@@ -5,6 +5,7 @@
   <use name="MagneticField/Engine"/>
   <use name="DataFormats/TrackerRecHit2D"/>
   <use name="Validation/RecoTrack"/>
+  <use name="RecoTracker/LST"/>
   <use name="TrackingTools/Records"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="TrackingTools/TransientTrackingRecHit"/>

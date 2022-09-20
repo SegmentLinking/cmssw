@@ -16,10 +16,12 @@
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHitBuilder.h"
 
-class LSTITHitConverter : public edm::global::EDProducer<> {
+#include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
+
+class LSTPixelSeedInputProducer : public edm::global::EDProducer<> {
 public:
-  explicit LSTITHitConverter(edm::ParameterSet const& iConfig);
-  ~LSTITHitConverter() override = default;
+  explicit LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig);
+  ~LSTPixelSeedInputProducer() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -31,12 +33,13 @@ private:
   edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> seedTokens_;
 //  std::vector<std::pair<unsigned int, edm::EDGetTokenT<StripMaskContainer>>> stripUseMaskTokens_; // Apparently not used, explanation when filled
-  // FIXME: No output yet, to be decided.
+  const edm::EDPutTokenT<LSTPixelSeedInput> LSTPixelSeedInputPutToken_;
 };
 
-LSTITHitConverter::LSTITHitConverter(edm::ParameterSet const& iConfig)
+LSTPixelSeedInputProducer::LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig)
     : mfToken_(esConsumes()),
-      beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))) {
+      beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
+      LSTPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()) {
   seedTokens_ = edm::vector_transform(iConfig.getUntrackedParameter<std::vector<edm::InputTag>>("seedTracks"),
                                       [&](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); });
 
@@ -46,10 +49,9 @@ LSTITHitConverter::LSTITHitConverter(edm::ParameterSet const& iConfig)
 //    auto index = mask.getUntrackedParameter<unsigned int>("index");
 //    assert(index < 64);
 //    stripUseMaskTokens_.emplace_back(index, consumes<StripMaskContainer>(mask.getUntrackedParameter<edm::InputTag>("src"))); // FIXME: This is inside an if (includeStripHits_) statement. Since stripDigiSimLink is an empty collection for our setup, includeStripHits_ is false, so nothing is added to the stripUseMaskTokens_.
-  // FIXME: No output yet, to be decided.
 }
 
-void LSTITHitConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
   desc.addUntracked<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
@@ -85,9 +87,9 @@ void LSTITHitConverter::fillDescriptions(edm::ConfigurationDescriptions& descrip
 }
 
 
-size_t LSTITHitConverter::addStripMatchedHit(const SiStripMatchedRecHit2D& hit,
-//                                             const std::vector<std::pair<uint64_t, StripMaskContainer const*>>& stripMasks, // FIXME: This is apparently not used, so the function needs to be modified respectively.
-                                             std::vector<std::pair<int, int>>& monoStereoClusterList) const {
+size_t LSTPixelSeedInputProducer::addStripMatchedHit(const SiStripMatchedRecHit2D& hit,
+//                                                     const std::vector<std::pair<uint64_t, StripMaskContainer const*>>& stripMasks, // FIXME: This is apparently not used, so the function needs to be modified respectively.
+                                                     std::vector<std::pair<int, int>>& monoStereoClusterList) const {
 //  auto strUsedMask = [&stripMasks](size_t key) {
 //    uint64_t mask = 0;
 //    for (auto const& m : stripMasks) {
@@ -102,7 +104,7 @@ size_t LSTITHitConverter::addStripMatchedHit(const SiStripMatchedRecHit2D& hit,
 }
 
 
-void LSTITHitConverter::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
+void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // Setup
   const auto& mf = iSetup.getData(mfToken_);
 
@@ -113,6 +115,7 @@ void LSTITHitConverter::produce(edm::StreamID iID, edm::Event& iEvent, const edm
   // Vector definitions
   std::vector<std::pair<int, int>> monoStereoClusterList; // FIXME: Needed?
 
+  LSTPixelSeedInput pixelSeedInput;
   std::vector<float> see_px;
   std::vector<float> see_py;
   std::vector<float> see_pz;
@@ -242,7 +245,9 @@ void LSTITHitConverter::produce(edm::StreamID iID, edm::Event& iEvent, const edm
       see_hitIdx.push_back(hitIdx);
     }
   }
-  // FIXME: No output yet, to be decided.
+
+  pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_algo, see_hitIdx);
+  iEvent.emplace(LSTPixelSeedInputPutToken_, std::move(pixelSeedInput));
 }
 
-DEFINE_FWK_MODULE(LSTITHitConverter);
+DEFINE_FWK_MODULE(LSTPixelSeedInputProducer);
