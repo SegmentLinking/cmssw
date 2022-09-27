@@ -24,6 +24,7 @@ public:
                              std::vector<float> see_stateTrajGlbPx,
                              std::vector<float> see_stateTrajGlbPy,
                              std::vector<float> see_stateTrajGlbPz,
+                             std::vector<int> see_q,
                              std::vector<unsigned int> see_algo,
                              std::vector<std::vector<int>> see_hitIdx) {
     see_px_ = see_px;
@@ -36,6 +37,7 @@ public:
     see_stateTrajGlbPx_ = see_stateTrajGlbPx;
     see_stateTrajGlbPy_ = see_stateTrajGlbPy;
     see_stateTrajGlbPz_ = see_stateTrajGlbPz;
+    see_q_ = see_q;
     see_algo_ = see_algo;
     see_hitIdx_ = see_hitIdx;
   }
@@ -70,6 +72,9 @@ public:
   std::vector<float>& see_stateTrajGlbPz() { return see_stateTrajGlbPz_; }
   std::vector<float> const& see_stateTrajGlbPz() const { return see_stateTrajGlbPz_; }
 
+  std::vector<int>& see_q() { return see_q_; }
+  std::vector<int> const& see_q() const { return see_q_; }
+
   std::vector<unsigned int>& see_algo() { return see_algo_; }
   std::vector<unsigned int> const& see_algo() const { return see_algo_; }
 
@@ -87,6 +92,7 @@ private:
   std::vector<float> see_stateTrajGlbPx_;
   std::vector<float> see_stateTrajGlbPy_;
   std::vector<float> see_stateTrajGlbPz_;
+  std::vector<int> see_q_;
   std::vector<unsigned int> see_algo_;
   std::vector<std::vector<int>> see_hitIdx_;
 };

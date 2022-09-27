@@ -30,25 +30,18 @@ private:
   size_t addStripMatchedHit(const SiStripMatchedRecHit2D& hit, std::vector<std::pair<int, int>>& monoStereoClusterList) const;
 
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
-  edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
+  const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> seedTokens_;
-//  std::vector<std::pair<unsigned int, edm::EDGetTokenT<StripMaskContainer>>> stripUseMaskTokens_; // Apparently not used, explanation when filled
-  const edm::EDPutTokenT<LSTPixelSeedInput> LSTPixelSeedInputPutToken_;
+  const edm::EDPutTokenT<LSTPixelSeedInput> lstPixelSeedInputPutToken_;
 };
 
 LSTPixelSeedInputProducer::LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig)
     : mfToken_(esConsumes()),
       beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
-      LSTPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()) {
+      lstPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()) {
   seedTokens_ = edm::vector_transform(iConfig.getUntrackedParameter<std::vector<edm::InputTag>>("seedTracks"),
                                       [&](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); });
 
-//  auto const& maskVPset = iConfig.getUntrackedParameterSetVector("clusterMasks");
-//  stripUseMaskTokens_.reserve(maskVPset.size());
-//  for (auto const& mask : maskVPset) {
-//    auto index = mask.getUntrackedParameter<unsigned int>("index");
-//    assert(index < 64);
-//    stripUseMaskTokens_.emplace_back(index, consumes<StripMaskContainer>(mask.getUntrackedParameter<edm::InputTag>("src"))); // FIXME: This is inside an if (includeStripHits_) statement. Since stripDigiSimLink is an empty collection for our setup, includeStripHits_ is false, so nothing is added to the stripUseMaskTokens_.
 }
 
 void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -61,44 +54,12 @@ void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions&
     std::vector<edm::InputTag>{edm::InputTag("seedTracksinitialStepSeeds"),
                                edm::InputTag("seedTrackshighPtTripletStepSeeds")});
 
-// This is aparently not used, explanation above.
-//  edm::ParameterSetDescription cMaskDesc;
-//  cMaskDesc.addUntracked<unsigned int>("index");
-//  cMaskDesc.addUntracked<edm::InputTag>("src");
-//  std::vector<edm::ParameterSet> cMasks;
-//  auto addMask = [&cMasks](reco::Track::TrackAlgorithm algo) {
-//    edm::ParameterSet ps;
-//    ps.addUntrackedParameter<unsigned int>("index", static_cast<unsigned int>(algo));
-//    ps.addUntrackedParameter<edm::InputTag>("src", {reco::Track::algoName(algo) + "Clusters"});
-//    cMasks.push_back(ps);
-//  };
-//  addMask(reco::Track::detachedQuadStep);
-//  addMask(reco::Track::highPtTripletStep);
-//  addMask(reco::Track::detachedTripletStep);
-//  addMask(reco::Track::lowPtQuadStep);
-//  addMask(reco::Track::lowPtTripletStep);
-//  addMask(reco::Track::mixedTripletStep);
-//  addMask(reco::Track::pixelLessStep);
-//  addMask(reco::Track::pixelPairStep);
-//  addMask(reco::Track::tobTecStep);
-//  desc.addVPSetUntracked("clusterMasks", cMaskDesc, cMasks);
-
   descriptions.addWithDefaultLabel(desc);
 }
 
 
 size_t LSTPixelSeedInputProducer::addStripMatchedHit(const SiStripMatchedRecHit2D& hit,
-//                                                     const std::vector<std::pair<uint64_t, StripMaskContainer const*>>& stripMasks, // FIXME: This is apparently not used, so the function needs to be modified respectively.
                                                      std::vector<std::pair<int, int>>& monoStereoClusterList) const {
-//  auto strUsedMask = [&stripMasks](size_t key) {
-//    uint64_t mask = 0;
-//    for (auto const& m : stripMasks) {
-//      if (m.second->mask(key))
-//        mask |= m.first;
-//    }
-//    return mask;
-//  };
-
   monoStereoClusterList.emplace_back(hit.monoHit().cluster().key(), hit.stereoHit().cluster().key());
   return monoStereoClusterList.size() - 1;
 }
@@ -126,6 +87,7 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
   std::vector<float> see_stateTrajGlbPx;
   std::vector<float> see_stateTrajGlbPy;
   std::vector<float> see_stateTrajGlbPz;
+  std::vector<int> see_q;
   std::vector<unsigned int> see_algo;
   std::vector<std::vector<int>> see_hitIdx;
 
@@ -241,13 +203,14 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
       see_stateTrajGlbPx.push_back(stateGlobal.momentum().x());
       see_stateTrajGlbPy.push_back(stateGlobal.momentum().y());
       see_stateTrajGlbPz.push_back(stateGlobal.momentum().z());
+      see_q.push_back(seedTrack.charge());
       see_algo.push_back(algo);
       see_hitIdx.push_back(hitIdx);
     }
   }
 
-  pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_algo, see_hitIdx);
-  iEvent.emplace(LSTPixelSeedInputPutToken_, std::move(pixelSeedInput));
+  pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_q, see_algo, see_hitIdx);
+  iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
 }
 
 DEFINE_FWK_MODULE(LSTPixelSeedInputProducer);
