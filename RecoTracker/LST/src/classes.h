@@ -3,5 +3,7 @@
 
 #include "DataFormats/Common/interface/Wrapper.h"
 #include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
+#include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
+#include "RecoTracker/LST/interface/LSTOutput.h"
 
 #endif
