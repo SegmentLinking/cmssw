@@ -1,4 +1,3 @@
-#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/Portable/interface/Product.h"
@@ -19,6 +18,10 @@
 #include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
 #include "RecoTracker/LST/interface/LSTOutput.h"
 
+#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
+#include "SDL/LST.h"
+#endif // ALPAKA_ACC_GPU_CUDA_ENABLED
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTProducer : public edm::stream::EDProducer<edm::ExternalWork> {
@@ -36,21 +39,44 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
       auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
 
-      //sdl_.run(ctx.queue(), pixelSeeds, phase2OTHits);
+#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
+      lst_.eventSetup();
+      lst_.run(ctx.queue().getNativeHandle(),
+               pixelSeeds.see_px(),
+               pixelSeeds.see_py(),
+               pixelSeeds.see_pz(),
+               pixelSeeds.see_dxy(),
+               pixelSeeds.see_dz(),
+               pixelSeeds.see_ptErr(),
+               pixelSeeds.see_etaErr(),
+               pixelSeeds.see_stateTrajGlbX(),
+               pixelSeeds.see_stateTrajGlbY(),
+               pixelSeeds.see_stateTrajGlbZ(),
+               pixelSeeds.see_stateTrajGlbPx(),
+               pixelSeeds.see_stateTrajGlbPy(),
+               pixelSeeds.see_stateTrajGlbPz(),
+               pixelSeeds.see_q(),
+               pixelSeeds.see_algo(),
+               pixelSeeds.see_hitIdx(),
+               phase2OTHits.ph2_detId(),
+               phase2OTHits.ph2_x(),
+               phase2OTHits.ph2_y(),
+               phase2OTHits.ph2_z());
+#endif // ALPAKA_ACC_GPU_CUDA_ENABLED
     }
 
     void produce(edm::Event& event, edm::EventSetup const&) override {
       // Output
       LSTOutput lstOutput;
-      //lstOutput.setLSTOutputTraits(sdl_.getLengths(), sdl_.getHits(), sdl_.getPt(), sdl_.getEta(), sdl_.getPhi());
+      lstOutput.setLSTOutputTraits(lst_.hits(), lst_.len(), lst_.pt(), lst_.eta(), lst_.phi());
  
       event.emplace(lstOutputToken_, std::move(lstOutput));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
-      desc.add<edm::InputTag>("pixelSeedInput", edm::InputTag{"lstPixelSeedInput"});
-      desc.add<edm::InputTag>("phase2OTHitsInput", edm::InputTag{"lstPhase2OTHits"});
+      desc.add<edm::InputTag>("pixelSeedInput", edm::InputTag{"lstPixelSeedInputProducer"});
+      desc.add<edm::InputTag>("phase2OTHitsInput", edm::InputTag{"lstPhase2OTHitsInputProducer"});
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -59,11 +85,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
-    //SDL sdl_;
+#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
+    SDL::LST lst_;
+#endif // ALPAKA_ACC_GPU_CUDA_ENABLED
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #include "HeterogeneousCore/AlpakaCore/interface/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(LSTProducer);
-#endif // ALPAKA_ACC_GPU_CUDA_ENABLED
