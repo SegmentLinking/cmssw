@@ -7,6 +7,7 @@
 #include "FWCore/Utilities/interface/transform.h"
 
 #include "MagneticField/Engine/interface/MagneticField.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 #include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
 
@@ -84,6 +85,9 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
   std::vector<float> see_dz;
   std::vector<float> see_ptErr;
   std::vector<float> see_etaErr;
+  std::vector<float> see_stateTrajGlbX;
+  std::vector<float> see_stateTrajGlbY;
+  std::vector<float> see_stateTrajGlbZ;
   std::vector<float> see_stateTrajGlbPx;
   std::vector<float> see_stateTrajGlbPy;
   std::vector<float> see_stateTrajGlbPz;
@@ -200,6 +204,9 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
       see_dz.push_back(seedFitOk ? seedTrack.dz(bs.position()) : 0);
       see_ptErr.push_back(seedFitOk ? seedTrack.ptError() : 0);
       see_etaErr.push_back(seedFitOk ? seedTrack.etaError() : 0);
+      see_stateTrajGlbX.push_back(stateGlobal.position().x());
+      see_stateTrajGlbY.push_back(stateGlobal.position().y());
+      see_stateTrajGlbZ.push_back(stateGlobal.position().z());
       see_stateTrajGlbPx.push_back(stateGlobal.momentum().x());
       see_stateTrajGlbPy.push_back(stateGlobal.momentum().y());
       see_stateTrajGlbPz.push_back(stateGlobal.momentum().z());
@@ -209,7 +216,7 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
     }
   }
 
-  pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_q, see_algo, see_hitIdx);
+  pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbX, see_stateTrajGlbY, see_stateTrajGlbZ, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_q, see_algo, see_hitIdx);
   iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
 }
 
