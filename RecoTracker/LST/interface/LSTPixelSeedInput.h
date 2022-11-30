@@ -21,6 +21,9 @@ public:
                              std::vector<float> see_dz,
                              std::vector<float> see_ptErr,
                              std::vector<float> see_etaErr,
+                             std::vector<float> see_stateTrajGlbX,
+                             std::vector<float> see_stateTrajGlbY,
+                             std::vector<float> see_stateTrajGlbZ,
                              std::vector<float> see_stateTrajGlbPx,
                              std::vector<float> see_stateTrajGlbPy,
                              std::vector<float> see_stateTrajGlbPz,
@@ -34,6 +37,9 @@ public:
     see_dz_ = see_dz;
     see_ptErr_ = see_ptErr;
     see_etaErr_ = see_etaErr;
+    see_stateTrajGlbX_ = see_stateTrajGlbX;
+    see_stateTrajGlbY_ = see_stateTrajGlbY;
+    see_stateTrajGlbZ_ = see_stateTrajGlbZ;
     see_stateTrajGlbPx_ = see_stateTrajGlbPx;
     see_stateTrajGlbPy_ = see_stateTrajGlbPy;
     see_stateTrajGlbPz_ = see_stateTrajGlbPz;
@@ -63,6 +69,15 @@ public:
   std::vector<float>& see_etaErr() { return see_etaErr_; }
   std::vector<float> const& see_etaErr() const { return see_etaErr_; }
 
+  std::vector<float>& see_stateTrajGlbX() { return see_stateTrajGlbX_; }
+  std::vector<float> const& see_stateTrajGlbX() const { return see_stateTrajGlbX_; }
+
+  std::vector<float>& see_stateTrajGlbY() { return see_stateTrajGlbY_; }
+  std::vector<float> const& see_stateTrajGlbY() const { return see_stateTrajGlbY_; }
+
+  std::vector<float>& see_stateTrajGlbZ() { return see_stateTrajGlbZ_; }
+  std::vector<float> const& see_stateTrajGlbZ() const { return see_stateTrajGlbZ_; }
+
   std::vector<float>& see_stateTrajGlbPx() { return see_stateTrajGlbPx_; }
   std::vector<float> const& see_stateTrajGlbPx() const { return see_stateTrajGlbPx_; }
 
@@ -89,6 +104,9 @@ private:
   std::vector<float> see_dz_;
   std::vector<float> see_ptErr_;
   std::vector<float> see_etaErr_;
+  std::vector<float> see_stateTrajGlbX_;
+  std::vector<float> see_stateTrajGlbY_;
+  std::vector<float> see_stateTrajGlbZ_;
   std::vector<float> see_stateTrajGlbPx_;
   std::vector<float> see_stateTrajGlbPy_;
   std::vector<float> see_stateTrajGlbPz_;
