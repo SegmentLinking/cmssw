@@ -37,8 +37,7 @@ void LSTPhase2OTHitsInputProducer::fillDescriptions(edm::ConfigurationDescriptio
 void LSTPhase2OTHitsInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // Setup
 
-  edm::Handle<Phase2TrackerRecHit1DCollectionNew> phase2OTHits;
-  iEvent.getByToken(phase2OTRecHitToken_, phase2OTHits);
+  auto const& phase2OTHits = iEvent.get(phase2OTRecHitToken_);
 
   // Vector definitions
   LSTPhase2OTHitsInput phase2OTHitsInput;
@@ -48,7 +47,7 @@ void LSTPhase2OTHitsInputProducer::produce(edm::StreamID iID, edm::Event& iEvent
   std::vector<float> ph2_y;
   std::vector<float> ph2_z;
 
-  for (auto it = phase2OTHits->begin(); it != phase2OTHits->end(); it++) {
+  for (auto it = phase2OTHits.begin(); it != phase2OTHits.end(); it++) {
     const DetId hitId = it->detId();
     for (auto hit = it->begin(); hit != it->end(); hit++) {
       ph2_detId.push_back(hitId.rawId());

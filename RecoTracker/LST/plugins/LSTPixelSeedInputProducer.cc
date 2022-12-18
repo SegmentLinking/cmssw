@@ -28,7 +28,6 @@ public:
 
 private:
   void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
-  size_t addStripMatchedHit(const SiStripMatchedRecHit2D& hit, std::vector<std::pair<int, int>>& monoStereoClusterList) const;
 
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
@@ -59,24 +58,13 @@ void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions&
 }
 
 
-size_t LSTPixelSeedInputProducer::addStripMatchedHit(const SiStripMatchedRecHit2D& hit,
-                                                     std::vector<std::pair<int, int>>& monoStereoClusterList) const {
-  monoStereoClusterList.emplace_back(hit.monoHit().cluster().key(), hit.stereoHit().cluster().key());
-  return monoStereoClusterList.size() - 1;
-}
-
-
 void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // Setup
   const auto& mf = iSetup.getData(mfToken_);
 
-  edm::Handle<reco::BeamSpot> recoBeamSpotHandle;
-  iEvent.getByToken(beamSpotToken_, recoBeamSpotHandle);
-  reco::BeamSpot const& bs = *recoBeamSpotHandle;
+  auto const& bs = iEvent.get(beamSpotToken_);
 
   // Vector definitions
-  std::vector<std::pair<int, int>> monoStereoClusterList; // FIXME: Needed?
-
   LSTPixelSeedInput pixelSeedInput;
   std::vector<float> see_px;
   std::vector<float> see_py;
@@ -98,9 +86,7 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
   for (size_t iColl = 0; iColl < seedTokens_.size(); ++iColl) {
     // Get seed tokens
     const auto& seedToken = seedTokens_[iColl];
-    edm::Handle<edm::View<reco::Track>> seedTracksHandle;
-    iEvent.getByToken(seedToken, seedTracksHandle);
-    const auto& seedTracks = *seedTracksHandle;
+    auto const& seedTracks = iEvent.get(seedToken);
 
     if (seedTracks.empty())
       continue;
@@ -153,46 +139,16 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
       auto const& stateGlobal = tsos.globalParameters();
 
       std::vector<int> hitIdx;
-      for (auto const& hit : seed.recHits()) { // FIXME: Is this whole block of code needed?
+      for (auto const& hit : seed.recHits()) {
         int subid = hit.geographicalId().subdetId();
         if (subid == (int)PixelSubdetector::PixelBarrel || subid == (int)PixelSubdetector::PixelEndcap) {
           const BaseTrackerRecHit* bhit = dynamic_cast<const BaseTrackerRecHit*>(&hit);
           const auto& clusterRef = bhit->firstClusterRef();
           const auto clusterKey = clusterRef.cluster_pixel().key();
           hitIdx.push_back(clusterKey);
-        } else if (subid == (int)StripSubdetector::TOB || subid == (int)StripSubdetector::TID ||
-                   subid == (int)StripSubdetector::TIB || subid == (int)StripSubdetector::TEC) {
-          if (trackerHitRTTI::isMatched(hit)) {
-            const SiStripMatchedRecHit2D* matchedHit = dynamic_cast<const SiStripMatchedRecHit2D*>(&hit);
-            int monoIdx = matchedHit->monoClusterRef().key();
-            int stereoIdx = matchedHit->stereoClusterRef().key();
-
-            std::vector<std::pair<int, int>>::iterator pos =
-                find(monoStereoClusterList.begin(), monoStereoClusterList.end(), std::make_pair(monoIdx, stereoIdx));
-            size_t gluedIndex = -1;
-            if (pos != monoStereoClusterList.end()) {
-              gluedIndex = std::distance(monoStereoClusterList.begin(), pos);
-            } else {
-              // We can encounter glued hits not in the input
-              // SiStripMatchedRecHit2DCollection, e.g. via muon
-              // outside-in seeds (or anything taking hits from
-              // MeasurementTrackerEvent). So let's add them here.
-              gluedIndex = addStripMatchedHit(*matchedHit,/* stripMasks,*/ monoStereoClusterList);
-            }
-            hitIdx.push_back(gluedIndex);
-          } else {
-            const BaseTrackerRecHit* bhit = dynamic_cast<const BaseTrackerRecHit*>(&hit);
-            const auto& clusterRef = bhit->firstClusterRef();
-            unsigned int clusterKey;
-            if (clusterRef.isPhase2()) {
-              clusterKey = clusterRef.cluster_phase2OT().key();
-            } else {
-              clusterKey = clusterRef.cluster_strip().key();
-            }
-            hitIdx.push_back(clusterKey);
-          }
         } else {
-          LogTrace("TrackingNtuple") << " not pixel and not Strip detector";
+          throw cms::Exception("LSTPixelSeedInputProducer")
+                << "Not pixel hits found!";
         }
       }
 

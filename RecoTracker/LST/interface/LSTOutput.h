@@ -6,47 +6,33 @@
 
 class LSTOutput {
 public:
-  LSTOutput();
-  ~LSTOutput();
+  LSTOutput() = default;
+  ~LSTOutput() = default;
 
-  LSTOutput(LSTOutput const&) = delete;
-  LSTOutput& operator=(LSTOutput const&) = delete;
-  LSTOutput(LSTOutput&&);
-  LSTOutput& operator=(LSTOutput&&);
-
-  void setLSTOutputTraits(std::vector<std::vector<int>> lstTrackCandidate_hitIdx,
-                          std::vector<int> lstTrackCandidate_len,
-                          std::vector<float> lstTrackCandidate_pt,
-                          std::vector<float> lstTrackCandidate_eta,
-                          std::vector<float> lstTrackCandidate_phi) {
-    lstTrackCandidate_hitIdx_ = lstTrackCandidate_hitIdx;
-    lstTrackCandidate_len_ = lstTrackCandidate_len;
-    lstTrackCandidate_pt_ = lstTrackCandidate_pt;
-    lstTrackCandidate_eta_ = lstTrackCandidate_eta;
-    lstTrackCandidate_phi_ = lstTrackCandidate_phi;
+  void setLSTOutputTraits(std::vector<std::vector<int>> hitIdx,
+                          std::vector<int> len,
+                          std::vector<float> pt,
+                          std::vector<float> eta,
+                          std::vector<float> phi) {
+    hitIdx_ = hitIdx;
+    len_ = len;
+    pt_ = pt;
+    eta_ = eta;
+    phi_ = phi;
   }
 
-  std::vector<std::vector<int>>& lstTrackCandidate_hitIdx() { return lstTrackCandidate_hitIdx_; }
-  std::vector<std::vector<int>> const& lstTrackCandidate_hitIdx() const { return lstTrackCandidate_hitIdx_; }
-
-  std::vector<int>& lstTrackCandidate_len() { return lstTrackCandidate_len_; }
-  std::vector<int> const& lstTrackCandidate_len() const { return lstTrackCandidate_len_; }
-
-  std::vector<float>& lstTrackCandidate_pt() { return lstTrackCandidate_pt_; }
-  std::vector<float> const& lstTrackCandidate_pt() const { return lstTrackCandidate_pt_; }
-
-  std::vector<float>& lstTrackCandidate_eta() { return lstTrackCandidate_eta_; }
-  std::vector<float> const& lstTrackCandidate_eta() const { return lstTrackCandidate_eta_; }
-
-  std::vector<float>& lstTrackCandidate_phi() { return lstTrackCandidate_phi_; }
-  std::vector<float> const& lstTrackCandidate_phi() const { return lstTrackCandidate_phi_; }
+  std::vector<std::vector<int>> const& hitIdx() const { return hitIdx_; }
+  std::vector<int> const& len() const { return len_; }
+  std::vector<float> const& pt() const { return pt_; }
+  std::vector<float> const& eta() const { return eta_; }
+  std::vector<float> const& phi() const { return phi_; }
 
 private:
-  std::vector<std::vector<int>> lstTrackCandidate_hitIdx_;
-  std::vector<int> lstTrackCandidate_len_;
-  std::vector<float> lstTrackCandidate_pt_;
-  std::vector<float> lstTrackCandidate_eta_;
-  std::vector<float> lstTrackCandidate_phi_;
+  std::vector<std::vector<int>> hitIdx_;
+  std::vector<int> len_;
+  std::vector<float> pt_;
+  std::vector<float> eta_;
+  std::vector<float> phi_;
 };
 
 #endif
