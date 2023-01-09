@@ -17,6 +17,10 @@ process.load('Configuration.StandardSequences.Reconstruction_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
+## Timing
+#process.Timing = cms.Service("Timing")
+#process.options.wantSummary = cms.untracked.bool(True)
+
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(1),
     output = cms.optional.untracked.allowed(cms.int32,cms.PSet)
@@ -25,6 +29,7 @@ process.maxEvents = cms.untracked.PSet(
 # Input source
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:/home/users/evourlio/TrackingNTupleProduction/CMSSW_12_6_0_pre2/src/step2_DIGI_L1TrackTrigger_L1_DIGI2RAW_HLT.root'),
+    #fileNames = cms.untracked.vstring('file:/home/users/phchang/work/lst/samples/CMSSW_12_5_0/src/step2_DIGI_L1TrackTrigger_L1_DIGI2RAW_HLT_PU.root'),
     secondaryFileNames = cms.untracked.vstring()
 )
 
@@ -69,7 +74,7 @@ process.configurationMetadata = cms.untracked.PSet(
 
 process.output = cms.OutputModule("PoolOutputModule",
     fileName = cms.untracked.string('LSTInputTesterOutput.root'),
-    outputCommands = cms.untracked.vstring('keep *_lst*Producer_*_*')
+    outputCommands = cms.untracked.vstring('keep *_lst*_*_*')
 )
 
 # Additional output definition
@@ -79,7 +84,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T21', '')
 
 # Tasks and Sequences for LST inputs
-process.load("RecoTracker.LST.inputsForLST_cff")
+process.load("RecoTracker.LST.lst_cff")
 process.load("Validation.RecoTrack.trackingNtuple_cff")
 lstInputTask = cms.Task(process.trackingNtupleSeedSelectors,process.siPhase2RecHits)
 lstInputSequence = cms.Sequence(lstInputTask)
@@ -92,9 +97,17 @@ process.AlpakaServiceCudaAsync = cms.Service('AlpakaServiceCudaAsync')
 process.AlpakaServiceSerialSync = cms.Service('AlpakaServiceSerialSync')
 process.lstProducer = process.alpaka_cuda_asyncLSTProducer.clone()
 
+# Track Fitting
+import RecoTracker.TrackProducer.TrackProducer_cfi
+process.lstTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
+  src           = 'lstOutputConverter',
+  AlgorithmName = 'lst',
+  Fitter        = 'FlexibleKFFittingSmoother'
+)
+
 # Path and EndPath definitions
 process.raw2digi_step = cms.Path(process.RawToDigi)
-process.reconstruction_step = cms.Path(process.reconstruction_trackingOnly*lstInputSequence*process.lstPixelSeedInputProducer*process.lstPhase2OTHitsInputProducer*process.lstProducer)
+process.reconstruction_step = cms.Path(process.reconstruction_trackingOnly*lstInputSequence*process.lstPixelSeedInputProducer*process.lstPhase2OTHitsInputProducer*process.lstProducer*process.lstOutputConverter*process.lstTracks)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 process.output_step = cms.EndPath(process.output)
 

@@ -10,6 +10,7 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 #include "DataFormats/TrackerRecHit2D/interface/SiStripMatchedRecHit2DCollection.h"
+#include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
 #include "Validation/RecoTrack/interface/trackFromSeedFitFailed.h"
 
@@ -33,12 +34,14 @@ private:
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> seedTokens_;
   const edm::EDPutTokenT<LSTPixelSeedInput> lstPixelSeedInputPutToken_;
+  const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
 };
 
 LSTPixelSeedInputProducer::LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig)
     : mfToken_(esConsumes()),
       beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
-      lstPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()) {
+      lstPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()),
+      lstPixelSeedsPutToken_(produces<TrajectorySeedCollection>()) {
   seedTokens_ = edm::vector_transform(iConfig.getUntrackedParameter<std::vector<edm::InputTag>>("seedTracks"),
                                       [&](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); });
 
@@ -61,7 +64,6 @@ void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions&
 void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // Setup
   const auto& mf = iSetup.getData(mfToken_);
-
   auto const& bs = iEvent.get(beamSpotToken_);
 
   // Vector definitions
@@ -82,6 +84,7 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
   std::vector<int> see_q;
   std::vector<unsigned int> see_algo;
   std::vector<std::vector<int>> see_hitIdx;
+  TrajectorySeedCollection see_seeds;
 
   for (size_t iColl = 0; iColl < seedTokens_.size(); ++iColl) {
     // Get seed tokens
@@ -169,11 +172,13 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
       see_q.push_back(seedTrack.charge());
       see_algo.push_back(algo);
       see_hitIdx.push_back(hitIdx);
+      see_seeds.push_back(seed);
     }
   }
 
   pixelSeedInput.setLSTPixelSeedTraits(see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr, see_stateTrajGlbX, see_stateTrajGlbY, see_stateTrajGlbZ, see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz, see_q, see_algo, see_hitIdx);
   iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
+  iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
 }
 
 DEFINE_FWK_MODULE(LSTPixelSeedInputProducer);
