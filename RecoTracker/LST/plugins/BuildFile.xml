@@ -7,6 +7,7 @@
   <use name="FWCore/Utilities"/>
   <use name="MagneticField/Engine"/>
   <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/TkSeedGenerator"/>
   <use name="TrackingTools/Records"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="TrackingTools/TransientTrackingRecHit"/>

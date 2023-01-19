@@ -73,7 +73,7 @@ process.configurationMetadata = cms.untracked.PSet(
 # Output definition
 
 process.output = cms.OutputModule("PoolOutputModule",
-    fileName = cms.untracked.string('LSTInputTesterOutput.root'),
+    fileName = cms.untracked.string('LSTAlpakaTesterOutput.root'),
     outputCommands = cms.untracked.vstring('keep *_lst*_*_*')
 )
 
@@ -100,9 +100,13 @@ process.lstProducer = process.alpaka_cuda_asyncLSTProducer.clone()
 # Track Fitting
 import RecoTracker.TrackProducer.TrackProducer_cfi
 process.lstTracks = RecoTracker.TrackProducer.TrackProducer_cfi.TrackProducer.clone(
-  src           = 'lstOutputConverter',
-  AlgorithmName = 'lst',
-  Fitter        = 'FlexibleKFFittingSmoother'
+    useSimpleMF = cms.bool(True),
+    SimpleMagneticField = cms.string("ParabolicMf"),
+    Propagator = cms.string('PropagatorWithMaterialParabolicMf'),
+    TTRHBuilder = cms.string('WithAngleAndTemplate'),
+    src           = cms.InputTag("lstOutputConverter"),
+    AlgorithmName = cms.string("lst"),
+    Fitter        = cms.string("FlexibleKFFittingSmoother")
 )
 
 # Path and EndPath definitions
