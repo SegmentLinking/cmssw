@@ -17,6 +17,8 @@
 #include "RecoTracker/TkSeedingLayers/interface/SeedingHitSet.h"
 #include "RecoTracker/TkSeedGenerator/interface/SeedCreatorFactory.h"
 #include "RecoTracker/TkTrackingRegions/interface/GlobalTrackingRegion.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
 //typedef SeedingHitSet::ConstRecHitPointer Hit;
@@ -39,6 +41,8 @@ private:
   const edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
   const edm::EDGetTokenT<TrajectorySeedCollection> lstPixelSeedToken_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
+  edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorAlongToken_;
+  edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
   //const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   //std::unique_ptr<SeedCreator> seedCreator_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatePutToken_;
@@ -50,6 +54,8 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       lstPhase2OTHitsInputToken_{consumes<LSTPhase2OTHitsInput>(iConfig.getUntrackedParameter<edm::InputTag>("phase2OTHits"))},
       lstPixelSeedToken_{consumes<TrajectorySeedCollection>(iConfig.getUntrackedParameter<edm::InputTag>("lstPixelSeeds"))},
       mfToken_(esConsumes()),
+      propagatorAlongToken_{esConsumes<Propagator, TrackingComponentsRecord>(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
+      propagatorOppositeToken_{esConsumes<Propagator, TrackingComponentsRecord>(iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
       //beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
       //seedCreator_(SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator", iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"), consumesCollector())),
       trackCandidatePutToken_(produces<TrackCandidateCollection>()),
@@ -61,6 +67,8 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.addUntracked<edm::InputTag>("lstOutput", edm::InputTag("lstProducer"));
   desc.addUntracked<edm::InputTag>("phase2OTHits", edm::InputTag("lstPhase2OTHitsInputProducer"));
   desc.addUntracked<edm::InputTag>("lstPixelSeeds", edm::InputTag("lstPixelSeedInputProducer"));
+  desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
+  desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
   //desc.addUntracked<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
 
   //edm::ParameterSetDescription psd0;
@@ -83,6 +91,8 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
   auto const& phase2OTRecHits = iEvent.get(lstPhase2OTHitsInputToken_);
   auto const& pixelSeeds = iEvent.get(lstPixelSeedToken_);
   const auto& mf = iSetup.getData(mfToken_);
+  const auto& propAlo = iSetup.getData(propagatorAlongToken_);
+  const auto& propOppo = iSetup.getData(propagatorOppositeToken_);
   //auto const& bs = iEvent.get(beamSpotToken_);
 
   // Vector definitions
@@ -103,7 +113,7 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
   LogDebug("LSTOutputConverter")<<"lstTC size "<<lstTC_len.size();
   for (unsigned int i=0; i<lstTC_len.size(); i++) {
     LogDebug("LSTOutputConverter")<<" cand "<<i<<" "<<lstTC_len[i]<<" "<<lstTC_pt[i]<<" "<<lstTC_eta[i]<<" "<<lstTC_phi[i]<<" "<<lstTC_seedIdx[i];
-    if (lstTC_len[i]==10) { // T5
+    if (lstTC_seedIdx[i] == -1) { // T5
       continue; // temporary
       //std::vector<Hit> hitsFromT5;
       //for (auto hitIdx : lstTC_hitIdx[i])
@@ -114,16 +124,20 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
       //seedCreator_->makeSeed(*seedsFromT5, hitsFromT5);
     }
 
-    //TrajectorySeed s = lstTC_len[i]==10 ? (*seedsFromT5)[0] : pixelSeeds[lstTC_seedIdx[i]];
+    //TrajectorySeed s = lstTC_seedIdx[i] == -1 ? (*seedsFromT5)[0] : pixelSeeds[lstTC_seedIdx[i]];
     TrajectorySeed s = pixelSeeds[lstTC_seedIdx[i]];
-    //PTrajectoryStateOnDet st = s.startingState();
 
     edm::OwnVector<TrackingRecHit> recHits;
     for (auto const& hit : s.recHits())
       recHits.push_back(hit.clone());
 
     TrajectoryStateOnSurface tsos = trajectoryStateTransform::transientState(s.startingState(), recHits.back().surface(), &mf);
-    PTrajectoryStateOnDet st = trajectoryStateTransform::persistentState(tsos, recHits[0].det()->geographicalId().rawId());
+    auto tsosPair = propAlo.propagateWithPath(tsos, *recHits[0].surface());
+    if (!tsosPair.first.isValid()) {
+      LogDebug("MkFitOutputConverter") << "Propagating to startingState along momentum failed, trying opposite next";
+      tsosPair = propOppo.propagateWithPath(tsos, *recHits[0].surface());
+    }
+    PTrajectoryStateOnDet st = trajectoryStateTransform::persistentState(tsosPair.first, recHits[0].det()->geographicalId().rawId());
 
     unsigned int const nPixelHits = lstTC_len[i]==10 ? 0 : recHits.size();
     for (unsigned int j=nPixelHits; j<lstTC_hitIdx[i].size(); j++)
@@ -136,16 +150,16 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
         return true;
       } else if (GeomDetEnumerators::isOuterTracker(asub) && GeomDetEnumerators::isInnerTracker(bsub)) {
         return false;
-      } else {
+      } else if (asub != bsub) {
         return asub < bsub;
-      }
- 
-      const auto& apos = a.globalPosition();
-      const auto& bpos = b.globalPosition();
-      if (GeomDetEnumerators::isBarrel(asub)) {
-        return apos.perp2() < bpos.perp2();
       } else {
-        return std::abs(apos.z()) < std::abs(bpos.z());
+        const auto& apos = a.surface();
+        const auto& bpos = b.surface();
+        if (GeomDetEnumerators::isBarrel(asub)) {
+          return apos->rSpan().first < bpos->rSpan().first;
+        } else {
+          return std::abs(apos->zSpan().first) < std::abs(bpos->zSpan().first);
+        }
       }
     });
 
