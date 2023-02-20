@@ -1,10 +1,12 @@
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
+#include "DataFormats/TrackReco/interface/SeedStopInfo.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 #include "FWCore/Framework/interface/global/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
@@ -40,6 +42,7 @@ private:
   //const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   //std::unique_ptr<SeedCreator> seedCreator_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatePutToken_;
+  const edm::EDPutTokenT<std::vector<SeedStopInfo>> seedStopInfoPutToken_;
 };
 
 LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
@@ -49,7 +52,8 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       mfToken_(esConsumes()),
       //beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
       //seedCreator_(SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator", iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"), consumesCollector())),
-      trackCandidatePutToken_(produces<TrackCandidateCollection>()) {}
+      trackCandidatePutToken_(produces<TrackCandidateCollection>()),
+      seedStopInfoPutToken_(produces<std::vector<SeedStopInfo>>()) {}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -96,7 +100,9 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
 
   //auto seedsFromT5 = std::make_unique<TrajectorySeedCollection>();
   //GlobalPoint vtxOfBs(bs.x0(), bs.y0(), bs.z0()); 
+  LogDebug("LSTOutputConverter")<<"lstTC size "<<lstTC_len.size();
   for (unsigned int i=0; i<lstTC_len.size(); i++) {
+    LogDebug("LSTOutputConverter")<<" cand "<<i<<" "<<lstTC_len[i]<<" "<<lstTC_pt[i]<<" "<<lstTC_eta[i]<<" "<<lstTC_phi[i]<<" "<<lstTC_seedIdx[i];
     if (lstTC_len[i]==10) { // T5
       continue; // temporary
       //std::vector<Hit> hitsFromT5;
@@ -146,7 +152,9 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
     output.emplace_back(TrackCandidate(recHits,s,st));
   }
 
+  LogDebug("LSTOutputConverter")<<"done with conversion: output size "<<output.size();
   iEvent.emplace(trackCandidatePutToken_, std::move(output));
+  iEvent.emplace(seedStopInfoPutToken_, 0U); //dummy stop info
 }
 
 DEFINE_FWK_MODULE(LSTOutputConverter);

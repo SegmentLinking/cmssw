@@ -1,7 +1,9 @@
 <!-- host-only plugins -->
 <library file="*.cc" name="RecoTrackerLSTPlugins">
   <use name="DataFormats/TrackCandidate"/>
+  <use name="DataFormats/TrackReco"/>
   <use name="DataFormats/TrackerRecHit2D"/>
+  <use name="DataFormats/TrajectorySeed"/>
   <use name="FWCore/Framework"/>
   <use name="FWCore/ParameterSet"/>
   <use name="FWCore/Utilities"/>
