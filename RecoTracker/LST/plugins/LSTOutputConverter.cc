@@ -102,7 +102,7 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
   std::vector<float> const lstTC_eta = lstOutput.eta();
   std::vector<float> const lstTC_phi = lstOutput.phi();
   std::vector<int> const lstTC_seedIdx = lstOutput.seedIdx();
-
+  std::vector<short> const lstTC_trackCandidateType = lstOutput.trackCandidateType();
   TrackCandidateCollection output;
   output.reserve(lstTC_len.size());
 
@@ -112,7 +112,7 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
   //GlobalPoint vtxOfBs(bs.x0(), bs.y0(), bs.z0()); 
   LogDebug("LSTOutputConverter")<<"lstTC size "<<lstTC_len.size();
   for (unsigned int i=0; i<lstTC_len.size(); i++) {
-    LogDebug("LSTOutputConverter")<<" cand "<<i<<" "<<lstTC_len[i]<<" "<<lstTC_pt[i]<<" "<<lstTC_eta[i]<<" "<<lstTC_phi[i]<<" "<<lstTC_seedIdx[i];
+    LogDebug("LSTOutputConverter")<<" cand "<<i<<" "<<lstTC_len[i]<<" "<<lstTC_pt[i]<<" "<<lstTC_eta[i]<<" "<<lstTC_phi[i]<<" "<<lstTC_seedIdx[i]<<" "<<lstTC_trackCandidateType[i];
     if (lstTC_seedIdx[i] == -1) { // T5
       continue; // temporary
       //std::vector<Hit> hitsFromT5;
