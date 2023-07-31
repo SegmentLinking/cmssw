@@ -43,7 +43,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
       lst_.eventSetup();
-      lst_.run(ctx.queue().getNativeHandle(),
+      lst_.run(ctx.queue(),
                verbose_,
                pixelSeeds.px(),
                pixelSeeds.py(),
