@@ -33,6 +33,12 @@ trackingPhase2PU140.toReplaceWith(convClusters, _phase2trackClusterRemover.clone
     oldClusterRemovalInfo                    = 'detachedQuadStepClusters',
     overrideTrkQuals                         = 'detachedQuadStepSelector:detachedQuadStepTrk'
 ))
+from Configuration.ProcessModifiers.trackingIters01_cff import trackingIters01
+trackingIters01.toModify(convClusters,
+                         trajectories          = "highPtTripletStepTracks",
+                         oldClusterRemovalInfo = "highPtTripletStepClusters",
+                         overrideTrkQuals      = "highPtTripletStepSelector:highPtTripletStep"
+)
 
 _convLayerPairsStripOnlyLayers = ['TIB1+TID1_pos', 
                                  'TIB1+TID1_neg', 
