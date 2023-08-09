@@ -1,22 +1,20 @@
 #include <alpaka/alpaka.hpp>
 
-#include "DataFormats/Portable/interface/Product.h"
-#include "FWCore/Framework/interface/Event.h"
-#include "FWCore/Framework/interface/EventSetup.h"
-#include "FWCore/Framework/interface/Frameworkfwd.h"
-#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
-#include "FWCore/Utilities/interface/EDGetToken.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-#include "FWCore/Utilities/interface/StreamID.h"
-#include "HeterogeneousCore/AlpakaCore/interface/ScopedContext.h"
+
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDGetToken.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/Event.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/EventSetup.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/stream/SynchronizingEDProducer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
-#include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
-#include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
 #include "RecoTracker/LST/interface/LSTOutput.h"
+#include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
+#include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
 
 #ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
 #include "SDL/LST.h"
@@ -24,18 +22,16 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  class LSTProducer : public edm::stream::EDProducer<edm::ExternalWork> {
+  class LSTProducer : public stream::SynchronizingEDProducer<> {
   public:
     LSTProducer(edm::ParameterSet const& config)
         : lstPixelSeedInputToken_{consumes<LSTPixelSeedInput>(config.getParameter<edm::InputTag>("pixelSeedInput"))},
           lstPhase2OTHitsInputToken_{
               consumes<LSTPhase2OTHitsInput>(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
           verbose_(config.getParameter<int>("verbose")),
-          lstOutputToken_{produces<LSTOutput>()} {}
+          lstOutputToken_{produces()} {}
 
-    void acquire(edm::Event const& event, edm::EventSetup const& setup, edm::WaitingTaskWithArenaHolder task) override {
-      // create a context based on the EDM stream number
-      cms::alpakatools::ScopedContextAcquire<Queue> ctx{event.streamID(), std::move(task)};
+    void acquire(device::Event const& event, device::EventSetup const& setup) override {
 
       // Inputs
       auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
@@ -43,7 +39,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 #ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
       lst_.eventSetup();
-      lst_.run(ctx.queue().getNativeHandle(),
+      lst_.run(event.queue().getNativeHandle(),
                verbose_,
                pixelSeeds.px(),
                pixelSeeds.py(),
@@ -67,7 +63,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif  // ALPAKA_ACC_GPU_CUDA_ENABLED
     }
 
-    void produce(edm::Event& event, edm::EventSetup const&) override {
+    void produce(device::Event& event, device::EventSetup const&) override {
+
       // Output
       LSTOutput lstOutput;
       lstOutput.setLSTOutputTraits(lst_.hits(), lst_.len(), lst_.seedIdx(), lst_.trackCandidateType());
@@ -96,5 +93,5 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
-#include "HeterogeneousCore/AlpakaCore/interface/MakerMacros.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(LSTProducer);
