@@ -320,15 +320,15 @@ def customisePhase2HLTForTrackingOnlyLST(process):
         mva = cms.PSet(
             dr_par = cms.PSet(
                 d0err = cms.vdouble(0.003, 0.003, 0.003),
-                d0err_par = cms.vdouble(0.002, 0.002, 0.001),
+                d0err_par = cms.vdouble(0.002, 0.002, 0.002),#d0err_par = cms.vdouble(0.002, 0.002, 0.001),
                 dr_exp = cms.vint32(4, 4, 4),
-                dr_par1 = cms.vdouble(0.7, 0.6, 0.6),
-                dr_par2 = cms.vdouble(0.6, 0.5, 0.45)
+                dr_par1 = cms.vdouble(0.7, 0.6, 0.7),#dr_par1 = cms.vdouble(0.7, 0.6, 0.6),
+                dr_par2 = cms.vdouble(0.6, 0.5, 0.6)#dr_par2 = cms.vdouble(0.6, 0.5, 0.45)
             ),
             dz_par = cms.PSet(
                 dz_exp = cms.vint32(4, 4, 4),
-                dz_par1 = cms.vdouble(0.8, 0.7, 0.7),
-                dz_par2 = cms.vdouble(0.6, 0.6, 0.55)
+                dz_par1 = cms.vdouble(0.8, 0.7, 0.8),#dz_par1 = cms.vdouble(0.8, 0.7, 0.7),
+                dz_par2 = cms.vdouble(0.6, 0.6, 0.6)#dz_par2 = cms.vdouble(0.6, 0.6, 0.55)
             ),
             maxChi2 = cms.vdouble(9999.0, 9999.0, 9999.0),
             maxChi2n = cms.vdouble(2.0, 1.0, 1.0),#maxChi2n = cms.vdouble(2.0, 1.0, 0.8),
@@ -352,12 +352,12 @@ def customisePhase2HLTForTrackingOnlyLST(process):
             TrackProducers = cms.VInputTag("highPtTripletStepTrackSelectionHighPurity"),
             #TrackProducers = cms.VInputTag("highPtTripletStepTracks"),
             hasSelector = cms.vint32(0),
-            indivShareFrac = cms.vdouble(1.0),
+            indivShareFrac = cms.vdouble(0.1),
             selectedTrackQuals = cms.VInputTag(cms.InputTag("highPtTripletStepTrackSelectionHighPurity")),
             #selectedTrackQuals = cms.VInputTag(cms.InputTag("highPtTripletStepTracks")),
             setsToMerge = cms.VPSet(cms.PSet(
                pQual = cms.bool(True),
-               tLists = cms.vint32(1)
+               tLists = cms.vint32(0)
             ))
     )
 
@@ -595,15 +595,15 @@ def customisePhase2HLTForPatatrackLST(process):
         mva = cms.PSet(
             dr_par = cms.PSet(
                 d0err = cms.vdouble(0.003, 0.003, 0.003),
-                d0err_par = cms.vdouble(0.002, 0.002, 0.001),
+                d0err_par = cms.vdouble(0.002, 0.002, 0.002),#d0err_par = cms.vdouble(0.002, 0.002, 0.001),
                 dr_exp = cms.vint32(4, 4, 4),
-                dr_par1 = cms.vdouble(0.7, 0.6, 0.6),
-                dr_par2 = cms.vdouble(0.6, 0.5, 0.45)
+                dr_par1 = cms.vdouble(0.7, 0.6, 0.7),#dr_par1 = cms.vdouble(0.7, 0.6, 0.6),
+                dr_par2 = cms.vdouble(0.6, 0.5, 0.6)#dr_par2 = cms.vdouble(0.6, 0.5, 0.45)
             ),
             dz_par = cms.PSet(
                 dz_exp = cms.vint32(4, 4, 4),
-                dz_par1 = cms.vdouble(0.8, 0.7, 0.7),
-                dz_par2 = cms.vdouble(0.6, 0.6, 0.55)
+                dz_par1 = cms.vdouble(0.8, 0.7, 0.8),#dz_par1 = cms.vdouble(0.8, 0.7, 0.7),
+                dz_par2 = cms.vdouble(0.6, 0.6, 0.6)#dz_par2 = cms.vdouble(0.6, 0.6, 0.55)
             ),
             maxChi2 = cms.vdouble(9999.0, 9999.0, 9999.0),
             maxChi2n = cms.vdouble(2.0, 1.0, 1.0),#maxChi2n = cms.vdouble(2.0, 1.0, 0.8),
@@ -627,12 +627,12 @@ def customisePhase2HLTForPatatrackLST(process):
             TrackProducers = cms.VInputTag("highPtTripletStepTrackSelectionHighPurity"),
             #TrackProducers = cms.VInputTag("highPtTripletStepTracks"),
             hasSelector = cms.vint32(0),
-            indivShareFrac = cms.vdouble(1.0),
+            indivShareFrac = cms.vdouble(0.1),
             selectedTrackQuals = cms.VInputTag(cms.InputTag("highPtTripletStepTrackSelectionHighPurity")),
             #selectedTrackQuals = cms.VInputTag(cms.InputTag("highPtTripletStepTracks")),
             setsToMerge = cms.VPSet(cms.PSet(
                pQual = cms.bool(True),
-               tLists = cms.vint32(1)
+               tLists = cms.vint32(0)
             ))
     )
 
