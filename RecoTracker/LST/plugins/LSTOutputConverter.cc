@@ -189,6 +189,7 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
 
     TrajectoryStateOnSurface tsos =
         trajectoryStateTransform::transientState(seed.startingState(), (seed.recHits().end() - 1)->surface(), &mf);
+    tsos.rescaleError(100.);
     auto tsosPair = propOppo.propagateWithPath(tsos, *recHits[0].surface());
     if (!tsosPair.first.isValid()) {
       LogDebug("LSTOutputConverter") << "Propagating to startingState opposite to momentum failed, trying along next";
