@@ -31,6 +31,6 @@
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoTracker/LST"/>
-  <flags ALPAKA_BACKENDS="cuda"/>
+  <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
 </library>
