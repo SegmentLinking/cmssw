@@ -394,8 +394,14 @@ from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 lstProducer = SwitchProducerCUDA(
     cpu  = alpaka_serial_syncLSTProducer.clone(),
 )
+from RecoTracker.LST.lstModuleConnectionMapESProducer_cfi import lstModuleConnectionMapESProducer as _mmapES
+lstModuleConnectionMap = _mmapES.clone(
+    ComponentName = "",
+    txt = "RecoTracker/LST/data/module_connection_tracing_CMSSW_12_2_0_pre2_merged.txt"
+)
 gpu.toModify(lstProducer,cuda = alpaka_cuda_asyncLSTProducer.clone())
-_HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstPixelSeedInputProducer, lstPhase2OTHitsInputProducer, lstProducer)
+_HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstPixelSeedInputProducer,
+                               lstPhase2OTHitsInputProducer, lstProducer, lstModuleConnectionMap)
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 
 # fast tracking mask producer 
