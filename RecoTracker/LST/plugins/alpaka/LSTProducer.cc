@@ -16,9 +16,7 @@
 #include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
 #include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
 
-#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
 #include "SDL/LST.h"
-#endif  // ALPAKA_ACC_GPU_CUDA_ENABLED
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -37,9 +35,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
       auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
 
-#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
       lst_.eventSetup();
-      lst_.run(event.queue().getNativeHandle(),
+      lst_.run(event.queue(),
                verbose_,
                pixelSeeds.px(),
                pixelSeeds.py(),
@@ -60,7 +57,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                phase2OTHits.x(),
                phase2OTHits.y(),
                phase2OTHits.z());
-#endif  // ALPAKA_ACC_GPU_CUDA_ENABLED
     }
 
     void produce(device::Event& event, device::EventSetup const&) override {
@@ -86,9 +82,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const int verbose_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
-#ifdef ALPAKA_ACC_GPU_CUDA_ENABLED
     SDL::LST lst_;
-#endif  // ALPAKA_ACC_GPU_CUDA_ENABLED
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
