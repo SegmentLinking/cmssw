@@ -387,14 +387,13 @@ from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPha
 from RecoTracker.LST.lstSeedTracks_cfi import lstInitialStepSeedTracks,lstHighPtTripletStepSeedTracks
 from RecoTracker.LST.lstPixelSeedInputProducer_cfi import lstPixelSeedInputProducer
 from RecoTracker.LST.lstPhase2OTHitsInputProducer_cfi import lstPhase2OTHitsInputProducer
-from RecoTracker.LST.alpaka_cuda_asyncLSTProducer_cfi import alpaka_cuda_asyncLSTProducer
-from RecoTracker.LST.alpaka_serial_syncLSTProducer_cfi import alpaka_serial_syncLSTProducer
+from RecoTracker.LST.lstProducer_cfi import lstProducer as _lstProducer
 from Configuration.ProcessModifiers.gpu_cff import gpu
-from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
-lstProducer = SwitchProducerCUDA(
-    cpu  = alpaka_serial_syncLSTProducer.clone(),
+# Define lstProducer like this to be able to run the serial version explicitly
+lstProducer = _lstProducer.clone(
+  alpaka = cms.untracked.PSet(backend = cms.untracked.string('serial_sync'))
 )
-gpu.toModify(lstProducer,cuda = alpaka_cuda_asyncLSTProducer.clone())
+gpu.toReplaceWith(lstProducer,_lstProducer.clone())
 _HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstPixelSeedInputProducer, lstPhase2OTHitsInputProducer, lstProducer)
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 

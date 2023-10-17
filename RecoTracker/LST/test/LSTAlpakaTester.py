@@ -90,16 +90,9 @@ lstInputSequence = cms.Sequence(lstInputTask)
 
 # Main LST Producer
 process.load('Configuration.StandardSequences.Accelerators_cff')
-process.load('RecoTracker.LST.alpaka_cuda_asyncLSTProducer_cfi')
-process.load('RecoTracker.LST.alpaka_serial_syncLSTProducer_cfi')
-### Enable alpaka-based heterogeneous modules
-process.AlpakaServiceCudaAsync = cms.Service('AlpakaServiceCudaAsync')
-process.AlpakaServiceSerialSync = cms.Service('AlpakaServiceSerialSync')
-from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
-process.lstProducer = SwitchProducerCUDA(
-        cpu = process.alpaka_serial_syncLSTProducer.clone(),
-        cuda = process.alpaka_cuda_asyncLSTProducer.clone()
-)
+process.load("HeterogeneousCore.AlpakaCore.ProcessAcceleratorAlpaka_cfi")
+from RecoTracker.LST.lstProducer_cfi import lstProducer as _lstProducer
+process.lstProducer = _lstProducer.clone()
 
 # Track Fitting
 import RecoTracker.TrackProducer.TrackProducer_cfi
