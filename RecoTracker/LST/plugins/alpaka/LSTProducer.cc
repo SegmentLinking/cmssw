@@ -1,5 +1,6 @@
 #include <alpaka/alpaka.hpp>
 
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
@@ -16,7 +17,10 @@
 #include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
 #include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
 
+#include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
+
 #include "SDL/LST.h"
+#include "SDL/ModuleConnectionMap.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -26,6 +30,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         : lstPixelSeedInputToken_{consumes<LSTPixelSeedInput>(config.getParameter<edm::InputTag>("pixelSeedInput"))},
           lstPhase2OTHitsInputToken_{
               consumes<LSTPhase2OTHitsInput>(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
+          mmapToken_{esConsumes()},
           verbose_(config.getParameter<int>("verbose")),
           lstOutputToken_{produces()} {}
 
@@ -35,6 +40,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
       auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
 
+      auto const& mmap = setup.getData(mmapToken_);
+      edm::LogWarning("MYDEBUG")<<mmap.size();
       lst_.eventSetup();
       lst_.run(event.queue(),
                verbose_,
@@ -79,6 +86,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
+    const edm::ESGetToken<SDL::ModuleConnectionMap, TrackerRecoGeometryRecord> mmapToken_;
     const int verbose_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 

@@ -1,10 +1,12 @@
 <!-- host-only plugins -->
 <library file="*.cc" name="RecoTrackerLSTPlugins">
+  <use name="lst"/>
   <use name="DataFormats/TrackCandidate"/>
   <use name="DataFormats/TrackReco"/>
   <use name="DataFormats/TrackerRecHit2D"/>
   <use name="DataFormats/TrajectorySeed"/>
   <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
   <use name="FWCore/ParameterSet"/>
   <use name="FWCore/Utilities"/>
   <use name="Geometry/TrackerGeometryBuilder"/>
@@ -13,6 +15,7 @@
   <use name="RecoTracker/LST"/>
   <use name="RecoTracker/TkSeedingLayers"/>
   <use name="RecoTracker/TkSeedGenerator"/>
+  <use name="RecoTracker/Record"/>
   <use name="TrackingTools/GeomPropagators"/>
   <use name="TrackingTools/Records"/>
   <use name="TrackingTools/TrajectoryState"/>
@@ -31,6 +34,7 @@
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/Record"/>
   <flags ALPAKA_BACKENDS="cuda serial"/>
   <flags EDM_PLUGIN="1"/>
 </library>
