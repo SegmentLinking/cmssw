@@ -394,14 +394,25 @@ from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
 lstProducer = SwitchProducerCUDA(
     cpu  = alpaka_serial_syncLSTProducer.clone(),
 )
+gpu.toModify(lstProducer,cuda = alpaka_cuda_asyncLSTProducer.clone())
+
 from RecoTracker.LST.lstModuleConnectionMapESProducer_cfi import lstModuleConnectionMapESProducer as _mmapES
+dataLST = "RecoTracker/LST/data/"
 lstModuleConnectionMap = _mmapES.clone(
     ComponentName = "",
-    txt = "RecoTracker/LST/data/module_connection_tracing_CMSSW_12_2_0_pre2_merged.txt"
+    txt = dataLST+"module_connection_tracing_CMSSW_12_2_0_pre2_merged.txt"
 )
-gpu.toModify(lstProducer,cuda = alpaka_cuda_asyncLSTProducer.clone())
 _HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstPixelSeedInputProducer,
                                lstPhase2OTHitsInputProducer, lstProducer, lstModuleConnectionMap)
+mCM_pLS = ["_layer1_subdet5", "_layer2_subdet5", "_layer1_subdet4", "_layer2_subdet4"]
+for mCM in mCM_pLS:
+    for ec in ["", "_pos", "_neg"]:
+        locals()["lstModuleConnectionMap_pLS"+mCM+ec] = _mmapES.clone(
+            ComponentName = "pLS"+mCM+ec,
+            txt = dataLST+"pixelmaps_CMSSW_12_2_0_pre2_0p8minPt/pLS_map"+ec+mCM+".txt"
+        )
+        _HighPtTripletStepTask_LST.add(locals()["lstModuleConnectionMap_pLS"+mCM+ec])
+
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 
 # fast tracking mask producer 

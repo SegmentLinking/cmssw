@@ -19,16 +19,14 @@ private:
 };
 
 LSTModuleConnectionMapESProducer::LSTModuleConnectionMapESProducer(const edm::ParameterSet &iConfig)
-  : txtFile_{iConfig.getParameter<edm::FileInPath>("txt").fullPath()}
-{
+    : txtFile_{iConfig.getParameter<edm::FileInPath>("txt").fullPath()} {
   setWhatProduced(this, iConfig.getParameter<std::string>("ComponentName"));
 }
 
 void LSTModuleConnectionMapESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<std::string>("ComponentName", "")->setComment("Product label");
-  desc.add<edm::FileInPath>("txt", edm::FileInPath())
-      ->setComment("Path to the txt file for the module map parameters");
+  desc.add<edm::FileInPath>("txt", edm::FileInPath())->setComment("Path to the txt file for the module map parameters");
   descriptions.addWithDefaultLabel(desc);
 }
 
