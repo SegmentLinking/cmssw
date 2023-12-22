@@ -107,6 +107,16 @@ trackingPhase2PU140.toReplaceWith(earlyGeneralTracks, _trackListMerger.clone(
     makeReKeyedSeeds = cms.untracked.bool(False)
     )
 )
+from Configuration.ProcessModifiers.trackingIters01_cff import trackingIters01
+trackingIters01.toModify(earlyGeneralTracks,
+                         TrackProducers = ['initialStepTracks', 'highPtTripletStepTracks'],
+                         hasSelector = [1,1],
+                         indivShareFrac = [1,0.16],
+                         selectedTrackQuals = ['initialStepSelector:initialStep',
+                                               'highPtTripletStepSelector:highPtTripletStep'
+                         ],
+                         setsToMerge = {0: dict(tLists = [0,1])}
+)
 from Configuration.ProcessModifiers.vectorHits_cff import vectorHits
 def _extend_pixelLess(x):
     x.TrackProducers += ['pixelLessStepTracks']
@@ -116,3 +126,14 @@ def _extend_pixelLess(x):
     x.setsToMerge[0].tLists += [6]
 (trackingPhase2PU140 & vectorHits).toModify(earlyGeneralTracks, _extend_pixelLess)
 
+def _dropIter(mod, iteration):
+     mod.TrackProducers.pop(iteration)
+     mod.hasSelector.pop(iteration)
+     mod.indivShareFrac.pop(iteration)
+     mod.selectedTrackQuals.pop(iteration)
+     mod.setsToMerge[0].tLists.pop(iteration)
+
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+# remove initialStep from earlyGeneralTracks inputs
+(trackingPhase2PU140 & trackingLST).toModify(earlyGeneralTracks, func=lambda x:_dropIter(x,0))
+(trackingPhase2PU140 & trackingLST).toModify(earlyGeneralTracks, indivShareFrac = {0:  1})
