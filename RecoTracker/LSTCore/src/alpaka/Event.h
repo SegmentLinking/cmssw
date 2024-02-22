@@ -1,16 +1,16 @@
 #ifndef Event_cuh
 #define Event_cuh
 
-// #include "Hit.h"
-// #include "Module.h"
-// #include "ModuleMethods.h"
-// #include "Segment.h"
-// #include "Triplet.h"
-// #include "Kernels.h"
-// #include "Quintuplet.h"
-// #include "MiniDoublet.h"
-// #include "PixelTriplet.h"
-// #include "TrackCandidate.h"
+#include "Hit.h"
+#include "Module.h"
+#include "ModuleMethods.h"
+#include "Segment.h"
+#include "Triplet.h"
+#include "Kernels.h"
+#include "Quintuplet.h"
+#include "MiniDoublet.h"
+#include "PixelTriplet.h"
+#include "TrackCandidate.h"
 #include "Constants.h"
 
 namespace SDL {
@@ -34,37 +34,37 @@ namespace SDL {
 
     //Device stuff
     unsigned int nTotalSegments;
-    // struct objectRanges* rangesInGPU;
-    // struct objectRangesBuffer<Dev>* rangesBuffers;
-    // struct hits* hitsInGPU;
-    // struct hitsBuffer<Dev>* hitsBuffers;
-    // struct miniDoublets* mdsInGPU;
-    // struct miniDoubletsBuffer<Dev>* miniDoubletsBuffers;
-    // struct segments* segmentsInGPU;
-    // struct segmentsBuffer<Dev>* segmentsBuffers;
-    // struct triplets* tripletsInGPU;
-    // struct tripletsBuffer<Dev>* tripletsBuffers;
-    // struct quintuplets* quintupletsInGPU;
-    // struct quintupletsBuffer<Dev>* quintupletsBuffers;
-    // struct trackCandidates* trackCandidatesInGPU;
-    // struct trackCandidatesBuffer<Dev>* trackCandidatesBuffers;
-    // struct pixelTriplets* pixelTripletsInGPU;
-    // struct pixelTripletsBuffer<Dev>* pixelTripletsBuffers;
-    // struct pixelQuintuplets* pixelQuintupletsInGPU;
-    // struct pixelQuintupletsBuffer<Dev>* pixelQuintupletsBuffers;
+    struct objectRanges* rangesInGPU;
+    struct objectRangesBuffer<Dev>* rangesBuffers;
+    struct hits* hitsInGPU;
+    struct hitsBuffer<Dev>* hitsBuffers;
+    struct miniDoublets* mdsInGPU;
+    struct miniDoubletsBuffer<Dev>* miniDoubletsBuffers;
+    struct segments* segmentsInGPU;
+    struct segmentsBuffer<Dev>* segmentsBuffers;
+    struct triplets* tripletsInGPU;
+    struct tripletsBuffer<Dev>* tripletsBuffers;
+    struct quintuplets* quintupletsInGPU;
+    struct quintupletsBuffer<Dev>* quintupletsBuffers;
+    struct trackCandidates* trackCandidatesInGPU;
+    struct trackCandidatesBuffer<Dev>* trackCandidatesBuffers;
+    struct pixelTriplets* pixelTripletsInGPU;
+    struct pixelTripletsBuffer<Dev>* pixelTripletsBuffers;
+    struct pixelQuintuplets* pixelQuintupletsInGPU;
+    struct pixelQuintupletsBuffer<Dev>* pixelQuintupletsBuffers;
 
     //CPU interface stuff
-    // objectRangesBuffer<alpaka::DevCpu>* rangesInCPU;
-    // hitsBuffer<alpaka::DevCpu>* hitsInCPU;
-    // miniDoubletsBuffer<alpaka::DevCpu>* mdsInCPU;
-    // segmentsBuffer<alpaka::DevCpu>* segmentsInCPU;
-    // tripletsBuffer<alpaka::DevCpu>* tripletsInCPU;
-    // trackCandidatesBuffer<alpaka::DevCpu>* trackCandidatesInCPU;
-    // modulesBuffer<alpaka::DevCpu>* modulesInCPU;
-    // modulesBuffer<alpaka::DevCpu>* modulesInCPUFull;
-    // quintupletsBuffer<alpaka::DevCpu>* quintupletsInCPU;
-    // pixelTripletsBuffer<alpaka::DevCpu>* pixelTripletsInCPU;
-    // pixelQuintupletsBuffer<alpaka::DevCpu>* pixelQuintupletsInCPU;
+    objectRangesBuffer<alpaka::DevCpu>* rangesInCPU;
+    hitsBuffer<alpaka::DevCpu>* hitsInCPU;
+    miniDoubletsBuffer<alpaka::DevCpu>* mdsInCPU;
+    segmentsBuffer<alpaka::DevCpu>* segmentsInCPU;
+    tripletsBuffer<alpaka::DevCpu>* tripletsInCPU;
+    trackCandidatesBuffer<alpaka::DevCpu>* trackCandidatesInCPU;
+    modulesBuffer<alpaka::DevCpu>* modulesInCPU;
+    modulesBuffer<alpaka::DevCpu>* modulesInCPUFull;
+    quintupletsBuffer<alpaka::DevCpu>* quintupletsInCPU;
+    pixelTripletsBuffer<alpaka::DevCpu>* pixelTripletsInCPU;
+    pixelQuintupletsBuffer<alpaka::DevCpu>* pixelQuintupletsInCPU;
 
     void init(bool verbose);
 
@@ -160,31 +160,31 @@ namespace SDL {
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
-    // objectRangesBuffer<alpaka::DevCpu>* getRanges();
-    // hitsBuffer<alpaka::DevCpu>* getHits();
-    // hitsBuffer<alpaka::DevCpu>* getHitsInCMSSW();
-    // miniDoubletsBuffer<alpaka::DevCpu>* getMiniDoublets();
-    // segmentsBuffer<alpaka::DevCpu>* getSegments();
-    // tripletsBuffer<alpaka::DevCpu>* getTriplets();
-    // quintupletsBuffer<alpaka::DevCpu>* getQuintuplets();
-    // trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidates();
-    // trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidatesInCMSSW();
-    // pixelTripletsBuffer<alpaka::DevCpu>* getPixelTriplets();
-    // pixelQuintupletsBuffer<alpaka::DevCpu>* getPixelQuintuplets();
-    // modulesBuffer<alpaka::DevCpu>* getModules();
-    // modulesBuffer<alpaka::DevCpu>* getFullModules();
+    objectRangesBuffer<alpaka::DevCpu>* getRanges();
+    hitsBuffer<alpaka::DevCpu>* getHits();
+    hitsBuffer<alpaka::DevCpu>* getHitsInCMSSW();
+    miniDoubletsBuffer<alpaka::DevCpu>* getMiniDoublets();
+    segmentsBuffer<alpaka::DevCpu>* getSegments();
+    tripletsBuffer<alpaka::DevCpu>* getTriplets();
+    quintupletsBuffer<alpaka::DevCpu>* getQuintuplets();
+    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidates();
+    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidatesInCMSSW();
+    pixelTripletsBuffer<alpaka::DevCpu>* getPixelTriplets();
+    pixelQuintupletsBuffer<alpaka::DevCpu>* getPixelQuintuplets();
+    modulesBuffer<alpaka::DevCpu>* getModules();
+    modulesBuffer<alpaka::DevCpu>* getFullModules();
   };
 
   //global stuff
-  // extern SDL::modules* modulesInGPU;
-  // extern SDL::modulesBuffer<Dev>* modulesBuffers;
-  // extern SDL::modulesBuffer<Dev> const* modulesBuffersES;  // not owned const buffers
+  extern SDL::modules* modulesInGPU;
+  extern SDL::modulesBuffer<Dev>* modulesBuffers;
+  extern SDL::modulesBuffer<Dev> const* modulesBuffersES;  // not owned const buffers
   extern uint16_t nModules;
   extern uint16_t nLowerModules;
   void initModules(const char* moduleMetaDataFilePath = "data/centroid.txt");  //read from file and init
   void freeModules();
   void initModulesHost();  //read from file and init
-  // extern std::shared_ptr<SDL::pixelMap> pixelMapping;
+  extern std::shared_ptr<SDL::pixelMap> pixelMapping;
   unsigned int getBackend();
 }  // namespace SDL
 #endif

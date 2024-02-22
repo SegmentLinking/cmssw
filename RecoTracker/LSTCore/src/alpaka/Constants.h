@@ -74,13 +74,22 @@ namespace SDL {
 //   using QueueAcc = alpaka::Queue<Acc, QueueProperty>;
 // #endif
 
+  // auto const& hostDevices = cms::alpakatools::devices<alpaka_common::PltfHost>();
+  // if (hostDevices.empty()) {
+  //   printf("No host device was found\n");
+  //   std::exit(1);
+  // }
+  // auto const devHost = hostDevices[0];
+  auto const devHost = alpaka::getDevByIdx<alpaka::DevCpu>(0u);
+
   using QueueAcc = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
-  auto const& devices = cms::alpakatools::devices<Platform>();
-  if (devices.empty()) {
-    printf("No devices available on the platform " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) "\n");
-    std::exit(1);
-  }
-  auto const devAcc = devices[0];
+  // auto const& devices = cms::alpakatools::devices<ALPAKA_ACCELERATOR_NAMESPACE::Platform>();
+  // if (devices.empty()) {
+  //   printf("No devices available on the platform " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) "\n");
+  //   std::exit(1);
+  // }
+  // auto const devAcc = devices[0];
+  auto const devAcc = alpaka::getDevByIdx<Acc>(0u);
 
   // Buffer type for allocations where auto type can't be used.
   template <typename TDev, typename TData>
