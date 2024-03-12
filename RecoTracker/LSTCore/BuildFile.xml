@@ -1,0 +1,8 @@
+<use name="alpaka"/>
+<use name="boost_header"/>
+<use name="root"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<flags ALPAKA_BACKENDS="serial cuda"/>
+<export>
+  <lib name="1"/>
+</export>
