@@ -1,4 +1,4 @@
-#include <SDL/Module.h>
+#include <RecoTracker/LSTCore/interface/Module.h>
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/typelookup.h"
 
 // Temporary hack: The DevHost instantiation is needed in both CPU and GPU plugins,
