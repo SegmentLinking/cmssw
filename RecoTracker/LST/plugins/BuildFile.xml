@@ -12,6 +12,7 @@
   <use name="MagneticField/Engine"/>
   <use name="MagneticField/Records"/>
   <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
   <use name="RecoTracker/TkSeedingLayers"/>
   <use name="RecoTracker/TkSeedGenerator"/>
   <use name="RecoTracker/Record"/>
