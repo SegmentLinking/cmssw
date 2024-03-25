@@ -19,7 +19,7 @@
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
-#include "RecoTracker/LSTCore/interface/LST.h"
+#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

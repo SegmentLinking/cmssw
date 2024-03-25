@@ -8,9 +8,9 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include <RecoTracker/LSTCore/interface/Module.h>
-#include <RecoTracker/LSTCore/interface/ModuleMethods.h>
-#include <RecoTracker/LSTCore/interface/LST.h>
+#include <RecoTracker/LSTCore/interface/alpaka/Module.h>
+#include <RecoTracker/LSTCore/interface/alpaka/ModuleMethods.h>
+#include <RecoTracker/LSTCore/interface/alpaka/LST.h>
 
 namespace cms::alpakatools {
   template <>
