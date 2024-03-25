@@ -1,1 +1,1 @@
-../../SDL/Triplet.h
+../../TrackLooper/SDL/Triplet.h

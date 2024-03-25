@@ -1,1 +1,0 @@
-../SDL/Triplet.h

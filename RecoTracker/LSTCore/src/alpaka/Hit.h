@@ -1,1 +1,1 @@
-../../SDL/Hit.h
+../../TrackLooper/SDL/Hit.h

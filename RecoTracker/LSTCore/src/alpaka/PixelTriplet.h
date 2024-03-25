@@ -1,1 +1,1 @@
-../../SDL/PixelTriplet.h
+../../TrackLooper/SDL/PixelTriplet.h
