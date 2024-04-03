@@ -1,1 +1,0 @@
-../../TrackLooper/SDL/Triplet.h

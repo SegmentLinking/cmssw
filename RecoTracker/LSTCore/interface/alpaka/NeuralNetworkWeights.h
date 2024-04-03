@@ -1,1 +1,0 @@
-../../TrackLooper/SDL/NeuralNetworkWeights.h
