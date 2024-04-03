@@ -48,7 +48,7 @@ void LSTModulesDevESProducer::fillDescriptions(edm::ConfigurationDescriptions &d
   std::optional<SDL::modulesBuffer<alpaka_common::DevHost>> LSTModulesDevESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
     SDL::modulesBuffer<alpaka_common::DevHost> modules(cms::alpakatools::host());
     alpaka::QueueCpuBlocking queue(cms::alpakatools::host());
-    SDL::LST::loadAndFillES(queue, &modules);
+    SDL::LST<SDL::Acc>::loadAndFillES(queue, &modules);
     return modules;
 }
 

@@ -40,9 +40,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
 
       auto const& modulesData = setup.getData(modulesESToken_);
-      SDL::modulesBuffersES = &modulesData;
-      SDL::modulesInGPU->setData(modulesData);
       lst_.run(event.queue(),
+               &modulesData,
                verbose_,
                pixelSeeds.px(),
                pixelSeeds.py(),
@@ -89,7 +88,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const int verbose_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
-    SDL::LST lst_;
+    SDL::LST<SDL::Acc> lst_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
