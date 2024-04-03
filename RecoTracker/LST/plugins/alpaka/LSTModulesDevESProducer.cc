@@ -9,7 +9,6 @@
 
 // LST includes
 #include <RecoTracker/LSTCore/interface/alpaka/Module.h>
-#include <RecoTracker/LSTCore/interface/alpaka/ModuleMethods.h>
 #include <RecoTracker/LSTCore/interface/alpaka/LST.h>
 
 namespace cms::alpakatools {
