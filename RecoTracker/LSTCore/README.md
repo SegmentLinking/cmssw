@@ -16,14 +16,13 @@ git remote add SegLink https://github.com/SegmentLinking/cmssw.git
 git fetch SegLink ${CMSSW_BRANCH}:SegLink_cmssw
 git checkout SegLink_cmssw
 git cms-addpkg RecoTracker/LST RecoTracker/LSTCore Configuration/ProcessModifiers RecoTracker/ConversionSeedGenerators RecoTracker/FinalTrackSelectors RecoTracker/IterativeTracking
+git submodule update --init --recursive
 scram b -j 8
 ```
 
 ## How it works
 
-The `SDL` and `data` directories of the [TrackLooper](https://github.com/SegmentLinking/TrackLooper) are copy-pasted into `RecoTracker/LSTCore` and the rest of the structure is set up using symlinks. Since all the warnings that were treated as errors are now resolved, it was just a matter of writing some simple `BuildFile.xml` file.
-
-If we do decide to go with this option, I think we shouldn't actually include the `SDL` and `data` directories in this repo (and add a `.gitignore` to prevent them from being added), but instead the CI or the person doing the tests would copy them over before compiling.
+The [TrackLooper repository](https://github.com/SegmentLinking/TrackLooper) is included as a git submodule in `RecoTracker/LSTCore` and the rest of the structure is set up using symlinks. Since we have made a lot of progress getting the code ready for CMSSW, it was just a matter of writing a simple `BuildFile.xml` file.
 
 ## Benefits
 
@@ -40,4 +39,4 @@ If we do decide to go with this option, I think we shouldn't actually include th
 
 - There are a few minor changes that need to be made to the current LST package to get it to work with LSTCore.
 - At some point we'll have to figure out how to properly integrate the `data` directory.
-- We should try to separate the actual stuff that needs to be in the `interface` folder versus the rest. For now I just put everything in there since they are very interconnected. Ideally, it should be `LST.h` and likely `Module.h`.
+
