@@ -34,6 +34,7 @@
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoTracker/LST"/>
   <use name="RecoTracker/Record"/>
+  <flags CXXFLAGS="-DLST_STANDALONE"/>
   <flags ALPAKA_BACKENDS="serial"/>
   <flags EDM_PLUGIN="1"/>
 </library>
@@ -48,6 +49,7 @@
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoTracker/LST"/>
   <use name="RecoTracker/Record"/>
+  <flags CXXFLAGS="-DLST_STANDALONE"/>
   <flags ALPAKA_BACKENDS="cuda"/>
   <flags EDM_PLUGIN="1"/>
 </library>

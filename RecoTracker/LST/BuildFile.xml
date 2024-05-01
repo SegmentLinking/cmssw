@@ -3,6 +3,7 @@
 <use name="lst_headers"/>
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
+<flags CXXFLAGS="-DLST_STANDALONE"/>
 <flags ALPAKA_BACKENDS="cuda serial"/>
 <export>
   <lib name="1"/>
