@@ -8,9 +8,8 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include <SDL/Module.h>
-#include <SDL/ModuleMethods.h>
-#include <SDL/LST.h>
+#include <RecoTracker/LSTCore/interface/alpaka/Module.h>
+#include <RecoTracker/LSTCore/interface/alpaka/LST.h>
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 

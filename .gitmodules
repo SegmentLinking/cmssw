@@ -1,0 +1,3 @@
+[submodule "RecoTracker/LSTCore/TrackLooper"]
+	path = RecoTracker/LSTCore/TrackLooper
+	url = https://github.com/SegmentLinking/TrackLooper
