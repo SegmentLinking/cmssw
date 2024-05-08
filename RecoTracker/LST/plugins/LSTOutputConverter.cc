@@ -179,8 +179,8 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
       }
       if (lstTC_trackCandidateType[i] == LSTOutput::LSTTCType::T5)
         seed = seeds[0];
-      outputTS.emplace_back(seeds[0]);
-      auto const& ss = seeds[0].startingState();
+      outputTS.emplace_back(seed);
+      auto const& ss = seed.startingState();
       LogDebug("LSTOutputConverter") << "Created a seed with " << seed.nHits() << " " << ss.detId() << " " << ss.pt()
                                      << " " << ss.parameters().vector() << " " << ss.error(0);
     } else {
