@@ -255,9 +255,8 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
     }
   }
 
-  LogDebug("LSTOutputConverter") << "done with conversion: Track candidate output size = "
-                                 << outputpTC.size() << " (p* objects) + "
-                                 <<  outputT5TC.size() << " (T5 objects)";
+  LogDebug("LSTOutputConverter") << "done with conversion: Track candidate output size = " << outputpTC.size()
+                                 << " (p* objects) + " << outputT5TC.size() << " (T5 objects)";
   iEvent.emplace(trajectorySeedPutToken_, std::move(outputTS));
   iEvent.emplace(trajectorySeedpLSPutToken_, std::move(outputpLSTS));
   iEvent.emplace(trackCandidatePutToken_, std::move(outputTC));

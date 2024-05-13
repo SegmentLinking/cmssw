@@ -34,7 +34,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           lstOutputToken_{produces()} {}
 
     void acquire(device::Event const& event, device::EventSetup const& setup) override {
-
       // Inputs
       auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
       auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
@@ -65,7 +64,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     void produce(device::Event& event, device::EventSetup const&) override {
-
       // Output
       LSTOutput lstOutput;
       lstOutput.setLSTOutputTraits(lst_.hits(), lst_.len(), lst_.seedIdx(), lst_.trackCandidateType());
