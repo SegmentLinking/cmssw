@@ -73,6 +73,12 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       seedCreator_(SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator",
                                                      iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"),
                                                      consumesCollector())),
+      // FIXME: need to make creation configurable:
+      // - A toggle to not produce TSs at all could be useful to save memory;
+      //   it won't affect speed though
+      // - The minimal set for TCs is t5TCsLST, pTTCsLST and pLSTCsLST.
+      //   That would complicate the handling of collections though,
+      //   so it is deferred to when we have a clearer picture of what's needed.
       trajectorySeedPutToken_(produces<TrajectorySeedCollection>("")),
       trajectorySeedpLSPutToken_(produces<TrajectorySeedCollection>("pLSTSsLST")),
       trackCandidatePutToken_(produces<TrackCandidateCollection>("")),
@@ -231,20 +237,20 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
         if (!includeT5s_) {
           continue;
         } else {
-          auto TC = TrackCandidate(recHits, seed, st);
-          outputTC.emplace_back(TC);
-          outputT5TC.emplace_back(TC);
-          outputNopLSTC.emplace_back(TC);
+          auto tc = TrackCandidate(recHits, seed, st);
+          outputTC.emplace_back(tc);
+          outputT5TC.emplace_back(tc);
+          outputNopLSTC.emplace_back(tc);
         }
       } else {
-        auto TC = TrackCandidate(recHits, seed, st);
-        outputTC.emplace_back(TC);
-        outputpTC.emplace_back(TC);
+        auto tc = TrackCandidate(recHits, seed, st);
+        outputTC.emplace_back(tc);
+        outputpTC.emplace_back(tc);
         if (lstTC_trackCandidateType[i] != LSTOutput::LSTTCType::pLS) {
-          outputNopLSTC.emplace_back(TC);
-          outputpTTC.emplace_back(TC);
+          outputNopLSTC.emplace_back(tc);
+          outputpTTC.emplace_back(tc);
         } else {
-          outputpLSTC.emplace_back(TC);
+          outputpLSTC.emplace_back(tc);
         }
       }
     } else {

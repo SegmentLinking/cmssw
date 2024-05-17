@@ -41,8 +41,6 @@ trackingIters01.toModify(convClusters,
 )
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 (trackingIters01 & trackingPhase2PU140 & trackingLST).toModify(convClusters,
-                         trajectories          = "highPtTripletStepTracks",
-                         oldClusterRemovalInfo = "highPtTripletStepClusters",
                          overrideTrkQuals      = ""
 )
 

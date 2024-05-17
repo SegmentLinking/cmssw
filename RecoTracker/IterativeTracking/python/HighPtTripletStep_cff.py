@@ -294,11 +294,11 @@ _highPtTripletStepTracks_LST = RecoTracker.FinalTrackSelectors.trackListMerger_c
     TrackProducers     = ['highPtTripletStepLSTpTracks',
                           'highPtTripletStepLSTT5Tracks'],
     hasSelector        = [1,0],
-    indivShareFrac = cms.vdouble(0.1,0.1),
+    indivShareFrac     = [0.1,0.1],
     selectedTrackQuals = ['highPtTripletStepSelector:highPtTripletStep',
                           'highPtTripletStepSelectorLSTT5:highPtTripletStepLSTT5'],
-    copyExtras = cms.untracked.bool(True),
-    copyMVA = cms.bool(False),
+    copyExtras         = True,
+    copyMVA            = False,
     setsToMerge        = [cms.PSet( tLists=cms.vint32(0,1), pQual=cms.bool(True) )]
 )
 (trackingPhase2PU140 & trackingLST).toReplaceWith(highPtTripletStepTracks, _highPtTripletStepTracks_LST)
