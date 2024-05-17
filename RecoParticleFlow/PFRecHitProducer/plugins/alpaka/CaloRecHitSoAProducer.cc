@@ -25,7 +25,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     CaloRecHitSoAProducer(edm::ParameterSet const& config)
         : recHitsToken_(consumes(config.getParameter<edm::InputTag>("src"))),
           deviceToken_(produces()),
-          synchronise_(config.getUntrackedParameter<bool>("synchronise")) {}
+          synchronise_(config.getUntrackedParameter<bool>("synchronise")) {
+      // Workaround until the ProductID problem in issue https://github.com/cms-sw/cmssw/issues/44643 is fixed
+#ifdef ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED
+      producesTemporarily("edm::DeviceProduct<alpaka_cuda_async::reco::CaloRecHitDeviceCollection>");
+#endif
+    }
 
     void produce(edm::StreamID sid, device::Event& event, device::EventSetup const&) const override {
       const edm::SortedCollection<typename CAL::CaloRecHitType>& recHits = event.get(recHitsToken_);
@@ -52,7 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
-      desc.add<edm::InputTag>("src")->setComment("Input calorimeter rec hit collection");
+      desc.add<edm::InputTag>("src", edm::InputTag(""))->setComment("Input calorimeter rec hit collection");
       desc.addUntracked<bool>("synchronise", false)
           ->setComment("Add synchronisation point after execution (for benchmarking asynchronous execution)");
       descriptions.addWithDefaultLabel(desc);

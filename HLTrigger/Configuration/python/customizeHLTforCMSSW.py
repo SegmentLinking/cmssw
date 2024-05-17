@@ -231,13 +231,34 @@ def customiseForOffline(process):
     for prod in esproducers_by_type(process, 'OnlineBeamSpotESProducer'):
         prod.timeThreshold = int(1e6)
 
+    # For running HLT offline and relieve the strain on Frontier so it will no longer inject a
+    # transaction id which tells Frontier to add a unique "&freshkey" to many query URLs.
+    # That was intended as a feature to only be used by the Online HLT, to guarantee that fresh conditions
+    # from the database were loaded at each Lumi section
+    # Seee CMSHLT-3123 for further details
+    if hasattr(process, 'GlobalTag'):
+        # Set ReconnectEachRun and RefreshEachRun to False
+        process.GlobalTag.ReconnectEachRun = cms.untracked.bool(False)
+        process.GlobalTag.RefreshEachRun = cms.untracked.bool(False)
+
+        if hasattr(process.GlobalTag, 'toGet'):
+            # Filter out PSet objects containing only 'record' and 'refreshTime'
+            process.GlobalTag.toGet = [
+                pset for pset in process.GlobalTag.toGet
+                if set(pset.parameterNames_()) != {'record', 'refreshTime'}
+            ]
+
     return process
 
+def checkHLTfor43774(process):
+    filt_types = ["HLTEgammaGenericFilter","HLTEgammaGenericQuadraticEtaFilter","HLTEgammaGenericQuadraticFilter","HLTElectronGenericFilter"]
+    absAbleVar = ["DEta","deta","DetaSeed","Dphi","OneOESuperMinusOneOP","OneOESeedMinusOneOP"]
+    for filt_type in filt_types:
+        for filt in filters_by_type(process, filt_type):
+            if filt.varTag.productInstanceLabel in absAbleVar:
+                if (filt.useAbs != cms.bool(True)):
+                    print('# TSG WARNING: check value of parameter "useAbs" in',filt,'(expect True but is False)!')
 
-def customizeHLTfor43885(process):
-    for producer in producers_by_type(process, "EgammaHLTClusterShapeProducer"):
-        if hasattr(producer, 'isIeta'):
-            delattr(producer, 'isIeta')
     return process
     
 # CMSSW version specific customizations
@@ -245,15 +266,9 @@ def customizeHLTforCMSSW(process, menuType="GRun"):
 
     process = customiseForOffline(process)
 
-    # Alpaka HLT
-    from Configuration.ProcessModifiers.alpaka_cff import alpaka 
-    from Configuration.Eras.Modifier_run3_common_cff import run3_common
-    from HLTrigger.Configuration.customizeHLTforAlpaka import customizeHLTforAlpaka
-    (alpaka & run3_common).makeProcessModifier(customizeHLTforAlpaka).apply(process)
-
     # add call to action function in proper order: newest last!
     # process = customiseFor12718(process)
 
-    process = customizeHLTfor43885(process)
+    process = checkHLTfor43774(process)
 
     return process

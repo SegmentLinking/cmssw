@@ -71,8 +71,10 @@ defaultOptions.outputCommands = None
 defaultOptions.inputEventContent = ''
 defaultOptions.dropDescendant = False
 defaultOptions.relval = None
+defaultOptions.prefix = None
 defaultOptions.profile = None
 defaultOptions.heap_profile = None
+defaultOptions.maxmem_profile = None
 defaultOptions.isRepacked = False
 defaultOptions.restoreRNDSeeds = False
 defaultOptions.donotDropOnInput = ''
@@ -324,37 +326,13 @@ class ConfigBuilder(object):
         Function to add the jemalloc heap  profile service so that you can dump in the middle
         of the run.
         """
-        profileOpts = self._options.profile.split(':')
+        profileOpts = []
         profilerStart = 1
         profilerInterval = 100
-        profilerFormat = None
+        profilerFormat = "jeprof_%s.heap"
         profilerJobFormat = None
 
-        if len(profileOpts):
-            #type, given as first argument is unused here
-            profileOpts.pop(0)
-        if len(profileOpts):
-            startEvent = profileOpts.pop(0)
-            if not startEvent.isdigit():
-                raise Exception("%s is not a number" % startEvent)
-            profilerStart = int(startEvent)
-        if len(profileOpts):
-            eventInterval = profileOpts.pop(0)
-            if not eventInterval.isdigit():
-                raise Exception("%s is not a number" % eventInterval)
-            profilerInterval = int(eventInterval)
-        if len(profileOpts):
-            profilerFormat = profileOpts.pop(0)
 
-
-        if not profilerFormat:
-            profilerFormat = "%s___%s___%%I.heap" % (
-                self._options.evt_type.replace("_cfi", ""),
-                hashlib.md5(
-                    (str(self._options.step) + str(self._options.pileup) + str(self._options.conditions) +
-                    str(self._options.datatier) + str(self._options.profileTypeLabel)).encode('utf-8')
-                ).hexdigest()
-            )
         if not profilerJobFormat and profilerFormat.endswith(".heap"):
             profilerJobFormat = profilerFormat.replace(".heap", "_EndOfJob.heap")
         elif not profilerJobFormat:
@@ -1125,8 +1103,8 @@ class ConfigBuilder(object):
             self.VALIDATIONDefaultCFF="Configuration/StandardSequences/ValidationHeavyIons_cff"
             self.VALIDATIONDefaultSeq=''
             self.EVTCONTDefaultCFF="Configuration/EventContent/EventContentHeavyIons_cff"
-            self.RECODefaultCFF="Configuration/StandardSequences/ReconstructionHeavyIons_cff"
-            self.RECODefaultSeq='reconstructionHeavyIons'
+            self.RECODefaultCFF="Configuration/StandardSequences/Reconstruction_cff"
+            self.RECODefaultSeq='reconstruction'
             self.ALCADefaultCFF = "Configuration/StandardSequences/AlCaRecoStreamsHeavyIons_cff"
             self.DQMOFFLINEDefaultCFF="DQMOffline/Configuration/DQMOfflineHeavyIons_cff"
             self.DQMDefaultSeq='DQMOfflineHeavyIons'
@@ -1818,12 +1796,17 @@ class ConfigBuilder(object):
     def prepare_NANO(self, stepSpec = '' ):
         print(f"in prepare_nano {stepSpec}")
         ''' Enrich the schedule with NANO '''
-        _,_nanoSeq,_nanoCff = self.loadDefaultOrSpecifiedCFF(stepSpec,self.NANODefaultCFF,self.NANODefaultSeq)
-        
-        # create full specified sequence using autoNANO 
+        if not '@' in stepSpec:
+            _,_nanoSeq,_nanoCff = self.loadDefaultOrSpecifiedCFF(stepSpec,self.NANODefaultCFF,self.NANODefaultSeq)
+        else:
+            _nanoSeq = stepSpec
+            _nanoCff = self.NANODefaultCFF
+
+        print(_nanoSeq)
+        # create full specified sequence using autoNANO
         from PhysicsTools.NanoAOD.autoNANO import autoNANO, expandNanoMapping
         # if not a autoNANO mapping, load an empty customization, which later will be converted into the default.
-        _nanoCustoms = _nanoSeq.split('+') if '@' in stepSpec else [''] 
+        _nanoCustoms = _nanoSeq.split('+') if '@' in stepSpec else ['']
         _nanoSeq = _nanoSeq.split('+')
         expandNanoMapping(_nanoSeq, autoNANO, 'sequence')
         expandNanoMapping(_nanoCustoms, autoNANO, 'customize')
@@ -1831,24 +1814,29 @@ class ConfigBuilder(object):
         _nanoSeq = list(sorted(set(_nanoSeq), key=_nanoSeq.index))
         _nanoCustoms = list(sorted(set(_nanoCustoms), key=_nanoCustoms.index))
         # replace empty sequence with default
-        _nanoSeq = [seq if seq!='' else self.NANODefaultSeq for seq in _nanoSeq]    
-        _nanoCustoms = [cust if cust!='' else self.NANODefaultCustom for cust in _nanoCustoms]   
+        _nanoSeq = [seq if seq!='' else f"{self.NANODefaultCFF}.{self.NANODefaultSeq}" for seq in _nanoSeq]
+        _nanoCustoms = [cust if cust!='' else self.NANODefaultCustom for cust in _nanoCustoms]
         # build and inject the sequence
         if len(_nanoSeq) < 1 and '@' in stepSpec:
-            raise Exception(f'The specified mapping: {stepSpec} generates an empty NANO sequence. Please provide a valid mappign')
+            raise Exception(f'The specified mapping: {stepSpec} generates an empty NANO sequence. Please provide a valid mapping')
         _seqToSchedule = []
         for _subSeq in _nanoSeq:
             if '.' in _subSeq:
                 _cff,_seq = _subSeq.split('.')
+                print("NANO: scheduling:",_seq,"from",_cff)
                 self.loadAndRemember(_cff)
                 _seqToSchedule.append(_seq)
+            elif '/' in _subSeq:
+                self.loadAndRemember(_subSeq)
+                _seqToSchedule.append(self.NANODefaultSeq)
             else:
+                print("NANO: scheduling:",_subSeq)
                 _seqToSchedule.append(_subSeq)
         self.scheduleSequence('+'.join(_seqToSchedule), 'nanoAOD_step')
-        
+
         # add the customisations
         for custom in _nanoCustoms:
-            custom_path = custom if '.' in custom else '.'.join([_nanoCff,custom]) 
+            custom_path = custom if '.' in custom else '.'.join([_nanoCff,custom])
             # customization order can be important for NANO, here later specified customise take precedence
             self._options.customisation_file.append(custom_path)
         if self._options.hltProcess:

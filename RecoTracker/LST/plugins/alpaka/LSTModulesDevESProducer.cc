@@ -8,18 +8,9 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include <RecoTracker/LSTCore/interface/alpaka/Module.h>
-#include <RecoTracker/LSTCore/interface/alpaka/LST.h>
+#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
-namespace cms::alpakatools {
-  template <>
-  struct CopyToDevice<SDL::modulesBuffer<alpaka_common::DevHost>> {
-    template <typename TQueue>
-    static auto copyAsync(TQueue &queue, SDL::modulesBuffer<alpaka_common::DevHost> const &srcData) {
-      return SDL::modulesBuffer<alpaka::Dev<TQueue>>(queue, srcData);
-    }
-  };
-}  //namespace cms::alpakatools
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
@@ -28,8 +19,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
 
-    std::optional<SDL::modulesBuffer<alpaka_common::DevHost>> produce(const TrackerRecoGeometryRecord &iRecord);
-  };
+  std::optional<SDL::modulesBuffer<SDL::Dev>> produce(device::Record<TrackerRecoGeometryRecord> const& iRecord);
+
+};
 
   LSTModulesDevESProducer::LSTModulesDevESProducer(const edm::ParameterSet &iConfig) : ESProducer(iConfig) {
     setWhatProduced(this, iConfig.getParameter<std::string>("ComponentName"));
@@ -41,10 +33,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     descriptions.addWithDefaultLabel(desc);
   }
 
-  std::optional<SDL::modulesBuffer<alpaka_common::DevHost>> LSTModulesDevESProducer::produce(
-      const TrackerRecoGeometryRecord &iRecord) {
-    SDL::modulesBuffer<alpaka_common::DevHost> modules(cms::alpakatools::host());
-    alpaka::QueueCpuBlocking queue(cms::alpakatools::host());
+
+  std::optional<SDL::modulesBuffer<SDL::Dev>> LSTModulesDevESProducer::produce(device::Record<TrackerRecoGeometryRecord> const& iRecord) {
+    SDL::QueueAcc& queue = iRecord.queue();
+    SDL::modulesBuffer<SDL::Dev> modules(alpaka::getDev(queue));
     SDL::LST<SDL::Acc>::loadAndFillES(queue, &modules);
     return modules;
   }

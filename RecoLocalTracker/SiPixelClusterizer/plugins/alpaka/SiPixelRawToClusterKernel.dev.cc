@@ -488,9 +488,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           alpaka::syncBlockThreads(acc);
         }
 #ifdef GPU_DEBUG
-        ALPAKA_ASSERT_ACC(0 == clus_view[0].moduleStart());
-        auto c0 = std::min(maxHitsInModule, clus_view[1].clusModuleStart());
-        ALPAKA_ASSERT_ACC(c0 == clus_view[1].moduleStart());
+        ALPAKA_ASSERT_ACC(0 == clus_view[1].moduleStart());
+        auto c0 = std::min(maxHitsInModule, clus_view[2].clusModuleStart());
+        ALPAKA_ASSERT_ACC(c0 == clus_view[2].moduleStart());
         ALPAKA_ASSERT_ACC(clus_view[1024].moduleStart() >= clus_view[1023].moduleStart());
         ALPAKA_ASSERT_ACC(clus_view[1025].moduleStart() >= clus_view[1024].moduleStart());
         ALPAKA_ASSERT_ACC(clus_view[numberOfModules].moduleStart() >= clus_view[1025].moduleStart());
@@ -504,13 +504,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (i == bpix2 || i == fpix1)
             printf("moduleStart %d %d\n", i, clus_view[i].moduleStart());
         }
+
 #endif
-        // avoid overflow
-        constexpr auto MAX_HITS = TrackerTraits::maxNumberOfHits;
-        for (uint32_t i : cms::alpakatools::independent_group_elements(acc, numberOfModules + 1)) {
-          if (clus_view[i].clusModuleStart() > MAX_HITS)
-            clus_view[i].clusModuleStart() = MAX_HITS;
-        }
 
       }  // end of FillHitsModuleStart kernel operator()
     };   // end of FillHitsModuleStart struct
@@ -641,25 +636,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
         alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
 
-        // TODO
-        // - we are fixing this here since it is used at compile time also in the kernel
-        // - put maxIter in the Geometry traits
-        constexpr auto threadsOrElementsFindClus = 256;
-
+        const auto elementsPerBlockFindClus = FindClus<TrackerTraits>::maxElementsPerBlock;
         const auto workDivMaxNumModules =
-            cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, threadsOrElementsFindClus);
-        // NB: With present FindClus() / chargeCut() algorithm,
-        // threadPerBlock (GPU) or elementsPerThread (CPU) = 256 show optimal performance.
-        // Though, it does not have to be the same number for CPU/GPU cases.
-
+            cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, elementsPerBlockFindClus);
 #ifdef GPU_DEBUG
-        std::cout << " FindClus kernel launch with " << numberOfModules << " blocks of " << threadsOrElementsFindClus
+        std::cout << " FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
                   << " threadsPerBlockOrElementsPerThread\n";
 #endif
-
         alpaka::exec<Acc1D>(
             queue, workDivMaxNumModules, FindClus<TrackerTraits>{}, digis_d->view(), clusters_d->view(), wordCounter);
-
 #ifdef GPU_DEBUG
         alpaka::wait(queue);
 #endif
@@ -740,14 +725,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           cms::alpakatools::make_device_view(alpaka::getDev(queue), clusters_d->view().moduleStart(), 1u);
       alpaka::memcpy(queue, nModules_Clusters_h, moduleStartFirstElement);
 
-      /// should be larger than maxPixInModule/16 aka (maxPixInModule/maxiter in the kernel)
-
-      const auto threadsPerBlockFindClus = 256;
-      const auto workDivMaxNumModules = cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, threadsPerBlockFindClus);
-
+      const auto elementsPerBlockFindClus = FindClus<TrackerTraits>::maxElementsPerBlock;
+      const auto workDivMaxNumModules =
+          cms::alpakatools::make_workdiv<Acc1D>(numberOfModules, elementsPerBlockFindClus);
 #ifdef GPU_DEBUG
       alpaka::wait(queue);
-      std::cout << "FindClus kernel launch with " << numberOfModules << " blocks of " << threadsPerBlockFindClus
+      std::cout << "FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
                 << " threadsPerBlockOrElementsPerThread\n";
 #endif
       alpaka::exec<Acc1D>(

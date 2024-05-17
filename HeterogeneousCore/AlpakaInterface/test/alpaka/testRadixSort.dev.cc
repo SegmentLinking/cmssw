@@ -3,6 +3,7 @@
 #include <chrono>
 using namespace std::chrono_literals;
 #include <cstdint>
+#include <cstdlib>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -11,6 +12,9 @@ using namespace std::chrono_literals;
 #include <set>
 #include <type_traits>
 
+#include <alpaka/alpaka.hpp>
+
+#include "FWCore/Utilities/interface/stringize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/radixSort.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/devices.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -83,7 +87,6 @@ void truncate(T& t) {
 template <typename T, int NS = sizeof(T), typename U = T, typename LL = long long>
 void go(Queue& queue, bool useShared) {
   std::mt19937 eng;
-  //std::mt19937 eng2;
   auto rgen = RS<T>::ud();
 
   std::chrono::high_resolution_clock::duration delta = 0ns;
@@ -91,7 +94,6 @@ void go(Queue& queue, bool useShared) {
   constexpr int blockSize = 256 * 32;
   constexpr int N = blockSize * blocks;
   auto v_h = cms::alpakatools::make_host_buffer<T[]>(queue, N);
-  //uint16_t ind_h[N];
 
   constexpr bool sgn = T(-1) < T(0);
   std::cout << "Will sort " << N << (sgn ? " signed" : " unsigned")
@@ -157,7 +159,6 @@ void go(Queue& queue, bool useShared) {
     auto workdiv = make_workdiv<Acc1D>(blocks, ntXBl);
     if (useShared)
       // The original CUDA version used to call a kernel with __launch_bounds__(256, 4) specifier
-      //
       alpaka::enqueue(queue,
                       alpaka::createTaskKernel<Acc1D>(workdiv,
                                                       radixSortMultiWrapper<U, NS>{},
@@ -221,7 +222,6 @@ void go(Queue& queue, bool useShared) {
                     << offsets_h[ib + 1] - 1 << "] j=" << j << " ind[j]=" << ind_h[j]
                     << " (k1 < k2) : a1=" << (int64_t)a[ind_h[j]] << " k1=" << (int64_t)k1
                     << " a2= " << (int64_t)a[ind_h[j - 1]] << " k2=" << (int64_t)k2 << std::endl;
-          //sleep(2);
           assert(false);
         }
       }
@@ -232,7 +232,6 @@ void go(Queue& queue, bool useShared) {
       if (inds.size() != (offsets_h[ib + 1] - offsets_h[ib]))
         std::cout << "error " << i << ' ' << ib << ' ' << inds.size() << "!=" << (offsets_h[ib + 1] - offsets_h[ib])
                   << std::endl;
-      //
       assert(inds.size() == (offsets_h[ib + 1] - offsets_h[ib]));
     }
   }  // 50 times
@@ -244,9 +243,9 @@ int main() {
   // get the list of devices on the current platform
   auto const& devices = cms::alpakatools::devices<Platform>();
   if (devices.empty()) {
-    std::cout << "No devices available on the platform " << EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE)
-              << ", the test will be skipped.\n";
-    return 0;
+    std::cerr << "No devices available for the " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) " backend, "
+      "the test will be skipped.\n";
+    exit(EXIT_FAILURE);
   }
 
   for (auto const& device : devices) {

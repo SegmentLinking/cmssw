@@ -4,6 +4,9 @@
 #define CATCH_CONFIG_MAIN
 #include <catch.hpp>
 
+#include <alpaka/alpaka.hpp>
+
+#include "FWCore/Utilities/interface/stringize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
@@ -22,7 +25,7 @@ struct update {
       auto m = i % 11;
       m = m % 6 + 1;  // max 6, no 0
       auto c = dc->inc_add(acc, m);
-      assert(c.first < n);
+      ALPAKA_ASSERT_ACC(c.first < n);
       ind[c.first] = c.second;
       for (uint32_t j = c.second; j < c.second + m; ++j)
         cont[j] = i;
@@ -34,7 +37,7 @@ struct finalize {
   template <typename TAcc>
   ALPAKA_FN_ACC void operator()(
       const TAcc &acc, AtomicPairCounter const *dc, uint32_t *ind, uint32_t *cont, uint32_t n) const {
-    assert(dc->get().first == n);
+    ALPAKA_ASSERT_ACC(dc->get().first == n);
     ind[n] = dc->get().second;
   }
 };
@@ -43,9 +46,8 @@ TEST_CASE("Standard checks of " ALPAKA_TYPE_ALIAS_NAME(alpakaTestAtomicPair), s_
   SECTION("AtomicPairCounter") {
     auto const &devices = cms::alpakatools::devices<Platform>();
     if (devices.empty()) {
-      std::cout << "No devices available on the platform " << EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE)
-                << ", the test will be skipped.\n";
-      REQUIRE(not devices.empty());
+      FAIL("No devices available for the " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) "backend, "
+           "the test will be skipped.");
     }
 
     // run the test on each device

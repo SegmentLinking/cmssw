@@ -701,7 +701,6 @@ namespace edm {
     if (preallocations_.numberOfRuns() > 1) {
       warnAboutModulesRequiringRunSynchronization();
     }
-    warnAboutLegacyModules();
 
     //NOTE:  This implementation assumes 'Job' means one call
     // the EventProcessor::run
@@ -1669,7 +1668,7 @@ namespace edm {
                                       edm::WaitingTaskHolder iHolder) {
     actReg_->esSyncIOVQueuingSignal_.emit(iSync);
 
-    auto status = std::make_shared<LuminosityBlockProcessingStatus>(preallocations_.numberOfStreams());
+    auto status = std::make_shared<LuminosityBlockProcessingStatus>();
     chain::first([this, &iSync, &status](auto nextTask) {
       espController_->runOrQueueEventSetupForInstanceAsync(iSync,
                                                            nextTask,
@@ -1768,12 +1767,12 @@ namespace edm {
                             streamQueuesInserter_.push(*holder.group(), [this, status, holder, &es]() mutable {
                               for (unsigned int i = 0; i < preallocations_.numberOfStreams(); ++i) {
                                 streamQueues_[i].push(*holder.group(), [this, i, status, holder, &es]() mutable {
+                                  if (!status->shouldStreamStartLumi()) {
+                                    return;
+                                  }
                                   streamQueues_[i].pause();
 
                                   auto& event = principalCache_.eventPrincipal(i);
-                                  //We need to be sure that 'status' and its internal shared_ptr<LuminosityBlockPrincipal> are only
-                                  // held by the container as this lambda may not finish executing before all the tasks it
-                                  // spawns have already started to run.
                                   auto eventSetupImpls = &status->eventSetupImpls();
                                   auto lp = status->lumiPrincipal().get();
                                   streamLumiStatus_[i] = std::move(status);
@@ -1980,6 +1979,7 @@ namespace edm {
       if (streamLumiActive_ > 0) {
         FinalWaitingTask globalWaitTask{taskGroup_};
         assert(streamLumiActive_ == preallocations_.numberOfStreams());
+        streamLumiStatus_[0]->noMoreEventsInLumi();
         streamLumiStatus_[0]->setCleaningUpAfterException(cleaningUpAfterException);
         for (unsigned int i = 0; i < preallocations_.numberOfStreams(); ++i) {
           streamEndLumiAsync(WaitingTaskHolder{taskGroup_, &globalWaitTask}, i);
@@ -2306,6 +2306,7 @@ namespace edm {
           // the stream will stop processing this lumi now
           if (status->eventProcessingState() == LuminosityBlockProcessingStatus::EventProcessingState::kStopLumi) {
             if (not status->haveStartedNextLumiOrEndedRun()) {
+              status->noMoreEventsInLumi();
               status->startNextLumiOrEndRun();
               if (lastTransitionType() == InputSource::ItemType::IsLumi && !iTask.taskHasFailed()) {
                 CMS_SA_ALLOW try {
@@ -2493,21 +2494,6 @@ namespace edm {
         if (not s) {
           s = std::make_unique<LogSystem>("ModulesSynchingOnRuns");
           (*s) << "The following modules require synchronizing on Run boundaries:";
-        }
-        (*s) << "\n  " << worker->description()->moduleName() << " " << worker->description()->moduleLabel();
-      }
-    }
-  }
-
-  void EventProcessor::warnAboutLegacyModules() const {
-    std::unique_ptr<LogSystem> s;
-    for (auto worker : schedule_->allWorkers()) {
-      if (worker->moduleConcurrencyType() == Worker::kLegacy) {
-        if (not s) {
-          s = std::make_unique<LogSystem>("LegacyModules");
-          (*s) << "The following legacy modules are configured. Support for legacy modules\n"
-                  "is going to end soon. These modules need to be converted to have type\n"
-                  "edm::global, edm::stream, edm::one, or in rare cases edm::limited.";
         }
         (*s) << "\n  " << worker->description()->moduleName() << " " << worker->description()->moduleLabel();
       }

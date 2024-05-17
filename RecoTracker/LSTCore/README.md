@@ -5,7 +5,7 @@
 This branch of CMSSW contains all of the relevant LST code and can be built entirely within CMSSW. The setup process is what you would expect.
 
 ```bash
-export CMSSW_VERSION=CMSSW_14_1_0_pre0
+export CMSSW_VERSION=CMSSW_14_1_0_pre3
 export CMSSW_BRANCH=${CMSSW_VERSION}_LST_X_LSTCore
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cmsrel $CMSSW_VERSION

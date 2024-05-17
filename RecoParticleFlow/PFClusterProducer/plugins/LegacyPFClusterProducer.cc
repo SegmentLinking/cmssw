@@ -32,7 +32,6 @@
 #include "DataFormats/ParticleFlowReco/interface/PFRecHitFractionHostCollection.h"
 #include "HeterogeneousCore/CUDACore/interface/JobConfigurationGPURecord.h"
 #include "RecoParticleFlow/PFClusterProducer/interface/PFCPositionCalculatorBase.h"
-#include "RecoParticleFlow/PFClusterProducer/interface/PFClusterParamsHostCollection.h"
 
 class LegacyPFClusterProducer : public edm::stream::EDProducer<> {
 public:
@@ -40,7 +39,6 @@ public:
       : pfClusterSoAToken_(consumes(config.getParameter<edm::InputTag>("src"))),
         pfRecHitFractionSoAToken_(consumes(config.getParameter<edm::InputTag>("src"))),
         InputPFRecHitSoA_Token_{consumes(config.getParameter<edm::InputTag>("PFRecHitsLabelIn"))},
-        pfClusParamsToken_(esConsumes(config.getParameter<edm::ESInputTag>("pfClusterParams"))),
         legacyPfClustersToken_(produces()),
         recHitsLabel_(consumes(config.getParameter<edm::InputTag>("recHitsSource"))),
         hcalCutsToken_(esConsumes<HcalPFCuts, HcalPFCutsRcd>(edm::ESInputTag("", "withTopo"))),
@@ -66,10 +64,9 @@ public:
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
-    desc.add<edm::InputTag>("src");
-    desc.add<edm::InputTag>("PFRecHitsLabelIn");
-    desc.add<edm::ESInputTag>("pfClusterParams");
-    desc.add<edm::InputTag>("recHitsSource");
+    desc.add<edm::InputTag>("src", edm::InputTag("pfClusterSoAProducer"));
+    desc.add<edm::InputTag>("PFRecHitsLabelIn", edm::InputTag("pfRecHitSoAProducerHCAL"));
+    desc.add<edm::InputTag>("recHitsSource", edm::InputTag("legacyPFRecHitProducer"));
     desc.add<bool>("usePFThresholdsFromDB", true);
     {
       edm::ParameterSetDescription pfClusterBuilder;
@@ -183,7 +180,6 @@ private:
   const edm::EDGetTokenT<reco::PFClusterHostCollection> pfClusterSoAToken_;
   const edm::EDGetTokenT<reco::PFRecHitFractionHostCollection> pfRecHitFractionSoAToken_;
   const edm::EDGetTokenT<reco::PFRecHitHostCollection> InputPFRecHitSoA_Token_;
-  const edm::ESGetToken<reco::PFClusterParamsHostCollection, JobConfigurationGPURecord> pfClusParamsToken_;
   const edm::EDPutTokenT<reco::PFClusterCollection> legacyPfClustersToken_;
   const edm::EDGetTokenT<reco::PFRecHitCollection> recHitsLabel_;
   const edm::ESGetToken<HcalPFCuts, HcalPFCutsRcd> hcalCutsToken_;
@@ -201,41 +197,45 @@ void LegacyPFClusterProducer::produce(edm::Event& event, const edm::EventSetup& 
   auto const& pfClusterSoA = event.get(pfClusterSoAToken_).const_view();
   auto const& pfRecHitFractionSoA = event.get(pfRecHitFractionSoAToken_).const_view();
 
-  int nRH = pfRecHits.view().size();
+  int nRH = 0;
+  if (pfRecHits->metadata().size() != 0)
+    nRH = pfRecHits.view().size();
   reco::PFClusterCollection out;
   out.reserve(nRH);
 
   auto const rechitsHandle = event.getHandle(recHitsLabel_);
 
-  // Build PFClusters in legacy format
-  std::vector<int> nTopoSeeds(nRH, 0);
+  if (nRH != 0) {
+    // Build PFClusters in legacy format
+    std::vector<int> nTopoSeeds(nRH, 0);
 
-  for (int i = 0; i < pfClusterSoA.nSeeds(); i++) {
-    nTopoSeeds[pfClusterSoA[i].topoId()]++;
-  }
+    for (int i = 0; i < pfClusterSoA.nSeeds(); i++) {
+      nTopoSeeds[pfClusterSoA[i].topoId()]++;
+    }
 
-  // Looping over SoA PFClusters to produce legacy PFCluster collection
-  for (int i = 0; i < pfClusterSoA.nSeeds(); i++) {
-    unsigned int n = pfClusterSoA[i].seedRHIdx();
-    reco::PFCluster temp;
-    temp.setSeed((*rechitsHandle)[n].detId());  // Pulling the detId of this PFRecHit from the legacy format input
-    int offset = pfClusterSoA[i].rhfracOffset();
-    for (int k = offset; k < (offset + pfClusterSoA[i].rhfracSize()) && k >= 0;
-         k++) {  // Looping over PFRecHits in the same topo cluster
-      if (pfRecHitFractionSoA[k].pfrhIdx() < nRH && pfRecHitFractionSoA[k].pfrhIdx() > -1 &&
-          pfRecHitFractionSoA[k].frac() > 0.0) {
-        const reco::PFRecHitRef& refhit = reco::PFRecHitRef(rechitsHandle, pfRecHitFractionSoA[k].pfrhIdx());
-        temp.addRecHitFraction(reco::PFRecHitFraction(refhit, pfRecHitFractionSoA[k].frac()));
+    // Looping over SoA PFClusters to produce legacy PFCluster collection
+    for (int i = 0; i < pfClusterSoA.nSeeds(); i++) {
+      unsigned int n = pfClusterSoA[i].seedRHIdx();
+      reco::PFCluster temp;
+      temp.setSeed((*rechitsHandle)[n].detId());  // Pulling the detId of this PFRecHit from the legacy format input
+      int offset = pfClusterSoA[i].rhfracOffset();
+      for (int k = offset; k < (offset + pfClusterSoA[i].rhfracSize()) && k >= 0;
+           k++) {  // Looping over PFRecHits in the same topo cluster
+        if (pfRecHitFractionSoA[k].pfrhIdx() < nRH && pfRecHitFractionSoA[k].pfrhIdx() > -1 &&
+            pfRecHitFractionSoA[k].frac() > 0.0) {
+          const reco::PFRecHitRef& refhit = reco::PFRecHitRef(rechitsHandle, pfRecHitFractionSoA[k].pfrhIdx());
+          temp.addRecHitFraction(reco::PFRecHitFraction(refhit, pfRecHitFractionSoA[k].frac()));
+        }
       }
-    }
 
-    // Now PFRecHitFraction of this PFCluster is set. Now compute calculateAndSetPosition (energy, position etc)
-    if (nTopoSeeds[pfClusterSoA[i].topoId()] == 1 && allCellsPositionCalc_) {
-      allCellsPositionCalc_->calculateAndSetPosition(temp, paramPF);
-    } else {
-      positionCalc_->calculateAndSetPosition(temp, paramPF);
+      // Now PFRecHitFraction of this PFCluster is set. Now compute calculateAndSetPosition (energy, position etc)
+      if (nTopoSeeds[pfClusterSoA[i].topoId()] == 1 && allCellsPositionCalc_) {
+        allCellsPositionCalc_->calculateAndSetPosition(temp, paramPF);
+      } else {
+        positionCalc_->calculateAndSetPosition(temp, paramPF);
+      }
+      out.emplace_back(std::move(temp));
     }
-    out.emplace_back(std::move(temp));
   }
 
   event.emplace(legacyPfClustersToken_, std::move(out));

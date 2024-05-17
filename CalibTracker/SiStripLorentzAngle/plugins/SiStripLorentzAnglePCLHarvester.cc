@@ -17,16 +17,19 @@
 #include <fmt/printf.h>
 #include <fstream>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
 
 // user includes
 #include "CalibTracker/Records/interface/SiStripDependentRecords.h"
+#include "CalibTracker/SiStripCommon/interface/TkDetMap.h"
 #include "CalibTracker/SiStripLorentzAngle/interface/SiStripLorentzAngleCalibrationHelpers.h"
 #include "CalibTracker/SiStripLorentzAngle/interface/SiStripLorentzAngleCalibrationStruct.h"
 #include "CondCore/DBOutputService/interface/PoolDBOutputService.h"
 #include "CondFormats/SiStripObjects/interface/SiStripLorentzAngle.h"
+#include "DQM/SiStripCommon/interface/TkHistoMap.h"
 #include "DQMServices/Core/interface/DQMEDHarvester.h"
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "FWCore/Framework/interface/EventSetup.h"
@@ -58,6 +61,8 @@ private:
   // es tokens
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomEsToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> topoEsTokenBR_, topoEsTokenER_;
+  const edm::ESGetToken<TkDetMap, TrackerTopologyRcd> tkDetMapTokenER_;
+
   const edm::ESGetToken<SiStripLatency, SiStripLatencyRcd> latencyToken_;
   const edm::ESGetToken<SiStripLorentzAngle, SiStripLorentzAngleDepRcd> siStripLAEsToken_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magneticFieldToken_;
@@ -78,9 +83,34 @@ private:
   static constexpr float teslaToInverseGeV_ = 2.99792458e-3f;
   std::pair<double, double> theFitRange_{0., 0.};
 
-  SiStripLorentzAngleCalibrationHistograms hists_;
   const SiStripLorentzAngle* currentLorentzAngle_;
   std::unique_ptr<TrackerTopology> theTrackerTopology_;
+  std::unique_ptr<TkDetMap> tkDetMap_;
+
+  // ancillary struct to store the input / output LA
+  struct LATkMap {
+    LATkMap() : hInputLA(nullptr), hOutputLA(nullptr) {}
+    LATkMap(std::unique_ptr<TkHistoMap>&& input, std::unique_ptr<TkHistoMap>&& output)
+        : hInputLA(std::move(input)), hOutputLA(std::move(output)) {}
+
+    void fill(uint32_t id, float inputLA, float outputLA) {
+      hInputLA->fill(id, inputLA);
+      hOutputLA->fill(id, outputLA);
+    }
+
+    void beautify() {
+      const auto& allInputMaps = hInputLA->getAllMaps();
+      // set colz
+      for (size_t i = 1; i < allInputMaps.size(); i++) {
+        hInputLA->getMap(i)->setOption("colz");
+        hOutputLA->getMap(i)->setOption("colz");
+      }
+    }
+
+    std::unique_ptr<TkHistoMap> hInputLA, hOutputLA;
+  };
+
+  LATkMap h_modulesLA;
 };
 
 //------------------------------------------------------------------------------
@@ -88,6 +118,7 @@ SiStripLorentzAnglePCLHarvester::SiStripLorentzAnglePCLHarvester(const edm::Para
     : geomEsToken_(esConsumes<edm::Transition::BeginRun>()),
       topoEsTokenBR_(esConsumes<edm::Transition::BeginRun>()),
       topoEsTokenER_(esConsumes<edm::Transition::EndRun>()),
+      tkDetMapTokenER_(esConsumes<edm::Transition::EndRun>()),
       latencyToken_(esConsumes<edm::Transition::BeginRun>()),
       siStripLAEsToken_(esConsumes<edm::Transition::BeginRun>()),
       magneticFieldToken_(esConsumes<edm::Transition::BeginRun>()),
@@ -165,6 +196,9 @@ void SiStripLorentzAnglePCLHarvester::endRun(edm::Run const& run, edm::EventSetu
   if (!theTrackerTopology_) {
     theTrackerTopology_ = std::make_unique<TrackerTopology>(isetup.getData(topoEsTokenER_));
   }
+  if (!tkDetMap_) {
+    tkDetMap_ = std::make_unique<TkDetMap>(isetup.getData(tkDetMapTokenER_));
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -221,6 +255,54 @@ void SiStripLorentzAnglePCLHarvester::dqmEndJob(DQMStore::IBooker& iBooker, DQMS
       }
     }
   }
+
+  // book the summary output histograms
+  iBooker.setCurrentFolder(fmt::format("{}Harvesting/LorentzAngleMaps", dqmDir_));
+
+  // Define a lambda function to extract the second element and add it to the accumulator
+  auto sumValues = [](int accumulator, const std::pair<std::string, int>& element) {
+    return accumulator + element.second;
+  };
+
+  // Use std::accumulate to sum the values
+  int totalLayers = std::accumulate(iHists_.nlayers_.begin(), iHists_.nlayers_.end(), 0, sumValues);
+
+  // Lambda expression to set bin labels for a TH2F histogram
+  auto setHistoLabels = [](TH2F* histogram, const std::map<std::string, int>& nlayers) {
+    // Set common options
+    histogram->SetOption("colz1");  // don't fill empty bins
+    histogram->SetStats(false);
+    histogram->GetYaxis()->SetLabelSize(0.05);
+    histogram->GetXaxis()->SetLabelSize(0.05);
+
+    // Set bin labels for the X-axis
+    histogram->GetXaxis()->SetBinLabel(1, "r-#phi");
+    histogram->GetXaxis()->SetBinLabel(2, "stereo");
+
+    // Set bin labels for the Y-axis
+    int binCounter = 1;
+    for (const auto& subdet : {"TIB", "TOB"}) {
+      for (int layer = 1; layer <= nlayers.at(subdet); ++layer) {
+        std::string label = Form("%s L%d", subdet, layer);
+        histogram->GetYaxis()->SetBinLabel(binCounter++, label.c_str());
+      }
+    }
+    histogram->GetXaxis()->LabelsOption("h");
+  };
+
+  std::string d_name = "h2_byLayerSiStripLA";
+  std::string d_text = "SiStrip tan#theta_{LA}/B;module type (r-#phi/stereo);layer number;tan#theta_{LA}/B [1/T]";
+  iHists_.h2_byLayerLA_ =
+      iBooker.book2D(d_name.c_str(), d_text.c_str(), 2, -0.5, 1.5, totalLayers, -0.5, totalLayers - 0.5);
+
+  setHistoLabels(iHists_.h2_byLayerLA_->getTH2F(), iHists_.nlayers_);
+
+  d_name = "h2_byLayerSiStripLADiff";
+  d_text = "SiStrip #Delta#mu_{H}/#mu_{H};module type (r-#phi/stereo);ladder number;#Delta#mu_{H}/#mu_{H} [%%]";
+  iHists_.h2_byLayerDiff_ =
+      iBooker.book2D(d_name.c_str(), d_text.c_str(), 2, -0.5, 1.5, totalLayers, -0.5, totalLayers - 0.5);
+
+  setHistoLabels(iHists_.h2_byLayerDiff_->getTH2F(), iHists_.nlayers_);
 
   // prepare the profiles
   for (const auto& ME : iHists_.h2_) {
@@ -291,29 +373,105 @@ void SiStripLorentzAnglePCLHarvester::dqmEndJob(DQMStore::IBooker& iBooker, DQMS
   // now prepare the output LA
   std::shared_ptr<SiStripLorentzAngle> OutLorentzAngle = std::make_shared<SiStripLorentzAngle>();
 
+  bool isPayloadChanged{false};
+  std::vector<std::pair<int, int>> treatedIndices;
   for (const auto& loc : iHists_.moduleLocationType_) {
     if (debug_) {
       edm::LogInfo(moduleDescription().moduleName()) << "modId: " << loc.first << " " << loc.second;
     }
 
-    if (!(loc.second).empty()) {
+    if (!(loc.second).empty() && theMagField_ != 0.f) {
       OutLorentzAngle->putLorentzAngle(loc.first, std::abs(LAMap_[loc.second].first / theMagField_));
     } else {
       OutLorentzAngle->putLorentzAngle(loc.first, iHists_.la_db_[loc.first]);
     }
+
+    // if the location is  not assigned (e.g. TID or TEC) continue
+    if ((loc.second).empty()) {
+      continue;
+    }
+
+    const auto& index2D = siStripLACalibration::locationTypeIndex(loc.second);
+    LogDebug("SiStripLorentzAnglePCLHarvester")
+        << loc.first << " : " << loc.second << " index: " << index2D.first << "-" << index2D.second << std::endl;
+
+    // check if the location exists, otherwise throw!
+    if (index2D != std::make_pair(-1, -1)) {
+      // Check if index2D is in treatedIndices
+      // Do not fill the control plots more than necessary (i.e. 1 entry per "partition")
+      auto it = std::find(treatedIndices.begin(), treatedIndices.end(), index2D);
+      if (it == treatedIndices.end()) {
+        // control plots
+        LogTrace("SiStripLorentzAnglePCLHarvester") << "accepted " << loc.first << " : " << loc.second << " bin ("
+                                                    << index2D.first << "," << index2D.second << ")";
+
+        const auto& outputLA = OutLorentzAngle->getLorentzAngle(loc.first);
+        const auto& inputLA = currentLorentzAngle_->getLorentzAngle(loc.first);
+
+        LogTrace("SiStripLorentzAnglePCLHarvester") << "inputLA: " << inputLA << " outputLA: " << outputLA;
+
+        iHists_.h2_byLayerLA_->setBinContent(index2D.first, index2D.second, outputLA);
+
+        float deltaMuHoverMuH = (inputLA != 0.f) ? (inputLA - outputLA) / inputLA : 0.f;
+        iHists_.h2_byLayerDiff_->setBinContent(index2D.first, index2D.second, deltaMuHoverMuH * 100.f);
+        treatedIndices.emplace_back(index2D);
+
+        // Check if the delta is different from zero
+        // and if the output LA is not zero (during B=0T running)
+        // If none of the locations has a non-zero diff
+        // will not write out the payload.
+        if (deltaMuHoverMuH != 0.f && outputLA != 0.f) {
+          isPayloadChanged = true;
+          LogDebug("SiStripLorentzAnglePCLHarvester")
+              << "accepted " << loc.first << " : " << loc.second << " bin (" << index2D.first << "," << index2D.second
+              << ") " << deltaMuHoverMuH;
+        } else {
+          edm::LogWarning("SiStripLorentzAnglePCLHarvester")
+              << "Discarded " << loc.first << " : " << loc.second << " bin (" << index2D.first << "," << index2D.second
+              << ") | delta muH/muH = " << deltaMuHoverMuH << " [1/T], output muH = " << outputLA << " [1/T]";
+        }
+      }  // if the index has not been treated already
+    } else {
+      throw cms::Exception("SiStripLorentzAnglePCLHarvester")
+          << "Trying to fill an inexistent module location from " << loc.second << "!";
+    }  //
+  }    // ends loop on location types
+
+  // book the TkDetMaps
+  const auto tkDetMapFolderIn = (fmt::format("{}Harvesting/TkDetMaps_LAInput", dqmDir_));
+  const auto tkDetMapFolderOut = (fmt::format("{}Harvesting/TkDetMaps_LAOutput", dqmDir_));
+  h_modulesLA = LATkMap(
+      std::make_unique<TkHistoMap>(tkDetMap_.get(), iBooker, tkDetMapFolderIn, "inputLorentzAngle", 0, false, true),
+      std::make_unique<TkHistoMap>(tkDetMap_.get(), iBooker, tkDetMapFolderOut, "outputLorentzAngle", 0, false, true));
+
+  // fill the TkDetMaps
+  for (const auto& loc : iHists_.moduleLocationType_) {
+    const auto& outputLA = OutLorentzAngle->getLorentzAngle(loc.first);
+    const auto& inputLA = currentLorentzAngle_->getLorentzAngle(loc.first);
+    h_modulesLA.fill(loc.first, inputLA, outputLA);
   }
 
-  edm::Service<cond::service::PoolDBOutputService> mydbservice;
-  if (mydbservice.isAvailable()) {
-    try {
-      mydbservice->writeOneIOV(*OutLorentzAngle, mydbservice->currentTime(), recordName_);
-    } catch (const cond::Exception& er) {
-      edm::LogError("SiStripLorentzAngleDB") << er.what();
-    } catch (const std::exception& er) {
-      edm::LogError("SiStripLorentzAngleDB") << "caught std::exception " << er.what();
+  // set colz to the output maps
+  h_modulesLA.beautify();
+
+  if (isPayloadChanged) {
+    // fill the DB object record
+    edm::Service<cond::service::PoolDBOutputService> mydbservice;
+    if (mydbservice.isAvailable()) {
+      try {
+        mydbservice->writeOneIOV(*OutLorentzAngle, mydbservice->currentTime(), recordName_);
+      } catch (const cond::Exception& er) {
+        edm::LogError("SiStripLorentzAngleDB") << er.what();
+      } catch (const std::exception& er) {
+        edm::LogError("SiStripLorentzAngleDB") << "caught std::exception " << er.what();
+      }
+    } else {
+      edm::LogError("SiStripLorentzAngleDB") << "Service is unavailable!";
     }
   } else {
-    edm::LogError("SiStripLorentzAngleDB") << "Service is unavailable";
+    edm::LogPrint("SiStripLorentzAngleDB")
+        << "****** WARNING ******\n* " << __PRETTY_FUNCTION__
+        << "\n* There is no new valid measurement to append!\n* Will NOT update the DB!\n*********************";
   }
 }
 

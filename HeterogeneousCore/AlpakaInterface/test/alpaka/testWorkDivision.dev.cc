@@ -1,5 +1,9 @@
+#include <cstdint>
 #include <vector>
 
+#include <alpaka/alpaka.hpp>
+
+#include "FWCore/Utilities/interface/stringize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/devices.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
@@ -16,16 +20,6 @@ enum class RangeType { Default, ExtentLimited, ExtentLimitedWithShift };
 
 // The concurrency scope between threads
 enum class LoopScope { Block, Grid };
-
-// Utility for one time initializations
-template <LoopScope loopScope, typename TAcc>
-bool constexpr firstInLoopRange(TAcc const& acc) {
-  if constexpr (loopScope == LoopScope::Block)
-    return !alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
-  if constexpr (loopScope == LoopScope::Grid)
-    return !alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc)[0u];
-  assert(false);
-}
 
 template <RangeType rangeType, LoopScope loopScope, typename TAcc>
 size_t constexpr expectedCount(TAcc const& acc, size_t skip, size_t size) {
@@ -61,8 +55,9 @@ struct testWordDivisionDefaultRange {
         (loopScope == LoopScope::Grid ? *globalCounter : alpaka::declareSharedVar<size_t, __COUNTER__>(acc));
     // Init the counter for block range. Grid range does so my mean of memset.
     if constexpr (loopScope == LoopScope::Block) {
-      if (firstInLoopRange<loopScope>(acc))
+      if (cms::alpakatools::once_per_block(acc)) {
         counter = 0;
+      }
       alpaka::syncBlockThreads(acc);
     }
     // The loop we are testing
@@ -78,9 +73,9 @@ struct testWordDivisionDefaultRange {
     alpaka::syncBlockThreads(acc);
     // Check the result. Grid range will check by memcpy-ing the result.
     if constexpr (loopScope == LoopScope::Block) {
-      if (firstInLoopRange<loopScope>(acc)) {
+      if (cms::alpakatools::once_per_block(acc)) {
         auto expected = expectedCount<rangeType, loopScope>(acc, skip, size);
-        assert(counter == expected);
+        ALPAKA_ASSERT_ACC(counter == expected);
       }
     }
   }
@@ -90,9 +85,9 @@ int main() {
   // get the list of devices on the current platform
   auto const& devices = cms::alpakatools::devices<Platform>();
   if (devices.empty()) {
-    std::cout << "No devices available on the platform " << EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE)
-              << ", the test will be skipped.\n";
-    return 0;
+    std::cerr << "No devices available for the " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) " backend, "
+      "the test will be skipped.\n";
+    exit(EXIT_FAILURE);
   }
 
   for (auto const& device : devices) {

@@ -2,10 +2,12 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <algorithm>
 
 #include <alpaka/alpaka.hpp>
 
+#include "FWCore/Utilities/interface/stringize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/radixSort.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/devices.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -73,9 +75,9 @@ namespace {
       // radix sort works in a single block (and the assert macro does not like the comma of the template parameters).
       const auto blocksPerGrid = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0u];
       const auto blocksIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u];
-      assert(1 == blocksPerGrid);
-      assert(0 == blocksIdx);
-      assert(elements <= 2048);
+      ALPAKA_ASSERT_ACC(1 == blocksPerGrid);
+      ALPAKA_ASSERT_ACC(0 == blocksIdx);
+      ALPAKA_ASSERT_ACC(elements <= 2048);
 
       auto& order = alpaka::declareSharedVar<uint16_t[2048], __COUNTER__>(acc);
       auto& sws = alpaka::declareSharedVar<uint16_t[2048], __COUNTER__>(acc);
@@ -98,7 +100,7 @@ namespace {
       for (auto itrack : uniform_elements(acc, elements - 1)) {
         auto ntrack = order[itrack];
         auto mtrack = order[itrack + 1];
-        assert(truncate<2>(z[ntrack]) <= truncate<2>(z[mtrack]));
+        ALPAKA_ASSERT_ACC(truncate<2>(z[ntrack]) <= truncate<2>(z[mtrack]));
       }
 
       alpaka::syncBlockThreads(acc);
@@ -126,7 +128,7 @@ namespace {
       for (auto itrack : uniform_elements(acc, elements - 1)) {
         auto ntrack = order[itrack];
         auto mtrack = order[itrack + 1];
-        assert(iz[ntrack] <= iz[mtrack]);
+        ALPAKA_ASSERT_ACC(iz[ntrack] <= iz[mtrack]);
       }
 
       if (doPrint)
@@ -157,15 +159,13 @@ namespace {
   }
 }  // namespace
 
-#include "HeterogeneousCore/CUDAUtilities/interface/requireDevices.h"
-
 int main() {
   // get the list of devices on the current platform
   auto const& devices = cms::alpakatools::devices<Platform>();
   if (devices.empty()) {
-    std::cout << "No devices available on the platform " << EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE)
-              << ", the test will be skipped.\n";
-    return 0;
+    std::cerr << "No devices available for the " EDM_STRINGIZE(ALPAKA_ACCELERATOR_NAMESPACE) " backend, "
+      "the test will be skipped.\n";
+    exit(EXIT_FAILURE);
   }
 
   std::random_device rd;
@@ -174,8 +174,6 @@ int main() {
   // run the test on each device
   for (auto const& device : devices) {
     Queue queue(device);
-    //    FLOAT* gpu_input;
-    //    int* gpu_product;
 
     int nmax = 4 * 260;
     auto gpu_input_h = cms::alpakatools::make_host_buffer<FLOAT[]>(queue, nmax);
@@ -227,17 +225,14 @@ int main() {
       input[i + 3 * 260] = -input[i] - 10;
     }
     auto gpu_input_d = cms::alpakatools::make_device_buffer<FLOAT[]>(queue, nmax);
-    //cudaCheck(cudaMalloc(&gpu_input, sizeof(FLOAT) * nmax));
-    //    cudaCheck(cudaMalloc(&gpu_product, sizeof(int) * nmax));
     auto gpu_product_d = cms::alpakatools::make_device_buffer<int[]>(queue, nmax);
     // copy the input data to the GPU
     alpaka::memcpy(queue, gpu_input_d, gpu_input_h);
-    //cudaCheck(cudaMemcpy(gpu_input, input, sizeof(FLOAT) * nmax, cudaMemcpyHostToDevice));
 
     for (int k = 2; k <= nmax; k++) {
       std::shuffle(input, input + k, g);
       printf("Test with %d items\n", k);
-      // sort  on the GPU
+      // sort on the GPU
       testWrapper(queue, gpu_input_d.data(), gpu_product_d.data(), k, false);
       alpaka::wait(queue);
     }
