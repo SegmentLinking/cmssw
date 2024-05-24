@@ -39,6 +39,10 @@ trackingIters01.toModify(convClusters,
                          oldClusterRemovalInfo = "highPtTripletStepClusters",
                          overrideTrkQuals      = "highPtTripletStepSelector:highPtTripletStep"
 )
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+(trackingIters01 & trackingPhase2PU140 & trackingLST).toModify(convClusters,
+                         overrideTrkQuals      = ""
+)
 
 _convLayerPairsStripOnlyLayers = ['TIB1+TID1_pos', 
                                  'TIB1+TID1_neg', 

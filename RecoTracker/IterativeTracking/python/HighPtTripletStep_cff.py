@@ -284,6 +284,25 @@ fastSim.toModify(highPtTripletStepTracks,TTRHBuilder = 'WithoutRefit')
 from Configuration.Eras.Modifier_phase2_timing_layer_cff import phase2_timing_layer
 phase2_timing_layer.toModify(highPtTripletStepTracks, TrajectoryInEvent = True)
 
+highPtTripletStepLSTpTracks = highPtTripletStepTracks.clone(
+     src           = 'highPtTripletStepTrackCandidates:pTCsLST'
+)
+highPtTripletStepLSTT5Tracks = highPtTripletStepTracks.clone(
+     src           = 'highPtTripletStepTrackCandidates:t5TCsLST'
+)
+_highPtTripletStepTracks_LST = RecoTracker.FinalTrackSelectors.trackListMerger_cfi.trackListMerger.clone(
+    TrackProducers     = ['highPtTripletStepLSTpTracks',
+                          'highPtTripletStepLSTT5Tracks'],
+    hasSelector        = [1,0],
+    indivShareFrac     = [0.1,0.1],
+    selectedTrackQuals = ['highPtTripletStepSelector:highPtTripletStep',
+                          'highPtTripletStepSelectorLSTT5:highPtTripletStepLSTT5'],
+    copyExtras         = True,
+    copyMVA            = False,
+    setsToMerge        = [cms.PSet( tLists=cms.vint32(0,1), pQual=cms.bool(True) )]
+)
+(trackingPhase2PU140 & trackingLST).toReplaceWith(highPtTripletStepTracks, _highPtTripletStepTracks_LST)
+
 # Final selection
 from RecoTracker.FinalTrackSelectors.TrackMVAClassifierPrompt_cfi import *
 highPtTripletStep = TrackMVAClassifierPrompt.clone(
@@ -361,6 +380,28 @@ highPtTripletStepSelector = RecoTracker.FinalTrackSelectors.multiTrackSelector_c
 from Configuration.ProcessModifiers.vectorHits_cff import vectorHits
 vectorHits.toModify(highPtTripletStepSelector.trackSelectors[2], minNumberLayers = 3, minNumber3DLayers = 3, d0_par1 = ( 0.5, 4.0 ), dz_par1 = ( 0.6, 4.0 ))
 
+(trackingPhase2PU140 & trackingLST).toModify(highPtTripletStepSelector, src = 'highPtTripletStepLSTpTracks')
+# Passthrough selector to satisfy the TrackListMerger requirement for selector values
+highPtTripletStepSelectorLSTT5 = RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.multiTrackSelector.clone(
+    src = 'highPtTripletStepLSTT5Tracks',
+    trackSelectors = [
+        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.looseMTS.clone(
+            name = 'highPtTripletStepLSTT5Loose',
+            minHitsToBypassChecks = 0
+            ), #end of pset
+        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.tightMTS.clone(
+            name = 'highPtTripletStepLSTT5Tight',
+            preFilterName = 'highPtTripletStepLSTT5Loose',
+            minHitsToBypassChecks = 0
+            ),
+        RecoTracker.FinalTrackSelectors.multiTrackSelector_cfi.highpurityMTS.clone(
+            name = 'highPtTripletStepLSTT5',
+            preFilterName = 'highPtTripletStepLSTT5Tight',
+            minHitsToBypassChecks = 0
+            ),
+    ] #end of vpset
+) #end of clone
+
 # Final sequence
 HighPtTripletStepTask = cms.Task(highPtTripletStepClusters,
                                  highPtTripletStepSeedLayers,
@@ -388,8 +429,9 @@ from RecoTracker.LST.lstSeedTracks_cfi import lstInitialStepSeedTracks,lstHighPt
 from RecoTracker.LST.lstPixelSeedInputProducer_cfi import lstPixelSeedInputProducer
 from RecoTracker.LST.lstPhase2OTHitsInputProducer_cfi import lstPhase2OTHitsInputProducer
 from RecoTracker.LST.lstProducer_cff import *
+
 _HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstPixelSeedInputProducer, lstPhase2OTHitsInputProducer,
-                               lstProducer, lstModulesDevESProducer)
+                               lstProducer, lstModulesDevESProducer, highPtTripletStepLSTpTracks, highPtTripletStepLSTT5Tracks, highPtTripletStepSelectorLSTT5)
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 
 # fast tracking mask producer 
