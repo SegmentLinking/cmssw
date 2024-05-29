@@ -8,41 +8,43 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include <SDL/Module.h>
-#include <SDL/ModuleMethods.h>
-#include <SDL/LST.h>
+#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
   public:
-    LSTModulesDevESProducer(const edm::ParameterSet &iConfig);
+    LSTModulesDevESProducer(const edm::ParameterSet& iConfig);
 
-    static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
     std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> produceHost(TrackerRecoGeometryRecord const& iRecord);
-    std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> produceDevice(device::Record<TrackerRecoGeometryRecord> const& iRecord);
+    std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> produceDevice(
+        device::Record<TrackerRecoGeometryRecord> const& iRecord);
 
   private:
     edm::ESGetToken<SDL::LSTESHostData<SDL::Dev>, TrackerRecoGeometryRecord> lstESHostToken_;
   };
 
-  LSTModulesDevESProducer::LSTModulesDevESProducer(const edm::ParameterSet &iConfig) : ESProducer(iConfig) {
+  LSTModulesDevESProducer::LSTModulesDevESProducer(const edm::ParameterSet& iConfig) : ESProducer(iConfig) {
     setWhatProduced(this, &LSTModulesDevESProducer::produceHost);
     auto cc = setWhatProduced(this, &LSTModulesDevESProducer::produceDevice);
     lstESHostToken_ = cc.consumes();
   }
 
-  void LSTModulesDevESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
+  void LSTModulesDevESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
     descriptions.addWithDefaultLabel(desc);
   }
 
-  std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> LSTModulesDevESProducer::produceHost(TrackerRecoGeometryRecord const& iRecord) {
+  std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> LSTModulesDevESProducer::produceHost(
+      TrackerRecoGeometryRecord const& iRecord) {
     return SDL::loadAndFillESHost();
   }
 
-  std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> LSTModulesDevESProducer::produceDevice(device::Record<TrackerRecoGeometryRecord> const& iRecord) {
+  std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> LSTModulesDevESProducer::produceDevice(
+      device::Record<TrackerRecoGeometryRecord> const& iRecord) {
     auto const& lstESHostData = iRecord.get(lstESHostToken_);
     SDL::QueueAcc& queue = iRecord.queue();
     return SDL::loadAndFillESDevice(queue, &lstESHostData);
