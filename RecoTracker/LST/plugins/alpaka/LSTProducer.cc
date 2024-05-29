@@ -31,6 +31,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               consumes<LSTPhase2OTHitsInput>(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
           lstESToken_{esConsumes()},
           verbose_(config.getParameter<int>("verbose")),
+          nopLSDupClean_(config.getParameter<int>("nopLSDupClean")),
+          tcpLSTriplets_(config.getParameter<int>("tcpLSTriplets")),
           lstOutputToken_{produces()} {}
 
     void acquire(device::Event const& event, device::EventSetup const& setup) override {
@@ -61,7 +63,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                phase2OTHits.detId(),
                phase2OTHits.x(),
                phase2OTHits.y(),
-               phase2OTHits.z());
+               phase2OTHits.z(),
+               nopLSDupClean_,
+               tcpLSTriplets_);
     }
 
     void produce(device::Event& event, device::EventSetup const&) override {
@@ -77,6 +81,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("pixelSeedInput", edm::InputTag{"lstPixelSeedInputProducer"});
       desc.add<edm::InputTag>("phase2OTHitsInput", edm::InputTag{"lstPhase2OTHitsInputProducer"});
       desc.add<int>("verbose", 0);
+      desc.add<int>("nopLSDupClean", 0);
+      desc.add<int>("tcpLSTriplets", 0);
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -84,7 +90,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
     device::ESGetToken<SDL::LSTESDeviceData<SDL::Dev>, TrackerRecoGeometryRecord> lstESToken_;
-    const int verbose_;
+    const int verbose_, nopLSDupClean_, tcpLSTriplets_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
     SDL::LST<SDL::Acc> lst_;
