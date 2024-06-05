@@ -1,0 +1,187 @@
+name: Testing
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ contains(github.event.comment.body, '/run standalone') }}-${{ contains(github.event.comment.body, '/run cmssw') }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  standalone:
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/run standalone') &&
+      (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'CONTRIBUTOR')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+          sparse-checkout: RecoTracker/LSTCore
+      - name: Get commit SHA
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "COMMIT_SHA=$sha" >> $GITHUB_ENV
+      - name: Create App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          skip-token-revoke: true
+      - name: Create in progress check
+        uses: LouisBrunner/checks-action@v2.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          sha: ${{ env.COMMIT_SHA }}
+          name: Run Standalone PU200
+          status: in_progress
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          output: |
+            {"title": "This check has started...", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
+      - name: Build and run PR
+        timeout-minutes: 60
+        id: build-and-run
+        uses: SegmentLinking/TrackLooper-actions/standalone@cmssw
+        with:
+          pr-number: ${{ github.event.issue.number }}
+      - name: Upload plots to archival repo
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: git@github.com:${{ steps.build-and-run.outputs.archive-repo }}.git
+          BRANCH: ${{ steps.build-and-run.outputs.archive-branch }}
+          FOLDER: ${{ steps.build-and-run.outputs.archive-dir }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          TARGET_DIR: ${{ steps.build-and-run.outputs.archive-dir }}
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{ steps.build-and-run.outputs.comment }}`
+            })
+      - name: Comment on PR if job failed.
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `There was a problem while building and running in standalone mode. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
+            })
+      - name: Create App Token
+        if: always()
+        uses: actions/create-github-app-token@v1
+        id: app-token-end
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Create completed check
+        uses: LouisBrunner/checks-action@v2.0.0
+        if: always()
+        with:
+          token: ${{ steps.app-token-end.outputs.token }}
+          sha: ${{ env.COMMIT_SHA }}
+          name: Run Standalone PU200
+          conclusion: ${{ job.status }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          output: |
+            {"title": "Status: ${{ job.status }}", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
+
+  cmssw:
+    if: >
+      github.event.issue.pull_request && 
+      contains(github.event.comment.body, '/run cmssw') &&
+      (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'CONTRIBUTOR')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.issue.number }}/head
+      - name: Get commit SHA
+        run: |
+          sha=$(git rev-parse HEAD)
+          echo "COMMIT_SHA=$sha" >> $GITHUB_ENV
+      - name: Create App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          skip-token-revoke: true
+      - name: Create in progress check
+        uses: LouisBrunner/checks-action@v2.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          sha: ${{ env.COMMIT_SHA }}
+          name: Run CMSSW 21034.1
+          status: in_progress
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          output: |
+            {"title": "This check has started...", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
+      - name: Build and run PR
+        timeout-minutes: 200
+        id: build-and-run
+        uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
+        with:
+          pr-number: ${{ github.event.issue.number }}
+      - name: Upload plots to archival repo
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: git@github.com:${{ steps.build-and-run.outputs.archive-repo }}.git
+          BRANCH: ${{ steps.build-and-run.outputs.archive-branch }}
+          FOLDER: ${{ steps.build-and-run.outputs.archive-dir }}
+          SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          TARGET_DIR: ${{ steps.build-and-run.outputs.archive-dir }}
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `${{ steps.build-and-run.outputs.comment }}`
+            })
+      - name: Comment on PR if job failed.
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `There was a problem while building and running with CMSSW. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
+            })
+      - name: Create App Token
+        if: always()
+        uses: actions/create-github-app-token@v1
+        id: app-token-end
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      - name: Create completed check
+        uses: LouisBrunner/checks-action@v2.0.0
+        if: always()
+        with:
+          token: ${{ steps.app-token-end.outputs.token }}
+          sha: ${{ env.COMMIT_SHA }}
+          name: Run CMSSW 21034.1
+          conclusion: ${{ job.status }}
+          details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          output: |
+            {"title": "Status: ${{ job.status }}", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
