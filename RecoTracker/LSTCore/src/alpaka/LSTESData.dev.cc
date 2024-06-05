@@ -21,10 +21,15 @@ namespace {
       path_str = path_tracklooperdir;
       path_str += "/../";
     } else {
-      // FIXME: temporary solution, will need to pass a value from FileInPath or CMSSW search path
-      // in the `LSTProducer` or a related ES producer
-      path_str = std::getenv("CMSSW_BASE");
-      path_str += "/src/RecoTracker/LSTCore";
+      std::stringstream search_path(std::getenv("CMSSW_SEARCH_PATH"));
+      std::string path;
+      while (std::getline(search_path, path, ':')) {
+        if (std::filesystem::exists(path+"/RecoTracker/LSTCore/data")) {
+          path_str = path;
+          break;
+        }
+      }
+      path_str += "/RecoTracker/LSTCore";
     }
     return path_str;
   }
