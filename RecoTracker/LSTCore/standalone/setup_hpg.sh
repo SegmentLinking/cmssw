@@ -47,8 +47,3 @@ export LSTPERFORMANCEWEBDIR=/home/users/phchang/public_html/LSTPerformanceWeb
 export LATEST_CPU_BENCHMARK_EFF_MUONGUN=
 export LATEST_CPU_BENCHMARK_EFF_PU200=
 #eof
-
-eval `scramv1 runtime -sh`
-# this needs to be last because it gets overwritten by cmsenv
-export LD_LIBRARY_PATH=$DIR/SDL:$DIR:$LD_LIBRARY_PATH
-

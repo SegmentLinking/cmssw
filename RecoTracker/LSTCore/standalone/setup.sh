@@ -55,7 +55,3 @@ fi
 export LATEST_CPU_BENCHMARK_EFF_MUONGUN="/data2/segmentlinking/muonGun_cpu_efficiencies.root"
 export LATEST_CPU_BENCHMARK_EFF_PU200="/data2/segmentlinking/pu200_cpu_efficiencies.root"
 #eof
-
-eval `scramv1 runtime -sh`
-# this needs to be last because it gets overwritten by cmsenv
-export LD_LIBRARY_PATH=$DIR/SDL:$DIR:$LD_LIBRARY_PATH

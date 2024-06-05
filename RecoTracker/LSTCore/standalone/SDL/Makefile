@@ -46,7 +46,7 @@ CXX                  = g++
 CXXFLAGS_CPU         = -march=native -mtune=native -Ofast -fno-reciprocal-math -fopenmp-simd -g -Wall -Wshadow -Woverloaded-virtual -fPIC -fopenmp -I..
 CXXFLAGS_CUDA        = -O3 -g --compiler-options -Wall --compiler-options -Wshadow --compiler-options -Woverloaded-virtual --compiler-options -fPIC --compiler-options -fopenmp -dc -lineinfo --ptxas-options=-v --cudart shared $(GENCODE_CUDA) --use_fast_math --default-stream per-thread -I..
 CXXFLAGS_ROCM        = -O3 -g -Wall -Wshadow -Woverloaded-virtual -fPIC -I${ROCM_ROOT}/include -I..
-CMSSWINCLUDE        := -I${CMSSW_BASE}/src -DLST_IS_CMSSW_PACKAGE
+CMSSWINCLUDE        := -I${TRACKLOOPERDIR}/../../../ -I${CMSSW_BASE}/src -DLST_IS_CMSSW_PACKAGE
 ifdef CMSSW_RELEASE_BASE
 CMSSWINCLUDE        := ${CMSSWINCLUDE} -I${CMSSW_RELEASE_BASE}/src
 endif
