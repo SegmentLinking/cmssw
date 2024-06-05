@@ -1079,11 +1079,8 @@ void writeMetaData() {
   gSystem->Exec(
       TString::Format("(cd $TRACKLOOPERDIR && git  --no-pager status && (cd - > /dev/null)) >> %s.gitversion.txt",
                       ana.output_tfile->GetName()));
-  gSystem->Exec(TString::Format("(cd $TRACKLOOPERDIR && echo 'git log -n5' && (cd - > /dev/null)) >> %s.gitversion.txt",
+  gSystem->Exec(TString::Format("(cd $TRACKLOOPERDIR && echo 'git --no-pager log -n 100' && (cd - > /dev/null)) >> %s.gitversion.txt",
                                 ana.output_tfile->GetName()));
-  gSystem->Exec(
-      TString::Format("(cd $TRACKLOOPERDIR && git --no-pager log  && (cd - > /dev/null)) >> %s.gitversion.txt",
-                      ana.output_tfile->GetName()));
   gSystem->Exec(TString::Format("(cd $TRACKLOOPERDIR && echo 'git diff' && (cd - > /dev/null)) >> %s.gitversion.txt",
                                 ana.output_tfile->GetName()));
   gSystem->Exec(
