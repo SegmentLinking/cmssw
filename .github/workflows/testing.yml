@@ -5,7 +5,7 @@ on:
     types: [created]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ contains(github.event.comment.body, '/run standalone') }}-${{ contains(github.event.comment.body, '/run cmssw') }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ contains(github.event.comment.body, '/run standalone') || contains(github.event.comment.body, '/run all') }}-${{ contains(github.event.comment.body, '/run cmssw') || contains(github.event.comment.body, '/run all') }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +16,7 @@ jobs:
   standalone:
     if: >
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/run standalone') &&
+      (contains(github.event.comment.body, '/run standalone') || contains(github.event.comment.body, '/run all')) &&
       (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'CONTRIBUTOR')
     runs-on: ubuntu-latest
     steps:
@@ -103,7 +103,7 @@ jobs:
   cmssw:
     if: >
       github.event.issue.pull_request && 
-      contains(github.event.comment.body, '/run cmssw') &&
+      (contains(github.event.comment.body, '/run cmssw')|| contains(github.event.comment.body, '/run all')) &&
       (github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'CONTRIBUTOR')
     runs-on: ubuntu-latest
     steps:
