@@ -359,8 +359,8 @@ namespace SDL {
       alpaka::wait(queue);
     }
 
-    template <typename TQueue>
-    modulesBuffer(TQueue queue, const modulesBuffer<alpaka::DevCpu>& src, unsigned int nMod, unsigned int nPixs)
+    template <typename TQueue, typename TDevSrc>
+    modulesBuffer(TQueue queue, const modulesBuffer<TDevSrc>& src, unsigned int nMod, unsigned int nPixs)
         : modulesBuffer(alpaka::getDev(queue), nMod, nPixs) {
       copyFromSrc(queue, src);
     }

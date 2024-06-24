@@ -90,23 +90,25 @@ namespace SDL {
     const uint16_t nModules_;
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
+    const unsigned int nEndCapMap_;
     const std::shared_ptr<const modulesBuffer<Dev>> modulesBuffers_;
     const std::shared_ptr<const pixelMap> pixelMapping_;
-    const std::shared_ptr<const EndcapGeometry<Dev>> endcapGeometry_;
+    const std::shared_ptr<const endcapGeometryBuffer<Dev>> endcapGeometryBuffers_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
     template <typename TQueue>
-    Event(bool verbose, TQueue const& q, const LSTESDeviceData<Dev>* deviceESData)
+    Event(bool verbose, TQueue const& q, const LSTESData<Dev>* deviceESData)
         : queue(q),
           devAcc(alpaka::getDev(q)),
           devHost(cms::alpakatools::host()),
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),
+          nEndCapMap_(deviceESData->nEndCapMap),
           modulesBuffers_(deviceESData->modulesBuffers),
           pixelMapping_(deviceESData->pixelMapping),
-          endcapGeometry_(deviceESData->endcapGeometry) {
+          endcapGeometryBuffers_(deviceESData->endcapGeometryBuffers) {
       init(verbose);
     }
     void resetEvent();

@@ -15,40 +15,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
   public:
-    LSTModulesDevESProducer(const edm::ParameterSet& iConfig);
+    LSTModulesDevESProducer(edm::ParameterSet const& iConfig) : ESProducer(iConfig) { setWhatProduced(this); }
 
-    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+      edm::ParameterSetDescription desc;
+      descriptions.addWithDefaultLabel(desc);
+    }
 
-    std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> produceHost(TrackerRecoGeometryRecord const& iRecord);
-    std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> produceDevice(
-        device::Record<TrackerRecoGeometryRecord> const& iRecord);
-
-  private:
-    edm::ESGetToken<SDL::LSTESHostData<SDL::Dev>, TrackerRecoGeometryRecord> lstESHostToken_;
+    std::unique_ptr<SDL::LSTESData<SDL::DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
+      return SDL::loadAndFillESHost();
+    }
   };
-
-  LSTModulesDevESProducer::LSTModulesDevESProducer(const edm::ParameterSet& iConfig) : ESProducer(iConfig) {
-    setWhatProduced(this, &LSTModulesDevESProducer::produceHost);
-    auto cc = setWhatProduced(this, &LSTModulesDevESProducer::produceDevice);
-    lstESHostToken_ = cc.consumes();
-  }
-
-  void LSTModulesDevESProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-    edm::ParameterSetDescription desc;
-    descriptions.addWithDefaultLabel(desc);
-  }
-
-  std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> LSTModulesDevESProducer::produceHost(
-      TrackerRecoGeometryRecord const& iRecord) {
-    return SDL::loadAndFillESHost();
-  }
-
-  std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> LSTModulesDevESProducer::produceDevice(
-      device::Record<TrackerRecoGeometryRecord> const& iRecord) {
-    auto const& lstESHostData = iRecord.get(lstESHostToken_);
-    SDL::QueueAcc& queue = iRecord.queue();
-    return SDL::loadAndFillESDevice(queue, &lstESHostData);
-  }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 

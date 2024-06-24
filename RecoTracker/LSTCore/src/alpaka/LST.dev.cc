@@ -11,7 +11,7 @@ using XYZVector = ROOT::Math::XYZVector;
 
 void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
                              bool verbose,
-                             const LSTESDeviceData<SDL::Dev>* deviceESData,
+                             const LSTESData<SDL::Dev>* deviceESData,
                              const std::vector<float> see_px,
                              const std::vector<float> see_py,
                              const std::vector<float> see_pz,

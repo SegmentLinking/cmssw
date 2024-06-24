@@ -1,16 +1,8 @@
 #include "EndcapGeometry.h"
 
-SDL::EndcapGeometry<SDL::Dev>::EndcapGeometry(SDL::Dev const& devAccIn,
-                                              SDL::QueueAcc& queue,
-                                              SDL::EndcapGeometryHost<SDL::Dev> const& endcapGeometryIn)
-    : geoMapDetId_buf(allocBufWrapper<unsigned int>(devAccIn, endcapGeometryIn.centroid_phis_.size())),
-      geoMapPhi_buf(allocBufWrapper<float>(devAccIn, endcapGeometryIn.centroid_phis_.size())) {
-  dxdy_slope_ = endcapGeometryIn.dxdy_slope_;
-  centroid_phis_ = endcapGeometryIn.centroid_phis_;
-  fillGeoMapArraysExplicit(queue);
-}
+SDL::EndcapGeometry<SDL::Dev>::EndcapGeometry(std::string filename) { load(filename); }
 
-void SDL::EndcapGeometryHost<SDL::Dev>::load(std::string filename) {
+void SDL::EndcapGeometry<SDL::Dev>::load(std::string filename) {
   dxdy_slope_.clear();
   centroid_phis_.clear();
 
@@ -38,45 +30,25 @@ void SDL::EndcapGeometryHost<SDL::Dev>::load(std::string filename) {
       }
     }
   }
+
+  fillGeoMapArraysExplicit();
 }
 
-void SDL::EndcapGeometry<SDL::Dev>::fillGeoMapArraysExplicit(SDL::QueueAcc& queue) {
-  unsigned int phi_size = centroid_phis_.size();
+void SDL::EndcapGeometry<SDL::Dev>::fillGeoMapArraysExplicit() {
+  nEndCapMap = centroid_phis_.size();
 
-  // Allocate buffers on host
-  SDL::DevHost const& devHost = cms::alpakatools::host();
-  auto mapPhi_host_buf = allocBufWrapper<float>(devHost, phi_size);
-  auto mapDetId_host_buf = allocBufWrapper<unsigned int>(devHost, phi_size);
+  geoMapDetId_buf.reserve(nEndCapMap);
+  geoMapPhi_buf.reserve(nEndCapMap);
 
-  // Access the raw pointers of the buffers
-  float* mapPhi = alpaka::getPtrNative(mapPhi_host_buf);
-  unsigned int* mapDetId = alpaka::getPtrNative(mapDetId_host_buf);
-
-  unsigned int counter = 0;
   for (auto it = centroid_phis_.begin(); it != centroid_phis_.end(); ++it) {
     unsigned int detId = it->first;
     float Phi = it->second;
-    mapPhi[counter] = Phi;
-    mapDetId[counter] = detId;
-    counter++;
+    geoMapPhi_buf.push_back(Phi);
+    geoMapDetId_buf.push_back(detId);
   }
-
-  nEndCapMap = counter;
-
-  // Copy data from host to device buffers
-  alpaka::memcpy(queue, geoMapPhi_buf, mapPhi_host_buf);
-  alpaka::memcpy(queue, geoMapDetId_buf, mapDetId_host_buf);
-  alpaka::wait(queue);
 }
 
 float SDL::EndcapGeometry<SDL::Dev>::getdxdy_slope(unsigned int detid) const {
-  if (dxdy_slope_.find(detid) != dxdy_slope_.end()) {
-    return dxdy_slope_.at(detid);
-  } else {
-    return 0;
-  }
-}
-float SDL::EndcapGeometryHost<SDL::Dev>::getdxdy_slope(unsigned int detid) const {
   if (dxdy_slope_.find(detid) != dxdy_slope_.end()) {
     return dxdy_slope_.at(detid);
   } else {

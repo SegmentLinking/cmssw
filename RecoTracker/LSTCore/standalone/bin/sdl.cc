@@ -295,7 +295,8 @@ void run_sdl() {
   TStopwatch full_timer;
   full_timer.Start();
   auto hostESData = SDL::loadAndFillESHost();
-  auto deviceESData = SDL::loadAndFillESDevice(queues[0], hostESData.get());
+  auto deviceESData =
+      cms::alpakatools::CopyToDevice<SDL::LSTESData<SDL::DevHost>>::copyAsync(queues[0], *hostESData.get());
   float timeForMapLoading = full_timer.RealTime() * 1000;
 
   if (ana.do_write_ntuple) {
@@ -373,7 +374,7 @@ void run_sdl() {
   full_timer.Start();
   std::vector<SDL::Event<SDL::Acc> *> events;
   for (int s = 0; s < ana.streams; s++) {
-    SDL::Event<SDL::Acc> *event = new SDL::Event<SDL::Acc>(ana.verbose >= 2, queues[s], deviceESData.get());
+    SDL::Event<SDL::Acc> *event = new SDL::Event<SDL::Acc>(ana.verbose >= 2, queues[s], &deviceESData);
     events.push_back(event);
   }
   float timeForEventCreation = full_timer.RealTime() * 1000;
