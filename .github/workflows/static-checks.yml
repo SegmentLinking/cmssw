@@ -25,16 +25,11 @@ jobs:
         github.event.comment.user.login == 'slava77'
       )
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - name: Checkout PR
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
-          sparse-checkout: |
-            .clang-format
-            RecoTracker/LST
-            RecoTracker/LSTCore
       - name: Get commit SHA
         run: |
           sha=$(git rev-parse HEAD)
@@ -55,43 +50,11 @@ jobs:
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
             {"title": "This check has started...", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
-      - name: Mount cvmfs
-        uses: cvmfs-contrib/github-action-cvmfs@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Run static checks with SCRAM
+        timeout-minutes: 45
+        uses: SegmentLinking/TrackLooper-actions/static-checks@cmssw
         with:
-          python-version: '3.11'
-      - name: Generate compilation database
-        run: |
-          # There are some errors when running the script, but they don't affect anything important.
-          # We only need to run it to set up some environment variables, so we suppress the output.
-          cd RecoTracker/LSTCore/standalone
-          source setup.sh 1> /dev/null 2> /dev/null
-          pip install compiledb compdb
-          cd SDL
-          make BACKEND=cpu explicit_cache -Bnwk > build_log.txt
-          compiledb < build_log.txt
-          # This extra step is needed to generate compilation commands for headers
-          compdb list > compile_commands_new.json
-          mv compile_commands_new.json ${{ github.workspace }}/compile_commands.json
-          rm compile_commands.json
-      - name: Run linter
-        uses: cpp-linter/cpp-linter-action@v2
-        id: linter
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          version: 16
-          style: file
-          thread-comments: true
-          # disable clang-tidy for now
-          tidy-checks: '-*'
-          files-changed-only: false
-          ignore: RecoTracker/LSTCore/standalone
-          extra-args: '-U_OPENMP -ferror-limit=0'
-      - name: Fail job if there were checks that failed
-        if: steps.linter.outputs.checks-failed > 0
-        run: exit 1
+          pr-number: ${{ github.event.issue.number }}
       - name: Create completed check
         uses: LouisBrunner/checks-action@v2.0.0
         if: always()
