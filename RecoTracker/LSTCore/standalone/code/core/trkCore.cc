@@ -166,9 +166,6 @@ float runpT3(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runTrackCandidate(SDL::Event<SDL::Acc> *event) { return runTrackCandidateTest_v2(event); }
-
-//___________________________________________________________________________________________________________________________________________________________________________________________
 float runQuintuplet(SDL::Event<SDL::Acc> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
@@ -214,12 +211,12 @@ float runQuintuplet(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runPixelLineSegment(SDL::Event<SDL::Acc> *event) {
+float runPixelLineSegment(SDL::Event<SDL::Acc> *event, bool no_pls_dupclean) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Line Segment start" << std::endl;
   my_timer.Start();
-  event->pixelLineSegmentCleaning();
+  event->pixelLineSegmentCleaning(no_pls_dupclean);
   float pls_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Line Segment processing time: " << pls_elapsed << " secs" << std::endl;
@@ -244,12 +241,12 @@ float runPixelQuintuplet(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runTrackCandidateTest_v2(SDL::Event<SDL::Acc> *event) {
+float runTrackCandidate(SDL::Event<SDL::Acc> *event, bool no_pls_dupclean, bool tc_pls_triplets) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco TrackCandidate start" << std::endl;
   my_timer.Start();
-  event->createTrackCandidates();
+  event->createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
   float tc_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)
     std::cout << "Reco TrackCandidate processing time: " << tc_elapsed << " secs" << std::endl;
@@ -696,7 +693,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
     float eta = p3LH.Eta();
     float ptErr = trk.see_ptErr()[iSeed];
 
-    if ((ptIn > PT_CUT - 2 * ptErr)) {
+    if ((ptIn > ana.ptCut - 2 * ptErr)) {
       TVector3 r3LH(trk.see_stateTrajGlbX()[iSeed], trk.see_stateTrajGlbY()[iSeed], trk.see_stateTrajGlbZ()[iSeed]);
       TVector3 p3PCA(trk.see_px()[iSeed], trk.see_py()[iSeed], trk.see_pz()[iSeed]);
       TVector3 r3PCA(calculateR3FromPCA(p3PCA, trk.see_dxy()[iSeed], trk.see_dz()[iSeed]));
@@ -718,7 +715,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
       int pixtype = -1;
       if (ptIn >= 2.0) { /*ptbin = 1;*/
         pixtype = 0;
-      } else if (ptIn >= (PT_CUT - 2 * ptErr) and ptIn < 2.0) {
+      } else if (ptIn >= (ana.ptCut - 2 * ptErr) and ptIn < 2.0) {
         // ptbin = 0;
         if (pixelSegmentDeltaPhiChange >= 0) {
           pixtype = 1;
@@ -1196,7 +1193,7 @@ void writeMetaData() {
     float ptErr = trk.see_ptErr()[iSeed];
     float eta = p3LH.Eta();
 
-    if ((ptIn > 0.8 - 2 * ptErr)) {
+    if ((ptIn > ana.ptCut - 2 * ptErr)) {
       TVector3 r3LH(trk.see_stateTrajGlbX()[iSeed], trk.see_stateTrajGlbY()[iSeed], trk.see_stateTrajGlbZ()[iSeed]);
       TVector3 p3PCA(trk.see_px()[iSeed], trk.see_py()[iSeed], trk.see_pz()[iSeed]);
       TVector3 r3PCA(calculateR3FromPCA(p3PCA, trk.see_dxy()[iSeed], trk.see_dz()[iSeed]));
@@ -1221,7 +1218,7 @@ void writeMetaData() {
       int pixtype = -1;
       if (ptIn >= 2.0) { /*ptbin = 1;*/
         pixtype = 0;
-      } else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
+      } else if (ptIn >= (ana.ptCut - 2 * ptErr) and ptIn < 2.0) {
         // ptbin = 0;
         if (pixelSegmentDeltaPhiChange >= 0) {
           pixtype = 1;

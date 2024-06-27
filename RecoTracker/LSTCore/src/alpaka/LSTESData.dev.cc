@@ -1,8 +1,4 @@
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/LSTESData.h"
-#else
-#include "LSTESData.h"
-#endif
 
 #include "EndcapGeometry.h"
 #include "ModuleConnectionMap.h"
@@ -12,25 +8,24 @@
 
 namespace {
   std::string trackLooperDir() {
-    const char* path_lst_base = std::getenv("LST_BASE");
+    std::string path_str, path;
     const char* path_tracklooperdir = std::getenv("TRACKLOOPERDIR");
-    std::string path_str;
-    if (path_lst_base != nullptr) {
-      path_str = path_lst_base;
-    } else if (path_tracklooperdir != nullptr) {
-      path_str = path_tracklooperdir;
-      path_str += "/../";
-    } else {
-      std::stringstream search_path(std::getenv("CMSSW_SEARCH_PATH"));
-      std::string path;
-      while (std::getline(search_path, path, ':')) {
-        if (std::filesystem::exists(path + "/RecoTracker/LSTCore/data")) {
-          path_str = path;
-          break;
-        }
+    std::stringstream search_path(std::getenv("CMSSW_SEARCH_PATH"));
+
+    while (std::getline(search_path, path, ':')) {
+      if (std::filesystem::exists(path + "/RecoTracker/LSTCore/data")) {
+        path_str = path;
+        break;
       }
+    }
+
+    if (path_str.empty()) {
+      path_str = path_tracklooperdir;
+      path_str += "/..";
+    } else {
       path_str += "/RecoTracker/LSTCore";
     }
+
     return path_str;
   }
 
@@ -46,21 +41,22 @@ namespace {
   void loadMapsHost(SDL::MapPLStoLayer& pLStoLayer,
                     std::shared_ptr<SDL::EndcapGeometryHost<SDL::Dev>> endcapGeometry,
                     std::shared_ptr<SDL::TiltedGeometry<SDL::Dev>> tiltedGeometry,
-                    std::shared_ptr<SDL::ModuleConnectionMap<SDL::Dev>> moduleConnectionMap) {
+                    std::shared_ptr<SDL::ModuleConnectionMap<SDL::Dev>> moduleConnectionMap,
+                    std::string& ptCutLabel) {
     // Module orientation information (DrDz or phi angles)
-    auto endcap_geom =
-        get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
-    auto tilted_geom = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/tilted_barrel_orientation.bin");
+    auto endcap_geom = get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt" +
+                                                                 ptCutLabel + "/endcap_orientation.bin");
+    auto tilted_geom = get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt" +
+                                                                 ptCutLabel + "/tilted_barrel_orientation.bin");
     // Module connection map (for line segment building)
-    auto mappath = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/module_connection_tracing_merged.bin");
+    auto mappath = get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt" + ptCutLabel +
+                                                             "/module_connection_tracing_merged.bin");
 
     endcapGeometry->load(endcap_geom);
     tiltedGeometry->load(tilted_geom);
     moduleConnectionMap->load(mappath);
 
-    auto pLSMapDir = trackLooperDir() + "/data/OT800_IT615_pt0.8/pixelmap/pLS_map";
+    auto pLSMapDir = trackLooperDir() + "/data/OT800_IT615_pt" + ptCutLabel + "/pixelmap/pLS_map";
     const std::array<std::string, 4> connects{
         {"_layer1_subdet5", "_layer2_subdet5", "_layer1_subdet4", "_layer2_subdet4"}};
     std::string path;
@@ -81,17 +77,18 @@ namespace {
   }
 }  // namespace
 
-std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> SDL::loadAndFillESHost() {
+std::unique_ptr<SDL::LSTESHostData<SDL::Dev>> SDL::loadAndFillESHost(std::string& ptCutLabel) {
   auto pLStoLayer = std::make_shared<SDL::MapPLStoLayer>();
   auto endcapGeometry = std::make_shared<SDL::EndcapGeometryHost<SDL::Dev>>();
   auto tiltedGeometry = std::make_shared<SDL::TiltedGeometry<SDL::Dev>>();
   auto moduleConnectionMap = std::make_shared<SDL::ModuleConnectionMap<SDL::Dev>>();
-  ::loadMapsHost(*pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
+  ::loadMapsHost(*pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap, ptCutLabel);
   return std::make_unique<LSTESHostData<SDL::Dev>>(pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 }
 
 std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> SDL::loadAndFillESDevice(SDL::QueueAcc& queue,
-                                                                         const LSTESHostData<SDL::Dev>* hostData) {
+                                                                         const LSTESHostData<SDL::Dev>* hostData,
+                                                                         std::string& ptCutLabel) {
   SDL::Dev const& devAccIn = alpaka::getDev(queue);
   uint16_t nModules;
   uint16_t nLowerModules;
@@ -101,8 +98,8 @@ std::unique_ptr<SDL::LSTESDeviceData<SDL::Dev>> SDL::loadAndFillESDevice(SDL::Qu
   auto pixelMapping = std::make_shared<SDL::pixelMap>();
   auto moduleConnectionMap = hostData->moduleConnectionMap;
 
-  auto path =
-      get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/sensor_centroids.bin");
+  auto path = get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt" + ptCutLabel +
+                                                        "/sensor_centroids.bin");
   SDL::loadModulesFromFile(queue,
                            hostData->mapPLStoLayer.get(),
                            path.c_str(),

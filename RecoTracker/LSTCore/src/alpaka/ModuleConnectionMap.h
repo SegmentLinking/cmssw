@@ -8,11 +8,7 @@
 #include <sstream>
 #include <algorithm>
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#else
-#include "Constants.h"
-#endif
 
 namespace SDL {
   //FIXME: move to non-alpaka single arch build

@@ -1,13 +1,8 @@
 #ifndef Hit_cuh
 #define Hit_cuh
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#else
-#include "Constants.h"
-#include "Module.h"
-#endif
 
 namespace SDL {
   struct hits {

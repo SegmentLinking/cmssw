@@ -1,11 +1,7 @@
 #ifndef LSTESData_H
 #define LSTESData_H
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#else
-#include "Constants.h"
-#endif
 
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 
@@ -76,8 +72,10 @@ namespace SDL {
           pixelMapping(pixelMappingIn) {}
   };
 
-  std::unique_ptr<LSTESHostData<Dev>> loadAndFillESHost();
-  std::unique_ptr<LSTESDeviceData<Dev>> loadAndFillESDevice(SDL::QueueAcc& queue, const LSTESHostData<Dev>* hostData);
+  std::unique_ptr<LSTESHostData<Dev>> loadAndFillESHost(std::string& ptCutLabel);
+  std::unique_ptr<LSTESDeviceData<Dev>> loadAndFillESDevice(SDL::QueueAcc& queue,
+                                                            const LSTESHostData<Dev>* hostData,
+                                                            std::string& ptCutLabel);
 
 }  // namespace SDL
 

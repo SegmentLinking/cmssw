@@ -1,13 +1,8 @@
 #ifndef MiniDoublet_cuh
 #define MiniDoublet_cuh
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#else
-#include "Constants.h"
-#include "Module.h"
-#endif
 
 #include "EndcapGeometry.h"
 #include "Hit.h"
@@ -341,6 +336,7 @@ namespace SDL {
                                                      float rt,
                                                      struct SDL::modules& modulesInGPU,
                                                      uint16_t& moduleIndex,
+                                                     const float ptCut,
                                                      float dPhi = 0,
                                                      float dz = 0) {
     // =================================================================
@@ -589,7 +585,8 @@ namespace SDL {
                                                float xUpper,
                                                float yUpper,
                                                float zUpper,
-                                               float rtUpper) {
+                                               float rtUpper,
+                                               const float ptCut) {
     if (modulesInGPU.subdets[lowerModuleIndex] == SDL::Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
                                              modulesInGPU,
@@ -613,7 +610,8 @@ namespace SDL {
                                              xUpper,
                                              yUpper,
                                              zUpper,
-                                             rtUpper);
+                                             rtUpper,
+                                             ptCut);
     } else {
       return runMiniDoubletDefaultAlgoEndcap(acc,
                                              modulesInGPU,
@@ -637,7 +635,8 @@ namespace SDL {
                                              xUpper,
                                              yUpper,
                                              zUpper,
-                                             rtUpper);
+                                             rtUpper,
+                                             ptCut);
     }
   };
 
@@ -664,7 +663,8 @@ namespace SDL {
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
-                                                     float rtUpper) {
+                                                     float rtUpper,
+                                                     const float ptCut) {
     bool pass = true;
     dz = zLower - zUpper;
     const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == SDL::PS ? 2.f : 10.f;
@@ -679,8 +679,8 @@ namespace SDL {
     float miniCut = 0;
 
     miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel
-                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex)
-                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex);
+                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut)
+                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut);
 
     // Cut #2: dphi difference
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3085
@@ -798,7 +798,8 @@ namespace SDL {
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
-                                                     float rtUpper) {
+                                                     float rtUpper,
+                                                     const float ptCut) {
     bool pass = true;
 
     // There are series of cuts that applies to mini-doublet in a "endcap" region
@@ -875,8 +876,8 @@ namespace SDL {
 
     float miniCut = 0;
     miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel
-                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, dPhi, dz)
-                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, dPhi, dz);
+                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz)
+                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz);
 
     pass = pass && (alpaka::math::abs(acc, dPhi) < miniCut);
     if (not pass)
@@ -899,7 +900,8 @@ namespace SDL {
                                   struct SDL::modules modulesInGPU,
                                   struct SDL::hits hitsInGPU,
                                   struct SDL::miniDoublets mdsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  struct SDL::objectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -955,7 +957,8 @@ namespace SDL {
                                                    xUpper,
                                                    yUpper,
                                                    zUpper,
-                                                   rtUpper);
+                                                   rtUpper,
+                                                   ptCut);
           if (success) {
             int totOccupancyMDs =
                 alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.totOccupancyMDs[lowerModuleIndex], 1u);

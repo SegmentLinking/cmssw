@@ -1,13 +1,8 @@
 #ifndef Segment_cuh
 #define Segment_cuh
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#else
-#include "Constants.h"
-#include "Module.h"
-#endif
 
 #include "EndcapGeometry.h"
 #include "MiniDoublet.h"
@@ -276,7 +271,8 @@ namespace SDL {
                                                       uint16_t& innerLowerModuleIndex,
                                                       uint16_t& outerLowerModuleIndex,
                                                       unsigned int& innerMDIndex,
-                                                      unsigned int& outerMDIndex) {
+                                                      unsigned int& outerMDIndex,
+                                                      const float ptCut) {
     float sdMuls = (modulesInGPU.subdets[innerLowerModuleIndex] == SDL::Barrel)
                        ? miniMulsPtScaleBarrel[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : miniMulsPtScaleEndcap[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -477,7 +473,8 @@ namespace SDL {
                                                                   float& sdCut,
                                                                   float& dAlphaInnerMDSegmentThreshold,
                                                                   float& dAlphaOuterMDSegmentThreshold,
-                                                                  float& dAlphaInnerMDOuterMDThreshold) {
+                                                                  float& dAlphaInnerMDOuterMDThreshold,
+                                                                  const float ptCut) {
     bool pass = true;
 
     float sdMuls = (modulesInGPU.subdets[innerLowerModuleIndex] == SDL::Barrel)
@@ -540,7 +537,8 @@ namespace SDL {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     float innerMDAlpha = mdsInGPU.dphichanges[innerMDIndex];
     float outerMDAlpha = mdsInGPU.dphichanges[outerMDIndex];
@@ -589,7 +587,8 @@ namespace SDL {
                                                                   float& dAlphaInnerMDSegmentThreshold,
                                                                   float& dAlphaOuterMDSegmentThreshold,
                                                                   float& dAlphaInnerMDOuterMDThreshold,
-                                                                  float& dAlphaInnerMDOuterMD) {
+                                                                  float& dAlphaInnerMDOuterMD,
+                                                                  const float ptCut) {
     bool pass = true;
 
     float xIn, yIn;
@@ -680,7 +679,8 @@ namespace SDL {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
@@ -731,7 +731,8 @@ namespace SDL {
                                                             float& sdCut,
                                                             float& dAlphaInnerMDSegmentThreshold,
                                                             float& dAlphaOuterMDSegmentThreshold,
-                                                            float& dAlphaInnerMDOuterMDThreshold) {
+                                                            float& dAlphaInnerMDOuterMDThreshold,
+                                                            const float ptCut) {
     zLo = -999.f;
     zHi = -999.f;
     rtLo = -999.f;
@@ -764,7 +765,8 @@ namespace SDL {
                                          sdCut,
                                          dAlphaInnerMDSegmentThreshold,
                                          dAlphaOuterMDSegmentThreshold,
-                                         dAlphaInnerMDOuterMDThreshold);
+                                         dAlphaInnerMDOuterMDThreshold,
+                                         ptCut);
     } else {
       return runSegmentDefaultAlgoEndcap(acc,
                                          modulesInGPU,
@@ -791,7 +793,8 @@ namespace SDL {
                                          sdCut,
                                          dAlphaInnerMDSegmentThreshold,
                                          dAlphaOuterMDSegmentThreshold,
-                                         dAlphaInnerMDOuterMDThreshold);
+                                         dAlphaInnerMDOuterMDThreshold,
+                                         ptCut);
     }
   };
 
@@ -801,7 +804,8 @@ namespace SDL {
                                   struct SDL::modules modulesInGPU,
                                   struct SDL::miniDoublets mdsInGPU,
                                   struct SDL::segments segmentsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  struct SDL::objectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const blockThreadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -873,7 +877,8 @@ namespace SDL {
                                               sdCut,
                                               dAlphaInnerMDSegmentThreshold,
                                               dAlphaOuterMDSegmentThreshold,
-                                              dAlphaInnerMDOuterMDThreshold);
+                                              dAlphaInnerMDOuterMDThreshold,
+                                              ptCut);
 
             if (pass) {
               unsigned int totOccupancySegments = alpaka::atomicOp<alpaka::AtomicAdd>(

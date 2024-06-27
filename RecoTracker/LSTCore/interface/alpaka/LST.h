@@ -1,13 +1,8 @@
 #ifndef LST_H
 #define LST_H
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTESData.h"
-#else
-#include "Constants.h"
-#include "LSTESData.h"
-#endif
 
 #include <cstdlib>
 #include <numeric>
@@ -28,6 +23,7 @@ namespace SDL {
 
     void run(QueueAcc& queue,
              bool verbose,
+             const float ptCut,
              const LSTESDeviceData<Dev>* deviceESData,
              const std::vector<float> see_px,
              const std::vector<float> see_py,
@@ -47,7 +43,9 @@ namespace SDL {
              const std::vector<unsigned int> ph2_detId,
              const std::vector<float> ph2_x,
              const std::vector<float> ph2_y,
-             const std::vector<float> ph2_z);
+             const std::vector<float> ph2_z,
+             bool no_pls_dupclean,
+             bool tc_pls_triplets);
     std::vector<std::vector<unsigned int>> hits() { return out_tc_hitIdxs_; }
     std::vector<unsigned int> len() { return out_tc_len_; }
     std::vector<int> seedIdx() { return out_tc_seedIdx_; }
@@ -72,7 +70,8 @@ namespace SDL {
                       const std::vector<unsigned int> ph2_detId,
                       const std::vector<float> ph2_x,
                       const std::vector<float> ph2_y,
-                      const std::vector<float> ph2_z);
+                      const std::vector<float> ph2_z,
+                      const float ptCut);
 
     void getOutput(SDL::Event<Acc>& event);
     std::vector<unsigned int> getHitIdxs(const short trackCandidateType,

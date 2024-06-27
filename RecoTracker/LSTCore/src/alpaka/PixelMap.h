@@ -4,11 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#else
-#include "Constants.h"
-#endif
 
 namespace SDL {
   // PixelMap is never allocated on the device.

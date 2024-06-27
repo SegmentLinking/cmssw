@@ -440,7 +440,8 @@ void SDL::Event<SDL::Acc>::createMiniDoublets() {
                                                                          *modulesBuffers_->data(),
                                                                          *hitsInGPU,
                                                                          *mdsInGPU,
-                                                                         *rangesInGPU));
+                                                                         *rangesInGPU,
+                                                                         ptCut));
 
   alpaka::enqueue(queue, createMiniDoubletsInGPUv2Task);
 
@@ -485,7 +486,8 @@ void SDL::Event<SDL::Acc>::createSegmentsWithModuleMap() {
                                                                      *modulesBuffers_->data(),
                                                                      *mdsInGPU,
                                                                      *segmentsInGPU,
-                                                                     *rangesInGPU));
+                                                                     *rangesInGPU,
+                                                                     ptCut));
 
   alpaka::enqueue(queue, createSegmentsInGPUv2Task);
 
@@ -593,7 +595,8 @@ void SDL::Event<SDL::Acc>::createTriplets() {
                                                                      *tripletsInGPU,
                                                                      *rangesInGPU,
                                                                      alpaka::getPtrNative(index_gpu_buf),
-                                                                     nonZeroModules));
+                                                                     nonZeroModules,
+                                                                     ptCut));
 
   alpaka::enqueue(queue, createTripletsInGPUv2Task);
 
@@ -617,7 +620,7 @@ void SDL::Event<SDL::Acc>::createTriplets() {
   }
 }
 
-void SDL::Event<SDL::Acc>::createTrackCandidates() {
+void SDL::Event<SDL::Acc>::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   if (trackCandidatesInGPU == nullptr) {
     trackCandidatesInGPU = new SDL::trackCandidates();
     trackCandidatesBuffers = new SDL::trackCandidatesBuffer<Dev>(
@@ -709,18 +712,18 @@ void SDL::Event<SDL::Acc>::createTrackCandidates() {
 
   alpaka::enqueue(queue, addT5asTrackCandidateInGPUTask);
 
-#ifndef NOPLSDUPCLEAN
-  Vec const threadsPerBlockCheckHitspLS = createVec(1, 16, 16);
-  Vec const blocksPerGridCheckHitspLS = createVec(1, MAX_BLOCKS * 4, MAX_BLOCKS / 4);
-  WorkDiv const checkHitspLS_workDiv =
-      createWorkDiv(blocksPerGridCheckHitspLS, threadsPerBlockCheckHitspLS, elementsPerThread);
+  if (!no_pls_dupclean) {
+    Vec const threadsPerBlockCheckHitspLS = createVec(1, 16, 16);
+    Vec const blocksPerGridCheckHitspLS = createVec(1, MAX_BLOCKS * 4, MAX_BLOCKS / 4);
+    WorkDiv const checkHitspLS_workDiv =
+        createWorkDiv(blocksPerGridCheckHitspLS, threadsPerBlockCheckHitspLS, elementsPerThread);
 
-  SDL::checkHitspLS checkHitspLS_kernel;
-  auto const checkHitspLSTask(alpaka::createTaskKernel<Acc>(
-      checkHitspLS_workDiv, checkHitspLS_kernel, *modulesBuffers_->data(), *segmentsInGPU, true));
+    SDL::checkHitspLS checkHitspLS_kernel;
+    auto const checkHitspLSTask(alpaka::createTaskKernel<Acc>(
+        checkHitspLS_workDiv, checkHitspLS_kernel, *modulesBuffers_->data(), *segmentsInGPU, true));
 
-  alpaka::enqueue(queue, checkHitspLSTask);
-#endif
+    alpaka::enqueue(queue, checkHitspLSTask);
+  }
 
   Vec const threadsPerBlock_crossCleanpLS = createVec(1, 16, 32);
   Vec const blocksPerGrid_crossCleanpLS = createVec(1, 4, 20);
@@ -751,7 +754,8 @@ void SDL::Event<SDL::Acc>::createTrackCandidates() {
                                                                            addpLSasTrackCandidateInGPU_kernel,
                                                                            nLowerModules_,
                                                                            *trackCandidatesInGPU,
-                                                                           *segmentsInGPU));
+                                                                           *segmentsInGPU,
+                                                                           tc_pls_triplets));
 
   alpaka::enqueue(queue, addpLSasTrackCandidateInGPUTask);
 
@@ -871,7 +875,8 @@ void SDL::Event<SDL::Acc>::createPixelTriplets() {
                                     *pixelTripletsInGPU,
                                     alpaka::getPtrNative(connectedPixelSize_dev_buf),
                                     alpaka::getPtrNative(connectedPixelIndex_dev_buf),
-                                    nInnerSegments));
+                                    nInnerSegments,
+                                    ptCut));
 
   alpaka::enqueue(queue, createPixelTripletsInGPUFromMapv2Task);
   alpaka::wait(queue);
@@ -950,7 +955,8 @@ void SDL::Event<SDL::Acc>::createQuintuplets() {
                                                                         *tripletsInGPU,
                                                                         *quintupletsInGPU,
                                                                         *rangesInGPU,
-                                                                        nEligibleT5Modules));
+                                                                        nEligibleT5Modules,
+                                                                        ptCut));
 
   alpaka::enqueue(queue, createQuintupletsInGPUv2Task);
 
@@ -990,20 +996,20 @@ void SDL::Event<SDL::Acc>::createQuintuplets() {
   }
 }
 
-void SDL::Event<SDL::Acc>::pixelLineSegmentCleaning() {
-#ifndef NOPLSDUPCLEAN
-  Vec const threadsPerBlockCheckHitspLS = createVec(1, 16, 16);
-  Vec const blocksPerGridCheckHitspLS = createVec(1, MAX_BLOCKS * 4, MAX_BLOCKS / 4);
-  WorkDiv const checkHitspLS_workDiv =
-      createWorkDiv(blocksPerGridCheckHitspLS, threadsPerBlockCheckHitspLS, elementsPerThread);
+void SDL::Event<SDL::Acc>::pixelLineSegmentCleaning(bool no_pls_dupclean) {
+  if (!no_pls_dupclean) {
+    Vec const threadsPerBlockCheckHitspLS = createVec(1, 16, 16);
+    Vec const blocksPerGridCheckHitspLS = createVec(1, MAX_BLOCKS * 4, MAX_BLOCKS / 4);
+    WorkDiv const checkHitspLS_workDiv =
+        createWorkDiv(blocksPerGridCheckHitspLS, threadsPerBlockCheckHitspLS, elementsPerThread);
 
-  SDL::checkHitspLS checkHitspLS_kernel;
-  auto const checkHitspLSTask(alpaka::createTaskKernel<Acc>(
-      checkHitspLS_workDiv, checkHitspLS_kernel, *modulesBuffers_->data(), *segmentsInGPU, false));
+    SDL::checkHitspLS checkHitspLS_kernel;
+    auto const checkHitspLSTask(alpaka::createTaskKernel<Acc>(
+        checkHitspLS_workDiv, checkHitspLS_kernel, *modulesBuffers_->data(), *segmentsInGPU, false));
 
-  alpaka::enqueue(queue, checkHitspLSTask);
-  alpaka::wait(queue);
-#endif
+    alpaka::enqueue(queue, checkHitspLSTask);
+    alpaka::wait(queue);
+  }
 }
 
 void SDL::Event<SDL::Acc>::createPixelQuintuplets() {
@@ -1101,7 +1107,8 @@ void SDL::Event<SDL::Acc>::createPixelQuintuplets() {
                                     alpaka::getPtrNative(connectedPixelSize_dev_buf),
                                     alpaka::getPtrNative(connectedPixelIndex_dev_buf),
                                     nInnerSegments,
-                                    *rangesInGPU));
+                                    *rangesInGPU,
+                                    ptCut));
 
   alpaka::enqueue(queue, createPixelQuintupletsInGPUFromMapv2Task);
 

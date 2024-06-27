@@ -1,15 +1,9 @@
 #ifndef Event_cuh
 #define Event_cuh
 
-#ifdef LST_IS_CMSSW_PACKAGE
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
-#else
-#include "Constants.h"
-#include "Module.h"
-#include "LST.h"
-#endif
 
 #include "Hit.h"
 #include "ModuleMethods.h"
@@ -31,6 +25,7 @@ namespace SDL {
   class Event<SDL::Acc> {
   private:
     QueueAcc queue;
+    const float ptCut;
     Dev devAcc;
     DevHost devHost;
     bool addObjects;
@@ -97,8 +92,9 @@ namespace SDL {
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
     template <typename TQueue>
-    Event(bool verbose, TQueue const& q, const LSTESDeviceData<Dev>* deviceESData)
+    Event(bool verbose, const float pt_cut, TQueue const& q, const LSTESDeviceData<Dev>* deviceESData)
         : queue(q),
+          ptCut(pt_cut),
           devAcc(alpaka::getDev(q)),
           devHost(cms::alpakatools::host()),
           nModules_(deviceESData->nModules),
@@ -107,6 +103,10 @@ namespace SDL {
           modulesBuffers_(deviceESData->modulesBuffers),
           pixelMapping_(deviceESData->pixelMapping),
           endcapGeometry_(deviceESData->endcapGeometry) {
+      if (pt_cut < 0.6f) {
+        throw std::invalid_argument("Minimum pT cut must be at least 0.6 GeV. Provided value: " +
+                                    std::to_string(pt_cut));
+      }
       init(verbose);
     }
     void resetEvent();
@@ -148,12 +148,12 @@ namespace SDL {
     void createTriplets();
     void createPixelTracklets();
     void createPixelTrackletsWithMap();
-    void createTrackCandidates();
+    void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets);
     void createExtendedTracks();
     void createQuintuplets();
     void createPixelTriplets();
     void createPixelQuintuplets();
-    void pixelLineSegmentCleaning();
+    void pixelLineSegmentCleaning(bool no_pls_dupclean);
 
     unsigned int getNumberOfHits();
     unsigned int getNumberOfHitsByLayer(unsigned int layer);
