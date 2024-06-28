@@ -26,7 +26,6 @@ numWFIB.extend([24434.0]) #2026D97
 numWFIB.extend([24834.0,24834.911,24834.103]) #2026D98 DDD XML, DD4hep XML, aging
 numWFIB.extend([25061.97]) #2026D98 premixing stage1 (NuGun+PU)
 numWFIB.extend([24834.702]) #2026D98 mkFit tracking (initialStep)
-numWFIB.extend([24834.703,24834.704]) #2026D98 LST tracking (initialStep+HighPtTripletStep only): CPU, GPU
 numWFIB.extend([24834.5,24834.9]) #2026D98 pixelTrackingOnly, vector hits
 numWFIB.extend([24834.501,24834.502]) #2026D98 Patatrack local reconstruction on CPU, Patatrack local reconstruction on GPU
 numWFIB.extend([25034.99,25034.999]) #2026D98 premixing combined stage1+stage2 (ttbar+PU200, ttbar+PU50 for PR test)
@@ -54,6 +53,9 @@ numWFIB.extend([24896.0]) #CE_E_Front_120um D98
 numWFIB.extend([24900.0]) #CE_H_Coarse_Scint D98
 # NuGun 
 numWFIB.extend([24861.0]) #Nu Gun 2026D98
+
+# Temporary placement for LST workflow to workaround PR conflicts - to be formatted and placed in an upcoming PR
+numWFIB.extend([24834.703,24834.704]) #2026D98 LST tracking (initialStep+HighPtTripletStep only): CPU, GPU
 
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]
