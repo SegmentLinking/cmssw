@@ -1027,8 +1027,6 @@ namespace SDL {
       // Select the appropriate occupancy matrix based on ptCut
       const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
-      alpaka::syncBlockThreads(acc);
-
       for (uint16_t i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         short module_rings = modulesInGPU.rings[i];
         short module_layers = modulesInGPU.layers[i];
