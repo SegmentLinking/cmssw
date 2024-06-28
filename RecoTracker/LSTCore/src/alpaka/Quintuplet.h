@@ -3174,27 +3174,8 @@ namespace SDL {
 
         int nEligibleT5Modules = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nEligibleT5Modulesx, 1);
 
-        int category_number = -1;
-        if (module_layers <= 3 && module_subdets == 5)
-          category_number = 0;
-        else if (module_layers >= 4 && module_subdets == 5)
-          category_number = 1;
-        else if ((module_layers <= 2 && module_subdets == 4 && module_rings >= 11) ||
-                 (module_layers >= 3 && module_subdets == 4 && module_rings >= 8))
-          category_number = 2;
-        else if ((module_layers <= 2 && module_subdets == 4 && module_rings <= 10) ||
-                 (module_layers >= 3 && module_subdets == 4 && module_rings <= 7))
-          category_number = 3;
-
-        int eta_number = -1;
-        if (module_eta < 0.75)
-          eta_number = 0;
-        else if (module_eta < 1.5)
-          eta_number = 1;
-        else if (module_eta < 2.25)
-          eta_number = 2;
-        else if (module_eta < 3)
-          eta_number = 3;
+        int category_number = SDL::getCategoryNumber(module_layers, module_subdets, module_rings);
+        int eta_number = SDL::getEtaBin(module_eta);
 
         int occupancy = 0;
         if (category_number != -1 && eta_number != -1) {

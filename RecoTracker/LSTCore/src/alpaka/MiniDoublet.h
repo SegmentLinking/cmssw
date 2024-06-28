@@ -994,6 +994,36 @@ namespace SDL {
     }
   };
 
+  // Helper function to determine eta bin for occupancies
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int getEtaBin(const float module_eta) {
+    if (module_eta < 0.75f)
+      return 0;
+    if (module_eta < 1.5f)
+      return 1;
+    if (module_eta < 2.25f)
+      return 2;
+    if (module_eta < 3.0f)
+      return 3;
+    return -1;
+  }
+
+  // Helper function to determine category number for occupancies
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int getCategoryNumber(const short module_layers,
+                                                       const short module_subdets,
+                                                       const short module_rings) {
+    if (module_subdets == 5) {
+      return (module_layers <= 3) ? 0 : 1;
+    }
+    if (module_subdets == 4) {
+      if (module_layers <= 2) {
+        return (module_rings >= 11) ? 2 : 3;
+      } else {
+        return (module_rings >= 8) ? 2 : 3;
+      }
+    }
+    return -1;
+  }
+
   struct createMDArrayRangesGPU {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
@@ -1033,27 +1063,8 @@ namespace SDL {
         short module_subdets = modulesInGPU.subdets[i];
         float module_eta = alpaka::math::abs(acc, modulesInGPU.eta[i]);
 
-        int category_number = -1;
-        if (module_layers <= 3 && module_subdets == 5)
-          category_number = 0;
-        else if (module_layers >= 4 && module_subdets == 5)
-          category_number = 1;
-        else if ((module_layers <= 2 && module_subdets == 4 && module_rings >= 11) ||
-                 (module_layers >= 3 && module_subdets == 4 && module_rings >= 8))
-          category_number = 2;
-        else if ((module_layers <= 2 && module_subdets == 4 && module_rings <= 10) ||
-                 (module_layers >= 3 && module_subdets == 4 && module_rings <= 7))
-          category_number = 3;
-
-        int eta_number = -1;
-        if (module_eta < 0.75)
-          eta_number = 0;
-        else if (module_eta < 1.5)
-          eta_number = 1;
-        else if (module_eta < 2.25)
-          eta_number = 2;
-        else if (module_eta < 3)
-          eta_number = 3;
+        int category_number = getCategoryNumber(module_layers, module_subdets, module_rings);
+        int eta_number = getEtaBin(module_eta);
 
         int occupancy = 0;
         if (category_number != -1 && eta_number != -1) {
