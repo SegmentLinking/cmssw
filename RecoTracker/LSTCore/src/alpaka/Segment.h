@@ -885,7 +885,9 @@ namespace SDL {
                   acc, &segmentsInGPU.totOccupancySegments[innerLowerModuleIndex], 1u);
               if (static_cast<int>(totOccupancySegments) >= rangesInGPU.segmentModuleOccupancy[innerLowerModuleIndex]) {
 #ifdef Warnings
-                printf("Segment excess alert! Module index = %d\n", innerLowerModuleIndex);
+                printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
+                       innerLowerModuleIndex,
+                       totOccupancySegments);
 #endif
               } else {
                 unsigned int segmentModuleIdx =

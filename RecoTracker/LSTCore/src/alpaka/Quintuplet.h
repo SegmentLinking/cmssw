@@ -3063,7 +3063,9 @@ namespace SDL {
                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quintupletsInGPU.totOccupancyQuintuplets[lowerModule1], 1u);
               if (totOccupancyQuintuplets >= rangesInGPU.quintupletModuleOccupancy[lowerModule1]) {
 #ifdef Warnings
-                printf("Quintuplet excess alert! Module index = %d\n", lowerModule1);
+                printf("Quintuplet excess alert! Module index = %d, Occupancy = %d\n",
+                       lowerModule1,
+                       totOccupancyQuintuplets);
 #endif
               } else {
                 int quintupletModuleIndex =

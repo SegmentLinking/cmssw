@@ -964,7 +964,8 @@ namespace SDL {
                 alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.totOccupancyMDs[lowerModuleIndex], 1u);
             if (totOccupancyMDs >= (rangesInGPU.miniDoubletModuleOccupancy[lowerModuleIndex])) {
 #ifdef Warnings
-              printf("Mini-doublet excess alert! Module index =  %d\n", lowerModuleIndex);
+              printf(
+                  "Mini-doublet excess alert! Module index = %d, Occupancy = %d\n", lowerModuleIndex, totOccupancyMDs);
 #endif
             } else {
               int mdModuleIndex = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.nMDs[lowerModuleIndex], 1u);
@@ -1040,10 +1041,10 @@ namespace SDL {
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {49, 42, 37, 41},      // category 0
-          {100, 100, 100, 100},  // category 1
-          {0, 16, 19, 0},        // category 2
-          {0, 14, 20, 25}        // category 3
+          {49, 42, 37, 41},  // category 0
+          {100, 100, 0, 0},  // category 1
+          {0, 16, 19, 0},    // category 2
+          {0, 14, 20, 25}    // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.99%

@@ -950,7 +950,9 @@ namespace SDL {
               if (static_cast<int>(totOccupancyTriplets) >=
                   rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
 #ifdef Warnings
-                printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
+                printf("Triplet excess alert! Module index = %d, Occupancy = %d\n",
+                       innerInnerLowerModuleIndex,
+                       totOccupancyTriplets);
 #endif
               } else {
                 unsigned int tripletModuleIndex =
