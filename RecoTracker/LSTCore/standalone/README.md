@@ -21,7 +21,7 @@ There are two way to set up LST as a standalone, either by setting up a full CMS
 
 ```bash
 CMSSW_VERSION=CMSSW_14_1_0_pre3 # Change with latest/preferred CMSSW version
-LST_BRANCH=CMSSW_14_1_0_pre3_LST_X_LSTCore_realfiles # Change to the development branch
+LST_BRANCH=CMSSW_14_1_0_pre3_LST_X_LSTCore_realfiles_batch1_devel # Change to the appropriate branch
 cmsrel ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src/
 cmsenv
@@ -32,9 +32,6 @@ git checkout ${LST_BRANCH}
 git cms-addpkg RecoTracker/LST RecoTracker/LSTCore
 scram b -j 12
 cd RecoTracker/LSTCore/standalone
-# Source one of the commands below, depending on the site
-source setup.sh # if on UCSD or Cornell
-source setup_hpg.sh # if on Florida
 ```
 
 Currently, the data files for LST need to be copied manually (under `$CMSSW_BASE/external/$SCRAM_ARCH/data/RecoTracker/LSTCore/data/`). This is done by running:
@@ -57,9 +54,6 @@ cd TrackLooper
 git sparse-checkout add HeterogeneousCore/AlpakaInterface RecoTracker/LSTCore
 git checkout
 cd RecoTracker/LSTCore/standalone/
-# Source one of the commands below, depending on the site
-source setup.sh # if on UCSD or Cornell
-source setup_hpg.sh # if on Florida
 ```
 
 The data files for LST need to be copied manually (under `RecoTracker/LSTCore/data/`). This is done by running:
@@ -107,6 +101,15 @@ source $PWD/code/rooutil/thisrooutil.sh
 -->
 
 ## Running the code
+
+Each time the standalone version of LST is to be used, the following command should be run from the `RecoTracker/LSTCore/standalone` directory:
+```bash
+# Source one of the commands below, depending on the site
+source setup.sh # if on UCSD or Cornell
+source setup_hpg.sh # if on Florida
+```
+
+For running the code:
 
     sdl_make_tracklooper -mc
     sdl_<backend> -i PU200 -o LSTNtuple.root
@@ -186,6 +189,28 @@ Comparing two different runs
         -L BaseLine,MyNewWork \   # Labeling
         -t "mywork" \
         --compare
+
+# How to set up CMSSW with LST
+
+## Setting up the area
+
+To set up the are, the following commands need to be used:
+
+```bash
+CMSSW_VERSION=CMSSW_14_1_0_pre3
+LST_BRANCH=CMSSW_14_1_0_pre3_LST_X_LSTCore_realfiles_batch1_devel
+cmsrel ${CMSSW_VERSION}
+cd ${CMSSW_VERSION}/src/
+cmsenv
+git cms-init
+git remote add SegLink git@github.com:SegmentLinking/cmssw.git
+git fetch SegLink ${LST_BRANCH}
+git checkout ${LST_BRANCH}
+git cms-addpkg Configuration RecoTracker/ConversionSeedGenerators RecoTracker/FinalTrackSelectors RecoTracker/IterativeTracking RecoTracker/LST RecoTracker/LSTCore
+scram b -j 12
+```
+
+The `LST_BRANCH` and packages to be added depend on the specific use case.
 
 ## Run the LST reconstruction in CMSSW (read to the end, before running)
 
