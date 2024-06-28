@@ -3126,7 +3126,8 @@ namespace SDL {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   struct SDL::modules modulesInGPU,
                                   struct SDL::triplets tripletsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  struct SDL::objectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -3137,8 +3138,24 @@ namespace SDL {
       nEligibleT5Modulesx = 0;
       alpaka::syncBlockThreads(acc);
 
-      // Initialize variables outside of the for loop.
-      int occupancy, category_number, eta_number;
+      // Occupancy matrix for 0.8 GeV pT Cut
+      constexpr int p08_occupancy_matrix[4][4] = {
+          {336, 414, 231, 146},  // category 0
+          {0, 0, 0, 0},          // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 0, 191, 106}       // category 3
+      };
+
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
+      constexpr int p06_occupancy_matrix[4][4] = {
+          {325, 237, 217, 176},  // category 0
+          {0, 0, 0, 0},          // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 0, 129, 180}       // category 3
+      };
+
+      // Select the appropriate occupancy matrix based on ptCut
+      const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (int i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         // Condition for a quintuple to exist for a module
@@ -3157,52 +3174,37 @@ namespace SDL {
 
         int nEligibleT5Modules = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nEligibleT5Modulesx, 1);
 
+        int category_number = -1;
         if (module_layers <= 3 && module_subdets == 5)
           category_number = 0;
         else if (module_layers >= 4 && module_subdets == 5)
           category_number = 1;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings >= 11)
+        else if ((module_layers <= 2 && module_subdets == 4 && module_rings >= 11) ||
+                 (module_layers >= 3 && module_subdets == 4 && module_rings >= 8))
           category_number = 2;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings >= 8)
-          category_number = 2;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings <= 10)
+        else if ((module_layers <= 2 && module_subdets == 4 && module_rings <= 10) ||
+                 (module_layers >= 3 && module_subdets == 4 && module_rings <= 7))
           category_number = 3;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings <= 7)
-          category_number = 3;
-        else
-          category_number = -1;
 
+        int eta_number = -1;
         if (module_eta < 0.75)
           eta_number = 0;
-        else if (module_eta > 0.75 && module_eta < 1.5)
+        else if (module_eta < 1.5)
           eta_number = 1;
-        else if (module_eta > 1.5 && module_eta < 2.25)
+        else if (module_eta < 2.25)
           eta_number = 2;
-        else if (module_eta > 2.25 && module_eta < 3)
+        else if (module_eta < 3)
           eta_number = 3;
-        else
-          eta_number = -1;
 
-        if (category_number == 0 && eta_number == 0)
-          occupancy = 336;
-        else if (category_number == 0 && eta_number == 1)
-          occupancy = 414;
-        else if (category_number == 0 && eta_number == 2)
-          occupancy = 231;
-        else if (category_number == 0 && eta_number == 3)
-          occupancy = 146;
-        else if (category_number == 3 && eta_number == 1)
-          occupancy = 0;
-        else if (category_number == 3 && eta_number == 2)
-          occupancy = 191;
-        else if (category_number == 3 && eta_number == 3)
-          occupancy = 106;
-        else {
-          occupancy = 0;
-#ifdef Warnings
-          printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
-#endif
+        int occupancy = 0;
+        if (category_number != -1 && eta_number != -1) {
+          occupancy = occupancy_matrix[category_number][eta_number];
         }
+#ifdef Warnings
+        else {
+          printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
+        }
+#endif
 
         int nTotQ = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalQuintupletsx, occupancy);
         rangesInGPU.quintupletModuleIndices[i] = nTotQ;

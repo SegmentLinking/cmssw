@@ -1013,7 +1013,8 @@ namespace SDL {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   struct SDL::modules modulesInGPU,
                                   struct SDL::objectRanges rangesInGPU,
-                                  struct SDL::segments segmentsInGPU) const {
+                                  struct SDL::segments segmentsInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -1022,8 +1023,24 @@ namespace SDL {
       nTotalTriplets = 0;
       alpaka::syncBlockThreads(acc);
 
-      // Initialize variables outside of the for loop.
-      int occupancy, category_number, eta_number;
+      // Occupancy matrix for 0.8 GeV pT Cut
+      constexpr int p08_occupancy_matrix[4][4] = {
+          {543, 235, 88, 46},  // category 0
+          {755, 347, 0, 0},    // category 1
+          {0, 0, 0, 0},        // category 2
+          {0, 38, 46, 39}      // category 3
+      };
+
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.9%
+      constexpr int p06_occupancy_matrix[4][4] = {
+          {1146, 544, 216, 83},  // category 0
+          {1032, 275, 0, 0},     // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 115, 110, 76}      // category 3
+      };
+
+      // Select the appropriate occupancy matrix based on ptCut
+      const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (uint16_t i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         if (segmentsInGPU.nSegments[i] == 0) {
@@ -1037,60 +1054,37 @@ namespace SDL {
         short module_subdets = modulesInGPU.subdets[i];
         float module_eta = alpaka::math::abs(acc, modulesInGPU.eta[i]);
 
+        int category_number = -1;
         if (module_layers <= 3 && module_subdets == 5)
           category_number = 0;
         else if (module_layers >= 4 && module_subdets == 5)
           category_number = 1;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings >= 11)
+        else if ((module_layers <= 2 && module_subdets == 4 && module_rings >= 11) ||
+                 (module_layers >= 3 && module_subdets == 4 && module_rings >= 8))
           category_number = 2;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings >= 8)
-          category_number = 2;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings <= 10)
+        else if ((module_layers <= 2 && module_subdets == 4 && module_rings <= 10) ||
+                 (module_layers >= 3 && module_subdets == 4 && module_rings <= 7))
           category_number = 3;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings <= 7)
-          category_number = 3;
-        else
-          category_number = -1;
 
+        int eta_number = -1;
         if (module_eta < 0.75)
           eta_number = 0;
-        else if (module_eta > 0.75 && module_eta < 1.5)
+        else if (module_eta < 1.5)
           eta_number = 1;
-        else if (module_eta > 1.5 && module_eta < 2.25)
+        else if (module_eta < 2.25)
           eta_number = 2;
-        else if (module_eta > 2.25 && module_eta < 3)
+        else if (module_eta < 3)
           eta_number = 3;
-        else
-          eta_number = -1;
 
-        if (category_number == 0 && eta_number == 0)
-          occupancy = 543;
-        else if (category_number == 0 && eta_number == 1)
-          occupancy = 235;
-        else if (category_number == 0 && eta_number == 2)
-          occupancy = 88;
-        else if (category_number == 0 && eta_number == 3)
-          occupancy = 46;
-        else if (category_number == 1 && eta_number == 0)
-          occupancy = 755;
-        else if (category_number == 1 && eta_number == 1)
-          occupancy = 347;
-        else if (category_number == 2 && eta_number == 1)
-          occupancy = 0;
-        else if (category_number == 2 && eta_number == 2)
-          occupancy = 0;
-        else if (category_number == 3 && eta_number == 1)
-          occupancy = 38;
-        else if (category_number == 3 && eta_number == 2)
-          occupancy = 46;
-        else if (category_number == 3 && eta_number == 3)
-          occupancy = 39;
-        else {
-          occupancy = 0;
-#ifdef Warnings
-          printf("Unhandled case in createTripletArrayRanges! Module index = %i\n", i);
-#endif
+        int occupancy = 0;
+        if (category_number != -1 && eta_number != -1) {
+          occupancy = occupancy_matrix[category_number][eta_number];
         }
+#ifdef Warnings
+        else {
+          printf("Unhandled case in createTripletArrayRanges! Module index = %i\n", i);
+        }
+#endif
 
         rangesInGPU.tripletModuleOccupancy[i] = occupancy;
         unsigned int nTotT = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalTriplets, occupancy);
