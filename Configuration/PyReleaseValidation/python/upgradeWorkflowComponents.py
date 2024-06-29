@@ -504,7 +504,8 @@ upgradeWFs['lstOnCPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnCPUIters01Track
     offset = 0.703,
 )
 upgradeWFs['lstOnCPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
-    '--procModifiers': 'trackingIters01,trackingLST'
+    '--procModifiers': 'trackingIters01,trackingLST',
+    '--accelerators' : 'cpu'
 }
 
 # LST on GPU, initialStep+highPtTripletStep-only tracking-only
@@ -536,7 +537,8 @@ upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01Track
     offset = 0.704,
 )
 upgradeWFs['lstOnGPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
-    '--procModifiers': 'gpu,trackingIters01,trackingLST'
+    '--procModifiers': 'trackingIters01,trackingLST',
+    '--accelerators' : 'gpu-nvidia'
 }
 
 #DeepCore seeding for JetCore iteration workflow

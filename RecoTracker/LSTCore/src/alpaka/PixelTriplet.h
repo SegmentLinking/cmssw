@@ -1350,7 +1350,7 @@ namespace SDL {
     if (not pass)
       return pass;
 
-    const float coshEta = alpaka::math::sqrt(acc, ptIn * ptIn + pz * pz) / ptIn;
+    const float cosh2Eta = 1.f + (pz * pz) / (ptIn * ptIn);
 
     const float drt_OutLo_InUp = (rt_OutLo - rt_InUp);
 
@@ -1358,15 +1358,14 @@ namespace SDL {
 
     float drt_InSeg = rt_InOut - rt_InLo;
 
-    const float sdlThetaMulsF = 0.015f * alpaka::math::sqrt(acc, 0.1f + 0.2f * (rt_OutLo - rt_InUp) / 50.f) *
-                                alpaka::math::sqrt(acc, r3_InUp / rt_InUp);
-    const float sdlMuls = sdlThetaMulsF * 3.f / ptCut * 4.f;  // will need a better guess than x4?
+    const float sdlThetaMulsF2 = (0.015f * 0.015f) * (0.1f + 0.2f * (rt_OutLo - rt_InUp) / 50.f) *
+                                (r3_InUp / rt_InUp);
+    const float sdlMuls2 = sdlThetaMulsF2 * 9.f / (ptCut * ptCut) * 16.f;
 
-    float dzErr = drt_OutLo_InUp * etaErr * coshEta;  //FIXME: check with the calc in the endcap
-    dzErr *= dzErr;
-    dzErr += 0.03f * 0.03f;  // pixel size x2. ... random for now
-    dzErr *= 9.f;            //3 sigma
-    dzErr += sdlMuls * sdlMuls * drt_OutLo_InUp * drt_OutLo_InUp / 3.f * coshEta * coshEta;  //sloppy
+    float dzErr = (drt_OutLo_InUp * drt_OutLo_InUp) * (etaErr * etaErr) * cosh2Eta;
+    dzErr += 0.03f * 0.03f;  // pixel size x2.
+    dzErr *= 9.f;            // 3 sigma
+    dzErr += sdlMuls2 * (drt_OutLo_InUp * drt_OutLo_InUp) / 3.f * cosh2Eta;
     dzErr += zGeom * zGeom;
     dzErr = alpaka::math::sqrt(acc, dzErr);
 
@@ -1384,7 +1383,7 @@ namespace SDL {
       return pass;
 
     const float sdlPVoff = 0.1f / rt_OutLo;
-    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls * sdlMuls + sdlPVoff * sdlPVoff);
+    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls2 + sdlPVoff * sdlPVoff);
 
 #ifdef CUT_VALUE_DEBUG
     dPhiPos = SDL::deltaPhi(acc, x_InUp, y_InUp, x_OutUp, y_OutUp);
@@ -1651,21 +1650,19 @@ namespace SDL {
       return pass;
 
     const float dzOutInAbs = alpaka::math::abs(acc, z_OutLo - z_InUp);
-    const float coshEta = alpaka::math::sqrt(acc, ptIn * ptIn + pz * pz) / ptIn;
-    const float multDzDr = dzOutInAbs * coshEta / (coshEta * coshEta - 1.f);
+    const float cosh2Eta = 1.f + (pz * pz) / (ptIn * ptIn);
+    const float multDzDr2 = (dzOutInAbs * dzOutInAbs) * cosh2Eta / ( (cosh2Eta - 1.f) * (cosh2Eta - 1.f) );
     const float r3_InUp = alpaka::math::sqrt(acc, z_InUp * z_InUp + rt_InUp * rt_InUp);
-    const float sdlThetaMulsF = 0.015f * alpaka::math::sqrt(acc, 0.1f + 0.2f * (rt_OutLo - rt_InUp) / 50.f) *
-                                alpaka::math::sqrt(acc, r3_InUp / rt_InUp);
-    const float sdlMuls = sdlThetaMulsF * 3.f / ptCut * 4.f;  // will need a better guess than x4?
+    const float sdlThetaMulsF2 = (0.015f * 0.015f) * (0.1f + 0.2f * (rt_OutLo - rt_InUp) / 50.f) *
+                                (r3_InUp / rt_InUp);
+    const float sdlMuls2 = sdlThetaMulsF2 * 9.f / (ptCut * ptCut) * 16.f;
 
-    float drtErr = etaErr * multDzDr;
-    drtErr *= drtErr;
-    drtErr += 0.03f * 0.03f;  // pixel size x2. ... random for now
-    drtErr *= 9.f;            //3 sigma
-    drtErr +=
-        sdlMuls * sdlMuls * multDzDr * multDzDr / 3.f * coshEta * coshEta;  //sloppy: relative muls is 1/3 of total muls
+    float drtErr = (etaErr * etaErr) * multDzDr2;
+    drtErr += 0.03f * 0.03f;  // pixel size x2.
+    drtErr *= 9.f;            // 3 sigma
+    drtErr += sdlMuls2 * multDzDr2 / 3.f * cosh2Eta;
     drtErr = alpaka::math::sqrt(acc, drtErr);
-    const float drtDzIn = alpaka::math::abs(acc, ptIn / pz);  //all tracks are out-going in endcaps?
+    const float drtDzIn = alpaka::math::abs(acc, ptIn / pz);
 
     const float drt_OutLo_InUp = (rt_OutLo - rt_InUp);  // drOutIn
 
@@ -1684,7 +1681,7 @@ namespace SDL {
     const float alpha1GeV_OutLo =
         alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, sinAlphaMax));
     const float sdlPVoff = 0.1f / rt_OutLo;
-    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls * sdlMuls + sdlPVoff * sdlPVoff);
+    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls2 + sdlPVoff * sdlPVoff);
 
     deltaPhiPos = SDL::deltaPhi(acc, x_InUp, y_InUp, x_OutUp, y_OutUp);
 
