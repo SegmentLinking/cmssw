@@ -58,7 +58,7 @@ jobs:
         uses: SegmentLinking/TrackLooper-actions/standalone@cmssw
         with:
           pr-number: ${{ github.event.issue.number }}
-          low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true || 'false' }}
+          low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true' || 'false' }}
       - name: Upload plots to archival repo
         uses: s0/git-publish-subdir-action@develop
         env:
@@ -151,7 +151,7 @@ jobs:
         uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
         with:
           pr-number: ${{ github.event.issue.number }}
-          low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true || 'false' }}
+          low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true' || 'false' }}
       - name: Upload plots to archival repo
         uses: s0/git-publish-subdir-action@develop
         env:
