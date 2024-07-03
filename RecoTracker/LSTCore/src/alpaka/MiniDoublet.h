@@ -1012,10 +1012,10 @@ namespace SDL {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int getCategoryNumber(const short module_layers,
                                                        const short module_subdets,
                                                        const short module_rings) {
-    if (module_subdets == 5) {
+    if (module_subdets == SDL::Barrel) {
       return (module_layers <= 3) ? 0 : 1;
     }
-    if (module_subdets == 4) {
+    if (module_subdets == SDL::Endcap) {
       if (module_layers <= 2) {
         return (module_rings >= 11) ? 2 : 3;
       } else {
