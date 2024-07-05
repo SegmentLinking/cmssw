@@ -265,7 +265,7 @@ void SDL::Event<SDL::Acc>::addPixelSegmentToEvent(std::vector<unsigned int> hitI
 
     SDL::createMDArrayRangesGPU createMDArrayRangesGPU_kernel;
     auto const createMDArrayRangesGPUTask(alpaka::createTaskKernel<Acc>(
-        createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU));
+        createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU, ptCut));
 
     alpaka::enqueue(queue, createMDArrayRangesGPUTask);
     alpaka::wait(queue);
@@ -299,7 +299,8 @@ void SDL::Event<SDL::Acc>::addPixelSegmentToEvent(std::vector<unsigned int> hitI
                                                                           createSegmentArrayRanges_kernel,
                                                                           *modulesBuffers_->data(),
                                                                           *rangesInGPU,
-                                                                          *mdsInGPU));
+                                                                          *mdsInGPU,
+                                                                          ptCut));
 
     alpaka::enqueue(queue, createSegmentArrayRangesTask);
     alpaka::wait(queue);
@@ -409,7 +410,7 @@ void SDL::Event<SDL::Acc>::createMiniDoublets() {
 
   SDL::createMDArrayRangesGPU createMDArrayRangesGPU_kernel;
   auto const createMDArrayRangesGPUTask(alpaka::createTaskKernel<Acc>(
-      createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU));
+      createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU, ptCut));
 
   alpaka::enqueue(queue, createMDArrayRangesGPUTask);
   alpaka::wait(queue);
@@ -523,7 +524,8 @@ void SDL::Event<SDL::Acc>::createTriplets() {
                                                                           createTripletArrayRanges_kernel,
                                                                           *modulesBuffers_->data(),
                                                                           *rangesInGPU,
-                                                                          *segmentsInGPU));
+                                                                          *segmentsInGPU,
+                                                                          ptCut));
 
     alpaka::enqueue(queue, createTripletArrayRangesTask);
     alpaka::wait(queue);
@@ -917,7 +919,8 @@ void SDL::Event<SDL::Acc>::createQuintuplets() {
                                     createEligibleModulesListForQuintupletsGPU_kernel,
                                     *modulesBuffers_->data(),
                                     *tripletsInGPU,
-                                    *rangesInGPU));
+                                    *rangesInGPU,
+                                    ptCut));
 
   alpaka::enqueue(queue, createEligibleModulesListForQuintupletsGPUTask);
   alpaka::wait(queue);
