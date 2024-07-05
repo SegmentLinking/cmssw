@@ -999,11 +999,11 @@ namespace SDL {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int getEtaBin(const float module_eta) {
     if (module_eta < 0.75f)
       return 0;
-    if (module_eta < 1.5f)
+    else if (module_eta < 1.5f)
       return 1;
-    if (module_eta < 2.25f)
+    else if (module_eta < 2.25f)
       return 2;
-    if (module_eta < 3.0f)
+    else if (module_eta < 3.0f)
       return 3;
     return -1;
   }
@@ -1014,8 +1014,7 @@ namespace SDL {
                                                        const short module_rings) {
     if (module_subdets == SDL::Barrel) {
       return (module_layers <= 3) ? 0 : 1;
-    }
-    if (module_subdets == SDL::Endcap) {
+    } else if (module_subdets == SDL::Endcap) {
       if (module_layers <= 2) {
         return (module_rings >= 11) ? 2 : 3;
       } else {
