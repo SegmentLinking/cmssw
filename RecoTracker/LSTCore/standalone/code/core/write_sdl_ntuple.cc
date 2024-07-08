@@ -133,7 +133,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<vector<float>>("t5_nonAnchorChiSquared");
 
   // T3 branches
-  ana.tx->createBranch<vector<float>>("T3_residual");
+  ana.tx->createBranch<vector<float>>("t3_residual");
+  ana.tx->createBranch<vector<int>>("t3_isFake");
 
   // Occupancy branches
   ana.tx->createBranch<vector<int>>("module_layers");
@@ -520,19 +521,25 @@ void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
 
 //________________________________________________________________________________________________________________________________
 void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
-    SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = (*event->getTriplets());
-    SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
-    SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
-    for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modulesInGPU.nLowerModules); ++lowerModuleIdx)
-    {
-        unsigned int nTriplets = tripletsInGPU.nTriplets[lowerModuleIdx];
-        for (unsigned int idx = 0; idx < nTriplets; idx++)
-        {
-            unsigned int tripletIndex = rangesInGPU.tripletModuleIndices[lowerModuleIdx] + idx;
-            const float residual = tripletsInGPU.residual[tripletIndex];
-            ana.tx->pushbackToBranch<float>("T3_residual", residual);
-        }
+  SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = (*event->getTriplets());
+  SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
+  SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
+  for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modulesInGPU.nLowerModules); ++lowerModuleIdx) {
+    unsigned int nTriplets = tripletsInGPU.nTriplets[lowerModuleIdx];
+    for (unsigned int idx = 0; idx < nTriplets; idx++) {
+      unsigned int tripletIndex = rangesInGPU.tripletModuleIndices[lowerModuleIdx] + idx;
+
+      const float residual = tripletsInGPU.residual[tripletIndex];
+      ana.tx->pushbackToBranch<float>("t3_residual", residual);
+
+      std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> hitIdxsAndTypes = getHitIdxsAndHitTypesFromT3(event, tripletIndex);
+      std::vector<unsigned int> hit_idxs = std::get<0>(hitIdxsAndTypes);
+      std::vector<unsigned int> hit_types = std::get<1>(hitIdxsAndTypes);
+
+      std::tuple<std::vector<int>, std::vector<float>> simIdxsAndFracs = matchedSimTrkIdxsAndFracs(hit_idxs, hit_types);
+      ana.tx->pushbackToBranch<int>("t3_isFake", static_cast<int>(std::get<0>(simIdxsAndFracs).size() == 0));
     }
+  }
 }
 
 //________________________________________________________________________________________________________________________________
