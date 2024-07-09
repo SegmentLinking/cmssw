@@ -51,6 +51,7 @@ int main(int argc, char **argv) {
       "o,output", "Output file name", cxxopts::value<std::string>())(
       "N,nmatch", "N match for MTV-like matching", cxxopts::value<int>()->default_value("9"))(
       "p,ptCut", "Min pT cut In GeV", cxxopts::value<float>()->default_value("0.8"))(
+      "f,fmatch", "hit matching fraction for RECO-SIM matching", cxxopts::value<float>()->default_value("0.75"))(
       "n,nevents", "N events to loop over", cxxopts::value<int>()->default_value("-1"))(
       "x,event_index", "specific event index to process", cxxopts::value<int>()->default_value("-1"))(
       "g,pdg_id", "The simhit pdgId match option", cxxopts::value<int>()->default_value("0"))(
@@ -60,7 +61,8 @@ int main(int argc, char **argv) {
       "w,write_ntuple", "Write Ntuple", cxxopts::value<int>()->default_value("1"))(
       "s,streams", "Set number of streams", cxxopts::value<int>()->default_value("1"))(
       "d,debug", "Run debug job. i.e. overrides output option to 'debug.root' and 'recreate's the file.")(
-      "l,lower_level", "write lower level objects ntuple results")("G,gnn_ntuple", "write gnn input variable ntuple")(
+      "O,optional_output", "Write optional objects in output LST ntuple")(
+      "l,lower_level", "Write lower level objects in output LST ntuple")(
       "j,nsplit_jobs", "Enable splitting jobs by N blocks (--job_index must be set)", cxxopts::value<int>())(
       "I,job_index",
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
@@ -152,6 +154,10 @@ int main(int argc, char **argv) {
   ana.nmatch_threshold = result["nmatch"].as<int>();
 
   //_______________________________________________________________________________
+  // --fmatch
+  ana.fmatch_threshold = result["fmatch"].as<float>();
+
+  //_______________________________________________________________________________
   // --nevents
   ana.n_events = result["nevents"].as<int>();
   ana.specific_event_index = result["event_index"].as<int>();
@@ -227,25 +233,30 @@ int main(int argc, char **argv) {
   // --optimization
 
   //_______________________________________________________________________________
-  // --lower_level
-  if (result.count("lower_level")) {
-    ana.do_lower_level = true;
-  } else {
-    ana.do_lower_level = false;
-  }
-
-  //_______________________________________________________________________________
-  // --gnn_ntuple
-  if (result.count("gnn_ntuple")) {
-    ana.gnn_ntuple = true;
-    // If one is not provided then throw error
+  // --optional_output
+  if (result.count("optional_output")) {
+    ana.do_optional_output = true;
     if (not ana.do_write_ntuple) {
       std::cout << options.help() << std::endl;
-      std::cout << "ERROR: option string --write_ntuple 1 and --gnn_ntuple must be set at the same time!" << std::endl;
+      std::cout << "ERROR: option string --write_ntuple 1 and --optional_output must be set at the same time!"
+                << std::endl;
       exit(1);
     }
   } else {
-    ana.gnn_ntuple = false;
+    ana.do_optional_output = false;
+  }
+
+  //_______________________________________________________________________________
+  // --lower_level
+  if (result.count("lower_level")) {
+    ana.do_lower_level = true;
+    if (not ana.do_write_ntuple) {
+      std::cout << options.help() << std::endl;
+      std::cout << "ERROR: option string --write_ntuple 1 and --lower_level must be set at the same time!" << std::endl;
+      exit(1);
+    }
+  } else {
+    ana.do_lower_level = false;
   }
 
   //_______________________________________________________________________________
@@ -273,6 +284,7 @@ int main(int argc, char **argv) {
   std::cout << " ana.verbose: " << ana.verbose << std::endl;
   std::cout << " ana.ptCut: " << ana.ptCut << std::endl;
   std::cout << " ana.nmatch_threshold: " << ana.nmatch_threshold << std::endl;
+  std::cout << " ana.fmatch_threshold: " << ana.fmatch_threshold << std::endl;
   std::cout << " ana.tc_pls_triplets: " << ana.tc_pls_triplets << std::endl;
   std::cout << " ana.no_pls_dupclean: " << ana.no_pls_dupclean << std::endl;
   std::cout << "=========================================================" << std::endl;
@@ -319,8 +331,8 @@ void run_sdl() {
 
   if (ana.do_write_ntuple) {
     createOutputBranches();
-    if (ana.gnn_ntuple) {
-      createGnnNtupleBranches();
+    if (ana.do_lower_level) {
+      createLowLevelBranches();
     }
   }
 

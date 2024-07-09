@@ -15,7 +15,7 @@
 void createOutputBranches();
 void createRequiredOutputBranches();
 void createOptionalOutputBranches();
-void createGnnNtupleBranches();
+void createLowLevelBranches();
 
 void fillOutputBranches(SDL::Event<SDL::Acc>* event);
 void setOutputBranches(SDL::Event<SDL::Acc>* event);
@@ -25,8 +25,8 @@ void setPixelQuintupletOutputBranches(SDL::Event<SDL::Acc>* event);
 void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event);
 void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event);
 void setTripletOutputBranches(SDL::Event<SDL::Acc>* event);
-void setGnnNtupleBranches(SDL::Event<SDL::Acc>* event);
-void setGnnNtupleMiniDoublet(SDL::Event<SDL::Acc>* event, unsigned int MD);
+void setLowLevelBranches(SDL::Event<SDL::Acc>* event);
+void setLowLevelMiniDoublet(SDL::Event<SDL::Acc>* event, unsigned int MD);
 
 std::tuple<int, float, float, float, int, vector<int>> parseTrackCandidate(SDL::Event<SDL::Acc>* event, unsigned int);
 std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepT5(SDL::Event<SDL::Acc>* event,
