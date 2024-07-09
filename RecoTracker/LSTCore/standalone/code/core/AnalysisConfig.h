@@ -55,6 +55,9 @@ public:
   // nmatch threshold of the hits to compute matching for MTV-like plots
   int nmatch_threshold;
 
+  // min matching hit fraction to determine RECO-SIM match
+  float fmatch_threshold;
+
   // verbose of the particles to compute efficincies on
   int verbose;
 
@@ -111,11 +114,11 @@ public:
   // Boolean to trigger whether to write ntuple or not
   bool do_write_ntuple;
 
+  // Boolean to write optional output
+  bool do_optional_output;
+
   // Boolean to write lower level objects
   bool do_lower_level;
-
-  // Boolean to write gnn ntuple
-  bool gnn_ntuple;
 
   // String to hold the MAKETARGET setting from compile
   std::string compilation_target;

@@ -140,6 +140,33 @@ std::vector<unsigned int> getHitsFromT3(SDL::Event<SDL::Acc>* event, unsigned in
 }
 
 //____________________________________________________________________________________________
+std::vector<unsigned int> getHitIdxsFromT3(SDL::Event<SDL::Acc>* event, unsigned int T3) {
+  SDL::hitsBuffer<alpaka::DevCpu>& hitsInGPU = *(event->getHits());
+  std::vector<unsigned int> hits = getHitsFromT3(event, T3);
+  std::vector<unsigned int> hitidxs;
+  for (auto& hit : hits)
+    hitidxs.push_back(hitsInGPU.idxs[hit]);
+  return hitidxs;
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getModuleIdxsFromT3(SDL::Event<SDL::Acc>* event, unsigned int T3) {
+  std::vector<unsigned int> hits = getHitsFromT3(event, T3);
+  std::vector<unsigned int> module_idxs;
+  SDL::hitsBuffer<alpaka::DevCpu>& hitsInGPU = *(event->getHits());
+  for (auto& hitIdx : hits) {
+    module_idxs.push_back(hitsInGPU.moduleIndices[hitIdx]);
+  }
+  return module_idxs;
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitTypesFromT3(SDL::Event<SDL::Acc>* event, unsigned int T3) {
+  return {4, 4, 4, 4, 4, 4};
+  ;
+}
+
+//____________________________________________________________________________________________
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT3(
     SDL::Event<SDL::Acc>* event, unsigned T3) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFromT3(event, T3));
