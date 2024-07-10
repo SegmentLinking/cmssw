@@ -39,22 +39,21 @@ private:
 
 LSTPixelSeedInputProducer::LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig)
     : mfToken_(esConsumes()),
-      beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"))),
+      beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       lstPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()),
       lstPixelSeedsPutToken_(produces<TrajectorySeedCollection>()) {
-  seedTokens_ = edm::vector_transform(iConfig.getUntrackedParameter<std::vector<edm::InputTag>>("seedTracks"),
+  seedTokens_ = edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("seedTracks"),
                                       [&](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); });
 }
 
 void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
-  desc.addUntracked<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
+  desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
 
-  desc.addUntracked<std::vector<edm::InputTag>>(
-      "seedTracks",
-      std::vector<edm::InputTag>{edm::InputTag("lstInitialStepSeedTracks"),
-                                 edm::InputTag("lstHighPtTripletStepSeedTracks")});
+  desc.add<std::vector<edm::InputTag>>("seedTracks",
+                                       std::vector<edm::InputTag>{edm::InputTag("lstInitialStepSeedTracks"),
+                                                                  edm::InputTag("lstHighPtTripletStepSeedTracks")});
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -65,7 +64,6 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
   auto const& bs = iEvent.get(beamSpotToken_);
 
   // Vector definitions
-  LSTPixelSeedInput pixelSeedInput;
   std::vector<float> see_px;
   std::vector<float> see_py;
   std::vector<float> see_pz;
@@ -151,21 +149,21 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
     }
   }
 
-  pixelSeedInput.setLSTPixelSeedTraits(see_px,
-                                       see_py,
-                                       see_pz,
-                                       see_dxy,
-                                       see_dz,
-                                       see_ptErr,
-                                       see_etaErr,
-                                       see_stateTrajGlbX,
-                                       see_stateTrajGlbY,
-                                       see_stateTrajGlbZ,
-                                       see_stateTrajGlbPx,
-                                       see_stateTrajGlbPy,
-                                       see_stateTrajGlbPz,
-                                       see_q,
-                                       see_hitIdx);
+  LSTPixelSeedInput pixelSeedInput(see_px,
+                                   see_py,
+                                   see_pz,
+                                   see_dxy,
+                                   see_dz,
+                                   see_ptErr,
+                                   see_etaErr,
+                                   see_stateTrajGlbX,
+                                   see_stateTrajGlbY,
+                                   see_stateTrajGlbZ,
+                                   see_stateTrajGlbPx,
+                                   see_stateTrajGlbPy,
+                                   see_stateTrajGlbPz,
+                                   see_q,
+                                   see_hitIdx);
   iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
   iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
 }

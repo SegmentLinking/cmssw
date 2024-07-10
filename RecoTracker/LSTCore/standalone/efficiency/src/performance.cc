@@ -302,111 +302,111 @@ void bookEfficiencySet(SimTrackSetDefinition& effset) {
   TString category_name = TString::Format("%s_%d_%d", effset.set_name.Data(), effset.pdgid, effset.q);
 
   // Denominator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_dxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_vxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_dz");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_dxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_vxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_dz");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_phi");
 
   // Numerator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_dxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_vxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_dz");
-  ana.tx.createBranch<vector<float>>(category_name + "_ef_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_dxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_vxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_dz");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_phi");
 
   // Inefficiencies
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_dxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_vxy");
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_dz");
-  ana.tx.createBranch<vector<float>>(category_name + "_ie_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_dxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_vxy");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_dz");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_phi");
 
   ana.histograms.addVecHistogram(category_name + "_ef_denom_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_ptflatbin", 180, 0., 100, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_dxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_dxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_dxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_vxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_vxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_vxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_dz", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_dz");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_dz");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_denom_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_phi");
   });
 
   ana.histograms.addVecHistogram(category_name + "_ef_numer_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_ptflatbin", 180, 0., 100, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_dxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_dxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_dxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_vxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_vxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_vxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_dz", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_dz");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_dz");
   });
   ana.histograms.addVecHistogram(category_name + "_ef_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ef_numer_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_phi");
   });
 
   ana.histograms.addVecHistogram(category_name + "_ie_numer_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_ptflatbin", 180, 0., 100, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_dxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_dxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_dxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_vxy", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_vxy");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_vxy");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_dz", 180, -30., 30., [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_dz");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_dz");
   });
   ana.histograms.addVecHistogram(category_name + "_ie_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_ie_numer_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_phi");
   });
 }
 
@@ -422,45 +422,45 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   TString category_name = DRset.set_name;
 
   // Denominator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_denom_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_denom_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_phi");
 
   // Numerator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_numer_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_numer_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_dr_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_phi");
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_dr_denom_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_denom_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_denom_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_denom_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_denom_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_denom_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_phi");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_numer_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_dr_numer_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_phi");
   });
 }
 
@@ -476,45 +476,45 @@ void bookFakeRateSet(RecoTrackSetDefinition& FRset) {
   TString category_name = FRset.set_name;
 
   // Denominator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_denom_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_denom_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_phi");
 
   // Numerator tracks' quantities
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_numer_pt");
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_numer_eta");
-  ana.tx.createBranch<vector<float>>(category_name + "_fr_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_phi");
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_fr_denom_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_denom_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_denom_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_denom_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_denom_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_denom_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_numer_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_phi");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_pt", getPtBounds(0), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_ptlow", getPtBounds(4), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_ptmtv", getPtBounds(9), [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_numer_pt");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_pt");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_numer_eta");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_eta");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<vector<float>>(category_name + "_fr_denom_phi");
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_phi");
   });
 }
 

@@ -1,5 +1,5 @@
-#ifndef Constants_cuh
-#define Constants_cuh
+#ifndef RecoTracker_LSTCore_interface_alpaka_Constants_h
+#define RecoTracker_LSTCore_interface_alpaka_Constants_h
 
 #include <alpaka/alpaka.hpp>
 
@@ -99,53 +99,79 @@ namespace SDL {
     return WorkDiv(adjustedBlocks, adjustedThreads, elementsPerThreadArg);
   }
 
-  const unsigned int MAX_BLOCKS = 80;
-  const unsigned int MAX_CONNECTED_MODULES = 40;
+  constexpr unsigned int MAX_BLOCKS = 80;
+  constexpr unsigned int MAX_CONNECTED_MODULES = 40;
 
-  const unsigned int N_MAX_PIXEL_SEGMENTS_PER_MODULE = 50000;
+  constexpr unsigned int N_MAX_PIXEL_SEGMENTS_PER_MODULE = 50000;
 
-  const unsigned int N_MAX_PIXEL_MD_PER_MODULES = 2 * N_MAX_PIXEL_SEGMENTS_PER_MODULE;
+  constexpr unsigned int N_MAX_PIXEL_MD_PER_MODULES = 2 * N_MAX_PIXEL_SEGMENTS_PER_MODULE;
 
-  const unsigned int N_MAX_PIXEL_TRIPLETS = 5000;
-  const unsigned int N_MAX_PIXEL_QUINTUPLETS = 15000;
+  constexpr unsigned int N_MAX_PIXEL_TRIPLETS = 5000;
+  constexpr unsigned int N_MAX_PIXEL_QUINTUPLETS = 15000;
 
-  const unsigned int N_MAX_PIXEL_TRACK_CANDIDATES = 30000;
-  const unsigned int N_MAX_NONPIXEL_TRACK_CANDIDATES = 1000;
+  constexpr unsigned int N_MAX_PIXEL_TRACK_CANDIDATES = 30000;
+  constexpr unsigned int N_MAX_NONPIXEL_TRACK_CANDIDATES = 1000;
 
-  const unsigned int size_superbins = 45000;
+  constexpr unsigned int size_superbins = 45000;
 
   //defining the constant host device variables right up here
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float miniMulsPtScaleBarrel[6] = {0.0052, 0.0038, 0.0034, 0.0034, 0.0032, 0.0034};
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float miniMulsPtScaleEndcap[5] = {0.006, 0.006, 0.006, 0.006, 0.006};
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float miniRminMeanBarrel[6] = {
+  // Currently pixel tracks treated as LSs with 2 double layers (IT layers 1+2 and 3+4) and 4 hits. To be potentially handled better in the future.
+  struct Params_pLS {
+    static constexpr int kLayers = 2, kHits = 4;
+  };
+  struct Params_LS {
+    static constexpr int kLayers = 2, kHits = 4;
+  };
+  struct Params_T3 {
+    static constexpr int kLayers = 3, kHits = 6;
+  };
+  struct Params_pT3 {
+    static constexpr int kLayers = 5, kHits = 10;
+  };
+  struct Params_T5 {
+    static constexpr int kLayers = 5, kHits = 10;
+  };
+  struct Params_pT5 {
+    static constexpr int kLayers = 7, kHits = 14;
+  };
+
+  // 15 MeV constant from the approximate Bethe-Bloch formula
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMulsInGeV = 0.015;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float miniMulsPtScaleBarrel[6] = {
+      0.0052, 0.0038, 0.0034, 0.0034, 0.0032, 0.0034};
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float miniMulsPtScaleEndcap[5] = {0.006, 0.006, 0.006, 0.006, 0.006};
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float miniRminMeanBarrel[6] = {
       25.007152356, 37.2186993757, 52.3104270826, 68.6658656666, 85.9770373007, 108.301772384};
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float miniRminMeanEndcap[5] = {
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float miniRminMeanEndcap[5] = {
       130.992832231, 154.813883559, 185.352604327, 221.635123002, 265.022076742};
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float kR1GeVf = 1. / (2.99792458e-3 * 3.8);
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float sinAlphaMax = 0.95;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float deltaZLum = 15.0;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float pixelPSZpitch = 0.15;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float strip2SZpitch = 5.0;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float pt_betaMax = 7.0;
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float magnetic_field = 3.8112;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR1GeVf = 1. / (2.99792458e-3 * 3.8);
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float sinAlphaMax = 0.95;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float deltaZLum = 15.0;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float pixelPSZpitch = 0.15;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float stripPSZpitch = 2.4;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float strip2SZpitch = 5.0;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float width2S = 0.009;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float widthPS = 0.01;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float pt_betaMax = 7.0;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float magnetic_field = 3.8112;
   // Since C++ can't represent infinity, SDL_INF = 123456789 was used to represent infinity in the data table
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float SDL_INF = 123456789.0;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float SDL_INF = 123456789.0;
 }  //namespace SDL
 
 namespace T5DNN {
   // Working points matching LST fake rate (43.9%) or signal acceptance (82.0%)
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float LSTWP1 = 0.3418833f;  // 94.0% TPR, 43.9% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float LSTWP2 = 0.6177366f;  // 82.0% TPR, 20.0% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP1 = 0.3418833f;  // 94.0% TPR, 43.9% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP2 = 0.6177366f;  // 82.0% TPR, 20.0% FPR
   // Other working points
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP70 = 0.7776195f;    // 70.0% TPR, 10.0% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP75 = 0.7181118f;    // 75.0% TPR, 13.5% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP80 = 0.6492643f;    // 80.0% TPR, 17.9% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP85 = 0.5655319f;    // 85.0% TPR, 23.8% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP90 = 0.4592205f;    // 90.0% TPR, 32.6% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP95 = 0.3073708f;    // 95.0% TPR, 47.7% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP97p5 = 0.2001348f;  // 97.5% TPR, 61.2% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP99 = 0.1120605f;    // 99.0% TPR, 75.9% FPR
-  ALPAKA_STATIC_ACC_MEM_GLOBAL const float WP99p9 = 0.0218196f;  // 99.9% TPR, 95.4% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP70 = 0.7776195f;    // 70.0% TPR, 10.0% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP75 = 0.7181118f;    // 75.0% TPR, 13.5% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP80 = 0.6492643f;    // 80.0% TPR, 17.9% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP85 = 0.5655319f;    // 85.0% TPR, 23.8% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP90 = 0.4592205f;    // 90.0% TPR, 32.6% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP95 = 0.3073708f;    // 95.0% TPR, 47.7% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP97p5 = 0.2001348f;  // 97.5% TPR, 61.2% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP99 = 0.1120605f;    // 99.0% TPR, 75.9% FPR
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float WP99p9 = 0.0218196f;  // 99.9% TPR, 95.4% FPR
 }  // namespace T5DNN
 #endif

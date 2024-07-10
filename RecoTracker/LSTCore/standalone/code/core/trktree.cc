@@ -3042,7 +3042,7 @@ void trktree::LoadAllBranches() {
   if (see_stateTrajGlbPy_branch != 0)
     see_stateTrajGlbPy();
 }
-const vector<float> &trktree::see_stateCcov01() {
+const std::vector<float> &trktree::see_stateCcov01() {
   if (not see_stateCcov01_isLoaded) {
     if (see_stateCcov01_branch != 0) {
       see_stateCcov01_branch->GetEntry(index);
@@ -3054,7 +3054,7 @@ const vector<float> &trktree::see_stateCcov01() {
   }
   return *see_stateCcov01_;
 }
-const vector<unsigned short> &trktree::simhit_rod() {
+const std::vector<unsigned short> &trktree::simhit_rod() {
   if (not simhit_rod_isLoaded) {
     if (simhit_rod_branch != 0) {
       simhit_rod_branch->GetEntry(index);
@@ -3066,7 +3066,7 @@ const vector<unsigned short> &trktree::simhit_rod() {
   }
   return *simhit_rod_;
 }
-const vector<float> &trktree::trk_phi() {
+const std::vector<float> &trktree::trk_phi() {
   if (not trk_phi_isLoaded) {
     if (trk_phi_branch != 0) {
       trk_phi_branch->GetEntry(index);
@@ -3090,7 +3090,7 @@ const float &trktree::bsp_x() {
   }
   return bsp_x_;
 }
-const vector<float> &trktree::see_stateCcov05() {
+const std::vector<float> &trktree::see_stateCcov05() {
   if (not see_stateCcov05_isLoaded) {
     if (see_stateCcov05_branch != 0) {
       see_stateCcov05_branch->GetEntry(index);
@@ -3102,7 +3102,7 @@ const vector<float> &trktree::see_stateCcov05() {
   }
   return *see_stateCcov05_;
 }
-const vector<float> &trktree::see_stateCcov04() {
+const std::vector<float> &trktree::see_stateCcov04() {
   if (not see_stateCcov04_isLoaded) {
     if (see_stateCcov04_branch != 0) {
       see_stateCcov04_branch->GetEntry(index);
@@ -3114,7 +3114,7 @@ const vector<float> &trktree::see_stateCcov04() {
   }
   return *see_stateCcov04_;
 }
-const vector<float> &trktree::trk_dxyPV() {
+const std::vector<float> &trktree::trk_dxyPV() {
   if (not trk_dxyPV_isLoaded) {
     if (trk_dxyPV_branch != 0) {
       trk_dxyPV_branch->GetEntry(index);
@@ -3126,7 +3126,7 @@ const vector<float> &trktree::trk_dxyPV() {
   }
   return *trk_dxyPV_;
 }
-const vector<float> &trktree::simhit_tof() {
+const std::vector<float> &trktree::simhit_tof() {
   if (not simhit_tof_isLoaded) {
     if (simhit_tof_branch != 0) {
       simhit_tof_branch->GetEntry(index);
@@ -3138,7 +3138,7 @@ const vector<float> &trktree::simhit_tof() {
   }
   return *simhit_tof_;
 }
-const vector<int> &trktree::sim_event() {
+const std::vector<int> &trktree::sim_event() {
   if (not sim_event_isLoaded) {
     if (sim_event_branch != 0) {
       sim_event_branch->GetEntry(index);
@@ -3150,7 +3150,7 @@ const vector<int> &trktree::sim_event() {
   }
   return *sim_event_;
 }
-const vector<unsigned short> &trktree::simhit_isStack() {
+const std::vector<unsigned short> &trktree::simhit_isStack() {
   if (not simhit_isStack_isLoaded) {
     if (simhit_isStack_branch != 0) {
       simhit_isStack_branch->GetEntry(index);
@@ -3162,7 +3162,7 @@ const vector<unsigned short> &trktree::simhit_isStack() {
   }
   return *simhit_isStack_;
 }
-const vector<float> &trktree::trk_dz() {
+const std::vector<float> &trktree::trk_dz() {
   if (not trk_dz_isLoaded) {
     if (trk_dz_branch != 0) {
       trk_dz_branch->GetEntry(index);
@@ -3174,7 +3174,7 @@ const vector<float> &trktree::trk_dz() {
   }
   return *trk_dz_;
 }
-const vector<float> &trktree::see_stateCcov03() {
+const std::vector<float> &trktree::see_stateCcov03() {
   if (not see_stateCcov03_isLoaded) {
     if (see_stateCcov03_branch != 0) {
       see_stateCcov03_branch->GetEntry(index);
@@ -3186,7 +3186,7 @@ const vector<float> &trktree::see_stateCcov03() {
   }
   return *see_stateCcov03_;
 }
-const vector<float> &trktree::sim_eta() {
+const std::vector<float> &trktree::sim_eta() {
   if (not sim_eta_isLoaded) {
     if (sim_eta_branch != 0) {
       sim_eta_branch->GetEntry(index);
@@ -3198,7 +3198,7 @@ const vector<float> &trktree::sim_eta() {
   }
   return *sim_eta_;
 }
-const vector<unsigned int> &trktree::simvtx_processType() {
+const std::vector<unsigned int> &trktree::simvtx_processType() {
   if (not simvtx_processType_isLoaded) {
     if (simvtx_processType_branch != 0) {
       simvtx_processType_branch->GetEntry(index);
@@ -3210,7 +3210,7 @@ const vector<unsigned int> &trktree::simvtx_processType() {
   }
   return *simvtx_processType_;
 }
-const vector<float> &trktree::pix_radL() {
+const std::vector<float> &trktree::pix_radL() {
   if (not pix_radL_isLoaded) {
     if (pix_radL_branch != 0) {
       pix_radL_branch->GetEntry(index);
@@ -3222,7 +3222,7 @@ const vector<float> &trktree::pix_radL() {
   }
   return *pix_radL_;
 }
-const vector<float> &trktree::see_stateCcov02() {
+const std::vector<float> &trktree::see_stateCcov02() {
   if (not see_stateCcov02_isLoaded) {
     if (see_stateCcov02_branch != 0) {
       see_stateCcov02_branch->GetEntry(index);
@@ -3234,7 +3234,7 @@ const vector<float> &trktree::see_stateCcov02() {
   }
   return *see_stateCcov02_;
 }
-const vector<unsigned int> &trktree::see_nGlued() {
+const std::vector<unsigned int> &trktree::see_nGlued() {
   if (not see_nGlued_isLoaded) {
     if (see_nGlued_branch != 0) {
       see_nGlued_branch->GetEntry(index);
@@ -3246,7 +3246,7 @@ const vector<unsigned int> &trktree::see_nGlued() {
   }
   return *see_nGlued_;
 }
-const vector<int> &trktree::trk_bestSimTrkIdx() {
+const std::vector<int> &trktree::trk_bestSimTrkIdx() {
   if (not trk_bestSimTrkIdx_isLoaded) {
     if (trk_bestSimTrkIdx_branch != 0) {
       trk_bestSimTrkIdx_branch->GetEntry(index);
@@ -3258,7 +3258,7 @@ const vector<int> &trktree::trk_bestSimTrkIdx() {
   }
   return *trk_bestSimTrkIdx_;
 }
-const vector<float> &trktree::see_stateTrajGlbPz() {
+const std::vector<float> &trktree::see_stateTrajGlbPz() {
   if (not see_stateTrajGlbPz_isLoaded) {
     if (see_stateTrajGlbPz_branch != 0) {
       see_stateTrajGlbPz_branch->GetEntry(index);
@@ -3270,7 +3270,7 @@ const vector<float> &trktree::see_stateTrajGlbPz() {
   }
   return *see_stateTrajGlbPz_;
 }
-const vector<float> &trktree::pix_yz() {
+const std::vector<float> &trktree::pix_yz() {
   if (not pix_yz_isLoaded) {
     if (pix_yz_branch != 0) {
       pix_yz_branch->GetEntry(index);
@@ -3282,7 +3282,7 @@ const vector<float> &trktree::pix_yz() {
   }
   return *pix_yz_;
 }
-const vector<float> &trktree::pix_yy() {
+const std::vector<float> &trktree::pix_yy() {
   if (not pix_yy_isLoaded) {
     if (pix_yy_branch != 0) {
       pix_yy_branch->GetEntry(index);
@@ -3294,7 +3294,7 @@ const vector<float> &trktree::pix_yy() {
   }
   return *pix_yy_;
 }
-const vector<short> &trktree::simhit_process() {
+const std::vector<short> &trktree::simhit_process() {
   if (not simhit_process_isLoaded) {
     if (simhit_process_branch != 0) {
       simhit_process_branch->GetEntry(index);
@@ -3306,7 +3306,7 @@ const vector<short> &trktree::simhit_process() {
   }
   return *simhit_process_;
 }
-const vector<float> &trktree::see_stateCcov34() {
+const std::vector<float> &trktree::see_stateCcov34() {
   if (not see_stateCcov34_isLoaded) {
     if (see_stateCcov34_branch != 0) {
       see_stateCcov34_branch->GetEntry(index);
@@ -3318,7 +3318,7 @@ const vector<float> &trktree::see_stateCcov34() {
   }
   return *see_stateCcov34_;
 }
-const vector<unsigned int> &trktree::trk_nInnerLost() {
+const std::vector<unsigned int> &trktree::trk_nInnerLost() {
   if (not trk_nInnerLost_isLoaded) {
     if (trk_nInnerLost_branch != 0) {
       trk_nInnerLost_branch->GetEntry(index);
@@ -3330,7 +3330,7 @@ const vector<unsigned int> &trktree::trk_nInnerLost() {
   }
   return *trk_nInnerLost_;
 }
-const vector<float> &trktree::see_py() {
+const std::vector<float> &trktree::see_py() {
   if (not see_py_isLoaded) {
     if (see_py_branch != 0) {
       see_py_branch->GetEntry(index);
@@ -3342,7 +3342,7 @@ const vector<float> &trktree::see_py() {
   }
   return *see_py_;
 }
-const vector<vector<int> > &trktree::sim_trkIdx() {
+const std::vector<std::vector<int> > &trktree::sim_trkIdx() {
   if (not sim_trkIdx_isLoaded) {
     if (sim_trkIdx_branch != 0) {
       sim_trkIdx_branch->GetEntry(index);
@@ -3354,7 +3354,7 @@ const vector<vector<int> > &trktree::sim_trkIdx() {
   }
   return *sim_trkIdx_;
 }
-const vector<unsigned int> &trktree::trk_nLost() {
+const std::vector<unsigned int> &trktree::trk_nLost() {
   if (not trk_nLost_isLoaded) {
     if (trk_nLost_branch != 0) {
       trk_nLost_branch->GetEntry(index);
@@ -3366,7 +3366,7 @@ const vector<unsigned int> &trktree::trk_nLost() {
   }
   return *trk_nLost_;
 }
-const vector<short> &trktree::pix_isBarrel() {
+const std::vector<short> &trktree::pix_isBarrel() {
   if (not pix_isBarrel_isLoaded) {
     if (pix_isBarrel_branch != 0) {
       pix_isBarrel_branch->GetEntry(index);
@@ -3378,7 +3378,7 @@ const vector<short> &trktree::pix_isBarrel() {
   }
   return *pix_isBarrel_;
 }
-const vector<float> &trktree::see_dxyErr() {
+const std::vector<float> &trktree::see_dxyErr() {
   if (not see_dxyErr_isLoaded) {
     if (see_dxyErr_branch != 0) {
       see_dxyErr_branch->GetEntry(index);
@@ -3390,7 +3390,7 @@ const vector<float> &trktree::see_dxyErr() {
   }
   return *see_dxyErr_;
 }
-const vector<unsigned int> &trktree::simhit_detId() {
+const std::vector<unsigned int> &trktree::simhit_detId() {
   if (not simhit_detId_isLoaded) {
     if (simhit_detId_branch != 0) {
       simhit_detId_branch->GetEntry(index);
@@ -3402,7 +3402,7 @@ const vector<unsigned int> &trktree::simhit_detId() {
   }
   return *simhit_detId_;
 }
-const vector<unsigned short> &trktree::simhit_subdet() {
+const std::vector<unsigned short> &trktree::simhit_subdet() {
   if (not simhit_subdet_isLoaded) {
     if (simhit_subdet_branch != 0) {
       simhit_subdet_branch->GetEntry(index);
@@ -3414,7 +3414,7 @@ const vector<unsigned short> &trktree::simhit_subdet() {
   }
   return *simhit_subdet_;
 }
-const vector<vector<int> > &trktree::see_hitIdx() {
+const std::vector<std::vector<int> > &trktree::see_hitIdx() {
   if (not see_hitIdx_isLoaded) {
     if (see_hitIdx_branch != 0) {
       see_hitIdx_branch->GetEntry(index);
@@ -3426,7 +3426,7 @@ const vector<vector<int> > &trktree::see_hitIdx() {
   }
   return *see_hitIdx_;
 }
-const vector<float> &trktree::see_pt() {
+const std::vector<float> &trktree::see_pt() {
   if (not see_pt_isLoaded) {
     if (see_pt_branch != 0) {
       see_pt_branch->GetEntry(index);
@@ -3438,7 +3438,7 @@ const vector<float> &trktree::see_pt() {
   }
   return *see_pt_;
 }
-const vector<unsigned int> &trktree::ph2_detId() {
+const std::vector<unsigned int> &trktree::ph2_detId() {
   if (not ph2_detId_isLoaded) {
     if (ph2_detId_branch != 0) {
       ph2_detId_branch->GetEntry(index);
@@ -3450,7 +3450,7 @@ const vector<unsigned int> &trktree::ph2_detId() {
   }
   return *ph2_detId_;
 }
-const vector<unsigned int> &trktree::trk_nStripLay() {
+const std::vector<unsigned int> &trktree::trk_nStripLay() {
   if (not trk_nStripLay_isLoaded) {
     if (trk_nStripLay_branch != 0) {
       trk_nStripLay_branch->GetEntry(index);
@@ -3462,7 +3462,7 @@ const vector<unsigned int> &trktree::trk_nStripLay() {
   }
   return *trk_nStripLay_;
 }
-const vector<int> &trktree::see_bestFromFirstHitSimTrkIdx() {
+const std::vector<int> &trktree::see_bestFromFirstHitSimTrkIdx() {
   if (not see_bestFromFirstHitSimTrkIdx_isLoaded) {
     if (see_bestFromFirstHitSimTrkIdx_branch != 0) {
       see_bestFromFirstHitSimTrkIdx_branch->GetEntry(index);
@@ -3474,7 +3474,7 @@ const vector<int> &trktree::see_bestFromFirstHitSimTrkIdx() {
   }
   return *see_bestFromFirstHitSimTrkIdx_;
 }
-const vector<float> &trktree::sim_pca_pt() {
+const std::vector<float> &trktree::sim_pca_pt() {
   if (not sim_pca_pt_isLoaded) {
     if (sim_pca_pt_branch != 0) {
       sim_pca_pt_branch->GetEntry(index);
@@ -3486,7 +3486,7 @@ const vector<float> &trktree::sim_pca_pt() {
   }
   return *sim_pca_pt_;
 }
-const vector<int> &trktree::see_trkIdx() {
+const std::vector<int> &trktree::see_trkIdx() {
   if (not see_trkIdx_isLoaded) {
     if (see_trkIdx_branch != 0) {
       see_trkIdx_branch->GetEntry(index);
@@ -3498,7 +3498,7 @@ const vector<int> &trktree::see_trkIdx() {
   }
   return *see_trkIdx_;
 }
-const vector<unsigned int> &trktree::trk_nCluster() {
+const std::vector<unsigned int> &trktree::trk_nCluster() {
   if (not trk_nCluster_isLoaded) {
     if (trk_nCluster_branch != 0) {
       trk_nCluster_branch->GetEntry(index);
@@ -3510,7 +3510,7 @@ const vector<unsigned int> &trktree::trk_nCluster() {
   }
   return *trk_nCluster_;
 }
-const vector<float> &trktree::trk_bestFromFirstHitSimTrkNChi2() {
+const std::vector<float> &trktree::trk_bestFromFirstHitSimTrkNChi2() {
   if (not trk_bestFromFirstHitSimTrkNChi2_isLoaded) {
     if (trk_bestFromFirstHitSimTrkNChi2_branch != 0) {
       trk_bestFromFirstHitSimTrkNChi2_branch->GetEntry(index);
@@ -3522,7 +3522,7 @@ const vector<float> &trktree::trk_bestFromFirstHitSimTrkNChi2() {
   }
   return *trk_bestFromFirstHitSimTrkNChi2_;
 }
-const vector<short> &trktree::trk_isHP() {
+const std::vector<short> &trktree::trk_isHP() {
   if (not trk_isHP_isLoaded) {
     if (trk_isHP_branch != 0) {
       trk_isHP_branch->GetEntry(index);
@@ -3534,7 +3534,7 @@ const vector<short> &trktree::trk_isHP() {
   }
   return *trk_isHP_;
 }
-const vector<vector<int> > &trktree::simhit_hitType() {
+const std::vector<std::vector<int> > &trktree::simhit_hitType() {
   if (not simhit_hitType_isLoaded) {
     if (simhit_hitType_branch != 0) {
       simhit_hitType_branch->GetEntry(index);
@@ -3546,7 +3546,7 @@ const vector<vector<int> > &trktree::simhit_hitType() {
   }
   return *simhit_hitType_;
 }
-const vector<unsigned short> &trktree::ph2_isUpper() {
+const std::vector<unsigned short> &trktree::ph2_isUpper() {
   if (not ph2_isUpper_isLoaded) {
     if (ph2_isUpper_branch != 0) {
       ph2_isUpper_branch->GetEntry(index);
@@ -3558,7 +3558,7 @@ const vector<unsigned short> &trktree::ph2_isUpper() {
   }
   return *ph2_isUpper_;
 }
-const vector<unsigned int> &trktree::see_nStrip() {
+const std::vector<unsigned int> &trktree::see_nStrip() {
   if (not see_nStrip_isLoaded) {
     if (see_nStrip_branch != 0) {
       see_nStrip_branch->GetEntry(index);
@@ -3570,7 +3570,7 @@ const vector<unsigned int> &trktree::see_nStrip() {
   }
   return *see_nStrip_;
 }
-const vector<float> &trktree::trk_bestSimTrkShareFracSimClusterDenom() {
+const std::vector<float> &trktree::trk_bestSimTrkShareFracSimClusterDenom() {
   if (not trk_bestSimTrkShareFracSimClusterDenom_isLoaded) {
     if (trk_bestSimTrkShareFracSimClusterDenom_branch != 0) {
       trk_bestSimTrkShareFracSimClusterDenom_branch->GetEntry(index);
@@ -3582,7 +3582,7 @@ const vector<float> &trktree::trk_bestSimTrkShareFracSimClusterDenom() {
   }
   return *trk_bestSimTrkShareFracSimClusterDenom_;
 }
-const vector<unsigned short> &trktree::simhit_side() {
+const std::vector<unsigned short> &trktree::simhit_side() {
   if (not simhit_side_isLoaded) {
     if (simhit_side_branch != 0) {
       simhit_side_branch->GetEntry(index);
@@ -3594,7 +3594,7 @@ const vector<unsigned short> &trktree::simhit_side() {
   }
   return *simhit_side_;
 }
-const vector<float> &trktree::simhit_x() {
+const std::vector<float> &trktree::simhit_x() {
   if (not simhit_x_isLoaded) {
     if (simhit_x_branch != 0) {
       simhit_x_branch->GetEntry(index);
@@ -3606,7 +3606,7 @@ const vector<float> &trktree::simhit_x() {
   }
   return *simhit_x_;
 }
-const vector<int> &trktree::see_q() {
+const std::vector<int> &trktree::see_q() {
   if (not see_q_isLoaded) {
     if (see_q_branch != 0) {
       see_q_branch->GetEntry(index);
@@ -3618,7 +3618,7 @@ const vector<int> &trktree::see_q() {
   }
   return *see_q_;
 }
-const vector<float> &trktree::simhit_z() {
+const std::vector<float> &trktree::simhit_z() {
   if (not simhit_z_isLoaded) {
     if (simhit_z_branch != 0) {
       simhit_z_branch->GetEntry(index);
@@ -3630,7 +3630,7 @@ const vector<float> &trktree::simhit_z() {
   }
   return *simhit_z_;
 }
-const vector<float> &trktree::sim_pca_lambda() {
+const std::vector<float> &trktree::sim_pca_lambda() {
   if (not sim_pca_lambda_isLoaded) {
     if (sim_pca_lambda_branch != 0) {
       sim_pca_lambda_branch->GetEntry(index);
@@ -3642,7 +3642,7 @@ const vector<float> &trktree::sim_pca_lambda() {
   }
   return *sim_pca_lambda_;
 }
-const vector<int> &trktree::sim_q() {
+const std::vector<int> &trktree::sim_q() {
   if (not sim_q_isLoaded) {
     if (sim_q_branch != 0) {
       sim_q_branch->GetEntry(index);
@@ -3654,7 +3654,7 @@ const vector<int> &trktree::sim_q() {
   }
   return *sim_q_;
 }
-const vector<float> &trktree::pix_bbxi() {
+const std::vector<float> &trktree::pix_bbxi() {
   if (not pix_bbxi_isLoaded) {
     if (pix_bbxi_branch != 0) {
       pix_bbxi_branch->GetEntry(index);
@@ -3666,7 +3666,7 @@ const vector<float> &trktree::pix_bbxi() {
   }
   return *pix_bbxi_;
 }
-const vector<unsigned short> &trktree::ph2_order() {
+const std::vector<unsigned short> &trktree::ph2_order() {
   if (not ph2_order_isLoaded) {
     if (ph2_order_branch != 0) {
       ph2_order_branch->GetEntry(index);
@@ -3678,7 +3678,7 @@ const vector<unsigned short> &trktree::ph2_order() {
   }
   return *ph2_order_;
 }
-const vector<unsigned short> &trktree::ph2_module() {
+const std::vector<unsigned short> &trktree::ph2_module() {
   if (not ph2_module_isLoaded) {
     if (ph2_module_branch != 0) {
       ph2_module_branch->GetEntry(index);
@@ -3690,7 +3690,7 @@ const vector<unsigned short> &trktree::ph2_module() {
   }
   return *ph2_module_;
 }
-const vector<unsigned short> &trktree::inv_order() {
+const std::vector<unsigned short> &trktree::inv_order() {
   if (not inv_order_isLoaded) {
     if (inv_order_branch != 0) {
       inv_order_branch->GetEntry(index);
@@ -3702,7 +3702,7 @@ const vector<unsigned short> &trktree::inv_order() {
   }
   return *inv_order_;
 }
-const vector<float> &trktree::trk_dzErr() {
+const std::vector<float> &trktree::trk_dzErr() {
   if (not trk_dzErr_isLoaded) {
     if (trk_dzErr_branch != 0) {
       trk_dzErr_branch->GetEntry(index);
@@ -3714,7 +3714,7 @@ const vector<float> &trktree::trk_dzErr() {
   }
   return *trk_dzErr_;
 }
-const vector<unsigned int> &trktree::trk_nInnerInactive() {
+const std::vector<unsigned int> &trktree::trk_nInnerInactive() {
   if (not trk_nInnerInactive_isLoaded) {
     if (trk_nInnerInactive_branch != 0) {
       trk_nInnerInactive_branch->GetEntry(index);
@@ -3726,7 +3726,7 @@ const vector<unsigned int> &trktree::trk_nInnerInactive() {
   }
   return *trk_nInnerInactive_;
 }
-const vector<short> &trktree::see_fitok() {
+const std::vector<short> &trktree::see_fitok() {
   if (not see_fitok_isLoaded) {
     if (see_fitok_branch != 0) {
       see_fitok_branch->GetEntry(index);
@@ -3738,7 +3738,7 @@ const vector<short> &trktree::see_fitok() {
   }
   return *see_fitok_;
 }
-const vector<unsigned short> &trktree::simhit_blade() {
+const std::vector<unsigned short> &trktree::simhit_blade() {
   if (not simhit_blade_isLoaded) {
     if (simhit_blade_branch != 0) {
       simhit_blade_branch->GetEntry(index);
@@ -3750,7 +3750,7 @@ const vector<unsigned short> &trktree::simhit_blade() {
   }
   return *simhit_blade_;
 }
-const vector<unsigned short> &trktree::inv_subdet() {
+const std::vector<unsigned short> &trktree::inv_subdet() {
   if (not inv_subdet_isLoaded) {
     if (inv_subdet_branch != 0) {
       inv_subdet_branch->GetEntry(index);
@@ -3762,7 +3762,7 @@ const vector<unsigned short> &trktree::inv_subdet() {
   }
   return *inv_subdet_;
 }
-const vector<unsigned short> &trktree::pix_blade() {
+const std::vector<unsigned short> &trktree::pix_blade() {
   if (not pix_blade_isLoaded) {
     if (pix_blade_branch != 0) {
       pix_blade_branch->GetEntry(index);
@@ -3774,7 +3774,7 @@ const vector<unsigned short> &trktree::pix_blade() {
   }
   return *pix_blade_;
 }
-const vector<float> &trktree::pix_xx() {
+const std::vector<float> &trktree::pix_xx() {
   if (not pix_xx_isLoaded) {
     if (pix_xx_branch != 0) {
       pix_xx_branch->GetEntry(index);
@@ -3786,7 +3786,7 @@ const vector<float> &trktree::pix_xx() {
   }
   return *pix_xx_;
 }
-const vector<float> &trktree::pix_xy() {
+const std::vector<float> &trktree::pix_xy() {
   if (not pix_xy_isLoaded) {
     if (pix_xy_branch != 0) {
       pix_xy_branch->GetEntry(index);
@@ -3798,7 +3798,7 @@ const vector<float> &trktree::pix_xy() {
   }
   return *pix_xy_;
 }
-const vector<unsigned short> &trktree::simhit_panel() {
+const std::vector<unsigned short> &trktree::simhit_panel() {
   if (not simhit_panel_isLoaded) {
     if (simhit_panel_branch != 0) {
       simhit_panel_branch->GetEntry(index);
@@ -3810,7 +3810,7 @@ const vector<unsigned short> &trktree::simhit_panel() {
   }
   return *simhit_panel_;
 }
-const vector<float> &trktree::sim_pz() {
+const std::vector<float> &trktree::sim_pz() {
   if (not sim_pz_isLoaded) {
     if (sim_pz_branch != 0) {
       sim_pz_branch->GetEntry(index);
@@ -3822,7 +3822,7 @@ const vector<float> &trktree::sim_pz() {
   }
   return *sim_pz_;
 }
-const vector<float> &trktree::trk_dxy() {
+const std::vector<float> &trktree::trk_dxy() {
   if (not trk_dxy_isLoaded) {
     if (trk_dxy_branch != 0) {
       trk_dxy_branch->GetEntry(index);
@@ -3834,7 +3834,7 @@ const vector<float> &trktree::trk_dxy() {
   }
   return *trk_dxy_;
 }
-const vector<float> &trktree::sim_px() {
+const std::vector<float> &trktree::sim_px() {
   if (not sim_px_isLoaded) {
     if (sim_px_branch != 0) {
       sim_px_branch->GetEntry(index);
@@ -3846,7 +3846,7 @@ const vector<float> &trktree::sim_px() {
   }
   return *sim_px_;
 }
-const vector<float> &trktree::trk_lambda() {
+const std::vector<float> &trktree::trk_lambda() {
   if (not trk_lambda_isLoaded) {
     if (trk_lambda_branch != 0) {
       trk_lambda_branch->GetEntry(index);
@@ -3858,7 +3858,7 @@ const vector<float> &trktree::trk_lambda() {
   }
   return *trk_lambda_;
 }
-const vector<float> &trktree::see_stateCcov12() {
+const std::vector<float> &trktree::see_stateCcov12() {
   if (not see_stateCcov12_isLoaded) {
     if (see_stateCcov12_branch != 0) {
       see_stateCcov12_branch->GetEntry(index);
@@ -3870,7 +3870,7 @@ const vector<float> &trktree::see_stateCcov12() {
   }
   return *see_stateCcov12_;
 }
-const vector<float> &trktree::sim_pt() {
+const std::vector<float> &trktree::sim_pt() {
   if (not sim_pt_isLoaded) {
     if (sim_pt_branch != 0) {
       sim_pt_branch->GetEntry(index);
@@ -3882,7 +3882,7 @@ const vector<float> &trktree::sim_pt() {
   }
   return *sim_pt_;
 }
-const vector<float> &trktree::sim_py() {
+const std::vector<float> &trktree::sim_py() {
   if (not sim_py_isLoaded) {
     if (sim_py_branch != 0) {
       sim_py_branch->GetEntry(index);
@@ -3894,7 +3894,7 @@ const vector<float> &trktree::sim_py() {
   }
   return *sim_py_;
 }
-const vector<vector<int> > &trktree::sim_decayVtxIdx() {
+const std::vector<std::vector<int> > &trktree::sim_decayVtxIdx() {
   if (not sim_decayVtxIdx_isLoaded) {
     if (sim_decayVtxIdx_branch != 0) {
       sim_decayVtxIdx_branch->GetEntry(index);
@@ -3906,7 +3906,7 @@ const vector<vector<int> > &trktree::sim_decayVtxIdx() {
   }
   return *sim_decayVtxIdx_;
 }
-const vector<unsigned int> &trktree::pix_detId() {
+const std::vector<unsigned int> &trktree::pix_detId() {
   if (not pix_detId_isLoaded) {
     if (pix_detId_branch != 0) {
       pix_detId_branch->GetEntry(index);
@@ -3918,7 +3918,7 @@ const vector<unsigned int> &trktree::pix_detId() {
   }
   return *pix_detId_;
 }
-const vector<float> &trktree::trk_eta() {
+const std::vector<float> &trktree::trk_eta() {
   if (not trk_eta_isLoaded) {
     if (trk_eta_branch != 0) {
       trk_eta_branch->GetEntry(index);
@@ -3930,7 +3930,7 @@ const vector<float> &trktree::trk_eta() {
   }
   return *trk_eta_;
 }
-const vector<float> &trktree::see_dxy() {
+const std::vector<float> &trktree::see_dxy() {
   if (not see_dxy_isLoaded) {
     if (see_dxy_branch != 0) {
       see_dxy_branch->GetEntry(index);
@@ -3942,7 +3942,7 @@ const vector<float> &trktree::see_dxy() {
   }
   return *see_dxy_;
 }
-const vector<int> &trktree::sim_isFromBHadron() {
+const std::vector<int> &trktree::sim_isFromBHadron() {
   if (not sim_isFromBHadron_isLoaded) {
     if (sim_isFromBHadron_branch != 0) {
       sim_isFromBHadron_branch->GetEntry(index);
@@ -3954,7 +3954,7 @@ const vector<int> &trktree::sim_isFromBHadron() {
   }
   return *sim_isFromBHadron_;
 }
-const vector<float> &trktree::simhit_eloss() {
+const std::vector<float> &trktree::simhit_eloss() {
   if (not simhit_eloss_isLoaded) {
     if (simhit_eloss_branch != 0) {
       simhit_eloss_branch->GetEntry(index);
@@ -3966,7 +3966,7 @@ const vector<float> &trktree::simhit_eloss() {
   }
   return *simhit_eloss_;
 }
-const vector<float> &trktree::see_stateCcov11() {
+const std::vector<float> &trktree::see_stateCcov11() {
   if (not see_stateCcov11_isLoaded) {
     if (see_stateCcov11_branch != 0) {
       see_stateCcov11_branch->GetEntry(index);
@@ -3978,7 +3978,7 @@ const vector<float> &trktree::see_stateCcov11() {
   }
   return *see_stateCcov11_;
 }
-const vector<float> &trktree::simhit_pz() {
+const std::vector<float> &trktree::simhit_pz() {
   if (not simhit_pz_isLoaded) {
     if (simhit_pz_branch != 0) {
       simhit_pz_branch->GetEntry(index);
@@ -3990,7 +3990,7 @@ const vector<float> &trktree::simhit_pz() {
   }
   return *simhit_pz_;
 }
-const vector<int> &trktree::sim_pdgId() {
+const std::vector<int> &trktree::sim_pdgId() {
   if (not sim_pdgId_isLoaded) {
     if (sim_pdgId_branch != 0) {
       sim_pdgId_branch->GetEntry(index);
@@ -4002,7 +4002,7 @@ const vector<int> &trktree::sim_pdgId() {
   }
   return *sim_pdgId_;
 }
-const vector<unsigned short> &trktree::trk_stopReason() {
+const std::vector<unsigned short> &trktree::trk_stopReason() {
   if (not trk_stopReason_isLoaded) {
     if (trk_stopReason_branch != 0) {
       trk_stopReason_branch->GetEntry(index);
@@ -4014,7 +4014,7 @@ const vector<unsigned short> &trktree::trk_stopReason() {
   }
   return *trk_stopReason_;
 }
-const vector<float> &trktree::sim_pca_phi() {
+const std::vector<float> &trktree::sim_pca_phi() {
   if (not sim_pca_phi_isLoaded) {
     if (sim_pca_phi_branch != 0) {
       sim_pca_phi_branch->GetEntry(index);
@@ -4026,7 +4026,7 @@ const vector<float> &trktree::sim_pca_phi() {
   }
   return *sim_pca_phi_;
 }
-const vector<unsigned short> &trktree::simhit_isLower() {
+const std::vector<unsigned short> &trktree::simhit_isLower() {
   if (not simhit_isLower_isLoaded) {
     if (simhit_isLower_branch != 0) {
       simhit_isLower_branch->GetEntry(index);
@@ -4038,7 +4038,7 @@ const vector<unsigned short> &trktree::simhit_isLower() {
   }
   return *simhit_isLower_;
 }
-const vector<unsigned short> &trktree::inv_ring() {
+const std::vector<unsigned short> &trktree::inv_ring() {
   if (not inv_ring_isLoaded) {
     if (inv_ring_branch != 0) {
       inv_ring_branch->GetEntry(index);
@@ -4050,7 +4050,7 @@ const vector<unsigned short> &trktree::inv_ring() {
   }
   return *inv_ring_;
 }
-const vector<vector<int> > &trktree::ph2_simHitIdx() {
+const std::vector<std::vector<int> > &trktree::ph2_simHitIdx() {
   if (not ph2_simHitIdx_isLoaded) {
     if (ph2_simHitIdx_branch != 0) {
       ph2_simHitIdx_branch->GetEntry(index);
@@ -4062,7 +4062,7 @@ const vector<vector<int> > &trktree::ph2_simHitIdx() {
   }
   return *ph2_simHitIdx_;
 }
-const vector<unsigned short> &trktree::simhit_order() {
+const std::vector<unsigned short> &trktree::simhit_order() {
   if (not simhit_order_isLoaded) {
     if (simhit_order_branch != 0) {
       simhit_order_branch->GetEntry(index);
@@ -4074,7 +4074,7 @@ const vector<unsigned short> &trktree::simhit_order() {
   }
   return *simhit_order_;
 }
-const vector<float> &trktree::trk_dxyClosestPV() {
+const std::vector<float> &trktree::trk_dxyClosestPV() {
   if (not trk_dxyClosestPV_isLoaded) {
     if (trk_dxyClosestPV_branch != 0) {
       trk_dxyClosestPV_branch->GetEntry(index);
@@ -4086,7 +4086,7 @@ const vector<float> &trktree::trk_dxyClosestPV() {
   }
   return *trk_dxyClosestPV_;
 }
-const vector<float> &trktree::pix_z() {
+const std::vector<float> &trktree::pix_z() {
   if (not pix_z_isLoaded) {
     if (pix_z_branch != 0) {
       pix_z_branch->GetEntry(index);
@@ -4098,7 +4098,7 @@ const vector<float> &trktree::pix_z() {
   }
   return *pix_z_;
 }
-const vector<float> &trktree::pix_y() {
+const std::vector<float> &trktree::pix_y() {
   if (not pix_y_isLoaded) {
     if (pix_y_branch != 0) {
       pix_y_branch->GetEntry(index);
@@ -4110,7 +4110,7 @@ const vector<float> &trktree::pix_y() {
   }
   return *pix_y_;
 }
-const vector<float> &trktree::pix_x() {
+const std::vector<float> &trktree::pix_x() {
   if (not pix_x_isLoaded) {
     if (pix_x_branch != 0) {
       pix_x_branch->GetEntry(index);
@@ -4122,7 +4122,7 @@ const vector<float> &trktree::pix_x() {
   }
   return *pix_x_;
 }
-const vector<vector<int> > &trktree::see_hitType() {
+const std::vector<std::vector<int> > &trktree::see_hitType() {
   if (not see_hitType_isLoaded) {
     if (see_hitType_branch != 0) {
       see_hitType_branch->GetEntry(index);
@@ -4134,7 +4134,7 @@ const vector<vector<int> > &trktree::see_hitType() {
   }
   return *see_hitType_;
 }
-const vector<float> &trktree::see_statePt() {
+const std::vector<float> &trktree::see_statePt() {
   if (not see_statePt_isLoaded) {
     if (see_statePt_branch != 0) {
       see_statePt_branch->GetEntry(index);
@@ -4146,7 +4146,7 @@ const vector<float> &trktree::see_statePt() {
   }
   return *see_statePt_;
 }
-const vector<vector<int> > &trktree::simvtx_sourceSimIdx() {
+const std::vector<std::vector<int> > &trktree::simvtx_sourceSimIdx() {
   if (not simvtx_sourceSimIdx_isLoaded) {
     if (simvtx_sourceSimIdx_branch != 0) {
       simvtx_sourceSimIdx_branch->GetEntry(index);
@@ -4170,7 +4170,7 @@ const unsigned long long &trktree::event() {
   }
   return event_;
 }
-const vector<unsigned short> &trktree::pix_module() {
+const std::vector<unsigned short> &trktree::pix_module() {
   if (not pix_module_isLoaded) {
     if (pix_module_branch != 0) {
       pix_module_branch->GetEntry(index);
@@ -4182,7 +4182,7 @@ const vector<unsigned short> &trktree::pix_module() {
   }
   return *pix_module_;
 }
-const vector<unsigned short> &trktree::ph2_side() {
+const std::vector<unsigned short> &trktree::ph2_side() {
   if (not ph2_side_isLoaded) {
     if (ph2_side_branch != 0) {
       ph2_side_branch->GetEntry(index);
@@ -4194,7 +4194,7 @@ const vector<unsigned short> &trktree::ph2_side() {
   }
   return *ph2_side_;
 }
-const vector<float> &trktree::trk_bestSimTrkNChi2() {
+const std::vector<float> &trktree::trk_bestSimTrkNChi2() {
   if (not trk_bestSimTrkNChi2_isLoaded) {
     if (trk_bestSimTrkNChi2_branch != 0) {
       trk_bestSimTrkNChi2_branch->GetEntry(index);
@@ -4206,7 +4206,7 @@ const vector<float> &trktree::trk_bestSimTrkNChi2() {
   }
   return *trk_bestSimTrkNChi2_;
 }
-const vector<float> &trktree::see_stateTrajPy() {
+const std::vector<float> &trktree::see_stateTrajPy() {
   if (not see_stateTrajPy_isLoaded) {
     if (see_stateTrajPy_branch != 0) {
       see_stateTrajPy_branch->GetEntry(index);
@@ -4218,7 +4218,7 @@ const vector<float> &trktree::see_stateTrajPy() {
   }
   return *see_stateTrajPy_;
 }
-const vector<unsigned short> &trktree::inv_type() {
+const std::vector<unsigned short> &trktree::inv_type() {
   if (not inv_type_isLoaded) {
     if (inv_type_branch != 0) {
       inv_type_branch->GetEntry(index);
@@ -4254,7 +4254,7 @@ const float &trktree::bsp_y() {
   }
   return bsp_y_;
 }
-const vector<float> &trktree::simhit_py() {
+const std::vector<float> &trktree::simhit_py() {
   if (not simhit_py_isLoaded) {
     if (simhit_py_branch != 0) {
       simhit_py_branch->GetEntry(index);
@@ -4266,7 +4266,7 @@ const vector<float> &trktree::simhit_py() {
   }
   return *simhit_py_;
 }
-const vector<vector<int> > &trktree::see_simTrkIdx() {
+const std::vector<std::vector<int> > &trktree::see_simTrkIdx() {
   if (not see_simTrkIdx_isLoaded) {
     if (see_simTrkIdx_branch != 0) {
       see_simTrkIdx_branch->GetEntry(index);
@@ -4278,7 +4278,7 @@ const vector<vector<int> > &trktree::see_simTrkIdx() {
   }
   return *see_simTrkIdx_;
 }
-const vector<float> &trktree::see_stateTrajGlbZ() {
+const std::vector<float> &trktree::see_stateTrajGlbZ() {
   if (not see_stateTrajGlbZ_isLoaded) {
     if (see_stateTrajGlbZ_branch != 0) {
       see_stateTrajGlbZ_branch->GetEntry(index);
@@ -4290,7 +4290,7 @@ const vector<float> &trktree::see_stateTrajGlbZ() {
   }
   return *see_stateTrajGlbZ_;
 }
-const vector<float> &trktree::see_stateTrajGlbX() {
+const std::vector<float> &trktree::see_stateTrajGlbX() {
   if (not see_stateTrajGlbX_isLoaded) {
     if (see_stateTrajGlbX_branch != 0) {
       see_stateTrajGlbX_branch->GetEntry(index);
@@ -4302,7 +4302,7 @@ const vector<float> &trktree::see_stateTrajGlbX() {
   }
   return *see_stateTrajGlbX_;
 }
-const vector<float> &trktree::see_stateTrajGlbY() {
+const std::vector<float> &trktree::see_stateTrajGlbY() {
   if (not see_stateTrajGlbY_isLoaded) {
     if (see_stateTrajGlbY_branch != 0) {
       see_stateTrajGlbY_branch->GetEntry(index);
@@ -4314,7 +4314,7 @@ const vector<float> &trktree::see_stateTrajGlbY() {
   }
   return *see_stateTrajGlbY_;
 }
-const vector<unsigned int> &trktree::trk_originalAlgo() {
+const std::vector<unsigned int> &trktree::trk_originalAlgo() {
   if (not trk_originalAlgo_isLoaded) {
     if (trk_originalAlgo_branch != 0) {
       trk_originalAlgo_branch->GetEntry(index);
@@ -4326,7 +4326,7 @@ const vector<unsigned int> &trktree::trk_originalAlgo() {
   }
   return *trk_originalAlgo_;
 }
-const vector<unsigned int> &trktree::trk_nPixel() {
+const std::vector<unsigned int> &trktree::trk_nPixel() {
   if (not trk_nPixel_isLoaded) {
     if (trk_nPixel_branch != 0) {
       trk_nPixel_branch->GetEntry(index);
@@ -4338,7 +4338,7 @@ const vector<unsigned int> &trktree::trk_nPixel() {
   }
   return *trk_nPixel_;
 }
-const vector<float> &trktree::see_stateCcov14() {
+const std::vector<float> &trktree::see_stateCcov14() {
   if (not see_stateCcov14_isLoaded) {
     if (see_stateCcov14_branch != 0) {
       see_stateCcov14_branch->GetEntry(index);
@@ -4350,7 +4350,7 @@ const vector<float> &trktree::see_stateCcov14() {
   }
   return *see_stateCcov14_;
 }
-const vector<float> &trktree::see_stateCcov15() {
+const std::vector<float> &trktree::see_stateCcov15() {
   if (not see_stateCcov15_isLoaded) {
     if (see_stateCcov15_branch != 0) {
       see_stateCcov15_branch->GetEntry(index);
@@ -4362,7 +4362,7 @@ const vector<float> &trktree::see_stateCcov15() {
   }
   return *see_stateCcov15_;
 }
-const vector<float> &trktree::trk_phiErr() {
+const std::vector<float> &trktree::trk_phiErr() {
   if (not trk_phiErr_isLoaded) {
     if (trk_phiErr_branch != 0) {
       trk_phiErr_branch->GetEntry(index);
@@ -4374,7 +4374,7 @@ const vector<float> &trktree::trk_phiErr() {
   }
   return *trk_phiErr_;
 }
-const vector<float> &trktree::see_stateCcov13() {
+const std::vector<float> &trktree::see_stateCcov13() {
   if (not see_stateCcov13_isLoaded) {
     if (see_stateCcov13_branch != 0) {
       see_stateCcov13_branch->GetEntry(index);
@@ -4386,7 +4386,7 @@ const vector<float> &trktree::see_stateCcov13() {
   }
   return *see_stateCcov13_;
 }
-const vector<vector<float> > &trktree::pix_chargeFraction() {
+const std::vector<std::vector<float> > &trktree::pix_chargeFraction() {
   if (not pix_chargeFraction_isLoaded) {
     if (pix_chargeFraction_branch != 0) {
       pix_chargeFraction_branch->GetEntry(index);
@@ -4398,7 +4398,7 @@ const vector<vector<float> > &trktree::pix_chargeFraction() {
   }
   return *pix_chargeFraction_;
 }
-const vector<int> &trktree::trk_q() {
+const std::vector<int> &trktree::trk_q() {
   if (not trk_q_isLoaded) {
     if (trk_q_branch != 0) {
       trk_q_branch->GetEntry(index);
@@ -4410,7 +4410,7 @@ const vector<int> &trktree::trk_q() {
   }
   return *trk_q_;
 }
-const vector<vector<int> > &trktree::sim_seedIdx() {
+const std::vector<std::vector<int> > &trktree::sim_seedIdx() {
   if (not sim_seedIdx_isLoaded) {
     if (sim_seedIdx_branch != 0) {
       sim_seedIdx_branch->GetEntry(index);
@@ -4422,7 +4422,7 @@ const vector<vector<int> > &trktree::sim_seedIdx() {
   }
   return *sim_seedIdx_;
 }
-const vector<float> &trktree::see_dzErr() {
+const std::vector<float> &trktree::see_dzErr() {
   if (not see_dzErr_isLoaded) {
     if (see_dzErr_branch != 0) {
       see_dzErr_branch->GetEntry(index);
@@ -4434,7 +4434,7 @@ const vector<float> &trktree::see_dzErr() {
   }
   return *see_dzErr_;
 }
-const vector<unsigned int> &trktree::sim_nRecoClusters() {
+const std::vector<unsigned int> &trktree::sim_nRecoClusters() {
   if (not sim_nRecoClusters_isLoaded) {
     if (sim_nRecoClusters_branch != 0) {
       sim_nRecoClusters_branch->GetEntry(index);
@@ -4458,7 +4458,7 @@ const unsigned int &trktree::run() {
   }
   return run_;
 }
-const vector<vector<float> > &trktree::ph2_xySignificance() {
+const std::vector<std::vector<float> > &trktree::ph2_xySignificance() {
   if (not ph2_xySignificance_isLoaded) {
     if (ph2_xySignificance_branch != 0) {
       ph2_xySignificance_branch->GetEntry(index);
@@ -4470,7 +4470,7 @@ const vector<vector<float> > &trktree::ph2_xySignificance() {
   }
   return *ph2_xySignificance_;
 }
-const vector<float> &trktree::trk_nChi2() {
+const std::vector<float> &trktree::trk_nChi2() {
   if (not trk_nChi2_isLoaded) {
     if (trk_nChi2_branch != 0) {
       trk_nChi2_branch->GetEntry(index);
@@ -4482,7 +4482,7 @@ const vector<float> &trktree::trk_nChi2() {
   }
   return *trk_nChi2_;
 }
-const vector<unsigned short> &trktree::pix_layer() {
+const std::vector<unsigned short> &trktree::pix_layer() {
   if (not pix_layer_isLoaded) {
     if (pix_layer_branch != 0) {
       pix_layer_branch->GetEntry(index);
@@ -4494,7 +4494,7 @@ const vector<unsigned short> &trktree::pix_layer() {
   }
   return *pix_layer_;
 }
-const vector<vector<float> > &trktree::pix_xySignificance() {
+const std::vector<std::vector<float> > &trktree::pix_xySignificance() {
   if (not pix_xySignificance_isLoaded) {
     if (pix_xySignificance_branch != 0) {
       pix_xySignificance_branch->GetEntry(index);
@@ -4506,7 +4506,7 @@ const vector<vector<float> > &trktree::pix_xySignificance() {
   }
   return *pix_xySignificance_;
 }
-const vector<float> &trktree::sim_pca_eta() {
+const std::vector<float> &trktree::sim_pca_eta() {
   if (not sim_pca_eta_isLoaded) {
     if (sim_pca_eta_branch != 0) {
       sim_pca_eta_branch->GetEntry(index);
@@ -4518,7 +4518,7 @@ const vector<float> &trktree::sim_pca_eta() {
   }
   return *sim_pca_eta_;
 }
-const vector<float> &trktree::see_bestSimTrkShareFrac() {
+const std::vector<float> &trktree::see_bestSimTrkShareFrac() {
   if (not see_bestSimTrkShareFrac_isLoaded) {
     if (see_bestSimTrkShareFrac_branch != 0) {
       see_bestSimTrkShareFrac_branch->GetEntry(index);
@@ -4530,7 +4530,7 @@ const vector<float> &trktree::see_bestSimTrkShareFrac() {
   }
   return *see_bestSimTrkShareFrac_;
 }
-const vector<float> &trktree::see_etaErr() {
+const std::vector<float> &trktree::see_etaErr() {
   if (not see_etaErr_isLoaded) {
     if (see_etaErr_branch != 0) {
       see_etaErr_branch->GetEntry(index);
@@ -4542,7 +4542,7 @@ const vector<float> &trktree::see_etaErr() {
   }
   return *see_etaErr_;
 }
-const vector<float> &trktree::trk_bestSimTrkShareFracSimDenom() {
+const std::vector<float> &trktree::trk_bestSimTrkShareFracSimDenom() {
   if (not trk_bestSimTrkShareFracSimDenom_isLoaded) {
     if (trk_bestSimTrkShareFracSimDenom_branch != 0) {
       trk_bestSimTrkShareFracSimDenom_branch->GetEntry(index);
@@ -4590,7 +4590,7 @@ const float &trktree::bsp_sigmax() {
   }
   return bsp_sigmax_;
 }
-const vector<unsigned short> &trktree::pix_ladder() {
+const std::vector<unsigned short> &trktree::pix_ladder() {
   if (not pix_ladder_isLoaded) {
     if (pix_ladder_branch != 0) {
       pix_ladder_branch->GetEntry(index);
@@ -4602,7 +4602,7 @@ const vector<unsigned short> &trktree::pix_ladder() {
   }
   return *pix_ladder_;
 }
-const vector<unsigned short> &trktree::trk_qualityMask() {
+const std::vector<unsigned short> &trktree::trk_qualityMask() {
   if (not trk_qualityMask_isLoaded) {
     if (trk_qualityMask_branch != 0) {
       trk_qualityMask_branch->GetEntry(index);
@@ -4614,7 +4614,7 @@ const vector<unsigned short> &trktree::trk_qualityMask() {
   }
   return *trk_qualityMask_;
 }
-const vector<float> &trktree::trk_ndof() {
+const std::vector<float> &trktree::trk_ndof() {
   if (not trk_ndof_isLoaded) {
     if (trk_ndof_branch != 0) {
       trk_ndof_branch->GetEntry(index);
@@ -4626,7 +4626,7 @@ const vector<float> &trktree::trk_ndof() {
   }
   return *trk_ndof_;
 }
-const vector<unsigned short> &trktree::pix_subdet() {
+const std::vector<unsigned short> &trktree::pix_subdet() {
   if (not pix_subdet_isLoaded) {
     if (pix_subdet_branch != 0) {
       pix_subdet_branch->GetEntry(index);
@@ -4638,7 +4638,7 @@ const vector<unsigned short> &trktree::pix_subdet() {
   }
   return *pix_subdet_;
 }
-const vector<vector<int> > &trktree::ph2_seeIdx() {
+const std::vector<std::vector<int> > &trktree::ph2_seeIdx() {
   if (not ph2_seeIdx_isLoaded) {
     if (ph2_seeIdx_branch != 0) {
       ph2_seeIdx_branch->GetEntry(index);
@@ -4650,7 +4650,7 @@ const vector<vector<int> > &trktree::ph2_seeIdx() {
   }
   return *ph2_seeIdx_;
 }
-const vector<unsigned short> &trktree::inv_isUpper() {
+const std::vector<unsigned short> &trktree::inv_isUpper() {
   if (not inv_isUpper_isLoaded) {
     if (inv_isUpper_branch != 0) {
       inv_isUpper_branch->GetEntry(index);
@@ -4662,7 +4662,7 @@ const vector<unsigned short> &trktree::inv_isUpper() {
   }
   return *inv_isUpper_;
 }
-const vector<float> &trktree::ph2_zx() {
+const std::vector<float> &trktree::ph2_zx() {
   if (not ph2_zx_isLoaded) {
     if (ph2_zx_branch != 0) {
       ph2_zx_branch->GetEntry(index);
@@ -4674,7 +4674,7 @@ const vector<float> &trktree::ph2_zx() {
   }
   return *ph2_zx_;
 }
-const vector<vector<int> > &trktree::pix_trkIdx() {
+const std::vector<std::vector<int> > &trktree::pix_trkIdx() {
   if (not pix_trkIdx_isLoaded) {
     if (pix_trkIdx_branch != 0) {
       pix_trkIdx_branch->GetEntry(index);
@@ -4686,7 +4686,7 @@ const vector<vector<int> > &trktree::pix_trkIdx() {
   }
   return *pix_trkIdx_;
 }
-const vector<unsigned int> &trktree::trk_nOuterLost() {
+const std::vector<unsigned int> &trktree::trk_nOuterLost() {
   if (not trk_nOuterLost_isLoaded) {
     if (trk_nOuterLost_branch != 0) {
       trk_nOuterLost_branch->GetEntry(index);
@@ -4698,7 +4698,7 @@ const vector<unsigned int> &trktree::trk_nOuterLost() {
   }
   return *trk_nOuterLost_;
 }
-const vector<unsigned short> &trktree::inv_panel() {
+const std::vector<unsigned short> &trktree::inv_panel() {
   if (not inv_panel_isLoaded) {
     if (inv_panel_branch != 0) {
       inv_panel_branch->GetEntry(index);
@@ -4710,7 +4710,7 @@ const vector<unsigned short> &trktree::inv_panel() {
   }
   return *inv_panel_;
 }
-const vector<float> &trktree::vtx_z() {
+const std::vector<float> &trktree::vtx_z() {
   if (not vtx_z_isLoaded) {
     if (vtx_z_branch != 0) {
       vtx_z_branch->GetEntry(index);
@@ -4722,7 +4722,7 @@ const vector<float> &trktree::vtx_z() {
   }
   return *vtx_z_;
 }
-const vector<unsigned short> &trktree::simhit_layer() {
+const std::vector<unsigned short> &trktree::simhit_layer() {
   if (not simhit_layer_isLoaded) {
     if (simhit_layer_branch != 0) {
       simhit_layer_branch->GetEntry(index);
@@ -4734,7 +4734,7 @@ const vector<unsigned short> &trktree::simhit_layer() {
   }
   return *simhit_layer_;
 }
-const vector<float> &trktree::vtx_y() {
+const std::vector<float> &trktree::vtx_y() {
   if (not vtx_y_isLoaded) {
     if (vtx_y_branch != 0) {
       vtx_y_branch->GetEntry(index);
@@ -4746,7 +4746,7 @@ const vector<float> &trktree::vtx_y() {
   }
   return *vtx_y_;
 }
-const vector<short> &trktree::ph2_isBarrel() {
+const std::vector<short> &trktree::ph2_isBarrel() {
   if (not ph2_isBarrel_isLoaded) {
     if (ph2_isBarrel_branch != 0) {
       ph2_isBarrel_branch->GetEntry(index);
@@ -4758,7 +4758,7 @@ const vector<short> &trktree::ph2_isBarrel() {
   }
   return *ph2_isBarrel_;
 }
-const vector<vector<int> > &trktree::pix_seeIdx() {
+const std::vector<std::vector<int> > &trktree::pix_seeIdx() {
   if (not pix_seeIdx_isLoaded) {
     if (pix_seeIdx_branch != 0) {
       pix_seeIdx_branch->GetEntry(index);
@@ -4770,7 +4770,7 @@ const vector<vector<int> > &trktree::pix_seeIdx() {
   }
   return *pix_seeIdx_;
 }
-const vector<int> &trktree::trk_bestFromFirstHitSimTrkIdx() {
+const std::vector<int> &trktree::trk_bestFromFirstHitSimTrkIdx() {
   if (not trk_bestFromFirstHitSimTrkIdx_isLoaded) {
     if (trk_bestFromFirstHitSimTrkIdx_branch != 0) {
       trk_bestFromFirstHitSimTrkIdx_branch->GetEntry(index);
@@ -4782,7 +4782,7 @@ const vector<int> &trktree::trk_bestFromFirstHitSimTrkIdx() {
   }
   return *trk_bestFromFirstHitSimTrkIdx_;
 }
-const vector<float> &trktree::simhit_px() {
+const std::vector<float> &trktree::simhit_px() {
   if (not simhit_px_isLoaded) {
     if (simhit_px_branch != 0) {
       simhit_px_branch->GetEntry(index);
@@ -4794,7 +4794,7 @@ const vector<float> &trktree::simhit_px() {
   }
   return *simhit_px_;
 }
-const vector<float> &trktree::see_stateTrajX() {
+const std::vector<float> &trktree::see_stateTrajX() {
   if (not see_stateTrajX_isLoaded) {
     if (see_stateTrajX_branch != 0) {
       see_stateTrajX_branch->GetEntry(index);
@@ -4806,7 +4806,7 @@ const vector<float> &trktree::see_stateTrajX() {
   }
   return *see_stateTrajX_;
 }
-const vector<float> &trktree::see_stateTrajY() {
+const std::vector<float> &trktree::see_stateTrajY() {
   if (not see_stateTrajY_isLoaded) {
     if (see_stateTrajY_branch != 0) {
       see_stateTrajY_branch->GetEntry(index);
@@ -4818,7 +4818,7 @@ const vector<float> &trktree::see_stateTrajY() {
   }
   return *see_stateTrajY_;
 }
-const vector<unsigned int> &trktree::trk_nOuterInactive() {
+const std::vector<unsigned int> &trktree::trk_nOuterInactive() {
   if (not trk_nOuterInactive_isLoaded) {
     if (trk_nOuterInactive_branch != 0) {
       trk_nOuterInactive_branch->GetEntry(index);
@@ -4830,7 +4830,7 @@ const vector<unsigned int> &trktree::trk_nOuterInactive() {
   }
   return *trk_nOuterInactive_;
 }
-const vector<float> &trktree::sim_pca_dxy() {
+const std::vector<float> &trktree::sim_pca_dxy() {
   if (not sim_pca_dxy_isLoaded) {
     if (sim_pca_dxy_branch != 0) {
       sim_pca_dxy_branch->GetEntry(index);
@@ -4842,7 +4842,7 @@ const vector<float> &trktree::sim_pca_dxy() {
   }
   return *sim_pca_dxy_;
 }
-const vector<unsigned int> &trktree::trk_algo() {
+const std::vector<unsigned int> &trktree::trk_algo() {
   if (not trk_algo_isLoaded) {
     if (trk_algo_branch != 0) {
       trk_algo_branch->GetEntry(index);
@@ -4854,7 +4854,7 @@ const vector<unsigned int> &trktree::trk_algo() {
   }
   return *trk_algo_;
 }
-const vector<vector<int> > &trktree::trk_hitType() {
+const std::vector<std::vector<int> > &trktree::trk_hitType() {
   if (not trk_hitType_isLoaded) {
     if (trk_hitType_branch != 0) {
       trk_hitType_branch->GetEntry(index);
@@ -4866,7 +4866,7 @@ const vector<vector<int> > &trktree::trk_hitType() {
   }
   return *trk_hitType_;
 }
-const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFrac() {
+const std::vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFrac() {
   if (not trk_bestFromFirstHitSimTrkShareFrac_isLoaded) {
     if (trk_bestFromFirstHitSimTrkShareFrac_branch != 0) {
       trk_bestFromFirstHitSimTrkShareFrac_branch->GetEntry(index);
@@ -4878,7 +4878,7 @@ const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFrac() {
   }
   return *trk_bestFromFirstHitSimTrkShareFrac_;
 }
-const vector<short> &trktree::inv_isBarrel() {
+const std::vector<short> &trktree::inv_isBarrel() {
   if (not inv_isBarrel_isLoaded) {
     if (inv_isBarrel_branch != 0) {
       inv_isBarrel_branch->GetEntry(index);
@@ -4890,7 +4890,7 @@ const vector<short> &trktree::inv_isBarrel() {
   }
   return *inv_isBarrel_;
 }
-const vector<int> &trktree::simvtx_event() {
+const std::vector<int> &trktree::simvtx_event() {
   if (not simvtx_event_isLoaded) {
     if (simvtx_event_branch != 0) {
       simvtx_event_branch->GetEntry(index);
@@ -4902,7 +4902,7 @@ const vector<int> &trktree::simvtx_event() {
   }
   return *simvtx_event_;
 }
-const vector<float> &trktree::ph2_z() {
+const std::vector<float> &trktree::ph2_z() {
   if (not ph2_z_isLoaded) {
     if (ph2_z_branch != 0) {
       ph2_z_branch->GetEntry(index);
@@ -4914,7 +4914,7 @@ const vector<float> &trktree::ph2_z() {
   }
   return *ph2_z_;
 }
-const vector<float> &trktree::ph2_x() {
+const std::vector<float> &trktree::ph2_x() {
   if (not ph2_x_isLoaded) {
     if (ph2_x_branch != 0) {
       ph2_x_branch->GetEntry(index);
@@ -4926,7 +4926,7 @@ const vector<float> &trktree::ph2_x() {
   }
   return *ph2_x_;
 }
-const vector<float> &trktree::ph2_y() {
+const std::vector<float> &trktree::ph2_y() {
   if (not ph2_y_isLoaded) {
     if (ph2_y_branch != 0) {
       ph2_y_branch->GetEntry(index);
@@ -4938,7 +4938,7 @@ const vector<float> &trktree::ph2_y() {
   }
   return *ph2_y_;
 }
-const vector<vector<int> > &trktree::sim_genPdgIds() {
+const std::vector<std::vector<int> > &trktree::sim_genPdgIds() {
   if (not sim_genPdgIds_isLoaded) {
     if (sim_genPdgIds_branch != 0) {
       sim_genPdgIds_branch->GetEntry(index);
@@ -4950,7 +4950,7 @@ const vector<vector<int> > &trktree::sim_genPdgIds() {
   }
   return *sim_genPdgIds_;
 }
-const vector<float> &trktree::trk_mva() {
+const std::vector<float> &trktree::trk_mva() {
   if (not trk_mva_isLoaded) {
     if (trk_mva_branch != 0) {
       trk_mva_branch->GetEntry(index);
@@ -4962,7 +4962,7 @@ const vector<float> &trktree::trk_mva() {
   }
   return *trk_mva_;
 }
-const vector<float> &trktree::see_stateCcov24() {
+const std::vector<float> &trktree::see_stateCcov24() {
   if (not see_stateCcov24_isLoaded) {
     if (see_stateCcov24_branch != 0) {
       see_stateCcov24_branch->GetEntry(index);
@@ -4974,7 +4974,7 @@ const vector<float> &trktree::see_stateCcov24() {
   }
   return *see_stateCcov24_;
 }
-const vector<float> &trktree::trk_dzClosestPV() {
+const std::vector<float> &trktree::trk_dzClosestPV() {
   if (not trk_dzClosestPV_isLoaded) {
     if (trk_dzClosestPV_branch != 0) {
       trk_dzClosestPV_branch->GetEntry(index);
@@ -4986,7 +4986,7 @@ const vector<float> &trktree::trk_dzClosestPV() {
   }
   return *trk_dzClosestPV_;
 }
-const vector<unsigned int> &trktree::see_nCluster() {
+const std::vector<unsigned int> &trktree::see_nCluster() {
   if (not see_nCluster_isLoaded) {
     if (see_nCluster_branch != 0) {
       see_nCluster_branch->GetEntry(index);
@@ -4998,7 +4998,7 @@ const vector<unsigned int> &trktree::see_nCluster() {
   }
   return *see_nCluster_;
 }
-const vector<unsigned short> &trktree::inv_rod() {
+const std::vector<unsigned short> &trktree::inv_rod() {
   if (not inv_rod_isLoaded) {
     if (inv_rod_branch != 0) {
       inv_rod_branch->GetEntry(index);
@@ -5010,7 +5010,7 @@ const vector<unsigned short> &trktree::inv_rod() {
   }
   return *inv_rod_;
 }
-const vector<vector<int> > &trktree::trk_hitIdx() {
+const std::vector<std::vector<int> > &trktree::trk_hitIdx() {
   if (not trk_hitIdx_isLoaded) {
     if (trk_hitIdx_branch != 0) {
       trk_hitIdx_branch->GetEntry(index);
@@ -5022,7 +5022,7 @@ const vector<vector<int> > &trktree::trk_hitIdx() {
   }
   return *trk_hitIdx_;
 }
-const vector<float> &trktree::see_stateCcov22() {
+const std::vector<float> &trktree::see_stateCcov22() {
   if (not see_stateCcov22_isLoaded) {
     if (see_stateCcov22_branch != 0) {
       see_stateCcov22_branch->GetEntry(index);
@@ -5034,7 +5034,7 @@ const vector<float> &trktree::see_stateCcov22() {
   }
   return *see_stateCcov22_;
 }
-const vector<unsigned short> &trktree::pix_simType() {
+const std::vector<unsigned short> &trktree::pix_simType() {
   if (not pix_simType_isLoaded) {
     if (pix_simType_branch != 0) {
       pix_simType_branch->GetEntry(index);
@@ -5046,7 +5046,7 @@ const vector<unsigned short> &trktree::pix_simType() {
   }
   return *pix_simType_;
 }
-const vector<unsigned short> &trktree::simhit_ring() {
+const std::vector<unsigned short> &trktree::simhit_ring() {
   if (not simhit_ring_isLoaded) {
     if (simhit_ring_branch != 0) {
       simhit_ring_branch->GetEntry(index);
@@ -5058,7 +5058,7 @@ const vector<unsigned short> &trktree::simhit_ring() {
   }
   return *simhit_ring_;
 }
-const vector<float> &trktree::trk_outer_px() {
+const std::vector<float> &trktree::trk_outer_px() {
   if (not trk_outer_px_isLoaded) {
     if (trk_outer_px_branch != 0) {
       trk_outer_px_branch->GetEntry(index);
@@ -5070,7 +5070,7 @@ const vector<float> &trktree::trk_outer_px() {
   }
   return *trk_outer_px_;
 }
-const vector<float> &trktree::trk_outer_py() {
+const std::vector<float> &trktree::trk_outer_py() {
   if (not trk_outer_py_isLoaded) {
     if (trk_outer_py_branch != 0) {
       trk_outer_py_branch->GetEntry(index);
@@ -5082,7 +5082,7 @@ const vector<float> &trktree::trk_outer_py() {
   }
   return *trk_outer_py_;
 }
-const vector<float> &trktree::trk_outer_pz() {
+const std::vector<float> &trktree::trk_outer_pz() {
   if (not trk_outer_pz_isLoaded) {
     if (trk_outer_pz_branch != 0) {
       trk_outer_pz_branch->GetEntry(index);
@@ -5094,7 +5094,7 @@ const vector<float> &trktree::trk_outer_pz() {
   }
   return *trk_outer_pz_;
 }
-const vector<float> &trktree::ph2_zz() {
+const std::vector<float> &trktree::ph2_zz() {
   if (not ph2_zz_isLoaded) {
     if (ph2_zz_branch != 0) {
       ph2_zz_branch->GetEntry(index);
@@ -5106,7 +5106,7 @@ const vector<float> &trktree::ph2_zz() {
   }
   return *ph2_zz_;
 }
-const vector<float> &trktree::trk_outer_pt() {
+const std::vector<float> &trktree::trk_outer_pt() {
   if (not trk_outer_pt_isLoaded) {
     if (trk_outer_pt_branch != 0) {
       trk_outer_pt_branch->GetEntry(index);
@@ -5118,7 +5118,7 @@ const vector<float> &trktree::trk_outer_pt() {
   }
   return *trk_outer_pt_;
 }
-const vector<unsigned int> &trktree::trk_n3DLay() {
+const std::vector<unsigned int> &trktree::trk_n3DLay() {
   if (not trk_n3DLay_isLoaded) {
     if (trk_n3DLay_branch != 0) {
       trk_n3DLay_branch->GetEntry(index);
@@ -5130,7 +5130,7 @@ const vector<unsigned int> &trktree::trk_n3DLay() {
   }
   return *trk_n3DLay_;
 }
-const vector<unsigned int> &trktree::trk_nValid() {
+const std::vector<unsigned int> &trktree::trk_nValid() {
   if (not trk_nValid_isLoaded) {
     if (trk_nValid_branch != 0) {
       trk_nValid_branch->GetEntry(index);
@@ -5142,7 +5142,7 @@ const vector<unsigned int> &trktree::trk_nValid() {
   }
   return *trk_nValid_;
 }
-const vector<float> &trktree::see_ptErr() {
+const std::vector<float> &trktree::see_ptErr() {
   if (not see_ptErr_isLoaded) {
     if (see_ptErr_branch != 0) {
       see_ptErr_branch->GetEntry(index);
@@ -5154,7 +5154,7 @@ const vector<float> &trktree::see_ptErr() {
   }
   return *see_ptErr_;
 }
-const vector<float> &trktree::see_stateTrajGlbPx() {
+const std::vector<float> &trktree::see_stateTrajGlbPx() {
   if (not see_stateTrajGlbPx_isLoaded) {
     if (see_stateTrajGlbPx_branch != 0) {
       see_stateTrajGlbPx_branch->GetEntry(index);
@@ -5166,7 +5166,7 @@ const vector<float> &trktree::see_stateTrajGlbPx() {
   }
   return *see_stateTrajGlbPx_;
 }
-const vector<unsigned short> &trktree::ph2_simType() {
+const std::vector<unsigned short> &trktree::ph2_simType() {
   if (not ph2_simType_isLoaded) {
     if (ph2_simType_branch != 0) {
       ph2_simType_branch->GetEntry(index);
@@ -5178,7 +5178,7 @@ const vector<unsigned short> &trktree::ph2_simType() {
   }
   return *ph2_simType_;
 }
-const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimClusterDenom() {
+const std::vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimClusterDenom() {
   if (not trk_bestFromFirstHitSimTrkShareFracSimClusterDenom_isLoaded) {
     if (trk_bestFromFirstHitSimTrkShareFracSimClusterDenom_branch != 0) {
       trk_bestFromFirstHitSimTrkShareFracSimClusterDenom_branch->GetEntry(index);
@@ -5190,7 +5190,7 @@ const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimClusterDenom
   }
   return *trk_bestFromFirstHitSimTrkShareFracSimClusterDenom_;
 }
-const vector<float> &trktree::sim_hits() {
+const std::vector<float> &trktree::sim_hits() {
   if (not sim_hits_isLoaded) {
     if (sim_hits_branch != 0) {
       sim_hits_branch->GetEntry(index);
@@ -5202,7 +5202,7 @@ const vector<float> &trktree::sim_hits() {
   }
   return *sim_hits_;
 }
-const vector<float> &trktree::sim_len() {
+const std::vector<float> &trktree::sim_len() {
   if (not sim_len_isLoaded) {
     if (sim_len_branch != 0) {
       sim_len_branch->GetEntry(index);
@@ -5214,7 +5214,7 @@ const vector<float> &trktree::sim_len() {
   }
   return *sim_len_;
 }
-const vector<float> &trktree::sim_lengap() {
+const std::vector<float> &trktree::sim_lengap() {
   if (not sim_lengap_isLoaded) {
     if (sim_lengap_branch != 0) {
       sim_lengap_branch->GetEntry(index);
@@ -5226,7 +5226,7 @@ const vector<float> &trktree::sim_lengap() {
   }
   return *sim_lengap_;
 }
-const vector<float> &trktree::simvtx_x() {
+const std::vector<float> &trktree::simvtx_x() {
   if (not simvtx_x_isLoaded) {
     if (simvtx_x_branch != 0) {
       simvtx_x_branch->GetEntry(index);
@@ -5238,7 +5238,7 @@ const vector<float> &trktree::simvtx_x() {
   }
   return *simvtx_x_;
 }
-const vector<float> &trktree::trk_pz() {
+const std::vector<float> &trktree::trk_pz() {
   if (not trk_pz_isLoaded) {
     if (trk_pz_branch != 0) {
       trk_pz_branch->GetEntry(index);
@@ -5250,7 +5250,7 @@ const vector<float> &trktree::trk_pz() {
   }
   return *trk_pz_;
 }
-const vector<float> &trktree::see_bestFromFirstHitSimTrkShareFrac() {
+const std::vector<float> &trktree::see_bestFromFirstHitSimTrkShareFrac() {
   if (not see_bestFromFirstHitSimTrkShareFrac_isLoaded) {
     if (see_bestFromFirstHitSimTrkShareFrac_branch != 0) {
       see_bestFromFirstHitSimTrkShareFrac_branch->GetEntry(index);
@@ -5262,7 +5262,7 @@ const vector<float> &trktree::see_bestFromFirstHitSimTrkShareFrac() {
   }
   return *see_bestFromFirstHitSimTrkShareFrac_;
 }
-const vector<float> &trktree::trk_px() {
+const std::vector<float> &trktree::trk_px() {
   if (not trk_px_isLoaded) {
     if (trk_px_branch != 0) {
       trk_px_branch->GetEntry(index);
@@ -5274,7 +5274,7 @@ const vector<float> &trktree::trk_px() {
   }
   return *trk_px_;
 }
-const vector<float> &trktree::trk_py() {
+const std::vector<float> &trktree::trk_py() {
   if (not trk_py_isLoaded) {
     if (trk_py_branch != 0) {
       trk_py_branch->GetEntry(index);
@@ -5286,7 +5286,7 @@ const vector<float> &trktree::trk_py() {
   }
   return *trk_py_;
 }
-const vector<int> &trktree::trk_vtxIdx() {
+const std::vector<int> &trktree::trk_vtxIdx() {
   if (not trk_vtxIdx_isLoaded) {
     if (trk_vtxIdx_branch != 0) {
       trk_vtxIdx_branch->GetEntry(index);
@@ -5298,7 +5298,7 @@ const vector<int> &trktree::trk_vtxIdx() {
   }
   return *trk_vtxIdx_;
 }
-const vector<unsigned int> &trktree::sim_nPixel() {
+const std::vector<unsigned int> &trktree::sim_nPixel() {
   if (not sim_nPixel_isLoaded) {
     if (sim_nPixel_branch != 0) {
       sim_nPixel_branch->GetEntry(index);
@@ -5310,7 +5310,7 @@ const vector<unsigned int> &trktree::sim_nPixel() {
   }
   return *sim_nPixel_;
 }
-const vector<float> &trktree::vtx_chi2() {
+const std::vector<float> &trktree::vtx_chi2() {
   if (not vtx_chi2_isLoaded) {
     if (vtx_chi2_branch != 0) {
       vtx_chi2_branch->GetEntry(index);
@@ -5322,7 +5322,7 @@ const vector<float> &trktree::vtx_chi2() {
   }
   return *vtx_chi2_;
 }
-const vector<unsigned short> &trktree::ph2_ring() {
+const std::vector<unsigned short> &trktree::ph2_ring() {
   if (not ph2_ring_isLoaded) {
     if (ph2_ring_branch != 0) {
       ph2_ring_branch->GetEntry(index);
@@ -5334,7 +5334,7 @@ const vector<unsigned short> &trktree::ph2_ring() {
   }
   return *ph2_ring_;
 }
-const vector<float> &trktree::trk_pt() {
+const std::vector<float> &trktree::trk_pt() {
   if (not trk_pt_isLoaded) {
     if (trk_pt_branch != 0) {
       trk_pt_branch->GetEntry(index);
@@ -5346,7 +5346,7 @@ const vector<float> &trktree::trk_pt() {
   }
   return *trk_pt_;
 }
-const vector<float> &trktree::see_stateCcov44() {
+const std::vector<float> &trktree::see_stateCcov44() {
   if (not see_stateCcov44_isLoaded) {
     if (see_stateCcov44_branch != 0) {
       see_stateCcov44_branch->GetEntry(index);
@@ -5358,7 +5358,7 @@ const vector<float> &trktree::see_stateCcov44() {
   }
   return *see_stateCcov44_;
 }
-const vector<float> &trktree::ph2_radL() {
+const std::vector<float> &trktree::ph2_radL() {
   if (not ph2_radL_isLoaded) {
     if (ph2_radL_branch != 0) {
       ph2_radL_branch->GetEntry(index);
@@ -5370,7 +5370,7 @@ const vector<float> &trktree::ph2_radL() {
   }
   return *ph2_radL_;
 }
-const vector<float> &trktree::vtx_zErr() {
+const std::vector<float> &trktree::vtx_zErr() {
   if (not vtx_zErr_isLoaded) {
     if (vtx_zErr_branch != 0) {
       vtx_zErr_branch->GetEntry(index);
@@ -5382,7 +5382,7 @@ const vector<float> &trktree::vtx_zErr() {
   }
   return *vtx_zErr_;
 }
-const vector<float> &trktree::see_px() {
+const std::vector<float> &trktree::see_px() {
   if (not see_px_isLoaded) {
     if (see_px_branch != 0) {
       see_px_branch->GetEntry(index);
@@ -5394,7 +5394,7 @@ const vector<float> &trktree::see_px() {
   }
   return *see_px_;
 }
-const vector<float> &trktree::see_pz() {
+const std::vector<float> &trktree::see_pz() {
   if (not see_pz_isLoaded) {
     if (see_pz_branch != 0) {
       see_pz_branch->GetEntry(index);
@@ -5406,7 +5406,7 @@ const vector<float> &trktree::see_pz() {
   }
   return *see_pz_;
 }
-const vector<float> &trktree::see_eta() {
+const std::vector<float> &trktree::see_eta() {
   if (not see_eta_isLoaded) {
     if (see_eta_branch != 0) {
       see_eta_branch->GetEntry(index);
@@ -5418,7 +5418,7 @@ const vector<float> &trktree::see_eta() {
   }
   return *see_eta_;
 }
-const vector<int> &trktree::simvtx_bunchCrossing() {
+const std::vector<int> &trktree::simvtx_bunchCrossing() {
   if (not simvtx_bunchCrossing_isLoaded) {
     if (simvtx_bunchCrossing_branch != 0) {
       simvtx_bunchCrossing_branch->GetEntry(index);
@@ -5430,7 +5430,7 @@ const vector<int> &trktree::simvtx_bunchCrossing() {
   }
   return *simvtx_bunchCrossing_;
 }
-const vector<float> &trktree::sim_pca_dz() {
+const std::vector<float> &trktree::sim_pca_dz() {
   if (not sim_pca_dz_isLoaded) {
     if (sim_pca_dz_branch != 0) {
       sim_pca_dz_branch->GetEntry(index);
@@ -5442,7 +5442,7 @@ const vector<float> &trktree::sim_pca_dz() {
   }
   return *sim_pca_dz_;
 }
-const vector<float> &trktree::simvtx_y() {
+const std::vector<float> &trktree::simvtx_y() {
   if (not simvtx_y_isLoaded) {
     if (simvtx_y_branch != 0) {
       simvtx_y_branch->GetEntry(index);
@@ -5454,7 +5454,7 @@ const vector<float> &trktree::simvtx_y() {
   }
   return *simvtx_y_;
 }
-const vector<unsigned short> &trktree::inv_isStack() {
+const std::vector<unsigned short> &trktree::inv_isStack() {
   if (not inv_isStack_isLoaded) {
     if (inv_isStack_branch != 0) {
       inv_isStack_branch->GetEntry(index);
@@ -5466,7 +5466,7 @@ const vector<unsigned short> &trktree::inv_isStack() {
   }
   return *inv_isStack_;
 }
-const vector<unsigned int> &trktree::trk_nStrip() {
+const std::vector<unsigned int> &trktree::trk_nStrip() {
   if (not trk_nStrip_isLoaded) {
     if (trk_nStrip_branch != 0) {
       trk_nStrip_branch->GetEntry(index);
@@ -5478,7 +5478,7 @@ const vector<unsigned int> &trktree::trk_nStrip() {
   }
   return *trk_nStrip_;
 }
-const vector<float> &trktree::trk_etaErr() {
+const std::vector<float> &trktree::trk_etaErr() {
   if (not trk_etaErr_isLoaded) {
     if (trk_etaErr_branch != 0) {
       trk_etaErr_branch->GetEntry(index);
@@ -5490,7 +5490,7 @@ const vector<float> &trktree::trk_etaErr() {
   }
   return *trk_etaErr_;
 }
-const vector<vector<float> > &trktree::trk_simTrkNChi2() {
+const std::vector<std::vector<float> > &trktree::trk_simTrkNChi2() {
   if (not trk_simTrkNChi2_isLoaded) {
     if (trk_simTrkNChi2_branch != 0) {
       trk_simTrkNChi2_branch->GetEntry(index);
@@ -5502,7 +5502,7 @@ const vector<vector<float> > &trktree::trk_simTrkNChi2() {
   }
   return *trk_simTrkNChi2_;
 }
-const vector<float> &trktree::pix_zz() {
+const std::vector<float> &trktree::pix_zz() {
   if (not pix_zz_isLoaded) {
     if (pix_zz_branch != 0) {
       pix_zz_branch->GetEntry(index);
@@ -5514,7 +5514,7 @@ const vector<float> &trktree::pix_zz() {
   }
   return *pix_zz_;
 }
-const vector<int> &trktree::simhit_particle() {
+const std::vector<int> &trktree::simhit_particle() {
   if (not simhit_particle_isLoaded) {
     if (simhit_particle_branch != 0) {
       simhit_particle_branch->GetEntry(index);
@@ -5526,7 +5526,7 @@ const vector<int> &trktree::simhit_particle() {
   }
   return *simhit_particle_;
 }
-const vector<float> &trktree::see_dz() {
+const std::vector<float> &trktree::see_dz() {
   if (not see_dz_isLoaded) {
     if (see_dz_branch != 0) {
       see_dz_branch->GetEntry(index);
@@ -5538,7 +5538,7 @@ const vector<float> &trktree::see_dz() {
   }
   return *see_dz_;
 }
-const vector<float> &trktree::see_stateTrajPz() {
+const std::vector<float> &trktree::see_stateTrajPz() {
   if (not see_stateTrajPz_isLoaded) {
     if (see_stateTrajPz_branch != 0) {
       see_stateTrajPz_branch->GetEntry(index);
@@ -5550,7 +5550,7 @@ const vector<float> &trktree::see_stateTrajPz() {
   }
   return *see_stateTrajPz_;
 }
-const vector<float> &trktree::trk_bestSimTrkShareFrac() {
+const std::vector<float> &trktree::trk_bestSimTrkShareFrac() {
   if (not trk_bestSimTrkShareFrac_isLoaded) {
     if (trk_bestSimTrkShareFrac_branch != 0) {
       trk_bestSimTrkShareFrac_branch->GetEntry(index);
@@ -5562,7 +5562,7 @@ const vector<float> &trktree::trk_bestSimTrkShareFrac() {
   }
   return *trk_bestSimTrkShareFrac_;
 }
-const vector<float> &trktree::trk_lambdaErr() {
+const std::vector<float> &trktree::trk_lambdaErr() {
   if (not trk_lambdaErr_isLoaded) {
     if (trk_lambdaErr_branch != 0) {
       trk_lambdaErr_branch->GetEntry(index);
@@ -5574,7 +5574,7 @@ const vector<float> &trktree::trk_lambdaErr() {
   }
   return *trk_lambdaErr_;
 }
-const vector<vector<float> > &trktree::see_simTrkShareFrac() {
+const std::vector<std::vector<float> > &trktree::see_simTrkShareFrac() {
   if (not see_simTrkShareFrac_isLoaded) {
     if (see_simTrkShareFrac_branch != 0) {
       see_simTrkShareFrac_branch->GetEntry(index);
@@ -5586,7 +5586,7 @@ const vector<vector<float> > &trktree::see_simTrkShareFrac() {
   }
   return *see_simTrkShareFrac_;
 }
-const vector<vector<int> > &trktree::pix_simHitIdx() {
+const std::vector<std::vector<int> > &trktree::pix_simHitIdx() {
   if (not pix_simHitIdx_isLoaded) {
     if (pix_simHitIdx_branch != 0) {
       pix_simHitIdx_branch->GetEntry(index);
@@ -5598,7 +5598,7 @@ const vector<vector<int> > &trktree::pix_simHitIdx() {
   }
   return *pix_simHitIdx_;
 }
-const vector<vector<int> > &trktree::vtx_trkIdx() {
+const std::vector<std::vector<int> > &trktree::vtx_trkIdx() {
   if (not vtx_trkIdx_isLoaded) {
     if (vtx_trkIdx_branch != 0) {
       vtx_trkIdx_branch->GetEntry(index);
@@ -5610,7 +5610,7 @@ const vector<vector<int> > &trktree::vtx_trkIdx() {
   }
   return *vtx_trkIdx_;
 }
-const vector<unsigned short> &trktree::ph2_rod() {
+const std::vector<unsigned short> &trktree::ph2_rod() {
   if (not ph2_rod_isLoaded) {
     if (ph2_rod_branch != 0) {
       ph2_rod_branch->GetEntry(index);
@@ -5622,7 +5622,7 @@ const vector<unsigned short> &trktree::ph2_rod() {
   }
   return *ph2_rod_;
 }
-const vector<float> &trktree::vtx_ndof() {
+const std::vector<float> &trktree::vtx_ndof() {
   if (not vtx_ndof_isLoaded) {
     if (vtx_ndof_branch != 0) {
       vtx_ndof_branch->GetEntry(index);
@@ -5634,7 +5634,7 @@ const vector<float> &trktree::vtx_ndof() {
   }
   return *vtx_ndof_;
 }
-const vector<unsigned int> &trktree::see_nPixel() {
+const std::vector<unsigned int> &trktree::see_nPixel() {
   if (not see_nPixel_isLoaded) {
     if (see_nPixel_branch != 0) {
       see_nPixel_branch->GetEntry(index);
@@ -5646,7 +5646,7 @@ const vector<unsigned int> &trktree::see_nPixel() {
   }
   return *see_nPixel_;
 }
-const vector<unsigned int> &trktree::sim_nStrip() {
+const std::vector<unsigned int> &trktree::sim_nStrip() {
   if (not sim_nStrip_isLoaded) {
     if (sim_nStrip_branch != 0) {
       sim_nStrip_branch->GetEntry(index);
@@ -5658,7 +5658,7 @@ const vector<unsigned int> &trktree::sim_nStrip() {
   }
   return *sim_nStrip_;
 }
-const vector<int> &trktree::sim_bunchCrossing() {
+const std::vector<int> &trktree::sim_bunchCrossing() {
   if (not sim_bunchCrossing_isLoaded) {
     if (sim_bunchCrossing_branch != 0) {
       sim_bunchCrossing_branch->GetEntry(index);
@@ -5670,7 +5670,7 @@ const vector<int> &trktree::sim_bunchCrossing() {
   }
   return *sim_bunchCrossing_;
 }
-const vector<float> &trktree::see_stateCcov45() {
+const std::vector<float> &trktree::see_stateCcov45() {
   if (not see_stateCcov45_isLoaded) {
     if (see_stateCcov45_branch != 0) {
       see_stateCcov45_branch->GetEntry(index);
@@ -5682,7 +5682,7 @@ const vector<float> &trktree::see_stateCcov45() {
   }
   return *see_stateCcov45_;
 }
-const vector<unsigned short> &trktree::ph2_isStack() {
+const std::vector<unsigned short> &trktree::ph2_isStack() {
   if (not ph2_isStack_isLoaded) {
     if (ph2_isStack_branch != 0) {
       ph2_isStack_branch->GetEntry(index);
@@ -5694,7 +5694,7 @@ const vector<unsigned short> &trktree::ph2_isStack() {
   }
   return *ph2_isStack_;
 }
-const vector<vector<float> > &trktree::sim_trkShareFrac() {
+const std::vector<std::vector<float> > &trktree::sim_trkShareFrac() {
   if (not sim_trkShareFrac_isLoaded) {
     if (sim_trkShareFrac_branch != 0) {
       sim_trkShareFrac_branch->GetEntry(index);
@@ -5706,7 +5706,7 @@ const vector<vector<float> > &trktree::sim_trkShareFrac() {
   }
   return *sim_trkShareFrac_;
 }
-const vector<vector<float> > &trktree::trk_simTrkShareFrac() {
+const std::vector<std::vector<float> > &trktree::trk_simTrkShareFrac() {
   if (not trk_simTrkShareFrac_isLoaded) {
     if (trk_simTrkShareFrac_branch != 0) {
       trk_simTrkShareFrac_branch->GetEntry(index);
@@ -5718,7 +5718,7 @@ const vector<vector<float> > &trktree::trk_simTrkShareFrac() {
   }
   return *trk_simTrkShareFrac_;
 }
-const vector<float> &trktree::sim_phi() {
+const std::vector<float> &trktree::sim_phi() {
   if (not sim_phi_isLoaded) {
     if (sim_phi_branch != 0) {
       sim_phi_branch->GetEntry(index);
@@ -5730,7 +5730,7 @@ const vector<float> &trktree::sim_phi() {
   }
   return *sim_phi_;
 }
-const vector<unsigned short> &trktree::inv_side() {
+const std::vector<unsigned short> &trktree::inv_side() {
   if (not inv_side_isLoaded) {
     if (inv_side_branch != 0) {
       inv_side_branch->GetEntry(index);
@@ -5742,7 +5742,7 @@ const vector<unsigned short> &trktree::inv_side() {
   }
   return *inv_side_;
 }
-const vector<short> &trktree::vtx_fake() {
+const std::vector<short> &trktree::vtx_fake() {
   if (not vtx_fake_isLoaded) {
     if (vtx_fake_branch != 0) {
       vtx_fake_branch->GetEntry(index);
@@ -5754,7 +5754,7 @@ const vector<short> &trktree::vtx_fake() {
   }
   return *vtx_fake_;
 }
-const vector<unsigned int> &trktree::trk_nInactive() {
+const std::vector<unsigned int> &trktree::trk_nInactive() {
   if (not trk_nInactive_isLoaded) {
     if (trk_nInactive_branch != 0) {
       trk_nInactive_branch->GetEntry(index);
@@ -5766,7 +5766,7 @@ const vector<unsigned int> &trktree::trk_nInactive() {
   }
   return *trk_nInactive_;
 }
-const vector<unsigned int> &trktree::trk_nPixelLay() {
+const std::vector<unsigned int> &trktree::trk_nPixelLay() {
   if (not trk_nPixelLay_isLoaded) {
     if (trk_nPixelLay_branch != 0) {
       trk_nPixelLay_branch->GetEntry(index);
@@ -5778,7 +5778,7 @@ const vector<unsigned int> &trktree::trk_nPixelLay() {
   }
   return *trk_nPixelLay_;
 }
-const vector<float> &trktree::ph2_bbxi() {
+const std::vector<float> &trktree::ph2_bbxi() {
   if (not ph2_bbxi_isLoaded) {
     if (ph2_bbxi_branch != 0) {
       ph2_bbxi_branch->GetEntry(index);
@@ -5790,7 +5790,7 @@ const vector<float> &trktree::ph2_bbxi() {
   }
   return *ph2_bbxi_;
 }
-const vector<float> &trktree::vtx_xErr() {
+const std::vector<float> &trktree::vtx_xErr() {
   if (not vtx_xErr_isLoaded) {
     if (vtx_xErr_branch != 0) {
       vtx_xErr_branch->GetEntry(index);
@@ -5802,7 +5802,7 @@ const vector<float> &trktree::vtx_xErr() {
   }
   return *vtx_xErr_;
 }
-const vector<float> &trktree::see_stateCcov25() {
+const std::vector<float> &trktree::see_stateCcov25() {
   if (not see_stateCcov25_isLoaded) {
     if (see_stateCcov25_branch != 0) {
       see_stateCcov25_branch->GetEntry(index);
@@ -5814,7 +5814,7 @@ const vector<float> &trktree::see_stateCcov25() {
   }
   return *see_stateCcov25_;
 }
-const vector<int> &trktree::sim_parentVtxIdx() {
+const std::vector<int> &trktree::sim_parentVtxIdx() {
   if (not sim_parentVtxIdx_isLoaded) {
     if (sim_parentVtxIdx_branch != 0) {
       sim_parentVtxIdx_branch->GetEntry(index);
@@ -5826,7 +5826,7 @@ const vector<int> &trktree::sim_parentVtxIdx() {
   }
   return *sim_parentVtxIdx_;
 }
-const vector<float> &trktree::see_stateCcov23() {
+const std::vector<float> &trktree::see_stateCcov23() {
   if (not see_stateCcov23_isLoaded) {
     if (see_stateCcov23_branch != 0) {
       see_stateCcov23_branch->GetEntry(index);
@@ -5838,7 +5838,7 @@ const vector<float> &trktree::see_stateCcov23() {
   }
   return *see_stateCcov23_;
 }
-const vector<ULong64_t> &trktree::trk_algoMask() {
+const std::vector<ULong64_t> &trktree::trk_algoMask() {
   if (not trk_algoMask_isLoaded) {
     if (trk_algoMask_branch != 0) {
       trk_algoMask_branch->GetEntry(index);
@@ -5850,7 +5850,7 @@ const vector<ULong64_t> &trktree::trk_algoMask() {
   }
   return *trk_algoMask_;
 }
-const vector<vector<int> > &trktree::trk_simTrkIdx() {
+const std::vector<std::vector<int> > &trktree::trk_simTrkIdx() {
   if (not trk_simTrkIdx_isLoaded) {
     if (trk_simTrkIdx_branch != 0) {
       trk_simTrkIdx_branch->GetEntry(index);
@@ -5862,7 +5862,7 @@ const vector<vector<int> > &trktree::trk_simTrkIdx() {
   }
   return *trk_simTrkIdx_;
 }
-const vector<float> &trktree::see_phiErr() {
+const std::vector<float> &trktree::see_phiErr() {
   if (not see_phiErr_isLoaded) {
     if (see_phiErr_branch != 0) {
       see_phiErr_branch->GetEntry(index);
@@ -5874,7 +5874,7 @@ const vector<float> &trktree::see_phiErr() {
   }
   return *see_phiErr_;
 }
-const vector<float> &trktree::trk_cotTheta() {
+const std::vector<float> &trktree::trk_cotTheta() {
   if (not trk_cotTheta_isLoaded) {
     if (trk_cotTheta_branch != 0) {
       trk_cotTheta_branch->GetEntry(index);
@@ -5886,7 +5886,7 @@ const vector<float> &trktree::trk_cotTheta() {
   }
   return *trk_cotTheta_;
 }
-const vector<unsigned int> &trktree::see_algo() {
+const std::vector<unsigned int> &trktree::see_algo() {
   if (not see_algo_isLoaded) {
     if (see_algo_branch != 0) {
       see_algo_branch->GetEntry(index);
@@ -5898,7 +5898,7 @@ const vector<unsigned int> &trktree::see_algo() {
   }
   return *see_algo_;
 }
-const vector<unsigned short> &trktree::simhit_module() {
+const std::vector<unsigned short> &trktree::simhit_module() {
   if (not simhit_module_isLoaded) {
     if (simhit_module_branch != 0) {
       simhit_module_branch->GetEntry(index);
@@ -5910,7 +5910,7 @@ const vector<unsigned short> &trktree::simhit_module() {
   }
   return *simhit_module_;
 }
-const vector<vector<int> > &trktree::simvtx_daughterSimIdx() {
+const std::vector<std::vector<int> > &trktree::simvtx_daughterSimIdx() {
   if (not simvtx_daughterSimIdx_isLoaded) {
     if (simvtx_daughterSimIdx_branch != 0) {
       simvtx_daughterSimIdx_branch->GetEntry(index);
@@ -5922,7 +5922,7 @@ const vector<vector<int> > &trktree::simvtx_daughterSimIdx() {
   }
   return *simvtx_daughterSimIdx_;
 }
-const vector<float> &trktree::vtx_x() {
+const std::vector<float> &trktree::vtx_x() {
   if (not vtx_x_isLoaded) {
     if (vtx_x_branch != 0) {
       vtx_x_branch->GetEntry(index);
@@ -5934,7 +5934,7 @@ const vector<float> &trktree::vtx_x() {
   }
   return *vtx_x_;
 }
-const vector<int> &trktree::trk_seedIdx() {
+const std::vector<int> &trktree::trk_seedIdx() {
   if (not trk_seedIdx_isLoaded) {
     if (trk_seedIdx_branch != 0) {
       trk_seedIdx_branch->GetEntry(index);
@@ -5946,7 +5946,7 @@ const vector<int> &trktree::trk_seedIdx() {
   }
   return *trk_seedIdx_;
 }
-const vector<float> &trktree::simhit_y() {
+const std::vector<float> &trktree::simhit_y() {
   if (not simhit_y_isLoaded) {
     if (simhit_y_branch != 0) {
       simhit_y_branch->GetEntry(index);
@@ -5958,7 +5958,7 @@ const vector<float> &trktree::simhit_y() {
   }
   return *simhit_y_;
 }
-const vector<unsigned short> &trktree::inv_layer() {
+const std::vector<unsigned short> &trktree::inv_layer() {
   if (not inv_layer_isLoaded) {
     if (inv_layer_branch != 0) {
       inv_layer_branch->GetEntry(index);
@@ -5970,7 +5970,7 @@ const vector<unsigned short> &trktree::inv_layer() {
   }
   return *inv_layer_;
 }
-const vector<unsigned int> &trktree::trk_nLostLay() {
+const std::vector<unsigned int> &trktree::trk_nLostLay() {
   if (not trk_nLostLay_isLoaded) {
     if (trk_nLostLay_branch != 0) {
       trk_nLostLay_branch->GetEntry(index);
@@ -5982,7 +5982,7 @@ const vector<unsigned int> &trktree::trk_nLostLay() {
   }
   return *trk_nLostLay_;
 }
-const vector<unsigned short> &trktree::ph2_isLower() {
+const std::vector<unsigned short> &trktree::ph2_isLower() {
   if (not ph2_isLower_isLoaded) {
     if (ph2_isLower_branch != 0) {
       ph2_isLower_branch->GetEntry(index);
@@ -5994,7 +5994,7 @@ const vector<unsigned short> &trktree::ph2_isLower() {
   }
   return *ph2_isLower_;
 }
-const vector<unsigned short> &trktree::pix_side() {
+const std::vector<unsigned short> &trktree::pix_side() {
   if (not pix_side_isLoaded) {
     if (pix_side_branch != 0) {
       pix_side_branch->GetEntry(index);
@@ -6006,7 +6006,7 @@ const vector<unsigned short> &trktree::pix_side() {
   }
   return *pix_side_;
 }
-const vector<unsigned short> &trktree::inv_isLower() {
+const std::vector<unsigned short> &trktree::inv_isLower() {
   if (not inv_isLower_isLoaded) {
     if (inv_isLower_branch != 0) {
       inv_isLower_branch->GetEntry(index);
@@ -6018,7 +6018,7 @@ const vector<unsigned short> &trktree::inv_isLower() {
   }
   return *inv_isLower_;
 }
-const vector<vector<int> > &trktree::ph2_trkIdx() {
+const std::vector<std::vector<int> > &trktree::ph2_trkIdx() {
   if (not ph2_trkIdx_isLoaded) {
     if (ph2_trkIdx_branch != 0) {
       ph2_trkIdx_branch->GetEntry(index);
@@ -6030,7 +6030,7 @@ const vector<vector<int> > &trktree::ph2_trkIdx() {
   }
   return *ph2_trkIdx_;
 }
-const vector<unsigned int> &trktree::sim_nValid() {
+const std::vector<unsigned int> &trktree::sim_nValid() {
   if (not sim_nValid_isLoaded) {
     if (sim_nValid_branch != 0) {
       sim_nValid_branch->GetEntry(index);
@@ -6042,7 +6042,7 @@ const vector<unsigned int> &trktree::sim_nValid() {
   }
   return *sim_nValid_;
 }
-const vector<int> &trktree::simhit_simTrkIdx() {
+const std::vector<int> &trktree::simhit_simTrkIdx() {
   if (not simhit_simTrkIdx_isLoaded) {
     if (simhit_simTrkIdx_branch != 0) {
       simhit_simTrkIdx_branch->GetEntry(index);
@@ -6054,7 +6054,7 @@ const vector<int> &trktree::simhit_simTrkIdx() {
   }
   return *simhit_simTrkIdx_;
 }
-const vector<unsigned short> &trktree::see_nCands() {
+const std::vector<unsigned short> &trktree::see_nCands() {
   if (not see_nCands_isLoaded) {
     if (see_nCands_branch != 0) {
       see_nCands_branch->GetEntry(index);
@@ -6066,7 +6066,7 @@ const vector<unsigned short> &trktree::see_nCands() {
   }
   return *see_nCands_;
 }
-const vector<int> &trktree::see_bestSimTrkIdx() {
+const std::vector<int> &trktree::see_bestSimTrkIdx() {
   if (not see_bestSimTrkIdx_isLoaded) {
     if (see_bestSimTrkIdx_branch != 0) {
       see_bestSimTrkIdx_branch->GetEntry(index);
@@ -6078,7 +6078,7 @@ const vector<int> &trktree::see_bestSimTrkIdx() {
   }
   return *see_bestSimTrkIdx_;
 }
-const vector<float> &trktree::vtx_yErr() {
+const std::vector<float> &trktree::vtx_yErr() {
   if (not vtx_yErr_isLoaded) {
     if (vtx_yErr_branch != 0) {
       vtx_yErr_branch->GetEntry(index);
@@ -6090,7 +6090,7 @@ const vector<float> &trktree::vtx_yErr() {
   }
   return *vtx_yErr_;
 }
-const vector<float> &trktree::trk_dzPV() {
+const std::vector<float> &trktree::trk_dzPV() {
   if (not trk_dzPV_isLoaded) {
     if (trk_dzPV_branch != 0) {
       trk_dzPV_branch->GetEntry(index);
@@ -6102,7 +6102,7 @@ const vector<float> &trktree::trk_dzPV() {
   }
   return *trk_dzPV_;
 }
-const vector<float> &trktree::ph2_xy() {
+const std::vector<float> &trktree::ph2_xy() {
   if (not ph2_xy_isLoaded) {
     if (ph2_xy_branch != 0) {
       ph2_xy_branch->GetEntry(index);
@@ -6114,7 +6114,7 @@ const vector<float> &trktree::ph2_xy() {
   }
   return *ph2_xy_;
 }
-const vector<unsigned short> &trktree::inv_module() {
+const std::vector<unsigned short> &trktree::inv_module() {
   if (not inv_module_isLoaded) {
     if (inv_module_branch != 0) {
       inv_module_branch->GetEntry(index);
@@ -6126,7 +6126,7 @@ const vector<unsigned short> &trktree::inv_module() {
   }
   return *inv_module_;
 }
-const vector<float> &trktree::see_stateCcov55() {
+const std::vector<float> &trktree::see_stateCcov55() {
   if (not see_stateCcov55_isLoaded) {
     if (see_stateCcov55_branch != 0) {
       see_stateCcov55_branch->GetEntry(index);
@@ -6138,7 +6138,7 @@ const vector<float> &trktree::see_stateCcov55() {
   }
   return *see_stateCcov55_;
 }
-const vector<unsigned short> &trktree::pix_panel() {
+const std::vector<unsigned short> &trktree::pix_panel() {
   if (not pix_panel_isLoaded) {
     if (pix_panel_branch != 0) {
       pix_panel_branch->GetEntry(index);
@@ -6150,7 +6150,7 @@ const vector<unsigned short> &trktree::pix_panel() {
   }
   return *pix_panel_;
 }
-const vector<unsigned short> &trktree::inv_ladder() {
+const std::vector<unsigned short> &trktree::inv_ladder() {
   if (not inv_ladder_isLoaded) {
     if (inv_ladder_branch != 0) {
       inv_ladder_branch->GetEntry(index);
@@ -6162,7 +6162,7 @@ const vector<unsigned short> &trktree::inv_ladder() {
   }
   return *inv_ladder_;
 }
-const vector<float> &trktree::ph2_xx() {
+const std::vector<float> &trktree::ph2_xx() {
   if (not ph2_xx_isLoaded) {
     if (ph2_xx_branch != 0) {
       ph2_xx_branch->GetEntry(index);
@@ -6174,7 +6174,7 @@ const vector<float> &trktree::ph2_xx() {
   }
   return *ph2_xx_;
 }
-const vector<float> &trktree::sim_pca_cotTheta() {
+const std::vector<float> &trktree::sim_pca_cotTheta() {
   if (not sim_pca_cotTheta_isLoaded) {
     if (sim_pca_cotTheta_branch != 0) {
       sim_pca_cotTheta_branch->GetEntry(index);
@@ -6186,7 +6186,7 @@ const vector<float> &trktree::sim_pca_cotTheta() {
   }
   return *sim_pca_cotTheta_;
 }
-const vector<int> &trktree::simpv_idx() {
+const std::vector<int> &trktree::simpv_idx() {
   if (not simpv_idx_isLoaded) {
     if (simpv_idx_branch != 0) {
       simpv_idx_branch->GetEntry(index);
@@ -6198,7 +6198,7 @@ const vector<int> &trktree::simpv_idx() {
   }
   return *simpv_idx_;
 }
-const vector<float> &trktree::trk_inner_pz() {
+const std::vector<float> &trktree::trk_inner_pz() {
   if (not trk_inner_pz_isLoaded) {
     if (trk_inner_pz_branch != 0) {
       trk_inner_pz_branch->GetEntry(index);
@@ -6210,7 +6210,7 @@ const vector<float> &trktree::trk_inner_pz() {
   }
   return *trk_inner_pz_;
 }
-const vector<float> &trktree::see_chi2() {
+const std::vector<float> &trktree::see_chi2() {
   if (not see_chi2_isLoaded) {
     if (see_chi2_branch != 0) {
       see_chi2_branch->GetEntry(index);
@@ -6222,7 +6222,7 @@ const vector<float> &trktree::see_chi2() {
   }
   return *see_chi2_;
 }
-const vector<float> &trktree::see_stateCcov35() {
+const std::vector<float> &trktree::see_stateCcov35() {
   if (not see_stateCcov35_isLoaded) {
     if (see_stateCcov35_branch != 0) {
       see_stateCcov35_branch->GetEntry(index);
@@ -6234,7 +6234,7 @@ const vector<float> &trktree::see_stateCcov35() {
   }
   return *see_stateCcov35_;
 }
-const vector<float> &trktree::see_stateCcov33() {
+const std::vector<float> &trktree::see_stateCcov33() {
   if (not see_stateCcov33_isLoaded) {
     if (see_stateCcov33_branch != 0) {
       see_stateCcov33_branch->GetEntry(index);
@@ -6246,7 +6246,7 @@ const vector<float> &trktree::see_stateCcov33() {
   }
   return *see_stateCcov33_;
 }
-const vector<unsigned int> &trktree::inv_detId() {
+const std::vector<unsigned int> &trktree::inv_detId() {
   if (not inv_detId_isLoaded) {
     if (inv_detId_branch != 0) {
       inv_detId_branch->GetEntry(index);
@@ -6258,7 +6258,7 @@ const vector<unsigned int> &trktree::inv_detId() {
   }
   return *inv_detId_;
 }
-const vector<unsigned int> &trktree::see_offset() {
+const std::vector<unsigned int> &trktree::see_offset() {
   if (not see_offset_isLoaded) {
     if (see_offset_branch != 0) {
       see_offset_branch->GetEntry(index);
@@ -6270,7 +6270,7 @@ const vector<unsigned int> &trktree::see_offset() {
   }
   return *see_offset_;
 }
-const vector<unsigned int> &trktree::sim_nLay() {
+const std::vector<unsigned int> &trktree::sim_nLay() {
   if (not sim_nLay_isLoaded) {
     if (sim_nLay_branch != 0) {
       sim_nLay_branch->GetEntry(index);
@@ -6282,7 +6282,7 @@ const vector<unsigned int> &trktree::sim_nLay() {
   }
   return *sim_nLay_;
 }
-const vector<vector<int> > &trktree::sim_simHitIdx() {
+const std::vector<std::vector<int> > &trktree::sim_simHitIdx() {
   if (not sim_simHitIdx_isLoaded) {
     if (sim_simHitIdx_branch != 0) {
       sim_simHitIdx_branch->GetEntry(index);
@@ -6294,7 +6294,7 @@ const vector<vector<int> > &trktree::sim_simHitIdx() {
   }
   return *sim_simHitIdx_;
 }
-const vector<unsigned short> &trktree::simhit_isUpper() {
+const std::vector<unsigned short> &trktree::simhit_isUpper() {
   if (not simhit_isUpper_isLoaded) {
     if (simhit_isUpper_branch != 0) {
       simhit_isUpper_branch->GetEntry(index);
@@ -6306,7 +6306,7 @@ const vector<unsigned short> &trktree::simhit_isUpper() {
   }
   return *simhit_isUpper_;
 }
-const vector<float> &trktree::see_stateCcov00() {
+const std::vector<float> &trktree::see_stateCcov00() {
   if (not see_stateCcov00_isLoaded) {
     if (see_stateCcov00_branch != 0) {
       see_stateCcov00_branch->GetEntry(index);
@@ -6318,7 +6318,7 @@ const vector<float> &trktree::see_stateCcov00() {
   }
   return *see_stateCcov00_;
 }
-const vector<unsigned short> &trktree::see_stopReason() {
+const std::vector<unsigned short> &trktree::see_stopReason() {
   if (not see_stopReason_isLoaded) {
     if (see_stopReason_branch != 0) {
       see_stopReason_branch->GetEntry(index);
@@ -6330,7 +6330,7 @@ const vector<unsigned short> &trktree::see_stopReason() {
   }
   return *see_stopReason_;
 }
-const vector<short> &trktree::vtx_valid() {
+const std::vector<short> &trktree::vtx_valid() {
   if (not vtx_valid_isLoaded) {
     if (vtx_valid_branch != 0) {
       vtx_valid_branch->GetEntry(index);
@@ -6354,7 +6354,7 @@ const unsigned int &trktree::lumi() {
   }
   return lumi_;
 }
-const vector<float> &trktree::trk_refpoint_x() {
+const std::vector<float> &trktree::trk_refpoint_x() {
   if (not trk_refpoint_x_isLoaded) {
     if (trk_refpoint_x_branch != 0) {
       trk_refpoint_x_branch->GetEntry(index);
@@ -6366,7 +6366,7 @@ const vector<float> &trktree::trk_refpoint_x() {
   }
   return *trk_refpoint_x_;
 }
-const vector<float> &trktree::trk_refpoint_y() {
+const std::vector<float> &trktree::trk_refpoint_y() {
   if (not trk_refpoint_y_isLoaded) {
     if (trk_refpoint_y_branch != 0) {
       trk_refpoint_y_branch->GetEntry(index);
@@ -6378,7 +6378,7 @@ const vector<float> &trktree::trk_refpoint_y() {
   }
   return *trk_refpoint_y_;
 }
-const vector<float> &trktree::trk_refpoint_z() {
+const std::vector<float> &trktree::trk_refpoint_z() {
   if (not trk_refpoint_z_isLoaded) {
     if (trk_refpoint_z_branch != 0) {
       trk_refpoint_z_branch->GetEntry(index);
@@ -6390,7 +6390,7 @@ const vector<float> &trktree::trk_refpoint_z() {
   }
   return *trk_refpoint_z_;
 }
-const vector<unsigned int> &trktree::sim_n3DLay() {
+const std::vector<unsigned int> &trktree::sim_n3DLay() {
   if (not sim_n3DLay_isLoaded) {
     if (sim_n3DLay_branch != 0) {
       sim_n3DLay_branch->GetEntry(index);
@@ -6402,7 +6402,7 @@ const vector<unsigned int> &trktree::sim_n3DLay() {
   }
   return *sim_n3DLay_;
 }
-const vector<unsigned int> &trktree::see_nPhase2OT() {
+const std::vector<unsigned int> &trktree::see_nPhase2OT() {
   if (not see_nPhase2OT_isLoaded) {
     if (see_nPhase2OT_branch != 0) {
       see_nPhase2OT_branch->GetEntry(index);
@@ -6414,7 +6414,7 @@ const vector<unsigned int> &trktree::see_nPhase2OT() {
   }
   return *see_nPhase2OT_;
 }
-const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimDenom() {
+const std::vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimDenom() {
   if (not trk_bestFromFirstHitSimTrkShareFracSimDenom_isLoaded) {
     if (trk_bestFromFirstHitSimTrkShareFracSimDenom_branch != 0) {
       trk_bestFromFirstHitSimTrkShareFracSimDenom_branch->GetEntry(index);
@@ -6426,7 +6426,7 @@ const vector<float> &trktree::trk_bestFromFirstHitSimTrkShareFracSimDenom() {
   }
   return *trk_bestFromFirstHitSimTrkShareFracSimDenom_;
 }
-const vector<float> &trktree::ph2_yy() {
+const std::vector<float> &trktree::ph2_yy() {
   if (not ph2_yy_isLoaded) {
     if (ph2_yy_branch != 0) {
       ph2_yy_branch->GetEntry(index);
@@ -6438,7 +6438,7 @@ const vector<float> &trktree::ph2_yy() {
   }
   return *ph2_yy_;
 }
-const vector<float> &trktree::ph2_yz() {
+const std::vector<float> &trktree::ph2_yz() {
   if (not ph2_yz_isLoaded) {
     if (ph2_yz_branch != 0) {
       ph2_yz_branch->GetEntry(index);
@@ -6450,7 +6450,7 @@ const vector<float> &trktree::ph2_yz() {
   }
   return *ph2_yz_;
 }
-const vector<unsigned short> &trktree::inv_blade() {
+const std::vector<unsigned short> &trktree::inv_blade() {
   if (not inv_blade_isLoaded) {
     if (inv_blade_branch != 0) {
       inv_blade_branch->GetEntry(index);
@@ -6462,7 +6462,7 @@ const vector<unsigned short> &trktree::inv_blade() {
   }
   return *inv_blade_;
 }
-const vector<float> &trktree::trk_ptErr() {
+const std::vector<float> &trktree::trk_ptErr() {
   if (not trk_ptErr_isLoaded) {
     if (trk_ptErr_branch != 0) {
       trk_ptErr_branch->GetEntry(index);
@@ -6474,7 +6474,7 @@ const vector<float> &trktree::trk_ptErr() {
   }
   return *trk_ptErr_;
 }
-const vector<float> &trktree::pix_zx() {
+const std::vector<float> &trktree::pix_zx() {
   if (not pix_zx_isLoaded) {
     if (pix_zx_branch != 0) {
       pix_zx_branch->GetEntry(index);
@@ -6486,7 +6486,7 @@ const vector<float> &trktree::pix_zx() {
   }
   return *pix_zx_;
 }
-const vector<float> &trktree::simvtx_z() {
+const std::vector<float> &trktree::simvtx_z() {
   if (not simvtx_z_isLoaded) {
     if (simvtx_z_branch != 0) {
       simvtx_z_branch->GetEntry(index);
@@ -6498,7 +6498,7 @@ const vector<float> &trktree::simvtx_z() {
   }
   return *simvtx_z_;
 }
-const vector<unsigned int> &trktree::sim_nTrackerHits() {
+const std::vector<unsigned int> &trktree::sim_nTrackerHits() {
   if (not sim_nTrackerHits_isLoaded) {
     if (sim_nTrackerHits_branch != 0) {
       sim_nTrackerHits_branch->GetEntry(index);
@@ -6510,7 +6510,7 @@ const vector<unsigned int> &trktree::sim_nTrackerHits() {
   }
   return *sim_nTrackerHits_;
 }
-const vector<unsigned short> &trktree::ph2_subdet() {
+const std::vector<unsigned short> &trktree::ph2_subdet() {
   if (not ph2_subdet_isLoaded) {
     if (ph2_subdet_branch != 0) {
       ph2_subdet_branch->GetEntry(index);
@@ -6522,7 +6522,7 @@ const vector<unsigned short> &trktree::ph2_subdet() {
   }
   return *ph2_subdet_;
 }
-const vector<float> &trktree::see_stateTrajPx() {
+const std::vector<float> &trktree::see_stateTrajPx() {
   if (not see_stateTrajPx_isLoaded) {
     if (see_stateTrajPx_branch != 0) {
       see_stateTrajPx_branch->GetEntry(index);
@@ -6534,7 +6534,7 @@ const vector<float> &trktree::see_stateTrajPx() {
   }
   return *see_stateTrajPx_;
 }
-const vector<vector<int> > &trktree::simhit_hitIdx() {
+const std::vector<std::vector<int> > &trktree::simhit_hitIdx() {
   if (not simhit_hitIdx_isLoaded) {
     if (simhit_hitIdx_branch != 0) {
       simhit_hitIdx_branch->GetEntry(index);
@@ -6546,7 +6546,7 @@ const vector<vector<int> > &trktree::simhit_hitIdx() {
   }
   return *simhit_hitIdx_;
 }
-const vector<unsigned short> &trktree::simhit_ladder() {
+const std::vector<unsigned short> &trktree::simhit_ladder() {
   if (not simhit_ladder_isLoaded) {
     if (simhit_ladder_branch != 0) {
       simhit_ladder_branch->GetEntry(index);
@@ -6558,7 +6558,7 @@ const vector<unsigned short> &trktree::simhit_ladder() {
   }
   return *simhit_ladder_;
 }
-const vector<unsigned short> &trktree::ph2_layer() {
+const std::vector<unsigned short> &trktree::ph2_layer() {
   if (not ph2_layer_isLoaded) {
     if (ph2_layer_branch != 0) {
       ph2_layer_branch->GetEntry(index);
@@ -6570,7 +6570,7 @@ const vector<unsigned short> &trktree::ph2_layer() {
   }
   return *ph2_layer_;
 }
-const vector<float> &trktree::see_phi() {
+const std::vector<float> &trktree::see_phi() {
   if (not see_phi_isLoaded) {
     if (see_phi_branch != 0) {
       see_phi_branch->GetEntry(index);
@@ -6582,7 +6582,7 @@ const vector<float> &trktree::see_phi() {
   }
   return *see_phi_;
 }
-const vector<float> &trktree::trk_nChi2_1Dmod() {
+const std::vector<float> &trktree::trk_nChi2_1Dmod() {
   if (not trk_nChi2_1Dmod_isLoaded) {
     if (trk_nChi2_1Dmod_branch != 0) {
       trk_nChi2_1Dmod_branch->GetEntry(index);
@@ -6594,7 +6594,7 @@ const vector<float> &trktree::trk_nChi2_1Dmod() {
   }
   return *trk_nChi2_1Dmod_;
 }
-const vector<float> &trktree::trk_inner_py() {
+const std::vector<float> &trktree::trk_inner_py() {
   if (not trk_inner_py_isLoaded) {
     if (trk_inner_py_branch != 0) {
       trk_inner_py_branch->GetEntry(index);
@@ -6606,7 +6606,7 @@ const vector<float> &trktree::trk_inner_py() {
   }
   return *trk_inner_py_;
 }
-const vector<float> &trktree::trk_inner_px() {
+const std::vector<float> &trktree::trk_inner_px() {
   if (not trk_inner_px_isLoaded) {
     if (trk_inner_px_branch != 0) {
       trk_inner_px_branch->GetEntry(index);
@@ -6618,7 +6618,7 @@ const vector<float> &trktree::trk_inner_px() {
   }
   return *trk_inner_px_;
 }
-const vector<float> &trktree::trk_dxyErr() {
+const std::vector<float> &trktree::trk_dxyErr() {
   if (not trk_dxyErr_isLoaded) {
     if (trk_dxyErr_branch != 0) {
       trk_dxyErr_branch->GetEntry(index);
@@ -6630,7 +6630,7 @@ const vector<float> &trktree::trk_dxyErr() {
   }
   return *trk_dxyErr_;
 }
-const vector<unsigned int> &trktree::sim_nPixelLay() {
+const std::vector<unsigned int> &trktree::sim_nPixelLay() {
   if (not sim_nPixelLay_isLoaded) {
     if (sim_nPixelLay_branch != 0) {
       sim_nPixelLay_branch->GetEntry(index);
@@ -6642,7 +6642,7 @@ const vector<unsigned int> &trktree::sim_nPixelLay() {
   }
   return *sim_nPixelLay_;
 }
-const vector<unsigned int> &trktree::see_nValid() {
+const std::vector<unsigned int> &trktree::see_nValid() {
   if (not see_nValid_isLoaded) {
     if (see_nValid_branch != 0) {
       see_nValid_branch->GetEntry(index);
@@ -6654,7 +6654,7 @@ const vector<unsigned int> &trktree::see_nValid() {
   }
   return *see_nValid_;
 }
-const vector<float> &trktree::trk_inner_pt() {
+const std::vector<float> &trktree::trk_inner_pt() {
   if (not trk_inner_pt_isLoaded) {
     if (trk_inner_pt_branch != 0) {
       trk_inner_pt_branch->GetEntry(index);
@@ -6666,7 +6666,7 @@ const vector<float> &trktree::trk_inner_pt() {
   }
   return *trk_inner_pt_;
 }
-const vector<float> &trktree::see_stateTrajGlbPy() {
+const std::vector<float> &trktree::see_stateTrajGlbPy() {
   if (not see_stateTrajGlbPy_isLoaded) {
     if (see_stateTrajGlbPy_branch != 0) {
       see_stateTrajGlbPy_branch->GetEntry(index);
@@ -6694,314 +6694,316 @@ void trktree::progress(int nEventsTotal, int nEventsChain) {
             "\015\033[32m ---> \033[1m\033[31m%4.1f%%"
             "\033[0m\033[32m <---\033[0m\015",
             100.);
-        cout << endl;
+        std::cout << std::endl;
       }
     }
   }
 }
 namespace tas {
-  const vector<float> &see_stateCcov01() { return trk.see_stateCcov01(); }
-  const vector<unsigned short> &simhit_rod() { return trk.simhit_rod(); }
-  const vector<float> &trk_phi() { return trk.trk_phi(); }
+  const std::vector<float> &see_stateCcov01() { return trk.see_stateCcov01(); }
+  const std::vector<unsigned short> &simhit_rod() { return trk.simhit_rod(); }
+  const std::vector<float> &trk_phi() { return trk.trk_phi(); }
   const float &bsp_x() { return trk.bsp_x(); }
-  const vector<float> &see_stateCcov05() { return trk.see_stateCcov05(); }
-  const vector<float> &see_stateCcov04() { return trk.see_stateCcov04(); }
-  const vector<float> &trk_dxyPV() { return trk.trk_dxyPV(); }
-  const vector<float> &simhit_tof() { return trk.simhit_tof(); }
-  const vector<int> &sim_event() { return trk.sim_event(); }
-  const vector<unsigned short> &simhit_isStack() { return trk.simhit_isStack(); }
-  const vector<float> &trk_dz() { return trk.trk_dz(); }
-  const vector<float> &see_stateCcov03() { return trk.see_stateCcov03(); }
-  const vector<float> &sim_eta() { return trk.sim_eta(); }
-  const vector<unsigned int> &simvtx_processType() { return trk.simvtx_processType(); }
-  const vector<float> &pix_radL() { return trk.pix_radL(); }
-  const vector<float> &see_stateCcov02() { return trk.see_stateCcov02(); }
-  const vector<unsigned int> &see_nGlued() { return trk.see_nGlued(); }
-  const vector<int> &trk_bestSimTrkIdx() { return trk.trk_bestSimTrkIdx(); }
-  const vector<float> &see_stateTrajGlbPz() { return trk.see_stateTrajGlbPz(); }
-  const vector<float> &pix_yz() { return trk.pix_yz(); }
-  const vector<float> &pix_yy() { return trk.pix_yy(); }
-  const vector<short> &simhit_process() { return trk.simhit_process(); }
-  const vector<float> &see_stateCcov34() { return trk.see_stateCcov34(); }
-  const vector<unsigned int> &trk_nInnerLost() { return trk.trk_nInnerLost(); }
-  const vector<float> &see_py() { return trk.see_py(); }
-  const vector<vector<int> > &sim_trkIdx() { return trk.sim_trkIdx(); }
-  const vector<unsigned int> &trk_nLost() { return trk.trk_nLost(); }
-  const vector<short> &pix_isBarrel() { return trk.pix_isBarrel(); }
-  const vector<float> &see_dxyErr() { return trk.see_dxyErr(); }
-  const vector<unsigned int> &simhit_detId() { return trk.simhit_detId(); }
-  const vector<unsigned short> &simhit_subdet() { return trk.simhit_subdet(); }
-  const vector<vector<int> > &see_hitIdx() { return trk.see_hitIdx(); }
-  const vector<float> &see_pt() { return trk.see_pt(); }
-  const vector<unsigned int> &ph2_detId() { return trk.ph2_detId(); }
-  const vector<unsigned int> &trk_nStripLay() { return trk.trk_nStripLay(); }
-  const vector<int> &see_bestFromFirstHitSimTrkIdx() { return trk.see_bestFromFirstHitSimTrkIdx(); }
-  const vector<float> &sim_pca_pt() { return trk.sim_pca_pt(); }
-  const vector<int> &see_trkIdx() { return trk.see_trkIdx(); }
-  const vector<unsigned int> &trk_nCluster() { return trk.trk_nCluster(); }
-  const vector<float> &trk_bestFromFirstHitSimTrkNChi2() { return trk.trk_bestFromFirstHitSimTrkNChi2(); }
-  const vector<short> &trk_isHP() { return trk.trk_isHP(); }
-  const vector<vector<int> > &simhit_hitType() { return trk.simhit_hitType(); }
-  const vector<unsigned short> &ph2_isUpper() { return trk.ph2_isUpper(); }
-  const vector<unsigned int> &see_nStrip() { return trk.see_nStrip(); }
-  const vector<float> &trk_bestSimTrkShareFracSimClusterDenom() { return trk.trk_bestSimTrkShareFracSimClusterDenom(); }
-  const vector<unsigned short> &simhit_side() { return trk.simhit_side(); }
-  const vector<float> &simhit_x() { return trk.simhit_x(); }
-  const vector<int> &see_q() { return trk.see_q(); }
-  const vector<float> &simhit_z() { return trk.simhit_z(); }
-  const vector<float> &sim_pca_lambda() { return trk.sim_pca_lambda(); }
-  const vector<int> &sim_q() { return trk.sim_q(); }
-  const vector<float> &pix_bbxi() { return trk.pix_bbxi(); }
-  const vector<unsigned short> &ph2_order() { return trk.ph2_order(); }
-  const vector<unsigned short> &ph2_module() { return trk.ph2_module(); }
-  const vector<unsigned short> &inv_order() { return trk.inv_order(); }
-  const vector<float> &trk_dzErr() { return trk.trk_dzErr(); }
-  const vector<unsigned int> &trk_nInnerInactive() { return trk.trk_nInnerInactive(); }
-  const vector<short> &see_fitok() { return trk.see_fitok(); }
-  const vector<unsigned short> &simhit_blade() { return trk.simhit_blade(); }
-  const vector<unsigned short> &inv_subdet() { return trk.inv_subdet(); }
-  const vector<unsigned short> &pix_blade() { return trk.pix_blade(); }
-  const vector<float> &pix_xx() { return trk.pix_xx(); }
-  const vector<float> &pix_xy() { return trk.pix_xy(); }
-  const vector<unsigned short> &simhit_panel() { return trk.simhit_panel(); }
-  const vector<float> &sim_pz() { return trk.sim_pz(); }
-  const vector<float> &trk_dxy() { return trk.trk_dxy(); }
-  const vector<float> &sim_px() { return trk.sim_px(); }
-  const vector<float> &trk_lambda() { return trk.trk_lambda(); }
-  const vector<float> &see_stateCcov12() { return trk.see_stateCcov12(); }
-  const vector<float> &sim_pt() { return trk.sim_pt(); }
-  const vector<float> &sim_py() { return trk.sim_py(); }
-  const vector<vector<int> > &sim_decayVtxIdx() { return trk.sim_decayVtxIdx(); }
-  const vector<unsigned int> &pix_detId() { return trk.pix_detId(); }
-  const vector<float> &trk_eta() { return trk.trk_eta(); }
-  const vector<float> &see_dxy() { return trk.see_dxy(); }
-  const vector<int> &sim_isFromBHadron() { return trk.sim_isFromBHadron(); }
-  const vector<float> &simhit_eloss() { return trk.simhit_eloss(); }
-  const vector<float> &see_stateCcov11() { return trk.see_stateCcov11(); }
-  const vector<float> &simhit_pz() { return trk.simhit_pz(); }
-  const vector<int> &sim_pdgId() { return trk.sim_pdgId(); }
-  const vector<unsigned short> &trk_stopReason() { return trk.trk_stopReason(); }
-  const vector<float> &sim_pca_phi() { return trk.sim_pca_phi(); }
-  const vector<unsigned short> &simhit_isLower() { return trk.simhit_isLower(); }
-  const vector<unsigned short> &inv_ring() { return trk.inv_ring(); }
-  const vector<vector<int> > &ph2_simHitIdx() { return trk.ph2_simHitIdx(); }
-  const vector<unsigned short> &simhit_order() { return trk.simhit_order(); }
-  const vector<float> &trk_dxyClosestPV() { return trk.trk_dxyClosestPV(); }
-  const vector<float> &pix_z() { return trk.pix_z(); }
-  const vector<float> &pix_y() { return trk.pix_y(); }
-  const vector<float> &pix_x() { return trk.pix_x(); }
-  const vector<vector<int> > &see_hitType() { return trk.see_hitType(); }
-  const vector<float> &see_statePt() { return trk.see_statePt(); }
-  const vector<vector<int> > &simvtx_sourceSimIdx() { return trk.simvtx_sourceSimIdx(); }
+  const std::vector<float> &see_stateCcov05() { return trk.see_stateCcov05(); }
+  const std::vector<float> &see_stateCcov04() { return trk.see_stateCcov04(); }
+  const std::vector<float> &trk_dxyPV() { return trk.trk_dxyPV(); }
+  const std::vector<float> &simhit_tof() { return trk.simhit_tof(); }
+  const std::vector<int> &sim_event() { return trk.sim_event(); }
+  const std::vector<unsigned short> &simhit_isStack() { return trk.simhit_isStack(); }
+  const std::vector<float> &trk_dz() { return trk.trk_dz(); }
+  const std::vector<float> &see_stateCcov03() { return trk.see_stateCcov03(); }
+  const std::vector<float> &sim_eta() { return trk.sim_eta(); }
+  const std::vector<unsigned int> &simvtx_processType() { return trk.simvtx_processType(); }
+  const std::vector<float> &pix_radL() { return trk.pix_radL(); }
+  const std::vector<float> &see_stateCcov02() { return trk.see_stateCcov02(); }
+  const std::vector<unsigned int> &see_nGlued() { return trk.see_nGlued(); }
+  const std::vector<int> &trk_bestSimTrkIdx() { return trk.trk_bestSimTrkIdx(); }
+  const std::vector<float> &see_stateTrajGlbPz() { return trk.see_stateTrajGlbPz(); }
+  const std::vector<float> &pix_yz() { return trk.pix_yz(); }
+  const std::vector<float> &pix_yy() { return trk.pix_yy(); }
+  const std::vector<short> &simhit_process() { return trk.simhit_process(); }
+  const std::vector<float> &see_stateCcov34() { return trk.see_stateCcov34(); }
+  const std::vector<unsigned int> &trk_nInnerLost() { return trk.trk_nInnerLost(); }
+  const std::vector<float> &see_py() { return trk.see_py(); }
+  const std::vector<std::vector<int> > &sim_trkIdx() { return trk.sim_trkIdx(); }
+  const std::vector<unsigned int> &trk_nLost() { return trk.trk_nLost(); }
+  const std::vector<short> &pix_isBarrel() { return trk.pix_isBarrel(); }
+  const std::vector<float> &see_dxyErr() { return trk.see_dxyErr(); }
+  const std::vector<unsigned int> &simhit_detId() { return trk.simhit_detId(); }
+  const std::vector<unsigned short> &simhit_subdet() { return trk.simhit_subdet(); }
+  const std::vector<std::vector<int> > &see_hitIdx() { return trk.see_hitIdx(); }
+  const std::vector<float> &see_pt() { return trk.see_pt(); }
+  const std::vector<unsigned int> &ph2_detId() { return trk.ph2_detId(); }
+  const std::vector<unsigned int> &trk_nStripLay() { return trk.trk_nStripLay(); }
+  const std::vector<int> &see_bestFromFirstHitSimTrkIdx() { return trk.see_bestFromFirstHitSimTrkIdx(); }
+  const std::vector<float> &sim_pca_pt() { return trk.sim_pca_pt(); }
+  const std::vector<int> &see_trkIdx() { return trk.see_trkIdx(); }
+  const std::vector<unsigned int> &trk_nCluster() { return trk.trk_nCluster(); }
+  const std::vector<float> &trk_bestFromFirstHitSimTrkNChi2() { return trk.trk_bestFromFirstHitSimTrkNChi2(); }
+  const std::vector<short> &trk_isHP() { return trk.trk_isHP(); }
+  const std::vector<std::vector<int> > &simhit_hitType() { return trk.simhit_hitType(); }
+  const std::vector<unsigned short> &ph2_isUpper() { return trk.ph2_isUpper(); }
+  const std::vector<unsigned int> &see_nStrip() { return trk.see_nStrip(); }
+  const std::vector<float> &trk_bestSimTrkShareFracSimClusterDenom() {
+    return trk.trk_bestSimTrkShareFracSimClusterDenom();
+  }
+  const std::vector<unsigned short> &simhit_side() { return trk.simhit_side(); }
+  const std::vector<float> &simhit_x() { return trk.simhit_x(); }
+  const std::vector<int> &see_q() { return trk.see_q(); }
+  const std::vector<float> &simhit_z() { return trk.simhit_z(); }
+  const std::vector<float> &sim_pca_lambda() { return trk.sim_pca_lambda(); }
+  const std::vector<int> &sim_q() { return trk.sim_q(); }
+  const std::vector<float> &pix_bbxi() { return trk.pix_bbxi(); }
+  const std::vector<unsigned short> &ph2_order() { return trk.ph2_order(); }
+  const std::vector<unsigned short> &ph2_module() { return trk.ph2_module(); }
+  const std::vector<unsigned short> &inv_order() { return trk.inv_order(); }
+  const std::vector<float> &trk_dzErr() { return trk.trk_dzErr(); }
+  const std::vector<unsigned int> &trk_nInnerInactive() { return trk.trk_nInnerInactive(); }
+  const std::vector<short> &see_fitok() { return trk.see_fitok(); }
+  const std::vector<unsigned short> &simhit_blade() { return trk.simhit_blade(); }
+  const std::vector<unsigned short> &inv_subdet() { return trk.inv_subdet(); }
+  const std::vector<unsigned short> &pix_blade() { return trk.pix_blade(); }
+  const std::vector<float> &pix_xx() { return trk.pix_xx(); }
+  const std::vector<float> &pix_xy() { return trk.pix_xy(); }
+  const std::vector<unsigned short> &simhit_panel() { return trk.simhit_panel(); }
+  const std::vector<float> &sim_pz() { return trk.sim_pz(); }
+  const std::vector<float> &trk_dxy() { return trk.trk_dxy(); }
+  const std::vector<float> &sim_px() { return trk.sim_px(); }
+  const std::vector<float> &trk_lambda() { return trk.trk_lambda(); }
+  const std::vector<float> &see_stateCcov12() { return trk.see_stateCcov12(); }
+  const std::vector<float> &sim_pt() { return trk.sim_pt(); }
+  const std::vector<float> &sim_py() { return trk.sim_py(); }
+  const std::vector<std::vector<int> > &sim_decayVtxIdx() { return trk.sim_decayVtxIdx(); }
+  const std::vector<unsigned int> &pix_detId() { return trk.pix_detId(); }
+  const std::vector<float> &trk_eta() { return trk.trk_eta(); }
+  const std::vector<float> &see_dxy() { return trk.see_dxy(); }
+  const std::vector<int> &sim_isFromBHadron() { return trk.sim_isFromBHadron(); }
+  const std::vector<float> &simhit_eloss() { return trk.simhit_eloss(); }
+  const std::vector<float> &see_stateCcov11() { return trk.see_stateCcov11(); }
+  const std::vector<float> &simhit_pz() { return trk.simhit_pz(); }
+  const std::vector<int> &sim_pdgId() { return trk.sim_pdgId(); }
+  const std::vector<unsigned short> &trk_stopReason() { return trk.trk_stopReason(); }
+  const std::vector<float> &sim_pca_phi() { return trk.sim_pca_phi(); }
+  const std::vector<unsigned short> &simhit_isLower() { return trk.simhit_isLower(); }
+  const std::vector<unsigned short> &inv_ring() { return trk.inv_ring(); }
+  const std::vector<std::vector<int> > &ph2_simHitIdx() { return trk.ph2_simHitIdx(); }
+  const std::vector<unsigned short> &simhit_order() { return trk.simhit_order(); }
+  const std::vector<float> &trk_dxyClosestPV() { return trk.trk_dxyClosestPV(); }
+  const std::vector<float> &pix_z() { return trk.pix_z(); }
+  const std::vector<float> &pix_y() { return trk.pix_y(); }
+  const std::vector<float> &pix_x() { return trk.pix_x(); }
+  const std::vector<std::vector<int> > &see_hitType() { return trk.see_hitType(); }
+  const std::vector<float> &see_statePt() { return trk.see_statePt(); }
+  const std::vector<std::vector<int> > &simvtx_sourceSimIdx() { return trk.simvtx_sourceSimIdx(); }
   const unsigned long long &event() { return trk.event(); }
-  const vector<unsigned short> &pix_module() { return trk.pix_module(); }
-  const vector<unsigned short> &ph2_side() { return trk.ph2_side(); }
-  const vector<float> &trk_bestSimTrkNChi2() { return trk.trk_bestSimTrkNChi2(); }
-  const vector<float> &see_stateTrajPy() { return trk.see_stateTrajPy(); }
-  const vector<unsigned short> &inv_type() { return trk.inv_type(); }
+  const std::vector<unsigned short> &pix_module() { return trk.pix_module(); }
+  const std::vector<unsigned short> &ph2_side() { return trk.ph2_side(); }
+  const std::vector<float> &trk_bestSimTrkNChi2() { return trk.trk_bestSimTrkNChi2(); }
+  const std::vector<float> &see_stateTrajPy() { return trk.see_stateTrajPy(); }
+  const std::vector<unsigned short> &inv_type() { return trk.inv_type(); }
   const float &bsp_z() { return trk.bsp_z(); }
   const float &bsp_y() { return trk.bsp_y(); }
-  const vector<float> &simhit_py() { return trk.simhit_py(); }
-  const vector<vector<int> > &see_simTrkIdx() { return trk.see_simTrkIdx(); }
-  const vector<float> &see_stateTrajGlbZ() { return trk.see_stateTrajGlbZ(); }
-  const vector<float> &see_stateTrajGlbX() { return trk.see_stateTrajGlbX(); }
-  const vector<float> &see_stateTrajGlbY() { return trk.see_stateTrajGlbY(); }
-  const vector<unsigned int> &trk_originalAlgo() { return trk.trk_originalAlgo(); }
-  const vector<unsigned int> &trk_nPixel() { return trk.trk_nPixel(); }
-  const vector<float> &see_stateCcov14() { return trk.see_stateCcov14(); }
-  const vector<float> &see_stateCcov15() { return trk.see_stateCcov15(); }
-  const vector<float> &trk_phiErr() { return trk.trk_phiErr(); }
-  const vector<float> &see_stateCcov13() { return trk.see_stateCcov13(); }
-  const vector<vector<float> > &pix_chargeFraction() { return trk.pix_chargeFraction(); }
-  const vector<int> &trk_q() { return trk.trk_q(); }
-  const vector<vector<int> > &sim_seedIdx() { return trk.sim_seedIdx(); }
-  const vector<float> &see_dzErr() { return trk.see_dzErr(); }
-  const vector<unsigned int> &sim_nRecoClusters() { return trk.sim_nRecoClusters(); }
+  const std::vector<float> &simhit_py() { return trk.simhit_py(); }
+  const std::vector<std::vector<int> > &see_simTrkIdx() { return trk.see_simTrkIdx(); }
+  const std::vector<float> &see_stateTrajGlbZ() { return trk.see_stateTrajGlbZ(); }
+  const std::vector<float> &see_stateTrajGlbX() { return trk.see_stateTrajGlbX(); }
+  const std::vector<float> &see_stateTrajGlbY() { return trk.see_stateTrajGlbY(); }
+  const std::vector<unsigned int> &trk_originalAlgo() { return trk.trk_originalAlgo(); }
+  const std::vector<unsigned int> &trk_nPixel() { return trk.trk_nPixel(); }
+  const std::vector<float> &see_stateCcov14() { return trk.see_stateCcov14(); }
+  const std::vector<float> &see_stateCcov15() { return trk.see_stateCcov15(); }
+  const std::vector<float> &trk_phiErr() { return trk.trk_phiErr(); }
+  const std::vector<float> &see_stateCcov13() { return trk.see_stateCcov13(); }
+  const std::vector<std::vector<float> > &pix_chargeFraction() { return trk.pix_chargeFraction(); }
+  const std::vector<int> &trk_q() { return trk.trk_q(); }
+  const std::vector<std::vector<int> > &sim_seedIdx() { return trk.sim_seedIdx(); }
+  const std::vector<float> &see_dzErr() { return trk.see_dzErr(); }
+  const std::vector<unsigned int> &sim_nRecoClusters() { return trk.sim_nRecoClusters(); }
   const unsigned int &run() { return trk.run(); }
-  const vector<vector<float> > &ph2_xySignificance() { return trk.ph2_xySignificance(); }
-  const vector<float> &trk_nChi2() { return trk.trk_nChi2(); }
-  const vector<unsigned short> &pix_layer() { return trk.pix_layer(); }
-  const vector<vector<float> > &pix_xySignificance() { return trk.pix_xySignificance(); }
-  const vector<float> &sim_pca_eta() { return trk.sim_pca_eta(); }
-  const vector<float> &see_bestSimTrkShareFrac() { return trk.see_bestSimTrkShareFrac(); }
-  const vector<float> &see_etaErr() { return trk.see_etaErr(); }
-  const vector<float> &trk_bestSimTrkShareFracSimDenom() { return trk.trk_bestSimTrkShareFracSimDenom(); }
+  const std::vector<std::vector<float> > &ph2_xySignificance() { return trk.ph2_xySignificance(); }
+  const std::vector<float> &trk_nChi2() { return trk.trk_nChi2(); }
+  const std::vector<unsigned short> &pix_layer() { return trk.pix_layer(); }
+  const std::vector<std::vector<float> > &pix_xySignificance() { return trk.pix_xySignificance(); }
+  const std::vector<float> &sim_pca_eta() { return trk.sim_pca_eta(); }
+  const std::vector<float> &see_bestSimTrkShareFrac() { return trk.see_bestSimTrkShareFrac(); }
+  const std::vector<float> &see_etaErr() { return trk.see_etaErr(); }
+  const std::vector<float> &trk_bestSimTrkShareFracSimDenom() { return trk.trk_bestSimTrkShareFracSimDenom(); }
   const float &bsp_sigmaz() { return trk.bsp_sigmaz(); }
   const float &bsp_sigmay() { return trk.bsp_sigmay(); }
   const float &bsp_sigmax() { return trk.bsp_sigmax(); }
-  const vector<unsigned short> &pix_ladder() { return trk.pix_ladder(); }
-  const vector<unsigned short> &trk_qualityMask() { return trk.trk_qualityMask(); }
-  const vector<float> &trk_ndof() { return trk.trk_ndof(); }
-  const vector<unsigned short> &pix_subdet() { return trk.pix_subdet(); }
-  const vector<vector<int> > &ph2_seeIdx() { return trk.ph2_seeIdx(); }
-  const vector<unsigned short> &inv_isUpper() { return trk.inv_isUpper(); }
-  const vector<float> &ph2_zx() { return trk.ph2_zx(); }
-  const vector<vector<int> > &pix_trkIdx() { return trk.pix_trkIdx(); }
-  const vector<unsigned int> &trk_nOuterLost() { return trk.trk_nOuterLost(); }
-  const vector<unsigned short> &inv_panel() { return trk.inv_panel(); }
-  const vector<float> &vtx_z() { return trk.vtx_z(); }
-  const vector<unsigned short> &simhit_layer() { return trk.simhit_layer(); }
-  const vector<float> &vtx_y() { return trk.vtx_y(); }
-  const vector<short> &ph2_isBarrel() { return trk.ph2_isBarrel(); }
-  const vector<vector<int> > &pix_seeIdx() { return trk.pix_seeIdx(); }
-  const vector<int> &trk_bestFromFirstHitSimTrkIdx() { return trk.trk_bestFromFirstHitSimTrkIdx(); }
-  const vector<float> &simhit_px() { return trk.simhit_px(); }
-  const vector<float> &see_stateTrajX() { return trk.see_stateTrajX(); }
-  const vector<float> &see_stateTrajY() { return trk.see_stateTrajY(); }
-  const vector<unsigned int> &trk_nOuterInactive() { return trk.trk_nOuterInactive(); }
-  const vector<float> &sim_pca_dxy() { return trk.sim_pca_dxy(); }
-  const vector<unsigned int> &trk_algo() { return trk.trk_algo(); }
-  const vector<vector<int> > &trk_hitType() { return trk.trk_hitType(); }
-  const vector<float> &trk_bestFromFirstHitSimTrkShareFrac() { return trk.trk_bestFromFirstHitSimTrkShareFrac(); }
-  const vector<short> &inv_isBarrel() { return trk.inv_isBarrel(); }
-  const vector<int> &simvtx_event() { return trk.simvtx_event(); }
-  const vector<float> &ph2_z() { return trk.ph2_z(); }
-  const vector<float> &ph2_x() { return trk.ph2_x(); }
-  const vector<float> &ph2_y() { return trk.ph2_y(); }
-  const vector<vector<int> > &sim_genPdgIds() { return trk.sim_genPdgIds(); }
-  const vector<float> &trk_mva() { return trk.trk_mva(); }
-  const vector<float> &see_stateCcov24() { return trk.see_stateCcov24(); }
-  const vector<float> &trk_dzClosestPV() { return trk.trk_dzClosestPV(); }
-  const vector<unsigned int> &see_nCluster() { return trk.see_nCluster(); }
-  const vector<unsigned short> &inv_rod() { return trk.inv_rod(); }
-  const vector<vector<int> > &trk_hitIdx() { return trk.trk_hitIdx(); }
-  const vector<float> &see_stateCcov22() { return trk.see_stateCcov22(); }
-  const vector<unsigned short> &pix_simType() { return trk.pix_simType(); }
-  const vector<unsigned short> &simhit_ring() { return trk.simhit_ring(); }
-  const vector<float> &trk_outer_px() { return trk.trk_outer_px(); }
-  const vector<float> &trk_outer_py() { return trk.trk_outer_py(); }
-  const vector<float> &trk_outer_pz() { return trk.trk_outer_pz(); }
-  const vector<float> &ph2_zz() { return trk.ph2_zz(); }
-  const vector<float> &trk_outer_pt() { return trk.trk_outer_pt(); }
-  const vector<unsigned int> &trk_n3DLay() { return trk.trk_n3DLay(); }
-  const vector<unsigned int> &trk_nValid() { return trk.trk_nValid(); }
-  const vector<float> &see_ptErr() { return trk.see_ptErr(); }
-  const vector<float> &see_stateTrajGlbPx() { return trk.see_stateTrajGlbPx(); }
-  const vector<unsigned short> &ph2_simType() { return trk.ph2_simType(); }
-  const vector<float> &trk_bestFromFirstHitSimTrkShareFracSimClusterDenom() {
+  const std::vector<unsigned short> &pix_ladder() { return trk.pix_ladder(); }
+  const std::vector<unsigned short> &trk_qualityMask() { return trk.trk_qualityMask(); }
+  const std::vector<float> &trk_ndof() { return trk.trk_ndof(); }
+  const std::vector<unsigned short> &pix_subdet() { return trk.pix_subdet(); }
+  const std::vector<std::vector<int> > &ph2_seeIdx() { return trk.ph2_seeIdx(); }
+  const std::vector<unsigned short> &inv_isUpper() { return trk.inv_isUpper(); }
+  const std::vector<float> &ph2_zx() { return trk.ph2_zx(); }
+  const std::vector<std::vector<int> > &pix_trkIdx() { return trk.pix_trkIdx(); }
+  const std::vector<unsigned int> &trk_nOuterLost() { return trk.trk_nOuterLost(); }
+  const std::vector<unsigned short> &inv_panel() { return trk.inv_panel(); }
+  const std::vector<float> &vtx_z() { return trk.vtx_z(); }
+  const std::vector<unsigned short> &simhit_layer() { return trk.simhit_layer(); }
+  const std::vector<float> &vtx_y() { return trk.vtx_y(); }
+  const std::vector<short> &ph2_isBarrel() { return trk.ph2_isBarrel(); }
+  const std::vector<std::vector<int> > &pix_seeIdx() { return trk.pix_seeIdx(); }
+  const std::vector<int> &trk_bestFromFirstHitSimTrkIdx() { return trk.trk_bestFromFirstHitSimTrkIdx(); }
+  const std::vector<float> &simhit_px() { return trk.simhit_px(); }
+  const std::vector<float> &see_stateTrajX() { return trk.see_stateTrajX(); }
+  const std::vector<float> &see_stateTrajY() { return trk.see_stateTrajY(); }
+  const std::vector<unsigned int> &trk_nOuterInactive() { return trk.trk_nOuterInactive(); }
+  const std::vector<float> &sim_pca_dxy() { return trk.sim_pca_dxy(); }
+  const std::vector<unsigned int> &trk_algo() { return trk.trk_algo(); }
+  const std::vector<std::vector<int> > &trk_hitType() { return trk.trk_hitType(); }
+  const std::vector<float> &trk_bestFromFirstHitSimTrkShareFrac() { return trk.trk_bestFromFirstHitSimTrkShareFrac(); }
+  const std::vector<short> &inv_isBarrel() { return trk.inv_isBarrel(); }
+  const std::vector<int> &simvtx_event() { return trk.simvtx_event(); }
+  const std::vector<float> &ph2_z() { return trk.ph2_z(); }
+  const std::vector<float> &ph2_x() { return trk.ph2_x(); }
+  const std::vector<float> &ph2_y() { return trk.ph2_y(); }
+  const std::vector<std::vector<int> > &sim_genPdgIds() { return trk.sim_genPdgIds(); }
+  const std::vector<float> &trk_mva() { return trk.trk_mva(); }
+  const std::vector<float> &see_stateCcov24() { return trk.see_stateCcov24(); }
+  const std::vector<float> &trk_dzClosestPV() { return trk.trk_dzClosestPV(); }
+  const std::vector<unsigned int> &see_nCluster() { return trk.see_nCluster(); }
+  const std::vector<unsigned short> &inv_rod() { return trk.inv_rod(); }
+  const std::vector<std::vector<int> > &trk_hitIdx() { return trk.trk_hitIdx(); }
+  const std::vector<float> &see_stateCcov22() { return trk.see_stateCcov22(); }
+  const std::vector<unsigned short> &pix_simType() { return trk.pix_simType(); }
+  const std::vector<unsigned short> &simhit_ring() { return trk.simhit_ring(); }
+  const std::vector<float> &trk_outer_px() { return trk.trk_outer_px(); }
+  const std::vector<float> &trk_outer_py() { return trk.trk_outer_py(); }
+  const std::vector<float> &trk_outer_pz() { return trk.trk_outer_pz(); }
+  const std::vector<float> &ph2_zz() { return trk.ph2_zz(); }
+  const std::vector<float> &trk_outer_pt() { return trk.trk_outer_pt(); }
+  const std::vector<unsigned int> &trk_n3DLay() { return trk.trk_n3DLay(); }
+  const std::vector<unsigned int> &trk_nValid() { return trk.trk_nValid(); }
+  const std::vector<float> &see_ptErr() { return trk.see_ptErr(); }
+  const std::vector<float> &see_stateTrajGlbPx() { return trk.see_stateTrajGlbPx(); }
+  const std::vector<unsigned short> &ph2_simType() { return trk.ph2_simType(); }
+  const std::vector<float> &trk_bestFromFirstHitSimTrkShareFracSimClusterDenom() {
     return trk.trk_bestFromFirstHitSimTrkShareFracSimClusterDenom();
   }
-  const vector<float> &simvtx_x() { return trk.simvtx_x(); }
-  const vector<float> &trk_pz() { return trk.trk_pz(); }
-  const vector<float> &see_bestFromFirstHitSimTrkShareFrac() { return trk.see_bestFromFirstHitSimTrkShareFrac(); }
-  const vector<float> &trk_px() { return trk.trk_px(); }
-  const vector<float> &trk_py() { return trk.trk_py(); }
-  const vector<int> &trk_vtxIdx() { return trk.trk_vtxIdx(); }
-  const vector<unsigned int> &sim_nPixel() { return trk.sim_nPixel(); }
-  const vector<float> &vtx_chi2() { return trk.vtx_chi2(); }
-  const vector<unsigned short> &ph2_ring() { return trk.ph2_ring(); }
-  const vector<float> &trk_pt() { return trk.trk_pt(); }
-  const vector<float> &see_stateCcov44() { return trk.see_stateCcov44(); }
-  const vector<float> &ph2_radL() { return trk.ph2_radL(); }
-  const vector<float> &vtx_zErr() { return trk.vtx_zErr(); }
-  const vector<float> &see_px() { return trk.see_px(); }
-  const vector<float> &see_pz() { return trk.see_pz(); }
-  const vector<float> &see_eta() { return trk.see_eta(); }
-  const vector<int> &simvtx_bunchCrossing() { return trk.simvtx_bunchCrossing(); }
-  const vector<float> &sim_pca_dz() { return trk.sim_pca_dz(); }
-  const vector<float> &simvtx_y() { return trk.simvtx_y(); }
-  const vector<unsigned short> &inv_isStack() { return trk.inv_isStack(); }
-  const vector<unsigned int> &trk_nStrip() { return trk.trk_nStrip(); }
-  const vector<float> &trk_etaErr() { return trk.trk_etaErr(); }
-  const vector<vector<float> > &trk_simTrkNChi2() { return trk.trk_simTrkNChi2(); }
-  const vector<float> &pix_zz() { return trk.pix_zz(); }
-  const vector<int> &simhit_particle() { return trk.simhit_particle(); }
-  const vector<float> &see_dz() { return trk.see_dz(); }
-  const vector<float> &see_stateTrajPz() { return trk.see_stateTrajPz(); }
-  const vector<float> &trk_bestSimTrkShareFrac() { return trk.trk_bestSimTrkShareFrac(); }
-  const vector<float> &trk_lambdaErr() { return trk.trk_lambdaErr(); }
-  const vector<vector<float> > &see_simTrkShareFrac() { return trk.see_simTrkShareFrac(); }
-  const vector<vector<int> > &pix_simHitIdx() { return trk.pix_simHitIdx(); }
-  const vector<vector<int> > &vtx_trkIdx() { return trk.vtx_trkIdx(); }
-  const vector<unsigned short> &ph2_rod() { return trk.ph2_rod(); }
-  const vector<float> &vtx_ndof() { return trk.vtx_ndof(); }
-  const vector<unsigned int> &see_nPixel() { return trk.see_nPixel(); }
-  const vector<unsigned int> &sim_nStrip() { return trk.sim_nStrip(); }
-  const vector<int> &sim_bunchCrossing() { return trk.sim_bunchCrossing(); }
-  const vector<float> &see_stateCcov45() { return trk.see_stateCcov45(); }
-  const vector<unsigned short> &ph2_isStack() { return trk.ph2_isStack(); }
-  const vector<vector<float> > &sim_trkShareFrac() { return trk.sim_trkShareFrac(); }
-  const vector<vector<float> > &trk_simTrkShareFrac() { return trk.trk_simTrkShareFrac(); }
-  const vector<float> &sim_phi() { return trk.sim_phi(); }
-  const vector<unsigned short> &inv_side() { return trk.inv_side(); }
-  const vector<short> &vtx_fake() { return trk.vtx_fake(); }
-  const vector<unsigned int> &trk_nInactive() { return trk.trk_nInactive(); }
-  const vector<unsigned int> &trk_nPixelLay() { return trk.trk_nPixelLay(); }
-  const vector<float> &ph2_bbxi() { return trk.ph2_bbxi(); }
-  const vector<float> &vtx_xErr() { return trk.vtx_xErr(); }
-  const vector<float> &see_stateCcov25() { return trk.see_stateCcov25(); }
-  const vector<int> &sim_parentVtxIdx() { return trk.sim_parentVtxIdx(); }
-  const vector<float> &see_stateCcov23() { return trk.see_stateCcov23(); }
-  const vector<ULong64_t> &trk_algoMask() { return trk.trk_algoMask(); }
-  const vector<vector<int> > &trk_simTrkIdx() { return trk.trk_simTrkIdx(); }
-  const vector<float> &see_phiErr() { return trk.see_phiErr(); }
-  const vector<float> &trk_cotTheta() { return trk.trk_cotTheta(); }
-  const vector<unsigned int> &see_algo() { return trk.see_algo(); }
-  const vector<unsigned short> &simhit_module() { return trk.simhit_module(); }
-  const vector<vector<int> > &simvtx_daughterSimIdx() { return trk.simvtx_daughterSimIdx(); }
-  const vector<float> &vtx_x() { return trk.vtx_x(); }
-  const vector<int> &trk_seedIdx() { return trk.trk_seedIdx(); }
-  const vector<float> &simhit_y() { return trk.simhit_y(); }
-  const vector<unsigned short> &inv_layer() { return trk.inv_layer(); }
-  const vector<unsigned int> &trk_nLostLay() { return trk.trk_nLostLay(); }
-  const vector<unsigned short> &ph2_isLower() { return trk.ph2_isLower(); }
-  const vector<unsigned short> &pix_side() { return trk.pix_side(); }
-  const vector<unsigned short> &inv_isLower() { return trk.inv_isLower(); }
-  const vector<vector<int> > &ph2_trkIdx() { return trk.ph2_trkIdx(); }
-  const vector<unsigned int> &sim_nValid() { return trk.sim_nValid(); }
-  const vector<int> &simhit_simTrkIdx() { return trk.simhit_simTrkIdx(); }
-  const vector<unsigned short> &see_nCands() { return trk.see_nCands(); }
-  const vector<int> &see_bestSimTrkIdx() { return trk.see_bestSimTrkIdx(); }
-  const vector<float> &vtx_yErr() { return trk.vtx_yErr(); }
-  const vector<float> &trk_dzPV() { return trk.trk_dzPV(); }
-  const vector<float> &ph2_xy() { return trk.ph2_xy(); }
-  const vector<unsigned short> &inv_module() { return trk.inv_module(); }
-  const vector<float> &see_stateCcov55() { return trk.see_stateCcov55(); }
-  const vector<unsigned short> &pix_panel() { return trk.pix_panel(); }
-  const vector<unsigned short> &inv_ladder() { return trk.inv_ladder(); }
-  const vector<float> &ph2_xx() { return trk.ph2_xx(); }
-  const vector<float> &sim_pca_cotTheta() { return trk.sim_pca_cotTheta(); }
-  const vector<int> &simpv_idx() { return trk.simpv_idx(); }
-  const vector<float> &trk_inner_pz() { return trk.trk_inner_pz(); }
-  const vector<float> &see_chi2() { return trk.see_chi2(); }
-  const vector<float> &see_stateCcov35() { return trk.see_stateCcov35(); }
-  const vector<float> &see_stateCcov33() { return trk.see_stateCcov33(); }
-  const vector<unsigned int> &inv_detId() { return trk.inv_detId(); }
-  const vector<unsigned int> &see_offset() { return trk.see_offset(); }
-  const vector<unsigned int> &sim_nLay() { return trk.sim_nLay(); }
-  const vector<vector<int> > &sim_simHitIdx() { return trk.sim_simHitIdx(); }
-  const vector<unsigned short> &simhit_isUpper() { return trk.simhit_isUpper(); }
-  const vector<float> &see_stateCcov00() { return trk.see_stateCcov00(); }
-  const vector<unsigned short> &see_stopReason() { return trk.see_stopReason(); }
-  const vector<short> &vtx_valid() { return trk.vtx_valid(); }
+  const std::vector<float> &simvtx_x() { return trk.simvtx_x(); }
+  const std::vector<float> &trk_pz() { return trk.trk_pz(); }
+  const std::vector<float> &see_bestFromFirstHitSimTrkShareFrac() { return trk.see_bestFromFirstHitSimTrkShareFrac(); }
+  const std::vector<float> &trk_px() { return trk.trk_px(); }
+  const std::vector<float> &trk_py() { return trk.trk_py(); }
+  const std::vector<int> &trk_vtxIdx() { return trk.trk_vtxIdx(); }
+  const std::vector<unsigned int> &sim_nPixel() { return trk.sim_nPixel(); }
+  const std::vector<float> &vtx_chi2() { return trk.vtx_chi2(); }
+  const std::vector<unsigned short> &ph2_ring() { return trk.ph2_ring(); }
+  const std::vector<float> &trk_pt() { return trk.trk_pt(); }
+  const std::vector<float> &see_stateCcov44() { return trk.see_stateCcov44(); }
+  const std::vector<float> &ph2_radL() { return trk.ph2_radL(); }
+  const std::vector<float> &vtx_zErr() { return trk.vtx_zErr(); }
+  const std::vector<float> &see_px() { return trk.see_px(); }
+  const std::vector<float> &see_pz() { return trk.see_pz(); }
+  const std::vector<float> &see_eta() { return trk.see_eta(); }
+  const std::vector<int> &simvtx_bunchCrossing() { return trk.simvtx_bunchCrossing(); }
+  const std::vector<float> &sim_pca_dz() { return trk.sim_pca_dz(); }
+  const std::vector<float> &simvtx_y() { return trk.simvtx_y(); }
+  const std::vector<unsigned short> &inv_isStack() { return trk.inv_isStack(); }
+  const std::vector<unsigned int> &trk_nStrip() { return trk.trk_nStrip(); }
+  const std::vector<float> &trk_etaErr() { return trk.trk_etaErr(); }
+  const std::vector<std::vector<float> > &trk_simTrkNChi2() { return trk.trk_simTrkNChi2(); }
+  const std::vector<float> &pix_zz() { return trk.pix_zz(); }
+  const std::vector<int> &simhit_particle() { return trk.simhit_particle(); }
+  const std::vector<float> &see_dz() { return trk.see_dz(); }
+  const std::vector<float> &see_stateTrajPz() { return trk.see_stateTrajPz(); }
+  const std::vector<float> &trk_bestSimTrkShareFrac() { return trk.trk_bestSimTrkShareFrac(); }
+  const std::vector<float> &trk_lambdaErr() { return trk.trk_lambdaErr(); }
+  const std::vector<std::vector<float> > &see_simTrkShareFrac() { return trk.see_simTrkShareFrac(); }
+  const std::vector<std::vector<int> > &pix_simHitIdx() { return trk.pix_simHitIdx(); }
+  const std::vector<std::vector<int> > &vtx_trkIdx() { return trk.vtx_trkIdx(); }
+  const std::vector<unsigned short> &ph2_rod() { return trk.ph2_rod(); }
+  const std::vector<float> &vtx_ndof() { return trk.vtx_ndof(); }
+  const std::vector<unsigned int> &see_nPixel() { return trk.see_nPixel(); }
+  const std::vector<unsigned int> &sim_nStrip() { return trk.sim_nStrip(); }
+  const std::vector<int> &sim_bunchCrossing() { return trk.sim_bunchCrossing(); }
+  const std::vector<float> &see_stateCcov45() { return trk.see_stateCcov45(); }
+  const std::vector<unsigned short> &ph2_isStack() { return trk.ph2_isStack(); }
+  const std::vector<std::vector<float> > &sim_trkShareFrac() { return trk.sim_trkShareFrac(); }
+  const std::vector<std::vector<float> > &trk_simTrkShareFrac() { return trk.trk_simTrkShareFrac(); }
+  const std::vector<float> &sim_phi() { return trk.sim_phi(); }
+  const std::vector<unsigned short> &inv_side() { return trk.inv_side(); }
+  const std::vector<short> &vtx_fake() { return trk.vtx_fake(); }
+  const std::vector<unsigned int> &trk_nInactive() { return trk.trk_nInactive(); }
+  const std::vector<unsigned int> &trk_nPixelLay() { return trk.trk_nPixelLay(); }
+  const std::vector<float> &ph2_bbxi() { return trk.ph2_bbxi(); }
+  const std::vector<float> &vtx_xErr() { return trk.vtx_xErr(); }
+  const std::vector<float> &see_stateCcov25() { return trk.see_stateCcov25(); }
+  const std::vector<int> &sim_parentVtxIdx() { return trk.sim_parentVtxIdx(); }
+  const std::vector<float> &see_stateCcov23() { return trk.see_stateCcov23(); }
+  const std::vector<ULong64_t> &trk_algoMask() { return trk.trk_algoMask(); }
+  const std::vector<std::vector<int> > &trk_simTrkIdx() { return trk.trk_simTrkIdx(); }
+  const std::vector<float> &see_phiErr() { return trk.see_phiErr(); }
+  const std::vector<float> &trk_cotTheta() { return trk.trk_cotTheta(); }
+  const std::vector<unsigned int> &see_algo() { return trk.see_algo(); }
+  const std::vector<unsigned short> &simhit_module() { return trk.simhit_module(); }
+  const std::vector<std::vector<int> > &simvtx_daughterSimIdx() { return trk.simvtx_daughterSimIdx(); }
+  const std::vector<float> &vtx_x() { return trk.vtx_x(); }
+  const std::vector<int> &trk_seedIdx() { return trk.trk_seedIdx(); }
+  const std::vector<float> &simhit_y() { return trk.simhit_y(); }
+  const std::vector<unsigned short> &inv_layer() { return trk.inv_layer(); }
+  const std::vector<unsigned int> &trk_nLostLay() { return trk.trk_nLostLay(); }
+  const std::vector<unsigned short> &ph2_isLower() { return trk.ph2_isLower(); }
+  const std::vector<unsigned short> &pix_side() { return trk.pix_side(); }
+  const std::vector<unsigned short> &inv_isLower() { return trk.inv_isLower(); }
+  const std::vector<std::vector<int> > &ph2_trkIdx() { return trk.ph2_trkIdx(); }
+  const std::vector<unsigned int> &sim_nValid() { return trk.sim_nValid(); }
+  const std::vector<int> &simhit_simTrkIdx() { return trk.simhit_simTrkIdx(); }
+  const std::vector<unsigned short> &see_nCands() { return trk.see_nCands(); }
+  const std::vector<int> &see_bestSimTrkIdx() { return trk.see_bestSimTrkIdx(); }
+  const std::vector<float> &vtx_yErr() { return trk.vtx_yErr(); }
+  const std::vector<float> &trk_dzPV() { return trk.trk_dzPV(); }
+  const std::vector<float> &ph2_xy() { return trk.ph2_xy(); }
+  const std::vector<unsigned short> &inv_module() { return trk.inv_module(); }
+  const std::vector<float> &see_stateCcov55() { return trk.see_stateCcov55(); }
+  const std::vector<unsigned short> &pix_panel() { return trk.pix_panel(); }
+  const std::vector<unsigned short> &inv_ladder() { return trk.inv_ladder(); }
+  const std::vector<float> &ph2_xx() { return trk.ph2_xx(); }
+  const std::vector<float> &sim_pca_cotTheta() { return trk.sim_pca_cotTheta(); }
+  const std::vector<int> &simpv_idx() { return trk.simpv_idx(); }
+  const std::vector<float> &trk_inner_pz() { return trk.trk_inner_pz(); }
+  const std::vector<float> &see_chi2() { return trk.see_chi2(); }
+  const std::vector<float> &see_stateCcov35() { return trk.see_stateCcov35(); }
+  const std::vector<float> &see_stateCcov33() { return trk.see_stateCcov33(); }
+  const std::vector<unsigned int> &inv_detId() { return trk.inv_detId(); }
+  const std::vector<unsigned int> &see_offset() { return trk.see_offset(); }
+  const std::vector<unsigned int> &sim_nLay() { return trk.sim_nLay(); }
+  const std::vector<std::vector<int> > &sim_simHitIdx() { return trk.sim_simHitIdx(); }
+  const std::vector<unsigned short> &simhit_isUpper() { return trk.simhit_isUpper(); }
+  const std::vector<float> &see_stateCcov00() { return trk.see_stateCcov00(); }
+  const std::vector<unsigned short> &see_stopReason() { return trk.see_stopReason(); }
+  const std::vector<short> &vtx_valid() { return trk.vtx_valid(); }
   const unsigned int &lumi() { return trk.lumi(); }
-  const vector<float> &trk_refpoint_x() { return trk.trk_refpoint_x(); }
-  const vector<float> &trk_refpoint_y() { return trk.trk_refpoint_y(); }
-  const vector<float> &trk_refpoint_z() { return trk.trk_refpoint_z(); }
-  const vector<unsigned int> &sim_n3DLay() { return trk.sim_n3DLay(); }
-  const vector<unsigned int> &see_nPhase2OT() { return trk.see_nPhase2OT(); }
-  const vector<float> &trk_bestFromFirstHitSimTrkShareFracSimDenom() {
+  const std::vector<float> &trk_refpoint_x() { return trk.trk_refpoint_x(); }
+  const std::vector<float> &trk_refpoint_y() { return trk.trk_refpoint_y(); }
+  const std::vector<float> &trk_refpoint_z() { return trk.trk_refpoint_z(); }
+  const std::vector<unsigned int> &sim_n3DLay() { return trk.sim_n3DLay(); }
+  const std::vector<unsigned int> &see_nPhase2OT() { return trk.see_nPhase2OT(); }
+  const std::vector<float> &trk_bestFromFirstHitSimTrkShareFracSimDenom() {
     return trk.trk_bestFromFirstHitSimTrkShareFracSimDenom();
   }
-  const vector<float> &ph2_yy() { return trk.ph2_yy(); }
-  const vector<float> &ph2_yz() { return trk.ph2_yz(); }
-  const vector<unsigned short> &inv_blade() { return trk.inv_blade(); }
-  const vector<float> &trk_ptErr() { return trk.trk_ptErr(); }
-  const vector<float> &pix_zx() { return trk.pix_zx(); }
-  const vector<float> &simvtx_z() { return trk.simvtx_z(); }
-  const vector<unsigned int> &sim_nTrackerHits() { return trk.sim_nTrackerHits(); }
-  const vector<unsigned short> &ph2_subdet() { return trk.ph2_subdet(); }
-  const vector<float> &see_stateTrajPx() { return trk.see_stateTrajPx(); }
-  const vector<vector<int> > &simhit_hitIdx() { return trk.simhit_hitIdx(); }
-  const vector<unsigned short> &simhit_ladder() { return trk.simhit_ladder(); }
-  const vector<unsigned short> &ph2_layer() { return trk.ph2_layer(); }
-  const vector<float> &see_phi() { return trk.see_phi(); }
-  const vector<float> &trk_nChi2_1Dmod() { return trk.trk_nChi2_1Dmod(); }
-  const vector<float> &trk_inner_py() { return trk.trk_inner_py(); }
-  const vector<float> &trk_inner_px() { return trk.trk_inner_px(); }
-  const vector<float> &trk_dxyErr() { return trk.trk_dxyErr(); }
-  const vector<unsigned int> &sim_nPixelLay() { return trk.sim_nPixelLay(); }
-  const vector<unsigned int> &see_nValid() { return trk.see_nValid(); }
-  const vector<float> &trk_inner_pt() { return trk.trk_inner_pt(); }
-  const vector<float> &see_stateTrajGlbPy() { return trk.see_stateTrajGlbPy(); }
+  const std::vector<float> &ph2_yy() { return trk.ph2_yy(); }
+  const std::vector<float> &ph2_yz() { return trk.ph2_yz(); }
+  const std::vector<unsigned short> &inv_blade() { return trk.inv_blade(); }
+  const std::vector<float> &trk_ptErr() { return trk.trk_ptErr(); }
+  const std::vector<float> &pix_zx() { return trk.pix_zx(); }
+  const std::vector<float> &simvtx_z() { return trk.simvtx_z(); }
+  const std::vector<unsigned int> &sim_nTrackerHits() { return trk.sim_nTrackerHits(); }
+  const std::vector<unsigned short> &ph2_subdet() { return trk.ph2_subdet(); }
+  const std::vector<float> &see_stateTrajPx() { return trk.see_stateTrajPx(); }
+  const std::vector<std::vector<int> > &simhit_hitIdx() { return trk.simhit_hitIdx(); }
+  const std::vector<unsigned short> &simhit_ladder() { return trk.simhit_ladder(); }
+  const std::vector<unsigned short> &ph2_layer() { return trk.ph2_layer(); }
+  const std::vector<float> &see_phi() { return trk.see_phi(); }
+  const std::vector<float> &trk_nChi2_1Dmod() { return trk.trk_nChi2_1Dmod(); }
+  const std::vector<float> &trk_inner_py() { return trk.trk_inner_py(); }
+  const std::vector<float> &trk_inner_px() { return trk.trk_inner_px(); }
+  const std::vector<float> &trk_dxyErr() { return trk.trk_dxyErr(); }
+  const std::vector<unsigned int> &sim_nPixelLay() { return trk.sim_nPixelLay(); }
+  const std::vector<unsigned int> &see_nValid() { return trk.see_nValid(); }
+  const std::vector<float> &trk_inner_pt() { return trk.trk_inner_pt(); }
+  const std::vector<float> &see_stateTrajGlbPy() { return trk.see_stateTrajGlbPy(); }
 }  // namespace tas

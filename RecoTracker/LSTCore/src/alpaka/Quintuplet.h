@@ -103,7 +103,7 @@ namespace SDL {
     template <typename TQueue, typename TDevAcc>
     quintupletsBuffer(unsigned int nTotalQuintuplets, unsigned int nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
         : tripletIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * nTotalQuintuplets, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, 5 * nTotalQuintuplets, queue)),
+          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, Params_T5::kLayers * nTotalQuintuplets, queue)),
           nQuintuplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           totOccupancyQuintuplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
@@ -121,8 +121,8 @@ namespace SDL {
           regressionRadius_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           regressionG_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, 5 * nTotalQuintuplets, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 10 * nTotalQuintuplets, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, Params_T5::kLayers * nTotalQuintuplets, queue)),
+          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T5::kHits * nTotalQuintuplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           chiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           nonAnchorChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)) {
@@ -170,11 +170,11 @@ namespace SDL {
     quintupletsInGPU.tripletIndices[2 * quintupletIndex] = innerTripletIndex;
     quintupletsInGPU.tripletIndices[2 * quintupletIndex + 1] = outerTripletIndex;
 
-    quintupletsInGPU.lowerModuleIndices[5 * quintupletIndex] = lowerModule1;
-    quintupletsInGPU.lowerModuleIndices[5 * quintupletIndex + 1] = lowerModule2;
-    quintupletsInGPU.lowerModuleIndices[5 * quintupletIndex + 2] = lowerModule3;
-    quintupletsInGPU.lowerModuleIndices[5 * quintupletIndex + 3] = lowerModule4;
-    quintupletsInGPU.lowerModuleIndices[5 * quintupletIndex + 4] = lowerModule5;
+    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex] = lowerModule1;
+    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 1] = lowerModule2;
+    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 2] = lowerModule3;
+    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 3] = lowerModule4;
+    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 4] = lowerModule5;
     quintupletsInGPU.innerRadius[quintupletIndex] = __F2H(innerRadius);
     quintupletsInGPU.outerRadius[quintupletIndex] = __F2H(outerRadius);
     quintupletsInGPU.pt[quintupletIndex] = __F2H(pt);
@@ -187,22 +187,37 @@ namespace SDL {
     quintupletsInGPU.regressionRadius[quintupletIndex] = regressionRadius;
     quintupletsInGPU.regressionG[quintupletIndex] = regressionG;
     quintupletsInGPU.regressionF[quintupletIndex] = regressionF;
-    quintupletsInGPU.logicalLayers[5 * quintupletIndex] = tripletsInGPU.logicalLayers[3 * innerTripletIndex];
-    quintupletsInGPU.logicalLayers[5 * quintupletIndex + 1] = tripletsInGPU.logicalLayers[3 * innerTripletIndex + 1];
-    quintupletsInGPU.logicalLayers[5 * quintupletIndex + 2] = tripletsInGPU.logicalLayers[3 * innerTripletIndex + 2];
-    quintupletsInGPU.logicalLayers[5 * quintupletIndex + 3] = tripletsInGPU.logicalLayers[3 * outerTripletIndex + 1];
-    quintupletsInGPU.logicalLayers[5 * quintupletIndex + 4] = tripletsInGPU.logicalLayers[3 * outerTripletIndex + 2];
+    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex] =
+        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex];
+    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 1] =
+        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex + 1];
+    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 2] =
+        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex + 2];
+    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 3] =
+        tripletsInGPU.logicalLayers[Params_T3::kLayers * outerTripletIndex + 1];
+    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 4] =
+        tripletsInGPU.logicalLayers[Params_T3::kLayers * outerTripletIndex + 2];
 
-    quintupletsInGPU.hitIndices[10 * quintupletIndex] = tripletsInGPU.hitIndices[6 * innerTripletIndex];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 1] = tripletsInGPU.hitIndices[6 * innerTripletIndex + 1];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 2] = tripletsInGPU.hitIndices[6 * innerTripletIndex + 2];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 3] = tripletsInGPU.hitIndices[6 * innerTripletIndex + 3];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 4] = tripletsInGPU.hitIndices[6 * innerTripletIndex + 4];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 5] = tripletsInGPU.hitIndices[6 * innerTripletIndex + 5];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 6] = tripletsInGPU.hitIndices[6 * outerTripletIndex + 2];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 7] = tripletsInGPU.hitIndices[6 * outerTripletIndex + 3];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 8] = tripletsInGPU.hitIndices[6 * outerTripletIndex + 4];
-    quintupletsInGPU.hitIndices[10 * quintupletIndex + 9] = tripletsInGPU.hitIndices[6 * outerTripletIndex + 5];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 1] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 1];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 2] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 2];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 3] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 3];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 4] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 4];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 5] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 5];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 6] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 2];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 7] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 3];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 8] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 4];
+    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 9] =
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 5];
     quintupletsInGPU.bridgeRadius[quintupletIndex] = bridgeRadius;
     quintupletsInGPU.rzChiSquared[quintupletIndex] = rzChiSquared;
     quintupletsInGPU.chiSquared[quintupletIndex] = rPhiChiSquared;
@@ -217,7 +232,7 @@ namespace SDL {
                                                                uint16_t& lowerModuleIndex4,
                                                                uint16_t& lowerModuleIndex5,
                                                                float& chiSquared) {
-    //following Philip's layer number prescription
+    // Using sdlLayer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.sdlLayers[lowerModuleIndex1];
     const int layer2 = modulesInGPU.sdlLayers[lowerModuleIndex2];
     const int layer3 = modulesInGPU.sdlLayers[lowerModuleIndex3];
@@ -326,7 +341,7 @@ namespace SDL {
     const float& z4 = mdsInGPU.anchorZ[fourthMDIndex] / 100;
     const float& z5 = mdsInGPU.anchorZ[fifthMDIndex] / 100;
 
-    //following Philip's layer number prescription
+    // Using sdl_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.sdlLayers[lowerModuleIndex1];
     const int layer2 = modulesInGPU.sdlLayers[lowerModuleIndex2];
     const int layer3 = modulesInGPU.sdlLayers[lowerModuleIndex3];
@@ -350,7 +365,7 @@ namespace SDL {
     const float& y4 = mdsInGPU.anchorY[fourthMDIndex] / 100;
 
     float residual = 0;
-    float error = 0;
+    float error2 = 0;
     float x_center = g / 100, y_center = f / 100;
     float x_init = mdsInGPU.anchorX[thirdMDIndex] / 100;
     float y_init = mdsInGPU.anchorY[thirdMDIndex] / 100;
@@ -441,21 +456,21 @@ namespace SDL {
     if (moduleType3 == 0) {  // 0 is ps
       if (x4 < x3 && x3 < x2)
         Px = -alpaka::math::abs(acc, Px);
-      if (x4 > x3 && x3 > x2)
+      else if (x4 > x3 && x3 > x2)
         Px = alpaka::math::abs(acc, Px);
       if (y4 < y3 && y3 < y2)
         Py = -alpaka::math::abs(acc, Py);
-      if (y4 > y3 && y3 > y2)
+      else if (y4 > y3 && y3 > y2)
         Py = alpaka::math::abs(acc, Py);
     } else if (moduleType3 == 1)  // 1 is 2s
     {
       if (x3 < x2 && x2 < x1)
         Px = -alpaka::math::abs(acc, Px);
-      if (x3 > x2 && x2 > x1)
+      else if (x3 > x2 && x2 > x1)
         Px = alpaka::math::abs(acc, Px);
       if (y3 < y2 && y2 < y1)
         Py = -alpaka::math::abs(acc, Py);
-      if (y3 > y2 && y2 > y1)
+      else if (y3 > y2 && y2 > y1)
         Py = alpaka::math::abs(acc, Py);
     }
 
@@ -463,15 +478,14 @@ namespace SDL {
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
     float BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
-    float AB = alpaka::math::sqrt(acc, (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init));
-    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB * AB) / (2 * AO * BO));
+    float AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init);
+    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO));
     float ds = innerRadius / 100 * dPhi;
 
     float Pz = (z_init - z1) / ds * Pt;
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
 
-    float Bz = SDL::magnetic_field;
-    float a = -0.299792 * Bz * charge;
+    float a = -2.f * k2Rinv1GeVf * 100 * charge;  // multiply by 100 to make the correct length units
 
     float zsi, rtsi;
     int layeri, moduleTypei;
@@ -545,10 +559,10 @@ namespace SDL {
 
       //PS Modules
       if (moduleTypei == 0) {
-        error = 0.15f;
+        error2 = pixelPSZpitch * pixelPSZpitch;
       } else  //2S modules
       {
-        error = 5.0f;
+        error2 = strip2SZpitch * strip2SZpitch;
       }
 
       //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
@@ -566,18 +580,18 @@ namespace SDL {
       }
       if (i == 2 || i == 3) {
         residual = (layeri <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
-        float projection_missing = 1;
+        float projection_missing2 = 1.f;
         if (drdz < 1)
-          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                   ? 1.f
-                                   : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+          projection_missing2 = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                    ? 1.f
+                                    : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
         if (drdz > 1)
-          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                   ? 1.f
-                                   : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
-        error = error * projection_missing;
+          projection_missing2 = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                    ? 1.f
+                                    : (drdz * drdz) / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+        error2 = error2 * projection_missing2;
       }
-      rzChiSquared += 12 * (residual * residual) / (error * error);
+      rzChiSquared += 12 * (residual * residual) / error2;
     }
     // for set rzchi2 cut
     // if the 5 points are linear, helix calculation gives nan
@@ -595,8 +609,8 @@ namespace SDL {
 
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
-      residual4_linear = (moduleType4 == 0) ? residual4_linear / 0.15f : residual4_linear / 5.0f;
-      residual5_linear = (moduleType5 == 0) ? residual5_linear / 0.15f : residual5_linear / 5.0f;
+      residual4_linear = (moduleType4 == 0) ? residual4_linear / pixelPSZpitch : residual4_linear / strip2SZpitch;
+      residual5_linear = (moduleType5 == 0) ? residual5_linear / pixelPSZpitch : residual5_linear / strip2SZpitch;
       residual4_linear = residual4_linear * 100;
       residual5_linear = residual5_linear * 100;
 
@@ -1148,9 +1162,9 @@ namespace SDL {
 
     ModuleType moduleType;
     short moduleSubdet, moduleSide;
-    float inv1 = 0.01f / 0.009f;
-    float inv2 = 0.15f / 0.009f;
-    float inv3 = 2.4f / 0.009f;
+    float inv1 = widthPS / width2S;
+    float inv2 = pixelPSZpitch / width2S;
+    float inv3 = stripPSZpitch / width2S;
     for (size_t i = 0; i < nPoints; i++) {
       moduleType = modulesInGPU.moduleType[lowerModuleIndices[i]];
       moduleSubdet = modulesInGPU.subdets[lowerModuleIndices[i]];
@@ -1225,7 +1239,7 @@ namespace SDL {
                                                                     bool* isFlat,
                                                                     float& g,
                                                                     float& f,
-                                                                    float* sigmas,
+                                                                    float* sigmas2,
                                                                     float& chiSquared) {
     float radius = 0.f;
 
@@ -1269,19 +1283,17 @@ namespace SDL {
         xPrime = xs[i];
         yPrime = ys[i];
       }
-      sigmas[i] =
-          2 * alpaka::math::sqrt(
-                  acc, (xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
+      sigmas2[i] = 4 * ((xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
 
-      sigmaX1Squared += (xs[i] * xs[i]) / (sigmas[i] * sigmas[i]);
-      sigmaX2Squared += (ys[i] * ys[i]) / (sigmas[i] * sigmas[i]);
-      sigmaX1X2 += (xs[i] * ys[i]) / (sigmas[i] * sigmas[i]);
-      sigmaX1y += (xs[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / (sigmas[i] * sigmas[i]);
-      sigmaX2y += (ys[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / (sigmas[i] * sigmas[i]);
-      sigmaY += (xs[i] * xs[i] + ys[i] * ys[i]) / (sigmas[i] * sigmas[i]);
-      sigmaX1 += xs[i] / (sigmas[i] * sigmas[i]);
-      sigmaX2 += ys[i] / (sigmas[i] * sigmas[i]);
-      sigmaOne += 1.0f / (sigmas[i] * sigmas[i]);
+      sigmaX1Squared += (xs[i] * xs[i]) / sigmas2[i];
+      sigmaX2Squared += (ys[i] * ys[i]) / sigmas2[i];
+      sigmaX1X2 += (xs[i] * ys[i]) / sigmas2[i];
+      sigmaX1y += (xs[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / sigmas2[i];
+      sigmaX2y += (ys[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / sigmas2[i];
+      sigmaY += (xs[i] * xs[i] + ys[i] * ys[i]) / sigmas2[i];
+      sigmaX1 += xs[i] / sigmas2[i];
+      sigmaX2 += ys[i] / sigmas2[i];
+      sigmaOne += 1.0f / sigmas2[i];
     }
     float denominator = (sigmaX1X2 - sigmaX1 * sigmaX2) * (sigmaX1X2 - sigmaX1 * sigmaX2) -
                         (sigmaX1Squared - sigmaX1 * sigmaX1) * (sigmaX2Squared - sigmaX2 * sigmaX2);
@@ -1309,7 +1321,7 @@ namespace SDL {
     chiSquared = 0.f;
     for (size_t i = 0; i < nPoints; i++) {
       chiSquared += (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) *
-                    (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) / (sigmas[i] * sigmas[i]);
+                    (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) / sigmas2[i];
     }
     return radius;
   };
@@ -1330,7 +1342,7 @@ namespace SDL {
     // compute chi squared
     float c = g * g + f * f - radius * radius;
     float chiSquared = 0.f;
-    float absArctanSlope, angleM, xPrime, yPrime, sigma;
+    float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope = ((slopes[i] != SDL::SDL_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
                                                     : 0.5f * float(M_PI));
@@ -1353,10 +1365,9 @@ namespace SDL {
         xPrime = xs[i];
         yPrime = ys[i];
       }
-      sigma = 2 * alpaka::math::sqrt(
-                      acc, (xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
+      sigma2 = 4 * ((xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
       chiSquared += (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) *
-                    (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / (sigma * sigma);
+                    (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / sigma2;
     }
     return chiSquared;
   };
@@ -1489,8 +1500,6 @@ namespace SDL {
                                                                    float& betaOutCut,
                                                                    float& deltaBetaCut,
                                                                    const float ptCut) {
-    bool pass = true;
-
     bool isPS_InLo = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == SDL::PS);
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == SDL::PS);
 
@@ -1519,9 +1528,8 @@ namespace SDL {
     //Cut 1 - z compatibility
     zOut = z_OutLo;
     rtOut = rt_OutLo;
-    pass = pass and ((z_OutLo >= zLo) && (z_OutLo <= zHi));
-    if (not pass)
-      return pass;
+    if ((z_OutLo < zLo) || (z_OutLo > zHi))
+      return false;
 
     float drt_OutLo_InLo = (rt_OutLo - rt_InLo);
     float r3_InLo = alpaka::math::sqrt(acc, z_InLo * z_InLo + rt_InLo * rt_InLo);
@@ -1533,10 +1541,10 @@ namespace SDL {
     float coshEta = dr3_InSeg / drt_InSeg;
     float dzErr = (zpitch_InLo + zpitch_OutLo) * (zpitch_InLo + zpitch_OutLo) * 2.f;
 
-    float sdlThetaMulsF = 0.015f * alpaka::math::sqrt(acc, 0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) *
-                          alpaka::math::sqrt(acc, r3_InLo / rt_InLo);
-    float sdlMuls = sdlThetaMulsF * 3.f / ptCut * 4.f;  // will need a better guess than x4?
-    dzErr += sdlMuls * sdlMuls * drt_OutLo_InLo * drt_OutLo_InLo / 3.f * coshEta * coshEta;  //sloppy
+    float sdlThetaMulsF2 =
+        (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) * (r3_InLo / rt_InLo);
+    float sdlMuls2 = sdlThetaMulsF2 * 9.f / (ptCut * ptCut) * 16.f;
+    dzErr += sdlMuls2 * drt_OutLo_InLo * drt_OutLo_InLo / 3.f * coshEta * coshEta;
     dzErr = alpaka::math::sqrt(acc, dzErr);
 
     // Constructing upper and lower bound
@@ -1548,18 +1556,16 @@ namespace SDL {
     zHiPointed = z_InLo + dzMean * (z_InLo < 0.f ? 1.f : dzDrtScale) + zWindow;
 
     // Cut #2: Pointed Z (Inner segment two MD points to outer segment inner MD)
-    pass = pass and ((z_OutLo >= zLoPointed) && (z_OutLo <= zHiPointed));
-    if (not pass)
-      return pass;
+    if ((z_OutLo < zLoPointed) || (z_OutLo > zHiPointed))
+      return false;
 
     float sdlPVoff = 0.1f / rt_OutLo;
-    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls * sdlMuls + sdlPVoff * sdlPVoff);
+    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls2 + sdlPVoff * sdlPVoff);
 
     deltaPhiPos = SDL::phi_mpi_pi(acc, mdsInGPU.anchorPhi[fourthMDIndex] - mdsInGPU.anchorPhi[secondMDIndex]);
     // Cut #3: FIXME:deltaPhiPos can be tighter
-    pass = pass and (alpaka::math::abs(acc, deltaPhiPos) <= sdlCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, deltaPhiPos) > sdlCut)
+      return false;
 
     float midPointX = 0.5f * (mdsInGPU.anchorX[firstMDIndex] + mdsInGPU.anchorX[thirdMDIndex]);
     float midPointY = 0.5f * (mdsInGPU.anchorY[firstMDIndex] + mdsInGPU.anchorY[thirdMDIndex]);
@@ -1569,10 +1575,8 @@ namespace SDL {
     dPhi = SDL::deltaPhi(acc, midPointX, midPointY, diffX, diffY);
 
     // Cut #4: deltaPhiChange
-    pass = pass and (alpaka::math::abs(acc, dPhi) <= sdlCut);
-    //lots of array accesses below. Cut here!
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, dPhi) > sdlCut)
+      return false;
 
     // First obtaining the raw betaIn and betaOut values without any correction and just purely based on the mini-doublet hit positions
 
@@ -1655,9 +1659,8 @@ namespace SDL {
         (0.02f / drt_InSeg);
 
     //Cut #5: first beta cut
-    pass = pass and (alpaka::math::abs(acc, betaInRHmin) < betaInCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaInRHmin) >= betaInCut)
+      return false;
 
     float betaAv = 0.5f * (betaIn + betaOut);
     pt_beta = drt_tl_axis * SDL::k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);
@@ -1683,10 +1686,9 @@ namespace SDL {
     betaOutRHmin *= betaOutMMSF;
     betaOutRHmax *= betaOutMMSF;
 
-    const float dBetaMuls =
-        sdlThetaMulsF * 4.f /
-        alpaka::math::min(
-            acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confimm the range-out value of 7 GeV
+    float min_ptBeta_maxPtBeta = alpaka::math::min(
+        acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confimm the range-out value of 7 GeV
+    const float dBetaMuls2 = sdlThetaMulsF2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg = alpaka::math::max(
         acc,
@@ -1719,25 +1721,22 @@ namespace SDL {
     //FIXME: need faster version
     betaOutCut =
         alpaka::math::asin(acc, alpaka::math::min(acc, drt_tl_axis * SDL::k2Rinv1GeVf / ptCut, SDL::sinAlphaMax)) +
-        (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls * dBetaMuls);
+        (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
-    pass = pass and ((alpaka::math::abs(acc, betaOut) < betaOutCut));
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaOut) >= betaOutCut)
+      return false;
 
     float dBetaRes = 0.02f / alpaka::math::min(acc, sdOut_d, drt_InSeg);
     float dBetaCut2 =
-        (dBetaRes * dBetaRes * 2.0f + dBetaMuls * dBetaMuls + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
+        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
 
     float dBeta = betaIn - betaOut;
     deltaBetaCut = alpaka::math::sqrt(acc, dBetaCut2);
-    pass = pass and (dBeta * dBeta <= dBetaCut2);
-
-    return pass;
+    return dBeta * dBeta <= dBetaCut2;
   };
 
   template <typename TAcc>
@@ -1771,7 +1770,6 @@ namespace SDL {
                                                                    float& deltaBetaCut,
                                                                    float& kZ,
                                                                    const float ptCut) {
-    bool pass = true;
     bool isPS_InLo = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == SDL::PS);
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == SDL::PS);
 
@@ -1796,9 +1794,8 @@ namespace SDL {
     zLo = z_InLo + (z_InLo - SDL::deltaZLum) * (rtRatio_OutLoInLo - 1.f) * (z_InLo > 0.f ? 1.f : dzDrtScale) - zGeom;
 
     // Cut #0: Preliminary (Only here in endcap case)
-    pass = pass and (z_InLo * z_OutLo > 0);
-    if (not pass)
-      return pass;
+    if (z_InLo * z_OutLo <= 0)
+      return false;
 
     float dLum = SDL::copysignf(SDL::deltaZLum, z_InLo);
     bool isOutSgInnerMDPS = modulesInGPU.moduleType[outerInnerLowerModuleIndex] == SDL::PS;
@@ -1810,9 +1807,8 @@ namespace SDL {
     rtOut = rt_OutLo;
 
     //Cut #1: rt condition
-    pass = pass and (rtOut >= rtLo);
-    if (not pass)
-      return pass;
+    if (rtOut < rtLo)
+      return false;
 
     float zInForHi = z_InLo - zGeom1 - dLum;
     if (zInForHi * z_InLo < 0) {
@@ -1821,9 +1817,8 @@ namespace SDL {
     rtHi = rt_InLo * (1.f + (z_OutLo - z_InLo + zGeom1) / zInForHi) + rtGeom1;
 
     //Cut #2: rt condition
-    pass = pass and ((rt_OutLo >= rtLo) && (rt_OutLo <= rtHi));
-    if (not pass)
-      return pass;
+    if ((rt_OutLo < rtLo) || (rt_OutLo > rtHi))
+      return false;
 
     float rIn = alpaka::math::sqrt(acc, z_InLo * z_InLo + rt_InLo * rt_InLo);
     const float drtSDIn = rt_InOut - rt_InLo;
@@ -1838,27 +1833,24 @@ namespace SDL {
     kZ = (z_OutLo - z_InLo) / dzSDIn;
     float drtErr =
         zGeom1_another * zGeom1_another * drtSDIn * drtSDIn / dzSDIn / dzSDIn * (1.f - 2.f * kZ + 2.f * kZ * kZ);
-    const float sdlThetaMulsF = 0.015f * alpaka::math::sqrt(acc, 0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) *
-                                alpaka::math::sqrt(acc, rIn / rt_InLo);
-    const float sdlMuls = sdlThetaMulsF * 3.f / ptCut * 4.f;  //will need a better guess than x4?
-    drtErr +=
-        sdlMuls * sdlMuls * multDzDr * multDzDr / 3.f * coshEta * coshEta;  //sloppy: relative muls is 1/3 of total muls
+    const float sdlThetaMulsF2 =
+        (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) * (rIn / rt_InLo);
+    const float sdlMuls2 = sdlThetaMulsF2 * 9.f / (ptCut * ptCut) * 16.f;
+    drtErr += sdlMuls2 * multDzDr * multDzDr / 3.f * coshEta * coshEta;
     drtErr = alpaka::math::sqrt(acc, drtErr);
 
     //Cut #3: rt-z pointed
-    pass = pass and ((kZ >= 0) && (rtOut >= rtLo) && (rtOut <= rtHi));
-    if (not pass)
-      return pass;
+    if ((kZ < 0) || (rtOut < rtLo) || (rtOut > rtHi))
+      return false;
 
     const float sdlPVoff = 0.1f / rt_OutLo;
-    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls * sdlMuls + sdlPVoff * sdlPVoff);
+    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls2 + sdlPVoff * sdlPVoff);
 
     deltaPhiPos = SDL::phi_mpi_pi(acc, mdsInGPU.anchorPhi[fourthMDIndex] - mdsInGPU.anchorPhi[secondMDIndex]);
 
     //Cut #4: deltaPhiPos can be tighter
-    pass = pass and (alpaka::math::abs(acc, deltaPhiPos) <= sdlCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, deltaPhiPos) > sdlCut)
+      return false;
 
     float midPointX = 0.5f * (mdsInGPU.anchorX[firstMDIndex] + mdsInGPU.anchorX[thirdMDIndex]);
     float midPointY = 0.5f * (mdsInGPU.anchorY[firstMDIndex] + mdsInGPU.anchorY[thirdMDIndex]);
@@ -1867,14 +1859,13 @@ namespace SDL {
 
     dPhi = SDL::deltaPhi(acc, midPointX, midPointY, diffX, diffY);
     // Cut #5: deltaPhiChange
-    pass = pass and (alpaka::math::abs(acc, dPhi) <= sdlCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, dPhi) > sdlCut)
+      return false;
 
     float sdIn_alpha = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
     float sdIn_alpha_min = __H2F(segmentsInGPU.dPhiChangeMins[innerSegmentIndex]);
     float sdIn_alpha_max = __H2F(segmentsInGPU.dPhiChangeMaxs[innerSegmentIndex]);
-    float sdOut_alpha = sdIn_alpha;  //weird
+    float sdOut_alpha = sdIn_alpha;
 
     float sdOut_alphaOut = SDL::phi_mpi_pi(acc,
                                            SDL::phi(acc,
@@ -1938,9 +1929,8 @@ namespace SDL {
                 (0.02f / sdIn_d);
 
     //Cut #6: first beta cut
-    pass = pass and (alpaka::math::abs(acc, betaInRHmin) < betaInCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaInRHmin) >= betaInCut)
+      return false;
 
     float betaAv = 0.5f * (betaIn + betaOut);
     pt_beta = dr * SDL::k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);
@@ -1968,10 +1958,9 @@ namespace SDL {
     betaOutRHmin *= betaOutMMSF;
     betaOutRHmax *= betaOutMMSF;
 
-    const float dBetaMuls =
-        sdlThetaMulsF * 4.f /
-        alpaka::math::min(
-            acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confirm the range-out value of 7 GeV
+    float min_ptBeta_maxPtBeta = alpaka::math::min(
+        acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confirm the range-out value of 7 GeV
+    const float dBetaMuls2 = sdlThetaMulsF2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg = alpaka::math::max(
         acc,
@@ -2002,25 +1991,22 @@ namespace SDL {
     const float dBetaROut2 = dBetaROut * dBetaROut;
     //FIXME: need faster version
     betaOutCut = alpaka::math::asin(acc, alpaka::math::min(acc, dr * SDL::k2Rinv1GeVf / ptCut, SDL::sinAlphaMax)) +
-                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls * dBetaMuls);
+                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
-    pass = pass and (alpaka::math::abs(acc, betaOut) < betaOutCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaOut) >= betaOutCut)
+      return false;
 
     float dBetaRes = 0.02f / alpaka::math::min(acc, sdOut_d, sdIn_d);
     float dBetaCut2 =
-        (dBetaRes * dBetaRes * 2.0f + dBetaMuls * dBetaMuls + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
+        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
     float dBeta = betaIn - betaOut;
     deltaBetaCut = alpaka::math::sqrt(acc, dBetaCut2);
     //Cut #7: Cut on dBet
-    pass = pass and (dBeta * dBeta <= dBetaCut2);
-
-    return pass;
+    return dBeta * dBeta <= dBetaCut2;
   };
 
   template <typename TAcc>
@@ -2054,8 +2040,6 @@ namespace SDL {
                                                                    float& deltaBetaCut,
                                                                    float& kZ,
                                                                    const float ptCut) {
-    bool pass = true;
-
     bool isPS_InLo = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == SDL::PS);
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == SDL::PS);
 
@@ -2081,9 +2065,8 @@ namespace SDL {
           zGeom;  //slope-correction only on outer end
 
     // Cut #0: Preliminary (Only here in endcap case)
-    pass = pass and ((z_InLo * z_OutLo) > 0);
-    if (not pass)
-      return pass;
+    if ((z_InLo * z_OutLo) <= 0)
+      return false;
 
     float dLum = SDL::copysignf(SDL::deltaZLum, z_InLo);
     bool isOutSgInnerMDPS = modulesInGPU.moduleType[outerInnerLowerModuleIndex] == SDL::PS;
@@ -2103,9 +2086,8 @@ namespace SDL {
 
     rtHi = rt_InLo * (1.f + dz / (z_InLo - dLum)) + rtGeom;
 
-    pass = pass and ((rtOut >= rtLo) && (rtOut <= rtHi));
-    if (not pass)
-      return pass;
+    if ((rtOut < rtLo) || (rtOut > rtHi))
+      return false;
 
     bool isInSgOuterMDPS = modulesInGPU.moduleType[innerOuterLowerModuleIndex] == SDL::PS;
 
@@ -2118,14 +2100,14 @@ namespace SDL {
     float multDzDr = dzOutInAbs * coshEta / (coshEta * coshEta - 1.f);
 
     kZ = (z_OutLo - z_InLo) / dzSDIn;
-    float sdlThetaMulsF = 0.015f * alpaka::math::sqrt(acc, 0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f);
+    float sdlThetaMulsF2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f);
 
-    float sdlMuls = sdlThetaMulsF * 3.f / ptCut * 4.f;  //will need a better guess than x4?
+    float sdlMuls2 = sdlThetaMulsF2 * 9.f / (ptCut * ptCut) * 16.f;
 
     float drtErr = alpaka::math::sqrt(
         acc,
         SDL::pixelPSZpitch * SDL::pixelPSZpitch * 2.f / (dzSDIn * dzSDIn) * (dzOutInAbs * dzOutInAbs) +
-            sdlMuls * sdlMuls * multDzDr * multDzDr / 3.f * coshEta * coshEta);
+            sdlMuls2 * multDzDr * multDzDr / 3.f * coshEta * coshEta);
 
     float drtMean = drtSDIn * dzOutInAbs / alpaka::math::abs(acc, dzSDIn);
     float rtWindow = drtErr + rtGeom;
@@ -2137,19 +2119,17 @@ namespace SDL {
 
     if (isInSgInnerMDPS and isInSgOuterMDPS)  // If both PS then we can point
     {
-      pass = pass and (kZ >= 0 and rtOut >= rtLo_point and rtOut <= rtHi_point);
-      if (not pass)
-        return pass;
+      if (kZ < 0 || rtOut < rtLo_point || rtOut > rtHi_point)
+        return false;
     }
 
     float sdlPVoff = 0.1f / rtOut;
-    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls * sdlMuls + sdlPVoff * sdlPVoff);
+    sdlCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, sdlMuls2 + sdlPVoff * sdlPVoff);
 
     deltaPhiPos = SDL::phi_mpi_pi(acc, mdsInGPU.anchorPhi[fourthMDIndex] - mdsInGPU.anchorPhi[secondMDIndex]);
 
-    pass = pass and (alpaka::math::abs(acc, deltaPhiPos) <= sdlCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, deltaPhiPos) > sdlCut)
+      return false;
 
     float midPointX = 0.5f * (mdsInGPU.anchorX[firstMDIndex] + mdsInGPU.anchorX[thirdMDIndex]);
     float midPointY = 0.5f * (mdsInGPU.anchorY[firstMDIndex] + mdsInGPU.anchorY[thirdMDIndex]);
@@ -2159,9 +2139,8 @@ namespace SDL {
     dPhi = SDL::deltaPhi(acc, midPointX, midPointY, diffX, diffY);
 
     // Cut #5: deltaPhiChange
-    pass = pass and ((alpaka::math::abs(acc, dPhi) <= sdlCut));
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, dPhi) > sdlCut)
+      return false;
 
     float sdIn_alpha = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
     float sdOut_alpha = sdIn_alpha;  //weird
@@ -2217,9 +2196,8 @@ namespace SDL {
                 (0.02f / sdIn_d);
 
     //Cut #6: first beta cut
-    pass = pass and (alpaka::math::abs(acc, betaInRHmin) < betaInCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaInRHmin) >= betaInCut)
+      return false;
 
     float betaAv = 0.5f * (betaIn + betaOut);
     pt_beta = dr * SDL::k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);
@@ -2247,10 +2225,9 @@ namespace SDL {
     betaOutRHmin *= betaOutMMSF;
     betaOutRHmax *= betaOutMMSF;
 
-    const float dBetaMuls =
-        sdlThetaMulsF * 4.f /
-        alpaka::math::min(
-            acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confirm the range-out value of 7 GeV
+    float min_ptBeta_maxPtBeta = alpaka::math::min(
+        acc, alpaka::math::abs(acc, pt_beta), SDL::pt_betaMax);  //need to confirm the range-out value of 7 GeV
+    const float dBetaMuls2 = sdlThetaMulsF2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg = alpaka::math::max(
         acc,
@@ -2269,16 +2246,15 @@ namespace SDL {
     float dBetaROut2 = 0;  //TODO-RH
     //FIXME: need faster version
     betaOutCut = alpaka::math::asin(acc, alpaka::math::min(acc, dr * SDL::k2Rinv1GeVf / ptCut, SDL::sinAlphaMax)) +
-                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls * dBetaMuls);
+                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
-    pass = pass and (alpaka::math::abs(acc, betaOut) < betaOutCut);
-    if (not pass)
-      return pass;
+    if (alpaka::math::abs(acc, betaOut) >= betaOutCut)
+      return false;
 
     float dBetaRes = 0.02f / alpaka::math::min(acc, sdOut_d, sdIn_d);
     float dBetaCut2 =
-        (dBetaRes * dBetaRes * 2.0f + dBetaMuls * dBetaMuls + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
+        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaRIn2 + dBetaROut2 +
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
@@ -2286,9 +2262,7 @@ namespace SDL {
     //Cut #7: Cut on dBeta
     deltaBetaCut = alpaka::math::sqrt(acc, dBetaCut2);
 
-    pass = pass and (dBeta * dBeta <= dBetaCut2);
-
-    return pass;
+    return dBeta * dBeta <= dBetaCut2;
   };
 
   template <typename TAcc>
@@ -2325,8 +2299,6 @@ namespace SDL {
                                                                 float& deltaBetaCut,
                                                                 float& kZ,
                                                                 const float ptCut) {
-    bool pass = false;
-
     zLo = -999;
     zHi = -999;
     rtLo = -999;
@@ -2503,7 +2475,7 @@ namespace SDL {
                                           ptCut);
     }
 
-    return pass;
+    return false;
   };
 
   template <typename TAcc>
@@ -2530,7 +2502,6 @@ namespace SDL {
                                                                float& nonAnchorChiSquared,
                                                                bool& TightCutFlag,
                                                                const float ptCut) {
-    bool pass = true;
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex];
@@ -2555,77 +2526,75 @@ namespace SDL {
     unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];
     unsigned int fifthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
 
-    pass = pass and runQuintupletAlgoSelector(acc,
-                                              modulesInGPU,
-                                              mdsInGPU,
-                                              segmentsInGPU,
-                                              lowerModuleIndex1,
-                                              lowerModuleIndex2,
-                                              lowerModuleIndex3,
-                                              lowerModuleIndex4,
-                                              firstSegmentIndex,
-                                              thirdSegmentIndex,
-                                              firstMDIndex,
-                                              secondMDIndex,
-                                              thirdMDIndex,
-                                              fourthMDIndex,
-                                              zOut,
-                                              rtOut,
-                                              deltaPhiPos,
-                                              deltaPhi,
-                                              betaIn,
-                                              betaOut,
-                                              pt_beta,
-                                              zLo,
-                                              zHi,
-                                              rtLo,
-                                              rtHi,
-                                              zLoPointed,
-                                              zHiPointed,
-                                              sdlCut,
-                                              betaInCut,
-                                              betaOutCut,
-                                              deltaBetaCut,
-                                              kZ,
-                                              ptCut);
-    if (not pass)
-      return pass;
+    if (not runQuintupletAlgoSelector(acc,
+                                      modulesInGPU,
+                                      mdsInGPU,
+                                      segmentsInGPU,
+                                      lowerModuleIndex1,
+                                      lowerModuleIndex2,
+                                      lowerModuleIndex3,
+                                      lowerModuleIndex4,
+                                      firstSegmentIndex,
+                                      thirdSegmentIndex,
+                                      firstMDIndex,
+                                      secondMDIndex,
+                                      thirdMDIndex,
+                                      fourthMDIndex,
+                                      zOut,
+                                      rtOut,
+                                      deltaPhiPos,
+                                      deltaPhi,
+                                      betaIn,
+                                      betaOut,
+                                      pt_beta,
+                                      zLo,
+                                      zHi,
+                                      rtLo,
+                                      rtHi,
+                                      zLoPointed,
+                                      zHiPointed,
+                                      sdlCut,
+                                      betaInCut,
+                                      betaOutCut,
+                                      deltaBetaCut,
+                                      kZ,
+                                      ptCut))
+      return false;
 
-    pass = pass and runQuintupletAlgoSelector(acc,
-                                              modulesInGPU,
-                                              mdsInGPU,
-                                              segmentsInGPU,
-                                              lowerModuleIndex1,
-                                              lowerModuleIndex2,
-                                              lowerModuleIndex4,
-                                              lowerModuleIndex5,
-                                              firstSegmentIndex,
-                                              fourthSegmentIndex,
-                                              firstMDIndex,
-                                              secondMDIndex,
-                                              fourthMDIndex,
-                                              fifthMDIndex,
-                                              zOut,
-                                              rtOut,
-                                              deltaPhiPos,
-                                              deltaPhi,
-                                              betaIn,
-                                              betaOut,
-                                              pt_beta,
-                                              zLo,
-                                              zHi,
-                                              rtLo,
-                                              rtHi,
-                                              zLoPointed,
-                                              zHiPointed,
-                                              sdlCut,
-                                              betaInCut,
-                                              betaOutCut,
-                                              deltaBetaCut,
-                                              kZ,
-                                              ptCut);
-    if (not pass)
-      return pass;
+    if (not runQuintupletAlgoSelector(acc,
+                                      modulesInGPU,
+                                      mdsInGPU,
+                                      segmentsInGPU,
+                                      lowerModuleIndex1,
+                                      lowerModuleIndex2,
+                                      lowerModuleIndex4,
+                                      lowerModuleIndex5,
+                                      firstSegmentIndex,
+                                      fourthSegmentIndex,
+                                      firstMDIndex,
+                                      secondMDIndex,
+                                      fourthMDIndex,
+                                      fifthMDIndex,
+                                      zOut,
+                                      rtOut,
+                                      deltaPhiPos,
+                                      deltaPhi,
+                                      betaIn,
+                                      betaOut,
+                                      pt_beta,
+                                      zLo,
+                                      zHi,
+                                      rtLo,
+                                      rtHi,
+                                      zLoPointed,
+                                      zHiPointed,
+                                      sdlCut,
+                                      betaInCut,
+                                      betaOutCut,
+                                      deltaBetaCut,
+                                      kZ,
+                                      ptCut))
+      return false;
 
     float x1 = mdsInGPU.anchorX[firstMDIndex];
     float x2 = mdsInGPU.anchorX[secondMDIndex];
@@ -2717,130 +2686,129 @@ namespace SDL {
 #ifdef USE_RZCHI2
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
 
-    bool passRZChi2 = passT5RZConstraint(acc,
-                                         modulesInGPU,
-                                         mdsInGPU,
-                                         firstMDIndex,
-                                         secondMDIndex,
-                                         thirdMDIndex,
-                                         fourthMDIndex,
-                                         fifthMDIndex,
-                                         lowerModuleIndex1,
-                                         lowerModuleIndex2,
-                                         lowerModuleIndex3,
-                                         lowerModuleIndex4,
-                                         lowerModuleIndex5,
-                                         rzChiSquared,
-                                         inner_pt,
-                                         innerRadius,
-                                         g,
-                                         f,
-                                         TightCutFlag);
-    pass = pass and passRZChi2;
-    if (not pass)
-      return pass;
+    if (not passT5RZConstraint(acc,
+                               modulesInGPU,
+                               mdsInGPU,
+                               firstMDIndex,
+                               secondMDIndex,
+                               thirdMDIndex,
+                               fourthMDIndex,
+                               fifthMDIndex,
+                               lowerModuleIndex1,
+                               lowerModuleIndex2,
+                               lowerModuleIndex3,
+                               lowerModuleIndex4,
+                               lowerModuleIndex5,
+                               rzChiSquared,
+                               inner_pt,
+                               innerRadius,
+                               g,
+                               f,
+                               TightCutFlag))
+      return false;
 #else
     rzChiSquared = -1;
 #endif
-    pass = pass && (innerRadius >= 0.95f * ptCut / (2.f * k2Rinv1GeVf));
+    if (innerRadius < 0.95f * ptCut / (2.f * k2Rinv1GeVf))
+      return false;
 
     float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax, outerInvRadiusMin,
         outerInvRadiusMax;
 
     //split by category
-    bool tempPass;
+    bool matchedRadii;
     if (modulesInGPU.subdets[lowerModuleIndex1] == SDL::Barrel and
         modulesInGPU.subdets[lowerModuleIndex2] == SDL::Barrel and
         modulesInGPU.subdets[lowerModuleIndex3] == SDL::Barrel and
         modulesInGPU.subdets[lowerModuleIndex4] == SDL::Barrel and
         modulesInGPU.subdets[lowerModuleIndex5] == SDL::Barrel) {
-      tempPass = matchRadiiBBBBB(acc,
-                                 innerRadius,
-                                 bridgeRadius,
-                                 outerRadius,
-                                 innerInvRadiusMin,
-                                 innerInvRadiusMax,
-                                 bridgeInvRadiusMin,
-                                 bridgeInvRadiusMax,
-                                 outerInvRadiusMin,
-                                 outerInvRadiusMax);
+      matchedRadii = matchRadiiBBBBB(acc,
+                                     innerRadius,
+                                     bridgeRadius,
+                                     outerRadius,
+                                     innerInvRadiusMin,
+                                     innerInvRadiusMax,
+                                     bridgeInvRadiusMin,
+                                     bridgeInvRadiusMax,
+                                     outerInvRadiusMin,
+                                     outerInvRadiusMax);
     } else if (modulesInGPU.subdets[lowerModuleIndex1] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex2] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex3] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex4] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex5] == SDL::Endcap) {
-      tempPass = matchRadiiBBBBE(acc,
-                                 innerRadius,
-                                 bridgeRadius,
-                                 outerRadius,
-                                 innerRadiusMin2S,
-                                 innerRadiusMax2S,
-                                 bridgeRadiusMin2S,
-                                 bridgeRadiusMax2S,
-                                 outerRadiusMin2S,
-                                 outerRadiusMax2S,
-                                 innerInvRadiusMin,
-                                 innerInvRadiusMax,
-                                 bridgeInvRadiusMin,
-                                 bridgeInvRadiusMax,
-                                 outerInvRadiusMin,
-                                 outerInvRadiusMax);
+      matchedRadii = matchRadiiBBBBE(acc,
+                                     innerRadius,
+                                     bridgeRadius,
+                                     outerRadius,
+                                     innerRadiusMin2S,
+                                     innerRadiusMax2S,
+                                     bridgeRadiusMin2S,
+                                     bridgeRadiusMax2S,
+                                     outerRadiusMin2S,
+                                     outerRadiusMax2S,
+                                     innerInvRadiusMin,
+                                     innerInvRadiusMax,
+                                     bridgeInvRadiusMin,
+                                     bridgeInvRadiusMax,
+                                     outerInvRadiusMin,
+                                     outerInvRadiusMax);
     } else if (modulesInGPU.subdets[lowerModuleIndex1] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex2] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex3] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex4] == SDL::Endcap and
                modulesInGPU.subdets[lowerModuleIndex5] == SDL::Endcap) {
       if (modulesInGPU.layers[lowerModuleIndex1] == 1) {
-        tempPass = matchRadiiBBBEE12378(acc,
-                                        innerRadius,
-                                        bridgeRadius,
-                                        outerRadius,
-                                        innerRadiusMin2S,
-                                        innerRadiusMax2S,
-                                        bridgeRadiusMin2S,
-                                        bridgeRadiusMax2S,
-                                        outerRadiusMin2S,
-                                        outerRadiusMax2S,
-                                        innerInvRadiusMin,
-                                        innerInvRadiusMax,
-                                        bridgeInvRadiusMin,
-                                        bridgeInvRadiusMax,
-                                        outerInvRadiusMin,
-                                        outerInvRadiusMax);
+        matchedRadii = matchRadiiBBBEE12378(acc,
+                                            innerRadius,
+                                            bridgeRadius,
+                                            outerRadius,
+                                            innerRadiusMin2S,
+                                            innerRadiusMax2S,
+                                            bridgeRadiusMin2S,
+                                            bridgeRadiusMax2S,
+                                            outerRadiusMin2S,
+                                            outerRadiusMax2S,
+                                            innerInvRadiusMin,
+                                            innerInvRadiusMax,
+                                            bridgeInvRadiusMin,
+                                            bridgeInvRadiusMax,
+                                            outerInvRadiusMin,
+                                            outerInvRadiusMax);
       } else if (modulesInGPU.layers[lowerModuleIndex1] == 2) {
-        tempPass = matchRadiiBBBEE23478(acc,
-                                        innerRadius,
-                                        bridgeRadius,
-                                        outerRadius,
-                                        innerRadiusMin2S,
-                                        innerRadiusMax2S,
-                                        bridgeRadiusMin2S,
-                                        bridgeRadiusMax2S,
-                                        outerRadiusMin2S,
-                                        outerRadiusMax2S,
-                                        innerInvRadiusMin,
-                                        innerInvRadiusMax,
-                                        bridgeInvRadiusMin,
-                                        bridgeInvRadiusMax,
-                                        outerInvRadiusMin,
-                                        outerInvRadiusMax);
+        matchedRadii = matchRadiiBBBEE23478(acc,
+                                            innerRadius,
+                                            bridgeRadius,
+                                            outerRadius,
+                                            innerRadiusMin2S,
+                                            innerRadiusMax2S,
+                                            bridgeRadiusMin2S,
+                                            bridgeRadiusMax2S,
+                                            outerRadiusMin2S,
+                                            outerRadiusMax2S,
+                                            innerInvRadiusMin,
+                                            innerInvRadiusMax,
+                                            bridgeInvRadiusMin,
+                                            bridgeInvRadiusMax,
+                                            outerInvRadiusMin,
+                                            outerInvRadiusMax);
       } else {
-        tempPass = matchRadiiBBBEE34578(acc,
-                                        innerRadius,
-                                        bridgeRadius,
-                                        outerRadius,
-                                        innerRadiusMin2S,
-                                        innerRadiusMax2S,
-                                        bridgeRadiusMin2S,
-                                        bridgeRadiusMax2S,
-                                        outerRadiusMin2S,
-                                        outerRadiusMax2S,
-                                        innerInvRadiusMin,
-                                        innerInvRadiusMax,
-                                        bridgeInvRadiusMin,
-                                        bridgeInvRadiusMax,
-                                        outerInvRadiusMin,
-                                        outerInvRadiusMax);
+        matchedRadii = matchRadiiBBBEE34578(acc,
+                                            innerRadius,
+                                            bridgeRadius,
+                                            outerRadius,
+                                            innerRadiusMin2S,
+                                            innerRadiusMax2S,
+                                            bridgeRadiusMin2S,
+                                            bridgeRadiusMax2S,
+                                            outerRadiusMin2S,
+                                            outerRadiusMax2S,
+                                            innerInvRadiusMin,
+                                            innerInvRadiusMax,
+                                            bridgeInvRadiusMin,
+                                            bridgeInvRadiusMax,
+                                            outerInvRadiusMin,
+                                            outerInvRadiusMax);
       }
     }
 
@@ -2849,66 +2817,65 @@ namespace SDL {
              modulesInGPU.subdets[lowerModuleIndex3] == SDL::Endcap and
              modulesInGPU.subdets[lowerModuleIndex4] == SDL::Endcap and
              modulesInGPU.subdets[lowerModuleIndex5] == SDL::Endcap) {
-      tempPass = matchRadiiBBEEE(acc,
-                                 innerRadius,
-                                 bridgeRadius,
-                                 outerRadius,
-                                 innerRadiusMin2S,
-                                 innerRadiusMax2S,
-                                 bridgeRadiusMin2S,
-                                 bridgeRadiusMax2S,
-                                 outerRadiusMin2S,
-                                 outerRadiusMax2S,
-                                 innerInvRadiusMin,
-                                 innerInvRadiusMax,
-                                 bridgeInvRadiusMin,
-                                 bridgeInvRadiusMax,
-                                 outerInvRadiusMin,
-                                 outerInvRadiusMax);
+      matchedRadii = matchRadiiBBEEE(acc,
+                                     innerRadius,
+                                     bridgeRadius,
+                                     outerRadius,
+                                     innerRadiusMin2S,
+                                     innerRadiusMax2S,
+                                     bridgeRadiusMin2S,
+                                     bridgeRadiusMax2S,
+                                     outerRadiusMin2S,
+                                     outerRadiusMax2S,
+                                     innerInvRadiusMin,
+                                     innerInvRadiusMax,
+                                     bridgeInvRadiusMin,
+                                     bridgeInvRadiusMax,
+                                     outerInvRadiusMin,
+                                     outerInvRadiusMax);
     } else if (modulesInGPU.subdets[lowerModuleIndex1] == SDL::Barrel and
                modulesInGPU.subdets[lowerModuleIndex2] == SDL::Endcap and
                modulesInGPU.subdets[lowerModuleIndex3] == SDL::Endcap and
                modulesInGPU.subdets[lowerModuleIndex4] == SDL::Endcap and
                modulesInGPU.subdets[lowerModuleIndex5] == SDL::Endcap) {
-      tempPass = matchRadiiBEEEE(acc,
-                                 innerRadius,
-                                 bridgeRadius,
-                                 outerRadius,
-                                 innerRadiusMin2S,
-                                 innerRadiusMax2S,
-                                 bridgeRadiusMin2S,
-                                 bridgeRadiusMax2S,
-                                 outerRadiusMin2S,
-                                 outerRadiusMax2S,
-                                 innerInvRadiusMin,
-                                 innerInvRadiusMax,
-                                 bridgeInvRadiusMin,
-                                 bridgeInvRadiusMax,
-                                 outerInvRadiusMin,
-                                 outerInvRadiusMax);
+      matchedRadii = matchRadiiBEEEE(acc,
+                                     innerRadius,
+                                     bridgeRadius,
+                                     outerRadius,
+                                     innerRadiusMin2S,
+                                     innerRadiusMax2S,
+                                     bridgeRadiusMin2S,
+                                     bridgeRadiusMax2S,
+                                     outerRadiusMin2S,
+                                     outerRadiusMax2S,
+                                     innerInvRadiusMin,
+                                     innerInvRadiusMax,
+                                     bridgeInvRadiusMin,
+                                     bridgeInvRadiusMax,
+                                     outerInvRadiusMin,
+                                     outerInvRadiusMax);
     } else {
-      tempPass = matchRadiiEEEEE(acc,
-                                 innerRadius,
-                                 bridgeRadius,
-                                 outerRadius,
-                                 innerRadiusMin2S,
-                                 innerRadiusMax2S,
-                                 bridgeRadiusMin2S,
-                                 bridgeRadiusMax2S,
-                                 outerRadiusMin2S,
-                                 outerRadiusMax2S,
-                                 innerInvRadiusMin,
-                                 innerInvRadiusMax,
-                                 bridgeInvRadiusMin,
-                                 bridgeInvRadiusMax,
-                                 outerInvRadiusMin,
-                                 outerInvRadiusMax);
+      matchedRadii = matchRadiiEEEEE(acc,
+                                     innerRadius,
+                                     bridgeRadius,
+                                     outerRadius,
+                                     innerRadiusMin2S,
+                                     innerRadiusMax2S,
+                                     bridgeRadiusMin2S,
+                                     bridgeRadiusMax2S,
+                                     outerRadiusMin2S,
+                                     outerRadiusMax2S,
+                                     innerInvRadiusMin,
+                                     innerInvRadiusMax,
+                                     bridgeInvRadiusMin,
+                                     bridgeInvRadiusMax,
+                                     outerInvRadiusMin,
+                                     outerInvRadiusMax);
     }
 
     //compute regression radius right here - this computation is expensive!!!
-    pass = pass and tempPass;
-    if (not pass)
-      return pass;
+    if (not matchedRadii)
+      return false;
 
     float xVec[] = {x1, x2, x3, x4, x5};
     float yVec[] = {y1, y2, y3, y4, y5};
@@ -2916,12 +2883,22 @@ namespace SDL {
         lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
     // 5 categories for sigmas
-    float sigmas[5], delta1[5], delta2[5], slopes[5];
+    float sigmas2[5], delta1[5], delta2[5], slopes[5];
     bool isFlat[5];
 
     computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
-    regressionRadius = computeRadiusUsingRegression(
-        acc, 5, xVec, yVec, delta1, delta2, slopes, isFlat, regressionG, regressionF, sigmas, chiSquared);
+    regressionRadius = computeRadiusUsingRegression(acc,
+                                                    Params_T5::kLayers,
+                                                    xVec,
+                                                    yVec,
+                                                    delta1,
+                                                    delta2,
+                                                    slopes,
+                                                    isFlat,
+                                                    regressionG,
+                                                    regressionF,
+                                                    sigmas2,
+                                                    chiSquared);
 
 #ifdef USE_T5_DNN
     unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
@@ -2939,30 +2916,28 @@ namespace SDL {
                                           innerRadius,
                                           outerRadius,
                                           bridgeRadius);
-    pass = pass and (inference > T5DNN::LSTWP2);                  // T5-building cut
     TightCutFlag = TightCutFlag and (inference > T5DNN::LSTWP2);  // T5-in-TC cut
-    if (not pass)
-      return pass;
+    if (inference <= T5DNN::LSTWP2)                               // T5-building cut
+      return false;
 #endif
 
 #ifdef USE_RPHICHI2
     // extra chi squared cuts!
     if (regressionRadius < 5.0f / (2.f * k2Rinv1GeVf)) {
-      pass = pass and passChiSquaredConstraint(modulesInGPU,
-                                               lowerModuleIndex1,
-                                               lowerModuleIndex2,
-                                               lowerModuleIndex3,
-                                               lowerModuleIndex4,
-                                               lowerModuleIndex5,
-                                               chiSquared);
-      if (not pass)
-        return pass;
+      if (not passChiSquaredConstraint(modulesInGPU,
+                                       lowerModuleIndex1,
+                                       lowerModuleIndex2,
+                                       lowerModuleIndex3,
+                                       lowerModuleIndex4,
+                                       lowerModuleIndex5,
+                                       chiSquared))
+        return false;
     }
 #endif
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[5], nonAnchorDelta2[5], nonAnchorSlopes[5];
+    float nonAnchorDelta1[Params_T5::kLayers], nonAnchorDelta2[Params_T5::kLayers], nonAnchorSlopes[Params_T5::kLayers];
     float nonAnchorxs[] = {mdsInGPU.outerX[firstMDIndex],
                            mdsInGPU.outerX[secondMDIndex],
                            mdsInGPU.outerX[thirdMDIndex],
@@ -2974,10 +2949,17 @@ namespace SDL {
                            mdsInGPU.outerY[fourthMDIndex],
                            mdsInGPU.outerY[fifthMDIndex]};
 
-    computeSigmasForRegression(
-        acc, modulesInGPU, lowerModuleIndices, nonAnchorDelta1, nonAnchorDelta2, nonAnchorSlopes, isFlat, 5, false);
+    computeSigmasForRegression(acc,
+                               modulesInGPU,
+                               lowerModuleIndices,
+                               nonAnchorDelta1,
+                               nonAnchorDelta2,
+                               nonAnchorSlopes,
+                               isFlat,
+                               Params_T5::kLayers,
+                               false);
     nonAnchorChiSquared = computeChiSquared(acc,
-                                            5,
+                                            Params_T5::kLayers,
                                             nonAnchorxs,
                                             nonAnchorys,
                                             nonAnchorDelta1,
@@ -2987,7 +2969,7 @@ namespace SDL {
                                             regressionG,
                                             regressionF,
                                             regressionRadius);
-    return pass;
+    return true;
   };
 
   struct createQuintupletsInGPUv2 {
@@ -3021,14 +3003,14 @@ namespace SDL {
         for (unsigned int innerTripletArrayIndex = globalThreadIdx[1]; innerTripletArrayIndex < nInnerTriplets;
              innerTripletArrayIndex += gridThreadExtent[1]) {
           unsigned int innerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule1] + innerTripletArrayIndex;
-          uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[3 * innerTripletIndex + 1];
-          uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[3 * innerTripletIndex + 2];
+          uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 1];
+          uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 2];
           unsigned int nOuterTriplets = tripletsInGPU.nTriplets[lowerModule3];
           for (unsigned int outerTripletArrayIndex = globalThreadIdx[2]; outerTripletArrayIndex < nOuterTriplets;
                outerTripletArrayIndex += gridThreadExtent[2]) {
             unsigned int outerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule3] + outerTripletArrayIndex;
-            uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[3 * outerTripletIndex + 1];
-            uint16_t lowerModule5 = tripletsInGPU.lowerModuleIndices[3 * outerTripletIndex + 2];
+            uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
+            uint16_t lowerModule5 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionG, regressionF, regressionRadius, rzChiSquared,
                 chiSquared, nonAnchorChiSquared;  //required for making distributions
@@ -3084,7 +3066,7 @@ namespace SDL {
                   float eta =
                       mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
                                                                                                   layer2_adjustment]]];
-                  float pt = (innerRadius + outerRadius) * 3.8f * 1.602f / (2 * 100 * 5.39f);
+                  float pt = (innerRadius + outerRadius) * SDL::k2Rinv1GeVf;
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuintupletToMemory(tripletsInGPU,
                                         quintupletsInGPU,

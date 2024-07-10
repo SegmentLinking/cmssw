@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LST_LSTPhase2OTHitsInput_h
-#define RecoTracker_LST_LSTPhase2OTHitsInput_h
+#ifndef RecoTracker_LST_interface_LSTPhase2OTHitsInput_h
+#define RecoTracker_LST_interface_LSTPhase2OTHitsInput_h
 
 #include <memory>
 #include <vector>
@@ -9,19 +9,19 @@
 class LSTPhase2OTHitsInput {
 public:
   LSTPhase2OTHitsInput() = default;
-  ~LSTPhase2OTHitsInput() = default;
-
-  void setLSTPhase2OTHitsTraits(std::vector<unsigned int> detId,
-                                std::vector<float> x,
-                                std::vector<float> y,
-                                std::vector<float> z,
-                                std::vector<TrackingRecHit const*> hits) {
-    detId_ = detId;
-    x_ = x;
-    y_ = y;
-    z_ = z;
-    hits_ = hits;
+  LSTPhase2OTHitsInput(std::vector<unsigned int> detId,
+                       std::vector<float> x,
+                       std::vector<float> y,
+                       std::vector<float> z,
+                       std::vector<TrackingRecHit const*> hits) {
+    detId_ = std::move(detId);
+    x_ = std::move(x);
+    y_ = std::move(y);
+    z_ = std::move(z);
+    hits_ = std::move(hits);
   }
+
+  ~LSTPhase2OTHitsInput() = default;
 
   std::vector<unsigned int> const& detId() const { return detId_; }
   std::vector<float> const& x() const { return x_; }

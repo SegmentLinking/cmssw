@@ -23,29 +23,29 @@ void fillOutputBranches(SDL::Event<SDL::Acc>* event) {
 //________________________________________________________________________________________________________________________________
 void createRequiredOutputBranches() {
   // Setup output TTree
-  ana.tx->createBranch<vector<float>>("sim_pt");
-  ana.tx->createBranch<vector<float>>("sim_eta");
-  ana.tx->createBranch<vector<float>>("sim_phi");
-  ana.tx->createBranch<vector<float>>("sim_pca_dxy");
-  ana.tx->createBranch<vector<float>>("sim_pca_dz");
-  ana.tx->createBranch<vector<int>>("sim_q");
-  ana.tx->createBranch<vector<int>>("sim_event");
-  ana.tx->createBranch<vector<int>>("sim_pdgId");
-  ana.tx->createBranch<vector<float>>("sim_vx");
-  ana.tx->createBranch<vector<float>>("sim_vy");
-  ana.tx->createBranch<vector<float>>("sim_vz");
-  ana.tx->createBranch<vector<float>>("sim_trkNtupIdx");
-  ana.tx->createBranch<vector<int>>("sim_TC_matched");
-  ana.tx->createBranch<vector<int>>("sim_TC_matched_mask");
+  ana.tx->createBranch<std::vector<float>>("sim_pt");
+  ana.tx->createBranch<std::vector<float>>("sim_eta");
+  ana.tx->createBranch<std::vector<float>>("sim_phi");
+  ana.tx->createBranch<std::vector<float>>("sim_pca_dxy");
+  ana.tx->createBranch<std::vector<float>>("sim_pca_dz");
+  ana.tx->createBranch<std::vector<int>>("sim_q");
+  ana.tx->createBranch<std::vector<int>>("sim_event");
+  ana.tx->createBranch<std::vector<int>>("sim_pdgId");
+  ana.tx->createBranch<std::vector<float>>("sim_vx");
+  ana.tx->createBranch<std::vector<float>>("sim_vy");
+  ana.tx->createBranch<std::vector<float>>("sim_vz");
+  ana.tx->createBranch<std::vector<float>>("sim_trkNtupIdx");
+  ana.tx->createBranch<std::vector<int>>("sim_TC_matched");
+  ana.tx->createBranch<std::vector<int>>("sim_TC_matched_mask");
 
   // Track candidates
-  ana.tx->createBranch<vector<float>>("tc_pt");
-  ana.tx->createBranch<vector<float>>("tc_eta");
-  ana.tx->createBranch<vector<float>>("tc_phi");
-  ana.tx->createBranch<vector<int>>("tc_type");
-  ana.tx->createBranch<vector<int>>("tc_isFake");
-  ana.tx->createBranch<vector<int>>("tc_isDuplicate");
-  ana.tx->createBranch<vector<vector<int>>>("tc_matched_simIdx");
+  ana.tx->createBranch<std::vector<float>>("tc_pt");
+  ana.tx->createBranch<std::vector<float>>("tc_eta");
+  ana.tx->createBranch<std::vector<float>>("tc_phi");
+  ana.tx->createBranch<std::vector<int>>("tc_type");
+  ana.tx->createBranch<std::vector<int>>("tc_isFake");
+  ana.tx->createBranch<std::vector<int>>("tc_isDuplicate");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("tc_matched_simIdx");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -56,81 +56,81 @@ void createOptionalOutputBranches() {
 
   // Sim Track branches
   // NOTE: Must sync with main tc branch in length!!
-  ana.tx->createBranch<vector<float>>("sim_dummy");
+  ana.tx->createBranch<std::vector<float>>("sim_dummy");
 
   // Track Candidate branches
   // NOTE: Must sync with main tc branch in length!!
-  ana.tx->createBranch<vector<float>>("tc_dummy");
+  ana.tx->createBranch<std::vector<float>>("tc_dummy");
 
   // pT5 branches
-  ana.tx->createBranch<vector<vector<int>>>("pT5_matched_simIdx");
-  ana.tx->createBranch<vector<vector<int>>>("pT5_hitIdxs");
-  ana.tx->createBranch<vector<int>>("sim_pT5_matched");
-  ana.tx->createBranch<vector<float>>("pT5_pt");
-  ana.tx->createBranch<vector<float>>("pT5_eta");
-  ana.tx->createBranch<vector<float>>("pT5_phi");
-  ana.tx->createBranch<vector<int>>("pT5_isFake");
-  ana.tx->createBranch<vector<int>>("pT5_isDuplicate");
-  ana.tx->createBranch<vector<int>>("pT5_score");
-  ana.tx->createBranch<vector<int>>("pT5_layer_binary");
-  ana.tx->createBranch<vector<int>>("pT5_moduleType_binary");
-  ana.tx->createBranch<vector<float>>("pT5_matched_pt");
-  ana.tx->createBranch<vector<float>>("pT5_rzChiSquared");
-  ana.tx->createBranch<vector<float>>("pT5_rPhiChiSquared");
-  ana.tx->createBranch<vector<float>>("pT5_rPhiChiSquaredInwards");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_matched_simIdx");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_hitIdxs");
+  ana.tx->createBranch<std::vector<int>>("sim_pT5_matched");
+  ana.tx->createBranch<std::vector<float>>("pT5_pt");
+  ana.tx->createBranch<std::vector<float>>("pT5_eta");
+  ana.tx->createBranch<std::vector<float>>("pT5_phi");
+  ana.tx->createBranch<std::vector<int>>("pT5_isFake");
+  ana.tx->createBranch<std::vector<int>>("pT5_isDuplicate");
+  ana.tx->createBranch<std::vector<int>>("pT5_score");
+  ana.tx->createBranch<std::vector<int>>("pT5_layer_binary");
+  ana.tx->createBranch<std::vector<int>>("pT5_moduleType_binary");
+  ana.tx->createBranch<std::vector<float>>("pT5_matched_pt");
+  ana.tx->createBranch<std::vector<float>>("pT5_rzChiSquared");
+  ana.tx->createBranch<std::vector<float>>("pT5_rPhiChiSquared");
+  ana.tx->createBranch<std::vector<float>>("pT5_rPhiChiSquaredInwards");
 
   // pT3 branches
-  ana.tx->createBranch<vector<int>>("sim_pT3_matched");
-  ana.tx->createBranch<vector<float>>("pT3_pt");
-  ana.tx->createBranch<vector<int>>("pT3_isFake");
-  ana.tx->createBranch<vector<int>>("pT3_isDuplicate");
-  ana.tx->createBranch<vector<float>>("pT3_eta");
-  ana.tx->createBranch<vector<float>>("pT3_phi");
-  ana.tx->createBranch<vector<float>>("pT3_score");
-  ana.tx->createBranch<vector<int>>("pT3_foundDuplicate");
-  ana.tx->createBranch<vector<vector<int>>>("pT3_matched_simIdx");
-  ana.tx->createBranch<vector<vector<int>>>("pT3_hitIdxs");
-  ana.tx->createBranch<vector<float>>("pT3_pixelRadius");
-  ana.tx->createBranch<vector<float>>("pT3_pixelRadiusError");
-  ana.tx->createBranch<vector<vector<float>>>("pT3_matched_pt");
-  ana.tx->createBranch<vector<float>>("pT3_tripletRadius");
-  ana.tx->createBranch<vector<float>>("pT3_rPhiChiSquared");
-  ana.tx->createBranch<vector<float>>("pT3_rPhiChiSquaredInwards");
-  ana.tx->createBranch<vector<float>>("pT3_rzChiSquared");
-  ana.tx->createBranch<vector<int>>("pT3_layer_binary");
-  ana.tx->createBranch<vector<int>>("pT3_moduleType_binary");
+  ana.tx->createBranch<std::vector<int>>("sim_pT3_matched");
+  ana.tx->createBranch<std::vector<float>>("pT3_pt");
+  ana.tx->createBranch<std::vector<int>>("pT3_isFake");
+  ana.tx->createBranch<std::vector<int>>("pT3_isDuplicate");
+  ana.tx->createBranch<std::vector<float>>("pT3_eta");
+  ana.tx->createBranch<std::vector<float>>("pT3_phi");
+  ana.tx->createBranch<std::vector<float>>("pT3_score");
+  ana.tx->createBranch<std::vector<int>>("pT3_foundDuplicate");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_matched_simIdx");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_hitIdxs");
+  ana.tx->createBranch<std::vector<float>>("pT3_pixelRadius");
+  ana.tx->createBranch<std::vector<float>>("pT3_pixelRadiusError");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pT3_matched_pt");
+  ana.tx->createBranch<std::vector<float>>("pT3_tripletRadius");
+  ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquared");
+  ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquaredInwards");
+  ana.tx->createBranch<std::vector<float>>("pT3_rzChiSquared");
+  ana.tx->createBranch<std::vector<int>>("pT3_layer_binary");
+  ana.tx->createBranch<std::vector<int>>("pT3_moduleType_binary");
 
   // pLS branches
-  ana.tx->createBranch<vector<int>>("sim_pLS_matched");
-  ana.tx->createBranch<vector<vector<int>>>("sim_pLS_types");
-  ana.tx->createBranch<vector<int>>("pLS_isFake");
-  ana.tx->createBranch<vector<int>>("pLS_isDuplicate");
-  ana.tx->createBranch<vector<float>>("pLS_pt");
-  ana.tx->createBranch<vector<float>>("pLS_eta");
-  ana.tx->createBranch<vector<float>>("pLS_phi");
-  ana.tx->createBranch<vector<float>>("pLS_score");
+  ana.tx->createBranch<std::vector<int>>("sim_pLS_matched");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_pLS_types");
+  ana.tx->createBranch<std::vector<int>>("pLS_isFake");
+  ana.tx->createBranch<std::vector<int>>("pLS_isDuplicate");
+  ana.tx->createBranch<std::vector<float>>("pLS_pt");
+  ana.tx->createBranch<std::vector<float>>("pLS_eta");
+  ana.tx->createBranch<std::vector<float>>("pLS_phi");
+  ana.tx->createBranch<std::vector<float>>("pLS_score");
 
   // T5 branches
-  ana.tx->createBranch<vector<int>>("sim_T5_matched");
-  ana.tx->createBranch<vector<int>>("t5_isFake");
-  ana.tx->createBranch<vector<int>>("t5_isDuplicate");
-  ana.tx->createBranch<vector<int>>("t5_foundDuplicate");
-  ana.tx->createBranch<vector<float>>("t5_pt");
-  ana.tx->createBranch<vector<float>>("t5_eta");
-  ana.tx->createBranch<vector<float>>("t5_phi");
-  ana.tx->createBranch<vector<float>>("t5_score_rphisum");
-  ana.tx->createBranch<vector<vector<int>>>("t5_hitIdxs");
-  ana.tx->createBranch<vector<vector<int>>>("t5_matched_simIdx");
-  ana.tx->createBranch<vector<int>>("t5_moduleType_binary");
-  ana.tx->createBranch<vector<int>>("t5_layer_binary");
-  ana.tx->createBranch<vector<float>>("t5_matched_pt");
-  ana.tx->createBranch<vector<int>>("t5_partOfTC");
-  ana.tx->createBranch<vector<float>>("t5_innerRadius");
-  ana.tx->createBranch<vector<float>>("t5_outerRadius");
-  ana.tx->createBranch<vector<float>>("t5_bridgeRadius");
-  ana.tx->createBranch<vector<float>>("t5_chiSquared");
-  ana.tx->createBranch<vector<float>>("t5_rzChiSquared");
-  ana.tx->createBranch<vector<float>>("t5_nonAnchorChiSquared");
+  ana.tx->createBranch<std::vector<int>>("sim_T5_matched");
+  ana.tx->createBranch<std::vector<int>>("t5_isFake");
+  ana.tx->createBranch<std::vector<int>>("t5_isDuplicate");
+  ana.tx->createBranch<std::vector<int>>("t5_foundDuplicate");
+  ana.tx->createBranch<std::vector<float>>("t5_pt");
+  ana.tx->createBranch<std::vector<float>>("t5_eta");
+  ana.tx->createBranch<std::vector<float>>("t5_phi");
+  ana.tx->createBranch<std::vector<float>>("t5_score_rphisum");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t5_hitIdxs");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t5_matched_simIdx");
+  ana.tx->createBranch<std::vector<int>>("t5_moduleType_binary");
+  ana.tx->createBranch<std::vector<int>>("t5_layer_binary");
+  ana.tx->createBranch<std::vector<float>>("t5_matched_pt");
+  ana.tx->createBranch<std::vector<int>>("t5_partOfTC");
+  ana.tx->createBranch<std::vector<float>>("t5_innerRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_outerRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
+  ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
+  ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
 
   // Occupancy branches
   ana.tx->createBranch<vector<int>>("module_layers");
@@ -155,46 +155,46 @@ void createOptionalOutputBranches() {
 //________________________________________________________________________________________________________________________________
 void createGnnNtupleBranches() {
   // Mini Doublets
-  ana.tx->createBranch<vector<float>>("MD_pt");
-  ana.tx->createBranch<vector<float>>("MD_eta");
-  ana.tx->createBranch<vector<float>>("MD_phi");
-  ana.tx->createBranch<vector<float>>("MD_dphichange");
-  ana.tx->createBranch<vector<int>>("MD_isFake");
-  ana.tx->createBranch<vector<int>>("MD_tpType");
-  ana.tx->createBranch<vector<int>>("MD_detId");
-  ana.tx->createBranch<vector<int>>("MD_layer");
-  ana.tx->createBranch<vector<float>>("MD_0_r");
-  ana.tx->createBranch<vector<float>>("MD_0_x");
-  ana.tx->createBranch<vector<float>>("MD_0_y");
-  ana.tx->createBranch<vector<float>>("MD_0_z");
-  ana.tx->createBranch<vector<float>>("MD_1_r");
-  ana.tx->createBranch<vector<float>>("MD_1_x");
-  ana.tx->createBranch<vector<float>>("MD_1_y");
-  ana.tx->createBranch<vector<float>>("MD_1_z");
+  ana.tx->createBranch<std::vector<float>>("MD_pt");
+  ana.tx->createBranch<std::vector<float>>("MD_eta");
+  ana.tx->createBranch<std::vector<float>>("MD_phi");
+  ana.tx->createBranch<std::vector<float>>("MD_dphichange");
+  ana.tx->createBranch<std::vector<int>>("MD_isFake");
+  ana.tx->createBranch<std::vector<int>>("MD_tpType");
+  ana.tx->createBranch<std::vector<int>>("MD_detId");
+  ana.tx->createBranch<std::vector<int>>("MD_layer");
+  ana.tx->createBranch<std::vector<float>>("MD_0_r");
+  ana.tx->createBranch<std::vector<float>>("MD_0_x");
+  ana.tx->createBranch<std::vector<float>>("MD_0_y");
+  ana.tx->createBranch<std::vector<float>>("MD_0_z");
+  ana.tx->createBranch<std::vector<float>>("MD_1_r");
+  ana.tx->createBranch<std::vector<float>>("MD_1_x");
+  ana.tx->createBranch<std::vector<float>>("MD_1_y");
+  ana.tx->createBranch<std::vector<float>>("MD_1_z");
 
   // Line Segments
-  ana.tx->createBranch<vector<float>>("LS_pt");
-  ana.tx->createBranch<vector<float>>("LS_eta");
-  ana.tx->createBranch<vector<float>>("LS_phi");
-  ana.tx->createBranch<vector<int>>("LS_isFake");
-  ana.tx->createBranch<vector<int>>("LS_MD_idx0");
-  ana.tx->createBranch<vector<int>>("LS_MD_idx1");
-  ana.tx->createBranch<vector<float>>("LS_sim_pt");
-  ana.tx->createBranch<vector<float>>("LS_sim_eta");
-  ana.tx->createBranch<vector<float>>("LS_sim_phi");
-  ana.tx->createBranch<vector<float>>("LS_sim_pca_dxy");
-  ana.tx->createBranch<vector<float>>("LS_sim_pca_dz");
-  ana.tx->createBranch<vector<int>>("LS_sim_q");
-  ana.tx->createBranch<vector<int>>("LS_sim_pdgId");
-  ana.tx->createBranch<vector<int>>("LS_sim_event");
-  ana.tx->createBranch<vector<int>>("LS_sim_bx");
-  ana.tx->createBranch<vector<float>>("LS_sim_vx");
-  ana.tx->createBranch<vector<float>>("LS_sim_vy");
-  ana.tx->createBranch<vector<float>>("LS_sim_vz");
-  ana.tx->createBranch<vector<int>>("LS_isInTrueTC");
+  ana.tx->createBranch<std::vector<float>>("LS_pt");
+  ana.tx->createBranch<std::vector<float>>("LS_eta");
+  ana.tx->createBranch<std::vector<float>>("LS_phi");
+  ana.tx->createBranch<std::vector<int>>("LS_isFake");
+  ana.tx->createBranch<std::vector<int>>("LS_MD_idx0");
+  ana.tx->createBranch<std::vector<int>>("LS_MD_idx1");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_pt");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_eta");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_phi");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_pca_dxy");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_pca_dz");
+  ana.tx->createBranch<std::vector<int>>("LS_sim_q");
+  ana.tx->createBranch<std::vector<int>>("LS_sim_pdgId");
+  ana.tx->createBranch<std::vector<int>>("LS_sim_event");
+  ana.tx->createBranch<std::vector<int>>("LS_sim_bx");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_vx");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_vy");
+  ana.tx->createBranch<std::vector<float>>("LS_sim_vz");
+  ana.tx->createBranch<std::vector<int>>("LS_isInTrueTC");
 
   // TC's LS
-  ana.tx->createBranch<vector<vector<int>>>("tc_lsIdx");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("tc_lsIdx");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -270,7 +270,7 @@ void setOutputBranches(SDL::Event<SDL::Acc>* event) {
   }
 
   // Using the intermedaite variables to compute whether a given track candidate is a duplicate
-  vector<int> tc_isDuplicate(tc_matched_simIdx.size());
+  std::vector<int> tc_isDuplicate(tc_matched_simIdx.size());
   // Loop over the track candidates
   for (unsigned int i = 0; i < tc_matched_simIdx.size(); ++i) {
     bool isDuplicate = false;
@@ -286,10 +286,10 @@ void setOutputBranches(SDL::Event<SDL::Acc>* event) {
   }
 
   // Now set the last remaining branches
-  ana.tx->setBranch<vector<int>>("sim_TC_matched", sim_TC_matched);
-  ana.tx->setBranch<vector<int>>("sim_TC_matched_mask", sim_TC_matched_mask);
-  ana.tx->setBranch<vector<vector<int>>>("tc_matched_simIdx", tc_matched_simIdx);
-  ana.tx->setBranch<vector<int>>("tc_isDuplicate", tc_isDuplicate);
+  ana.tx->setBranch<std::vector<int>>("sim_TC_matched", sim_TC_matched);
+  ana.tx->setBranch<std::vector<int>>("sim_TC_matched_mask", sim_TC_matched_mask);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("tc_matched_simIdx", tc_matched_simIdx);
+  ana.tx->setBranch<std::vector<int>>("tc_isDuplicate", tc_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -373,7 +373,7 @@ void setPixelQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::quintupletsBuffer<alpaka::DevCpu>& quintupletsInGPU = (*event->getQuintuplets());
   SDL::segmentsBuffer<alpaka::DevCpu>& segmentsInGPU = (*event->getSegments());
   SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
-  int n_accepted_simtrk = ana.tx->getBranch<vector<int>>("sim_TC_matched").size();
+  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   unsigned int nPixelQuintuplets =
       *pixelQuintupletsInGPU.nPixelQuintuplets;  // size of this nPixelTriplets array is 1 (NOTE: parallelism lost here.)
@@ -420,7 +420,7 @@ void setPixelQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
   }
 
   // Using the intermedaite variables to compute whether a given track candidate is a duplicate
-  vector<int> pT5_isDuplicate(pT5_matched_simIdx.size());
+  std::vector<int> pT5_isDuplicate(pT5_matched_simIdx.size());
   // Loop over the track candidates
   for (unsigned int i = 0; i < pT5_matched_simIdx.size(); ++i) {
     bool isDuplicate = false;
@@ -438,9 +438,9 @@ void setPixelQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
   }
 
   // Now set the last remaining branches
-  ana.tx->setBranch<vector<int>>("sim_pT5_matched", sim_pT5_matched);
-  ana.tx->setBranch<vector<vector<int>>>("pT5_matched_simIdx", pT5_matched_simIdx);
-  ana.tx->setBranch<vector<int>>("pT5_isDuplicate", pT5_isDuplicate);
+  ana.tx->setBranch<std::vector<int>>("sim_pT5_matched", sim_pT5_matched);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("pT5_matched_simIdx", pT5_matched_simIdx);
+  ana.tx->setBranch<std::vector<int>>("pT5_isDuplicate", pT5_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -448,7 +448,7 @@ void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::quintupletsBuffer<alpaka::DevCpu>& quintupletsInGPU = (*event->getQuintuplets());
   SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
   SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
-  int n_accepted_simtrk = ana.tx->getBranch<vector<int>>("sim_TC_matched").size();
+  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   std::vector<int> sim_t5_matched(n_accepted_simtrk);
   std::vector<std::vector<int>> t5_matched_simIdx;
@@ -496,7 +496,7 @@ void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
     }
   }
 
-  vector<int> t5_isDuplicate(t5_matched_simIdx.size());
+  std::vector<int> t5_isDuplicate(t5_matched_simIdx.size());
   for (unsigned int i = 0; i < t5_matched_simIdx.size(); i++) {
     bool isDuplicate = false;
     for (unsigned int isim = 0; isim < t5_matched_simIdx[i].size(); isim++) {
@@ -509,9 +509,9 @@ void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
     }
     t5_isDuplicate[i] = isDuplicate;
   }
-  ana.tx->setBranch<vector<int>>("sim_T5_matched", sim_t5_matched);
-  ana.tx->setBranch<vector<vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
-  ana.tx->setBranch<vector<int>>("t5_isDuplicate", t5_isDuplicate);
+  ana.tx->setBranch<std::vector<int>>("sim_T5_matched", sim_t5_matched);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
+  ana.tx->setBranch<std::vector<int>>("t5_isDuplicate", t5_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -521,7 +521,7 @@ void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = *(event->getModules());
   SDL::segmentsBuffer<alpaka::DevCpu>& segmentsInGPU = *(event->getSegments());
   SDL::hitsBuffer<alpaka::DevCpu>& hitsInGPU = *(event->getHits());
-  int n_accepted_simtrk = ana.tx->getBranch<vector<int>>("sim_TC_matched").size();
+  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   unsigned int nPixelTriplets = *pixelTripletsInGPU.nPixelTriplets;
   std::vector<int> sim_pT3_matched(n_accepted_simtrk);
@@ -561,7 +561,7 @@ void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
     }
   }
 
-  vector<int> pT3_isDuplicate(pT3_matched_simIdx.size());
+  std::vector<int> pT3_isDuplicate(pT3_matched_simIdx.size());
   for (unsigned int i = 0; i < pT3_matched_simIdx.size(); i++) {
     bool isDuplicate = true;
     for (unsigned int isim = 0; isim < pT3_matched_simIdx[i].size(); isim++) {
@@ -574,9 +574,9 @@ void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
     }
     pT3_isDuplicate[i] = isDuplicate;
   }
-  ana.tx->setBranch<vector<int>>("sim_pT3_matched", sim_pT3_matched);
-  ana.tx->setBranch<vector<vector<int>>>("pT3_matched_simIdx", pT3_matched_simIdx);
-  ana.tx->setBranch<vector<int>>("pT3_isDuplicate", pT3_isDuplicate);
+  ana.tx->setBranch<std::vector<int>>("sim_pT3_matched", sim_pT3_matched);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("pT3_matched_simIdx", pT3_matched_simIdx);
+  ana.tx->setBranch<std::vector<int>>("pT3_isDuplicate", pT3_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -699,7 +699,7 @@ void setGnnNtupleBranches(SDL::Event<SDL::Acc>* event) {
                                       simidxs.size() > 0 ? trk.simvtx_z()[trk.sim_parentVtxIdx()[simidxs[0]]] : -999);
       ana.tx->pushbackToBranch<int>("LS_isInTrueTC", lss_used_in_true_tc.find(sgIdx) != lss_used_in_true_tc.end());
 
-      sg_index_map[sgIdx] = ana.tx->getBranch<vector<int>>("LS_isFake").size() - 1;
+      sg_index_map[sgIdx] = ana.tx->getBranch<std::vector<int>>("LS_isFake").size() - 1;
 
       // // T5 eta and phi are computed using outer and innermost hits
       // SDLMath::Hit hitA(trk.ph2_x()[anchitidx], trk.ph2_y()[anchitidx], trk.ph2_z()[anchitidx]);
@@ -714,7 +714,7 @@ void setGnnNtupleBranches(SDL::Event<SDL::Acc>* event) {
     for (auto& LS : LSs) {
       lsIdx.push_back(sg_index_map[LS]);
     }
-    ana.tx->pushbackToBranch<vector<int>>("tc_lsIdx", lsIdx);
+    ana.tx->pushbackToBranch<std::vector<int>>("tc_lsIdx", lsIdx);
   }
 
   std::cout << " mds_used_in_sg.size(): " << mds_used_in_sg.size() << std::endl;
@@ -789,8 +789,8 @@ void setGnnNtupleMiniDoublet(SDL::Event<SDL::Acc>* event, unsigned int MD) {
 }
 
 //________________________________________________________________________________________________________________________________
-std::tuple<int, float, float, float, int, vector<int>> parseTrackCandidate(SDL::Event<SDL::Acc>* event,
-                                                                           unsigned int idx) {
+std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(SDL::Event<SDL::Acc>* event,
+                                                                                unsigned int idx) {
   // Get the type of the track candidate
   SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event->getTrackCandidates());
   short type = trackCandidatesInGPU.trackCandidateType[idx];
@@ -823,8 +823,8 @@ std::tuple<int, float, float, float, int, vector<int>> parseTrackCandidate(SDL::
 }
 
 //________________________________________________________________________________________________________________________________
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepT5(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int idx) {
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(
+    SDL::Event<SDL::Acc>* event, unsigned int idx) {
   // Get relevant information
   SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event->getTrackCandidates());
   SDL::quintupletsBuffer<alpaka::DevCpu>& quintupletsInGPU = (*event->getQuintuplets());
@@ -927,7 +927,7 @@ std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> pars
   float pt_T5 = __H2F(quintupletsInGPU.innerRadius[T5Index]) * 2 * SDL::k2Rinv1GeVf;
   const float pt = (pt_T5 + pt_pLS) / 2;
 
-  // Form the hit idx/type vector
+  // Form the hit idx/type std::vector
   std::vector<unsigned int> hit_idx = getHitIdxsFrompT5(event, pT5);
   std::vector<unsigned int> hit_type = getHitTypesFrompT5(event, pT5);
 
@@ -935,8 +935,8 @@ std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> pars
 }
 
 //________________________________________________________________________________________________________________________________
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepT3(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int idx) {
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(
+    SDL::Event<SDL::Acc>* event, unsigned int idx) {
   // Get relevant information
   SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event->getTrackCandidates());
   SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = (*event->getTriplets());
@@ -962,7 +962,7 @@ std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> pars
   // average pt
   const float pt = (pt_pLS + pt_T3) / 2;
 
-  // Form the hit idx/type vector
+  // Form the hit idx/type std::vector
   std::vector<unsigned int> hit_idx = getHitIdxsFrompT3(event, pT3);
   std::vector<unsigned int> hit_type = getHitTypesFrompT3(event, pT3);
 
@@ -970,8 +970,8 @@ std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> pars
 }
 
 //________________________________________________________________________________________________________________________________
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parseT5(SDL::Event<SDL::Acc>* event,
-                                                                                    unsigned int idx) {
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT5(
+    SDL::Event<SDL::Acc>* event, unsigned int idx) {
   SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event->getTrackCandidates());
   SDL::quintupletsBuffer<alpaka::DevCpu>& quintupletsInGPU = (*event->getQuintuplets());
   unsigned int T5 = trackCandidatesInGPU.directObjectIndices[idx];
@@ -1004,8 +1004,8 @@ std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> pars
 }
 
 //________________________________________________________________________________________________________________________________
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepLS(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int idx) {
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(
+    SDL::Event<SDL::Acc>* event, unsigned int idx) {
   SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event->getTrackCandidates());
   SDL::segmentsBuffer<alpaka::DevCpu>& segmentsInGPU = (*event->getSegments());
 

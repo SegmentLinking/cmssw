@@ -1,7 +1,9 @@
-#ifndef LSTESData_H
-#define LSTESData_H
+#ifndef RecoTracker_LSTCore_interface_alpaka_LSTESData_h
+#define RecoTracker_LSTCore_interface_alpaka_LSTESData_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/EndcapGeometryBuffer.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 
@@ -12,79 +14,56 @@ namespace SDL {
 
   struct pixelMap;
 
-  template <typename>
-  class TiltedGeometry;
-
-  template <typename>
-  class ModuleConnectionMap;
-  using MapPLStoLayer = std::array<std::array<ModuleConnectionMap<Dev>, 4>, 3>;
-
-  template <typename>
-  struct modulesBuffer;
-
-  template <typename>
-  class EndcapGeometryHost;
-
-  template <typename>
-  class EndcapGeometry;
-
   template <typename TDev>
-  struct LSTESHostData;
-
-  // FIXME: This shouldn't be a templated struct
-  template <>
-  struct LSTESHostData<Dev> {
-    std::shared_ptr<const MapPLStoLayer> mapPLStoLayer;
-    std::shared_ptr<const EndcapGeometryHost<Dev>> endcapGeometry;
-    std::shared_ptr<const TiltedGeometry<Dev>> tiltedGeometry;
-    std::shared_ptr<const ModuleConnectionMap<Dev>> moduleConnectionMap;
-
-    LSTESHostData(std::shared_ptr<MapPLStoLayer> mapPLStoLayerIn,
-                  std::shared_ptr<EndcapGeometryHost<Dev>> endcapGeometryIn,
-                  std::shared_ptr<TiltedGeometry<Dev>> tiltedGeometryIn,
-                  std::shared_ptr<ModuleConnectionMap<Dev>> moduleConnectionMapIn)
-        : mapPLStoLayer(mapPLStoLayerIn),
-          endcapGeometry(endcapGeometryIn),
-          tiltedGeometry(tiltedGeometryIn),
-          moduleConnectionMap(moduleConnectionMapIn) {}
-  };
-
-  template <typename TDev>
-  struct LSTESDeviceData {
+  struct LSTESData {
     uint16_t nModules;
     uint16_t nLowerModules;
     unsigned int nPixels;
+    unsigned int nEndCapMap;
     std::shared_ptr<const modulesBuffer<TDev>> modulesBuffers;
-    std::shared_ptr<const EndcapGeometry<TDev>> endcapGeometry;
+    std::shared_ptr<const EndcapGeometryBuffer<TDev>> endcapGeometryBuffers;
     std::shared_ptr<const pixelMap> pixelMapping;
 
-    LSTESDeviceData(uint16_t nModulesIn,
-                    uint16_t nLowerModulesIn,
-                    unsigned int nPixelsIn,
-                    std::shared_ptr<modulesBuffer<TDev>> modulesBuffersIn,
-                    std::shared_ptr<EndcapGeometry<TDev>> endcapGeometryIn,
-                    std::shared_ptr<pixelMap> pixelMappingIn)
+    LSTESData(uint16_t const& nModulesIn,
+              uint16_t const& nLowerModulesIn,
+              unsigned int const& nPixelsIn,
+              unsigned int const& nEndCapMapIn,
+              std::shared_ptr<const modulesBuffer<TDev>> const& modulesBuffersIn,
+              std::shared_ptr<const EndcapGeometryBuffer<TDev>> const& endcapGeometryBuffersIn,
+              std::shared_ptr<const pixelMap> const& pixelMappingIn)
         : nModules(nModulesIn),
           nLowerModules(nLowerModulesIn),
           nPixels(nPixelsIn),
+          nEndCapMap(nEndCapMapIn),
           modulesBuffers(modulesBuffersIn),
-          endcapGeometry(endcapGeometryIn),
+          endcapGeometryBuffers(endcapGeometryBuffersIn),
           pixelMapping(pixelMappingIn) {}
   };
 
-  std::unique_ptr<LSTESHostData<Dev>> loadAndFillESHost(std::string& ptCutLabel);
-  std::unique_ptr<LSTESDeviceData<Dev>> loadAndFillESDevice(SDL::QueueAcc& queue,
-                                                            const LSTESHostData<Dev>* hostData,
-                                                            std::string& ptCutLabel);
+  std::unique_ptr<LSTESData<alpaka_common::DevHost>> loadAndFillESHost(std::string& ptCutLabel);
 
 }  // namespace SDL
 
 namespace cms::alpakatools {
   template <>
-  struct CopyToDevice<SDL::LSTESHostData<SDL::Dev>> {
+  struct CopyToDevice<SDL::LSTESData<alpaka_common::DevHost>> {
     template <typename TQueue>
-    static auto copyAsync(TQueue& queue, SDL::LSTESHostData<SDL::Dev> const& hostData) {
-      return std::make_unique<SDL::LSTESHostData<SDL::Dev>>(hostData);
+    static SDL::LSTESData<alpaka::Dev<TQueue>> copyAsync(TQueue& queue,
+                                                         SDL::LSTESData<alpaka_common::DevHost> const& srcData) {
+      auto deviceModulesBuffers = std::make_shared<SDL::modulesBuffer<alpaka::Dev<TQueue>>>(
+          alpaka::getDev(queue), srcData.nModules, srcData.nPixels);
+      deviceModulesBuffers->copyFromSrc(queue, *srcData.modulesBuffers);
+      auto deviceEndcapGeometryBuffers =
+          std::make_shared<SDL::EndcapGeometryBuffer<alpaka::Dev<TQueue>>>(alpaka::getDev(queue), srcData.nEndCapMap);
+      deviceEndcapGeometryBuffers->copyFromSrc(queue, *srcData.endcapGeometryBuffers);
+
+      return SDL::LSTESData<alpaka::Dev<TQueue>>(srcData.nModules,
+                                                 srcData.nLowerModules,
+                                                 srcData.nPixels,
+                                                 srcData.nEndCapMap,
+                                                 deviceModulesBuffers,
+                                                 deviceEndcapGeometryBuffers,
+                                                 srcData.pixelMapping);
     }
   };
 }  // namespace cms::alpakatools

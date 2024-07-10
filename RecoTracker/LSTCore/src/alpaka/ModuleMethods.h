@@ -25,7 +25,7 @@ namespace SDL {
   };
 
   template <typename TQueue>
-  inline void fillPixelMap(std::shared_ptr<modulesBuffer<Dev>>& modulesBuf,
+  inline void fillPixelMap(std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
                            uint16_t nModules,
                            unsigned int& nPixels,
                            pixelMap& pixelMapping,
@@ -83,12 +83,11 @@ namespace SDL {
     nPixels = connectedPix_size;
 
     // Now we can initialize modulesBuf
+    DevHost const& devHost = cms::alpakatools::host();
     if (modulesBuf == nullptr) {
-      SDL::Dev const& devAcc = alpaka::getDev(queue);
-      modulesBuf = std::make_shared<modulesBuffer<Dev>>(devAcc, nModules, nPixels);
+      modulesBuf = std::make_shared<modulesBuffer<DevHost>>(devHost, nModules, nPixels);
     }
 
-    DevHost const& devHost = cms::alpakatools::host();
     auto connectedPixels_buf = allocBufWrapper<unsigned int>(devHost, connectedPix_size);
     unsigned int* connectedPixels = alpaka::getPtrNative(connectedPixels_buf);
 
@@ -220,18 +219,16 @@ namespace SDL {
     nModules = counter;
   };
 
-  template <typename TQueue>
-  void loadModulesFromFile(TQueue& queue,
-                           const MapPLStoLayer* pLStoLayer,
-                           const char* moduleMetaDataFilePath,
-                           uint16_t& nModules,
-                           uint16_t& nLowerModules,
-                           unsigned int& nPixels,
-                           std::shared_ptr<modulesBuffer<Dev>>& modulesBuf,
-                           pixelMap* pixelMapping,
-                           const EndcapGeometry<Dev>* endcapGeometry,
-                           const TiltedGeometry<Dev>* tiltedGeometry,
-                           const ModuleConnectionMap<Dev>* moduleConnectionMap) {
+  inline void loadModulesFromFile(const MapPLStoLayer* pLStoLayer,
+                                  const char* moduleMetaDataFilePath,
+                                  uint16_t& nModules,
+                                  uint16_t& nLowerModules,
+                                  unsigned int& nPixels,
+                                  std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
+                                  pixelMap* pixelMapping,
+                                  const EndcapGeometry<Dev>* endcapGeometry,
+                                  const TiltedGeometry<Dev>* tiltedGeometry,
+                                  const ModuleConnectionMap<Dev>* moduleConnectionMap) {
     ModuleMetaData mmd;
 
     loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
@@ -375,6 +372,9 @@ namespace SDL {
         }
       }
     }
+
+    // TODO: We don't need a queue, but this code needs to be refactored
+    alpaka::QueueCpuBlocking queue(cms::alpakatools::host());
 
     // modulesBuf is initialized in fillPixelMap since both nModules and nPix will be known
     fillPixelMap(modulesBuf, nModules, nPixels, *pixelMapping, queue, *pLStoLayer, mmd);

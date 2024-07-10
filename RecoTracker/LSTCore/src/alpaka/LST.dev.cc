@@ -8,7 +8,7 @@ using XYZVector = ROOT::Math::XYZVector;
 void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
                              bool verbose,
                              const float ptCut,
-                             const LSTESDeviceData<SDL::Dev>* deviceESData,
+                             const LSTESData<SDL::Dev>* deviceESData,
                              const std::vector<float> see_px,
                              const std::vector<float> see_py,
                              const std::vector<float> see_pz,
@@ -400,16 +400,16 @@ std::vector<unsigned int> SDL::LST<SDL::Acc>::getHitIdxs(const short trackCandid
 
   unsigned int maxNHits = 0;
   if (trackCandidateType == 7)
-    maxNHits = 14;  // pT5
+    maxNHits = Params_pT5::kHits;  // pT5
   else if (trackCandidateType == 5)
-    maxNHits = 10;  // pT3
+    maxNHits = Params_pT3::kHits;  // pT3
   else if (trackCandidateType == 4)
-    maxNHits = 10;  // T5
+    maxNHits = Params_T5::kHits;  // T5
   else if (trackCandidateType == 8)
-    maxNHits = 4;  // pLS
+    maxNHits = Params_pLS::kHits;  // pLS
 
   for (unsigned int i = 0; i < maxNHits; i++) {
-    unsigned int hitIdxInGPU = TCHitIndices[14 * TCIdx + i];
+    unsigned int hitIdxInGPU = TCHitIndices[Params_pT5::kHits * TCIdx + i];
     unsigned int hitIdx =
         (trackCandidateType == 8)
             ? hitIdxInGPU

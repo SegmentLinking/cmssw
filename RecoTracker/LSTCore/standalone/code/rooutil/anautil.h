@@ -13,9 +13,6 @@
 #include <iostream>
 #include <algorithm>
 
-using namespace std;
-using namespace RooUtil;
-
 bool PASS();
 float UNITY();
 
@@ -69,13 +66,13 @@ namespace RooUtil {
                          unsigned int,
                          float,
                          float,
-                         std::function<vector<float>()>,
-                         std::function<vector<float>()> wgt = nullptr);
+                         std::function<std::vector<float>()>,
+                         std::function<std::vector<float>()> wgt = nullptr);
     void addHistogram(TString, std::vector<float>, std::function<float()>);
     void addVecHistogram(TString,
                          std::vector<float>,
-                         std::function<vector<float>()>,
-                         std::function<vector<float>()> wgt = nullptr);
+                         std::function<std::vector<float>()>,
+                         std::function<std::vector<float>()> wgt = nullptr);
     void add2DHistogram(TString,
                         unsigned int,
                         float,
@@ -211,16 +208,18 @@ namespace RooUtil {
                        TString = "");
     void bookVecHistogram(
         TString,
-        std::pair<TString,
-                  std::tuple<unsigned, float, float, std::function<vector<float>()>, std::function<vector<float>()>>>,
+        std::pair<
+            TString,
+            std::tuple<unsigned, float, float, std::function<std::vector<float>()>, std::function<std::vector<float>()>>>,
         TString = "");
     void bookHistogram(TString,
                        std::pair<TString, std::tuple<std::vector<float>, std::function<float()>>>,
                        TString = "");
     void bookVecHistogram(
         TString,
-        std::pair<TString,
-                  std::tuple<std::vector<float>, std::function<vector<float>()>, std::function<vector<float>()>>>,
+        std::pair<
+            TString,
+            std::tuple<std::vector<float>, std::function<std::vector<float>()>, std::function<std::vector<float>()>>>,
         TString = "");
     void book2DHistogram(
         TString,

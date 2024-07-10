@@ -1,5 +1,5 @@
-#ifndef Module_cuh
-#define Module_cuh
+#ifndef RecoTracker_LSTCore_interface_alpaka_Module_h
+#define RecoTracker_LSTCore_interface_alpaka_Module_h
 
 #include <alpaka/alpaka.hpp>
 
@@ -355,8 +355,8 @@ namespace SDL {
       alpaka::wait(queue);
     }
 
-    template <typename TQueue>
-    modulesBuffer(TQueue queue, const modulesBuffer<alpaka::DevCpu>& src, unsigned int nMod, unsigned int nPixs)
+    template <typename TQueue, typename TDevSrc>
+    modulesBuffer(TQueue queue, const modulesBuffer<TDevSrc>& src, unsigned int nMod, unsigned int nPixs)
         : modulesBuffer(alpaka::getDev(queue), nMod, nPixs) {
       copyFromSrc(queue, src);
     }

@@ -99,13 +99,12 @@ namespace T5DNN {
         mdsInGPU.anchorZ[mdIndex5],                                      // outer T3 anchor hit 5 z (t3_4_z)
         alpaka::math::sqrt(acc, x5 * x5 + y5 * y5),                      // outer T3 anchor hit 5 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex5] + 6 * is_endcap5),  // outer T3 anchor hit 5 layer (t3_4_layer)
-        SDL::temp_log10(
-            acc, (innerRadius + outerRadius) * SDL::magnetic_field * 1.602f / (2 * 100 * 5.39f)),  // T5 pT (t5_pt)
-        mdsInGPU.anchorEta[md_idx_for_t5_eta_phi],                                                 // T5 eta (t5_eta)
-        mdsInGPU.anchorPhi[md_idx_for_t5_eta_phi],                                                 // T5 phi (t5_phi)
-        SDL::temp_log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
-        SDL::temp_log10(acc, bridgeRadius),  // T5 bridge radius (t5_bridgeRadius)
-        SDL::temp_log10(acc, outerRadius)    // T5 outer radius (t5_outerRadius)
+        SDL::temp_log10(acc, (innerRadius + outerRadius) * SDL::k2Rinv1GeVf),  // T5 pT (t5_pt)
+        mdsInGPU.anchorEta[md_idx_for_t5_eta_phi],                             // T5 eta (t5_eta)
+        mdsInGPU.anchorPhi[md_idx_for_t5_eta_phi],                             // T5 phi (t5_phi)
+        SDL::temp_log10(acc, innerRadius),                                     // T5 inner radius (t5_innerRadius)
+        SDL::temp_log10(acc, bridgeRadius),                                    // T5 bridge radius (t5_bridgeRadius)
+        SDL::temp_log10(acc, outerRadius)                                      // T5 outer radius (t5_outerRadius)
     };
 
     // (0): Linear(in_features=38, out_features=32, bias=True) => x = x*W_T + b

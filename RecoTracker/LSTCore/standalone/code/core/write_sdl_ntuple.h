@@ -27,15 +27,16 @@ void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event);
 void setGnnNtupleBranches(SDL::Event<SDL::Acc>* event);
 void setGnnNtupleMiniDoublet(SDL::Event<SDL::Acc>* event, unsigned int MD);
 
-std::tuple<int, float, float, float, int, vector<int>> parseTrackCandidate(SDL::Event<SDL::Acc>* event, unsigned int);
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepT5(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int);
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepT3(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int);
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parseT5(SDL::Event<SDL::Acc>* event,
-                                                                                    unsigned int);
-std::tuple<float, float, float, vector<unsigned int>, vector<unsigned int>> parsepLS(SDL::Event<SDL::Acc>* event,
-                                                                                     unsigned int);
+std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(SDL::Event<SDL::Acc>* event,
+                                                                                unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(
+    SDL::Event<SDL::Acc>* event, unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(
+    SDL::Event<SDL::Acc>* event, unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT5(
+    SDL::Event<SDL::Acc>* event, unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(
+    SDL::Event<SDL::Acc>* event, unsigned int);
 
 // Print multiplicities
 void printMiniDoubletMultiplicities(SDL::Event<SDL::Acc>* event);

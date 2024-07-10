@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LST_LSTPixelSeedInput_h
-#define RecoTracker_LST_LSTPixelSeedInput_h
+#ifndef RecoTracker_LST_interface_LSTPixelSeedInput_h
+#define RecoTracker_LST_interface_LSTPixelSeedInput_h
 
 #include <memory>
 #include <vector>
@@ -7,39 +7,39 @@
 class LSTPixelSeedInput {
 public:
   LSTPixelSeedInput() = default;
-  ~LSTPixelSeedInput() = default;
-
-  void setLSTPixelSeedTraits(std::vector<float> px,
-                             std::vector<float> py,
-                             std::vector<float> pz,
-                             std::vector<float> dxy,
-                             std::vector<float> dz,
-                             std::vector<float> ptErr,
-                             std::vector<float> etaErr,
-                             std::vector<float> stateTrajGlbX,
-                             std::vector<float> stateTrajGlbY,
-                             std::vector<float> stateTrajGlbZ,
-                             std::vector<float> stateTrajGlbPx,
-                             std::vector<float> stateTrajGlbPy,
-                             std::vector<float> stateTrajGlbPz,
-                             std::vector<int> q,
-                             std::vector<std::vector<int>> hitIdx) {
-    px_ = px;
-    py_ = py;
-    pz_ = pz;
-    dxy_ = dxy;
-    dz_ = dz;
-    ptErr_ = ptErr;
-    etaErr_ = etaErr;
-    stateTrajGlbX_ = stateTrajGlbX;
-    stateTrajGlbY_ = stateTrajGlbY;
-    stateTrajGlbZ_ = stateTrajGlbZ;
-    stateTrajGlbPx_ = stateTrajGlbPx;
-    stateTrajGlbPy_ = stateTrajGlbPy;
-    stateTrajGlbPz_ = stateTrajGlbPz;
-    q_ = q;
-    hitIdx_ = hitIdx;
+  LSTPixelSeedInput(std::vector<float> px,
+                    std::vector<float> py,
+                    std::vector<float> pz,
+                    std::vector<float> dxy,
+                    std::vector<float> dz,
+                    std::vector<float> ptErr,
+                    std::vector<float> etaErr,
+                    std::vector<float> stateTrajGlbX,
+                    std::vector<float> stateTrajGlbY,
+                    std::vector<float> stateTrajGlbZ,
+                    std::vector<float> stateTrajGlbPx,
+                    std::vector<float> stateTrajGlbPy,
+                    std::vector<float> stateTrajGlbPz,
+                    std::vector<int> q,
+                    std::vector<std::vector<int>> hitIdx) {
+    px_ = std::move(px);
+    py_ = std::move(py);
+    pz_ = std::move(pz);
+    dxy_ = std::move(dxy);
+    dz_ = std::move(dz);
+    ptErr_ = std::move(ptErr);
+    etaErr_ = std::move(etaErr);
+    stateTrajGlbX_ = std::move(stateTrajGlbX);
+    stateTrajGlbY_ = std::move(stateTrajGlbY);
+    stateTrajGlbZ_ = std::move(stateTrajGlbZ);
+    stateTrajGlbPx_ = std::move(stateTrajGlbPx);
+    stateTrajGlbPy_ = std::move(stateTrajGlbPy);
+    stateTrajGlbPz_ = std::move(stateTrajGlbPz);
+    q_ = std::move(q);
+    hitIdx_ = std::move(hitIdx);
   }
+
+  ~LSTPixelSeedInput() = default;
 
   std::vector<float> const& px() const { return px_; }
   std::vector<float> const& py() const { return py_; }

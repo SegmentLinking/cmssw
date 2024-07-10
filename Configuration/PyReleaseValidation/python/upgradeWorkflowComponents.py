@@ -485,16 +485,8 @@ class UpgradeWorkflow_lstOnCPUIters01TrackingOnly(UpgradeWorkflowTracking):
         return ('2026' in key)
 upgradeWFs['lstOnCPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnCPUIters01TrackingOnly(
     steps = [
-        'Reco',
-        'RecoFakeHLT',
-        'HARVEST',
-        'HARVESTFakeHLT',
         'RecoGlobal',
         'HARVESTGlobal',
-        'RecoNano',
-        'RecoNanoFakeHLT',
-        'HARVESTNano',
-        'HARVESTNanoFakeHLT',
         # Add ALCA steps explicitly, so that they can be properly removed
         'ALCA',
         'ALCAPhase2'
@@ -504,7 +496,8 @@ upgradeWFs['lstOnCPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnCPUIters01Track
     offset = 0.703,
 )
 upgradeWFs['lstOnCPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
-    '--procModifiers': 'trackingIters01,trackingLST'
+    '--procModifiers': 'trackingIters01,trackingLST',
+    '--accelerators' : 'cpu'
 }
 
 # LST on GPU, initialStep+highPtTripletStep-only tracking-only
@@ -517,16 +510,8 @@ class UpgradeWorkflow_lstOnGPUIters01TrackingOnly(UpgradeWorkflowTracking):
         return ('2026' in key)
 upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01TrackingOnly(
     steps = [
-        'Reco',
-        'RecoFakeHLT',
-        'HARVEST',
-        'HARVESTFakeHLT',
         'RecoGlobal',
         'HARVESTGlobal',
-        'RecoNano',
-        'RecoNanoFakeHLT',
-        'HARVESTNano',
-        'HARVESTNanoFakeHLT',
         # Add ALCA steps explicitly, so that they can be properly removed
         'ALCA',
         'ALCAPhase2'
@@ -536,7 +521,8 @@ upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01Track
     offset = 0.704,
 )
 upgradeWFs['lstOnGPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
-    '--procModifiers': 'gpu,trackingIters01,trackingLST'
+    '--procModifiers': 'trackingIters01,trackingLST',
+    '--accelerators' : 'gpu-nvidia'
 }
 
 #DeepCore seeding for JetCore iteration workflow

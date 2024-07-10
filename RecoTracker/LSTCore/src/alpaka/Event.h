@@ -85,14 +85,15 @@ namespace SDL {
     const uint16_t nModules_;
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
+    const unsigned int nEndCapMap_;
     const std::shared_ptr<const modulesBuffer<Dev>> modulesBuffers_;
     const std::shared_ptr<const pixelMap> pixelMapping_;
-    const std::shared_ptr<const EndcapGeometry<Dev>> endcapGeometry_;
+    const std::shared_ptr<const EndcapGeometryBuffer<Dev>> endcapGeometryBuffers_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
     template <typename TQueue>
-    Event(bool verbose, const float pt_cut, TQueue const& q, const LSTESDeviceData<Dev>* deviceESData)
+    Event(bool verbose, const float pt_cut, TQueue const& q, const LSTESData<Dev>* deviceESData)
         : queue(q),
           ptCut(pt_cut),
           devAcc(alpaka::getDev(q)),
@@ -100,9 +101,10 @@ namespace SDL {
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),
+          nEndCapMap_(deviceESData->nEndCapMap),
           modulesBuffers_(deviceESData->modulesBuffers),
           pixelMapping_(deviceESData->pixelMapping),
-          endcapGeometry_(deviceESData->endcapGeometry) {
+          endcapGeometryBuffers_(deviceESData->endcapGeometryBuffers) {
       if (pt_cut < 0.6f) {
         throw std::invalid_argument("Minimum pT cut must be at least 0.6 GeV. Provided value: " +
                                     std::to_string(pt_cut));

@@ -21,14 +21,14 @@ private:
 };
 
 LSTPhase2OTHitsInputProducer::LSTPhase2OTHitsInputProducer(edm::ParameterSet const& iConfig)
-    : phase2OTRecHitToken_(consumes<Phase2TrackerRecHit1DCollectionNew>(
-          iConfig.getUntrackedParameter<edm::InputTag>("phase2OTRecHits"))),
+    : phase2OTRecHitToken_(
+          consumes<Phase2TrackerRecHit1DCollectionNew>(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
       lstPhase2OTHitsInputPutToken_(produces<LSTPhase2OTHitsInput>()) {}
 
 void LSTPhase2OTHitsInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
-  desc.addUntracked<edm::InputTag>("phase2OTRecHits", edm::InputTag("siPhase2RecHits"));
+  desc.add<edm::InputTag>("phase2OTRecHits", edm::InputTag("siPhase2RecHits"));
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -38,8 +38,6 @@ void LSTPhase2OTHitsInputProducer::produce(edm::StreamID iID, edm::Event& iEvent
   auto const& phase2OTHits = iEvent.get(phase2OTRecHitToken_);
 
   // Vector definitions
-  LSTPhase2OTHitsInput phase2OTHitsInput;
-
   std::vector<unsigned int> ph2_detId;
   std::vector<float> ph2_x;
   std::vector<float> ph2_y;
@@ -57,7 +55,7 @@ void LSTPhase2OTHitsInputProducer::produce(edm::StreamID iID, edm::Event& iEvent
     }
   }
 
-  phase2OTHitsInput.setLSTPhase2OTHitsTraits(ph2_detId, ph2_x, ph2_y, ph2_z, ph2_hits);
+  LSTPhase2OTHitsInput phase2OTHitsInput(ph2_detId, ph2_x, ph2_y, ph2_z, ph2_hits);
   iEvent.emplace(lstPhase2OTHitsInputPutToken_, std::move(phase2OTHitsInput));
 }
 

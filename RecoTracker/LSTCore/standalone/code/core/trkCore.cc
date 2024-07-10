@@ -302,7 +302,7 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
 
   int nhits_input = to_check_duplicate.size();
 
-  std::vector<vector<int>> simtrk_idxs;
+  std::vector<std::vector<int>> simtrk_idxs;
   std::vector<int> unique_idxs;  // to aggregate which ones to count and test
 
   if (verbose) {
@@ -320,7 +320,7 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
 
     std::vector<int> simtrk_idxs_per_hit;
 
-    const std::vector<vector<int>> *simHitIdxs = hittype == 4 ? &trk.ph2_simHitIdx() : &trk.pix_simHitIdx();
+    const std::vector<std::vector<int>> *simHitIdxs = hittype == 4 ? &trk.ph2_simHitIdx() : &trk.pix_simHitIdx();
 
     if (verbose) {
       std::cout << " trk.ph2_simHitIdx().size(): " << trk.ph2_simHitIdx().size() << std::endl;
@@ -384,8 +384,11 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
   }
 
   // Compute all permutations
-  std::function<void(vector<vector<int>> &, vector<int>, size_t, vector<vector<int>> &)> perm =
-      [&](vector<vector<int>> &result, vector<int> intermediate, size_t n, vector<vector<int>> &va) {
+  std::function<void(std::vector<std::vector<int>> &, std::vector<int>, size_t, std::vector<std::vector<int>> &)> perm =
+      [&](std::vector<std::vector<int>> &result,
+          std::vector<int> intermediate,
+          size_t n,
+          std::vector<std::vector<int>> &va) {
         // std::cout <<  " 'called': " << "called" <<  std::endl;
         if (va.size() > n) {
           for (auto x : va[n]) {
@@ -400,8 +403,8 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
         }
       };
 
-  vector<vector<int>> allperms;
-  perm(allperms, vector<int>(), 0, simtrk_idxs);
+  std::vector<std::vector<int>> allperms;
+  perm(allperms, std::vector<int>(), 0, simtrk_idxs);
 
   if (verbose) {
     std::cout << " allperms.size(): " << allperms.size() << std::endl;
@@ -429,7 +432,7 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
       matched_sim_trk_idxs.push_back(trkidx);
     maxHitMatchCount = std::max(maxHitMatchCount, *std::max_element(counts.begin(), counts.end()));
   }
-  set<int> s;
+  std::set<int> s;
   unsigned size = matched_sim_trk_idxs.size();
   for (unsigned i = 0; i < size; ++i)
     s.insert(matched_sim_trk_idxs[i]);
@@ -900,24 +903,24 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   if (ana.verbose == 0)
     return;
 
-  std::cout << showpoint;
-  std::cout << fixed;
-  std::cout << setprecision(2);
-  std::cout << right;
+  std::cout << std::showpoint;
+  std::cout << std::fixed;
+  std::cout << std::setprecision(2);
+  std::cout << std::right;
   std::cout << "Timing summary" << std::endl;
-  std::cout << setw(6) << "Evt";
-  std::cout << "   " << setw(6) << "Hits";
-  std::cout << "   " << setw(6) << "MD";
-  std::cout << "   " << setw(6) << "LS";
-  std::cout << "   " << setw(6) << "T3";
-  std::cout << "   " << setw(6) << "T5";
-  std::cout << "   " << setw(6) << "pLS";
-  std::cout << "   " << setw(6) << "pT5";
-  std::cout << "   " << setw(6) << "pT3";
-  std::cout << "   " << setw(6) << "TC";
-  std::cout << "   " << setw(6) << "Reset";
-  std::cout << "   " << setw(7) << "Total";
-  std::cout << "   " << setw(7) << "Total(short)";
+  std::cout << std::setw(6) << "Evt";
+  std::cout << "   " << std::setw(6) << "Hits";
+  std::cout << "   " << std::setw(6) << "MD";
+  std::cout << "   " << std::setw(6) << "LS";
+  std::cout << "   " << std::setw(6) << "T3";
+  std::cout << "   " << std::setw(6) << "T5";
+  std::cout << "   " << std::setw(6) << "pLS";
+  std::cout << "   " << std::setw(6) << "pT5";
+  std::cout << "   " << std::setw(6) << "pT3";
+  std::cout << "   " << std::setw(6) << "TC";
+  std::cout << "   " << std::setw(6) << "Reset";
+  std::cout << "   " << std::setw(7) << "Total";
+  std::cout << "   " << std::setw(7) << "Total(short)";
   std::cout << std::endl;
   std::vector<float> timing_sum_information(timing_information[0].size());
   std::vector<float> timing_shortlist;
@@ -943,19 +946,19 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
     timing_total_short += timing[7] * 1000;  // pT3
     timing_total_short += timing[8] * 1000;  // TC
     timing_total_short += timing[9] * 1000;  // Reset
-    std::cout << setw(6) << ievt;
-    std::cout << "   " << setw(6) << timing[0] * 1000;    // Hits
-    std::cout << "   " << setw(6) << timing[1] * 1000;    // MD
-    std::cout << "   " << setw(6) << timing[2] * 1000;    // LS
-    std::cout << "   " << setw(6) << timing[3] * 1000;    // T3
-    std::cout << "   " << setw(6) << timing[4] * 1000;    // T5
-    std::cout << "   " << setw(6) << timing[5] * 1000;    // pLS
-    std::cout << "   " << setw(6) << timing[6] * 1000;    // pT5
-    std::cout << "   " << setw(6) << timing[7] * 1000;    // pT3
-    std::cout << "   " << setw(6) << timing[8] * 1000;    // TC
-    std::cout << "   " << setw(6) << timing[9] * 1000;    // Reset
-    std::cout << "   " << setw(7) << timing_total;        // Total time
-    std::cout << "   " << setw(7) << timing_total_short;  // Total time
+    std::cout << std::setw(6) << ievt;
+    std::cout << "   " << std::setw(6) << timing[0] * 1000;    // Hits
+    std::cout << "   " << std::setw(6) << timing[1] * 1000;    // MD
+    std::cout << "   " << std::setw(6) << timing[2] * 1000;    // LS
+    std::cout << "   " << std::setw(6) << timing[3] * 1000;    // T3
+    std::cout << "   " << std::setw(6) << timing[4] * 1000;    // T5
+    std::cout << "   " << std::setw(6) << timing[5] * 1000;    // pLS
+    std::cout << "   " << std::setw(6) << timing[6] * 1000;    // pT5
+    std::cout << "   " << std::setw(6) << timing[7] * 1000;    // pT3
+    std::cout << "   " << std::setw(6) << timing[8] * 1000;    // TC
+    std::cout << "   " << std::setw(6) << timing[9] * 1000;    // Reset
+    std::cout << "   " << std::setw(7) << timing_total;        // Total time
+    std::cout << "   " << std::setw(7) << timing_total_short;  // Total time
     std::cout << std::endl;
     timing_sum_information[0] += timing[0] * 1000;   // Hits
     timing_sum_information[1] += timing[1] * 1000;   // MD
@@ -1008,41 +1011,41 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   }
   float stdDev = sqrt(standardDeviation / timing_shortlist.size());
 
-  std::cout << setprecision(1);
-  std::cout << setw(6) << "Evt";
-  std::cout << "   " << setw(6) << "Hits";
-  std::cout << "   " << setw(6) << "MD";
-  std::cout << "   " << setw(6) << "LS";
-  std::cout << "   " << setw(6) << "T3";
-  std::cout << "   " << setw(6) << "T5";
-  std::cout << "   " << setw(6) << "pLS";
-  std::cout << "   " << setw(6) << "pT5";
-  std::cout << "   " << setw(6) << "pT3";
-  std::cout << "   " << setw(6) << "TC";
-  std::cout << "   " << setw(6) << "Reset";
-  std::cout << "   " << setw(7) << "Total";
-  std::cout << "   " << setw(7) << "Total(short)";
+  std::cout << std::setprecision(1);
+  std::cout << std::setw(6) << "Evt";
+  std::cout << "   " << std::setw(6) << "Hits";
+  std::cout << "   " << std::setw(6) << "MD";
+  std::cout << "   " << std::setw(6) << "LS";
+  std::cout << "   " << std::setw(6) << "T3";
+  std::cout << "   " << std::setw(6) << "T5";
+  std::cout << "   " << std::setw(6) << "pLS";
+  std::cout << "   " << std::setw(6) << "pT5";
+  std::cout << "   " << std::setw(6) << "pT3";
+  std::cout << "   " << std::setw(6) << "TC";
+  std::cout << "   " << std::setw(6) << "Reset";
+  std::cout << "   " << std::setw(7) << "Total";
+  std::cout << "   " << std::setw(7) << "Total(short)";
   std::cout << std::endl;
-  std::cout << setw(6) << "avg";
-  std::cout << "   " << setw(6) << timing_sum_information[0];  // Hits
-  std::cout << "   " << setw(6) << timing_sum_information[1];  // MD
-  std::cout << "   " << setw(6) << timing_sum_information[2];  // LS
-  std::cout << "   " << setw(6) << timing_sum_information[3];  // T3
-  std::cout << "   " << setw(6) << timing_sum_information[4];  // T5
-  std::cout << "   " << setw(6) << timing_sum_information[5];  // pLS
-  std::cout << "   " << setw(6) << timing_sum_information[6];  // pT5
-  std::cout << "   " << setw(6) << timing_sum_information[7];  // pT3
-  std::cout << "   " << setw(6) << timing_sum_information[8];  // TC
-  std::cout << "   " << setw(6) << timing_sum_information[9];  // Reset
-  std::cout << "   " << setw(7) << timing_total_avg;           // Average total time
-  std::cout << "   " << setw(7) << timing_totalshort_avg;      // Average total time
-  std::cout << "+/- " << setw(4) << stdDev;
-  std::cout << "   " << setw(7) << fullavg;  // Average full time
+  std::cout << std::setw(6) << "avg";
+  std::cout << "   " << std::setw(6) << timing_sum_information[0];  // Hits
+  std::cout << "   " << std::setw(6) << timing_sum_information[1];  // MD
+  std::cout << "   " << std::setw(6) << timing_sum_information[2];  // LS
+  std::cout << "   " << std::setw(6) << timing_sum_information[3];  // T3
+  std::cout << "   " << std::setw(6) << timing_sum_information[4];  // T5
+  std::cout << "   " << std::setw(6) << timing_sum_information[5];  // pLS
+  std::cout << "   " << std::setw(6) << timing_sum_information[6];  // pT5
+  std::cout << "   " << std::setw(6) << timing_sum_information[7];  // pT3
+  std::cout << "   " << std::setw(6) << timing_sum_information[8];  // TC
+  std::cout << "   " << std::setw(6) << timing_sum_information[9];  // Reset
+  std::cout << "   " << std::setw(7) << timing_total_avg;           // Average total time
+  std::cout << "   " << std::setw(7) << timing_totalshort_avg;      // Average total time
+  std::cout << "+/- " << std::setw(4) << stdDev;
+  std::cout << "   " << std::setw(7) << fullavg;  // Average full time
   std::cout << "   " << ana.compilation_target;
   std::cout << "[s=" << ana.streams << "]";
   std::cout << std::endl;
 
-  std::cout << left;
+  std::cout << std::left;
 }
 
 //  ---------------------------------- =========================================== ----------------------------------------------

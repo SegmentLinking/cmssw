@@ -425,7 +425,7 @@ trackingPhase2PU140.toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_
 
 _HighPtTripletStepTask_LST = HighPtTripletStepTask.copy()
 from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits
-from RecoTracker.LST.lstSeedTracks_cfi import lstInitialStepSeedTracks,lstHighPtTripletStepSeedTracks
+from RecoTracker.LST.lstSeedTracks_cff import lstInitialStepSeedTracks,lstHighPtTripletStepSeedTracks
 from RecoTracker.LST.lstPixelSeedInputProducer_cfi import lstPixelSeedInputProducer
 from RecoTracker.LST.lstPhase2OTHitsInputProducer_cfi import lstPhase2OTHitsInputProducer
 from RecoTracker.LST.lstProducer_cff import *

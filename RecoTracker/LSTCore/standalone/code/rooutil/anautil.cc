@@ -62,8 +62,8 @@ void RooUtil::Cutflow::setLastActiveCut(TString n) { last_active_cut = cuttree.g
 void RooUtil::Cutflow::printCuts() { cuttree.printCuts(); }
 
 //_______________________________________________________________________________________________________
-CutTree& RooUtil::Cutflow::getCut(TString n) {
-  CutTree& c = cuttree.getCut(n);
+RooUtil::CutTree& RooUtil::Cutflow::getCut(TString n) {
+  RooUtil::CutTree& c = cuttree.getCut(n);
   setLastActiveCut(n);
   return c;
 }
@@ -105,7 +105,7 @@ void RooUtil::Cutflow::addCutToLastActiveCut(TString n) {
 
 //_______________________________________________________________________________________________________
 void RooUtil::Cutflow::removeCut(TString n) {
-  CutTree* c = cuttree.getCutPointer(n);
+  RooUtil::CutTree* c = cuttree.getCutPointer(n);
   c->parent->children.erase(std::find(c->parent->children.begin(), c->parent->children.end(), c));
   cuttreemap.erase(cuttreemap.find(n.Data()));
 }
@@ -124,8 +124,8 @@ void RooUtil::Cutflow::filterCuts(std::vector<TString> ns) {
   for (auto& n : ns) {
     std::vector<TString> cutlist = cuttree.getCutList(n);
     for (unsigned int i = 0; i < cutlist.size() - 1; ++i) {
-      CutTree* cut = cuttree.getCutPointer(cutlist[i]);
-      std::vector<CutTree*> toremove;
+      RooUtil::CutTree* cut = cuttree.getCutPointer(cutlist[i]);
+      std::vector<RooUtil::CutTree*> toremove;
       for (auto& child : cut->children) {
         if (not child->name.EqualTo(cutlist[i + 1])) {
           if (std::find(to_not_remove.begin(), to_not_remove.end(), child->name) == to_not_remove.end())
@@ -538,7 +538,7 @@ void RooUtil::Cutflow::fillCutflows_v1(TString syst, bool iswgtsyst) {
 void RooUtil::Cutflow::fillCutflows_v2(TString syst, bool iswgtsyst) {
   for (auto& pair : cuttreelists) {
     const TString& region_name = pair.first;
-    std::vector<CutTree*>& cuttreelist = pair.second;
+    std::vector<RooUtil::CutTree*>& cuttreelist = pair.second;
     float wgtsyst = (!syst.IsNull() and iswgtsyst) ? systs_funcs[syst]() : 1;
     fillCutflow_v2(cuttreelist,
                    cutflow_histograms[(region_name + syst).Data()],
@@ -576,9 +576,12 @@ void RooUtil::Cutflow::fillCutflow(std::vector<TString>& cutlist, THist* h, THis
 }
 
 //_______________________________________________________________________________________________________
-void RooUtil::Cutflow::fillCutflow_v2(std::vector<CutTree*>& cuttreelist, THist* h, THist* hraw, float wgtsyst) {
+void RooUtil::Cutflow::fillCutflow_v2(std::vector<RooUtil::CutTree*>& cuttreelist,
+                                      THist* h,
+                                      THist* hraw,
+                                      float wgtsyst) {
   for (unsigned int i = 0; i < cuttreelist.size(); ++i) {
-    CutTree* ct = cuttreelist[i];
+    RooUtil::CutTree* ct = cuttreelist[i];
     // if (std::find(cutflow_nofill_cut_list.begin(), cutflow_nofill_cut_list.end(), ct->name) != cutflow_nofill_cut_list.end())
     //     continue;
     int& pass = ct->pass;

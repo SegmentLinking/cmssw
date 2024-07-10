@@ -72,9 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void produce(device::Event& event, device::EventSetup const&) override {
       // Output
-      LSTOutput lstOutput;
-      lstOutput.setLSTOutputTraits(lst_.hits(), lst_.len(), lst_.seedIdx(), lst_.trackCandidateType());
-
+      LSTOutput lstOutput(lst_.hits(), lst_.len(), lst_.seedIdx(), lst_.trackCandidateType());
       event.emplace(lstOutputToken_, std::move(lstOutput));
     }
 
@@ -93,7 +91,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
-    device::ESGetToken<SDL::LSTESDeviceData<SDL::Dev>, TrackerRecoGeometryRecord> lstESToken_;
+    device::ESGetToken<SDL::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_;
     const double ptCut_;
     const bool nopLSDupClean_;

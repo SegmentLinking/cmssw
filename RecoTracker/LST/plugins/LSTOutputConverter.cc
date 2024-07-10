@@ -41,8 +41,8 @@ private:
   const bool includeT5s_;
   const bool includeNonpLSTSs_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
-  edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorAlongToken_;
-  edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
+  const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorAlongToken_;
+  const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tGeomToken_;
   std::unique_ptr<SeedCreator> seedCreator_;
   const edm::EDPutTokenT<TrajectorySeedCollection> trajectorySeedPutToken_;
@@ -57,11 +57,9 @@ private:
 };
 
 LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
-    : lstOutputToken_(consumes<LSTOutput>(iConfig.getUntrackedParameter<edm::InputTag>("lstOutput"))),
-      lstPhase2OTHitsInputToken_{
-          consumes<LSTPhase2OTHitsInput>(iConfig.getUntrackedParameter<edm::InputTag>("phase2OTHits"))},
-      lstPixelSeedToken_{
-          consumes<TrajectorySeedCollection>(iConfig.getUntrackedParameter<edm::InputTag>("lstPixelSeeds"))},
+    : lstOutputToken_(consumes<LSTOutput>(iConfig.getParameter<edm::InputTag>("lstOutput"))),
+      lstPhase2OTHitsInputToken_{consumes<LSTPhase2OTHitsInput>(iConfig.getParameter<edm::InputTag>("phase2OTHits"))},
+      lstPixelSeedToken_{consumes<TrajectorySeedCollection>(iConfig.getParameter<edm::InputTag>("lstPixelSeeds"))},
       includeT5s_(iConfig.getParameter<bool>("includeT5s")),
       includeNonpLSTSs_(iConfig.getParameter<bool>("includeNonpLSTSs")),
       mfToken_(esConsumes()),
@@ -92,9 +90,9 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
 
-  desc.addUntracked<edm::InputTag>("lstOutput", edm::InputTag("lstProducer"));
-  desc.addUntracked<edm::InputTag>("phase2OTHits", edm::InputTag("lstPhase2OTHitsInputProducer"));
-  desc.addUntracked<edm::InputTag>("lstPixelSeeds", edm::InputTag("lstPixelSeedInputProducer"));
+  desc.add<edm::InputTag>("lstOutput", edm::InputTag("lstProducer"));
+  desc.add<edm::InputTag>("phase2OTHits", edm::InputTag("lstPhase2OTHitsInputProducer"));
+  desc.add<edm::InputTag>("lstPixelSeeds", edm::InputTag("lstPixelSeedInputProducer"));
   desc.add<bool>("includeT5s", true);
   desc.add<bool>("includeNonpLSTSs", false);
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
