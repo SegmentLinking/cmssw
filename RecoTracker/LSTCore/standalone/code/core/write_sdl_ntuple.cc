@@ -133,19 +133,19 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
 
   // Occupancy branches
-  ana.tx->createBranch<vector<int>>("module_layers");
-  ana.tx->createBranch<vector<int>>("module_subdets");
-  ana.tx->createBranch<vector<int>>("module_rings");
-  ana.tx->createBranch<vector<int>>("module_rods");
-  ana.tx->createBranch<vector<int>>("module_modules");
-  ana.tx->createBranch<vector<bool>>("module_isTilted");
-  ana.tx->createBranch<vector<float>>("module_eta");
-  ana.tx->createBranch<vector<float>>("module_r");
-  ana.tx->createBranch<vector<int>>("md_occupancies");
-  ana.tx->createBranch<vector<int>>("sg_occupancies");
-  ana.tx->createBranch<vector<int>>("t3_occupancies");
+  ana.tx->createBranch<std::vector<int>>("module_layers");
+  ana.tx->createBranch<std::vector<int>>("module_subdets");
+  ana.tx->createBranch<std::vector<int>>("module_rings");
+  ana.tx->createBranch<std::vector<int>>("module_rods");
+  ana.tx->createBranch<std::vector<int>>("module_modules");
+  ana.tx->createBranch<std::vector<bool>>("module_isTilted");
+  ana.tx->createBranch<std::vector<float>>("module_eta");
+  ana.tx->createBranch<std::vector<float>>("module_r");
+  ana.tx->createBranch<std::vector<int>>("md_occupancies");
+  ana.tx->createBranch<std::vector<int>>("sg_occupancies");
+  ana.tx->createBranch<std::vector<int>>("t3_occupancies");
   ana.tx->createBranch<int>("tc_occupancies");
-  ana.tx->createBranch<vector<int>>("t5_occupancies");
+  ana.tx->createBranch<std::vector<int>>("t5_occupancies");
   ana.tx->createBranch<int>("pT3_occupancies");
   ana.tx->createBranch<int>("pT5_occupancies");
 
@@ -349,20 +349,20 @@ void setOccupancyBranches(SDL::Event<SDL::Acc>* event) {
     }
   }
 
-  ana.tx->setBranch<vector<int>>("module_layers", moduleLayer);
-  ana.tx->setBranch<vector<int>>("module_subdets", moduleSubdet);
-  ana.tx->setBranch<vector<int>>("module_rings", moduleRing);
-  ana.tx->setBranch<vector<int>>("module_rods", moduleRod);
-  ana.tx->setBranch<vector<int>>("module_modules", moduleModule);
-  ana.tx->setBranch<vector<bool>>("module_isTilted", moduleIsTilted);
-  ana.tx->setBranch<vector<float>>("module_eta", moduleEta);
-  ana.tx->setBranch<vector<float>>("module_r", moduleR);
-  ana.tx->setBranch<vector<int>>("md_occupancies", mdOccupancy);
-  ana.tx->setBranch<vector<int>>("sg_occupancies", segmentOccupancy);
-  ana.tx->setBranch<vector<int>>("t3_occupancies", tripletOccupancy);
+  ana.tx->setBranch<std::vector<int>>("module_layers", moduleLayer);
+  ana.tx->setBranch<std::vector<int>>("module_subdets", moduleSubdet);
+  ana.tx->setBranch<std::vector<int>>("module_rings", moduleRing);
+  ana.tx->setBranch<std::vector<int>>("module_rods", moduleRod);
+  ana.tx->setBranch<std::vector<int>>("module_modules", moduleModule);
+  ana.tx->setBranch<std::vector<bool>>("module_isTilted", moduleIsTilted);
+  ana.tx->setBranch<std::vector<float>>("module_eta", moduleEta);
+  ana.tx->setBranch<std::vector<float>>("module_r", moduleR);
+  ana.tx->setBranch<std::vector<int>>("md_occupancies", mdOccupancy);
+  ana.tx->setBranch<std::vector<int>>("sg_occupancies", segmentOccupancy);
+  ana.tx->setBranch<std::vector<int>>("t3_occupancies", tripletOccupancy);
   ana.tx->setBranch<int>("tc_occupancies", *(trackCandidatesInGPU.nTrackCandidates));
   ana.tx->setBranch<int>("pT3_occupancies", *(pixelTripletsInGPU.totOccupancyPixelTriplets));
-  ana.tx->setBranch<vector<int>>("t5_occupancies", quintupletOccupancy);
+  ana.tx->setBranch<std::vector<int>>("t5_occupancies", quintupletOccupancy);
   ana.tx->setBranch<int>("pT5_occupancies", *(pixelQuintupletsInGPU.totOccupancyPixelQuintuplets));
 }
 

@@ -15,7 +15,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
   public:
-    LSTModulesDevESProducer(edm::ParameterSet const& iConfig) : ESProducer(iConfig), ptCutLabel_(iConfig.getParameter<std::string>("ptCutLabel")) {
+    LSTModulesDevESProducer(edm::ParameterSet const& iConfig)
+        : ESProducer(iConfig), ptCutLabel_(iConfig.getParameter<std::string>("ptCutLabel")) {
       setWhatProduced(this, &LSTModulesDevESProducer::produce, ptCutLabel_);
     }
 
