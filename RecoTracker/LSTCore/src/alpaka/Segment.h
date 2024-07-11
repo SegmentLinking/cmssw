@@ -3,8 +3,8 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 
-#include "EndcapGeometry.h"
 #include "MiniDoublet.h"
 #include "Hit.h"
 

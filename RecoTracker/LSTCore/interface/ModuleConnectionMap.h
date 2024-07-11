@@ -1,5 +1,5 @@
-#ifndef ModuleConnectionMap_h
-#define ModuleConnectionMap_h
+#ifndef RecoTracker_LSTCore_interface_ModuleConnectionMap_h
+#define RecoTracker_LSTCore_interface_ModuleConnectionMap_h
 
 #include <iostream>
 #include <fstream>
@@ -8,14 +8,8 @@
 #include <sstream>
 #include <algorithm>
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-
 namespace SDL {
-  //FIXME: move to non-alpaka single arch build
-  template <typename>
-  class ModuleConnectionMap;
-  template <>
-  class ModuleConnectionMap<SDL::Dev> {
+  class ModuleConnectionMap {
   private:
     std::map<unsigned int, std::vector<unsigned int>> moduleConnections_;
 
@@ -32,7 +26,7 @@ namespace SDL {
     int size() const;
   };
 
-  using MapPLStoLayer = std::array<std::array<ModuleConnectionMap<SDL::Dev>, 4>, 3>;
+  using MapPLStoLayer = std::array<std::array<ModuleConnectionMap, 4>, 3>;
 }  // namespace SDL
 
 #endif

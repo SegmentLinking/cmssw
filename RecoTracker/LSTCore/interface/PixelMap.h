@@ -1,14 +1,12 @@
-#ifndef PixelMap_h
-#define PixelMap_h
+#ifndef RecoTracker_LSTCore_interface_PixelMap_h
+#define RecoTracker_LSTCore_interface_PixelMap_h
 
 #include <vector>
 #include <cstdint>
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/Constants.h"
 
 namespace SDL {
-  // PixelMap is never allocated on the device.
-  // This is also not passed to any of the kernels, so we can combine the structs.
   struct pixelMap {
     uint16_t pixelModuleIndex;
 

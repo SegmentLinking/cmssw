@@ -1,9 +1,9 @@
 #include "RecoTracker/LSTCore/interface/alpaka/LSTESData.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
+#include "RecoTracker/LSTCore/interface/ModuleConnectionMap.h"
+#include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
+#include "RecoTracker/LSTCore/interface/PixelMap.h"
 
-#include "EndcapGeometry.h"
-#include "ModuleConnectionMap.h"
-#include "TiltedGeometry.h"
-#include "PixelMap.h"
 #include "ModuleMethods.h"
 
 namespace {
@@ -40,9 +40,9 @@ namespace {
   }
 
   void loadMapsHost(SDL::MapPLStoLayer& pLStoLayer,
-                    std::shared_ptr<SDL::EndcapGeometry<SDL::Dev>> endcapGeometry,
-                    std::shared_ptr<SDL::TiltedGeometry<SDL::Dev>> tiltedGeometry,
-                    std::shared_ptr<SDL::ModuleConnectionMap<SDL::Dev>> moduleConnectionMap) {
+                    std::shared_ptr<SDL::EndcapGeometry> endcapGeometry,
+                    std::shared_ptr<SDL::TiltedGeometry> tiltedGeometry,
+                    std::shared_ptr<SDL::ModuleConnectionMap> moduleConnectionMap) {
     // Module orientation information (DrDz or phi angles)
     auto endcap_geom =
         get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
@@ -66,13 +66,13 @@ namespace {
       auto connectData = connects[i].data();
 
       path = pLSMapDir + connectData + ".bin";
-      pLStoLayer[0][i] = SDL::ModuleConnectionMap<SDL::Dev>(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[0][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
 
       path = pLSMapDir + "_pos" + connectData + ".bin";
-      pLStoLayer[1][i] = SDL::ModuleConnectionMap<SDL::Dev>(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[1][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
 
       path = pLSMapDir + "_neg" + connectData + ".bin";
-      pLStoLayer[2][i] = SDL::ModuleConnectionMap<SDL::Dev>(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[2][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
     }
   }
 }  // namespace
@@ -83,10 +83,10 @@ std::unique_ptr<SDL::LSTESData<SDL::DevHost>> SDL::loadAndFillESHost() {
   unsigned int nPixels;
   std::shared_ptr<SDL::modulesBuffer<SDL::DevHost>> modulesBuffers = nullptr;
   auto pLStoLayer = std::make_shared<SDL::MapPLStoLayer>();
-  auto endcapGeometry = std::make_shared<SDL::EndcapGeometry<SDL::Dev>>();
-  auto tiltedGeometry = std::make_shared<SDL::TiltedGeometry<SDL::Dev>>();
+  auto endcapGeometry = std::make_shared<SDL::EndcapGeometry>();
+  auto tiltedGeometry = std::make_shared<SDL::TiltedGeometry>();
   auto pixelMapping = std::make_shared<SDL::pixelMap>();
-  auto moduleConnectionMap = std::make_shared<SDL::ModuleConnectionMap<SDL::Dev>>();
+  auto moduleConnectionMap = std::make_shared<SDL::ModuleConnectionMap>();
   ::loadMapsHost(*pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 
   auto endcapGeometryBuffers =

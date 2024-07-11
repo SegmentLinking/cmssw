@@ -3,9 +3,9 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 
 #include "NeuralNetwork.h"
-#include "EndcapGeometry.h"
 #include "Segment.h"
 #include "MiniDoublet.h"
 #include "Hit.h"

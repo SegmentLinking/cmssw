@@ -6,11 +6,10 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-
-#include "TiltedGeometry.h"
-#include "EndcapGeometry.h"
-#include "ModuleConnectionMap.h"
-#include "PixelMap.h"
+#include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
+#include "RecoTracker/LSTCore/interface/ModuleConnectionMap.h"
+#include "RecoTracker/LSTCore/interface/PixelMap.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
@@ -110,7 +109,7 @@ namespace SDL {
                                                unsigned int nMod,
                                                TQueue queue,
                                                struct ModuleMetaData& mmd,
-                                               const ModuleConnectionMap<Dev>* moduleConnectionMap) {
+                                               const ModuleConnectionMap* moduleConnectionMap) {
     DevHost const& devHost = cms::alpakatools::host();
     auto moduleMap_buf = allocBufWrapper<uint16_t>(devHost, nMod * MAX_CONNECTED_MODULES);
     uint16_t* moduleMap = alpaka::getPtrNative(moduleMap_buf);
@@ -226,9 +225,9 @@ namespace SDL {
                                   unsigned int& nPixels,
                                   std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
                                   pixelMap* pixelMapping,
-                                  const EndcapGeometry<Dev>* endcapGeometry,
-                                  const TiltedGeometry<Dev>* tiltedGeometry,
-                                  const ModuleConnectionMap<Dev>* moduleConnectionMap) {
+                                  const EndcapGeometry* endcapGeometry,
+                                  const TiltedGeometry* tiltedGeometry,
+                                  const ModuleConnectionMap* moduleConnectionMap) {
     ModuleMetaData mmd;
 
     loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
