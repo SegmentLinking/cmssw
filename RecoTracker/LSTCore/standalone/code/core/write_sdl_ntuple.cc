@@ -124,7 +124,6 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t5_moduleType_binary");
   ana.tx->createBranch<std::vector<int>>("t5_layer_binary");
   ana.tx->createBranch<std::vector<float>>("t5_matched_pt");
-  ana.tx->createBranch<std::vector<int>>("t5_partOfTC");
   ana.tx->createBranch<std::vector<float>>("t5_innerRadius");
   ana.tx->createBranch<std::vector<float>>("t5_outerRadius");
   ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
@@ -158,38 +157,40 @@ void createOptionalOutputBranches() {
 //________________________________________________________________________________________________________________________________
 void createT5DNNBranches() {
   // T3 branches for T5 DNN
-  ana.tx->createBranch<vector<int>>("t5_t3_idx0");
-  ana.tx->createBranch<vector<int>>("t5_t3_idx1");
-  ana.tx->createBranch<vector<float>>("t3_pt");
-  ana.tx->createBranch<vector<float>>("t3_eta");
-  ana.tx->createBranch<vector<float>>("t3_phi");
-  ana.tx->createBranch<vector<float>>("t3_0_r");
-  ana.tx->createBranch<vector<float>>("t3_0_x");
-  ana.tx->createBranch<vector<float>>("t3_0_y");
-  ana.tx->createBranch<vector<float>>("t3_0_z");
-  ana.tx->createBranch<vector<float>>("t3_0_eta");
-  ana.tx->createBranch<vector<float>>("t3_0_phi");
-  ana.tx->createBranch<vector<int>>("t3_0_detId");
-  ana.tx->createBranch<vector<int>>("t3_0_layer");
-  ana.tx->createBranch<vector<int>>("t3_0_moduleType");
-  ana.tx->createBranch<vector<float>>("t3_2_r");
-  ana.tx->createBranch<vector<float>>("t3_2_x");
-  ana.tx->createBranch<vector<float>>("t3_2_y");
-  ana.tx->createBranch<vector<float>>("t3_2_z");
-  ana.tx->createBranch<vector<float>>("t3_2_eta");
-  ana.tx->createBranch<vector<float>>("t3_2_phi");
-  ana.tx->createBranch<vector<int>>("t3_2_detId");
-  ana.tx->createBranch<vector<int>>("t3_2_layer");
-  ana.tx->createBranch<vector<int>>("t3_2_moduleType");
-  ana.tx->createBranch<vector<float>>("t3_4_r");
-  ana.tx->createBranch<vector<float>>("t3_4_x");
-  ana.tx->createBranch<vector<float>>("t3_4_y");
-  ana.tx->createBranch<vector<float>>("t3_4_z");
-  ana.tx->createBranch<vector<float>>("t3_4_eta");
-  ana.tx->createBranch<vector<float>>("t3_4_phi");
-  ana.tx->createBranch<vector<int>>("t3_4_detId");
-  ana.tx->createBranch<vector<int>>("t3_4_layer");
-  ana.tx->createBranch<vector<int>>("t3_4_moduleType");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_idx0");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_idx1");
+  ana.tx->createBranch<std::vector<int>>("t5_tc_idx");
+  ana.tx->createBranch<std::vector<int>>("t5_partOfTC");
+  ana.tx->createBranch<std::vector<float>>("t3_pt");
+  ana.tx->createBranch<std::vector<float>>("t3_eta");
+  ana.tx->createBranch<std::vector<float>>("t3_phi");
+  ana.tx->createBranch<std::vector<float>>("t3_0_r");
+  ana.tx->createBranch<std::vector<float>>("t3_0_x");
+  ana.tx->createBranch<std::vector<float>>("t3_0_y");
+  ana.tx->createBranch<std::vector<float>>("t3_0_z");
+  ana.tx->createBranch<std::vector<float>>("t3_0_eta");
+  ana.tx->createBranch<std::vector<float>>("t3_0_phi");
+  ana.tx->createBranch<std::vector<int>>("t3_0_detId");
+  ana.tx->createBranch<std::vector<int>>("t3_0_layer");
+  ana.tx->createBranch<std::vector<int>>("t3_0_moduleType");
+  ana.tx->createBranch<std::vector<float>>("t3_2_r");
+  ana.tx->createBranch<std::vector<float>>("t3_2_x");
+  ana.tx->createBranch<std::vector<float>>("t3_2_y");
+  ana.tx->createBranch<std::vector<float>>("t3_2_z");
+  ana.tx->createBranch<std::vector<float>>("t3_2_eta");
+  ana.tx->createBranch<std::vector<float>>("t3_2_phi");
+  ana.tx->createBranch<std::vector<int>>("t3_2_detId");
+  ana.tx->createBranch<std::vector<int>>("t3_2_layer");
+  ana.tx->createBranch<std::vector<int>>("t3_2_moduleType");
+  ana.tx->createBranch<std::vector<float>>("t3_4_r");
+  ana.tx->createBranch<std::vector<float>>("t3_4_x");
+  ana.tx->createBranch<std::vector<float>>("t3_4_y");
+  ana.tx->createBranch<std::vector<float>>("t3_4_z");
+  ana.tx->createBranch<std::vector<float>>("t3_4_eta");
+  ana.tx->createBranch<std::vector<float>>("t3_4_phi");
+  ana.tx->createBranch<std::vector<int>>("t3_4_detId");
+  ana.tx->createBranch<std::vector<int>>("t3_4_layer");
+  ana.tx->createBranch<std::vector<int>>("t3_4_moduleType");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -712,17 +713,51 @@ void fillT5DNNBranches(SDL::Event<SDL::Acc>* event, unsigned int T3) {
 
 //________________________________________________________________________________________________________________________________
 void setT5DNNBranches(SDL::Event<SDL::Acc>* event) {
-  SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = (*event->getTriplets());
-  SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
-  SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
+  auto& tripletsInGPU = *event->getTriplets();
+  auto& modulesInGPU = *event->getModules();
+  auto& rangesInGPU = *event->getRanges();
+  auto& quintupletsInGPU = *event->getQuintuplets();
+  auto& trackCandidatesInGPU = *event->getTrackCandidates();
 
   std::unordered_set<unsigned int> all_T3s;
-  for (unsigned int idx = 0; idx < *(modulesInGPU.nLowerModules); ++idx) {
+  std::unordered_map<unsigned int, unsigned int> T3_index_map;
+
+  for (unsigned int idx = 0; idx < *modulesInGPU.nLowerModules; ++idx) {
     for (unsigned int jdx = 0; jdx < tripletsInGPU.nTriplets[idx]; jdx++) {
       unsigned int T3_idx = rangesInGPU.tripletModuleIndices[idx] + jdx;
-      if (all_T3s.find(T3_idx) == all_T3s.end()) {
-        all_T3s.insert(T3_idx);
+      if (all_T3s.insert(T3_idx).second) {
+        T3_index_map[T3_idx] = all_T3s.size() - 1;
         fillT5DNNBranches(event, T3_idx);
+      }
+    }
+  }
+
+  std::unordered_map<unsigned int, unsigned int> t5_tc_index_map;
+  std::unordered_set<unsigned int> t5s_used_in_tc;
+
+  for (unsigned int idx = 0; idx < *trackCandidatesInGPU.nTrackCandidates; idx++) {
+    if (trackCandidatesInGPU.trackCandidateType[idx] == kT5) {
+      unsigned int objidx = trackCandidatesInGPU.directObjectIndices[idx];
+      t5s_used_in_tc.insert(objidx);
+      t5_tc_index_map[objidx] = idx;
+    }
+  }
+
+  for (unsigned int idx = 0; idx < *modulesInGPU.nLowerModules; ++idx) {
+    for (unsigned int jdx = 0; jdx < quintupletsInGPU.nQuintuplets[idx]; jdx++) {
+      unsigned int T5_idx = rangesInGPU.quintupletModuleIndices[idx] + jdx;
+      std::vector<unsigned int> T3s = getT3sFromT5(event, T5_idx);
+
+      ana.tx->pushbackToBranch<int>("t5_t3_idx0", T3_index_map[T3s[0]]);
+      ana.tx->pushbackToBranch<int>("t5_t3_idx1", T3_index_map[T3s[1]]);
+
+      auto t5_it = t5s_used_in_tc.find(T5_idx);
+      if (t5_it != t5s_used_in_tc.end()) {
+        ana.tx->pushbackToBranch<int>("t5_partOfTC", 1);
+        ana.tx->pushbackToBranch<int>("t5_tc_idx", t5_tc_index_map[T5_idx]);
+      } else {
+        ana.tx->pushbackToBranch<int>("t5_partOfTC", 0);
+        ana.tx->pushbackToBranch<int>("t5_tc_idx", -999);
       }
     }
   }
