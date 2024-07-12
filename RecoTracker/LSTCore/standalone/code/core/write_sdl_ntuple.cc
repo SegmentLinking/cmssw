@@ -168,26 +168,17 @@ void createLowLevelBranches() {
   ana.tx->createBranch<vector<float>>("MD_1_z");
 
   // Line Segments
+  ana.tx->createBranch<vector<int>>("sim_LS_matched");
   ana.tx->createBranch<vector<int>>("LS_isFake");
-  ana.tx->createBranch<vector<int>>("LS_nMatch");
-  ana.tx->createBranch<vector<float>>("LS_fracBestMatch");
+  ana.tx->createBranch<vector<int>>("LS_isDuplicate");
+  ana.tx->createBranch<vector<int>>("LS_nsimMatch");
+  ana.tx->createBranch<vector<vector<float>>>("LS_matched_frac");
+  ana.tx->createBranch<vector<vector<int>>>("LS_matched_simIdx");
   ana.tx->createBranch<vector<float>>("LS_pt");
   ana.tx->createBranch<vector<float>>("LS_eta");
   ana.tx->createBranch<vector<float>>("LS_phi");
   ana.tx->createBranch<vector<int>>("LS_MD_idx0");
   ana.tx->createBranch<vector<int>>("LS_MD_idx1");
-  ana.tx->createBranch<vector<float>>("LS_sim_pt");
-  ana.tx->createBranch<vector<float>>("LS_sim_eta");
-  ana.tx->createBranch<vector<float>>("LS_sim_phi");
-  ana.tx->createBranch<vector<float>>("LS_sim_pca_dxy");
-  ana.tx->createBranch<vector<float>>("LS_sim_pca_dz");
-  ana.tx->createBranch<vector<int>>("LS_sim_q");
-  ana.tx->createBranch<vector<int>>("LS_sim_pdgId");
-  ana.tx->createBranch<vector<int>>("LS_sim_event");
-  ana.tx->createBranch<vector<int>>("LS_sim_bx");
-  ana.tx->createBranch<vector<float>>("LS_sim_vx");
-  ana.tx->createBranch<vector<float>>("LS_sim_vy");
-  ana.tx->createBranch<vector<float>>("LS_sim_vz");
   ana.tx->createBranch<vector<int>>("LS_isInTrueTC");
 
   // TC's LS
@@ -596,9 +587,6 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = *(event->getModules());
   SDL::segmentsBuffer<alpaka::DevCpu>& segmentsInGPU = *(event->getSegments());
   SDL::hitsBuffer<alpaka::DevCpu>& hitsInGPU = *(event->getHits());
-  int n_accepted_simtrk = ana.tx->getBranch<vector<int>>("sim_TC_matched").size();
-
-  std::vector<int> sim_t3_matched(n_accepted_simtrk);
   std::vector<std::vector<int>> t3_matched_simIdx;
 
   for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modulesInGPU.nLowerModules); ++lowerModuleIdx) {
@@ -643,11 +631,21 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
       ana.tx->pushbackToBranch<bool>("t3_partOfT5", __H2F(tripletsInGPU.partOfT5[tripletIndex]));
 
       t3_matched_simIdx.push_back(simidx);
+    }
+  }
 
-      for (auto& simtrk : simidx) {
-        if (simtrk < n_accepted_simtrk) {
-          sim_t3_matched.at(simtrk) += 1;
-        }
+  std::set<unsigned int> accepted_simidxs;
+  for (unsigned int i = 0; i < t3_matched_simIdx.size(); ++i) {
+    for (unsigned int isim = 0; isim < t3_matched_simIdx[i].size(); ++isim) {
+      accepted_simidxs.insert(t3_matched_simIdx[i][isim]);
+    }
+  }
+  int n_accepted_simtrk = accepted_simidxs.size();
+  std::vector<int> sim_t3_matched(n_accepted_simtrk);
+  for (size_t i = 0; i < t3_matched_simIdx.size(); ++i) {
+    for (auto& simtrk : t3_matched_simIdx[i]) {
+      if (simtrk < n_accepted_simtrk) {
+        sim_t3_matched.at(simtrk) += 1;
       }
     }
   }
@@ -716,6 +714,7 @@ void setLowLevelBranches(SDL::Event<SDL::Acc>* event) {
   // std::cout <<  " nTotalMD: " << nTotalMD <<  std::endl;
   // std::cout <<  " nTotalLS: " << nTotalLS <<  std::endl;
 
+  std::vector<std::vector<int>> LS_matched_simIdx;
   // Loop over modules (lower ones where the MDs are saved)
   for (unsigned int idx = 0; idx < *(modulesInGPU.nLowerModules); ++idx) {
     // // Loop over minidoublets
@@ -774,24 +773,11 @@ void setLowLevelBranches(SDL::Event<SDL::Acc>* event) {
       // For LSs, set min hit matching fraction to 0 (R&D - July 2024), and write hit matching fractions
       std::vector<int> simidxs = matchedSimTrkIdxs(hitidxs, hittypes, ana.verbose, 0.0, true, matchedfracs);
 
+      LS_matched_simIdx.push_back(simidxs);
+
       ana.tx->pushbackToBranch<int>("LS_isFake", simidxs.size() == 0);
-      ana.tx->pushbackToBranch<int>("LS_nMatch", simidxs.size());
-      ana.tx->pushbackToBranch<float>("LS_fracBestMatch", simidxs.size() > 0 ? matchedfracs[0] : 0.0);
-      ana.tx->pushbackToBranch<float>("LS_sim_pt", simidxs.size() > 0 ? trk.sim_pt()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_eta", simidxs.size() > 0 ? trk.sim_eta()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_phi", simidxs.size() > 0 ? trk.sim_phi()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_pca_dxy", simidxs.size() > 0 ? trk.sim_pca_dxy()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_pca_dz", simidxs.size() > 0 ? trk.sim_pca_dz()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_q", simidxs.size() > 0 ? trk.sim_q()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_event", simidxs.size() > 0 ? trk.sim_event()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_bx", simidxs.size() > 0 ? trk.sim_bunchCrossing()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_pdgId", simidxs.size() > 0 ? trk.sim_pdgId()[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vx",
-                                      simidxs.size() > 0 ? trk.simvtx_x()[trk.sim_parentVtxIdx()[simidxs[0]]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vy",
-                                      simidxs.size() > 0 ? trk.simvtx_y()[trk.sim_parentVtxIdx()[simidxs[0]]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vz",
-                                      simidxs.size() > 0 ? trk.simvtx_z()[trk.sim_parentVtxIdx()[simidxs[0]]] : -999);
+      ana.tx->pushbackToBranch<int>("LS_nsimMatch", simidxs.size());
+      ana.tx->pushbackToBranch<vector<float>>("LS_matched_frac", matchedfracs);
       ana.tx->pushbackToBranch<int>("LS_isInTrueTC", lss_used_in_true_tc.find(sgIdx) != lss_used_in_true_tc.end());
 
       sg_index_map[sgIdx] = ana.tx->getBranch<vector<int>>("LS_isFake").size() - 1;
@@ -802,6 +788,39 @@ void setLowLevelBranches(SDL::Event<SDL::Acc>* event) {
       // const float eta = hitA.eta();
     }
   }
+
+  std::set<unsigned int> accepted_simidxs;
+  for (unsigned int i = 0; i < LS_matched_simIdx.size(); ++i) {
+    for (unsigned int isim = 0; isim < LS_matched_simIdx[i].size(); ++isim) {
+      accepted_simidxs.insert(LS_matched_simIdx[i][isim]);
+    }
+  }
+  int n_accepted_simtrk = accepted_simidxs.size();
+  std::vector<int> sim_LS_matched(n_accepted_simtrk);
+  for (size_t i = 0; i < LS_matched_simIdx.size(); ++i) {
+    for (auto& simtrk : LS_matched_simIdx[i]) {
+      if (simtrk < n_accepted_simtrk) {
+        sim_LS_matched.at(simtrk) += 1;
+      }
+    }
+  }
+
+  vector<int> LS_isDuplicate(LS_matched_simIdx.size());
+  for (unsigned int i = 0; i < LS_matched_simIdx.size(); i++) {
+    bool isDuplicate = false;
+    for (unsigned int isim = 0; isim < LS_matched_simIdx[i].size(); isim++) {
+      int simidx = LS_matched_simIdx[i][isim];
+      if (simidx < n_accepted_simtrk) {
+        if (sim_LS_matched[simidx] > 1) {
+          isDuplicate = true;
+        }
+      }
+    }
+    LS_isDuplicate[i] = isDuplicate;
+  }
+  ana.tx->setBranch<vector<int>>("sim_LS_matched", sim_LS_matched);
+  ana.tx->setBranch<vector<vector<int>>>("LS_matched_simIdx", LS_matched_simIdx);
+  ana.tx->setBranch<vector<int>>("LS_isDuplicate", LS_isDuplicate);
 
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     std::vector<unsigned int> LSs = getLSsFromTC(event, idx);

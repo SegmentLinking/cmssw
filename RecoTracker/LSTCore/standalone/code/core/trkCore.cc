@@ -431,29 +431,20 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
       continue;
     if (counts[rawidx] > (((float)nhits_input) * matchFraction))
       matched_sim_idx_frac.push_back(
-          std::make_pair(trkidx, nhits_input > 0 ? ((float)counts[rawidx]) / ((float)nhits_input) : -999.0));
-    //matched_sim_trk_idxs.push_back(trkidx);
+          std::make_pair(trkidx, (nhits_input > 0 ? ((float)counts[rawidx]) / ((float)nhits_input) : -999.0)));
     maxHitMatchCount = std::max(maxHitMatchCount, *std::max_element(counts.begin(), counts.end()));
   }
   sort(matched_sim_idx_frac.begin(), matched_sim_idx_frac.end(), [](auto &a, auto &b) { return a.second > b.second; });
-  //set<int> s;
-  set<std::pair<int, float>> s;
-  //unsigned size = matched_sim_trk_idxs.size();
-  unsigned size = matched_sim_idx_frac.size();
-  for (unsigned i = 0; i < size; ++i) {
-    //s.insert(matched_sim_trk_idxs[i]);
-    s.insert(matched_sim_idx_frac[i]);
-  }
-  matched_sim_idx_frac.assign(s.begin(), s.end());
   for (auto it = std::make_move_iterator(matched_sim_idx_frac.begin()),
             end = std::make_move_iterator(matched_sim_idx_frac.end());
        it != end;
        ++it) {
-    matched_sim_trk_idxs.push_back(std::move(it->first));
-    if (writeMatchFraction)
-      matched_fractions.push_back(std::move(it->second));
+    if (std::find(matched_sim_trk_idxs.begin(), matched_sim_trk_idxs.end(), it->first) == matched_sim_trk_idxs.end()) {
+      matched_sim_trk_idxs.push_back(std::move(it->first));
+      if (writeMatchFraction)
+        matched_fractions.push_back(std::move(it->second));
+    }
   }
-  //matched_sim_trk_idxs.assign(s.begin(), s.end());
   return matched_sim_trk_idxs;
 }
 
