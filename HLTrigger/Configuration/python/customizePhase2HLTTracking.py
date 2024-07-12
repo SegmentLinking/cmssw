@@ -63,42 +63,200 @@ def addTrackingValidation(process):
 
 def customisePhase2HLTForTrackingOnly(process):
     
-    #Baseline tracking path
+    # Baseline tracking path
     process.HLTTrackingV61Path = cms.Path(process.HLTTrackingV61Sequence)
- 
-    #process.localTask = cms.Task(process.RawToDigiTask,process.calolocalrecoTask)
-    #process.localSeq = cms.Sequence(process.localTask) #For the moment no MTD,process.mtdRecoTask)
-    #process.localPath = cms.Path(process.localSeq)
 
-    #process.vertexRecoTask = cms.Task(process.ak4CaloJetsForTrk,
-    #                                  process.initialStepPVTask,
-    #                                  process.offlinePrimaryVertices,
-    #                                  process.trackRefsForJetsBeforeSorting,
-    #                                  process.trackWithVertexRefSelectorBeforeSorting,
-    #                                  process.unsortedOfflinePrimaryVertices,
-    #                                  process.goodOfflinePrimaryVertices)
-    #
-    #process.vertexRecoSeq = cms.Sequence(process.vertexRecoTask) ## No MTD : ,process.vertex4DrecoTask)
-    #process.vertexRecoPath = cms.Path(process.vertexRecoSeq)    
-    #
-    ###Local Reco
-    #process.localPath = cms.Path(process.RawToDigiTask,process.localrecoTask)
-
-    process.output = cms.OutputModule("PoolOutputModule",
-        fileName = cms.untracked.string('Phase2_HLT_LST_noValidation.root'),
-        outputCommands = cms.untracked.vstring('keep *_generalTracks_*_*')
-    )
+    # Dummy output
+    process.output = cms.OutputModule("AsciiOutputModule")
     process.output_step = cms.EndPath(process.output)
 
     process.schedule = cms.Schedule(*[
-        #process.localPath,
         process.HLTTrackingV61Path,
-        #process.vertexRecoPath,
         #process.output_step,
         ])
         
     return process
 
+
+def customisePhase2HLTForLSTCKFOnLegacyTriplets(process):
+
+    process.load("Configuration.StandardSequences.Accelerators_cff")
+
+    # Load ESProducers
+    from RecoTracker.LST.lstProducer_cff import lstModulesDevESProducer as _lstModulesDevESProducer
+    process.lstModulesDevESProducer = _lstModulesDevESProducer.clone()
+
+    process.hltESPTTRHBuilderWithoutRefit = cms.ESProducer("TkTransientTrackingRecHitBuilderESProducer",
+        ComponentName = cms.string('WithoutRefit'),
+        ComputeCoarseLocalPositionFromDisk = cms.bool(False),
+        Matcher = cms.string('Fake'),
+        Phase2StripCPE = cms.string(''),
+        PixelCPE = cms.string('Fake'),
+        StripCPE = cms.string('Fake')
+    )
+
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepClusters_cfi import highPtTripletStepClusters as _highPtTripletStepClusters
+    process.highPtTripletStepClusters = _highPtTripletStepClusters.clone(
+        trajectories = cms.InputTag("lstInitialStepSeedTracks")
+    )
+
+    from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits as _siPhase2RecHits
+    process.siPhase2RecHits = _siPhase2RecHits.clone()
+    from RecoTracker.LST.lstSeedTracks_cff import lstInitialStepSeedTracks as _lstInitialStepSeedTracks
+    process.lstInitialStepSeedTracks = _lstInitialStepSeedTracks.clone()
+    from RecoTracker.LST.lstSeedTracks_cff import lstHighPtTripletStepSeedTracks as _lstHighPtTripletStepSeedTracks
+    process.lstHighPtTripletStepSeedTracks = _lstHighPtTripletStepSeedTracks.clone()
+    from RecoTracker.LST.lstPixelSeedInputProducer_cfi import lstPixelSeedInputProducer as _lstPixelSeedInputProducer
+    process.lstPixelSeedInputProducer = _lstPixelSeedInputProducer.clone()
+    from RecoTracker.LST.lstPhase2OTHitsInputProducer_cfi import lstPhase2OTHitsInputProducer as _lstPhase2OTHitsInputProducer
+    process.lstPhase2OTHitsInputProducer = _lstPhase2OTHitsInputProducer.clone()
+    from RecoTracker.LST.lstProducer_cff import lstProducer as _lstProducer
+    process.lstProducer = _lstProducer.clone()
+
+    from RecoTracker.LST.lstOutputConverter_cfi import lstOutputConverter as _lstOutputConverter
+    process.initialStepTrackCandidates = _lstOutputConverter.clone()
+
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTracks_cfi import highPtTripletStepTracks as _highPtTripletStepTracks
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTrackCutClassifier_cfi import highPtTripletStepTrackCutClassifier as _highPtTripletStepTrackCutClassifier
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTrackSelectionHighPurity_cfi import highPtTripletStepTrackSelectionHighPurity as _highPtTripletStepTrackSelectionHighPurity
+
+    process.initialStepTrackspTTCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("initialStepTrackCandidates:pTTCsLST") )
+    process.initialStepTrackCutClassifierpTTCLST = _highPtTripletStepTrackCutClassifier.clone( src = cms.InputTag("initialStepTrackspTTCLST") )
+    process.initialStepTrackSelectionHighPuritypTTCLST = _highPtTripletStepTrackSelectionHighPurity.clone(
+        originalMVAVals = cms.InputTag("initialStepTrackCutClassifierpTTCLST","MVAValues"),
+        originalQualVals = cms.InputTag("initialStepTrackCutClassifierpTTCLST","QualityMasks"),
+        originalSource = cms.InputTag("initialStepTrackspTTCLST")
+    )
+
+    process.initialStepTrackspLSTCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("initialStepTrackCandidates:pLSTCsLST") )
+    process.initialStepTrackCutClassifierpLSTCLST = _highPtTripletStepTrackCutClassifier.clone( src = cms.InputTag("initialStepTrackspLSTCLST") )
+    process.initialStepTrackSelectionHighPuritypLSTCLST = _highPtTripletStepTrackSelectionHighPurity.clone(
+        originalMVAVals = cms.InputTag("initialStepTrackCutClassifierpLSTCLST","MVAValues"),
+        originalQualVals = cms.InputTag("initialStepTrackCutClassifierpLSTCLST","QualityMasks"),
+        originalSource = cms.InputTag("initialStepTrackspLSTCLST")
+    )
+
+    process.initialStepTracksT5TCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("initialStepTrackCandidates:t5TCsLST") )
+
+
+    from HLTrigger.Configuration.HLT_75e33.modules.generalTracks_cfi import generalTracks as _generalTracks
+    process.generalTracks = _generalTracks.clone(
+            TrackProducers = cms.VInputTag("initialStepTrackSelectionHighPuritypTTCLST","initialStepTrackSelectionHighPuritypLSTCLST","initialStepTracksT5TCLST", "highPtTripletStepTrackSelectionHighPurity"),
+            hasSelector = cms.vint32(0,0,0,0),
+            indivShareFrac = cms.vdouble(0.1,0.1,0.1,0.1),
+            selectedTrackQuals = cms.VInputTag(cms.InputTag("initialStepTrackSelectionHighPuritypTTCLST"),cms.InputTag("initialStepTrackSelectionHighPuritypLSTCLST"),cms.InputTag("initialStepTracksT5TCLST"),cms.InputTag("highPtTripletStepTrackSelectionHighPurity")),
+            setsToMerge = cms.VPSet(cms.PSet(
+               pQual = cms.bool(True),
+               tLists = cms.vint32(0,1,2,3)
+            ))
+    )
+
+    process.lstITInputsSequence = cms.Sequence(process.initialStepSeeds+
+                                               process.lstInitialStepSeedTracks+
+                                               process.highPtTripletStepSeedingSequence+
+                                               process.lstHighPtTripletStepSeedTracks+
+                                               process.lstPixelSeedInputProducer
+                                               )
+    process.lstOTInputsSequence = cms.Sequence(process.siPhase2RecHits+
+                                               process.lstPhase2OTHitsInputProducer
+                                               )
+    process.lstInitialStepSequence = cms.Sequence(process.lstProducer+
+                                                  process.initialStepTrackCandidates+
+                                                  process.initialStepTrackspTTCLST+
+                                                  process.initialStepTrackspLSTCLST+
+                                                  process.initialStepTracksT5TCLST+
+                                                  process.initialStepTrackCutClassifierpTTCLST+
+                                                  process.initialStepTrackCutClassifierpLSTCLST+
+                                                  process.initialStepTrackSelectionHighPuritypTTCLST+
+                                                  process.initialStepTrackSelectionHighPuritypLSTCLST
+                                                  )
+    process.lstHighPtTripletStepSequence = cms.Sequence(process.highPtTripletStepTrackCandidates+
+                                                        process.highPtTripletStepTracks+
+                                                        process.highPtTripletStepTrackCutClassifier+
+                                                        process.highPtTripletStepTrackSelectionHighPurity
+                                                        )
+    process.lstFullSequence = cms.Sequence(process.lstITInputsSequence+
+                                           process.lstOTInputsSequence+
+                                           process.lstInitialStepSequence+
+                                           process.lstHighPtTripletStepSequence
+                                           )
+    process.HLTTrackingV61Sequence = cms.Sequence(process.itLocalRecoSequence+
+                                                  process.otLocalRecoSequence+
+                                                  process.trackerClusterCheck+
+                                                  process.hltPhase2PixelTracksSequence+
+                                                  process.hltPhase2PixelVertices+
+                                                  process.lstFullSequence+
+                                                  process.generalTracks
+                                                  )
+    process.HLTTrackingV61Path = cms.Path(process.HLTTrackingV61Sequence)
+
+    # Dummy output
+    process.output = cms.OutputModule("AsciiOutputModule")
+    process.output_step = cms.EndPath(process.output)
+
+    process.schedule = cms.Schedule(*[
+        process.HLTTrackingV61Path,
+        #process.output_step,
+        ])
+    
+    return process
+
+
+def customisePhase2HLTForLSTCKFOnLSTSeeds(process):
+
+    process = customisePhase2HLTForLSTCKFOnLegacyTriplets(process)
+
+    from HLTrigger.Configuration.HLT_75e33.modules.initialStepTrackCandidates_cfi import initialStepTrackCandidates as _pLSTrackCandidates
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTracks_cfi import highPtTripletStepTracks as _highPtTripletStepTracks
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTrackCutClassifier_cfi import highPtTripletStepTrackCutClassifier as _highPtTripletStepTrackCutClassifier
+    from HLTrigger.Configuration.HLT_75e33.modules.highPtTripletStepTrackSelectionHighPurity_cfi import highPtTripletStepTrackSelectionHighPurity as _highPtTripletStepTrackSelectionHighPurity
+
+    process.initialStepTrackspTTCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("initialStepTrackCandidates:pTTCsLST") )
+    process.initialStepTrackCutClassifierpTTCLST = _highPtTripletStepTrackCutClassifier.clone( src = cms.InputTag("initialStepTrackspTTCLST") )
+    process.initialStepTrackSelectionHighPuritypTTCLST = _highPtTripletStepTrackSelectionHighPurity.clone(
+        originalMVAVals = cms.InputTag("initialStepTrackCutClassifierpTTCLST","MVAValues"),
+        originalQualVals = cms.InputTag("initialStepTrackCutClassifierpTTCLST","QualityMasks"),
+        originalSource = cms.InputTag("initialStepTrackspTTCLST")
+    )
+
+    process.initialStepTracksT5TCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("initialStepTrackCandidates:t5TCsLST") )
+
+    process.highPtTripletStepTrackCandidatespLSTCLST = _pLSTrackCandidates.clone( src = cms.InputTag("initialStepTrackCandidates:pLSTSsLST") )
+    process.highPtTripletStepTrackspLSTCLST = _highPtTripletStepTracks.clone( src = cms.InputTag("highPtTripletStepTrackCandidatespLSTCLST") )
+    process.highPtTripletStepTrackCutClassifierpLSTCLST = _highPtTripletStepTrackCutClassifier.clone( src = cms.InputTag("highPtTripletStepTrackspLSTCLST") )
+    process.highPtTripletStepTrackSelectionHighPuritypLSTCLST = _highPtTripletStepTrackSelectionHighPurity.clone(
+        originalMVAVals = cms.InputTag("highPtTripletStepTrackCutClassifierpLSTCLST","MVAValues"),
+        originalQualVals = cms.InputTag("highPtTripletStepTrackCutClassifierpLSTCLST","QualityMasks"),
+        originalSource = cms.InputTag("highPtTripletStepTrackspLSTCLST")
+    )
+
+
+    from HLTrigger.Configuration.HLT_75e33.modules.generalTracks_cfi import generalTracks as _generalTracks
+    process.generalTracks = _generalTracks.clone(
+            TrackProducers = cms.VInputTag("initialStepTrackSelectionHighPuritypTTCLST","highPtTripletStepTrackSelectionHighPuritypLSTCLST","initialStepTracksT5TCLST"),
+            hasSelector = cms.vint32(0,0,0),
+            indivShareFrac = cms.vdouble(0.1,0.1,0.1),
+            selectedTrackQuals = cms.VInputTag(cms.InputTag("initialStepTrackSelectionHighPuritypTTCLST"),cms.InputTag("highPtTripletStepTrackSelectionHighPuritypLSTCLST"),cms.InputTag("initialStepTracksT5TCLST")),
+            setsToMerge = cms.VPSet(cms.PSet(
+               pQual = cms.bool(True),
+               tLists = cms.vint32(0,1,2)
+            ))
+    )
+
+    process.lstInitialStepSequence = cms.Sequence(process.lstProducer+
+                                                  process.initialStepTrackCandidates+
+                                                  process.initialStepTrackspTTCLST+
+                                                  process.initialStepTracksT5TCLST+
+                                                  process.initialStepTrackCutClassifierpTTCLST+
+                                                  process.initialStepTrackSelectionHighPuritypTTCLST
+                                                  )
+    process.lstHighPtTripletStepSequence = cms.Sequence(process.highPtTripletStepTrackCandidatespLSTCLST+
+                                                        process.highPtTripletStepTrackspLSTCLST+
+                                                        process.highPtTripletStepTrackCutClassifierpLSTCLST+
+                                                        process.highPtTripletStepTrackSelectionHighPuritypLSTCLST
+                                                        )
+
+    return process
 
 def customisePhase2HLTForPatatrack(process):
 
@@ -541,6 +699,7 @@ def customisePhase2HLTForPatatrackLSTCKFOnLegacyTriplets(process):
     
     return process
 
+
 def customisePhase2HLTForPatatrackLSTCKFOnLSTSeeds(process):
 
     from HeterogeneousCore.CUDACore.SwitchProducerCUDA import SwitchProducerCUDA
@@ -816,6 +975,7 @@ def customisePhase2HLTForPatatrackLSTCKFOnLSTSeeds(process):
         ])
     
     return process
+
 
 def customizePhase2HLTMkFitInitialStepTracks(process):
     
