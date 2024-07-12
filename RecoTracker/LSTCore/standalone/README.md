@@ -20,7 +20,7 @@ There are two way to set up LST as a standalone, either by setting up a full CMS
 ### Setting up LST within CMSSW (preferred option)
 
 ```bash
-CMSSW_VERSION=CMSSW_14_1_0_pre3 # Change with latest/preferred CMSSW version
+CMSSW_VERSION=CMSSW_14_1_0_pre5 # Change with latest/preferred CMSSW version
 LST_BRANCH=CMSSW_14_1_0_pre3_LST_X_LSTCore_realfiles_batch1_devel # Change to the appropriate branch
 cmsrel ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src/
@@ -197,7 +197,7 @@ Comparing two different runs
 To set up the are, the following commands need to be used:
 
 ```bash
-CMSSW_VERSION=CMSSW_14_1_0_pre3
+CMSSW_VERSION=CMSSW_14_1_0_pre5
 LST_BRANCH=CMSSW_14_1_0_pre3_LST_X_LSTCore_realfiles_batch1_devel
 cmsrel ${CMSSW_VERSION}
 cd ${CMSSW_VERSION}/src/
