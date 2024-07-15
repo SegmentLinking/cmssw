@@ -9,7 +9,7 @@
 #include <mutex>
 #include <alpaka/alpaka.hpp>
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   template <typename>
   class Event;
 
@@ -17,13 +17,13 @@ namespace SDL {
   class LST;
 
   template <>
-  class LST<SDL::Acc> {
+  class LST<Acc3D> {
   public:
     LST() = default;
 
-    void run(QueueAcc& queue,
+    void run(Queue& queue,
              bool verbose,
-             const LSTESData<Dev>* deviceESData,
+             const LSTESData<Device>* deviceESData,
              const std::vector<float> see_px,
              const std::vector<float> see_py,
              const std::vector<float> see_pz,
@@ -71,7 +71,7 @@ namespace SDL {
                       const std::vector<float> ph2_y,
                       const std::vector<float> ph2_z);
 
-    void getOutput(SDL::Event<Acc>& event);
+    void getOutput(SDL::Event<Acc3D>& event);
     std::vector<unsigned int> getHitIdxs(const short trackCandidateType,
                                          const unsigned int TCIdx,
                                          const unsigned int* TCHitIndices,

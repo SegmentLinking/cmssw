@@ -8,7 +8,7 @@
 #include "MiniDoublet.h"
 #include "Hit.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct segments {
     FPX* dPhis;
     FPX* dPhiMins;
@@ -794,7 +794,7 @@ namespace SDL {
         for (uint16_t outerLowerModuleArrayIdx = blockThreadIdx[1]; outerLowerModuleArrayIdx < nConnectedModules;
              outerLowerModuleArrayIdx += blockThreadExtent[1]) {
           uint16_t outerLowerModuleIndex =
-              modulesInGPU.moduleMap[innerLowerModuleIndex * MAX_CONNECTED_MODULES + outerLowerModuleArrayIdx];
+              modulesInGPU.moduleMap[innerLowerModuleIndex * ::SDL::MAX_CONNECTED_MODULES + outerLowerModuleArrayIdx];
 
           unsigned int nOuterMDs = mdsInGPU.nMDs[outerLowerModuleIndex];
 
@@ -1068,7 +1068,7 @@ namespace SDL {
                           (hitsInGPU.zs[mdsInGPU.anchorHitIndices[outerMDIndex]]);
         score_lsq = score_lsq * score_lsq;
 
-        unsigned int hits1[Params_pLS::kHits];
+        unsigned int hits1[::SDL::Params_pLS::kHits];
         hits1[0] = hitsInGPU.idxs[mdsInGPU.anchorHitIndices[innerMDIndex]];
         hits1[1] = hitsInGPU.idxs[mdsInGPU.anchorHitIndices[outerMDIndex]];
         hits1[2] = hitsInGPU.idxs[mdsInGPU.outerHitIndices[innerMDIndex]];

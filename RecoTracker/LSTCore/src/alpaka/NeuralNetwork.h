@@ -10,7 +10,7 @@
 #include "Hit.h"
 #include "Triplet.h"
 
-namespace T5DNN {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::T5DNN {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc,

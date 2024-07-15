@@ -13,7 +13,7 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct ModuleMetaData {
     std::map<unsigned int, uint16_t> detIdToIndex;
     std::map<unsigned int, float> module_x;
@@ -27,9 +27,9 @@ namespace SDL {
   inline void fillPixelMap(std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
                            uint16_t nModules,
                            unsigned int& nPixels,
-                           pixelMap& pixelMapping,
+                           ::SDL::pixelMap& pixelMapping,
                            TQueue queue,
-                           const MapPLStoLayer& pLStoLayer,
+                           const ::SDL::MapPLStoLayer& pLStoLayer,
                            struct ModuleMetaData& mmd) {
     pixelMapping.pixelModuleIndex = mmd.detIdToIndex[1];
 
@@ -40,11 +40,11 @@ namespace SDL {
     unsigned int totalSizes = 0;
     unsigned int totalSizes_pos = 0;
     unsigned int totalSizes_neg = 0;
-    for (unsigned int isuperbin = 0; isuperbin < size_superbins; isuperbin++) {
+    for (unsigned int isuperbin = 0; isuperbin < ::SDL::size_superbins; isuperbin++) {
       int sizes = 0;
       for (auto const& mCM_pLS : pLStoLayer[0]) {
         std::vector<unsigned int> connectedModuleDetIds_pLS =
-            mCM_pLS.getConnectedModuleDetIds(isuperbin + size_superbins);
+            mCM_pLS.getConnectedModuleDetIds(isuperbin + ::SDL::size_superbins);
         connectedModuleDetIds.insert(
             connectedModuleDetIds.end(), connectedModuleDetIds_pLS.begin(), connectedModuleDetIds_pLS.end());
         sizes += connectedModuleDetIds_pLS.size();
@@ -109,9 +109,9 @@ namespace SDL {
                                                unsigned int nMod,
                                                TQueue queue,
                                                struct ModuleMetaData& mmd,
-                                               const ModuleConnectionMap* moduleConnectionMap) {
+                                               const ::SDL::ModuleConnectionMap* moduleConnectionMap) {
     DevHost const& devHost = cms::alpakatools::host();
-    auto moduleMap_buf = allocBufWrapper<uint16_t>(devHost, nMod * MAX_CONNECTED_MODULES);
+    auto moduleMap_buf = allocBufWrapper<uint16_t>(devHost, nMod * ::SDL::MAX_CONNECTED_MODULES);
     uint16_t* moduleMap = alpaka::getPtrNative(moduleMap_buf);
 
     auto nConnectedModules_buf = allocBufWrapper<uint16_t>(devHost, nMod);
@@ -123,7 +123,7 @@ namespace SDL {
       auto& connectedModules = moduleConnectionMap->getConnectedModuleDetIds(detId);
       nConnectedModules[index] = connectedModules.size();
       for (uint16_t i = 0; i < nConnectedModules[index]; i++) {
-        moduleMap[index * MAX_CONNECTED_MODULES + i] = mmd.detIdToIndex[connectedModules[i]];
+        moduleMap[index * ::SDL::MAX_CONNECTED_MODULES + i] = mmd.detIdToIndex[connectedModules[i]];
       }
     }
 
@@ -218,16 +218,16 @@ namespace SDL {
     nModules = counter;
   };
 
-  inline void loadModulesFromFile(const MapPLStoLayer* pLStoLayer,
+  inline void loadModulesFromFile(const ::SDL::MapPLStoLayer* pLStoLayer,
                                   const char* moduleMetaDataFilePath,
                                   uint16_t& nModules,
                                   uint16_t& nLowerModules,
                                   unsigned int& nPixels,
                                   std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
-                                  pixelMap* pixelMapping,
-                                  const EndcapGeometry* endcapGeometry,
-                                  const TiltedGeometry* tiltedGeometry,
-                                  const ModuleConnectionMap* moduleConnectionMap) {
+                                  ::SDL::pixelMap* pixelMapping,
+                                  const ::SDL::EndcapGeometry* endcapGeometry,
+                                  const ::SDL::TiltedGeometry* tiltedGeometry,
+                                  const ::SDL::ModuleConnectionMap* moduleConnectionMap) {
     ModuleMetaData mmd;
 
     loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);

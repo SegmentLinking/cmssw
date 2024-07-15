@@ -2,12 +2,14 @@
 
 #include "Event.h"
 
+using namespace ALPAKA_ACCELERATOR_NAMESPACE;
+
 #include "Math/Vector3D.h"
 using XYZVector = ROOT::Math::XYZVector;
 
-void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
+void ALPAKA_ACCELERATOR_NAMESPACE::SDL::LST<Acc3D>::run(Queue& queue,
                              bool verbose,
-                             const LSTESData<SDL::Dev>* deviceESData,
+                             const LSTESData<Device>* deviceESData,
                              const std::vector<float> see_px,
                              const std::vector<float> see_py,
                              const std::vector<float> see_pz,
@@ -29,7 +31,7 @@ void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
                              const std::vector<float> ph2_z,
                              bool no_pls_dupclean,
                              bool tc_pls_triplets) {
-  auto event = SDL::Event<Acc>(verbose, queue, deviceESData);
+  auto event = SDL::Event<Acc3D>(verbose, queue, deviceESData);
   prepareInput(see_px,
                see_py,
                see_pz,
@@ -170,7 +172,7 @@ namespace {
   }
 }  // namespace
 
-void SDL::LST<SDL::Acc>::prepareInput(const std::vector<float> see_px,
+void ALPAKA_ACCELERATOR_NAMESPACE::SDL::LST<Acc3D>::prepareInput(const std::vector<float> see_px,
                                       const std::vector<float> see_py,
                                       const std::vector<float> see_pz,
                                       const std::vector<float> see_dxy,
@@ -362,7 +364,7 @@ void SDL::LST<SDL::Acc>::prepareInput(const std::vector<float> see_px,
   in_isQuad_vec_ = isQuad_vec;
 }
 
-void SDL::LST<SDL::Acc>::getOutput(SDL::Event<SDL::Acc>& event) {
+void ALPAKA_ACCELERATOR_NAMESPACE::SDL::LST<Acc3D>::getOutput(SDL::Event<Acc3D>& event) {
   std::vector<std::vector<unsigned int>> tc_hitIdxs;
   std::vector<unsigned int> tc_len;
   std::vector<int> tc_seedIdx;
@@ -389,7 +391,7 @@ void SDL::LST<SDL::Acc>::getOutput(SDL::Event<SDL::Acc>& event) {
   out_tc_trackCandidateType_ = tc_trackCandidateType;
 }
 
-std::vector<unsigned int> SDL::LST<SDL::Acc>::getHitIdxs(const short trackCandidateType,
+std::vector<unsigned int> ALPAKA_ACCELERATOR_NAMESPACE::SDL::LST<Acc3D>::getHitIdxs(const short trackCandidateType,
                                                          const unsigned int TCIdx,
                                                          const unsigned int* TCHitIndices,
                                                          const unsigned int* hitIndices) {
@@ -397,16 +399,16 @@ std::vector<unsigned int> SDL::LST<SDL::Acc>::getHitIdxs(const short trackCandid
 
   unsigned int maxNHits = 0;
   if (trackCandidateType == 7)
-    maxNHits = Params_pT5::kHits;  // pT5
+    maxNHits = ::SDL::Params_pT5::kHits;  // pT5
   else if (trackCandidateType == 5)
-    maxNHits = Params_pT3::kHits;  // pT3
+    maxNHits = ::SDL::Params_pT3::kHits;  // pT3
   else if (trackCandidateType == 4)
-    maxNHits = Params_T5::kHits;  // T5
+    maxNHits = ::SDL::Params_T5::kHits;  // T5
   else if (trackCandidateType == 8)
-    maxNHits = Params_pLS::kHits;  // pLS
+    maxNHits = ::SDL::Params_pLS::kHits;  // pLS
 
   for (unsigned int i = 0; i < maxNHits; i++) {
-    unsigned int hitIdxInGPU = TCHitIndices[Params_pT5::kHits * TCIdx + i];
+    unsigned int hitIdxInGPU = TCHitIndices[::SDL::Params_pT5::kHits * TCIdx + i];
     unsigned int hitIdx =
         (trackCandidateType == 8)
             ? hitIdxInGPU

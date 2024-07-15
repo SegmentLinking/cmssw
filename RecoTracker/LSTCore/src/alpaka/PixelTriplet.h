@@ -10,7 +10,7 @@
 #include "Hit.h"
 #include "Quintuplet.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   // One pixel segment, one outer tracker triplet!
   struct pixelTriplets {
     unsigned int* pixelSegmentIndices;
@@ -110,9 +110,9 @@ namespace SDL {
           score_buf(allocBufWrapper<FPX>(devAccIn, maxPixelTriplets, queue)),
           isDup_buf(allocBufWrapper<bool>(devAccIn, maxPixelTriplets, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxPixelTriplets, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxPixelTriplets * Params_pT3::kLayers, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelTriplets * Params_pT3::kHits, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, maxPixelTriplets * Params_pT3::kLayers, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxPixelTriplets * ::SDL::Params_pT3::kLayers, queue)),
+          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelTriplets * ::SDL::Params_pT3::kHits, queue)),
+          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, maxPixelTriplets * ::SDL::Params_pT3::kLayers, queue)),
           centerX_buf(allocBufWrapper<FPX>(devAccIn, maxPixelTriplets, queue)),
           centerY_buf(allocBufWrapper<FPX>(devAccIn, maxPixelTriplets, queue)),
           pixelRadiusError_buf(allocBufWrapper<float>(devAccIn, maxPixelTriplets, queue)),
@@ -161,46 +161,46 @@ namespace SDL {
 
     pixelTripletsInGPU.centerX[pixelTripletIndex] = __F2H(centerX);
     pixelTripletsInGPU.centerY[pixelTripletIndex] = __F2H(centerY);
-    pixelTripletsInGPU.logicalLayers[Params_pT3::kLayers * pixelTripletIndex] = 0;
-    pixelTripletsInGPU.logicalLayers[Params_pT3::kLayers * pixelTripletIndex + 1] = 0;
-    pixelTripletsInGPU.logicalLayers[Params_pT3::kLayers * pixelTripletIndex + 2] =
-        tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers];
-    pixelTripletsInGPU.logicalLayers[Params_pT3::kLayers * pixelTripletIndex + 3] =
-        tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 1];
-    pixelTripletsInGPU.logicalLayers[Params_pT3::kLayers * pixelTripletIndex + 4] =
-        tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 2];
+    pixelTripletsInGPU.logicalLayers[::SDL::Params_pT3::kLayers * pixelTripletIndex] = 0;
+    pixelTripletsInGPU.logicalLayers[::SDL::Params_pT3::kLayers * pixelTripletIndex + 1] = 0;
+    pixelTripletsInGPU.logicalLayers[::SDL::Params_pT3::kLayers * pixelTripletIndex + 2] =
+        tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers];
+    pixelTripletsInGPU.logicalLayers[::SDL::Params_pT3::kLayers * pixelTripletIndex + 3] =
+        tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers + 1];
+    pixelTripletsInGPU.logicalLayers[::SDL::Params_pT3::kLayers * pixelTripletIndex + 4] =
+        tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers + 2];
 
-    pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers * pixelTripletIndex] =
+    pixelTripletsInGPU.lowerModuleIndices[::SDL::Params_pT3::kLayers * pixelTripletIndex] =
         segmentsInGPU.innerLowerModuleIndices[pixelSegmentIndex];
-    pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers * pixelTripletIndex + 1] =
+    pixelTripletsInGPU.lowerModuleIndices[::SDL::Params_pT3::kLayers * pixelTripletIndex + 1] =
         segmentsInGPU.outerLowerModuleIndices[pixelSegmentIndex];
-    pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers * pixelTripletIndex + 2] =
-        tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex];
-    pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers * pixelTripletIndex + 3] =
-        tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex + 1];
-    pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers * pixelTripletIndex + 4] =
-        tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex + 2];
+    pixelTripletsInGPU.lowerModuleIndices[::SDL::Params_pT3::kLayers * pixelTripletIndex + 2] =
+        tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex];
+    pixelTripletsInGPU.lowerModuleIndices[::SDL::Params_pT3::kLayers * pixelTripletIndex + 3] =
+        tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex + 1];
+    pixelTripletsInGPU.lowerModuleIndices[::SDL::Params_pT3::kLayers * pixelTripletIndex + 4] =
+        tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex + 2];
 
     unsigned int pixelInnerMD = segmentsInGPU.mdIndices[2 * pixelSegmentIndex];
     unsigned int pixelOuterMD = segmentsInGPU.mdIndices[2 * pixelSegmentIndex + 1];
 
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex] = mdsInGPU.anchorHitIndices[pixelInnerMD];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 1] = mdsInGPU.outerHitIndices[pixelInnerMD];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 2] = mdsInGPU.anchorHitIndices[pixelOuterMD];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 3] = mdsInGPU.outerHitIndices[pixelOuterMD];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex] = mdsInGPU.anchorHitIndices[pixelInnerMD];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 1] = mdsInGPU.outerHitIndices[pixelInnerMD];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 2] = mdsInGPU.anchorHitIndices[pixelOuterMD];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 3] = mdsInGPU.outerHitIndices[pixelOuterMD];
 
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 4] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 5] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex + 1];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 6] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex + 2];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 7] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex + 3];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 8] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex + 4];
-    pixelTripletsInGPU.hitIndices[Params_pT3::kHits * pixelTripletIndex + 9] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * tripletIndex + 5];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 4] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 5] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex + 1];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 6] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex + 2];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 7] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex + 3];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 8] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex + 4];
+    pixelTripletsInGPU.hitIndices[::SDL::Params_pT3::kHits * pixelTripletIndex + 9] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * tripletIndex + 5];
     pixelTripletsInGPU.rPhiChiSquared[pixelTripletIndex] = rPhiChiSquared;
     pixelTripletsInGPU.rPhiChiSquaredInwards[pixelTripletIndex] = rPhiChiSquaredInwards;
     pixelTripletsInGPU.rzChiSquared[pixelTripletIndex] = rzChiSquared;
@@ -247,11 +247,11 @@ namespace SDL {
     short outerInnerLowerModuleSubdet = modulesInGPU.subdets[outerInnerLowerModuleIndex];
     short outerOuterLowerModuleSubdet = modulesInGPU.subdets[outerOuterLowerModuleIndex];
 
-    unsigned int firstMDIndex = segmentsInGPU.mdIndices[Params_LS::kLayers * innerSegmentIndex];
-    unsigned int secondMDIndex = segmentsInGPU.mdIndices[Params_LS::kLayers * innerSegmentIndex + 1];
+    unsigned int firstMDIndex = segmentsInGPU.mdIndices[::SDL::Params_LS::kLayers * innerSegmentIndex];
+    unsigned int secondMDIndex = segmentsInGPU.mdIndices[::SDL::Params_LS::kLayers * innerSegmentIndex + 1];
 
-    unsigned int thirdMDIndex = segmentsInGPU.mdIndices[Params_LS::kLayers * outerSegmentIndex];
-    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[Params_LS::kLayers * outerSegmentIndex + 1];
+    unsigned int thirdMDIndex = segmentsInGPU.mdIndices[::SDL::Params_LS::kLayers * outerSegmentIndex];
+    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[::SDL::Params_LS::kLayers * outerSegmentIndex + 1];
 
     if (outerInnerLowerModuleSubdet == SDL::Barrel and
         (outerOuterLowerModuleSubdet == SDL::Barrel or outerOuterLowerModuleSubdet == SDL::Endcap)) {
@@ -765,7 +765,7 @@ namespace SDL {
 
     float a = -2.f * k2Rinv1GeVf * 100 * charge;  // multiply by 100 to make the correct length units
 
-    for (size_t i = 0; i < Params_T3::kLayers; i++) {
+    for (size_t i = 0; i < ::SDL::Params_T3::kLayers; i++) {
       float zsi = zs[i] / 100;
       float rtsi = rts[i] / 100;
       uint16_t lowerModuleIndex = lowerModuleIndices[i];
@@ -845,9 +845,9 @@ namespace SDL {
     //run pT4 compatibility between the pixel segment and inner segment, and between the pixel and outer segment of the triplet
     uint16_t pixelModuleIndex = segmentsInGPU.innerLowerModuleIndices[pixelSegmentIndex];
 
-    uint16_t lowerModuleIndex = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex];
-    uint16_t middleModuleIndex = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex + 1];
-    uint16_t upperModuleIndex = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * tripletIndex + 2];
+    uint16_t lowerModuleIndex = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex];
+    uint16_t middleModuleIndex = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex + 1];
+    uint16_t upperModuleIndex = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * tripletIndex + 2];
 
     {
       //placeholder
@@ -864,7 +864,7 @@ namespace SDL {
                                              lowerModuleIndex,
                                              middleModuleIndex,
                                              pixelSegmentIndex,
-                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex],
+                                             tripletsInGPU.segmentIndices[::SDL::Params_LS::kLayers * tripletIndex],
                                              zOut,
                                              rtOut,
                                              deltaPhiPos,
@@ -895,7 +895,7 @@ namespace SDL {
                                              middleModuleIndex,
                                              upperModuleIndex,
                                              pixelSegmentIndex,
-                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex + 1],
+                                             tripletsInGPU.segmentIndices[::SDL::Params_LS::kLayers * tripletIndex + 1],
                                              zOut,
                                              rtOut,
                                              deltaPhiPos,
@@ -930,8 +930,8 @@ namespace SDL {
     float pixelF = segmentsInGPU.circleCenterY[pixelSegmentArrayIndex];
     float pixelRadiusPCA = segmentsInGPU.circleRadius[pixelSegmentArrayIndex];
 
-    unsigned int pixelInnerMDIndex = segmentsInGPU.mdIndices[Params_pLS::kLayers * pixelSegmentIndex];
-    unsigned int pixelOuterMDIndex = segmentsInGPU.mdIndices[Params_pLS::kLayers * pixelSegmentIndex + 1];
+    unsigned int pixelInnerMDIndex = segmentsInGPU.mdIndices[::SDL::Params_pLS::kLayers * pixelSegmentIndex];
+    unsigned int pixelOuterMDIndex = segmentsInGPU.mdIndices[::SDL::Params_pLS::kLayers * pixelSegmentIndex + 1];
 
     pixelRadius = pixelSegmentPt * kR1GeVf;
     pixelRadiusError = pixelSegmentPtError * kR1GeVf;
@@ -942,9 +942,9 @@ namespace SDL {
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * tripletInnerSegmentIndex + 1];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * tripletOuterSegmentIndex + 1];
 
-    float xs[Params_T3::kLayers] = {
+    float xs[::SDL::Params_T3::kLayers] = {
         mdsInGPU.anchorX[firstMDIndex], mdsInGPU.anchorX[secondMDIndex], mdsInGPU.anchorX[thirdMDIndex]};
-    float ys[Params_T3::kLayers] = {
+    float ys[::SDL::Params_T3::kLayers] = {
         mdsInGPU.anchorY[firstMDIndex], mdsInGPU.anchorY[secondMDIndex], mdsInGPU.anchorY[thirdMDIndex]};
 
     float g, f;
@@ -962,17 +962,17 @@ namespace SDL {
                                 upperModuleIndex))
       return false;
 
-    uint16_t lowerModuleIndices[Params_T3::kLayers] = {lowerModuleIndex, middleModuleIndex, upperModuleIndex};
+    uint16_t lowerModuleIndices[::SDL::Params_T3::kLayers] = {lowerModuleIndex, middleModuleIndex, upperModuleIndex};
 
     if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
-      float rts[Params_T3::kLayers] = {
+      float rts[::SDL::Params_T3::kLayers] = {
           mdsInGPU.anchorRt[firstMDIndex], mdsInGPU.anchorRt[secondMDIndex], mdsInGPU.anchorRt[thirdMDIndex]};
-      float zs[Params_T3::kLayers] = {
+      float zs[::SDL::Params_T3::kLayers] = {
           mdsInGPU.anchorZ[firstMDIndex], mdsInGPU.anchorZ[secondMDIndex], mdsInGPU.anchorZ[thirdMDIndex]};
-      float rtPix[Params_pLS::kLayers] = {mdsInGPU.anchorRt[pixelInnerMDIndex], mdsInGPU.anchorRt[pixelOuterMDIndex]};
-      float xPix[Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
-      float yPix[Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
-      float zPix[Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
+      float rtPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorRt[pixelInnerMDIndex], mdsInGPU.anchorRt[pixelOuterMDIndex]};
+      float xPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
+      float yPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
+      float zPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
 
       rzChiSquared = computePT3RZChiSquared(acc,
                                             modulesInGPU,
@@ -1006,8 +1006,8 @@ namespace SDL {
         return false;
     }
 
-    float xPix[Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
-    float yPix[Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
+    float xPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
+    float yPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
     rPhiChiSquaredInwards = computePT3RPhiChiSquaredInwards(modulesInGPU, g, f, tripletRadius, xPix, yPix);
 
     if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
@@ -1123,7 +1123,7 @@ namespace SDL {
               float score = rPhiChiSquared + rPhiChiSquaredInwards;
               unsigned int totOccupancyPixelTriplets =
                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelTripletsInGPU.totOccupancyPixelTriplets, 1u);
-              if (totOccupancyPixelTriplets >= N_MAX_PIXEL_TRIPLETS) {
+              if (totOccupancyPixelTriplets >= ::SDL::N_MAX_PIXEL_TRIPLETS) {
 #ifdef Warnings
                 printf("Pixel Triplet excess alert!\n");
 #endif
@@ -1837,7 +1837,7 @@ namespace SDL {
 #include "Quintuplet.h"
 #include "PixelTriplet.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct pixelQuintuplets {
     unsigned int* pixelIndices;
     unsigned int* T5Indices;
@@ -1912,9 +1912,9 @@ namespace SDL {
           score_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
           eta_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
           phi_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxPixelQuintuplets * Params_pT5::kLayers, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelQuintuplets * Params_pT5::kHits, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, maxPixelQuintuplets * Params_pT5::kLayers, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxPixelQuintuplets * ::SDL::Params_pT5::kLayers, queue)),
+          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelQuintuplets * ::SDL::Params_pT5::kHits, queue)),
+          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, maxPixelQuintuplets * ::SDL::Params_pT5::kLayers, queue)),
           pixelRadius_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
           quintupletRadius_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
           centerX_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuintuplets, queue)),
@@ -1958,66 +1958,66 @@ namespace SDL {
     pixelQuintupletsInGPU.centerX[pixelQuintupletIndex] = __F2H(centerX);
     pixelQuintupletsInGPU.centerY[pixelQuintupletIndex] = __F2H(centerY);
 
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex] = 0;
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 1] = 0;
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 2] =
-        quintupletsInGPU.logicalLayers[T5Index * Params_T5::kLayers];
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 3] =
-        quintupletsInGPU.logicalLayers[T5Index * Params_T5::kLayers + 1];
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 4] =
-        quintupletsInGPU.logicalLayers[T5Index * Params_T5::kLayers + 2];
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 5] =
-        quintupletsInGPU.logicalLayers[T5Index * Params_T5::kLayers + 3];
-    pixelQuintupletsInGPU.logicalLayers[Params_pT5::kLayers * pixelQuintupletIndex + 6] =
-        quintupletsInGPU.logicalLayers[T5Index * Params_T5::kLayers + 4];
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex] = 0;
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 1] = 0;
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 2] =
+        quintupletsInGPU.logicalLayers[T5Index * ::SDL::Params_T5::kLayers];
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 3] =
+        quintupletsInGPU.logicalLayers[T5Index * ::SDL::Params_T5::kLayers + 1];
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 4] =
+        quintupletsInGPU.logicalLayers[T5Index * ::SDL::Params_T5::kLayers + 2];
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 5] =
+        quintupletsInGPU.logicalLayers[T5Index * ::SDL::Params_T5::kLayers + 3];
+    pixelQuintupletsInGPU.logicalLayers[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 6] =
+        quintupletsInGPU.logicalLayers[T5Index * ::SDL::Params_T5::kLayers + 4];
 
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex] =
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex] =
         segmentsInGPU.innerLowerModuleIndices[pixelIndex];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 1] =
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 1] =
         segmentsInGPU.outerLowerModuleIndices[pixelIndex];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 2] =
-        quintupletsInGPU.lowerModuleIndices[T5Index * Params_T5::kLayers];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 3] =
-        quintupletsInGPU.lowerModuleIndices[T5Index * Params_T5::kLayers + 1];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 4] =
-        quintupletsInGPU.lowerModuleIndices[T5Index * Params_T5::kLayers + 2];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 5] =
-        quintupletsInGPU.lowerModuleIndices[T5Index * Params_T5::kLayers + 3];
-    pixelQuintupletsInGPU.lowerModuleIndices[Params_pT5::kLayers * pixelQuintupletIndex + 6] =
-        quintupletsInGPU.lowerModuleIndices[T5Index * Params_T5::kLayers + 4];
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 2] =
+        quintupletsInGPU.lowerModuleIndices[T5Index * ::SDL::Params_T5::kLayers];
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 3] =
+        quintupletsInGPU.lowerModuleIndices[T5Index * ::SDL::Params_T5::kLayers + 1];
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 4] =
+        quintupletsInGPU.lowerModuleIndices[T5Index * ::SDL::Params_T5::kLayers + 2];
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 5] =
+        quintupletsInGPU.lowerModuleIndices[T5Index * ::SDL::Params_T5::kLayers + 3];
+    pixelQuintupletsInGPU.lowerModuleIndices[::SDL::Params_pT5::kLayers * pixelQuintupletIndex + 6] =
+        quintupletsInGPU.lowerModuleIndices[T5Index * ::SDL::Params_T5::kLayers + 4];
 
-    unsigned int pixelInnerMD = segmentsInGPU.mdIndices[Params_pLS::kLayers * pixelIndex];
-    unsigned int pixelOuterMD = segmentsInGPU.mdIndices[Params_pLS::kLayers * pixelIndex + 1];
+    unsigned int pixelInnerMD = segmentsInGPU.mdIndices[::SDL::Params_pLS::kLayers * pixelIndex];
+    unsigned int pixelOuterMD = segmentsInGPU.mdIndices[::SDL::Params_pLS::kLayers * pixelIndex + 1];
 
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex] =
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex] =
         mdsInGPU.anchorHitIndices[pixelInnerMD];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 1] =
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 1] =
         mdsInGPU.outerHitIndices[pixelInnerMD];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 2] =
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 2] =
         mdsInGPU.anchorHitIndices[pixelOuterMD];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 3] =
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 3] =
         mdsInGPU.outerHitIndices[pixelOuterMD];
 
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 4] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 5] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 1];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 6] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 2];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 7] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 3];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 8] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 4];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 9] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 5];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 10] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 6];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 11] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 7];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 12] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 8];
-    pixelQuintupletsInGPU.hitIndices[Params_pT5::kHits * pixelQuintupletIndex + 13] =
-        quintupletsInGPU.hitIndices[Params_T5::kHits * T5Index + 9];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 4] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 5] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 1];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 6] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 2];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 7] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 3];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 8] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 4];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 9] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 5];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 10] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 6];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 11] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 7];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 12] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 8];
+    pixelQuintupletsInGPU.hitIndices[::SDL::Params_pT5::kHits * pixelQuintupletIndex + 13] =
+        quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * T5Index + 9];
 
     pixelQuintupletsInGPU.rzChiSquared[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintupletsInGPU.rPhiChiSquared[pixelQuintupletIndex] = rPhiChiSquared;
@@ -2520,23 +2520,23 @@ namespace SDL {
     unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];
     unsigned int fifthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
 
-    uint16_t lowerModuleIndex1 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex];
-    uint16_t lowerModuleIndex2 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 1];
-    uint16_t lowerModuleIndex3 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 2];
-    uint16_t lowerModuleIndex4 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 3];
-    uint16_t lowerModuleIndex5 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 4];
+    uint16_t lowerModuleIndex1 = quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex];
+    uint16_t lowerModuleIndex2 = quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 1];
+    uint16_t lowerModuleIndex3 = quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 2];
+    uint16_t lowerModuleIndex4 = quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 3];
+    uint16_t lowerModuleIndex5 = quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 4];
 
-    uint16_t lowerModuleIndices[Params_T5::kLayers] = {
+    uint16_t lowerModuleIndices[::SDL::Params_T5::kLayers] = {
         lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
-    float zPix[Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
-    float rtPix[Params_pLS::kLayers] = {mdsInGPU.anchorRt[pixelInnerMDIndex], mdsInGPU.anchorRt[pixelOuterMDIndex]};
-    float zs[Params_T5::kLayers] = {mdsInGPU.anchorZ[firstMDIndex],
+    float zPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
+    float rtPix[::SDL::Params_pLS::kLayers] = {mdsInGPU.anchorRt[pixelInnerMDIndex], mdsInGPU.anchorRt[pixelOuterMDIndex]};
+    float zs[::SDL::Params_T5::kLayers] = {mdsInGPU.anchorZ[firstMDIndex],
                                     mdsInGPU.anchorZ[secondMDIndex],
                                     mdsInGPU.anchorZ[thirdMDIndex],
                                     mdsInGPU.anchorZ[fourthMDIndex],
                                     mdsInGPU.anchorZ[fifthMDIndex]};
-    float rts[Params_T5::kLayers] = {mdsInGPU.anchorRt[firstMDIndex],
+    float rts[::SDL::Params_T5::kLayers] = {mdsInGPU.anchorRt[firstMDIndex],
                                      mdsInGPU.anchorRt[secondMDIndex],
                                      mdsInGPU.anchorRt[thirdMDIndex],
                                      mdsInGPU.anchorRt[fourthMDIndex],
@@ -2556,12 +2556,12 @@ namespace SDL {
     }
 
     //outer T5
-    float xs[Params_T5::kLayers] = {mdsInGPU.anchorX[firstMDIndex],
+    float xs[::SDL::Params_T5::kLayers] = {mdsInGPU.anchorX[firstMDIndex],
                                     mdsInGPU.anchorX[secondMDIndex],
                                     mdsInGPU.anchorX[thirdMDIndex],
                                     mdsInGPU.anchorX[fourthMDIndex],
                                     mdsInGPU.anchorX[fifthMDIndex]};
-    float ys[Params_T5::kLayers] = {mdsInGPU.anchorY[firstMDIndex],
+    float ys[::SDL::Params_T5::kLayers] = {mdsInGPU.anchorY[firstMDIndex],
                                     mdsInGPU.anchorY[secondMDIndex],
                                     mdsInGPU.anchorY[thirdMDIndex],
                                     mdsInGPU.anchorY[fourthMDIndex],
@@ -2628,7 +2628,7 @@ namespace SDL {
     float error2 = 0;
     //hardcoded array indices!!!
     float RMSE = 0;
-    for (size_t i = 0; i < Params_T5::kLayers; i++) {
+    for (size_t i = 0; i < ::SDL::Params_T5::kLayers; i++) {
       uint16_t& lowerModuleIndex = lowerModuleIndices[i];
       const int moduleType = modulesInGPU.moduleType[lowerModuleIndex];
       const int moduleSide = modulesInGPU.sides[lowerModuleIndex];
@@ -2726,7 +2726,7 @@ namespace SDL {
             if (success) {
               unsigned int totOccupancyPixelQuintuplets =
                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuintupletsInGPU.totOccupancyPixelQuintuplets, 1u);
-              if (totOccupancyPixelQuintuplets >= N_MAX_PIXEL_QUINTUPLETS) {
+              if (totOccupancyPixelQuintuplets >= ::SDL::N_MAX_PIXEL_QUINTUPLETS) {
 #ifdef Warnings
                 printf("Pixel Quintuplet excess alert!\n");
 #endif

@@ -7,7 +7,7 @@
 
 #include "Hit.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct miniDoublets {
     unsigned int* nMemoryLocations;
 

@@ -14,7 +14,7 @@
 #include <cuda_fp16.h>
 #endif
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
 // Half precision wrapper functions.
 #if defined(FP16_Base)
 #define __F2H __float2half
@@ -26,19 +26,7 @@ namespace SDL {
   typedef float FPX;
 #endif
 
-  using Idx = alpaka_common::Idx;
-  using Dim = alpaka_common::Dim3D;
-  using Dim1d = alpaka_common::Dim1D;
-  using Vec = alpaka_common::Vec3D;
-  using Vec1d = alpaka_common::Vec1D;
-  using WorkDiv = alpaka_common::WorkDiv3D;
-
-  using Acc = ALPAKA_ACCELERATOR_NAMESPACE::Acc3D;
-  using Dev = ALPAKA_ACCELERATOR_NAMESPACE::Device;
-  using DevHost = ALPAKA_ACCELERATOR_NAMESPACE::DevHost;
-  using QueueAcc = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
-
-  Vec const elementsPerThread(Vec::all(static_cast<Idx>(1)));
+  alpaka_common::Vec3D const elementsPerThread(alpaka_common::Vec3D::all(static_cast<Idx>(1)));
 
 // Needed for files that are compiled by g++ to not throw an error.
 // uint4 is defined only for CUDA, so we will have to revisit this soon when running on other backends.
@@ -53,7 +41,7 @@ namespace SDL {
 
   // Buffer type for allocations where auto type can't be used.
   template <typename TDev, typename TData>
-  using Buf = alpaka::Buf<TDev, TData, Dim1d, Idx>;
+  using Buf = alpaka::Buf<TDev, TData, Dim1D, Idx>;
 
   // Allocation wrapper function to make integration of the caching allocator easier and reduce code boilerplate.
   template <typename T, typename TAcc, typename TSize, typename TQueue>
@@ -61,26 +49,26 @@ namespace SDL {
                                                                             TSize nElements,
                                                                             TQueue queue) {
 #ifdef CACHE_ALLOC
-    return cms::alpakatools::allocCachedBuf<T, Idx>(devAccIn, queue, Vec1d(static_cast<Idx>(nElements)));
+    return cms::alpakatools::allocCachedBuf<T, Idx>(devAccIn, queue, Vec1D(static_cast<Idx>(nElements)));
 #else
-    return alpaka::allocBuf<T, Idx>(devAccIn, Vec1d(static_cast<Idx>(nElements)));
+    return alpaka::allocBuf<T, Idx>(devAccIn, Vec1D(static_cast<Idx>(nElements)));
 #endif
   }
 
   // Second allocation wrapper function when queue is not given. Reduces code boilerplate.
   template <typename T, typename TAcc, typename TSize>
   ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<alpaka::Dev<TAcc>, T> allocBufWrapper(TAcc const& devAccIn, TSize nElements) {
-    return alpaka::allocBuf<T, Idx>(devAccIn, Vec1d(static_cast<Idx>(nElements)));
+    return alpaka::allocBuf<T, Idx>(devAccIn, Vec1D(static_cast<Idx>(nElements)));
   }
 
   // Wrapper function to reduce code boilerplate for defining grid/block sizes.
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE Vec createVec(int x, int y, int z) {
-    return Vec(static_cast<Idx>(x), static_cast<Idx>(y), static_cast<Idx>(z));
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE alpaka_common::Vec3D createVec(int x, int y, int z) {
+    return alpaka_common::Vec3D(static_cast<Idx>(x), static_cast<Idx>(y), static_cast<Idx>(z));
   }
 
   // Adjust grid and block sizes based on backend configuration
   template <typename Vec>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE WorkDiv createWorkDiv(const Vec& blocksPerGrid,
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE WorkDiv3D createWorkDiv(const Vec& blocksPerGrid,
                                                         const Vec& threadsPerBlock,
                                                         const Vec& elementsPerThreadArg) {
     Vec adjustedBlocks = blocksPerGrid;
@@ -97,7 +85,7 @@ namespace SDL {
     adjustedBlocks = Vec::all(static_cast<Idx>(1));
 #endif
 
-    return WorkDiv(adjustedBlocks, adjustedThreads, elementsPerThreadArg);
+    return WorkDiv3D(adjustedBlocks, adjustedThreads, elementsPerThreadArg);
   }
 
   // 15 MeV constant from the approximate Bethe-Bloch formula
@@ -112,7 +100,11 @@ namespace SDL {
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR1GeVf = 1. / (2.99792458e-3 * 3.8);
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float sinAlphaMax = 0.95;
+#ifdef PT_CUT
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float ptCut = PT_CUT;
+#else
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float ptCut = ::SDL::PT_CUT;
+#endif
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float deltaZLum = 15.0;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float pixelPSZpitch = 0.15;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float stripPSZpitch = 2.4;
@@ -125,7 +117,7 @@ namespace SDL {
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float SDL_INF = 123456789.0;
 }  //namespace SDL
 
-namespace T5DNN {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::T5DNN {
   // Working points matching LST fake rate (43.9%) or signal acceptance (82.0%)
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP1 = 0.3418833f;  // 94.0% TPR, 43.9% FPR
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP2 = 0.6177366f;  // 82.0% TPR, 20.0% FPR

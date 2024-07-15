@@ -8,7 +8,7 @@
 #include "MiniDoublet.h"
 #include "Hit.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct triplets {
     unsigned int* segmentIndices;
     uint16_t* lowerModuleIndices;  //3 of them now
@@ -108,12 +108,12 @@ namespace SDL {
     template <typename TQueue, typename TDevAcc>
     tripletsBuffer(unsigned int maxTriplets, unsigned int nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
         : segmentIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * maxTriplets, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, Params_T3::kLayers * maxTriplets, queue)),
+          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, ::SDL::Params_T3::kLayers * maxTriplets, queue)),
           nTriplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           totOccupancyTriplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxTriplets * Params_T3::kLayers, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxTriplets * Params_T3::kHits, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxTriplets * ::SDL::Params_T3::kLayers, queue)),
+          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxTriplets * ::SDL::Params_T3::kHits, queue)),
           betaIn_buf(allocBufWrapper<FPX>(devAccIn, maxTriplets, queue)),
           circleRadius_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           circleCenterX_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
@@ -191,31 +191,31 @@ namespace SDL {
   {
     tripletsInGPU.segmentIndices[tripletIndex * 2] = innerSegmentIndex;
     tripletsInGPU.segmentIndices[tripletIndex * 2 + 1] = outerSegmentIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers] = innerInnerLowerModuleIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers + 1] = middleLowerModuleIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers + 2] = outerOuterLowerModuleIndex;
+    tripletsInGPU.lowerModuleIndices[tripletIndex * ::SDL::Params_T3::kLayers] = innerInnerLowerModuleIndex;
+    tripletsInGPU.lowerModuleIndices[tripletIndex * ::SDL::Params_T3::kLayers + 1] = middleLowerModuleIndex;
+    tripletsInGPU.lowerModuleIndices[tripletIndex * ::SDL::Params_T3::kLayers + 2] = outerOuterLowerModuleIndex;
 
     tripletsInGPU.betaIn[tripletIndex] = __F2H(betaIn);
     tripletsInGPU.circleRadius[tripletIndex] = circleRadius;
     tripletsInGPU.circleCenterX[tripletIndex] = circleCenterX;
     tripletsInGPU.circleCenterY[tripletIndex] = circleCenterY;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers] =
+    tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers] =
         modulesInGPU.layers[innerInnerLowerModuleIndex] + (modulesInGPU.subdets[innerInnerLowerModuleIndex] == 4) * 6;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 1] =
+    tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers + 1] =
         modulesInGPU.layers[middleLowerModuleIndex] + (modulesInGPU.subdets[middleLowerModuleIndex] == 4) * 6;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 2] =
+    tripletsInGPU.logicalLayers[tripletIndex * ::SDL::Params_T3::kLayers + 2] =
         modulesInGPU.layers[outerOuterLowerModuleIndex] + (modulesInGPU.subdets[outerOuterLowerModuleIndex] == 4) * 6;
     //get the hits
     unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * innerSegmentIndex];
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * innerSegmentIndex + 1];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex + 1];
 
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits] = mdsInGPU.anchorHitIndices[firstMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 1] = mdsInGPU.outerHitIndices[firstMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 2] = mdsInGPU.anchorHitIndices[secondMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 3] = mdsInGPU.outerHitIndices[secondMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 4] = mdsInGPU.anchorHitIndices[thirdMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 5] = mdsInGPU.outerHitIndices[thirdMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits] = mdsInGPU.anchorHitIndices[firstMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits + 1] = mdsInGPU.outerHitIndices[firstMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits + 2] = mdsInGPU.anchorHitIndices[secondMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits + 3] = mdsInGPU.outerHitIndices[secondMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits + 4] = mdsInGPU.anchorHitIndices[thirdMDIndex];
+    tripletsInGPU.hitIndices[tripletIndex * ::SDL::Params_T3::kHits + 5] = mdsInGPU.outerHitIndices[thirdMDIndex];
 #ifdef CUT_VALUE_DEBUG
     tripletsInGPU.zOut[tripletIndex] = zOut;
     tripletsInGPU.rtOut[tripletIndex] = rtOut;

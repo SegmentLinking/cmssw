@@ -11,7 +11,7 @@
 #include "Hit.h"
 #include "Triplet.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   struct quintuplets {
     unsigned int* tripletIndices;
     uint16_t* lowerModuleIndices;
@@ -103,7 +103,7 @@ namespace SDL {
     template <typename TQueue, typename TDevAcc>
     quintupletsBuffer(unsigned int nTotalQuintuplets, unsigned int nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
         : tripletIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * nTotalQuintuplets, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, Params_T5::kLayers * nTotalQuintuplets, queue)),
+          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, ::SDL::Params_T5::kLayers * nTotalQuintuplets, queue)),
           nQuintuplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           totOccupancyQuintuplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
           nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
@@ -121,8 +121,8 @@ namespace SDL {
           regressionRadius_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           regressionG_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, Params_T5::kLayers * nTotalQuintuplets, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T5::kHits * nTotalQuintuplets, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, ::SDL::Params_T5::kLayers * nTotalQuintuplets, queue)),
+          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, ::SDL::Params_T5::kHits * nTotalQuintuplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           chiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           nonAnchorChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)) {
@@ -170,11 +170,11 @@ namespace SDL {
     quintupletsInGPU.tripletIndices[2 * quintupletIndex] = innerTripletIndex;
     quintupletsInGPU.tripletIndices[2 * quintupletIndex + 1] = outerTripletIndex;
 
-    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex] = lowerModule1;
-    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 1] = lowerModule2;
-    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 2] = lowerModule3;
-    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 3] = lowerModule4;
-    quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers * quintupletIndex + 4] = lowerModule5;
+    quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex] = lowerModule1;
+    quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 1] = lowerModule2;
+    quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 2] = lowerModule3;
+    quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 3] = lowerModule4;
+    quintupletsInGPU.lowerModuleIndices[::SDL::Params_T5::kLayers * quintupletIndex + 4] = lowerModule5;
     quintupletsInGPU.innerRadius[quintupletIndex] = __F2H(innerRadius);
     quintupletsInGPU.outerRadius[quintupletIndex] = __F2H(outerRadius);
     quintupletsInGPU.pt[quintupletIndex] = __F2H(pt);
@@ -187,37 +187,37 @@ namespace SDL {
     quintupletsInGPU.regressionRadius[quintupletIndex] = regressionRadius;
     quintupletsInGPU.regressionG[quintupletIndex] = regressionG;
     quintupletsInGPU.regressionF[quintupletIndex] = regressionF;
-    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex] =
-        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex];
-    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 1] =
-        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex + 1];
-    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 2] =
-        tripletsInGPU.logicalLayers[Params_T3::kLayers * innerTripletIndex + 2];
-    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 3] =
-        tripletsInGPU.logicalLayers[Params_T3::kLayers * outerTripletIndex + 1];
-    quintupletsInGPU.logicalLayers[Params_T5::kLayers * quintupletIndex + 4] =
-        tripletsInGPU.logicalLayers[Params_T3::kLayers * outerTripletIndex + 2];
+    quintupletsInGPU.logicalLayers[::SDL::Params_T5::kLayers * quintupletIndex] =
+        tripletsInGPU.logicalLayers[::SDL::Params_T3::kLayers * innerTripletIndex];
+    quintupletsInGPU.logicalLayers[::SDL::Params_T5::kLayers * quintupletIndex + 1] =
+        tripletsInGPU.logicalLayers[::SDL::Params_T3::kLayers * innerTripletIndex + 1];
+    quintupletsInGPU.logicalLayers[::SDL::Params_T5::kLayers * quintupletIndex + 2] =
+        tripletsInGPU.logicalLayers[::SDL::Params_T3::kLayers * innerTripletIndex + 2];
+    quintupletsInGPU.logicalLayers[::SDL::Params_T5::kLayers * quintupletIndex + 3] =
+        tripletsInGPU.logicalLayers[::SDL::Params_T3::kLayers * outerTripletIndex + 1];
+    quintupletsInGPU.logicalLayers[::SDL::Params_T5::kLayers * quintupletIndex + 4] =
+        tripletsInGPU.logicalLayers[::SDL::Params_T3::kLayers * outerTripletIndex + 2];
 
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 1] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 1];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 2] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 2];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 3] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 3];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 4] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 4];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 5] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 5];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 6] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 2];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 7] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 3];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 8] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 4];
-    quintupletsInGPU.hitIndices[Params_T5::kHits * quintupletIndex + 9] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 5];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 1] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex + 1];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 2] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex + 2];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 3] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex + 3];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 4] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex + 4];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 5] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * innerTripletIndex + 5];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 6] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * outerTripletIndex + 2];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 7] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * outerTripletIndex + 3];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 8] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * outerTripletIndex + 4];
+    quintupletsInGPU.hitIndices[::SDL::Params_T5::kHits * quintupletIndex + 9] =
+        tripletsInGPU.hitIndices[::SDL::Params_T3::kHits * outerTripletIndex + 5];
     quintupletsInGPU.bridgeRadius[quintupletIndex] = bridgeRadius;
     quintupletsInGPU.rzChiSquared[quintupletIndex] = rzChiSquared;
     quintupletsInGPU.chiSquared[quintupletIndex] = rPhiChiSquared;
@@ -2878,7 +2878,7 @@ namespace SDL {
 
     computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegression(acc,
-                                                    Params_T5::kLayers,
+                                                    ::SDL::Params_T5::kLayers,
                                                     xVec,
                                                     yVec,
                                                     delta1,
@@ -2927,7 +2927,7 @@ namespace SDL {
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[Params_T5::kLayers], nonAnchorDelta2[Params_T5::kLayers], nonAnchorSlopes[Params_T5::kLayers];
+    float nonAnchorDelta1[::SDL::Params_T5::kLayers], nonAnchorDelta2[::SDL::Params_T5::kLayers], nonAnchorSlopes[::SDL::Params_T5::kLayers];
     float nonAnchorxs[] = {mdsInGPU.outerX[firstMDIndex],
                            mdsInGPU.outerX[secondMDIndex],
                            mdsInGPU.outerX[thirdMDIndex],
@@ -2946,10 +2946,10 @@ namespace SDL {
                                nonAnchorDelta2,
                                nonAnchorSlopes,
                                isFlat,
-                               Params_T5::kLayers,
+                               ::SDL::Params_T5::kLayers,
                                false);
     nonAnchorChiSquared = computeChiSquared(acc,
-                                            Params_T5::kLayers,
+                                            ::SDL::Params_T5::kLayers,
                                             nonAnchorxs,
                                             nonAnchorys,
                                             nonAnchorDelta1,
@@ -2992,14 +2992,14 @@ namespace SDL {
         for (unsigned int innerTripletArrayIndex = globalThreadIdx[1]; innerTripletArrayIndex < nInnerTriplets;
              innerTripletArrayIndex += gridThreadExtent[1]) {
           unsigned int innerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule1] + innerTripletArrayIndex;
-          uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 1];
-          uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 2];
+          uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * innerTripletIndex + 1];
+          uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * innerTripletIndex + 2];
           unsigned int nOuterTriplets = tripletsInGPU.nTriplets[lowerModule3];
           for (unsigned int outerTripletArrayIndex = globalThreadIdx[2]; outerTripletArrayIndex < nOuterTriplets;
                outerTripletArrayIndex += gridThreadExtent[2]) {
             unsigned int outerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule3] + outerTripletArrayIndex;
-            uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
-            uint16_t lowerModule5 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
+            uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * outerTripletIndex + 1];
+            uint16_t lowerModule5 = tripletsInGPU.lowerModuleIndices[::SDL::Params_T3::kLayers * outerTripletIndex + 2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionG, regressionF, regressionRadius, rzChiSquared,
                 chiSquared, nonAnchorChiSquared;  //required for making distributions

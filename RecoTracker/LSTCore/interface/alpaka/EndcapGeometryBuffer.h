@@ -13,7 +13,7 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
 
   struct EndcapGeometryDev {
     const unsigned int* geoMapDetId;
@@ -49,7 +49,7 @@ namespace SDL {
       copyFromSrc(queue, src);
     }
 
-    inline SDL::EndcapGeometryDev const* data() const { return this; }
+    inline EndcapGeometryDev const* data() const { return this; }
   };
 
 }  // namespace SDL

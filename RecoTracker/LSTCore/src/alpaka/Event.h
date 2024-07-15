@@ -17,15 +17,15 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
-namespace SDL {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::SDL {
   template <typename TAcc>
   class Event {};
 
   template <>
-  class Event<SDL::Acc> {
+  class Event<Acc3D> {
   private:
-    QueueAcc queue;
-    Dev devAcc;
+    Queue queue;
+    Device devAcc;
     DevHost devHost;
     bool addObjects;
 
@@ -45,35 +45,35 @@ namespace SDL {
     //Device stuff
     unsigned int nTotalSegments;
     struct objectRanges* rangesInGPU;
-    struct objectRangesBuffer<Dev>* rangesBuffers;
+    struct objectRangesBuffer<Device>* rangesBuffers;
     struct hits* hitsInGPU;
-    struct hitsBuffer<Dev>* hitsBuffers;
+    struct hitsBuffer<Device>* hitsBuffers;
     struct miniDoublets* mdsInGPU;
-    struct miniDoubletsBuffer<Dev>* miniDoubletsBuffers;
+    struct miniDoubletsBuffer<Device>* miniDoubletsBuffers;
     struct segments* segmentsInGPU;
-    struct segmentsBuffer<Dev>* segmentsBuffers;
+    struct segmentsBuffer<Device>* segmentsBuffers;
     struct triplets* tripletsInGPU;
-    struct tripletsBuffer<Dev>* tripletsBuffers;
+    struct tripletsBuffer<Device>* tripletsBuffers;
     struct quintuplets* quintupletsInGPU;
-    struct quintupletsBuffer<Dev>* quintupletsBuffers;
+    struct quintupletsBuffer<Device>* quintupletsBuffers;
     struct trackCandidates* trackCandidatesInGPU;
-    struct trackCandidatesBuffer<Dev>* trackCandidatesBuffers;
+    struct trackCandidatesBuffer<Device>* trackCandidatesBuffers;
     struct pixelTriplets* pixelTripletsInGPU;
-    struct pixelTripletsBuffer<Dev>* pixelTripletsBuffers;
+    struct pixelTripletsBuffer<Device>* pixelTripletsBuffers;
     struct pixelQuintuplets* pixelQuintupletsInGPU;
-    struct pixelQuintupletsBuffer<Dev>* pixelQuintupletsBuffers;
+    struct pixelQuintupletsBuffer<Device>* pixelQuintupletsBuffers;
 
     //CPU interface stuff
-    objectRangesBuffer<alpaka::DevCpu>* rangesInCPU;
-    hitsBuffer<alpaka::DevCpu>* hitsInCPU;
-    miniDoubletsBuffer<alpaka::DevCpu>* mdsInCPU;
-    segmentsBuffer<alpaka::DevCpu>* segmentsInCPU;
-    tripletsBuffer<alpaka::DevCpu>* tripletsInCPU;
-    trackCandidatesBuffer<alpaka::DevCpu>* trackCandidatesInCPU;
-    modulesBuffer<alpaka::DevCpu>* modulesInCPU;
-    quintupletsBuffer<alpaka::DevCpu>* quintupletsInCPU;
-    pixelTripletsBuffer<alpaka::DevCpu>* pixelTripletsInCPU;
-    pixelQuintupletsBuffer<alpaka::DevCpu>* pixelQuintupletsInCPU;
+    objectRangesBuffer<DevHost>* rangesInCPU;
+    hitsBuffer<DevHost>* hitsInCPU;
+    miniDoubletsBuffer<DevHost>* mdsInCPU;
+    segmentsBuffer<DevHost>* segmentsInCPU;
+    tripletsBuffer<DevHost>* tripletsInCPU;
+    trackCandidatesBuffer<DevHost>* trackCandidatesInCPU;
+    modulesBuffer<DevHost>* modulesInCPU;
+    quintupletsBuffer<DevHost>* quintupletsInCPU;
+    pixelTripletsBuffer<DevHost>* pixelTripletsInCPU;
+    pixelQuintupletsBuffer<DevHost>* pixelQuintupletsInCPU;
 
     void init(bool verbose);
 
@@ -85,14 +85,14 @@ namespace SDL {
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
     const unsigned int nEndCapMap_;
-    const std::shared_ptr<const modulesBuffer<Dev>> modulesBuffers_;
-    const std::shared_ptr<const pixelMap> pixelMapping_;
-    const std::shared_ptr<const EndcapGeometryBuffer<Dev>> endcapGeometryBuffers_;
+    const std::shared_ptr<const modulesBuffer<Device>> modulesBuffers_;
+    const std::shared_ptr<const ::SDL::pixelMap> pixelMapping_;
+    const std::shared_ptr<const EndcapGeometryBuffer<Device>> endcapGeometryBuffers_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
     template <typename TQueue>
-    Event(bool verbose, TQueue const& q, const LSTESData<Dev>* deviceESData)
+    Event(bool verbose, TQueue const& q, const LSTESData<Device>* deviceESData)
         : queue(q),
           devAcc(alpaka::getDev(q)),
           devHost(cms::alpakatools::host()),
@@ -186,18 +186,18 @@ namespace SDL {
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
-    objectRangesBuffer<alpaka::DevCpu>* getRanges();
-    hitsBuffer<alpaka::DevCpu>* getHits();
-    hitsBuffer<alpaka::DevCpu>* getHitsInCMSSW();
-    miniDoubletsBuffer<alpaka::DevCpu>* getMiniDoublets();
-    segmentsBuffer<alpaka::DevCpu>* getSegments();
-    tripletsBuffer<alpaka::DevCpu>* getTriplets();
-    quintupletsBuffer<alpaka::DevCpu>* getQuintuplets();
-    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidates();
-    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidatesInCMSSW();
-    pixelTripletsBuffer<alpaka::DevCpu>* getPixelTriplets();
-    pixelQuintupletsBuffer<alpaka::DevCpu>* getPixelQuintuplets();
-    modulesBuffer<alpaka::DevCpu>* getModules(bool isFull = false);
+    objectRangesBuffer<DevHost>* getRanges();
+    hitsBuffer<DevHost>* getHits();
+    hitsBuffer<DevHost>* getHitsInCMSSW();
+    miniDoubletsBuffer<DevHost>* getMiniDoublets();
+    segmentsBuffer<DevHost>* getSegments();
+    tripletsBuffer<DevHost>* getTriplets();
+    quintupletsBuffer<DevHost>* getQuintuplets();
+    trackCandidatesBuffer<DevHost>* getTrackCandidates();
+    trackCandidatesBuffer<DevHost>* getTrackCandidatesInCMSSW();
+    pixelTripletsBuffer<DevHost>* getPixelTriplets();
+    pixelQuintupletsBuffer<DevHost>* getPixelQuintuplets();
+    modulesBuffer<DevHost>* getModules(bool isFull = false);
   };
 
 }  // namespace SDL

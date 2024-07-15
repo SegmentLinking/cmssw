@@ -91,7 +91,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool verbose_, nopLSDupClean_, tcpLSTriplets_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
-    SDL::LST<SDL::Acc> lst_;
+    SDL::LST<Acc3D> lst_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

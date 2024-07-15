@@ -6,6 +6,8 @@
 
 #include "ModuleMethods.h"
 
+using namespace ALPAKA_ACCELERATOR_NAMESPACE;
+
 namespace {
   std::string trackLooperDir() {
     const char* path_lst_base = std::getenv("LST_BASE");
@@ -39,10 +41,10 @@ namespace {
     return fullpath.string();
   }
 
-  void loadMapsHost(SDL::MapPLStoLayer& pLStoLayer,
-                    std::shared_ptr<SDL::EndcapGeometry> endcapGeometry,
-                    std::shared_ptr<SDL::TiltedGeometry> tiltedGeometry,
-                    std::shared_ptr<SDL::ModuleConnectionMap> moduleConnectionMap) {
+  void loadMapsHost(::SDL::MapPLStoLayer& pLStoLayer,
+                    std::shared_ptr<::SDL::EndcapGeometry> endcapGeometry,
+                    std::shared_ptr<::SDL::TiltedGeometry> tiltedGeometry,
+                    std::shared_ptr<::SDL::ModuleConnectionMap> moduleConnectionMap) {
     // Module orientation information (DrDz or phi angles)
     auto endcap_geom =
         get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
@@ -66,31 +68,31 @@ namespace {
       auto connectData = connects[i].data();
 
       path = pLSMapDir + connectData + ".bin";
-      pLStoLayer[0][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[0][i] = ::SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
 
       path = pLSMapDir + "_pos" + connectData + ".bin";
-      pLStoLayer[1][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[1][i] = ::SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
 
       path = pLSMapDir + "_neg" + connectData + ".bin";
-      pLStoLayer[2][i] = SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
+      pLStoLayer[2][i] = ::SDL::ModuleConnectionMap(get_absolute_path_after_check_file_exists(path));
     }
   }
 }  // namespace
 
-std::unique_ptr<SDL::LSTESData<SDL::DevHost>> SDL::loadAndFillESHost() {
+std::unique_ptr<ALPAKA_ACCELERATOR_NAMESPACE::SDL::LSTESData<DevHost>> ALPAKA_ACCELERATOR_NAMESPACE::SDL::loadAndFillESHost() {
   uint16_t nModules;
   uint16_t nLowerModules;
   unsigned int nPixels;
-  std::shared_ptr<SDL::modulesBuffer<SDL::DevHost>> modulesBuffers = nullptr;
-  auto pLStoLayer = std::make_shared<SDL::MapPLStoLayer>();
-  auto endcapGeometry = std::make_shared<SDL::EndcapGeometry>();
-  auto tiltedGeometry = std::make_shared<SDL::TiltedGeometry>();
-  auto pixelMapping = std::make_shared<SDL::pixelMap>();
-  auto moduleConnectionMap = std::make_shared<SDL::ModuleConnectionMap>();
+  std::shared_ptr<SDL::modulesBuffer<DevHost>> modulesBuffers = nullptr;
+  auto pLStoLayer = std::make_shared<::SDL::MapPLStoLayer>();
+  auto endcapGeometry = std::make_shared<::SDL::EndcapGeometry>();
+  auto tiltedGeometry = std::make_shared<::SDL::TiltedGeometry>();
+  auto pixelMapping = std::make_shared<::SDL::pixelMap>();
+  auto moduleConnectionMap = std::make_shared<::SDL::ModuleConnectionMap>();
   ::loadMapsHost(*pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 
   auto endcapGeometryBuffers =
-      std::make_shared<SDL::EndcapGeometryBuffer<SDL::DevHost>>(cms::alpakatools::host(), endcapGeometry->nEndCapMap);
+      std::make_shared<EndcapGeometryBuffer<DevHost>>(cms::alpakatools::host(), endcapGeometry->nEndCapMap);
   alpaka::QueueCpuBlocking queue(cms::alpakatools::host());
   alpaka::memcpy(
       queue, endcapGeometryBuffers->geoMapDetId_buf, endcapGeometry->geoMapDetId_buf, endcapGeometry->nEndCapMap);
@@ -109,6 +111,6 @@ std::unique_ptr<SDL::LSTESData<SDL::DevHost>> SDL::loadAndFillESHost() {
                            endcapGeometry.get(),
                            tiltedGeometry.get(),
                            moduleConnectionMap.get());
-  return std::make_unique<LSTESData<SDL::DevHost>>(
+  return std::make_unique<LSTESData<DevHost>>(
       nModules, nLowerModules, nPixels, endcapGeometry->nEndCapMap, modulesBuffers, endcapGeometryBuffers, pixelMapping);
 }
