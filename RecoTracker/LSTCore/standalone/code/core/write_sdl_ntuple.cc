@@ -723,7 +723,7 @@ void setT5DNNBranches(SDL::Event<SDL::Acc>* event) {
   std::unordered_map<unsigned int, unsigned int> T3_index_map;
 
   for (unsigned int idx = 0; idx < *modulesInGPU.nLowerModules; ++idx) {
-    for (unsigned int jdx = 0; jdx < tripletsInGPU.nTriplets[idx]; jdx++) {
+    for (unsigned int jdx = 0; jdx < tripletsInGPU.nTriplets[idx]; ++jdx) {
       unsigned int T3_idx = rangesInGPU.tripletModuleIndices[idx] + jdx;
       if (all_T3s.insert(T3_idx).second) {
         T3_index_map[T3_idx] = all_T3s.size() - 1;
@@ -744,15 +744,14 @@ void setT5DNNBranches(SDL::Event<SDL::Acc>* event) {
   }
 
   for (unsigned int idx = 0; idx < *modulesInGPU.nLowerModules; ++idx) {
-    for (unsigned int jdx = 0; jdx < quintupletsInGPU.nQuintuplets[idx]; jdx++) {
+    for (unsigned int jdx = 0; jdx < quintupletsInGPU.nQuintuplets[idx]; ++jdx) {
       unsigned int T5_idx = rangesInGPU.quintupletModuleIndices[idx] + jdx;
       std::vector<unsigned int> T3s = getT3sFromT5(event, T5_idx);
 
       ana.tx->pushbackToBranch<int>("t5_t3_idx0", T3_index_map[T3s[0]]);
       ana.tx->pushbackToBranch<int>("t5_t3_idx1", T3_index_map[T3s[1]]);
 
-      auto t5_it = t5s_used_in_tc.find(T5_idx);
-      if (t5_it != t5s_used_in_tc.end()) {
+      if (t5s_used_in_tc.find(T5_idx) != t5s_used_in_tc.end()) {
         ana.tx->pushbackToBranch<int>("t5_partOfTC", 1);
         ana.tx->pushbackToBranch<int>("t5_tc_idx", t5_tc_index_map[T5_idx]);
       } else {
