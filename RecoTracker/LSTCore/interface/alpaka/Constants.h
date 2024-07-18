@@ -160,8 +160,9 @@ namespace SDL {
 }  //namespace SDL
 
 namespace T5DNN {
-  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP = 0.5f;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float Z_max = 267.2349854f;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float R_max = 110.1099396f;
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float LSTWP[10] = {
+      0.4069, 0.4174, 0.5, 0.539,  0.3421, 0.3174, 0.3481, 0.4968, 0.693,  0.761};
 }  // namespace T5DNN
 #endif

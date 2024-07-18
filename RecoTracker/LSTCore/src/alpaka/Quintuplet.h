@@ -2916,8 +2916,8 @@ namespace SDL {
                                           innerRadius,
                                           outerRadius,
                                           bridgeRadius);
-    TightCutFlag = TightCutFlag and (inference > T5DNN::LSTWP);  // T5-in-TC cut
-    if (inference <= T5DNN::LSTWP)                               // T5-building cut
+    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
       return false;
 #endif
 

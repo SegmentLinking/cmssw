@@ -65,6 +65,8 @@ namespace T5DNN {
     bool is_endcap4 = (modulesInGPU.subdets[lowerModuleIndex4] == 4);  // true if anchor hit 4 is in the endcap
     bool is_endcap5 = (modulesInGPU.subdets[lowerModuleIndex5] == 4);  // true if anchor hit 5 is in the endcap
 
+    float t5_eta = mdsInGPU.anchorEta[md_idx_for_t5_eta_phi];
+
     // Build DNN input vector (corresponding output N-tuple branch noted in parenthetical in comment)
     float x[24] = {
         mdsInGPU.anchorEta[mdIndex1],                                    // inner T3 anchor hit 1 eta (t3_0_eta)
@@ -87,7 +89,7 @@ namespace T5DNN {
         mdsInGPU.anchorZ[mdIndex5] / T5DNN::Z_max,                       // outer T3 anchor hit 5 z (t3_4_z)
         alpaka::math::sqrt(acc, x5 * x5 + y5 * y5) / T5DNN::R_max,       // outer T3 anchor hit 5 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex5] + 6 * is_endcap5),  // outer T3 anchor hit 5 layer (t3_4_layer)
-        mdsInGPU.anchorEta[md_idx_for_t5_eta_phi],                       // T5 eta (t5_eta)
+        t5_eta,                                                          // T5 eta (t5_eta)
         SDL::temp_log10(acc, innerRadius),                               // T5 inner radius (t5_innerRadius)
         SDL::temp_log10(acc, bridgeRadius),                              // T5 bridge radius (t5_bridgeRadius)
         SDL::temp_log10(acc, outerRadius)                                // T5 outer radius (t5_outerRadius)
@@ -141,7 +143,12 @@ namespace T5DNN {
       x_5[col] = alpaka::math::exp(acc, x_4[col]) / (alpaka::math::exp(acc, x_4[col]) + 1);
     }
 
-    return x_5[0];
+    // Get the bin index based on abs(t5_eta)
+    float abs_t5_eta = alpaka::math::abs(acc, t5_eta);
+    unsigned int bin_index = (abs_t5_eta > 2.5f) ? 9 : static_cast<unsigned int>(abs_t5_eta / 0.25f);
+
+    // Compare x_5[0] to the cut value for the relevant bin
+    return x_5[0] > LSTWP[bin_index];
   }
 }  // namespace T5DNN
 
