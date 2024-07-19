@@ -1629,6 +1629,8 @@ SDL::tripletsBuffer<alpaka::DevCpu>* SDL::Event<SDL::Acc>::getTriplets() {
     alpaka::memcpy(queue, tripletsInCPU->rtLo_buf, tripletsBuffers->rtLo_buf, nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->rtHi_buf, tripletsBuffers->rtHi_buf, nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->residual_buf, tripletsBuffers->residual_buf, nMemHost);
+    alpaka::memcpy(queue, tripletsInCPU->rzChiSquared_buf, tripletsBuffers->rzChiSquared_buf, nMemHost);
+    alpaka::memcpy(queue, tripletsInCPU->region_buf, tripletsBuffers->region_buf, nMemHost);
 #endif
     alpaka::memcpy(queue, tripletsInCPU->hitIndices_buf, tripletsBuffers->hitIndices_buf, 6 * nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->logicalLayers_buf, tripletsBuffers->logicalLayers_buf, 3 * nMemHost);

@@ -40,6 +40,8 @@ namespace SDL {
     float* rtLo;
     float* rtHi;
     float* residual;
+    float* rzChiSquared;
+    int* region; 
 #endif
     template <typename TBuff>
     void setData(TBuff& tripletsbuf) {
@@ -71,6 +73,8 @@ namespace SDL {
       rtLo = alpaka::getPtrNative(tripletsbuf.rtLo_buf);
       rtHi = alpaka::getPtrNative(tripletsbuf.rtHi_buf);
       residual = alpaka::getPtrNative(tripletsbuf.residual_buf);
+      rzChiSquared = alpaka::getPtrNative(tripletsbuf.rzChiSquared_buf);
+      region = alpaka::getPtrNative(tripletsbuf.region_buf);
 #endif
     }
   };
@@ -106,6 +110,8 @@ namespace SDL {
     Buf<TDev, float> rtLo_buf;
     Buf<TDev, float> rtHi_buf;
     Buf<TDev, float> residual_buf;
+    Buf<TDev, float> rzChiSquared_buf;
+    Buf<TDev, int> region_buf;
 #endif
 
     template <typename TQueue, typename TDevAcc>
@@ -138,7 +144,9 @@ namespace SDL {
           betaInCut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           rtLo_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           rtHi_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          residual_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue))
+          residual_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          rzChiSquared_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          region_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue))
 #endif
     {
       alpaka::memset(queue, nTriplets_buf, 0u);
@@ -172,6 +180,8 @@ namespace SDL {
                                                          float& rtLo,
                                                          float& rtHi,
                                                          float& residual,
+                                                         float& rzChiSquared,
+                                                         int& region,
                                                          float& zLoPointed,
                                                          float& zHiPointed,
                                                          float& sdlCut,
@@ -235,6 +245,8 @@ namespace SDL {
     tripletsInGPU.sdlCut[tripletIndex] = sdlCut;
     tripletsInGPU.betaInCut[tripletIndex] = betaInCut;
     tripletsInGPU.residual[tripletIndex] = residual;
+    tripletsInGPU.rzChiSquared[tripletIndex] = rzChiSquared;
+    tripletsInGPU.region[tripletIndex] = region;
 #endif
   };
 
@@ -250,6 +262,8 @@ namespace SDL {
                                                        unsigned int& secondMDIndex,
                                                        unsigned int& thirdMDIndex,
                                                        float& residual,
+                                                       float& rzChiSquared,
+                                                       int& region,
                                                        float& circleRadius,
                                                        float& circleCenterX, 
                                                        float& circleCenterY) {
@@ -260,44 +274,111 @@ namespace SDL {
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
-    const float r1 = mdsInGPU.anchorRt[firstMDIndex]; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
-    const float r2 = mdsInGPU.anchorRt[secondMDIndex];
-    const float r3 = mdsInGPU.anchorRt[thirdMDIndex];
+    const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
+    const float r2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
+    const float r3 = mdsInGPU.anchorRt[thirdMDIndex] / 100;
 
-    const float z1 = mdsInGPU.anchorZ[firstMDIndex];
-    const float z2 = mdsInGPU.anchorZ[secondMDIndex];
-    const float z3 = mdsInGPU.anchorZ[thirdMDIndex];
-/*
+    const float z1 = mdsInGPU.anchorZ[firstMDIndex] / 100;
+    const float z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
+    const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
+
     //get the type of module: ps or 2s
-    const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
-    const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
+    // const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
+    // const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
 
     //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex];
-    const float x2 = mdsInGPU.anchorX[secondMDIndex];
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex];
+    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
+    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
+    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
 
-    const float y1 = mdsInGPU.anchorY[firstMDIndex];
-    const float y2 = mdsInGPU.anchorY[secondMDIndex];
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex];
+    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
+    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
+    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
 
     //use the second MD as the initial point to provide x0,y0,z0 and rt0.
-    float x_init = mdsInGPU.anchorX[secondMDIndex];
-    float y_init = mdsInGPU.anchorY[secondMDIndex];
-    float z_init = mdsInGPU.anchorZ[secondMDIndex];
-    float rt_init = mdsInGPU.anchorRt[secondMDIndex];  //use the second MD as initial point
+    float x_init = x2;
+    float y_init = y2;
+    float z_init = z2;
+    float rt_init = r2;  //use the second MD as initial point
 
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
-    float x_center = circleCenterX;
-    float y_center = circleCenterY;
+    float x_center = circleCenterX / 100;
+    float y_center = circleCenterY / 100;
     float Pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
+
+    // start from a circle of inner T3.
+    // to determine the charge
+    int charge = 0;
+    float slope3c = (y3 - y_center) / (x3 - x_center);
+    float slope1c = (y1 - y_center) / (x1 - x_center);
+    // these 4 "if"s basically separate the x-y plane into 4 quarters. It determines geometrically how a circle and line slope goes and their positions, and we can get the charges correspondingly.
+    if ((y3 - y_center) > 0 && (y1 - y_center) > 0) {
+      if (slope1c > 0 && slope3c < 0)
+        charge = -1;  // on x axis of a quarter, 3 hits go anti-clockwise
+      else if (slope1c < 0 && slope3c > 0)
+        charge = 1;  // on x axis of a quarter, 3 hits go clockwise
+      else if (slope3c > slope1c)
+        charge = -1;
+      else if (slope3c < slope1c)
+        charge = 1;
+    } else if ((y3 - y_center) < 0 && (y1 - y_center) < 0) {
+      if (slope1c < 0 && slope3c > 0)
+        charge = 1;
+      else if (slope1c > 0 && slope3c < 0)
+        charge = -1;
+      else if (slope3c > slope1c)
+        charge = -1;
+      else if (slope3c < slope1c)
+        charge = 1;
+    } else if ((y3 - y_center) < 0 && (y1 - y_center) > 0) {
+      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
+        charge = 1;
+      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
+        charge = -1;
+    } else if ((y3 - y_center) > 0 && (y1 - y_center) < 0) {
+      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
+        charge = -1;
+      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
+        charge = 1;
+    }
 
     //get the absolute value of px and py at the initial point
     float pseudo_phi = alpaka::math::atan(
         acc, (y_init - y_center) / (x_init - x_center));  //actually represent pi/2-phi, wrt helix axis z
     float Px = Pt * alpaka::math::abs(acc, alpaka::math::sin(acc, pseudo_phi)),
           Py = Pt * alpaka::math::abs(acc, cos(pseudo_phi));
+
+    // Above line only gives you the correct value of Px and Py, but signs of Px and Py calculated below.
+    // We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
+    if (x_init > x_center && y_init > y_center)  //1st quad
+    {
+      if (charge == 1)
+        Py = -Py;
+      if (charge == -1)
+        Px = -Px;
+    }
+    if (x_init < x_center && y_init > y_center)  //2nd quad
+    {
+      if (charge == -1) {
+        Px = -Px;
+        Py = -Py;
+      }
+    }
+    if (x_init < x_center && y_init < y_center)  //3rd quad
+    {
+      if (charge == 1)
+        Px = -Px;
+      if (charge == -1)
+        Py = -Py;
+    }
+    if (x_init > x_center && y_init < y_center)  //4th quad
+    {
+      if (charge == 1) {
+        Px = -Px;
+        Py = -Py;
+      }
+    }
 
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
     float BO =
@@ -308,41 +389,144 @@ namespace SDL {
 
     float Pz = (z_init - z1) / ds * Pt;
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
-*/
+
+    float Bz = SDL::magnetic_field;
+    float a = -0.299792 * Bz * charge;
+
+    rzChiSquared = 0;
+
+    // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
+    float diffr = 0, diffz = 0;
+
+    float rou = a / p;
+    // for endcap
+    float s = (z3 - z_init) * p / Pz;
+    float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
+    float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
+    diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
+
+    // for barrel
+    if (layer3 <= 6) {
+      float paraA =
+          rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
+      float paraB = 2 * (x_init * Px + y_init * Py) / a;
+      float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
+      float A = paraB * paraB + paraC * paraC;
+      float B = 2 * paraA * paraB;
+      float C = paraA * paraA - paraC * paraC;
+      float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+      float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+      float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
+      float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
+      float diffz1 = (solz1 - z3) * 100;
+      float diffz2 = (solz2 - z3) * 100;
+      // Alpaka : Needs to be moved over
+      if (alpaka::math::isnan(acc, diffz1))
+        diffz = diffz2;
+      else if (alpaka::math::isnan(acc, diffz2))
+        diffz = diffz1;
+      else {
+        diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
+      }
+    }
+    residual = (layer3 > 6) ? diffr : diffz;
+
+    float error;
+    if (moduleType3 == 0) { //PS Modules
+      error = 0.15f;
+    } else { //2S modules
+      error = 5.0f;
+    }
+
+    float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
+    short side = modulesInGPU.sides[middleLowerModuleIndex];
+    short subdets = modulesInGPU.subdets[middleLowerModuleIndex];
+
+    float projection_missing = 1;
+    if (drdz < 1) {
+      float residual2 = (layer2 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
+      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                ? 1.f
+                                : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+      rzChiSquared += 12 * (residual2 * residual2) / (error * error * projection_missing * projection_missing);
+    }
+    if (drdz > 1) {
+      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                ? 1.f
+                                : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+    }
+    error = error * projection_missing;
+
+    rzChiSquared += 12 * (residual * residual) / (error * error);
+
+    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
+      float slope = (z2 - z1) / (r2 - r1);
+
+      float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
+
+      // creating a chi squared type quantity
+      // 0-> PS, 1->2S
+      residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
+
+      rzChiSquared = 12 * residual3_linear * residual3_linear;
+      // return rzChiSquared < 4.677f;
+    }
+
+    if (layer1==7 and layer2==8 and layer3==9) {
+      region = 0;
+    } else if (layer1==7 and layer2==8 and layer3==14) {
+      region = 1;
+    } else if (layer1==7 and layer2==13 and layer3==14) {
+      region = 2;
+    } else if (layer1==8 and layer2==9 and layer3==10) {
+      region = 3;
+    } else if (layer1==8 and layer2==9 and layer3==15) {
+      region = 4;
+    } else if (layer1==8 and layer2==14 and layer3==15) {
+      region = 5;
+    } else if (layer1==9 and layer2==10 and layer3==11) {
+      region = 6;
+    } else if (layer1==9 and layer2==10 and layer3==16) {
+      region = 7;
+    } else if (layer1==9 and layer2==15 and layer3==16) {
+      region = 8;
+    } else if (layer1==1 and layer2==7 and layer3==8) {
+      region = 9;
+    } else if (layer1==1 and layer2==7 and layer3==13) {
+      region = 10;
+    } else if (layer1==1 and layer2==2 and layer3==7) {
+      region = 11;
+    } else if (layer1==1 and layer2==2 and layer3==3) {
+      region = 12;
+    } else if (layer1==2 and layer2==7 and layer3==8) {
+      region = 13;
+    } else if (layer1==2 and layer2==7 and layer3==13) {
+      region = 14;
+    } else if (layer1==2 and layer2==3 and layer3==7) {
+      region = 15;
+    } else if (layer1==2 and layer2==3 and layer3==12) {
+      region = 16;
+    } else if (layer1==2 and layer2==3 and layer3==4) {
+      region = 17;
+    } else if (layer1==3 and layer2==7 and layer3==8) {
+      region = 18;
+    } else if (layer1==3 and layer2==7 and layer3==13) {
+      region = 19;
+    } else if (layer1==3 and layer2==12 and layer3==13) {
+      region = 20;
+    } else if (layer1==3 and layer2==4 and layer3==5) {
+      region = 21;
+    } else if (layer1==4 and layer2==12 and layer3==13) {
+      region = 22;
+    } else if (layer1==4 and layer2==5 and layer3==6) {
+      region = 23;
+    } else if (layer1==5 and layer2==12 and layer3==13) {
+      region = 24;
+    }
 
     residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
 
-    if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
-      return false;
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      return alpaka::math::abs(acc, residual) < 0.53f;
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 13 and layer2 == 14 and layer3 == 15) {
-      return false;
-    } else if (layer1 == 14 and layer2 == 15 and layer3 == 16) {
-      return false;
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      return alpaka::math::abs(acc, residual) < 1.21f;
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-      return alpaka::math::abs(acc, residual) < 1.f;
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      return alpaka::math::abs(acc, residual) < 1.f;
-    } else if (layer1 == 3 and layer2 == 4 and layer3 == 5) {
-      return alpaka::math::abs(acc, residual) < 2.7f;
-    } else if (layer1 == 4 and layer2 == 5 and layer3 == 6) {
-      return alpaka::math::abs(acc, residual) < 3.06f;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 9 and layer2 == 10 and layer3 == 11) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else {
-      return alpaka::math::abs(acc, residual) < 5;
-    }
+    return true;
   };
 
   template <typename TAcc>
@@ -869,6 +1053,8 @@ namespace SDL {
                                                                    float& rtLo,
                                                                    float& rtHi,
                                                                    float& residual,
+                                                                   float& rzChiSquared,
+                                                                   int& region,
                                                                    float& zLoPointed,
                                                                    float& zHiPointed,
                                                                    float& sdlCut,
@@ -924,6 +1110,8 @@ namespace SDL {
                                       secondMDIndex,
                                       thirdMDIndex,
                                       residual,
+                                      rzChiSquared,
+                                      region,
                                       circleRadius,
                                       circleCenterX, 
                                       circleCenterY));
@@ -973,7 +1161,8 @@ namespace SDL {
             uint16_t outerOuterLowerModuleIndex = segmentsInGPU.outerLowerModuleIndices[outerSegmentIndex];
 
             float zOut, rtOut, deltaPhiPos, deltaPhi, betaIn, circleRadius, circleCenterX, circleCenterY;
-            float zLo, zHi, rtLo, rtHi, residual, zLoPointed, zHiPointed, sdlCut, betaInCut;
+            float zLo, zHi, rtLo, rtHi, residual, rzChiSquared, zLoPointed, zHiPointed, sdlCut, betaInCut;
+            int region;
 
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modulesInGPU,
@@ -997,6 +1186,8 @@ namespace SDL {
                                                         rtLo,
                                                         rtHi,
                                                         residual,
+                                                        rzChiSquared,
+                                                        region,
                                                         zLoPointed,
                                                         zHiPointed,
                                                         sdlCut,
@@ -1039,6 +1230,8 @@ namespace SDL {
                                    rtLo,
                                    rtHi,
                                    residual,
+                                   rzChiSquared,
+                                   region,
                                    zLoPointed,
                                    zHiPointed,
                                    sdlCut,
