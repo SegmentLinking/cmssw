@@ -13,7 +13,6 @@ void fillOutputBranches(SDL::Event<SDL::Acc>* event) {
     setOptionalOutputBranches(event);
   if (ana.do_lower_level) {
     setLowLevelBranches(event);
-    setTripletOutputBranches(event);
   }
 
   // Now actually fill the ttree
@@ -130,7 +129,24 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<vector<float>>("t5_nonAnchorChiSquared");
 
   // T3 branches
-  ana.tx->createBranch<vector<float>>("T3_residual");
+  ana.tx->createBranch<vector<int>>("sim_T3_matched");
+  ana.tx->createBranch<vector<int>>("t3_isFake");
+  ana.tx->createBranch<vector<int>>("t3_isPerfect");
+  ana.tx->createBranch<vector<int>>("t3_isDuplicate");
+  ana.tx->createBranch<vector<float>>("t3_pt");
+  ana.tx->createBranch<vector<float>>("t3_eta");
+  ana.tx->createBranch<vector<float>>("t3_phi");
+  ana.tx->createBranch<vector<float>>("t3_circleRadius");
+  ana.tx->createBranch<vector<vector<int>>>("t3_hitIdxs");
+  ana.tx->createBranch<vector<vector<int>>>("t3_matched_simIdx");
+  ana.tx->createBranch<vector<int>>("t3_moduleType_binary");
+  ana.tx->createBranch<vector<int>>("t3_layer_binary");
+  ana.tx->createBranch<vector<bool>>("t3_partOfPT3");
+  ana.tx->createBranch<vector<bool>>("t3_partOfPT5");
+  ana.tx->createBranch<vector<bool>>("t3_partOfT5");
+  ana.tx->createBranch<vector<float>>("t3_residual");
+  ana.tx->createBranch<vector<float>>("t3_rzChiSquared");
+  ana.tx->createBranch<vector<float>>("t3_region");
 
   // Occupancy branches
   ana.tx->createBranch<vector<int>>("module_layers");
@@ -195,22 +211,6 @@ void createLowLevelBranches() {
 
   // TC's LS
   ana.tx->createBranch<vector<vector<int>>>("tc_lsIdx");
-
-  // T3 branches
-  ana.tx->createBranch<vector<int>>("sim_T3_matched");
-  ana.tx->createBranch<vector<int>>("t3_isFake");
-  ana.tx->createBranch<vector<int>>("t3_isDuplicate");
-  ana.tx->createBranch<vector<float>>("t3_pt");
-  ana.tx->createBranch<vector<float>>("t3_eta");
-  ana.tx->createBranch<vector<float>>("t3_phi");
-  ana.tx->createBranch<vector<float>>("t3_circleRadius");
-  ana.tx->createBranch<vector<vector<int>>>("t3_hitIdxs");
-  ana.tx->createBranch<vector<vector<int>>>("t3_matched_simIdx");
-  ana.tx->createBranch<vector<int>>("t3_moduleType_binary");
-  ana.tx->createBranch<vector<int>>("t3_layer_binary");
-  ana.tx->createBranch<vector<bool>>("t3_partOfPT3");
-  ana.tx->createBranch<vector<bool>>("t3_partOfPT5");
-  ana.tx->createBranch<vector<bool>>("t3_partOfT5");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -529,23 +529,6 @@ void setQuintupletOutputBranches(SDL::Event<SDL::Acc>* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
-    SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = (*event->getTriplets());
-    SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
-    SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = (*event->getModules());
-    for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modulesInGPU.nLowerModules); ++lowerModuleIdx)
-    {
-        unsigned int nTriplets = tripletsInGPU.nTriplets[lowerModuleIdx];
-        for (unsigned int idx = 0; idx < nTriplets; idx++)
-        {
-            unsigned int tripletIndex = rangesInGPU.tripletModuleIndices[lowerModuleIdx] + idx;
-            const float residual = tripletsInGPU.residual[tripletIndex];
-            ana.tx->pushbackToBranch<float>("T3_residual", residual);
-        }
-    }
-}
-
-//________________________________________________________________________________________________________________________________
 void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::pixelTripletsBuffer<alpaka::DevCpu>& pixelTripletsInGPU = (*event->getPixelTriplets());
   SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = *(event->getTriplets());
@@ -652,7 +635,16 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
       std::vector<int> simidx =
           matchedSimTrkIdxs(hit_idx, hit_type, ana.verbose, ana.fmatch_threshold, true, matchedfracs);
 
+      int isPerfect = 0;
+      for (auto& frac : matchedfracs) {
+        if (frac > 0.99) {
+          isPerfect = 1;
+          break;
+        }
+      }
+
       ana.tx->pushbackToBranch<int>("t3_isFake", static_cast<int>(simidx.size() == 0));
+      ana.tx->pushbackToBranch<int>("t3_isPerfect", isPerfect);
       ana.tx->pushbackToBranch<float>("t3_pt", pt);
       ana.tx->pushbackToBranch<float>("t3_eta", eta);
       ana.tx->pushbackToBranch<float>("t3_phi", phi);
@@ -662,6 +654,16 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
       ana.tx->pushbackToBranch<bool>("t3_partOfPT3", __H2F(tripletsInGPU.partOfPT3[tripletIndex]));
       ana.tx->pushbackToBranch<bool>("t3_partOfPT5", __H2F(tripletsInGPU.partOfPT5[tripletIndex]));
       ana.tx->pushbackToBranch<bool>("t3_partOfT5", __H2F(tripletsInGPU.partOfT5[tripletIndex]));
+
+#ifdef CUT_VALUE_DEBUG
+      const float residual = tripletsInGPU.residual[tripletIndex];
+      const float rzChiSquared = tripletsInGPU.rzChiSquared[tripletIndex];
+      const int region = tripletsInGPU.region[tripletIndex];
+
+      ana.tx->pushbackToBranch<float>("t3_residual", residual);
+      ana.tx->pushbackToBranch<float>("t3_rzChiSquared", rzChiSquared);
+      ana.tx->pushbackToBranch<float>("t3_region", region);
+#endif
 
       t3_matched_simIdx.push_back(simidx);
 

@@ -274,27 +274,27 @@ namespace SDL {
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
-    const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
-    const float r2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
-    const float r3 = mdsInGPU.anchorRt[thirdMDIndex] / 100;
+    const float r1 = mdsInGPU.anchorRt[firstMDIndex]; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
+    const float r2 = mdsInGPU.anchorRt[secondMDIndex];
+    const float r3 = mdsInGPU.anchorRt[thirdMDIndex];
 
-    const float z1 = mdsInGPU.anchorZ[firstMDIndex] / 100;
-    const float z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
-    const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
+    const float z1 = mdsInGPU.anchorZ[firstMDIndex];
+    const float z2 = mdsInGPU.anchorZ[secondMDIndex];
+    const float z3 = mdsInGPU.anchorZ[thirdMDIndex];
 
     //get the type of module: ps or 2s
     // const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
-    // const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
+    const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
 
     //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
-    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
+    const float x1 = mdsInGPU.anchorX[firstMDIndex];
+    const float x2 = mdsInGPU.anchorX[secondMDIndex];
+    const float x3 = mdsInGPU.anchorX[thirdMDIndex];
 
-    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
-    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
+    const float y1 = mdsInGPU.anchorY[firstMDIndex];
+    const float y2 = mdsInGPU.anchorY[secondMDIndex];
+    const float y3 = mdsInGPU.anchorY[thirdMDIndex];
 
     //use the second MD as the initial point to provide x0,y0,z0 and rt0.
     float x_init = x2;
@@ -303,43 +303,43 @@ namespace SDL {
     float rt_init = r2;  //use the second MD as initial point
 
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
-    float x_center = circleCenterX / 100;
-    float y_center = circleCenterY / 100;
+    float x_center = circleCenterX;
+    float y_center = circleCenterY;
     float Pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
 
     // start from a circle of inner T3.
     // to determine the charge
     int charge = 0;
-    float slope3c = (y3 - y_center) / (x3 - x_center);
+    float slope2c = (y2 - y_center) / (x2 - x_center);
     float slope1c = (y1 - y_center) / (x1 - x_center);
     // these 4 "if"s basically separate the x-y plane into 4 quarters. It determines geometrically how a circle and line slope goes and their positions, and we can get the charges correspondingly.
-    if ((y3 - y_center) > 0 && (y1 - y_center) > 0) {
-      if (slope1c > 0 && slope3c < 0)
-        charge = -1;  // on x axis of a quarter, 3 hits go anti-clockwise
-      else if (slope1c < 0 && slope3c > 0)
-        charge = 1;  // on x axis of a quarter, 3 hits go clockwise
-      else if (slope3c > slope1c)
+    if ((y2 - y_center) > 0 && (y1 - y_center) > 0) {
+      if (slope1c > 0 && slope2c < 0)
+        charge = -1;  // on x axis of a quarter, 2 hits go anti-clockwise
+      else if (slope1c < 0 && slope2c > 0)
+        charge = 1;  // on x axis of a quarter, 2 hits go clockwise
+      else if (slope2c > slope1c)
         charge = -1;
-      else if (slope3c < slope1c)
+      else if (slope2c < slope1c)
         charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) < 0) {
-      if (slope1c < 0 && slope3c > 0)
+    } else if ((y2 - y_center) < 0 && (y1 - y_center) < 0) {
+      if (slope1c < 0 && slope2c > 0)
         charge = 1;
-      else if (slope1c > 0 && slope3c < 0)
+      else if (slope1c > 0 && slope2c < 0)
         charge = -1;
-      else if (slope3c > slope1c)
+      else if (slope2c > slope1c)
         charge = -1;
-      else if (slope3c < slope1c)
+      else if (slope2c < slope1c)
         charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) > 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
+    } else if ((y2 - y_center) < 0 && (y1 - y_center) > 0) {
+      if ((x2 - x_center) > 0 && (x1 - x_center) > 0)
         charge = 1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
+      else if ((x2 - x_center) < 0 && (x1 - x_center) < 0)
         charge = -1;
-    } else if ((y3 - y_center) > 0 && (y1 - y_center) < 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
+    } else if ((y2 - y_center) > 0 && (y1 - y_center) < 0) {
+      if ((x2 - x_center) > 0 && (x1 - x_center) > 0)
         charge = -1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
+      else if ((x2 - x_center) < 0 && (x1 - x_center) < 0)
         charge = 1;
     }
 
@@ -380,6 +380,29 @@ namespace SDL {
       }
     }
 
+    // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
+    if (moduleType2 == 0) {  // 0 is ps
+      if (x3 < x2 && x2 < x1)
+        Px = -alpaka::math::abs(acc, Px);
+      if (x3 > x2 && x2 > x1)
+        Px = alpaka::math::abs(acc, Px);
+      if (y3 < y2 && y2 < y1)
+        Py = -alpaka::math::abs(acc, Py);
+      if (y3 > y2 && y3 > y1)
+        Py = alpaka::math::abs(acc, Py);
+    } 
+    // else if (moduleType3 == 1)  // 1 is 2s
+    // {
+    //   if (x3 < x2 && x2 < x1)
+    //     Px = -alpaka::math::abs(acc, Px);
+    //   if (x3 > x2 && x2 > x1)
+    //     Px = alpaka::math::abs(acc, Px);
+    //   if (y3 < y2 && y2 < y1)
+    //     Py = -alpaka::math::abs(acc, Py);
+    //   if (y3 > y2 && y2 > y1)
+    //     Py = alpaka::math::abs(acc, Py);
+    // }
+
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
     float BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
@@ -393,71 +416,94 @@ namespace SDL {
     float Bz = SDL::magnetic_field;
     float a = -0.299792 * Bz * charge;
 
+    float zsi, rtsi;
+    int layeri, moduleTypei;
     rzChiSquared = 0;
-
-    // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
-    float diffr = 0, diffz = 0;
-
-    float rou = a / p;
-    // for endcap
-    float s = (z3 - z_init) * p / Pz;
-    float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
-    float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
-    diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
-
-    // for barrel
-    if (layer3 <= 6) {
-      float paraA =
-          rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
-      float paraB = 2 * (x_init * Px + y_init * Py) / a;
-      float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
-      float A = paraB * paraB + paraC * paraC;
-      float B = 2 * paraA * paraB;
-      float C = paraA * paraA - paraC * paraC;
-      float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-      float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-      float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
-      float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
-      float diffz1 = (solz1 - z3) * 100;
-      float diffz2 = (solz2 - z3) * 100;
-      // Alpaka : Needs to be moved over
-      if (alpaka::math::isnan(acc, diffz1))
-        diffz = diffz2;
-      else if (alpaka::math::isnan(acc, diffz2))
-        diffz = diffz1;
-      else {
-        diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
+    float error = 0;
+    for (size_t i = 2; i < 4; i++) {
+      if (i == 2) {
+        zsi = z2;
+        rtsi = r2;
+        layeri = layer2;
+        moduleTypei = moduleType2;
+      } else if (i == 3) {
+        zsi = z3;
+        rtsi = r3;
+        layeri = layer3;
+        moduleTypei = moduleType3;
       }
-    }
-    residual = (layer3 > 6) ? diffr : diffz;
 
-    float error;
-    if (moduleType3 == 0) { //PS Modules
-      error = 0.15f;
-    } else { //2S modules
-      error = 5.0f;
-    }
+      // if (moduleType2 == 0) {  //0: ps
+      //   if (i == 2)
+      //     continue;
+      // }
 
-    float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
-    short side = modulesInGPU.sides[middleLowerModuleIndex];
-    short subdets = modulesInGPU.subdets[middleLowerModuleIndex];
+      // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
+      float diffr = 0, diffz = 0;
 
-    float projection_missing = 1;
-    if (drdz < 1) {
-      float residual2 = (layer2 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
-      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                ? 1.f
-                                : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
-      rzChiSquared += 12 * (residual2 * residual2) / (error * error * projection_missing * projection_missing);
-    }
-    if (drdz > 1) {
-      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                ? 1.f
-                                : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
-    }
-    error = error * projection_missing;
+      float rou = a / p;
+      // for endcap
+      float s = (zsi - z_init) * p / Pz;
+      float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
+      float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
+      diffr = (rtsi - alpaka::math::sqrt(acc, x * x + y * y));
 
-    rzChiSquared += 12 * (residual * residual) / (error * error);
+      // for barrel
+      if (layeri <= 6) {
+        float paraA =
+            rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - rtsi * rtsi;
+        float paraB = 2 * (x_init * Px + y_init * Py) / a;
+        float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
+        float A = paraB * paraB + paraC * paraC;
+        float B = 2 * paraA * paraB;
+        float C = paraA * paraA - paraC * paraC;
+        float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+        float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+        float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
+        float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
+        float diffz1 = (solz1 - zsi);
+        float diffz2 = (solz2 - zsi);
+        // Alpaka : Needs to be moved over
+        if (alpaka::math::isnan(acc, diffz1))
+          diffz = diffz2;
+        else if (alpaka::math::isnan(acc, diffz2))
+          diffz = diffz1;
+        else {
+          diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
+        }
+      }
+      residual = (layeri > 6) ? diffr : diffz;
+
+      //PS Modules
+      if (moduleTypei == 0) {
+        error = 0.15f;
+      } else  //2S modules
+      {
+        error = 5.0f;
+      }
+
+      //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
+      float drdz;
+      short side, subdets;
+      if (i == 2) {
+        drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
+        side = modulesInGPU.sides[middleLowerModuleIndex];
+        subdets = modulesInGPU.subdets[middleLowerModuleIndex];
+
+        residual = (layeri <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
+        float projection_missing = 1;
+        if (drdz < 1)
+          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                   ? 1.f
+                                   : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+        if (drdz > 1)
+          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                   ? 1.f
+                                   : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+        error = error * projection_missing;
+      }
+      rzChiSquared += 12 * (residual * residual) / (error * error);
+    }
 
     if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
       float slope = (z2 - z1) / (r2 - r1);
@@ -467,6 +513,7 @@ namespace SDL {
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
       residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
+      residual3_linear = residual3_linear;
 
       rzChiSquared = 12 * residual3_linear * residual3_linear;
       // return rzChiSquared < 4.677f;
