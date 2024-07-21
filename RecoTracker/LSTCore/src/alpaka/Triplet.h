@@ -274,27 +274,27 @@ namespace SDL {
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
-    const float r1 = mdsInGPU.anchorRt[firstMDIndex]; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
-    const float r2 = mdsInGPU.anchorRt[secondMDIndex];
-    const float r3 = mdsInGPU.anchorRt[thirdMDIndex];
+    const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
+    const float r2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
+    const float r3 = mdsInGPU.anchorRt[thirdMDIndex] / 100;
 
-    const float z1 = mdsInGPU.anchorZ[firstMDIndex];
-    const float z2 = mdsInGPU.anchorZ[secondMDIndex];
-    const float z3 = mdsInGPU.anchorZ[thirdMDIndex];
+    const float z1 = mdsInGPU.anchorZ[firstMDIndex] / 100;
+    const float z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
+    const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
 
     //get the type of module: ps or 2s
-    // const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
+    const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
     const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
 
     //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex];
-    const float x2 = mdsInGPU.anchorX[secondMDIndex];
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex];
+    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
+    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
+    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
 
-    const float y1 = mdsInGPU.anchorY[firstMDIndex];
-    const float y2 = mdsInGPU.anchorY[secondMDIndex];
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex];
+    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
+    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
+    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
 
     //use the second MD as the initial point to provide x0,y0,z0 and rt0.
     float x_init = x2;
@@ -303,8 +303,8 @@ namespace SDL {
     float rt_init = r2;  //use the second MD as initial point
 
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
-    float x_center = circleCenterX;
-    float y_center = circleCenterY;
+    float x_center = circleCenterX / 100;
+    float y_center = circleCenterY / 100;
     float Pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
 
     // start from a circle of inner T3.
@@ -390,25 +390,23 @@ namespace SDL {
         Py = -alpaka::math::abs(acc, Py);
       if (y3 > y2 && y3 > y1)
         Py = alpaka::math::abs(acc, Py);
-    } 
-    // else if (moduleType3 == 1)  // 1 is 2s
-    // {
-    //   if (x3 < x2 && x2 < x1)
-    //     Px = -alpaka::math::abs(acc, Px);
-    //   if (x3 > x2 && x2 > x1)
-    //     Px = alpaka::math::abs(acc, Px);
-    //   if (y3 < y2 && y2 < y1)
-    //     Py = -alpaka::math::abs(acc, Py);
-    //   if (y3 > y2 && y2 > y1)
-    //     Py = alpaka::math::abs(acc, Py);
-    // }
+    } else if (moduleType2 == 1) {  // 1 is 2s
+      if (x2 < x1)
+        Px = -alpaka::math::abs(acc, Px);
+      if (x2 > x1)
+        Px = alpaka::math::abs(acc, Px);
+      if (y2 < y1)
+        Py = -alpaka::math::abs(acc, Py);
+      if (y2 > y1)
+        Py = alpaka::math::abs(acc, Py);
+    }
 
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
     float BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
     float AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init);
     float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
-    float ds = circleRadius * dPhi;
+    float ds = circleRadius / 100 * dPhi;
 
     float Pz = (z_init - z1) / ds * Pt;
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
@@ -433,10 +431,10 @@ namespace SDL {
         moduleTypei = moduleType3;
       }
 
-      // if (moduleType2 == 0) {  //0: ps
-      //   if (i == 2)
-      //     continue;
-      // }
+      if (moduleType2 == 0) {  //0: ps
+        if (i == 2)
+          continue;
+      }
 
       // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
       float diffr = 0, diffz = 0;
@@ -446,7 +444,7 @@ namespace SDL {
       float s = (zsi - z_init) * p / Pz;
       float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
       float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
-      diffr = (rtsi - alpaka::math::sqrt(acc, x * x + y * y));
+      diffr = (rtsi - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
 
       // for barrel
       if (layeri <= 6) {
@@ -461,8 +459,8 @@ namespace SDL {
         float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
         float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
         float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
-        float diffz1 = (solz1 - zsi);
-        float diffz2 = (solz2 - zsi);
+        float diffz1 = (solz1 - zsi) * 100;
+        float diffz2 = (solz2 - zsi) * 100;
         // Alpaka : Needs to be moved over
         if (alpaka::math::isnan(acc, diffz1))
           diffz = diffz2;
@@ -506,14 +504,21 @@ namespace SDL {
     }
 
     if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
-      float slope = (z2 - z1) / (r2 - r1);
+      float slope;
+      if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
+        slope = (z2 - z1) / (r2 - r1);
+      } else {
+        slope = (z3 - z1) / (r3 - r1);
+      }
 
       float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
+
+      // float residual3_linear = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
 
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
       residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
-      residual3_linear = residual3_linear;
+      residual3_linear = residual3_linear * 100;
 
       rzChiSquared = 12 * residual3_linear * residual3_linear;
       // return rzChiSquared < 4.677f;
