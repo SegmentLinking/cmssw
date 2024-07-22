@@ -414,94 +414,70 @@ namespace SDL {
     float Bz = SDL::magnetic_field;
     float a = -0.299792 * Bz * charge;
 
-    float zsi, rtsi;
-    int layeri, moduleTypei;
     rzChiSquared = 0;
     float error = 0;
-    for (size_t i = 2; i < 4; i++) {
-      if (i == 2) {
-        zsi = z2;
-        rtsi = r2;
-        layeri = layer2;
-        moduleTypei = moduleType2;
-      } else if (i == 3) {
-        zsi = z3;
-        rtsi = r3;
-        layeri = layer3;
-        moduleTypei = moduleType3;
+
+    // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
+    float diffr = 0, diffz = 0;
+
+    float rou = a / p;
+    // for endcap
+    float s = (z3 - z_init) * p / Pz;
+    float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
+    float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
+    diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
+
+    // for barrel
+    if (layer3 <= 6) {
+      float paraA =
+          rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
+      float paraB = 2 * (x_init * Px + y_init * Py) / a;
+      float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
+      float A = paraB * paraB + paraC * paraC;
+      float B = 2 * paraA * paraB;
+      float C = paraA * paraA - paraC * paraC;
+      float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+      float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+      float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
+      float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
+      float diffz1 = (solz1 - z3) * 100;
+      float diffz2 = (solz2 - z3) * 100;
+      // Alpaka : Needs to be moved over
+      if (alpaka::math::isnan(acc, diffz1))
+        diffz = diffz2;
+      else if (alpaka::math::isnan(acc, diffz2))
+        diffz = diffz1;
+      else {
+        diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
       }
-
-      if (moduleType2 == 0) {  //0: ps
-        if (i == 2)
-          continue;
-      }
-
-      // calculation is copied from PixelTriplet.cc SDL::computePT3RZChiSquared
-      float diffr = 0, diffz = 0;
-
-      float rou = a / p;
-      // for endcap
-      float s = (zsi - z_init) * p / Pz;
-      float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
-      float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
-      diffr = (rtsi - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
-
-      // for barrel
-      if (layeri <= 6) {
-        float paraA =
-            rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - rtsi * rtsi;
-        float paraB = 2 * (x_init * Px + y_init * Py) / a;
-        float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
-        float A = paraB * paraB + paraC * paraC;
-        float B = 2 * paraA * paraB;
-        float C = paraA * paraA - paraC * paraC;
-        float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-        float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-        float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
-        float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
-        float diffz1 = (solz1 - zsi) * 100;
-        float diffz2 = (solz2 - zsi) * 100;
-        // Alpaka : Needs to be moved over
-        if (alpaka::math::isnan(acc, diffz1))
-          diffz = diffz2;
-        else if (alpaka::math::isnan(acc, diffz2))
-          diffz = diffz1;
-        else {
-          diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
-        }
-      }
-      residual = (layeri > 6) ? diffr : diffz;
-
-      //PS Modules
-      if (moduleTypei == 0) {
-        error = 0.15f;
-      } else  //2S modules
-      {
-        error = 5.0f;
-      }
-
-      //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
-      float drdz;
-      short side, subdets;
-      if (i == 2) {
-        drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
-        side = modulesInGPU.sides[middleLowerModuleIndex];
-        subdets = modulesInGPU.subdets[middleLowerModuleIndex];
-
-        residual = (layeri <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
-        float projection_missing = 1;
-        if (drdz < 1)
-          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                   ? 1.f
-                                   : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
-        if (drdz > 1)
-          projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
-                                   ? 1.f
-                                   : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
-        error = error * projection_missing;
-      }
-      rzChiSquared += 12 * (residual * residual) / (error * error);
     }
+
+    //PS Modules
+    if (moduleType3 == 0) {
+      error = 0.15f;
+    } else  //2S modules
+    {
+      error = 5.0f;
+    }
+
+    //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
+    float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[outerOuterLowerModuleIndex]);
+    short side = modulesInGPU.sides[outerOuterLowerModuleIndex];
+    short subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
+
+    residual = (layer3 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
+    float projection_missing = 1;
+    if (drdz < 1)
+      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                ? 1.f
+                                : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+    if (drdz > 1)
+      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+                                ? 1.f
+                                : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+    error = error * projection_missing;
+
+    rzChiSquared = 12 * (residual * residual) / (error * error);
 
     if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
       float slope;
@@ -577,6 +553,7 @@ namespace SDL {
     }
 
     residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
+    residual = residual * 100;
 
     return true;
   };
