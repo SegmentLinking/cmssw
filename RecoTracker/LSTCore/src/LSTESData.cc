@@ -45,18 +45,18 @@ namespace {
                     std::shared_ptr<lst::ModuleConnectionMap> moduleConnectionMap) {
     // Module orientation information (DrDz or phi angles)
     auto endcap_geom =
-        get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
+        get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT711_pt0.8/endcap_orientation.bin");
     auto tilted_geom = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/tilted_barrel_orientation.bin");
+        trackLooperDir() + "/data/OT800_IT711_pt0.8/tilted_barrel_orientation.bin");
     // Module connection map (for line segment building)
     auto mappath = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/module_connection_tracing_merged.bin");
+        trackLooperDir() + "/data/OT800_IT711_pt0.8/module_connection_tracing_merged.bin");
 
     endcapGeometry->load(endcap_geom);
     tiltedGeometry->load(tilted_geom);
     moduleConnectionMap->load(mappath);
 
-    auto pLSMapDir = trackLooperDir() + "/data/OT800_IT615_pt0.8/pixelmap/pLS_map";
+    auto pLSMapDir = trackLooperDir() + "/data/OT800_IT711_pt0.8/pixelmap/pLS_map";
     const std::array<std::string, 4> connects{
         {"_layer1_subdet5", "_layer2_subdet5", "_layer1_subdet4", "_layer2_subdet4"}};
     std::string path;
@@ -98,7 +98,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
       queue, endcapGeometryBuffers->geoMapPhi_buf, endcapGeometry->geoMapPhi_buf, endcapGeometry->nEndCapMap);
 
   auto path =
-      get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/sensor_centroids.bin");
+      get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT711_pt0.8/sensor_centroids.bin");
   lst::loadModulesFromFile(pLStoLayer.get(),
                            path.c_str(),
                            nModules,
