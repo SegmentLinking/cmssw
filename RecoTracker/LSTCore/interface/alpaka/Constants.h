@@ -83,8 +83,6 @@ namespace lst {
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float widthPS = 0.01;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float pt_betaMax = 7.0;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float magnetic_field = 3.8112;
-  // Since C++ can't represent infinity, lst_INF = 123456789 was used to represent infinity in the data table
-  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float lst_INF = 123456789.0;
 
   namespace t5dnn {
 
