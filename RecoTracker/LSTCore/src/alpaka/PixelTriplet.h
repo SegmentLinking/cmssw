@@ -395,8 +395,7 @@ namespace lst {
     float chiSquared = 0.f;
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
-      absArctanSlope = ((slopes[i] != lst::lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
-                                                    : 0.5f * float(M_PI));
+      absArctanSlope = alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]));
       if (xs[i] > 0 and ys[i] > 0) {
         angleM = 0.5f * float(M_PI) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
@@ -2234,8 +2233,7 @@ namespace lst {
     float chiSquared = 0.f;
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
-      absArctanSlope = ((slopes[i] != lst::lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
-                                                    : 0.5f * float(M_PI));
+      absArctanSlope = alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]));
       if (xs[i] > 0 and ys[i] > 0) {
         angleM = 0.5f * float(M_PI) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
