@@ -381,25 +381,34 @@ namespace SDL {
     }
 
     // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
-    if (moduleType2 == 0) {  // 0 is ps
-      if (x3 < x2 && x2 < x1)
-        Px = -alpaka::math::abs(acc, Px);
-      if (x3 > x2 && x2 > x1)
-        Px = alpaka::math::abs(acc, Px);
-      if (y3 < y2 && y2 < y1)
-        Py = -alpaka::math::abs(acc, Py);
-      if (y3 > y2 && y3 > y1)
-        Py = alpaka::math::abs(acc, Py);
-    } else if (moduleType2 == 1) {  // 1 is 2s
-      if (x2 < x1)
-        Px = -alpaka::math::abs(acc, Px);
-      if (x2 > x1)
-        Px = alpaka::math::abs(acc, Px);
-      if (y2 < y1)
-        Py = -alpaka::math::abs(acc, Py);
-      if (y2 > y1)
-        Py = alpaka::math::abs(acc, Py);
-    }
+    // if (moduleType2 == 0) {  // 0 is ps
+    //   if (x3 < x2 && x2 < x1)
+    //     Px = -alpaka::math::abs(acc, Px);
+    //   if (x3 > x2 && x2 > x1)
+    //     Px = alpaka::math::abs(acc, Px);
+    //   if (y3 < y2 && y2 < y1)
+    //     Py = -alpaka::math::abs(acc, Py);
+    //   if (y3 > y2 && y3 > y1)
+    //     Py = alpaka::math::abs(acc, Py);
+    // } else if (moduleType2 == 1) {  // 1 is 2s
+    //   if (x2 < x1)
+    //     Px = -alpaka::math::abs(acc, Px);
+    //   if (x2 > x1)
+    //     Px = alpaka::math::abs(acc, Px);
+    //   if (y2 < y1)
+    //     Py = -alpaka::math::abs(acc, Py);
+    //   if (y2 > y1)
+    //     Py = alpaka::math::abs(acc, Py);
+    // }
+
+    if (x3 < x2 && x2 < x1)
+      Px = -alpaka::math::abs(acc, Px);
+    if (x3 > x2 && x2 > x1)
+      Px = alpaka::math::abs(acc, Px);
+    if (y3 < y2 && y2 < y1)
+      Py = -alpaka::math::abs(acc, Py);
+    if (y3 > y2 && y3 > y1)
+      Py = alpaka::math::abs(acc, Py);
 
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
     float BO =
@@ -479,6 +488,7 @@ namespace SDL {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
+    bool pass = false;
     if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
@@ -495,90 +505,193 @@ namespace SDL {
       residual3_linear = residual3_linear * 100;
 
       rzChiSquared = 12 * residual3_linear * residual3_linear;
-      // return rzChiSquared < 4.677f;
+
+      pass = rzChiSquared < 2.806f;
     }
 
+    
+    if (layer1==7) {
+      if (layer2==8) {
+        if (layer3==9) {
+          pass = rzChiSquared < 55.037f;
+        } else if (layer3==14) {
+          pass = rzChiSquared < 2.928f;
+        }
+      } else if (layer2==13) {
+        pass = rzChiSquared < 18.076f;
+      }
+    } else if (layer1==8) {
+      if (layer2==9) {
+        if (layer3==10) {
+          pass = rzChiSquared < 53.87f;
+        } else if (layer3==15) {
+          pass = rzChiSquared < 2.841f;
+        } 
+      } else if (layer2==14) {
+        pass = rzChiSquared < 24.368f;
+      }
+    } else if (layer1==9) {
+      if (layer2==10) {
+        if (layer3==11) {
+          pass = rzChiSquared < 62.583f;
+        } else if (layer3==16) {
+          pass = rzChiSquared < 2.807f;
+        }
+      } else if (layer2==15) {
+        pass = rzChiSquared < 22.581f;
+      }
+    } else if (layer1==1) {
+      if (layer2==7) {
+        if (layer3==8) {
+          pass = rzChiSquared < 77.736f;
+        } else if (layer3==13) {
+          pass = rzChiSquared < 0;
+        }
+      } else if (layer2==2) {
+        if (layer3==7) {
+          pass = rzChiSquared < 80.138f;
+        } else if (layer3==3) {
+          pass = rzChiSquared < 276.436f;
+        }
+      }
+    } else if (layer1==2) {
+      if (layer2==7) {
+        if (layer3==8) {
+          pass = rzChiSquared < 86.238f;
+        } else if (layer3==13) {
+          pass = rzChiSquared < 2.932f;
+        }
+      } else if (layer2==3) {
+        if (layer3==7) {
+          pass = rzChiSquared < 37.143f;
+        } else if (layer3==12) {
+          pass = rzChiSquared < 3.736f;
+        } else if (layer3==4) {
+          pass = rzChiSquared < 8.882f;
+        }
+      }
+    } else if (layer1==3) {
+      if (layer2==7) {
+        if (layer3==8) {
+          pass = rzChiSquared < 42.679f;
+        } else if (layer3==13) {
+          pass = rzChiSquared < 3.026f;
+        }
+      } else if (layer2==12) {
+        pass = rzChiSquared < 17.472f;
+      } else if (layer2==4) {
+        pass = rzChiSquared < 26.537f;
+      }
+    } else if (layer1==4) {
+      if (layer2==12) {
+        pass = rzChiSquared < 29.08f;
+      } else if (layer2==5) {
+        pass = rzChiSquared < 49.019f;
+      }
+    } else if (layer1==5) {
+      pass = rzChiSquared < 0;
+    } else {
+      pass = false;
+    }
+
+#ifdef CUT_VALUE_DEBUG
     if (layer1==7 and layer2==8 and layer3==9) {
       region = 0;
-      return rzChiSquared < 55.03714;
     } else if (layer1==7 and layer2==8 and layer3==14) {
       region = 1;
-      return rzChiSquared < 2.9278774;
     } else if (layer1==7 and layer2==13 and layer3==14) {
       region = 2;
-      return rzChiSquared < 18.075539;
     } else if (layer1==8 and layer2==9 and layer3==10) {
       region = 3;
-      return rzChiSquared < 53.870045;
     } else if (layer1==8 and layer2==9 and layer3==15) {
       region = 4;
-      return rzChiSquared < 2.841095;
     } else if (layer1==8 and layer2==14 and layer3==15) {
       region = 5;
-      return rzChiSquared < 24.36788;
     } else if (layer1==9 and layer2==10 and layer3==11) {
       region = 6;
-      return rzChiSquared < 62.583008;
     } else if (layer1==9 and layer2==10 and layer3==16) {
       region = 7;
-      return rzChiSquared < 2.806731;
     } else if (layer1==9 and layer2==15 and layer3==16) {
       region = 8;
-      return rzChiSquared < 22.5806;
     } else if (layer1==1 and layer2==7 and layer3==8) {
       region = 9;
-      return rzChiSquared < 77.73639;
     } else if (layer1==1 and layer2==7 and layer3==13) {
       region = 10;
-      return rzChiSquared < 0;
     } else if (layer1==1 and layer2==2 and layer3==7) {
       region = 11;
-      return rzChiSquared < 80.13825;
     } else if (layer1==1 and layer2==2 and layer3==3) {
       region = 12;
-      return rzChiSquared < 276.43582;
     } else if (layer1==2 and layer2==7 and layer3==8) {
       region = 13;
-      return rzChiSquared < 86.2376;
     } else if (layer1==2 and layer2==7 and layer3==13) {
       region = 14;
-      return rzChiSquared < 2.9319773;
     } else if (layer1==2 and layer2==3 and layer3==7) {
       region = 15;
-      return rzChiSquared < 37.14292;
     } else if (layer1==2 and layer2==3 and layer3==12) {
       region = 16;
-      return rzChiSquared < 3.736187;
     } else if (layer1==2 and layer2==3 and layer3==4) {
       region = 17;
-      return rzChiSquared < 8.882084;
     } else if (layer1==3 and layer2==7 and layer3==8) {
       region = 18;
-      return rzChiSquared < 42.679012;
     } else if (layer1==3 and layer2==7 and layer3==13) {
       region = 19;
-      return rzChiSquared < 3.0258129;
     } else if (layer1==3 and layer2==12 and layer3==13) {
       region = 20;
-      return rzChiSquared < 17.472382;
     } else if (layer1==3 and layer2==4 and layer3==5) {
       region = 21;
-      return 26.536562;
     } else if (layer1==4 and layer2==12 and layer3==13) {
       region = 22;
-      return rzChiSquared < 29.079618;
     } else if (layer1==4 and layer2==5 and layer3==6) {
       region = 23;
-      return rzChiSquared < 49.0191;
     } else if (layer1==5 and layer2==12 and layer3==13) {
       region = 24;
-      return rzChiSquared < 0;
+    } else {
+      region = -1;
     }
+    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
+      region = 25;
+    }
+#endif
 
+
+        
     residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
     residual = residual * 100;
+    
+    // pass = true;
+    return pass;
 
-    return false;
+    // if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
+    //   return false;
+    // } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
+    //   return alpaka::math::abs(acc, residual) < 0.53f;
+    // } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
+    //   return alpaka::math::abs(acc, residual) < 1;
+    // } else if (layer1 == 13 and layer2 == 14 and layer3 == 15) {
+    //   return false;
+    // } else if (layer1 == 14 and layer2 == 15 and layer3 == 16) {
+    //   return false;
+    // } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
+    //   return alpaka::math::abs(acc, residual) < 1;
+    // } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
+    //   return alpaka::math::abs(acc, residual) < 1.21f;
+    // } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
+    //   return alpaka::math::abs(acc, residual) < 1.f;
+    // } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
+    //   return alpaka::math::abs(acc, residual) < 1.f;
+    // } else if (layer1 == 3 and layer2 == 4 and layer3 == 5) {
+    //   return alpaka::math::abs(acc, residual) < 2.7f;
+    // } else if (layer1 == 4 and layer2 == 5 and layer3 == 6) {
+    //   return alpaka::math::abs(acc, residual) < 3.06f;
+    // } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
+    //   return alpaka::math::abs(acc, residual) < 1;
+    // } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
+    //   return alpaka::math::abs(acc, residual) < 1;
+    // } else if (layer1 == 9 and layer2 == 10 and layer3 == 11) {
+    //   return alpaka::math::abs(acc, residual) < 1;
+    // } else {
+    //   return alpaka::math::abs(acc, residual) < 5;
+    // }
   };
 
   template <typename TAcc>
