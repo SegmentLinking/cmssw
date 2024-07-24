@@ -489,8 +489,6 @@ namespace SDL {
 
       float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
 
-      // float residual3_linear = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
-
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
       residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
@@ -502,60 +500,85 @@ namespace SDL {
 
     if (layer1==7 and layer2==8 and layer3==9) {
       region = 0;
+      return rzChiSquared < 55.03714;
     } else if (layer1==7 and layer2==8 and layer3==14) {
       region = 1;
+      return rzChiSquared < 2.9278774;
     } else if (layer1==7 and layer2==13 and layer3==14) {
       region = 2;
+      return rzChiSquared < 18.075539;
     } else if (layer1==8 and layer2==9 and layer3==10) {
       region = 3;
+      return rzChiSquared < 53.870045;
     } else if (layer1==8 and layer2==9 and layer3==15) {
       region = 4;
+      return rzChiSquared < 2.841095;
     } else if (layer1==8 and layer2==14 and layer3==15) {
       region = 5;
+      return rzChiSquared < 24.36788;
     } else if (layer1==9 and layer2==10 and layer3==11) {
       region = 6;
+      return rzChiSquared < 62.583008;
     } else if (layer1==9 and layer2==10 and layer3==16) {
       region = 7;
+      return rzChiSquared < 2.806731;
     } else if (layer1==9 and layer2==15 and layer3==16) {
       region = 8;
+      return rzChiSquared < 22.5806;
     } else if (layer1==1 and layer2==7 and layer3==8) {
       region = 9;
+      return rzChiSquared < 77.73639;
     } else if (layer1==1 and layer2==7 and layer3==13) {
       region = 10;
+      return rzChiSquared < 0;
     } else if (layer1==1 and layer2==2 and layer3==7) {
       region = 11;
+      return rzChiSquared < 80.13825;
     } else if (layer1==1 and layer2==2 and layer3==3) {
       region = 12;
+      return rzChiSquared < 276.43582;
     } else if (layer1==2 and layer2==7 and layer3==8) {
       region = 13;
+      return rzChiSquared < 86.2376;
     } else if (layer1==2 and layer2==7 and layer3==13) {
       region = 14;
+      return rzChiSquared < 2.9319773;
     } else if (layer1==2 and layer2==3 and layer3==7) {
       region = 15;
+      return rzChiSquared < 37.14292;
     } else if (layer1==2 and layer2==3 and layer3==12) {
       region = 16;
+      return rzChiSquared < 3.736187;
     } else if (layer1==2 and layer2==3 and layer3==4) {
       region = 17;
+      return rzChiSquared < 8.882084;
     } else if (layer1==3 and layer2==7 and layer3==8) {
       region = 18;
+      return rzChiSquared < 42.679012;
     } else if (layer1==3 and layer2==7 and layer3==13) {
       region = 19;
+      return rzChiSquared < 3.0258129;
     } else if (layer1==3 and layer2==12 and layer3==13) {
       region = 20;
+      return rzChiSquared < 17.472382;
     } else if (layer1==3 and layer2==4 and layer3==5) {
       region = 21;
+      return 26.536562;
     } else if (layer1==4 and layer2==12 and layer3==13) {
       region = 22;
+      return rzChiSquared < 29.079618;
     } else if (layer1==4 and layer2==5 and layer3==6) {
       region = 23;
+      return rzChiSquared < 49.0191;
     } else if (layer1==5 and layer2==12 and layer3==13) {
       region = 24;
+      return rzChiSquared < 0;
     }
 
     residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
     residual = residual * 100;
 
-    return true;
+    return false;
   };
 
   template <typename TAcc>
