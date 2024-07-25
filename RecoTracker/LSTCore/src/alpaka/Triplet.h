@@ -488,112 +488,6 @@ namespace SDL {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
-    bool pass = false;
-    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
-      float slope;
-      if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
-        slope = (z2 - z1) / (r2 - r1);
-      } else {
-        slope = (z3 - z1) / (r3 - r1);
-      }
-
-      float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
-
-      // creating a chi squared type quantity
-      // 0-> PS, 1->2S
-      residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
-      residual3_linear = residual3_linear * 100;
-
-      rzChiSquared = 12 * residual3_linear * residual3_linear;
-
-      pass = rzChiSquared < 2.806f;
-    }
-
-    
-    if (layer1==7) {
-      if (layer2==8) {
-        if (layer3==9) {
-          pass = rzChiSquared < 55.037f;
-        } else if (layer3==14) {
-          pass = rzChiSquared < 2.928f;
-        }
-      } else if (layer2==13) {
-        pass = rzChiSquared < 18.076f;
-      }
-    } else if (layer1==8) {
-      if (layer2==9) {
-        if (layer3==10) {
-          pass = rzChiSquared < 53.87f;
-        } else if (layer3==15) {
-          pass = rzChiSquared < 2.841f;
-        } 
-      } else if (layer2==14) {
-        pass = rzChiSquared < 24.368f;
-      }
-    } else if (layer1==9) {
-      if (layer2==10) {
-        if (layer3==11) {
-          pass = rzChiSquared < 62.583f;
-        } else if (layer3==16) {
-          pass = rzChiSquared < 2.807f;
-        }
-      } else if (layer2==15) {
-        pass = rzChiSquared < 22.581f;
-      }
-    } else if (layer1==1) {
-      if (layer2==7) {
-        if (layer3==8) {
-          pass = rzChiSquared < 77.736f;
-        } else if (layer3==13) {
-          pass = rzChiSquared < 0;
-        }
-      } else if (layer2==2) {
-        if (layer3==7) {
-          pass = rzChiSquared < 80.138f;
-        } else if (layer3==3) {
-          pass = rzChiSquared < 276.436f;
-        }
-      }
-    } else if (layer1==2) {
-      if (layer2==7) {
-        if (layer3==8) {
-          pass = rzChiSquared < 86.238f;
-        } else if (layer3==13) {
-          pass = rzChiSquared < 2.932f;
-        }
-      } else if (layer2==3) {
-        if (layer3==7) {
-          pass = rzChiSquared < 37.143f;
-        } else if (layer3==12) {
-          pass = rzChiSquared < 3.736f;
-        } else if (layer3==4) {
-          pass = rzChiSquared < 8.882f;
-        }
-      }
-    } else if (layer1==3) {
-      if (layer2==7) {
-        if (layer3==8) {
-          pass = rzChiSquared < 42.679f;
-        } else if (layer3==13) {
-          pass = rzChiSquared < 3.026f;
-        }
-      } else if (layer2==12) {
-        pass = rzChiSquared < 17.472f;
-      } else if (layer2==4) {
-        pass = rzChiSquared < 26.537f;
-      }
-    } else if (layer1==4) {
-      if (layer2==12) {
-        pass = rzChiSquared < 29.08f;
-      } else if (layer2==5) {
-        pass = rzChiSquared < 49.019f;
-      }
-    } else if (layer1==5) {
-      pass = rzChiSquared < 0;
-    } else {
-      pass = false;
-    }
-
 #ifdef CUT_VALUE_DEBUG
     if (layer1==7 and layer2==8 and layer3==9) {
       region = 0;
@@ -653,13 +547,116 @@ namespace SDL {
     }
 #endif
 
+    // bool pass = false;
+    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
+      float slope;
+      if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
+        slope = (z2 - z1) / (r2 - r1);
+      } else {
+        slope = (z3 - z1) / (r3 - r1);
+      }
 
+      float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
+
+      // creating a chi squared type quantity
+      // 0-> PS, 1->2S
+      residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
+      residual3_linear = residual3_linear * 100;
+
+      rzChiSquared = 12 * residual3_linear * residual3_linear;
+
+      return rzChiSquared < 2.806f;
+    }
+
+    
+    if (layer1==7) {
+      if (layer2==8) {
+        if (layer3==9) {
+          return rzChiSquared < 55.037f;
+        } else if (layer3==14) {
+          return rzChiSquared < 2.927f;
+        }
+      } else if (layer2==13) {
+        return rzChiSquared < 17.854f;
+      }
+    } else if (layer1==8) {
+      if (layer2==9) {
+        if (layer3==10) {
+          return rzChiSquared < 53.87f;
+        } else if (layer3==15) {
+          return rzChiSquared < 2.837f;
+        } 
+      } else if (layer2==14) {
+        return rzChiSquared < 24.368f;
+      }
+    } else if (layer1==9) {
+      if (layer2==10) {
+        if (layer3==11) {
+          return rzChiSquared < 62.583f;
+        } else if (layer3==16) {
+          return rzChiSquared < 2.802f;
+        }
+      } else if (layer2==15) {
+        return rzChiSquared < 22.571f;
+      }
+    } else if (layer1==1) {
+      if (layer2==7) {
+        if (layer3==8) {
+          return rzChiSquared < 77.838f;
+        } else if (layer3==13) {
+          return rzChiSquared < 0;
+        }
+      } else if (layer2==2) {
+        if (layer3==7) {
+          return rzChiSquared < 80.205f;
+        } else if (layer3==3) {
+          return rzChiSquared < 276.998f;
+        }
+      }
+    } else if (layer1==2) {
+      if (layer2==7) {
+        if (layer3==8) {
+          return rzChiSquared < 86.341f;
+        } else if (layer3==13) {
+          return rzChiSquared < 2.861f;
+        }
+      } else if (layer2==3) {
+        if (layer3==7) {
+          return rzChiSquared < 37.314f;
+        } else if (layer3==12) {
+          return rzChiSquared < 3.007f;
+        } else if (layer3==4) {
+          return rzChiSquared < 3.416f;
+        }
+      }
+    } else if (layer1==3) {
+      if (layer2==7) {
+        if (layer3==8) {
+          return rzChiSquared < 42.679f;
+        } else if (layer3==13) {
+          return rzChiSquared < 2.828f;
+        }
+      } else if (layer2==12) {
+        return rzChiSquared < 17.047f;
+      } else if (layer2==4) {
+        return rzChiSquared < 26.714f;
+      }
+    } else if (layer1==4) {
+      if (layer2==12) {
+        return rzChiSquared < 28.821f;
+      } else if (layer2==5) {
+        return rzChiSquared < 49.019f;
+      }
+    } else if (layer1==5) {
+      return rzChiSquared < 0;
+    }
+    return false;
         
-    residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
-    residual = residual * 100;
+    // residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
+    // residual = residual * 100;
     
     // pass = true;
-    return pass;
+    // return pass;
 
     // if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
     //   return false;
