@@ -30,7 +30,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
-          sparse-checkout: RecoTracker/LSTCore
+          sparse-checkout: >
+            RecoTracker/LST
+            RecoTracker/LSTCore
+            Configuration/ProcessModifiers
+            RecoTracker/ConversionSeedGenerators
+            RecoTracker/FinalTrackSelectors
+            RecoTracker/IterativeTracking
+            HeterogeneousCore/AlpakaInterface
       - name: Get commit SHA
         run: |
           sha=$(git rev-parse HEAD)
