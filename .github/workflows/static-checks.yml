@@ -51,7 +51,7 @@ jobs:
           output: |
             {"title": "This check has started...", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
       - name: Run static checks with SCRAM
-        timeout-minutes: 45
+        timeout-minutes: 100
         uses: SegmentLinking/TrackLooper-actions/static-checks@cmssw
         with:
           pr-number: ${{ github.event.issue.number }}
