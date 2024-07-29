@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: refs/pull/${{ github.event.issue.number }}/head
-          sparse-checkout: >
+          sparse-checkout: |
             RecoTracker/LST
             RecoTracker/LSTCore
             Configuration/ProcessModifiers
