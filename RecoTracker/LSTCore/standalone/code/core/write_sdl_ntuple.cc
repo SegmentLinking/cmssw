@@ -146,7 +146,22 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<vector<bool>>("t3_partOfT5");
   ana.tx->createBranch<vector<float>>("t3_residual");
   ana.tx->createBranch<vector<float>>("t3_rzChiSquared");
-  ana.tx->createBranch<vector<float>>("t3_region");
+  ana.tx->createBranch<vector<int>>("t3_region");
+  ana.tx->createBranch<vector<int>>("t3_layer0");
+  ana.tx->createBranch<vector<int>>("t3_layer1");
+  ana.tx->createBranch<vector<int>>("t3_layer2");
+  ana.tx->createBranch<vector<float>>("t3_x0");
+  ana.tx->createBranch<vector<float>>("t3_y0");
+  ana.tx->createBranch<vector<float>>("t3_z0");
+  ana.tx->createBranch<vector<float>>("t3_r0");
+  ana.tx->createBranch<vector<float>>("t3_x1");
+  ana.tx->createBranch<vector<float>>("t3_y1");
+  ana.tx->createBranch<vector<float>>("t3_z1");
+  ana.tx->createBranch<vector<float>>("t3_r1");
+  ana.tx->createBranch<vector<float>>("t3_x2");
+  ana.tx->createBranch<vector<float>>("t3_y2");
+  ana.tx->createBranch<vector<float>>("t3_z2");
+  ana.tx->createBranch<vector<float>>("t3_r2");
 
   // Occupancy branches
   ana.tx->createBranch<vector<int>>("module_layers");
@@ -596,6 +611,7 @@ void setPixelTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
 //________________________________________________________________________________________________________________________________
 void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
   SDL::tripletsBuffer<alpaka::DevCpu>& tripletsInGPU = *(event->getTriplets());
+  SDL::miniDoubletsBuffer<alpaka::DevCpu>& mdsInGPU = (*event->getMiniDoublets());
   SDL::objectRangesBuffer<alpaka::DevCpu>& rangesInGPU = (*event->getRanges());
   SDL::modulesBuffer<alpaka::DevCpu>& modulesInGPU = *(event->getModules());
   SDL::segmentsBuffer<alpaka::DevCpu>& segmentsInGPU = *(event->getSegments());
@@ -610,7 +626,7 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
     for (unsigned int idx = 0; idx < nTriplets; idx++) {
       unsigned int tripletIndex = rangesInGPU.tripletModuleIndices[lowerModuleIdx] + idx;
       float pt = __H2F(tripletsInGPU.circleRadius[tripletIndex]) * 2 * SDL::k2Rinv1GeVf;
-      ;
+      
       std::vector<unsigned int> hits = getHitsFromT3(event, tripletIndex);
       SDLMath::Hit hitA(hitsInGPU.xs[hits[0]], hitsInGPU.ys[hits[0]], hitsInGPU.zs[hits[0]]);
       SDLMath::Hit hitB(hitsInGPU.xs[hits[hits.size() - 1]],
@@ -626,9 +642,11 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
 
       int layer_binary = 0;
       int moduleType_binary = 0;
+      std::vector<int> layers;
       for (size_t i = 0; i < module_idx.size(); i += 2) {
         layer_binary |= (1 << (modulesInGPU.layers[module_idx[i]] + 6 * (modulesInGPU.subdets[module_idx[i]] == 4)));
         moduleType_binary |= (modulesInGPU.moduleType[module_idx[i]] << i);
+        layers.push_back(modulesInGPU.layers[module_idx[i]] + 6 * (modulesInGPU.subdets[module_idx[i]] == 4) + 5 * (modulesInGPU.subdets[module_idx[i]] == 4 && modulesInGPU.moduleType[module_idx[i]] == 1));
       }
 
       std::vector<float> matchedfracs;
@@ -642,6 +660,9 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
           break;
         }
       }
+
+      // std::vector<float> xs, ys, zs, rs;
+      std::vector<unsigned int> mdIdxs = getMDsFromT3(event, tripletIndex);
 
       ana.tx->pushbackToBranch<int>("t3_isFake", static_cast<int>(simidx.size() == 0));
       ana.tx->pushbackToBranch<int>("t3_isPerfect", isPerfect);
@@ -658,11 +679,80 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
 #ifdef CUT_VALUE_DEBUG
       const float residual = tripletsInGPU.residual[tripletIndex];
       const float rzChiSquared = tripletsInGPU.rzChiSquared[tripletIndex];
-      const int region = tripletsInGPU.region[tripletIndex];
+      int region = -1;
+      if (layers[0]==7 and layers[1]==8 and layers[2]==9) {
+        region = 0;
+      } else if (layers[0]==7 and layers[1]==8 and layers[2]==14) {
+        region = 1;
+      } else if (layers[0]==7 and layers[1]==13 and layers[2]==14) {
+        region = 2;
+      } else if (layers[0]==8 and layers[1]==9 and layers[2]==10) {
+        region = 3;
+      } else if (layers[0]==8 and layers[1]==9 and layers[2]==15) {
+        region = 4;
+      } else if (layers[0]==8 and layers[1]==14 and layers[2]==15) {
+        region = 5;
+      } else if (layers[0]==9 and layers[1]==10 and layers[2]==11) {
+        region = 6;
+      } else if (layers[0]==9 and layers[1]==10 and layers[2]==16) {
+        region = 7;
+      } else if (layers[0]==9 and layers[1]==15 and layers[2]==16) {
+        region = 8;
+      } else if (layers[0]==1 and layers[1]==7 and layers[2]==8) {
+        region = 9;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==7) {
+        region = 10;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==3) {
+        region = 11;
+      } else if (layers[0]==2 and layers[1]==7 and layers[2]==8) {
+        region = 12;
+      } else if (layers[0]==2 and layers[1]==7 and layers[2]==13) {
+        region = 13;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==7) {
+        region = 14;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==12) {
+        region = 15;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==4) {
+        region = 16;
+      } else if (layers[0]==3 and layers[1]==7 and layers[2]==8) {
+        region = 17;
+      } else if (layers[0]==3 and layers[1]==7 and layers[2]==13) {
+        region = 18;
+      } else if (layers[0]==3 and layers[1]==12 and layers[2]==13) {
+        region = 19;
+      } else if (layers[0]==3 and layers[1]==4 and layers[2]==5) {
+        region = 20;
+      } else if (layers[0]==3 and layers[1]==4 and layers[2]==12) {
+        region = 21;
+      }else if (layers[0]==4 and layers[1]==12 and layers[2]==13) {
+        region = 22;
+      } else if (layers[0]==4 and layers[1]==5 and layers[2]==6) {
+        region = 23;
+      } else if (layers[0]==4 and layers[1]==5 and layers[2]==12) {
+        region = 24;
+      } else if (layers[0]==5 and layers[1]==12 and layers[2]==13) {
+        region = 25;
+      }
 
       ana.tx->pushbackToBranch<float>("t3_residual", residual);
       ana.tx->pushbackToBranch<float>("t3_rzChiSquared", rzChiSquared);
-      ana.tx->pushbackToBranch<float>("t3_region", region);
+      ana.tx->pushbackToBranch<int>("t3_region", region);
+      ana.tx->pushbackToBranch<int>("t3_layer0", layers[0]);
+      ana.tx->pushbackToBranch<int>("t3_layer1", layers[1]);
+      ana.tx->pushbackToBranch<int>("t3_layer2", layers[2]); 
+      ana.tx->pushbackToBranch<float>("t3_x0", mdsInGPU.anchorX[mdIdxs[0]]);
+      ana.tx->pushbackToBranch<float>("t3_y0", mdsInGPU.anchorY[mdIdxs[0]]);
+      ana.tx->pushbackToBranch<float>("t3_z0", mdsInGPU.anchorZ[mdIdxs[0]]);
+      ana.tx->pushbackToBranch<float>("t3_r0", mdsInGPU.anchorRt[mdIdxs[0]]);
+      ana.tx->pushbackToBranch<float>("t3_x1", mdsInGPU.anchorX[mdIdxs[1]]);
+      ana.tx->pushbackToBranch<float>("t3_y1", mdsInGPU.anchorY[mdIdxs[1]]);
+      ana.tx->pushbackToBranch<float>("t3_z1", mdsInGPU.anchorZ[mdIdxs[1]]);
+      ana.tx->pushbackToBranch<float>("t3_r1", mdsInGPU.anchorRt[mdIdxs[1]]);
+      ana.tx->pushbackToBranch<float>("t3_x2", mdsInGPU.anchorX[mdIdxs[2]]);
+      ana.tx->pushbackToBranch<float>("t3_y2", mdsInGPU.anchorY[mdIdxs[2]]);
+      ana.tx->pushbackToBranch<float>("t3_z2", mdsInGPU.anchorZ[mdIdxs[2]]);
+      ana.tx->pushbackToBranch<float>("t3_r2", mdsInGPU.anchorRt[mdIdxs[2]]);
+     
 #endif
 
       t3_matched_simIdx.push_back(simidx);
@@ -787,8 +877,6 @@ void setLowLevelBranches(SDL::Event<SDL::Acc>* event) {
       ana.tx->pushbackToBranch<float>("LS_pt", pt);
       ana.tx->pushbackToBranch<float>("LS_eta", eta);
       ana.tx->pushbackToBranch<float>("LS_phi", phi);
-      // ana.tx->pushbackToBranch<int>("LS_layer0", layer0);
-      // ana.tx->pushbackToBranch<int>("LS_layer1", layer1);
 
       std::vector<unsigned int> hitidxs;
       std::vector<unsigned int> hittypes;

@@ -41,7 +41,6 @@ namespace SDL {
     float* rtHi;
     float* residual;
     float* rzChiSquared;
-    int* region; 
 #endif
     template <typename TBuff>
     void setData(TBuff& tripletsbuf) {
@@ -74,7 +73,6 @@ namespace SDL {
       rtHi = alpaka::getPtrNative(tripletsbuf.rtHi_buf);
       residual = alpaka::getPtrNative(tripletsbuf.residual_buf);
       rzChiSquared = alpaka::getPtrNative(tripletsbuf.rzChiSquared_buf);
-      region = alpaka::getPtrNative(tripletsbuf.region_buf);
 #endif
     }
   };
@@ -111,7 +109,6 @@ namespace SDL {
     Buf<TDev, float> rtHi_buf;
     Buf<TDev, float> residual_buf;
     Buf<TDev, float> rzChiSquared_buf;
-    Buf<TDev, int> region_buf;
 #endif
 
     template <typename TQueue, typename TDevAcc>
@@ -145,8 +142,7 @@ namespace SDL {
           rtLo_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           rtHi_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           residual_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          rzChiSquared_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          region_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue))
+          rzChiSquared_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue))
 #endif
     {
       alpaka::memset(queue, nTriplets_buf, 0u);
@@ -181,7 +177,6 @@ namespace SDL {
                                                          float& rtHi,
                                                          float& residual,
                                                          float& rzChiSquared,
-                                                         int& region,
                                                          float& zLoPointed,
                                                          float& zHiPointed,
                                                          float& sdlCut,
@@ -246,7 +241,6 @@ namespace SDL {
     tripletsInGPU.betaInCut[tripletIndex] = betaInCut;
     tripletsInGPU.residual[tripletIndex] = residual;
     tripletsInGPU.rzChiSquared[tripletIndex] = rzChiSquared;
-    tripletsInGPU.region[tripletIndex] = region;
 #endif
   };
 
@@ -263,14 +257,13 @@ namespace SDL {
                                                        unsigned int& thirdMDIndex,
                                                        float& residual,
                                                        float& rzChiSquared,
-                                                       int& region,
                                                        float& circleRadius,
                                                        float& circleCenterX, 
                                                        float& circleCenterY) {
 
     //following Philip's layer number prescription
-    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
-    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
+    // const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
+    // const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
@@ -381,26 +374,6 @@ namespace SDL {
     }
 
     // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
-    // if (moduleType2 == 0) {  // 0 is ps
-    //   if (x3 < x2 && x2 < x1)
-    //     Px = -alpaka::math::abs(acc, Px);
-    //   if (x3 > x2 && x2 > x1)
-    //     Px = alpaka::math::abs(acc, Px);
-    //   if (y3 < y2 && y2 < y1)
-    //     Py = -alpaka::math::abs(acc, Py);
-    //   if (y3 > y2 && y3 > y1)
-    //     Py = alpaka::math::abs(acc, Py);
-    // } else if (moduleType2 == 1) {  // 1 is 2s
-    //   if (x2 < x1)
-    //     Px = -alpaka::math::abs(acc, Px);
-    //   if (x2 > x1)
-    //     Px = alpaka::math::abs(acc, Px);
-    //   if (y2 < y1)
-    //     Py = -alpaka::math::abs(acc, Py);
-    //   if (y2 > y1)
-    //     Py = alpaka::math::abs(acc, Py);
-    // }
-
     if (x3 < x2 && x2 < x1)
       Px = -alpaka::math::abs(acc, Px);
     if (x3 > x2 && x2 > x1)
@@ -488,66 +461,10 @@ namespace SDL {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
-#ifdef CUT_VALUE_DEBUG
-    if (layer1==7 and layer2==8 and layer3==9) {
-      region = 0;
-    } else if (layer1==7 and layer2==8 and layer3==14) {
-      region = 1;
-    } else if (layer1==7 and layer2==13 and layer3==14) {
-      region = 2;
-    } else if (layer1==8 and layer2==9 and layer3==10) {
-      region = 3;
-    } else if (layer1==8 and layer2==9 and layer3==15) {
-      region = 4;
-    } else if (layer1==8 and layer2==14 and layer3==15) {
-      region = 5;
-    } else if (layer1==9 and layer2==10 and layer3==11) {
-      region = 6;
-    } else if (layer1==9 and layer2==10 and layer3==16) {
-      region = 7;
-    } else if (layer1==9 and layer2==15 and layer3==16) {
-      region = 8;
-    } else if (layer1==1 and layer2==7 and layer3==8) {
-      region = 9;
-    } else if (layer1==1 and layer2==7 and layer3==13) {
-      region = 10;
-    } else if (layer1==1 and layer2==2 and layer3==7) {
-      region = 11;
-    } else if (layer1==1 and layer2==2 and layer3==3) {
-      region = 12;
-    } else if (layer1==2 and layer2==7 and layer3==8) {
-      region = 13;
-    } else if (layer1==2 and layer2==7 and layer3==13) {
-      region = 14;
-    } else if (layer1==2 and layer2==3 and layer3==7) {
-      region = 15;
-    } else if (layer1==2 and layer2==3 and layer3==12) {
-      region = 16;
-    } else if (layer1==2 and layer2==3 and layer3==4) {
-      region = 17;
-    } else if (layer1==3 and layer2==7 and layer3==8) {
-      region = 18;
-    } else if (layer1==3 and layer2==7 and layer3==13) {
-      region = 19;
-    } else if (layer1==3 and layer2==12 and layer3==13) {
-      region = 20;
-    } else if (layer1==3 and layer2==4 and layer3==5) {
-      region = 21;
-    } else if (layer1==4 and layer2==12 and layer3==13) {
-      region = 22;
-    } else if (layer1==4 and layer2==5 and layer3==6) {
-      region = 23;
-    } else if (layer1==5 and layer2==12 and layer3==13) {
-      region = 24;
-    } else {
-      region = -1;
+    if (alpaka::math::isnan(acc, rzChiSquared)) {
+      rzChiSquared = -1;
     }
-    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
-      region = 25;
-    }
-#endif
-
-    // bool pass = false;
+    // // bool pass = false;
     if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
@@ -563,132 +480,159 @@ namespace SDL {
       residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
       residual3_linear = residual3_linear * 100;
 
-      rzChiSquared = 12 * residual3_linear * residual3_linear;
+      // rzChiSquared = 12 * residual3_linear * residual3_linear;
 
-      return rzChiSquared < 2.806f;
+      // return rzChiSquared < 2.806f;
     }
 
+    residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
+    return true;
     
-    if (layer1==7) {
-      if (layer2==8) {
-        if (layer3==9) {
-          return rzChiSquared < 55.037f;
-        } else if (layer3==14) {
-          return rzChiSquared < 2.927f;
-        }
-      } else if (layer2==13) {
-        return rzChiSquared < 17.854f;
-      }
-    } else if (layer1==8) {
-      if (layer2==9) {
-        if (layer3==10) {
-          return rzChiSquared < 53.87f;
-        } else if (layer3==15) {
-          return rzChiSquared < 2.837f;
-        } 
-      } else if (layer2==14) {
-        return rzChiSquared < 24.368f;
-      }
-    } else if (layer1==9) {
-      if (layer2==10) {
-        if (layer3==11) {
-          return rzChiSquared < 62.583f;
-        } else if (layer3==16) {
-          return rzChiSquared < 2.802f;
-        }
-      } else if (layer2==15) {
-        return rzChiSquared < 22.571f;
-      }
-    } else if (layer1==1) {
-      if (layer2==7) {
-        if (layer3==8) {
-          return rzChiSquared < 77.838f;
-        } else if (layer3==13) {
-          return rzChiSquared < 0;
-        }
-      } else if (layer2==2) {
-        if (layer3==7) {
-          return rzChiSquared < 80.205f;
-        } else if (layer3==3) {
-          return rzChiSquared < 276.998f;
-        }
-      }
-    } else if (layer1==2) {
-      if (layer2==7) {
-        if (layer3==8) {
-          return rzChiSquared < 86.341f;
-        } else if (layer3==13) {
-          return rzChiSquared < 2.861f;
-        }
-      } else if (layer2==3) {
-        if (layer3==7) {
-          return rzChiSquared < 37.314f;
-        } else if (layer3==12) {
-          return rzChiSquared < 3.007f;
-        } else if (layer3==4) {
-          return rzChiSquared < 3.416f;
-        }
-      }
-    } else if (layer1==3) {
-      if (layer2==7) {
-        if (layer3==8) {
-          return rzChiSquared < 42.679f;
-        } else if (layer3==13) {
-          return rzChiSquared < 2.828f;
-        }
-      } else if (layer2==12) {
-        return rzChiSquared < 17.047f;
-      } else if (layer2==4) {
-        return rzChiSquared < 26.714f;
-      }
-    } else if (layer1==4) {
-      if (layer2==12) {
-        return rzChiSquared < 28.821f;
-      } else if (layer2==5) {
-        return rzChiSquared < 49.019f;
-      }
-    } else if (layer1==5) {
-      return rzChiSquared < 0;
-    }
-    return false;
-        
-    // residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
-    // residual = residual * 100;
-    
-    // pass = true;
-    // return pass;
+    // if (layer1==7) {
+    //   if (layer2==8) {
+    //     if (layer3==9) {
+    //       return rzChiSquared < 58.553f;
+    //     } else if (layer3==14) {
+    //       return rzChiSquared < 2.888f;
+    //     }
+    //   } else if (layer2==13) {
+    //     return rzChiSquared < 17.918f;
+    //   }
+    // } else if (layer1==8) {
+    //   if (layer2==9) {
+    //     if (layer3==10) {
+    //       return rzChiSquared < 56.322f;
+    //     } else if (layer3==15) {
+    //       return rzChiSquared < 2.791f;
+    //     } 
+    //   } else if (layer2==14) {
+    //     return rzChiSquared < 23.22f;
+    //   }
+    // } else if (layer1==9) {
+    //   if (layer2==10) {
+    //     if (layer3==11) {
+    //       return rzChiSquared < 70.975f;
+    //     } else if (layer3==16) {
+    //       return rzChiSquared < 2.769f;
+    //     }
+    //   } else if (layer2==15) {
+    //     return rzChiSquared < 21.619f;
+    //   }
+    // } else if (layer1==1) {
+    //   if (layer2==7) {
+    //     return rzChiSquared < 78.726f;
+    //   } else if (layer2==2) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 83.427f;
+    //     } else if (layer3==3) {
+    //       return rzChiSquared < 306.587f;
+    //     }
+    //   }
+    // } else if (layer1==2) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 84.842f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.862f;
+    //     }
+    //   } else if (layer2==3) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 38.373f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 3.039f;
+    //     } else if (layer3==4) {
+    //       return rzChiSquared < 3.454f;
+    //     }
+    //   }
+    // } else if (layer1==3) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 54.426f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.768f;
+    //     }
+    //   } else if (layer2==12) {
+    //     return rzChiSquared < 16.517f;
+    //   } else if (layer2==4) {
+    //     if (layer3==5) {
+    //       return rzChiSquared < 27.048f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 20.06f;
+    //     }
+    //   }
+    // } else if (layer1==4) {
+    //   if (layer2==12) {
+    //     return rzChiSquared < 28.118f;
+    //   } else if (layer2==5) {
+    //     if (layer3==6) {
+    //       return rzChiSquared < 49.019f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 25.248f;
+    //     }
+    //   }
+    // } else if (layer1==5) {
+    //   return rzChiSquared < 10.93f;
+    // } 
+  };
 
-    // if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
-    //   return false;
-    // } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-    //   return alpaka::math::abs(acc, residual) < 0.53f;
-    // } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-    //   return alpaka::math::abs(acc, residual) < 1;
-    // } else if (layer1 == 13 and layer2 == 14 and layer3 == 15) {
-    //   return false;
-    // } else if (layer1 == 14 and layer2 == 15 and layer3 == 16) {
-    //   return false;
-    // } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-    //   return alpaka::math::abs(acc, residual) < 1;
-    // } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-    //   return alpaka::math::abs(acc, residual) < 1.21f;
-    // } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-    //   return alpaka::math::abs(acc, residual) < 1.f;
-    // } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-    //   return alpaka::math::abs(acc, residual) < 1.f;
-    // } else if (layer1 == 3 and layer2 == 4 and layer3 == 5) {
-    //   return alpaka::math::abs(acc, residual) < 2.7f;
-    // } else if (layer1 == 4 and layer2 == 5 and layer3 == 6) {
-    //   return alpaka::math::abs(acc, residual) < 3.06f;
-    // } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-    //   return alpaka::math::abs(acc, residual) < 1;
-    // } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
-    //   return alpaka::math::abs(acc, residual) < 1;
-    // } else if (layer1 == 9 and layer2 == 10 and layer3 == 11) {
-    //   return alpaka::math::abs(acc, residual) < 1;
-    // } else {
-    //   return alpaka::math::abs(acc, residual) < 5;
-    // }
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRZConstraint(TAcc const& acc,
+                                                       struct SDL::modules& modulesInGPU,
+                                                       struct SDL::miniDoublets& mdsInGPU,
+                                                       struct SDL::segments& segmentsInGPU,
+                                                       uint16_t& innerInnerLowerModuleIndex,
+                                                       uint16_t& middleLowerModuleIndex,
+                                                       uint16_t& outerOuterLowerModuleIndex,
+                                                       unsigned int& firstMDIndex,
+                                                       unsigned int& secondMDIndex,
+                                                       unsigned int& thirdMDIndex) {
+    //get the rt and z
+    const float& r1 = mdsInGPU.anchorRt[firstMDIndex];
+    const float& r2 = mdsInGPU.anchorRt[secondMDIndex];
+    const float& r3 = mdsInGPU.anchorRt[thirdMDIndex];
+
+    const float& z1 = mdsInGPU.anchorZ[firstMDIndex];
+    const float& z2 = mdsInGPU.anchorZ[secondMDIndex];
+    const float& z3 = mdsInGPU.anchorZ[thirdMDIndex];
+
+    // Using sdl_layer numbering convention defined in ModuleMethods.h
+    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
+    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
+    const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
+
+    const float residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
+
+    if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
+      return false;
+    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
+      return alpaka::math::abs(acc, residual) < 0.53f;
+    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
+      return alpaka::math::abs(acc, residual) < 1;
+    } else if (layer1 == 13 and layer2 == 14 and layer3 == 15) {
+      return false;
+    } else if (layer1 == 14 and layer2 == 15 and layer3 == 16) {
+      return false;
+    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
+      return alpaka::math::abs(acc, residual) < 1;
+    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
+      return alpaka::math::abs(acc, residual) < 1.21f;
+    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
+      return alpaka::math::abs(acc, residual) < 1.f;
+    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
+      return alpaka::math::abs(acc, residual) < 1.f;
+    } else if (layer1 == 3 and layer2 == 4 and layer3 == 5) {
+      return alpaka::math::abs(acc, residual) < 2.7f;
+    } else if (layer1 == 4 and layer2 == 5 and layer3 == 6) {
+      return alpaka::math::abs(acc, residual) < 3.06f;
+    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
+      return alpaka::math::abs(acc, residual) < 1;
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
+      return alpaka::math::abs(acc, residual) < 1;
+    } else if (layer1 == 9 and layer2 == 10 and layer3 == 11) {
+      return alpaka::math::abs(acc, residual) < 1;
+    } else {
+      return alpaka::math::abs(acc, residual) < 5;
+    }
   };
 
   template <typename TAcc>
@@ -1216,13 +1160,12 @@ namespace SDL {
                                                                    float& rtHi,
                                                                    float& residual,
                                                                    float& rzChiSquared,
-                                                                   int& region,
                                                                    float& zLoPointed,
                                                                    float& zHiPointed,
                                                                    float& sdlCut,
                                                                    float& betaInCut,
                                                                    const float ptCut) {
-    bool pass = true;
+    // bool pass = true;
     //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
     if (segmentsInGPU.mdIndices[2 * innerSegmentIndex + 1] != segmentsInGPU.mdIndices[2 * outerSegmentIndex])
       return false;
@@ -1230,27 +1173,6 @@ namespace SDL {
     unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * innerSegmentIndex];
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex + 1];
-
-    pass = pass and (passPointingConstraint(acc,
-                                            modulesInGPU,
-                                            mdsInGPU,
-                                            segmentsInGPU,
-                                            innerInnerLowerModuleIndex,
-                                            middleLowerModuleIndex,
-                                            outerOuterLowerModuleIndex,
-                                            firstMDIndex,
-                                            secondMDIndex,
-                                            thirdMDIndex,
-                                            zOut,
-                                            rtOut,
-                                            middleLowerModuleIndex,
-                                            innerSegmentIndex,
-                                            outerSegmentIndex,
-                                            betaIn,
-                                            betaInCut,
-                                            ptCut));
-    if (not pass)
-      return pass;
 
     float x1 = mdsInGPU.anchorX[firstMDIndex];
     float x2 = mdsInGPU.anchorX[secondMDIndex];
@@ -1261,24 +1183,56 @@ namespace SDL {
 
     circleRadius = computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3, circleCenterX, circleCenterY);
 
-    pass = pass and (passRZConstraint(acc,
-                                      modulesInGPU,
-                                      mdsInGPU,
-                                      segmentsInGPU,
-                                      innerInnerLowerModuleIndex,
-                                      middleLowerModuleIndex,
-                                      outerOuterLowerModuleIndex,
-                                      firstMDIndex,
-                                      secondMDIndex,
-                                      thirdMDIndex,
-                                      residual,
-                                      rzChiSquared,
-                                      region,
-                                      circleRadius,
-                                      circleCenterX, 
-                                      circleCenterY));
+    if (not(passRZConstraint(acc,
+                            modulesInGPU,
+                            mdsInGPU,
+                            segmentsInGPU,
+                            innerInnerLowerModuleIndex,
+                            middleLowerModuleIndex,
+                            outerOuterLowerModuleIndex,
+                            firstMDIndex,
+                            secondMDIndex,
+                            thirdMDIndex,
+                            residual,
+                            rzChiSquared,
+                            circleRadius,
+                            circleCenterX, 
+                            circleCenterY)))
+      return false;
 
-    return pass;
+    // if (not(passRZConstraint(acc,
+    //                          modulesInGPU,
+    //                          mdsInGPU,
+    //                          segmentsInGPU,
+    //                          innerInnerLowerModuleIndex,
+    //                          middleLowerModuleIndex,
+    //                          outerOuterLowerModuleIndex,
+    //                          firstMDIndex,
+    //                          secondMDIndex,
+    //                          thirdMDIndex)))
+    //   return false;
+
+    // if (not(passPointingConstraint(acc,
+    //                               modulesInGPU,
+    //                               mdsInGPU,
+    //                               segmentsInGPU,
+    //                               innerInnerLowerModuleIndex,
+    //                               middleLowerModuleIndex,
+    //                               outerOuterLowerModuleIndex,
+    //                               firstMDIndex,
+    //                               secondMDIndex,
+    //                               thirdMDIndex,
+    //                               zOut,
+    //                               rtOut,
+    //                               middleLowerModuleIndex,
+    //                               innerSegmentIndex,
+    //                               outerSegmentIndex,
+    //                               betaIn,
+    //                               betaInCut,
+    //                               ptCut)))
+    //   return false;
+
+    return true;
   };
 
   struct createTripletsInGPUv2 {
@@ -1324,7 +1278,6 @@ namespace SDL {
 
             float zOut, rtOut, deltaPhiPos, deltaPhi, betaIn, circleRadius, circleCenterX, circleCenterY;
             float zLo, zHi, rtLo, rtHi, residual, rzChiSquared, zLoPointed, zHiPointed, sdlCut, betaInCut;
-            int region;
 
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modulesInGPU,
@@ -1349,7 +1302,6 @@ namespace SDL {
                                                         rtHi,
                                                         residual,
                                                         rzChiSquared,
-                                                        region,
                                                         zLoPointed,
                                                         zHiPointed,
                                                         sdlCut,
@@ -1393,7 +1345,6 @@ namespace SDL {
                                    rtHi,
                                    residual,
                                    rzChiSquared,
-                                   region,
                                    zLoPointed,
                                    zHiPointed,
                                    sdlCut,
