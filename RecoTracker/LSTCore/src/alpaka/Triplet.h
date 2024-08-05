@@ -409,6 +409,11 @@ namespace SDL {
     float ds = circleRadius / 100 * dPhi;
 
     float Pz = (z_init - z1) / ds * Pt;
+    if (z1 == z_init){
+      float Phi1 = alpaka::math::atan(acc, y1/x1);
+      ds = circleRadius / 100 * Phi1;
+      Pz = z1/ds * Pt;
+    }
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
 
     float Bz = SDL::magnetic_field;
@@ -551,7 +556,9 @@ namespace SDL {
     } else if (layer1==5 and layer2==12 and layer3==13) {
       region = 24;
     }
-
+    // if (region == 23 && rzChiSquared > 10 && rzChiSquared < 14){
+    //   printf("r1:%f, r2:%f, r3:%f, x1:%f, x2:%f, x3:%f, y1:%f, y2:%f, y3:%f, z1:%f, z2:%f, z3:%f\n x center:%f, y center:%f\n Pt:%f, px:%f, py:%f, pz:%f, p:%f\n Layer 1:%d, Layer 2:%d, Layer 3:%d\n ModType1:%d, ModType2:%d, ModType3:%d\n error:%f, rzChi2:%f\n s:%f\n", r1, r2, r3, x1, x2, x3, y1, y2, y3, z1, z2, z3, x_center, y_center, Pt, Px, Py, Pz, p, layer1, layer2, layer3, moduleType1, moduleType2, moduleType3, error, rzChiSquared, s);
+    // }
     residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
     residual = residual * 100;
 
