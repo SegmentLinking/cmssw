@@ -19,16 +19,16 @@ namespace lst {
     uint16_t nLowerModules;
     unsigned int nPixels;
     unsigned int nEndCapMap;
-    std::shared_ptr<const ModulesBuffer<TDev>> modulesBuffers;
-    std::shared_ptr<const EndcapGeometryBuffer<TDev>> endcapGeometryBuffers;
+    ModulesBuffer<TDev> modulesBuffers;
+    EndcapGeometryBuffer<TDev> endcapGeometryBuffers;
     std::shared_ptr<const PixelMap> pixelMapping;
 
     LSTESData(uint16_t const& nModulesIn,
               uint16_t const& nLowerModulesIn,
               unsigned int const& nPixelsIn,
               unsigned int const& nEndCapMapIn,
-              std::shared_ptr<const ModulesBuffer<TDev>> const& modulesBuffersIn,
-              std::shared_ptr<const EndcapGeometryBuffer<TDev>> const& endcapGeometryBuffersIn,
+              ModulesBuffer<TDev> const& modulesBuffersIn,
+              EndcapGeometryBuffer<TDev> const& endcapGeometryBuffersIn,
               std::shared_ptr<const PixelMap> const& pixelMappingIn)
         : nModules(nModulesIn),
           nLowerModules(nLowerModulesIn),
@@ -49,19 +49,19 @@ namespace cms::alpakatools {
     template <typename TQueue>
     static lst::LSTESData<alpaka::Dev<TQueue>> copyAsync(TQueue& queue,
                                                          lst::LSTESData<alpaka_common::DevHost> const& srcData) {
-      auto deviceModulesBuffers = std::make_shared<lst::ModulesBuffer<alpaka::Dev<TQueue>>>(
-          alpaka::getDev(queue), srcData.nModules, srcData.nPixels);
-      deviceModulesBuffers->copyFromSrc(queue, *srcData.modulesBuffers);
+      auto deviceModulesBuffers =
+          lst::ModulesBuffer<alpaka::Dev<TQueue>>(alpaka::getDev(queue), srcData.nModules, srcData.nPixels);
+      deviceModulesBuffers.copyFromSrc(queue, srcData.modulesBuffers);
       auto deviceEndcapGeometryBuffers =
-          std::make_shared<lst::EndcapGeometryBuffer<alpaka::Dev<TQueue>>>(alpaka::getDev(queue), srcData.nEndCapMap);
-      deviceEndcapGeometryBuffers->copyFromSrc(queue, *srcData.endcapGeometryBuffers);
+          lst::EndcapGeometryBuffer<alpaka::Dev<TQueue>>(alpaka::getDev(queue), srcData.nEndCapMap);
+      deviceEndcapGeometryBuffers.copyFromSrc(queue, srcData.endcapGeometryBuffers);
 
       return lst::LSTESData<alpaka::Dev<TQueue>>(srcData.nModules,
                                                  srcData.nLowerModules,
                                                  srcData.nPixels,
                                                  srcData.nEndCapMap,
-                                                 deviceModulesBuffers,
-                                                 deviceEndcapGeometryBuffers,
+                                                 std::move(deviceModulesBuffers),
+                                                 std::move(deviceEndcapGeometryBuffers),
                                                  srcData.pixelMapping);
     }
   };

@@ -87,9 +87,9 @@ namespace lst {
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
     const unsigned int nEndCapMap_;
-    const std::shared_ptr<const ModulesBuffer<Device>> modulesBuffers_;
-    const std::shared_ptr<const PixelMap> pixelMapping_;
-    const std::shared_ptr<const EndcapGeometryBuffer<Device>> endcapGeometryBuffers_;
+    ModulesBuffer<Device> const& modulesBuffers_;
+    PixelMap const& pixelMapping_;
+    EndcapGeometryBuffer<Device> const& endcapGeometryBuffers_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
@@ -103,7 +103,7 @@ namespace lst {
           nPixels_(deviceESData->nPixels),
           nEndCapMap_(deviceESData->nEndCapMap),
           modulesBuffers_(deviceESData->modulesBuffers),
-          pixelMapping_(deviceESData->pixelMapping),
+          pixelMapping_(*deviceESData->pixelMapping),
           endcapGeometryBuffers_(deviceESData->endcapGeometryBuffers) {
       init(verbose);
     }

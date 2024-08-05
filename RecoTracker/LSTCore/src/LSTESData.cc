@@ -39,9 +39,9 @@ namespace {
   }
 
   void loadMapsHost(lst::MapPLStoLayer& pLStoLayer,
-                    std::shared_ptr<lst::EndcapGeometry> endcapGeometry,
-                    std::shared_ptr<lst::TiltedGeometry> tiltedGeometry,
-                    std::shared_ptr<lst::ModuleConnectionMap> moduleConnectionMap) {
+                    lst::EndcapGeometry& endcapGeometry,
+                    lst::TiltedGeometry& tiltedGeometry,
+                    lst::ModuleConnectionMap& moduleConnectionMap) {
     // Module orientation information (DrDz or phi angles)
     auto endcap_geom =
         get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
@@ -51,9 +51,9 @@ namespace {
     auto mappath = get_absolute_path_after_check_file_exists(
         trackLooperDir() + "/data/OT800_IT615_pt0.8/module_connection_tracing_merged.bin");
 
-    endcapGeometry->load(endcap_geom);
-    tiltedGeometry->load(tilted_geom);
-    moduleConnectionMap->load(mappath);
+    endcapGeometry.load(endcap_geom);
+    tiltedGeometry.load(tilted_geom);
+    moduleConnectionMap.load(mappath);
 
     auto pLSMapDir = trackLooperDir() + "/data/OT800_IT615_pt0.8/pixelmap/pLS_map";
     const std::array<std::string, 4> connects{
@@ -80,34 +80,39 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
   uint16_t nModules;
   uint16_t nLowerModules;
   unsigned int nPixels;
-  std::shared_ptr<lst::ModulesBuffer<alpaka_common::DevHost>> modulesBuffers = nullptr;
-  auto pLStoLayer = std::make_shared<MapPLStoLayer>();
-  auto endcapGeometry = std::make_shared<EndcapGeometry>();
-  auto tiltedGeometry = std::make_shared<TiltedGeometry>();
-  auto pixelMapping = std::make_shared<PixelMap>();
-  auto moduleConnectionMap = std::make_shared<ModuleConnectionMap>();
-  ::loadMapsHost(*pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
+  MapPLStoLayer pLStoLayer;
+  EndcapGeometry endcapGeometry;
+  TiltedGeometry tiltedGeometry;
+  PixelMap pixelMapping;
+  ModuleConnectionMap moduleConnectionMap;
+  ::loadMapsHost(pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 
-  auto endcapGeometryBuffers = std::make_shared<EndcapGeometryBuffer<alpaka_common::DevHost>>(
-      cms::alpakatools::host(), endcapGeometry->nEndCapMap);
-  alpaka::QueueCpuBlocking queue(cms::alpakatools::host());
-  alpaka::memcpy(
-      queue, endcapGeometryBuffers->geoMapDetId_buf, endcapGeometry->geoMapDetId_buf, endcapGeometry->nEndCapMap);
-  alpaka::memcpy(
-      queue, endcapGeometryBuffers->geoMapPhi_buf, endcapGeometry->geoMapPhi_buf, endcapGeometry->nEndCapMap);
+  auto endcapGeometryBuffers =
+      EndcapGeometryBuffer<alpaka_common::DevHost>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
+  std::memcpy(alpaka::getPtrNative(endcapGeometryBuffers.geoMapDetId_buf),
+              endcapGeometry.geoMapDetId_buf.data(),
+              endcapGeometry.nEndCapMap * sizeof(unsigned int));
+  std::memcpy(alpaka::getPtrNative(endcapGeometryBuffers.geoMapPhi_buf),
+              endcapGeometry.geoMapPhi_buf.data(),
+              endcapGeometry.nEndCapMap * sizeof(float));
 
   auto path =
       get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/sensor_centroids.bin");
-  lst::loadModulesFromFile(pLStoLayer.get(),
-                           path.c_str(),
-                           nModules,
-                           nLowerModules,
-                           nPixels,
-                           modulesBuffers,
-                           pixelMapping.get(),
-                           endcapGeometry.get(),
-                           tiltedGeometry.get(),
-                           moduleConnectionMap.get());
-  return std::make_unique<LSTESData<alpaka_common::DevHost>>(
-      nModules, nLowerModules, nPixels, endcapGeometry->nEndCapMap, modulesBuffers, endcapGeometryBuffers, pixelMapping);
+  auto modulesBuffers = lst::loadModulesFromFile(pLStoLayer,
+                                                 path.c_str(),
+                                                 nModules,
+                                                 nLowerModules,
+                                                 nPixels,
+                                                 pixelMapping,
+                                                 endcapGeometry,
+                                                 tiltedGeometry,
+                                                 moduleConnectionMap);
+  auto pixelMappingPtr = std::make_shared<PixelMap>(std::move(pixelMapping));
+  return std::make_unique<LSTESData<alpaka_common::DevHost>>(nModules,
+                                                             nLowerModules,
+                                                             nPixels,
+                                                             endcapGeometry.nEndCapMap,
+                                                             std::move(modulesBuffers),
+                                                             std::move(endcapGeometryBuffers),
+                                                             pixelMappingPtr);
 }
