@@ -21,7 +21,7 @@ usage()
   echo "  -h    Help                      (Display this message)"
   echo "  -c    cache                     (Make library with cache enabled)"
   echo "  -s    show log                  (Full compilation script to stdout)"
-  echo "  -m    make clean binaries       (Make clean binaries before remake. e.g. when header files changed in SDL/*.h)"
+  echo "  -m    make clean binaries       (Make clean binaries before remake. e.g. when header files changed in LST/*.h)"
   echo "  -d    cut value ntuple          (With extra variables in a debug ntuple file)"
   echo "  -p    primitive object ntuple   (With extra variables related to primitive objects)"
   echo "  -N    neural networks           (Toggle LST neural networks)"
@@ -119,8 +119,8 @@ if $MAKECACHE; then MAKETARGET=${MAKETARGET}_cache; fi
 
 # If make clean binaries are called then first make clean before making
 if $MAKECLEANBINARIES; then
-    echo "First make cleaning all of TrackLooper objects and libsdl*.so" | tee -a ${LOG}
-    cd SDL;make clean >>${LOG} 2>&1;cd -;
+    echo "First make cleaning all of TrackLooper objects and liblst*.so" | tee -a ${LOG}
+    cd LST;make clean >>${LOG} 2>&1;cd -;
     make clean >> ${LOG} 2>&1
 fi
 #if make cut value is called then cut value ntuple making is done
@@ -148,25 +148,25 @@ BACKENDOPT="BACKEND="
 EXES=
 if [ "${ALLBACKENDS}" == true ]; then
   BACKENDOPT="BACKEND=all"
-  EXES="bin/sdl_cpu bin/sdl_cuda bin/sdl_rocm"
+  EXES="bin/lst_cpu bin/lst_cuda bin/lst_rocm"
 else
   if [ "${CPUBACKEND}" == true ]; then
     BACKENDOPT=$BACKENDOPT"cpu,"
-    EXES="$EXES bin/sdl_cpu"
+    EXES="$EXES bin/lst_cpu"
   fi
   if [ "${CUDABACKEND}" == true ]; then
     BACKENDOPT=$BACKENDOPT"cuda,"
-    EXES="$EXES bin/sdl_cuda"
+    EXES="$EXES bin/lst_cuda"
   fi
   if [ "${ROCMBACKEND}" == true ]; then
     BACKENDOPT=$BACKENDOPT"rocm,"
-    EXES="$EXES bin/sdl_rocm"
+    EXES="$EXES bin/lst_rocm"
   fi
 fi
 
 PRINTWARNINGSOPT=
 if $PRINTWARNINGS; then
-    PRINTWARNINGSOPT="LSTWARNINGSFLAG=-DWarnings"
+    PRINTWARNINGSOPT="LSTWARNINGSFLAG=-DWARNINGS"
 fi
 
 ###
@@ -181,21 +181,21 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd SDL && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd SDL && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
-if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f SDL/libsdl_cpu.so ]; then
-  echo "ERROR: libsdl_cpu.so failed to compile!" | tee -a ${LOG}
+if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then
+  echo "ERROR: liblst_cpu.so failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
-elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cuda"* ]]) && [ ! -f SDL/libsdl_cuda.so ]; then
-  echo "ERROR: libsdl_cuda.so failed to compile!" | tee -a ${LOG}
+elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cuda"* ]]) && [ ! -f LST/liblst_cuda.so ]; then
+  echo "ERROR: liblst_cuda.so failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
-elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"rocm"* ]]) && [ ! -f SDL/libsdl_rocm.so ]; then
-  echo "ERROR: libsdl_rocm.so failed to compile!" | tee -a ${LOG}
+elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"rocm"* ]]) && [ ! -f LST/liblst_rocm.so ]; then
+  echo "ERROR: liblst_rocm.so failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
 fi
@@ -223,27 +223,27 @@ else
     make EXES="${EXES}" ${TRACKLOOPERTARGET} -j >> ${LOG} 2>&1
 fi
 
-if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/sdl_cpu ]; then
-  echo "ERROR: bin/sdl_cpu failed to compile!" | tee -a ${LOG}
+if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/lst_cpu ]; then
+  echo "ERROR: bin/lst_cpu failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
-elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cuda"* ]]) && [ ! -f bin/sdl_cuda ]; then
-  echo "ERROR: bin/sdl_cuda failed to compile!" | tee -a ${LOG}
+elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cuda"* ]]) && [ ! -f bin/lst_cuda ]; then
+  echo "ERROR: bin/lst_cuda failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
-elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"rocm"* ]]) && [ ! -f bin/sdl_rocm ]; then
-  echo "ERROR: bin/sdl_rocm failed to compile!" | tee -a ${LOG}
+elif ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"rocm"* ]]) && [ ! -f bin/lst_rocm ]; then
+  echo "ERROR: bin/lst_rocm failed to compile!" | tee -a ${LOG}
   echo "See ${LOG} file for more detail..." | tee -a ${LOG}
   exit 1
 fi
 
 # Make a symlink with priority CUDA > CPU > ROCM
 if [ "${CUDABACKEND}" == true ]; then
-    ln -sfr bin/sdl_cuda bin/sdl
+    ln -sfr bin/lst_cuda bin/lst
 elif [ "${CPUBACKEND}" == true ]; then
-    ln -sfr bin/sdl_cpu bin/sdl
+    ln -sfr bin/lst_cpu bin/lst
 elif [ "${ROCMBACKEND}" == true ]; then
-    ln -sfr bin/sdl_rocm bin/sdl
+    ln -sfr bin/lst_rocm bin/lst
 fi
 
 echo "" >> ${LOG}

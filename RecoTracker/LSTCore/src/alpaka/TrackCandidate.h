@@ -1,8 +1,8 @@
-#ifndef TrackCandidate_cuh
-#define TrackCandidate_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_TrackCandidate_h
+#define RecoTracker_LSTCore_src_alpaka_TrackCandidate_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
 
 #include "Triplet.h"
 #include "Segment.h"
@@ -10,9 +10,10 @@
 #include "PixelTriplet.h"
 #include "Quintuplet.h"
 #include "Hit.h"
+#include "ObjectRanges.h"
 
-namespace SDL {
-  struct trackCandidates {
+namespace lst {
+  struct TrackCandidates {
     short* trackCandidateType;          // 4-T5 5-pT3 7-pT5 8-pLS
     unsigned int* directObjectIndices;  // Will hold direct indices to each type containers
     unsigned int* objectIndices;        // Will hold tracklet and  triplet indices - check the type!!
@@ -32,29 +33,29 @@ namespace SDL {
     FPX* radius;
 
     template <typename TBuff>
-    void setData(TBuff& trackCandidatesbuf) {
-      trackCandidateType = alpaka::getPtrNative(trackCandidatesbuf.trackCandidateType_buf);
-      directObjectIndices = alpaka::getPtrNative(trackCandidatesbuf.directObjectIndices_buf);
-      objectIndices = alpaka::getPtrNative(trackCandidatesbuf.objectIndices_buf);
-      nTrackCandidates = alpaka::getPtrNative(trackCandidatesbuf.nTrackCandidates_buf);
-      nTrackCandidatespT3 = alpaka::getPtrNative(trackCandidatesbuf.nTrackCandidatespT3_buf);
-      nTrackCandidatespT5 = alpaka::getPtrNative(trackCandidatesbuf.nTrackCandidatespT5_buf);
-      nTrackCandidatespLS = alpaka::getPtrNative(trackCandidatesbuf.nTrackCandidatespLS_buf);
-      nTrackCandidatesT5 = alpaka::getPtrNative(trackCandidatesbuf.nTrackCandidatesT5_buf);
+    void setData(TBuff& buf) {
+      trackCandidateType = alpaka::getPtrNative(buf.trackCandidateType_buf);
+      directObjectIndices = alpaka::getPtrNative(buf.directObjectIndices_buf);
+      objectIndices = alpaka::getPtrNative(buf.objectIndices_buf);
+      nTrackCandidates = alpaka::getPtrNative(buf.nTrackCandidates_buf);
+      nTrackCandidatespT3 = alpaka::getPtrNative(buf.nTrackCandidatespT3_buf);
+      nTrackCandidatespT5 = alpaka::getPtrNative(buf.nTrackCandidatespT5_buf);
+      nTrackCandidatespLS = alpaka::getPtrNative(buf.nTrackCandidatespLS_buf);
+      nTrackCandidatesT5 = alpaka::getPtrNative(buf.nTrackCandidatesT5_buf);
 
-      logicalLayers = alpaka::getPtrNative(trackCandidatesbuf.logicalLayers_buf);
-      hitIndices = alpaka::getPtrNative(trackCandidatesbuf.hitIndices_buf);
-      pixelSeedIndex = alpaka::getPtrNative(trackCandidatesbuf.pixelSeedIndex_buf);
-      lowerModuleIndices = alpaka::getPtrNative(trackCandidatesbuf.lowerModuleIndices_buf);
+      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
+      hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
+      pixelSeedIndex = alpaka::getPtrNative(buf.pixelSeedIndex_buf);
+      lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
 
-      centerX = alpaka::getPtrNative(trackCandidatesbuf.centerX_buf);
-      centerY = alpaka::getPtrNative(trackCandidatesbuf.centerY_buf);
-      radius = alpaka::getPtrNative(trackCandidatesbuf.radius_buf);
+      centerX = alpaka::getPtrNative(buf.centerX_buf);
+      centerY = alpaka::getPtrNative(buf.centerY_buf);
+      radius = alpaka::getPtrNative(buf.radius_buf);
     }
   };
 
   template <typename TDev>
-  struct trackCandidatesBuffer : trackCandidates {
+  struct TrackCandidatesBuffer {
     Buf<TDev, short> trackCandidateType_buf;
     Buf<TDev, unsigned int> directObjectIndices_buf;
     Buf<TDev, unsigned int> objectIndices_buf;
@@ -73,8 +74,10 @@ namespace SDL {
     Buf<TDev, FPX> centerY_buf;
     Buf<TDev, FPX> radius_buf;
 
+    TrackCandidates data_;
+
     template <typename TQueue, typename TDevAcc>
-    trackCandidatesBuffer(unsigned int maxTrackCandidates, TDevAcc const& devAccIn, TQueue& queue)
+    TrackCandidatesBuffer(unsigned int maxTrackCandidates, TDevAcc const& devAccIn, TQueue& queue)
         : trackCandidateType_buf(allocBufWrapper<short>(devAccIn, maxTrackCandidates, queue)),
           directObjectIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxTrackCandidates, queue)),
           objectIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * maxTrackCandidates, queue)),
@@ -101,9 +104,12 @@ namespace SDL {
       alpaka::memset(queue, pixelSeedIndex_buf, 0);
       alpaka::wait(queue);
     }
+
+    inline TrackCandidates const* data() const { return &data_; }
+    inline void setData(TrackCandidatesBuffer& buf) { data_.setData(buf); }
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addpLSTrackCandidateToMemory(struct SDL::trackCandidates& trackCandidatesInGPU,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addpLSTrackCandidateToMemory(lst::TrackCandidates& trackCandidatesInGPU,
                                                                    unsigned int trackletIndex,
                                                                    unsigned int trackCandidateIndex,
                                                                    uint4 hitIndices,
@@ -122,7 +128,7 @@ namespace SDL {
     trackCandidatesInGPU.hitIndices[Params_pT5::kHits * trackCandidateIndex + 3] = hitIndices.w;
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateToMemory(struct SDL::trackCandidates& trackCandidatesInGPU,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateToMemory(lst::TrackCandidates& trackCandidatesInGPU,
                                                                 short trackCandidateType,
                                                                 unsigned int innerTrackletIndex,
                                                                 unsigned int outerTrackletIndex,
@@ -161,9 +167,9 @@ namespace SDL {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkPixelHits(unsigned int ix,
                                                     unsigned int jx,
-                                                    struct SDL::miniDoublets& mdsInGPU,
-                                                    struct SDL::segments& segmentsInGPU,
-                                                    struct SDL::hits& hitsInGPU) {
+                                                    lst::MiniDoublets const& mdsInGPU,
+                                                    lst::Segments const& segmentsInGPU,
+                                                    lst::Hits const& hitsInGPU) {
     int phits1[Params_pLS::kHits];
     int phits2[Params_pLS::kHits];
 
@@ -202,11 +208,11 @@ namespace SDL {
   struct crossCleanpT3 {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::objectRanges rangesInGPU,
-                                  struct SDL::pixelTriplets pixelTripletsInGPU,
-                                  struct SDL::segments segmentsInGPU,
-                                  struct SDL::pixelQuintuplets pixelQuintupletsInGPU) const {
+                                  lst::Modules modulesInGPU,
+                                  lst::ObjectRanges rangesInGPU,
+                                  lst::PixelTriplets pixelTripletsInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -230,7 +236,7 @@ namespace SDL {
           float eta2 = segmentsInGPU.eta[pLS_jx - prefix];
           float phi2 = segmentsInGPU.phi[pLS_jx - prefix];
           float dEta = alpaka::math::abs(acc, (eta1 - eta2));
-          float dPhi = SDL::calculate_dPhi(phi1, phi2);
+          float dPhi = lst::calculate_dPhi(phi1, phi2);
 
           float dR2 = dEta * dEta + dPhi * dPhi;
           if (dR2 < 1e-5f)
@@ -243,11 +249,11 @@ namespace SDL {
   struct crossCleanT5 {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::quintuplets quintupletsInGPU,
-                                  struct SDL::pixelQuintuplets pixelQuintupletsInGPU,
-                                  struct SDL::pixelTriplets pixelTripletsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::Modules modulesInGPU,
+                                  lst::Quintuplets quintupletsInGPU,
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU,
+                                  lst::PixelTriplets pixelTripletsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -283,7 +289,7 @@ namespace SDL {
             }
 
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = SDL::calculate_dPhi(phi1, phi2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 1e-3f)
@@ -295,19 +301,17 @@ namespace SDL {
     }
   };
 
-  // Using Matt's block for the outer loop and thread for inner loop trick here!
-  // This will eliminate the need for another kernel just for adding the pLS, because we can __syncthreads()
   struct crossCleanpLS {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::objectRanges rangesInGPU,
-                                  struct SDL::pixelTriplets pixelTripletsInGPU,
-                                  struct SDL::trackCandidates trackCandidatesInGPU,
-                                  struct SDL::segments segmentsInGPU,
-                                  struct SDL::miniDoublets mdsInGPU,
-                                  struct SDL::hits hitsInGPU,
-                                  struct SDL::quintuplets quintupletsInGPU) const {
+                                  lst::Modules modulesInGPU,
+                                  lst::ObjectRanges rangesInGPU,
+                                  lst::PixelTriplets pixelTripletsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::MiniDoublets mdsInGPU,
+                                  lst::Hits hitsInGPU,
+                                  lst::Quintuplets quintupletsInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -333,7 +337,7 @@ namespace SDL {
             float eta2 = __H2F(quintupletsInGPU.eta[quintupletIndex]);
             float phi2 = __H2F(quintupletsInGPU.phi[quintupletIndex]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = SDL::calculate_dPhi(phi1, phi2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 1e-3f)
@@ -350,7 +354,7 @@ namespace SDL {
             float eta2 = __H2F(pixelTripletsInGPU.eta_pix[pT3Index]);
             float phi2 = __H2F(pixelTripletsInGPU.phi_pix[pT3Index]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = SDL::calculate_dPhi(phi1, phi2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 0.000001f)
@@ -367,7 +371,7 @@ namespace SDL {
             float eta2 = segmentsInGPU.eta[pLSIndex - prefix];
             float phi2 = segmentsInGPU.phi[pLSIndex - prefix];
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = SDL::calculate_dPhi(phi1, phi2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 0.000001f)
@@ -382,10 +386,10 @@ namespace SDL {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   uint16_t nLowerModules,
-                                  struct SDL::pixelTriplets pixelTripletsInGPU,
-                                  struct SDL::trackCandidates trackCandidatesInGPU,
-                                  struct SDL::segments segmentsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::PixelTriplets pixelTripletsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -398,9 +402,9 @@ namespace SDL {
 
         unsigned int trackCandidateIdx =
             alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
-        if (trackCandidateIdx >= N_MAX_PIXEL_TRACK_CANDIDATES)  // This is done before any non-pixel TCs are added
+        if (trackCandidateIdx >= n_max_pixel_track_candidates)  // This is done before any non-pixel TCs are added
         {
-#ifdef Warnings
+#ifdef WARNINGS
           printf("Track Candidate excess alert! Type = pT3");
 #endif
           alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
@@ -434,9 +438,9 @@ namespace SDL {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   uint16_t nLowerModules,
-                                  struct SDL::quintuplets quintupletsInGPU,
-                                  struct SDL::trackCandidates trackCandidatesInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::Quintuplets quintupletsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -456,9 +460,9 @@ namespace SDL {
               alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
           if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatespT5 -
                   *trackCandidatesInGPU.nTrackCandidatespT3 >=
-              N_MAX_NONPIXEL_TRACK_CANDIDATES)  // pT5 and pT3 TCs have been added, but not pLS TCs
+              n_max_nonpixel_track_candidates)  // pT5 and pT3 TCs have been added, but not pLS TCs
           {
-#ifdef Warnings
+#ifdef WARNINGS
             printf("Track Candidate excess alert! Type = T5");
 #endif
             alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
@@ -488,8 +492,8 @@ namespace SDL {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   uint16_t nLowerModules,
-                                  struct SDL::trackCandidates trackCandidatesInGPU,
-                                  struct SDL::segments segmentsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::Segments segmentsInGPU,
                                   bool tc_pls_triplets) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
@@ -503,9 +507,9 @@ namespace SDL {
         unsigned int trackCandidateIdx =
             alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
         if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatesT5 >=
-            N_MAX_PIXEL_TRACK_CANDIDATES)  // T5 TCs have already been added
+            n_max_pixel_track_candidates)  // T5 TCs have already been added
         {
-#ifdef Warnings
+#ifdef WARNINGS
           printf("Track Candidate excess alert! Type = pLS");
 #endif
           alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
@@ -527,10 +531,10 @@ namespace SDL {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   uint16_t nLowerModules,
-                                  struct SDL::pixelQuintuplets pixelQuintupletsInGPU,
-                                  struct SDL::trackCandidates trackCandidatesInGPU,
-                                  struct SDL::segments segmentsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -543,9 +547,9 @@ namespace SDL {
 
         unsigned int trackCandidateIdx =
             alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
-        if (trackCandidateIdx >= N_MAX_PIXEL_TRACK_CANDIDATES)  // No other TCs have been added yet
+        if (trackCandidateIdx >= n_max_pixel_track_candidates)  // No other TCs have been added yet
         {
-#ifdef Warnings
+#ifdef WARNINGS
           printf("Track Candidate excess alert! Type = pT5");
 #endif
           alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
@@ -575,5 +579,5 @@ namespace SDL {
       }
     }
   };
-}  // namespace SDL
+}  // namespace lst
 #endif

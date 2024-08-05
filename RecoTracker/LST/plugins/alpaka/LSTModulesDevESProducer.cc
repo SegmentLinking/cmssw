@@ -8,8 +8,8 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -26,8 +26,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       descriptions.addWithDefaultLabel(desc);
     }
 
-    std::unique_ptr<SDL::LSTESData<SDL::DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
-      return SDL::loadAndFillESHost(ptCutLabel_);
+    std::unique_ptr<lst::LSTESData<DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
+      return lst::loadAndFillESHost(ptCutLabel_);
     }
 
   private:

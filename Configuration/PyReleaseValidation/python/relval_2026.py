@@ -42,6 +42,9 @@ numWFIB.extend([30434.0]) #2026D112
 numWFIB.extend([30834.0]) #2026D113
 numWFIB.extend([31234.0]) #2026D114
 
+# Temporary placement for LST workflow to workaround PR conflicts - to be formatted and placed in an upcoming PR
+numWFIB.extend([24834.703,24834.704]) #2026D98 LST tracking (initialStep+HighPtTripletStep only): CPU, GPU
+
 #Additional sample for short matrix and IB
 #Default Phase-2 Det NoPU
 numWFIB.extend([prefixDet+34.911]) #DD4hep XML
@@ -61,9 +64,6 @@ numWFIB.extend([prefixDet+234.999])  #premixing combined stage1+stage2 ttbar+PU5
 numWFIB.extend([prefixDet+234.21])   #prodlike PU
 numWFIB.extend([prefixDet+234.9921]) #prodlike premix stage1+stage2
 numWFIB.extend([prefixDet+234.114])  #PU, with 10% OT inefficiency
-
-# Temporary placement for LST workflow to workaround PR conflicts - to be formatted and placed in an upcoming PR
-numWFIB.extend([24834.703,24834.704]) #2026D98 LST tracking (initialStep+HighPtTripletStep only): CPU, GPU
 
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]

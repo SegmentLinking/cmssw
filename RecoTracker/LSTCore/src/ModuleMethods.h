@@ -1,20 +1,19 @@
-#ifndef ModuleMethods_cuh
-#define ModuleMethods_cuh
+#ifndef RecoTracker_LSTCore_src_ModuleMethods_h
+#define RecoTracker_LSTCore_src_ModuleMethods_h
 
 #include <map>
 #include <iostream>
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-
-#include "TiltedGeometry.h"
-#include "EndcapGeometry.h"
-#include "ModuleConnectionMap.h"
-#include "PixelMap.h"
+#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
+#include "RecoTracker/LSTCore/interface/ModuleConnectionMap.h"
+#include "RecoTracker/LSTCore/interface/PixelMap.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
-namespace SDL {
+namespace lst {
   struct ModuleMetaData {
     std::map<unsigned int, uint16_t> detIdToIndex;
     std::map<unsigned int, float> module_x;
@@ -25,13 +24,13 @@ namespace SDL {
   };
 
   template <typename TQueue>
-  inline void fillPixelMap(std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
+  inline void fillPixelMap(std::shared_ptr<ModulesBuffer<alpaka_common::DevHost>>& modulesBuf,
                            uint16_t nModules,
                            unsigned int& nPixels,
-                           pixelMap& pixelMapping,
+                           PixelMap& pixelMapping,
                            TQueue queue,
                            const MapPLStoLayer& pLStoLayer,
-                           struct ModuleMetaData& mmd) {
+                           ModuleMetaData& mmd) {
     pixelMapping.pixelModuleIndex = mmd.detIdToIndex[1];
 
     std::vector<unsigned int> connectedModuleDetIds;
@@ -83,9 +82,9 @@ namespace SDL {
     nPixels = connectedPix_size;
 
     // Now we can initialize modulesBuf
-    DevHost const& devHost = cms::alpakatools::host();
+    alpaka_common::DevHost const& devHost = cms::alpakatools::host();
     if (modulesBuf == nullptr) {
-      modulesBuf = std::make_shared<modulesBuffer<DevHost>>(devHost, nModules, nPixels);
+      modulesBuf = std::make_shared<ModulesBuffer<alpaka_common::DevHost>>(devHost, nModules, nPixels);
     }
 
     auto connectedPixels_buf = allocBufWrapper<unsigned int>(devHost, connectedPix_size);
@@ -106,13 +105,13 @@ namespace SDL {
   };
 
   template <typename TQueue, typename TDev>
-  inline void fillConnectedModuleArrayExplicit(struct modulesBuffer<TDev>* modulesBuf,
+  inline void fillConnectedModuleArrayExplicit(ModulesBuffer<TDev>* modulesBuf,
                                                unsigned int nMod,
                                                TQueue queue,
-                                               struct ModuleMetaData& mmd,
-                                               const ModuleConnectionMap<Dev>* moduleConnectionMap) {
-    DevHost const& devHost = cms::alpakatools::host();
-    auto moduleMap_buf = allocBufWrapper<uint16_t>(devHost, nMod * MAX_CONNECTED_MODULES);
+                                               ModuleMetaData& mmd,
+                                               const ModuleConnectionMap* moduleConnectionMap) {
+    alpaka_common::DevHost const& devHost = cms::alpakatools::host();
+    auto moduleMap_buf = allocBufWrapper<uint16_t>(devHost, nMod * max_connected_modules);
     uint16_t* moduleMap = alpaka::getPtrNative(moduleMap_buf);
 
     auto nConnectedModules_buf = allocBufWrapper<uint16_t>(devHost, nMod);
@@ -124,7 +123,7 @@ namespace SDL {
       auto& connectedModules = moduleConnectionMap->getConnectedModuleDetIds(detId);
       nConnectedModules[index] = connectedModules.size();
       for (uint16_t i = 0; i < nConnectedModules[index]; i++) {
-        moduleMap[index * MAX_CONNECTED_MODULES + i] = mmd.detIdToIndex[connectedModules[i]];
+        moduleMap[index * max_connected_modules + i] = mmd.detIdToIndex[connectedModules[i]];
       }
     }
 
@@ -134,11 +133,11 @@ namespace SDL {
   };
 
   template <typename TQueue, typename TDev>
-  inline void fillMapArraysExplicit(struct modulesBuffer<TDev>* modulesBuf,
+  inline void fillMapArraysExplicit(ModulesBuffer<TDev>* modulesBuf,
                                     unsigned int nMod,
                                     TQueue queue,
-                                    struct ModuleMetaData& mmd) {
-    DevHost const& devHost = cms::alpakatools::host();
+                                    ModuleMetaData& mmd) {
+    alpaka_common::DevHost const& devHost = cms::alpakatools::host();
     auto mapIdx_buf = allocBufWrapper<uint16_t>(devHost, nMod);
     uint16_t* mapIdx = alpaka::getPtrNative(mapIdx_buf);
 
@@ -224,16 +223,16 @@ namespace SDL {
                                   uint16_t& nModules,
                                   uint16_t& nLowerModules,
                                   unsigned int& nPixels,
-                                  std::shared_ptr<modulesBuffer<DevHost>>& modulesBuf,
-                                  pixelMap* pixelMapping,
-                                  const EndcapGeometry<Dev>* endcapGeometry,
-                                  const TiltedGeometry<Dev>* tiltedGeometry,
-                                  const ModuleConnectionMap<Dev>* moduleConnectionMap) {
+                                  std::shared_ptr<ModulesBuffer<alpaka_common::DevHost>>& modulesBuf,
+                                  PixelMap* pixelMapping,
+                                  const EndcapGeometry* endcapGeometry,
+                                  const TiltedGeometry* tiltedGeometry,
+                                  const ModuleConnectionMap* moduleConnectionMap) {
     ModuleMetaData mmd;
 
     loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
 
-    DevHost const& devHost = cms::alpakatools::host();
+    alpaka_common::DevHost const& devHost = cms::alpakatools::host();
     auto detIds_buf = allocBufWrapper<unsigned int>(devHost, nModules);
     auto layers_buf = allocBufWrapper<short>(devHost, nModules);
     auto rings_buf = allocBufWrapper<short>(devHost, nModules);
@@ -251,7 +250,7 @@ namespace SDL {
     auto dxdys_buf = allocBufWrapper<float>(devHost, nModules);
     auto drdzs_buf = allocBufWrapper<float>(devHost, nModules);
     auto partnerModuleIndices_buf = allocBufWrapper<uint16_t>(devHost, nModules);
-    auto sdlLayers_buf = allocBufWrapper<int>(devHost, nModules);
+    auto lstLayers_buf = allocBufWrapper<int>(devHost, nModules);
 
     // Getting the underlying data pointers
     unsigned int* host_detIds = alpaka::getPtrNative(detIds_buf);
@@ -271,7 +270,7 @@ namespace SDL {
     float* host_dxdys = alpaka::getPtrNative(dxdys_buf);
     float* host_drdzs = alpaka::getPtrNative(drdzs_buf);
     uint16_t* host_partnerModuleIndices = alpaka::getPtrNative(partnerModuleIndices_buf);
-    int* host_sdlLayers = alpaka::getPtrNative(sdlLayers_buf);
+    int* host_lstLayers = alpaka::getPtrNative(lstLayers_buf);
 
     //reassign detIdToIndex indices here
     nLowerModules = (nModules - 1) / 2;
@@ -303,8 +302,8 @@ namespace SDL {
         r = 0;
       } else {
         setDerivedQuantities(detId, layer, ring, rod, module, subdet, side, m_x, m_y, m_z, eta, r);
-        isInverted = SDL::modules::parseIsInverted(subdet, side, module, layer);
-        isLower = SDL::modules::parseIsLower(isInverted, detId);
+        isInverted = lst::Modules::parseIsInverted(subdet, side, module, layer);
+        isLower = lst::Modules::parseIsLower(isInverted, detId);
       }
       if (isLower) {
         index = lowerModuleCounter;
@@ -332,17 +331,17 @@ namespace SDL {
       //assigning other variables!
       if (detId == 1) {
         host_moduleType[index] = PixelModule;
-        host_moduleLayerType[index] = SDL::InnerPixelLayer;
+        host_moduleLayerType[index] = lst::InnerPixelLayer;
         host_dxdys[index] = 0;
         host_drdzs[index] = 0;
         host_isAnchor[index] = false;
       } else {
-        host_moduleType[index] = (m_t == 25 ? SDL::TwoS : SDL::PS);
-        host_moduleLayerType[index] = (m_t == 23 ? SDL::Pixel : SDL::Strip);
+        host_moduleType[index] = (m_t == 25 ? lst::TwoS : lst::PS);
+        host_moduleLayerType[index] = (m_t == 23 ? lst::Pixel : lst::Strip);
 
-        if (host_moduleType[index] == SDL::PS and host_moduleLayerType[index] == SDL::Pixel) {
+        if (host_moduleType[index] == lst::PS and host_moduleLayerType[index] == lst::Pixel) {
           host_isAnchor[index] = true;
-        } else if (host_moduleType[index] == SDL::TwoS and host_isLower[index]) {
+        } else if (host_moduleType[index] == lst::TwoS and host_isLower[index]) {
           host_isAnchor[index] = true;
         } else {
           host_isAnchor[index] = false;
@@ -352,8 +351,8 @@ namespace SDL {
         host_drdzs[index] = (subdet == Barrel) ? tiltedGeometry->getDrDz(detId) : 0;
       }
 
-      host_sdlLayers[index] =
-          layer + 6 * (subdet == SDL::Endcap) + 5 * (subdet == SDL::Endcap and host_moduleType[index] == SDL::TwoS);
+      host_lstLayers[index] =
+          layer + 6 * (subdet == lst::Endcap) + 5 * (subdet == lst::Endcap and host_moduleType[index] == lst::TwoS);
     }
 
     //partner module stuff, and slopes and drdz move around
@@ -362,7 +361,7 @@ namespace SDL {
       auto& index = it->second;
       if (detId != 1) {
         host_partnerModuleIndices[index] =
-            mmd.detIdToIndex[SDL::modules::parsePartnerModuleId(detId, host_isLower[index], host_isInverted[index])];
+            mmd.detIdToIndex[lst::Modules::parsePartnerModuleId(detId, host_isLower[index], host_isInverted[index])];
         //add drdz and slope importing stuff here!
         if (host_drdzs[index] == 0) {
           host_drdzs[index] = host_drdzs[host_partnerModuleIndices[index]];
@@ -379,10 +378,10 @@ namespace SDL {
     // modulesBuf is initialized in fillPixelMap since both nModules and nPix will be known
     fillPixelMap(modulesBuf, nModules, nPixels, *pixelMapping, queue, *pLStoLayer, mmd);
 
-    auto src_view_nModules = alpaka::createView(devHost, &nModules, (Idx)1u);
+    auto src_view_nModules = alpaka::createView(devHost, &nModules, (alpaka_common::Idx)1u);
     alpaka::memcpy(queue, modulesBuf->nModules_buf, src_view_nModules);
 
-    auto src_view_nLowerModules = alpaka::createView(devHost, &nLowerModules, (Idx)1u);
+    auto src_view_nLowerModules = alpaka::createView(devHost, &nLowerModules, (alpaka_common::Idx)1u);
     alpaka::memcpy(queue, modulesBuf->nLowerModules_buf, src_view_nLowerModules);
 
     alpaka::memcpy(queue, modulesBuf->moduleType_buf, moduleType_buf);
@@ -403,11 +402,11 @@ namespace SDL {
     alpaka::memcpy(queue, modulesBuf->dxdys_buf, dxdys_buf);
     alpaka::memcpy(queue, modulesBuf->drdzs_buf, drdzs_buf);
     alpaka::memcpy(queue, modulesBuf->partnerModuleIndices_buf, partnerModuleIndices_buf);
-    alpaka::memcpy(queue, modulesBuf->sdlLayers_buf, sdlLayers_buf);
+    alpaka::memcpy(queue, modulesBuf->lstLayers_buf, lstLayers_buf);
     alpaka::wait(queue);
 
     fillConnectedModuleArrayExplicit(modulesBuf.get(), nModules, queue, mmd, moduleConnectionMap);
     fillMapArraysExplicit(modulesBuf.get(), nModules, queue, mmd);
   };
-}  // namespace SDL
+}  // namespace lst
 #endif

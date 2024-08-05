@@ -23,10 +23,10 @@ EXTRAFLAGS  = -fPIC -ITMultiDrawTreePlayer -Wunused-variable -lTMVA -lEG -lGenVe
 
 all: rooutil $(EXE)
 
-$(EXE): src/performance.o src/helper.o src/SDL.o
-	$(LD) $(CXXFLAGS) $(LDFLAGS) src/performance.o src/helper.o src/SDL.o $(ROOTLIBS) $(EXTRAFLAGS) -o $@
+$(EXE): src/performance.o src/helper.o src/LSTEff.o
+	$(LD) $(CXXFLAGS) $(LDFLAGS) src/performance.o src/helper.o src/LSTEff.o $(ROOTLIBS) $(EXTRAFLAGS) -o $@
 
-src/SDL.o: src/SDL.cc src/SDL.h
+src/LSTEff.o: src/LSTEff.cc src/LSTEff.h
 	$(CC) $(CFLAGS) $(EXTRACFLAGS) $< -c -o $@
 
 src/performance.o: src/performance.cc src/performance.h
@@ -39,6 +39,6 @@ rooutil:
 	$(MAKE) -C ../code/rooutil
 
 clean:
-	rm -r src/performance.o src/helper.o src/SDL.o $(EXE)
+	rm -r src/performance.o src/helper.o src/LSTEff.o $(EXE)
 
 .PHONY: all clean rooutil

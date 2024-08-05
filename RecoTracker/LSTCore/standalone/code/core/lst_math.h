@@ -1,10 +1,10 @@
-#ifndef SDLMath_h
-#define SDLMath_h
+#ifndef lst_math_h
+#define lst_math_h
 #include <tuple>
 #include <vector>
 #include <cmath>
 
-namespace SDLMath {
+namespace lst_math {
   inline float Phi_mpi_pi(float x) {
     if (std::isnan(x)) {
       std::cout << "MathUtil::Phi_mpi_pi() function called with NaN" << std::endl;
@@ -209,5 +209,5 @@ namespace SDLMath {
 
     return Hit(x, y, 0);
   };
-}  // namespace SDLMath
+}  // namespace lst_math
 #endif

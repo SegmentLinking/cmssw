@@ -19,7 +19,7 @@
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -91,14 +91,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
-    device::ESGetToken<SDL::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
+    device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_;
     const double ptCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 
-    SDL::LST<SDL::Acc> lst_;
+    lst::LST<Acc3D> lst_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

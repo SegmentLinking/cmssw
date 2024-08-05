@@ -1,7 +1,7 @@
 #ifndef helper_h
 #define helper_h
 
-#include "SDL.h"
+#include "LSTEff.h"
 #include "cxxopts.h"
 #include "rooutil.h"
 
@@ -39,7 +39,7 @@ public:
   TChain* events_tchain;
 
   // Custom Looper object to facilitate looping over many files
-  RooUtil::Looper<SDL> looper;
+  RooUtil::Looper<LSTEff> looper;
 
   // Custom Cutflow framework
   RooUtil::Cutflow cutflow;
