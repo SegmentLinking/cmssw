@@ -1565,6 +1565,12 @@ SDL::miniDoubletsBuffer<alpaka::DevCpu>* SDL::Event<SDL::Acc>::getMiniDoublets()
     alpaka::memcpy(queue, mdsInCPU->dphichanges_buf, miniDoubletsBuffers->dphichanges_buf, nMemHost);
     alpaka::memcpy(queue, mdsInCPU->nMDs_buf, miniDoubletsBuffers->nMDs_buf);
     alpaka::memcpy(queue, mdsInCPU->totOccupancyMDs_buf, miniDoubletsBuffers->totOccupancyMDs_buf);
+#ifdef CUT_VALUE_DEBUG
+    alpaka::memcpy(queue, mdsInCPU->anchorX_buf, miniDoubletsBuffers->anchorX_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorY_buf, miniDoubletsBuffers->anchorY_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorZ_buf, miniDoubletsBuffers->anchorZ_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorRt_buf, miniDoubletsBuffers->anchorRt_buf);
+#endif
     alpaka::wait(queue);
   }
   return mdsInCPU;

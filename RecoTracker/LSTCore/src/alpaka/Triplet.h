@@ -262,8 +262,8 @@ namespace SDL {
                                                        float& circleCenterY) {
 
     //following Philip's layer number prescription
-    // const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
-    // const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
+    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
+    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
@@ -300,40 +300,38 @@ namespace SDL {
     float y_center = circleCenterY / 100;
     float Pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
 
-    // start from a circle of inner T3.
-    // to determine the charge
+    // determine the charge
     int charge = 0;
-    float slope2c = (y2 - y_center) / (x2 - x_center);
-    float slope1c = (y1 - y_center) / (x1 - x_center);
-    // these 4 "if"s basically separate the x-y plane into 4 quarters. It determines geometrically how a circle and line slope goes and their positions, and we can get the charges correspondingly.
-    if ((y2 - y_center) > 0 && (y1 - y_center) > 0) {
-      if (slope1c > 0 && slope2c < 0)
-        charge = -1;  // on x axis of a quarter, 2 hits go anti-clockwise
-      else if (slope1c < 0 && slope2c > 0)
-        charge = 1;  // on x axis of a quarter, 2 hits go clockwise
-      else if (slope2c > slope1c)
-        charge = -1;
-      else if (slope2c < slope1c)
+    float slope12 = (y2 - y1) / (x2 - x1);
+    float slope23 = (y3 - y2) / (x3 - x2);
+    if (slope12 > 0 and slope23 < 0) {
+      if (x1 < x2 and x2 < x3)
         charge = 1;
-    } else if ((y2 - y_center) < 0 && (y1 - y_center) < 0) {
-      if (slope1c < 0 && slope2c > 0)
+      else if (x1 > x2 and x2 > x3)
         charge = 1;
-      else if (slope1c > 0 && slope2c < 0)
+      else if (y1 < y2 and y2 < y3)
         charge = -1;
-      else if (slope2c > slope1c)
+      else if (y1 > y2 and y2 > y3)
         charge = -1;
-      else if (slope2c < slope1c)
+    } else if (slope12 < 0 and slope23 > 0) {
+      if (x1 < x2 and x2 < x3)
+        charge = -1;
+      else if (x1 > x2 and x2 > x3)
+        charge = -1;
+      else if (y1 < y2 and y2 < y3)
         charge = 1;
-    } else if ((y2 - y_center) < 0 && (y1 - y_center) > 0) {
-      if ((x2 - x_center) > 0 && (x1 - x_center) > 0)
+      else if (y1 > y2 and y2 > y3)
         charge = 1;
-      else if ((x2 - x_center) < 0 && (x1 - x_center) < 0)
-        charge = -1;
-    } else if ((y2 - y_center) > 0 && (y1 - y_center) < 0) {
-      if ((x2 - x_center) > 0 && (x1 - x_center) > 0)
-        charge = -1;
-      else if ((x2 - x_center) < 0 && (x1 - x_center) < 0)
+    } else if (slope12 > 0 and slope23 > 0) {
+      if (slope12 > slope23)
         charge = 1;
+      else
+        charge = -1;
+    } else if (slope12 < 0 and slope23 < 0) {
+      if (slope12 > slope23)
+        charge = 1;
+      else
+        charge = -1;
     }
 
     //get the absolute value of px and py at the initial point
@@ -380,7 +378,7 @@ namespace SDL {
       Px = alpaka::math::abs(acc, Px);
     if (y3 < y2 && y2 < y1)
       Py = -alpaka::math::abs(acc, Py);
-    if (y3 > y2 && y3 > y1)
+    if (y3 > y2 && y2 > y1)
       Py = alpaka::math::abs(acc, Py);
 
     float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
@@ -461,11 +459,7 @@ namespace SDL {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
-    if (alpaka::math::isnan(acc, rzChiSquared)) {
-      rzChiSquared = -1;
-    }
-    // // bool pass = false;
-    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
+    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
         slope = (z2 - z1) / (r2 - r1);
@@ -480,58 +474,60 @@ namespace SDL {
       residual3_linear = (moduleType3 == 0) ? residual3_linear / 0.15f : residual3_linear / 5.0f;
       residual3_linear = residual3_linear * 100;
 
-      // rzChiSquared = 12 * residual3_linear * residual3_linear;
+      rzChiSquared = 12 * residual3_linear * residual3_linear;
 
       // return rzChiSquared < 2.806f;
+      return rzChiSquared < 2.39f;
     }
 
-    residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
-    return true;
+    // 99% efficiency
+    // residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    // return true;
     
     // if (layer1==7) {
     //   if (layer2==8) {
     //     if (layer3==9) {
-    //       return rzChiSquared < 58.553f;
+    //       return rzChiSquared < 58.48f;
     //     } else if (layer3==14) {
     //       return rzChiSquared < 2.888f;
     //     }
     //   } else if (layer2==13) {
-    //     return rzChiSquared < 17.918f;
+    //     return rzChiSquared < 17.775f;
     //   }
     // } else if (layer1==8) {
     //   if (layer2==9) {
     //     if (layer3==10) {
-    //       return rzChiSquared < 56.322f;
+    //       return rzChiSquared < 56.08f;
     //     } else if (layer3==15) {
     //       return rzChiSquared < 2.791f;
     //     } 
     //   } else if (layer2==14) {
-    //     return rzChiSquared < 23.22f;
+    //     return rzChiSquared < 23.15f;
     //   }
     // } else if (layer1==9) {
     //   if (layer2==10) {
     //     if (layer3==11) {
     //       return rzChiSquared < 70.975f;
     //     } else if (layer3==16) {
-    //       return rzChiSquared < 2.769f;
+    //       return rzChiSquared < 2.76f;
     //     }
     //   } else if (layer2==15) {
-    //     return rzChiSquared < 21.619f;
+    //     return rzChiSquared < 21.65f;
     //   }
     // } else if (layer1==1) {
     //   if (layer2==7) {
-    //     return rzChiSquared < 78.726f;
+    //     return rzChiSquared < 78.57f;
     //   } else if (layer2==2) {
     //     if (layer3==7) {
-    //       return rzChiSquared < 83.427f;
+    //       return rzChiSquared < 80.2f;
     //     } else if (layer3==3) {
-    //       return rzChiSquared < 306.587f;
+    //       return rzChiSquared < 302.492f;
     //     }
     //   }
     // } else if (layer1==2) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 84.842f;
+    //       return rzChiSquared < 84.78f;
     //     } else if (layer3==13) {
     //       return rzChiSquared < 2.862f;
     //     }
@@ -539,25 +535,25 @@ namespace SDL {
     //     if (layer3==7) {
     //       return rzChiSquared < 38.373f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 3.039f;
+    //       return rzChiSquared < 3.034f;
     //     } else if (layer3==4) {
-    //       return rzChiSquared < 3.454f;
+    //       return rzChiSquared < 3.455f;
     //     }
     //   }
     // } else if (layer1==3) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 54.426f;
+    //       return rzChiSquared < 54.422f;
     //     } else if (layer3==13) {
     //       return rzChiSquared < 2.768f;
     //     }
     //   } else if (layer2==12) {
-    //     return rzChiSquared < 16.517f;
+    //     return rzChiSquared < 16.57f;
     //   } else if (layer2==4) {
     //     if (layer3==5) {
-    //       return rzChiSquared < 27.048f;
+    //       return rzChiSquared < 26.99f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 20.06f;
+    //       return rzChiSquared < 19.97f;
     //     }
     //   }
     // } else if (layer1==4) {
@@ -572,7 +568,96 @@ namespace SDL {
     //   }
     // } else if (layer1==5) {
     //   return rzChiSquared < 10.93f;
-    // } 
+    // }
+    // return false;
+    
+    // 95% efficiency
+    if (layer1==7) {
+      if (layer2==8) {
+        if (layer3==9) {
+          return rzChiSquared < 28.97f;
+        } else if (layer3==14) {
+          return rzChiSquared < 2.41f;
+        }
+      } else if (layer2==13) {
+        return rzChiSquared < 12.23f;
+      }
+    } else if (layer1==8) {
+      if (layer2==9) {
+        if (layer3==10) {
+          return rzChiSquared < 27.08f;
+        } else if (layer3==15) {
+          return rzChiSquared < 2.28f;
+        } 
+      } else if (layer2==14) {
+        return rzChiSquared < 15.92f;
+      }
+    } else if (layer1==9) {
+      if (layer2==10) {
+        if (layer3==11) {
+          return rzChiSquared < 27.21f;
+        } else if (layer3==16) {
+          return rzChiSquared < 2.25f;
+        }
+      } else if (layer2==15) {
+        return rzChiSquared < 13.59f;
+      }
+    } else if (layer1==1) {
+      if (layer2==7) {
+        return rzChiSquared < 36.98f;
+      } else if (layer2==2) {
+        if (layer3==7) {
+          return rzChiSquared < 31.75f;
+        } else if (layer3==3) {
+          return rzChiSquared < 93.12f;
+        }
+      }
+    } else if (layer1==2) {
+      if (layer2==7) {
+        if (layer3==8) {
+          return rzChiSquared < 36.83f;
+        } else if (layer3==13) {
+          return rzChiSquared < 2.47f;
+        }
+      } else if (layer2==3) {
+        if (layer3==7) {
+          return rzChiSquared < 16.24f;
+        } else if (layer3==12) {
+          return rzChiSquared < 2.36f;
+        } else if (layer3==4) {
+          return rzChiSquared < 2.79f;
+        }
+      }
+    } else if (layer1==3) {
+      if (layer2==7) {
+        if (layer3==8) {
+          return rzChiSquared < 38.97f;
+        } else if (layer3==13) {
+          return rzChiSquared < 2.21f;
+        }
+      } else if (layer2==12) {
+        return rzChiSquared < 11.68f;
+      } else if (layer2==4) {
+        if (layer3==5) {
+          return rzChiSquared < 18.87f;
+        } else if (layer3==12) {
+          return rzChiSquared < 11.1f;
+        }
+      }
+    } else if (layer1==4) {
+      if (layer2==12) {
+        return rzChiSquared < 12.18f;
+      } else if (layer2==5) {
+        if (layer3==6) {
+          return rzChiSquared < 32.53f;
+        } else if (layer3==12) {
+          return rzChiSquared < 13.27f;
+        }
+      }
+    } else if (layer1==5) {
+      return rzChiSquared < 5.3f;
+    } 
+    return false;
   };
 
   template <typename TAcc>
@@ -1212,25 +1297,25 @@ namespace SDL {
     //                          thirdMDIndex)))
     //   return false;
 
-    // if (not(passPointingConstraint(acc,
-    //                               modulesInGPU,
-    //                               mdsInGPU,
-    //                               segmentsInGPU,
-    //                               innerInnerLowerModuleIndex,
-    //                               middleLowerModuleIndex,
-    //                               outerOuterLowerModuleIndex,
-    //                               firstMDIndex,
-    //                               secondMDIndex,
-    //                               thirdMDIndex,
-    //                               zOut,
-    //                               rtOut,
-    //                               middleLowerModuleIndex,
-    //                               innerSegmentIndex,
-    //                               outerSegmentIndex,
-    //                               betaIn,
-    //                               betaInCut,
-    //                               ptCut)))
-    //   return false;
+    if (not(passPointingConstraint(acc,
+                                  modulesInGPU,
+                                  mdsInGPU,
+                                  segmentsInGPU,
+                                  innerInnerLowerModuleIndex,
+                                  middleLowerModuleIndex,
+                                  outerOuterLowerModuleIndex,
+                                  firstMDIndex,
+                                  secondMDIndex,
+                                  thirdMDIndex,
+                                  zOut,
+                                  rtOut,
+                                  middleLowerModuleIndex,
+                                  innerSegmentIndex,
+                                  outerSegmentIndex,
+                                  betaIn,
+                                  betaInCut,
+                                  ptCut)))
+      return false;
 
     return true;
   };

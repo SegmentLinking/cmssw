@@ -162,6 +162,9 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<vector<float>>("t3_y2");
   ana.tx->createBranch<vector<float>>("t3_z2");
   ana.tx->createBranch<vector<float>>("t3_r2");
+  ana.tx->createBranch<vector<float>>("t3_lastMD_drdz");
+  ana.tx->createBranch<vector<int>>("t3_lastMD_subdet");
+  ana.tx->createBranch<vector<int>>("t3_lastMD_side");
 
   // Occupancy branches
   ana.tx->createBranch<vector<int>>("module_layers");
@@ -752,6 +755,9 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
       ana.tx->pushbackToBranch<float>("t3_y2", mdsInGPU.anchorY[mdIdxs[2]]);
       ana.tx->pushbackToBranch<float>("t3_z2", mdsInGPU.anchorZ[mdIdxs[2]]);
       ana.tx->pushbackToBranch<float>("t3_r2", mdsInGPU.anchorRt[mdIdxs[2]]);
+      ana.tx->pushbackToBranch<float>("t3_lastMD_drdz", modulesInGPU.drdzs[module_idx[4]]);
+      ana.tx->pushbackToBranch<int>("t3_lastMD_subdet", modulesInGPU.subdets[module_idx[4]]);
+      ana.tx->pushbackToBranch<int>("t3_lastMD_side", modulesInGPU.sides[module_idx[4]]);
      
 #endif
 
