@@ -1,6 +1,6 @@
 // -*- C++ -*-
-#ifndef trktree_H
-#define trktree_H
+#ifndef Trktree_H
+#define Trktree_H
 #include "Math/LorentzVector.h"
 #include "Math/Point3D.h"
 #include "TMath.h"
@@ -13,7 +13,7 @@
 #include <unistd.h>
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> > LorentzVector;
 
-class trktree {
+class Trktree {
 private:
 protected:
   unsigned int index;
@@ -1238,7 +1238,7 @@ public:
 };
 
 #ifndef __CINT__
-extern trktree trk;
+extern Trktree trk;
 #endif
 
 namespace tas {

@@ -1,8 +1,8 @@
-#include "EndcapGeometry.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 
-SDL::EndcapGeometry<SDL::Dev>::EndcapGeometry(std::string filename) { load(filename); }
+lst::EndcapGeometry::EndcapGeometry(std::string const& filename) { load(filename); }
 
-void SDL::EndcapGeometry<SDL::Dev>::load(std::string filename) {
+void lst::EndcapGeometry::load(std::string const& filename) {
   dxdy_slope_.clear();
   centroid_phis_.clear();
 
@@ -34,7 +34,7 @@ void SDL::EndcapGeometry<SDL::Dev>::load(std::string filename) {
   fillGeoMapArraysExplicit();
 }
 
-void SDL::EndcapGeometry<SDL::Dev>::fillGeoMapArraysExplicit() {
+void lst::EndcapGeometry::fillGeoMapArraysExplicit() {
   nEndCapMap = centroid_phis_.size();
 
   geoMapDetId_buf.reserve(nEndCapMap);
@@ -48,10 +48,7 @@ void SDL::EndcapGeometry<SDL::Dev>::fillGeoMapArraysExplicit() {
   }
 }
 
-float SDL::EndcapGeometry<SDL::Dev>::getdxdy_slope(unsigned int detid) const {
-  if (dxdy_slope_.find(detid) != dxdy_slope_.end()) {
-    return dxdy_slope_.at(detid);
-  } else {
-    return 0;
-  }
+float lst::EndcapGeometry::getdxdy_slope(unsigned int detid) const {
+  auto res = dxdy_slope_.find(detid);
+  return res == dxdy_slope_.end() ? 0.f : res->second;
 }

@@ -1,14 +1,17 @@
-#ifndef MiniDoublet_cuh
-#define MiniDoublet_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_MiniDoublet_h
+#define RecoTracker_LSTCore_src_alpaka_MiniDoublet_h
+
+#include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 
-#include "EndcapGeometry.h"
 #include "Hit.h"
+#include "ObjectRanges.h"
 
-namespace SDL {
-  struct miniDoublets {
+namespace lst {
+  struct MiniDoublets {
     unsigned int* nMemoryLocations;
 
     unsigned int* anchorHitIndices;
@@ -24,7 +27,6 @@ namespace SDL {
     float* shiftedXs;
     float* shiftedYs;
     float* shiftedZs;
-    float* noShiftedDzs;          //if shifted module
     float* noShiftedDphis;        //if shifted module
     float* noShiftedDphiChanges;  //if shifted module
 
@@ -53,49 +55,48 @@ namespace SDL {
     float* outerLowEdgeY;
 
     template <typename TBuf>
-    void setData(TBuf& mdsbuf) {
-      nMemoryLocations = alpaka::getPtrNative(mdsbuf.nMemoryLocations_buf);
-      anchorHitIndices = alpaka::getPtrNative(mdsbuf.anchorHitIndices_buf);
-      outerHitIndices = alpaka::getPtrNative(mdsbuf.outerHitIndices_buf);
-      moduleIndices = alpaka::getPtrNative(mdsbuf.moduleIndices_buf);
-      nMDs = alpaka::getPtrNative(mdsbuf.nMDs_buf);
-      totOccupancyMDs = alpaka::getPtrNative(mdsbuf.totOccupancyMDs_buf);
-      dphichanges = alpaka::getPtrNative(mdsbuf.dphichanges_buf);
-      dzs = alpaka::getPtrNative(mdsbuf.dzs_buf);
-      dphis = alpaka::getPtrNative(mdsbuf.dphis_buf);
-      shiftedXs = alpaka::getPtrNative(mdsbuf.shiftedXs_buf);
-      shiftedYs = alpaka::getPtrNative(mdsbuf.shiftedYs_buf);
-      shiftedZs = alpaka::getPtrNative(mdsbuf.shiftedZs_buf);
-      noShiftedDzs = alpaka::getPtrNative(mdsbuf.noShiftedDzs_buf);
-      noShiftedDphis = alpaka::getPtrNative(mdsbuf.noShiftedDphis_buf);
-      noShiftedDphiChanges = alpaka::getPtrNative(mdsbuf.noShiftedDphiChanges_buf);
-      anchorX = alpaka::getPtrNative(mdsbuf.anchorX_buf);
-      anchorY = alpaka::getPtrNative(mdsbuf.anchorY_buf);
-      anchorZ = alpaka::getPtrNative(mdsbuf.anchorZ_buf);
-      anchorRt = alpaka::getPtrNative(mdsbuf.anchorRt_buf);
-      anchorPhi = alpaka::getPtrNative(mdsbuf.anchorPhi_buf);
-      anchorEta = alpaka::getPtrNative(mdsbuf.anchorEta_buf);
-      anchorHighEdgeX = alpaka::getPtrNative(mdsbuf.anchorHighEdgeX_buf);
-      anchorHighEdgeY = alpaka::getPtrNative(mdsbuf.anchorHighEdgeY_buf);
-      anchorLowEdgeX = alpaka::getPtrNative(mdsbuf.anchorLowEdgeX_buf);
-      anchorLowEdgeY = alpaka::getPtrNative(mdsbuf.anchorLowEdgeY_buf);
-      outerX = alpaka::getPtrNative(mdsbuf.outerX_buf);
-      outerY = alpaka::getPtrNative(mdsbuf.outerY_buf);
-      outerZ = alpaka::getPtrNative(mdsbuf.outerZ_buf);
-      outerRt = alpaka::getPtrNative(mdsbuf.outerRt_buf);
-      outerPhi = alpaka::getPtrNative(mdsbuf.outerPhi_buf);
-      outerEta = alpaka::getPtrNative(mdsbuf.outerEta_buf);
-      outerHighEdgeX = alpaka::getPtrNative(mdsbuf.outerHighEdgeX_buf);
-      outerHighEdgeY = alpaka::getPtrNative(mdsbuf.outerHighEdgeY_buf);
-      outerLowEdgeX = alpaka::getPtrNative(mdsbuf.outerLowEdgeX_buf);
-      outerLowEdgeY = alpaka::getPtrNative(mdsbuf.outerLowEdgeY_buf);
-      anchorLowEdgePhi = alpaka::getPtrNative(mdsbuf.anchorLowEdgePhi_buf);
-      anchorHighEdgePhi = alpaka::getPtrNative(mdsbuf.anchorHighEdgePhi_buf);
+    void setData(TBuf& buf) {
+      nMemoryLocations = alpaka::getPtrNative(buf.nMemoryLocations_buf);
+      anchorHitIndices = alpaka::getPtrNative(buf.anchorHitIndices_buf);
+      outerHitIndices = alpaka::getPtrNative(buf.outerHitIndices_buf);
+      moduleIndices = alpaka::getPtrNative(buf.moduleIndices_buf);
+      nMDs = alpaka::getPtrNative(buf.nMDs_buf);
+      totOccupancyMDs = alpaka::getPtrNative(buf.totOccupancyMDs_buf);
+      dphichanges = alpaka::getPtrNative(buf.dphichanges_buf);
+      dzs = alpaka::getPtrNative(buf.dzs_buf);
+      dphis = alpaka::getPtrNative(buf.dphis_buf);
+      shiftedXs = alpaka::getPtrNative(buf.shiftedXs_buf);
+      shiftedYs = alpaka::getPtrNative(buf.shiftedYs_buf);
+      shiftedZs = alpaka::getPtrNative(buf.shiftedZs_buf);
+      noShiftedDphis = alpaka::getPtrNative(buf.noShiftedDphis_buf);
+      noShiftedDphiChanges = alpaka::getPtrNative(buf.noShiftedDphiChanges_buf);
+      anchorX = alpaka::getPtrNative(buf.anchorX_buf);
+      anchorY = alpaka::getPtrNative(buf.anchorY_buf);
+      anchorZ = alpaka::getPtrNative(buf.anchorZ_buf);
+      anchorRt = alpaka::getPtrNative(buf.anchorRt_buf);
+      anchorPhi = alpaka::getPtrNative(buf.anchorPhi_buf);
+      anchorEta = alpaka::getPtrNative(buf.anchorEta_buf);
+      anchorHighEdgeX = alpaka::getPtrNative(buf.anchorHighEdgeX_buf);
+      anchorHighEdgeY = alpaka::getPtrNative(buf.anchorHighEdgeY_buf);
+      anchorLowEdgeX = alpaka::getPtrNative(buf.anchorLowEdgeX_buf);
+      anchorLowEdgeY = alpaka::getPtrNative(buf.anchorLowEdgeY_buf);
+      outerX = alpaka::getPtrNative(buf.outerX_buf);
+      outerY = alpaka::getPtrNative(buf.outerY_buf);
+      outerZ = alpaka::getPtrNative(buf.outerZ_buf);
+      outerRt = alpaka::getPtrNative(buf.outerRt_buf);
+      outerPhi = alpaka::getPtrNative(buf.outerPhi_buf);
+      outerEta = alpaka::getPtrNative(buf.outerEta_buf);
+      outerHighEdgeX = alpaka::getPtrNative(buf.outerHighEdgeX_buf);
+      outerHighEdgeY = alpaka::getPtrNative(buf.outerHighEdgeY_buf);
+      outerLowEdgeX = alpaka::getPtrNative(buf.outerLowEdgeX_buf);
+      outerLowEdgeY = alpaka::getPtrNative(buf.outerLowEdgeY_buf);
+      anchorLowEdgePhi = alpaka::getPtrNative(buf.anchorLowEdgePhi_buf);
+      anchorHighEdgePhi = alpaka::getPtrNative(buf.anchorHighEdgePhi_buf);
     }
   };
 
   template <typename TDev>
-  struct miniDoubletsBuffer : miniDoublets {
+  struct MiniDoubletsBuffer {
     Buf<TDev, unsigned int> nMemoryLocations_buf;
 
     Buf<TDev, unsigned int> anchorHitIndices_buf;
@@ -111,7 +112,6 @@ namespace SDL {
     Buf<TDev, float> shiftedXs_buf;
     Buf<TDev, float> shiftedYs_buf;
     Buf<TDev, float> shiftedZs_buf;
-    Buf<TDev, float> noShiftedDzs_buf;
     Buf<TDev, float> noShiftedDphis_buf;
     Buf<TDev, float> noShiftedDphiChanges_buf;
 
@@ -139,8 +139,10 @@ namespace SDL {
     Buf<TDev, float> outerLowEdgeX_buf;
     Buf<TDev, float> outerLowEdgeY_buf;
 
+    MiniDoublets data_;
+
     template <typename TQueue, typename TDevAcc>
-    miniDoubletsBuffer(unsigned int nMemoryLoc, uint16_t nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
+    MiniDoubletsBuffer(unsigned int nMemoryLoc, uint16_t nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
         : nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           anchorHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLoc, queue)),
           outerHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLoc, queue)),
@@ -153,7 +155,6 @@ namespace SDL {
           shiftedXs_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
           shiftedYs_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
           shiftedZs_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
-          noShiftedDzs_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
           noShiftedDphis_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
           noShiftedDphiChanges_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
           anchorX_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)),
@@ -182,23 +183,25 @@ namespace SDL {
       alpaka::memset(queue, totOccupancyMDs_buf, 0u);
       alpaka::wait(queue);
     }
+
+    inline MiniDoublets const* data() const { return &data_; }
+    inline void setData(MiniDoubletsBuffer& buf) { data_.setData(buf); }
   };
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addMDToMemory(TAcc const& acc,
-                                                    struct SDL::miniDoublets& mdsInGPU,
-                                                    struct SDL::hits& hitsInGPU,
-                                                    struct SDL::modules& modulesInGPU,
+                                                    lst::MiniDoublets& mdsInGPU,
+                                                    lst::Hits const& hitsInGPU,
+                                                    lst::Modules const& modulesInGPU,
                                                     unsigned int lowerHitIdx,
                                                     unsigned int upperHitIdx,
-                                                    uint16_t& lowerModuleIdx,
+                                                    uint16_t lowerModuleIdx,
                                                     float dz,
                                                     float dPhi,
                                                     float dPhiChange,
                                                     float shiftedX,
                                                     float shiftedY,
                                                     float shiftedZ,
-                                                    float noShiftedDz,
                                                     float noShiftedDphi,
                                                     float noShiftedDPhiChange,
                                                     unsigned int idx) {
@@ -229,7 +232,6 @@ namespace SDL {
     mdsInGPU.shiftedYs[idx] = shiftedY;
     mdsInGPU.shiftedZs[idx] = shiftedZ;
 
-    mdsInGPU.noShiftedDzs[idx] = noShiftedDz;
     mdsInGPU.noShiftedDphis[idx] = noShiftedDphi;
     mdsInGPU.noShiftedDphiChanges[idx] = noShiftedDPhiChange;
 
@@ -260,8 +262,7 @@ namespace SDL {
     mdsInGPU.outerLowEdgeY[idx] = hitsInGPU.lowEdgeYs[outerHitIndex];
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float isTighterTiltedModules(struct SDL::modules& modulesInGPU,
-                                                              uint16_t& moduleIndex) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float isTighterTiltedModules(lst::Modules const& modulesInGPU, uint16_t moduleIndex) {
     // The "tighter" tilted modules are the subset of tilted modules that have smaller spacing
     // This is the same as what was previously considered as"isNormalTiltedModules"
     // See Figure 9.1 of https://cds.cern.ch/record/2272264/files/CMS-TDR-014.pdf
@@ -281,7 +282,7 @@ namespace SDL {
       return false;
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float moduleGapSize(struct SDL::modules& modulesInGPU, uint16_t& moduleIndex) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float moduleGapSize(struct lst::Modules const& modulesInGPU, uint16_t moduleIndex) {
     float miniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
     float miniDeltaFlat[6] = {0.26f, 0.16f, 0.16f, 0.18f, 0.18f, 0.18f};
     float miniDeltaLooseTilted[3] = {0.4f, 0.4f, 0.4f};
@@ -335,8 +336,8 @@ namespace SDL {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float dPhiThreshold(TAcc const& acc,
                                                      float rt,
-                                                     struct SDL::modules& modulesInGPU,
-                                                     uint16_t& moduleIndex,
+                                                     lst::Modules const& modulesInGPU,
+                                                     uint16_t moduleIndex,
                                                      const float ptCut,
                                                      float dPhi = 0,
                                                      float dz = 0) {
@@ -350,12 +351,12 @@ namespace SDL {
     // =================================================================
 
     unsigned int iL = modulesInGPU.layers[moduleIndex] - 1;
-    const float miniSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rt * k2Rinv1GeVf / ptCut, sinAlphaMax));
+    const float miniSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rt * k2Rinv1GeVf / ptCut, kSinAlphaMax));
     const float rLayNominal =
-        ((modulesInGPU.subdets[moduleIndex] == Barrel) ? miniRminMeanBarrel[iL] : miniRminMeanEndcap[iL]);
+        ((modulesInGPU.subdets[moduleIndex] == Barrel) ? kMiniRminMeanBarrel[iL] : kMiniRminMeanEndcap[iL]);
     const float miniPVoff = 0.1f / rLayNominal;
-    const float miniMuls = ((modulesInGPU.subdets[moduleIndex] == Barrel) ? miniMulsPtScaleBarrel[iL] * 3.f / ptCut
-                                                                          : miniMulsPtScaleEndcap[iL] * 3.f / ptCut);
+    const float miniMuls = ((modulesInGPU.subdets[moduleIndex] == Barrel) ? kMiniMulsPtScaleBarrel[iL] * 3.f / ptCut
+                                                                          : kMiniMulsPtScaleEndcap[iL] * 3.f / ptCut);
     const bool isTilted = modulesInGPU.subdets[moduleIndex] == Barrel and modulesInGPU.sides[moduleIndex] != Center;
     //the lower module is sent in irrespective of its layer type. We need to fetch the drdz properly
 
@@ -369,12 +370,12 @@ namespace SDL {
     } else {
       drdz = 0;
     }
-    const float miniTilt2 = ((isTilted) ? (0.5f * 0.5f) * (pixelPSZpitch * pixelPSZpitch) * (drdz * drdz) /
+    const float miniTilt2 = ((isTilted) ? (0.5f * 0.5f) * (kPixelPSZpitch * kPixelPSZpitch) * (drdz * drdz) /
                                               (1.f + drdz * drdz) / moduleGapSize(modulesInGPU, moduleIndex)
                                         : 0);
 
     // Compute luminous region requirement for endcap
-    const float miniLum = alpaka::math::abs(acc, dPhi * deltaZLum / dz);  // Balaji's new error
+    const float miniLum = alpaka::math::abs(acc, dPhi * kDeltaZLum / dz);  // Balaji's new error
 
     // =================================================================
     // Return the threshold value
@@ -398,9 +399,9 @@ namespace SDL {
 
   template <typename TAcc>
   ALPAKA_FN_INLINE ALPAKA_FN_ACC void shiftStripHits(TAcc const& acc,
-                                                     struct SDL::modules& modulesInGPU,
-                                                     uint16_t& lowerModuleIndex,
-                                                     uint16_t& upperModuleIndex,
+                                                     lst::Modules const& modulesInGPU,
+                                                     uint16_t lowerModuleIndex,
+                                                     uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
                                                      float* shiftedCoords,
@@ -424,8 +425,8 @@ namespace SDL {
     // lowerModule
     // lowerHit
     // upperHit
-    // SDL::endcapGeometry
-    // SDL::tiltedGeometry
+    // lst::endcapGeometry
+    // lst::tiltedGeometry
 
     // Some variables relevant to the function
     float xp;       // pixel x (pixel hit x)
@@ -504,7 +505,7 @@ namespace SDL {
     drprime = (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);
 
     // Compute arctan of the slope and take care of the slope = infinity case
-    absArctanSlope = ((slope != SDL::SDL_INF) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI) / 2.f);
+    absArctanSlope = ((slope != lst::lst_INF) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI) / 2.f);
 
     // Depending on which quadrant the pixel hit lies, we define the angleM by shifting them slightly differently
     if (xp > 0 and yp > 0) {
@@ -528,7 +529,7 @@ namespace SDL {
 
     // Compute the new strip hit position (if the slope value is in special condition take care of the exceptions)
     if (slope ==
-        SDL::SDL_INF)  // Designated for tilted module when the slope is exactly infinity (module lying along y-axis)
+        lst::lst_INF)  // Designated for tilted module when the slope is exactly infinity (module lying along y-axis)
     {
       xn = xa;  // New x point is simply where the anchor is
       yn = yo;  // No shift in y
@@ -564,9 +565,9 @@ namespace SDL {
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgo(TAcc const& acc,
-                                               struct SDL::modules& modulesInGPU,
-                                               uint16_t& lowerModuleIndex,
-                                               uint16_t& upperModuleIndex,
+                                               lst::Modules const& modulesInGPU,
+                                               uint16_t lowerModuleIndex,
+                                               uint16_t upperModuleIndex,
                                                unsigned int lowerHitIndex,
                                                unsigned int upperHitIndex,
                                                float& dz,
@@ -575,7 +576,6 @@ namespace SDL {
                                                float& shiftedX,
                                                float& shiftedY,
                                                float& shiftedZ,
-                                               float& noShiftedDz,
                                                float& noShiftedDphi,
                                                float& noShiftedDphiChange,
                                                float xLower,
@@ -587,7 +587,7 @@ namespace SDL {
                                                float zUpper,
                                                float rtUpper,
                                                const float ptCut) {
-    if (modulesInGPU.subdets[lowerModuleIndex] == SDL::Barrel) {
+    if (modulesInGPU.subdets[lowerModuleIndex] == lst::Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
                                              modulesInGPU,
                                              lowerModuleIndex,
@@ -600,7 +600,6 @@ namespace SDL {
                                              shiftedX,
                                              shiftedY,
                                              shiftedZ,
-                                             noShiftedDz,
                                              noShiftedDphi,
                                              noShiftedDphiChange,
                                              xLower,
@@ -625,7 +624,6 @@ namespace SDL {
                                              shiftedX,
                                              shiftedY,
                                              shiftedZ,
-                                             noShiftedDz,
                                              noShiftedDphi,
                                              noShiftedDphiChange,
                                              xLower,
@@ -642,9 +640,9 @@ namespace SDL {
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoBarrel(TAcc const& acc,
-                                                     struct SDL::modules& modulesInGPU,
-                                                     uint16_t& lowerModuleIndex,
-                                                     uint16_t& upperModuleIndex,
+                                                     lst::Modules const& modulesInGPU,
+                                                     uint16_t lowerModuleIndex,
+                                                     uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
                                                      float& dz,
@@ -653,7 +651,6 @@ namespace SDL {
                                                      float& shiftedX,
                                                      float& shiftedY,
                                                      float& shiftedZ,
-                                                     float& noShiftedDz,
                                                      float& noShiftedDphi,
                                                      float& noShiftedDphiChange,
                                                      float xLower,
@@ -666,8 +663,7 @@ namespace SDL {
                                                      float rtUpper,
                                                      const float ptCut) {
     dz = zLower - zUpper;
-    const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == SDL::PS ? 2.f : 10.f;
-    //const float sign = ((dz > 0) - (dz < 0)) * ((hitsInGPU.zs[lowerHitIndex] > 0) - (hitsInGPU.zs[lowerHitIndex] < 0));
+    const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == lst::PS ? 2.f : 10.f;
     const float sign = ((dz > 0) - (dz < 0)) * ((zLower > 0) - (zLower < 0));
     const float invertedcrossercut = (alpaka::math::abs(acc, dz) > 2) * sign;
 
@@ -676,7 +672,7 @@ namespace SDL {
 
     float miniCut = 0;
 
-    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel
+    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel
                   ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut)
                   : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut);
 
@@ -707,27 +703,27 @@ namespace SDL {
       yn = shiftedCoords[1];
 
       // Lower or the upper hit needs to be modified depending on which one was actually shifted
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel) {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zUpper;
         shiftedRt2 = xn * xn + yn * yn;
 
-        dPhi = SDL::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);  //function from Hit.cc
-        noShiftedDphi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        dPhi = lst::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);  //function from Hit.cc
+        noShiftedDphi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
       } else {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zLower;
         shiftedRt2 = xn * xn + yn * yn;
-        dPhi = SDL::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
-        noShiftedDphi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        dPhi = lst::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
+        noShiftedDphi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
       }
     } else {
       shiftedX = 0;
       shiftedY = 0;
       shiftedZ = 0;
-      dPhi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+      dPhi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
       noShiftedDphi = dPhi;
     }
 
@@ -739,44 +735,42 @@ namespace SDL {
     if (modulesInGPU.sides[lowerModuleIndex] != Center) {
       // When it is tilted, use the new shifted positions
       // TODO: This is somewhat of an mystery.... somewhat confused why this is the case
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] != SDL::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] != lst::Pixel) {
         // dPhi Change should be calculated so that the upper hit has higher rt.
         // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
         // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
         // But I still placed this check for safety. (TODO: After checking explicitly if not needed remove later?)
         // setdeltaPhiChange(lowerHit.rt() < upperHitMod.rt() ? lowerHit.deltaPhiChange(upperHitMod) : upperHitMod.deltaPhiChange(lowerHit));
 
-        dPhiChange = (rtLower * rtLower < shiftedRt2) ? SDL::deltaPhiChange(acc, xLower, yLower, shiftedX, shiftedY)
-                                                      : SDL::deltaPhiChange(acc, shiftedX, shiftedY, xLower, yLower);
-        noShiftedDphiChange = rtLower < rtUpper ? SDL::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
-                                                : SDL::deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
+        dPhiChange = (rtLower * rtLower < shiftedRt2) ? lst::deltaPhiChange(acc, xLower, yLower, shiftedX, shiftedY)
+                                                      : lst::deltaPhiChange(acc, shiftedX, shiftedY, xLower, yLower);
+        noShiftedDphiChange = rtLower < rtUpper ? lst::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
+                                                : lst::deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
       } else {
         // dPhi Change should be calculated so that the upper hit has higher rt.
         // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
         // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
         // But I still placed this check for safety. (TODO: After checking explicitly if not needed remove later?)
 
-        dPhiChange = (shiftedRt2 < rtUpper * rtUpper) ? SDL::deltaPhiChange(acc, shiftedX, shiftedY, xUpper, yUpper)
-                                                      : SDL::deltaPhiChange(acc, xUpper, yUpper, shiftedX, shiftedY);
-        noShiftedDphiChange = rtLower < rtUpper ? SDL::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
-                                                : SDL::deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
+        dPhiChange = (shiftedRt2 < rtUpper * rtUpper) ? lst::deltaPhiChange(acc, shiftedX, shiftedY, xUpper, yUpper)
+                                                      : lst::deltaPhiChange(acc, xUpper, yUpper, shiftedX, shiftedY);
+        noShiftedDphiChange = rtLower < rtUpper ? lst::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
+                                                : lst::deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
       }
     } else {
       // When it is flat lying module, whichever is the lowerSide will always have rt lower
-      dPhiChange = SDL::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper);
+      dPhiChange = lst::deltaPhiChange(acc, xLower, yLower, xUpper, yUpper);
       noShiftedDphiChange = dPhiChange;
     }
-
-    noShiftedDz = 0;  // not used anywhere
 
     return alpaka::math::abs(acc, dPhiChange) < miniCut;
   };
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoEndcap(TAcc const& acc,
-                                                     struct SDL::modules& modulesInGPU,
-                                                     uint16_t& lowerModuleIndex,
-                                                     uint16_t& upperModuleIndex,
+                                                     lst::Modules const& modulesInGPU,
+                                                     uint16_t lowerModuleIndex,
+                                                     uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
                                                      float& drt,
@@ -785,7 +779,6 @@ namespace SDL {
                                                      float& shiftedX,
                                                      float& shiftedY,
                                                      float& shiftedZ,
-                                                     float& noShiftedDz,
                                                      float& noShiftedDphi,
                                                      float& noShiftedDphichange,
                                                      float xLower,
@@ -810,7 +803,7 @@ namespace SDL {
       return false;
     // Cut #2 : drt cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3100
-    const float drtCut = modulesInGPU.moduleType[lowerModuleIndex] == SDL::PS ? 2.f : 10.f;
+    const float drtCut = modulesInGPU.moduleType[lowerModuleIndex] == lst::PS ? 2.f : 10.f;
     drt = rtLower - rtUpper;
     if (alpaka::math::abs(acc, drt) >= drtCut)
       return false;
@@ -838,37 +831,37 @@ namespace SDL {
     yn = shiftedCoords[1];
     zn = shiftedCoords[2];
 
-    if (modulesInGPU.moduleType[lowerModuleIndex] == SDL::PS) {
+    if (modulesInGPU.moduleType[lowerModuleIndex] == lst::PS) {
       // Appropriate lower or upper hit is modified after checking which one was actually shifted
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel) {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zUpper;
-        dPhi = SDL::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);
-        noShiftedDphi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        dPhi = lst::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);
+        noShiftedDphi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
       } else {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zLower;
-        dPhi = SDL::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
-        noShiftedDphi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        dPhi = lst::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
+        noShiftedDphi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
       }
     } else {
       shiftedX = xn;
       shiftedY = yn;
       shiftedZ = zUpper;
-      dPhi = SDL::deltaPhi(acc, xLower, yLower, xn, yn);
-      noShiftedDphi = SDL::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+      dPhi = lst::deltaPhi(acc, xLower, yLower, xn, yn);
+      noShiftedDphi = lst::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
     }
 
     // dz needs to change if it is a PS module where the strip hits are shifted in order to properly account for the case when a tilted module falls under "endcap logic"
     // if it was an endcap it will have zero effect
-    if (modulesInGPU.moduleType[lowerModuleIndex] == SDL::PS) {
-      dz = modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel ? zLower - zn : zUpper - zn;
+    if (modulesInGPU.moduleType[lowerModuleIndex] == lst::PS) {
+      dz = modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel ? zLower - zn : zUpper - zn;
     }
 
     float miniCut = 0;
-    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == SDL::Pixel
+    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel
                   ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz)
                   : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz);
 
@@ -881,7 +874,6 @@ namespace SDL {
     float dzFrac = alpaka::math::abs(acc, dz) / alpaka::math::abs(acc, zLower);
     dPhiChange = dPhi / dzFrac * (1.f + dzFrac);
     noShiftedDphichange = noShiftedDphi / dzFrac * (1.f + dzFrac);
-    noShiftedDz = 0;  // not used anywhere
 
     return alpaka::math::abs(acc, dPhiChange) < miniCut;
   };
@@ -889,10 +881,10 @@ namespace SDL {
   struct createMiniDoubletsInGPUv2 {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::hits hitsInGPU,
-                                  struct SDL::miniDoublets mdsInGPU,
-                                  struct SDL::objectRanges rangesInGPU,
+                                  struct lst::Modules modulesInGPU,
+                                  struct lst::Hits hitsInGPU,
+                                  struct lst::MiniDoublets mdsInGPU,
+                                  struct lst::ObjectRanges rangesInGPU,
                                   const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
@@ -926,7 +918,7 @@ namespace SDL {
           float zUpper = hitsInGPU.zs[upperHitArrayIndex];
           float rtUpper = hitsInGPU.rts[upperHitArrayIndex];
 
-          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDz, noShiftedDphi, noShiftedDphiChange;
+          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
           bool success = runMiniDoubletDefaultAlgo(acc,
                                                    modulesInGPU,
                                                    lowerModuleIndex,
@@ -939,7 +931,6 @@ namespace SDL {
                                                    shiftedX,
                                                    shiftedY,
                                                    shiftedZ,
-                                                   noShiftedDz,
                                                    noShiftedDphi,
                                                    noShiftedDphiChange,
                                                    xLower,
@@ -955,7 +946,7 @@ namespace SDL {
             int totOccupancyMDs =
                 alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.totOccupancyMDs[lowerModuleIndex], 1u);
             if (totOccupancyMDs >= (rangesInGPU.miniDoubletModuleOccupancy[lowerModuleIndex])) {
-#ifdef Warnings
+#ifdef WARNINGS
               printf(
                   "Mini-doublet excess alert! Module index = %d, Occupancy = %d\n", lowerModuleIndex, totOccupancyMDs);
 #endif
@@ -976,7 +967,6 @@ namespace SDL {
                             shiftedX,
                             shiftedY,
                             shiftedZ,
-                            noShiftedDz,
                             noShiftedDphi,
                             noShiftedDphiChange,
                             mdIndex);
@@ -1004,9 +994,9 @@ namespace SDL {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int getCategoryNumber(const short module_layers,
                                                        const short module_subdets,
                                                        const short module_rings) {
-    if (module_subdets == SDL::Barrel) {
+    if (module_subdets == lst::Barrel) {
       return (module_layers <= 3) ? 0 : 1;
-    } else if (module_subdets == SDL::Endcap) {
+    } else if (module_subdets == lst::Endcap) {
       if (module_layers <= 2) {
         return (module_rings >= 11) ? 2 : 3;
       } else {
@@ -1019,15 +1009,17 @@ namespace SDL {
   struct createMDArrayRangesGPU {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::objectRanges rangesInGPU,
+                                  struct lst::Modules modulesInGPU,
+                                  struct lst::ObjectRanges rangesInGPU,
                                   const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
-      // Initialize variables in shared memory and set to 0
+      // Declare variables in shared memory and set to 0
       int& nTotalMDs = alpaka::declareSharedVar<int, __COUNTER__>(acc);
-      nTotalMDs = 0;
+      if (cms::alpakatools::once_per_block(acc)) {
+        nTotalMDs = 0;
+      }
       alpaka::syncBlockThreads(acc);
 
       // Occupancy matrix for 0.8 GeV pT Cut
@@ -1062,7 +1054,7 @@ namespace SDL {
         if (category_number != -1 && eta_number != -1) {
           occupancy = occupancy_matrix[category_number][eta_number];
         }
-#ifdef Warnings
+#ifdef WARNINGS
         else {
           printf("Unhandled case in createMDArrayRangesGPU! Module index = %i\n", i);
         }
@@ -1075,8 +1067,7 @@ namespace SDL {
 
       // Wait for all threads to finish before reporting final values
       alpaka::syncBlockThreads(acc);
-
-      if (globalThreadIdx[2] == 0) {
+      if (cms::alpakatools::once_per_block(acc)) {
         rangesInGPU.miniDoubletModuleIndices[*modulesInGPU.nLowerModules] = nTotalMDs;
         *rangesInGPU.device_nTotalMDs = nTotalMDs;
       }
@@ -1086,10 +1077,10 @@ namespace SDL {
   struct addMiniDoubletRangesToEventExplicit {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::miniDoublets mdsInGPU,
-                                  struct SDL::objectRanges rangesInGPU,
-                                  struct SDL::hits hitsInGPU) const {
+                                  struct lst::Modules modulesInGPU,
+                                  struct lst::MiniDoublets mdsInGPU,
+                                  struct lst::ObjectRanges rangesInGPU,
+                                  struct lst::Hits hitsInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -1104,5 +1095,5 @@ namespace SDL {
       }
     }
   };
-}  // namespace SDL
+}  // namespace lst
 #endif

@@ -1,8 +1,8 @@
-#include "TiltedGeometry.h"
+#include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
 
-SDL::TiltedGeometry<SDL::Dev>::TiltedGeometry(std::string filename) { load(filename); }
+lst::TiltedGeometry::TiltedGeometry(std::string const& filename) { load(filename); }
 
-void SDL::TiltedGeometry<SDL::Dev>::load(std::string filename) {
+void lst::TiltedGeometry::load(std::string const& filename) {
   drdzs_.clear();
   dxdys_.clear();
 
@@ -32,18 +32,12 @@ void SDL::TiltedGeometry<SDL::Dev>::load(std::string filename) {
   }
 }
 
-float SDL::TiltedGeometry<SDL::Dev>::getDrDz(unsigned int detid) const {
-  if (drdzs_.find(detid) != drdzs_.end()) {
-    return drdzs_.at(detid);
-  } else {
-    return 0;
-  }
+float lst::TiltedGeometry::getDrDz(unsigned int detid) const {
+  auto res = drdzs_.find(detid);
+  return res == drdzs_.end() ? 0.f : res->second;
 }
 
-float SDL::TiltedGeometry<SDL::Dev>::getDxDy(unsigned int detid) const {
-  if (dxdys_.find(detid) != dxdys_.end()) {
-    return dxdys_.at(detid);
-  } else {
-    return 0;
-  }
+float lst::TiltedGeometry::getDxDy(unsigned int detid) const {
+  auto res = dxdys_.find(detid);
+  return res == dxdys_.end() ? 0.f : res->second;
 }

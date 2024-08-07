@@ -2,10 +2,11 @@
 # stuff to make
 #
 
-CCSOURCES=$(filter-out ../../src.alpaka/LST.dev.cc, $(wildcard ../../src/alpaka/*.dev.cc))
-CCOBJECTS_CPU=$(patsubst ../../src/alpaka/%.dev.cc, %_cpu.o, $(CCSOURCES))
-CCOBJECTS_CUDA=$(patsubst ../../src/alpaka/%.dev.cc, %_cuda.o, $(CCSOURCES))
-CCOBJECTS_ROCM=$(patsubst ../../src/alpaka/%.dev.cc, %_rocm.o, $(CCSOURCES))
+CCSOURCES=$(wildcard ../../src/*.cc)
+ALPAKACCSOURCES=$(filter-out ../../src.alpaka/LST.dev.cc, $(wildcard ../../src/alpaka/*.dev.cc))
+CCOBJECTS_CPU=$(patsubst ../../src/alpaka/%.dev.cc, %_cpu.o, $(ALPAKACCSOURCES)) $(patsubst ../../src/%.cc, %_cpu.o, $(CCSOURCES))
+CCOBJECTS_CUDA=$(patsubst ../../src/alpaka/%.dev.cc, %_cuda.o, $(ALPAKACCSOURCES)) $(patsubst ../../src/%.cc, %_cuda.o, $(CCSOURCES))
+CCOBJECTS_ROCM=$(patsubst ../../src/alpaka/%.dev.cc, %_rocm.o, $(ALPAKACCSOURCES)) $(patsubst ../../src/%.cc, %_rocm.o, $(CCSOURCES))
 
 LSTSOURCES=../../src/alpaka/LST.dev.cc
 LSTOBJECTS_CPU=$(patsubst ../../src/alpaka/%.dev.cc, %_cpu.o, $(LSTSOURCES))
@@ -14,23 +15,23 @@ LSTOBJECTS_ROCM=$(patsubst ../../src/alpaka/%.dev.cc, %_rocm.o, $(LSTSOURCES))
 
 # Default to CPU and CUDA backends
 ifeq ($(BACKEND),)
-  LIB_CPU=libsdl_cpu.so
-  LIB_CUDA=libsdl_cuda.so
+  LIB_CPU=liblst_cpu.so
+  LIB_CUDA=liblst_cuda.so
 endif
 
 ifneq ($(findstring cpu,$(BACKEND)),)
-  LIB_CPU=libsdl_cpu.so
+  LIB_CPU=liblst_cpu.so
 endif
 ifneq ($(findstring cuda,$(BACKEND)),)
-  LIB_CUDA=libsdl_cuda.so
+  LIB_CUDA=liblst_cuda.so
 endif
 ifneq ($(findstring rocm,$(BACKEND)),)
-  LIB_ROCM=libsdl_rocm.so
+  LIB_ROCM=liblst_rocm.so
 endif
 ifneq ($(findstring all,$(BACKEND)),)
-  LIB_CPU=libsdl_cpu.so
-  LIB_CUDA=libsdl_cuda.so
-  LIB_ROCM=libsdl_rocm.so
+  LIB_CPU=liblst_cpu.so
+  LIB_CUDA=liblst_cuda.so
+  LIB_ROCM=liblst_rocm.so
 endif
 
 LIBS=$(LIB_CPU) $(LIB_CUDA) $(LIB_ROCM)
@@ -97,6 +98,15 @@ CUTVALUEFLAG_FLAGS = -DCUT_VALUE_DEBUG
 
 %_rocm.o: ../../src/alpaka/%.dev.cc
 	$(COMPILE_CMD_ROCM) $(CXXFLAGS_ROCM) $(ROOTINCLUDE) $(PRINTFLAG) $(CACHEFLAG) $(CUTVALUEFLAG) $(LSTWARNINGSFLAG) $(CMSSW_WERRORS_ROCM) $(T5CUTFLAGS) $(DUPLICATES) $(ALPAKAINCLUDE) $(ALPAKABACKEND_ROCM) $< -o $@
+
+%_cpu.o: ../../src/%.cc
+	$(COMPILE_CMD_CPU) $(CXXFLAGS_CPU) $(ROOTINCLUDE) $(PRINTFLAG) $(CACHEFLAG) $(CUTVALUEFLAG) $(LSTWARNINGSFLAG) $(CMSSW_WERRORS_CPU) $(T5CUTFLAGS) $(PTCUTFLAG) $(DUPLICATES) $(ALPAKAINCLUDE) $(ALPAKABACKEND_CPU) $< -o $@
+
+%_cuda.o: ../../src/%.cc
+	$(COMPILE_CMD_CUDA) $(CXXFLAGS_CUDA) $(ROOTINCLUDE) $(PRINTFLAG) $(CACHEFLAG) $(CUTVALUEFLAG) $(LSTWARNINGSFLAG) $(CMSSW_WERRORS_CUDA) $(T5CUTFLAGS) $(PTCUTFLAG) $(DUPLICATES) $(ALPAKAINCLUDE) $(ALPAKABACKEND_CUDA) $< -o $@
+
+%_rocm.o: ../../src/%.cc
+	$(COMPILE_CMD_ROCM) $(CXXFLAGS_ROCM) $(ROOTINCLUDE) $(PRINTFLAG) $(CACHEFLAG) $(CUTVALUEFLAG) $(LSTWARNINGSFLAG) $(CMSSW_WERRORS_ROCM) $(T5CUTFLAGS) $(PTCUTFLAG) $(DUPLICATES) $(ALPAKAINCLUDE) $(ALPAKABACKEND_ROCM) $< -o $@
 
 $(LIB_CPU): $(CCOBJECTS_CPU) $(LSTOBJECTS_CPU)
 	$(LD_CPU) $(SOFLAGS_CPU) $^ -o $@
