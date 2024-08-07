@@ -23,6 +23,7 @@ namespace lst {
     template <typename TQueue>
     void run(TQueue& queue,
              bool verbose,
+             const float ptCut,
              LSTESData<alpaka::Dev<TAcc>> const* deviceESData,
              std::vector<float> const& see_px,
              std::vector<float> const& see_py,
@@ -69,7 +70,8 @@ namespace lst {
                       std::vector<unsigned int> const& ph2_detId,
                       std::vector<float> const& ph2_x,
                       std::vector<float> const& ph2_y,
-                      std::vector<float> const& ph2_z);
+                      std::vector<float> const& ph2_z,
+                      const float ptCut);
 
     void getOutput(lst::Event<TAcc>& event);
     std::vector<unsigned int> getHitIdxs(short trackCandidateType,

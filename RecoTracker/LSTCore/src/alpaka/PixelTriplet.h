@@ -219,7 +219,8 @@ namespace lst {
                                                                      uint16_t outerInnerLowerModuleIndex,
                                                                      uint16_t outerOuterLowerModuleIndex,
                                                                      unsigned int innerSegmentIndex,
-                                                                     unsigned int outerSegmentIndex) {
+                                                                     unsigned int outerSegmentIndex,
+                                                                     const float ptCut) {
     short outerInnerLowerModuleSubdet = modulesInGPU.subdets[outerInnerLowerModuleIndex];
     short outerOuterLowerModuleSubdet = modulesInGPU.subdets[outerOuterLowerModuleIndex];
 
@@ -244,7 +245,8 @@ namespace lst {
                                        firstMDIndex,
                                        secondMDIndex,
                                        thirdMDIndex,
-                                       fourthMDIndex);
+                                       fourthMDIndex,
+                                       ptCut);
     } else if (outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
       return runTripletDefaultAlgoPPEE(acc,
                                        modulesInGPU,
@@ -259,7 +261,8 @@ namespace lst {
                                        firstMDIndex,
                                        secondMDIndex,
                                        thirdMDIndex,
-                                       fourthMDIndex);
+                                       fourthMDIndex,
+                                       ptCut);
     }
     return false;
   };
@@ -730,6 +733,7 @@ namespace lst {
         float x = x1 + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
         float y = y1 + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
         diffr = alpaka::math::abs(acc, rtsi - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
+        residual = diffr;
       }
 
       if (moduleSubdet == lst::Barrel) {
@@ -746,9 +750,8 @@ namespace lst {
         float diffz1 = alpaka::math::abs(acc, solz1 - zsi) * 100;
         float diffz2 = alpaka::math::abs(acc, solz2 - zsi) * 100;
         diffz = alpaka::math::min(acc, diffz1, diffz2);
+        residual = diffz;
       }
-
-      residual = moduleSubdet == lst::Barrel ? diffz : diffr;
 
       //PS Modules
       if (moduleType == 0) {
@@ -787,6 +790,7 @@ namespace lst {
                                                                  float& rzChiSquared,
                                                                  float& rPhiChiSquared,
                                                                  float& rPhiChiSquaredInwards,
+                                                                 const float ptCut,
                                                                  bool runChiSquaredCuts = true) {
     //run pT4 compatibility between the pixel segment and inner segment, and between the pixel and outer segment of the triplet
     uint16_t pixelModuleIndex = segmentsInGPU.innerLowerModuleIndices[pixelSegmentIndex];
@@ -806,7 +810,8 @@ namespace lst {
                                              lowerModuleIndex,
                                              middleModuleIndex,
                                              pixelSegmentIndex,
-                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex]))
+                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex],
+                                             ptCut))
         return false;
 
       //pixel segment vs outer segment of triplet
@@ -819,7 +824,8 @@ namespace lst {
                                              middleModuleIndex,
                                              upperModuleIndex,
                                              pixelSegmentIndex,
-                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex + 1]))
+                                             tripletsInGPU.segmentIndices[Params_LS::kLayers * tripletIndex + 1],
+                                             ptCut))
         return false;
     }
 
@@ -937,7 +943,8 @@ namespace lst {
                                   lst::PixelTriplets pixelTripletsInGPU,
                                   unsigned int* connectedPixelSize,
                                   unsigned int* connectedPixelIndex,
-                                  unsigned int nPixelSegments) const {
+                                  unsigned int nPixelSegments,
+                                  const float ptCut) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -1012,7 +1019,8 @@ namespace lst {
                                                       centerY,
                                                       rzChiSquared,
                                                       rPhiChiSquared,
-                                                      rPhiChiSquaredInwards);
+                                                      rPhiChiSquaredInwards,
+                                                      ptCut);
 
             if (success) {
               float phi =
@@ -1183,7 +1191,8 @@ namespace lst {
                                                                 unsigned int firstMDIndex,
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex) {
+                                                                unsigned int fourthMDIndex,
+                                                                const float ptCut) {
     float dPhi, betaIn, betaOut, pt_beta, zLo, zHi, zLoPointed, zHiPointed, dPhiCut, betaOutCut;
 
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == lst::PS);
@@ -1441,7 +1450,8 @@ namespace lst {
                                                                 unsigned int firstMDIndex,
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex) {
+                                                                unsigned int fourthMDIndex,
+                                                                const float ptCut) {
     float dPhi, betaIn, betaOut, pt_beta, rtLo, rtHi, dPhiCut, betaOutCut;
 
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == lst::PS);

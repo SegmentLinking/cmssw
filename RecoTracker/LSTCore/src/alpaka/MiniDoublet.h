@@ -334,8 +334,13 @@ namespace lst {
   };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dPhiThreshold(
-      TAcc const& acc, float rt, lst::Modules const& modulesInGPU, uint16_t moduleIndex, float dPhi = 0, float dz = 0) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float dPhiThreshold(TAcc const& acc,
+                                                     float rt,
+                                                     lst::Modules const& modulesInGPU,
+                                                     uint16_t moduleIndex,
+                                                     const float ptCut,
+                                                     float dPhi = 0,
+                                                     float dz = 0) {
     // =================================================================
     // Various constants
     // =================================================================
@@ -580,7 +585,8 @@ namespace lst {
                                                float xUpper,
                                                float yUpper,
                                                float zUpper,
-                                               float rtUpper) {
+                                               float rtUpper,
+                                               const float ptCut) {
     if (modulesInGPU.subdets[lowerModuleIndex] == lst::Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
                                              modulesInGPU,
@@ -603,7 +609,8 @@ namespace lst {
                                              xUpper,
                                              yUpper,
                                              zUpper,
-                                             rtUpper);
+                                             rtUpper,
+                                             ptCut);
     } else {
       return runMiniDoubletDefaultAlgoEndcap(acc,
                                              modulesInGPU,
@@ -626,7 +633,8 @@ namespace lst {
                                              xUpper,
                                              yUpper,
                                              zUpper,
-                                             rtUpper);
+                                             rtUpper,
+                                             ptCut);
     }
   };
 
@@ -652,7 +660,8 @@ namespace lst {
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
-                                                     float rtUpper) {
+                                                     float rtUpper,
+                                                     const float ptCut) {
     dz = zLower - zUpper;
     const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == lst::PS ? 2.f : 10.f;
     const float sign = ((dz > 0) - (dz < 0)) * ((zLower > 0) - (zLower < 0));
@@ -664,8 +673,8 @@ namespace lst {
     float miniCut = 0;
 
     miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel
-                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex)
-                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex);
+                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut)
+                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut);
 
     // Cut #2: dphi difference
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3085
@@ -779,7 +788,8 @@ namespace lst {
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
-                                                     float rtUpper) {
+                                                     float rtUpper,
+                                                     const float ptCut) {
     // There are series of cuts that applies to mini-doublet in a "endcap" region
     // Cut #1 : dz cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3093
@@ -852,8 +862,8 @@ namespace lst {
 
     float miniCut = 0;
     miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == lst::Pixel
-                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, dPhi, dz)
-                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, dPhi, dz);
+                  ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz)
+                  : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, ptCut, dPhi, dz);
 
     if (alpaka::math::abs(acc, dPhi) >= miniCut)
       return false;
@@ -874,7 +884,8 @@ namespace lst {
                                   struct lst::Modules modulesInGPU,
                                   struct lst::Hits hitsInGPU,
                                   struct lst::MiniDoublets mdsInGPU,
-                                  struct lst::ObjectRanges rangesInGPU) const {
+                                  struct lst::ObjectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -929,13 +940,15 @@ namespace lst {
                                                    xUpper,
                                                    yUpper,
                                                    zUpper,
-                                                   rtUpper);
+                                                   rtUpper,
+                                                   ptCut);
           if (success) {
             int totOccupancyMDs =
                 alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.totOccupancyMDs[lowerModuleIndex], 1u);
             if (totOccupancyMDs >= (rangesInGPU.miniDoubletModuleOccupancy[lowerModuleIndex])) {
 #ifdef WARNINGS
-              printf("Mini-doublet excess alert! Module index =  %d\n", lowerModuleIndex);
+              printf(
+                  "Mini-doublet excess alert! Module index = %d, Occupancy = %d\n", lowerModuleIndex, totOccupancyMDs);
 #endif
             } else {
               int mdModuleIndex = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &mdsInGPU.nMDs[lowerModuleIndex], 1u);
@@ -964,11 +977,41 @@ namespace lst {
     }
   };
 
+  // Helper function to determine eta bin for occupancies
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int getEtaBin(const float module_eta) {
+    if (module_eta < 0.75f)
+      return 0;
+    else if (module_eta < 1.5f)
+      return 1;
+    else if (module_eta < 2.25f)
+      return 2;
+    else if (module_eta < 3.0f)
+      return 3;
+    return -1;
+  }
+
+  // Helper function to determine category number for occupancies
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int getCategoryNumber(const short module_layers,
+                                                       const short module_subdets,
+                                                       const short module_rings) {
+    if (module_subdets == lst::Barrel) {
+      return (module_layers <= 3) ? 0 : 1;
+    } else if (module_subdets == lst::Endcap) {
+      if (module_layers <= 2) {
+        return (module_rings >= 11) ? 2 : 3;
+      } else {
+        return (module_rings >= 8) ? 2 : 3;
+      }
+    }
+    return -1;
+  }
+
   struct createMDArrayRangesGPU {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   struct lst::Modules modulesInGPU,
-                                  struct lst::ObjectRanges rangesInGPU) const {
+                                  struct lst::ObjectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -979,8 +1022,24 @@ namespace lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Initialize variables outside of the for loop.
-      int occupancy, category_number, eta_number;
+      // Occupancy matrix for 0.8 GeV pT Cut
+      constexpr int p08_occupancy_matrix[4][4] = {
+          {49, 42, 37, 41},  // category 0
+          {100, 100, 0, 0},  // category 1
+          {0, 16, 19, 0},    // category 2
+          {0, 14, 20, 25}    // category 3
+      };
+
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
+      constexpr int p06_occupancy_matrix[4][4] = {
+          {60, 57, 54, 48},  // category 0
+          {259, 195, 0, 0},  // category 1
+          {0, 23, 28, 0},    // category 2
+          {0, 25, 25, 33}    // category 3
+      };
+
+      // Select the appropriate occupancy matrix based on ptCut
+      const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (uint16_t i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         short module_rings = modulesInGPU.rings[i];
@@ -988,61 +1047,20 @@ namespace lst {
         short module_subdets = modulesInGPU.subdets[i];
         float module_eta = alpaka::math::abs(acc, modulesInGPU.eta[i]);
 
-        if (module_layers <= 3 && module_subdets == 5)
-          category_number = 0;
-        else if (module_layers >= 4 && module_subdets == 5)
-          category_number = 1;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings >= 11)
-          category_number = 2;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings >= 8)
-          category_number = 2;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings <= 10)
-          category_number = 3;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings <= 7)
-          category_number = 3;
-        else
-          category_number = -1;
+        int category_number = getCategoryNumber(module_layers, module_subdets, module_rings);
+        int eta_number = getEtaBin(module_eta);
 
-        if (module_eta < 0.75f)
-          eta_number = 0;
-        else if (module_eta < 1.5f)
-          eta_number = 1;
-        else if (module_eta < 2.25f)
-          eta_number = 2;
-        else if (module_eta < 3.0f)
-          eta_number = 3;
-        else
-          eta_number = -1;
-
-        if (category_number == 0 && eta_number == 0)
-          occupancy = 49;
-        else if (category_number == 0 && eta_number == 1)
-          occupancy = 42;
-        else if (category_number == 0 && eta_number == 2)
-          occupancy = 37;
-        else if (category_number == 0 && eta_number == 3)
-          occupancy = 41;
-        else if (category_number == 1)
-          occupancy = 100;
-        else if (category_number == 2 && eta_number == 1)
-          occupancy = 16;
-        else if (category_number == 2 && eta_number == 2)
-          occupancy = 19;
-        else if (category_number == 3 && eta_number == 1)
-          occupancy = 14;
-        else if (category_number == 3 && eta_number == 2)
-          occupancy = 20;
-        else if (category_number == 3 && eta_number == 3)
-          occupancy = 25;
-        else {
-          occupancy = 0;
-#ifdef WARNINGS
-          printf("Unhandled case in createMDArrayRangesGPU! Module index = %i\n", i);
-#endif
+        int occupancy = 0;
+        if (category_number != -1 && eta_number != -1) {
+          occupancy = occupancy_matrix[category_number][eta_number];
         }
+#ifdef WARNINGS
+        else {
+          printf("Unhandled case in createMDArrayRangesGPU! Module index = %i\n", i);
+        }
+#endif
 
         unsigned int nTotMDs = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalMDs, occupancy);
-
         rangesInGPU.miniDoubletModuleIndices[i] = nTotMDs;
         rangesInGPU.miniDoubletModuleOccupancy[i] = occupancy;
       }

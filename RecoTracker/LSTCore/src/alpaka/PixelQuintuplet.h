@@ -231,63 +231,61 @@ namespace lst {
                        5 * (modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap and
                             modulesInGPU.moduleType[lowerModuleIndex5] == lst::TwoS);
 
+    // This slides shows the cut threshold definition. The comments below in the code, e.g, "cat 10", is consistent with the region separation in the slides
+    // https://indico.cern.ch/event/1410985/contributions/5931017/attachments/2875400/5035406/helix%20approxi%20for%20pT5%20rzchi2%20new%20results%20versions.pdf
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 12 and layer5 == 13) {
-        return rzChiSquared < 451.141f;
-      } else if (layer4 == 4 and layer5 == 12) {
-        return rzChiSquared < 392.654f;
-      } else if (layer4 == 4 and layer5 == 5) {
-        return rzChiSquared < 225.322f;
-      } else if (layer4 == 7 and layer5 == 13) {
-        return rzChiSquared < 595.546f;
-      } else if (layer4 == 7 and layer5 == 8) {
-        return rzChiSquared < 196.111f;
+      if (layer4 == 12 and layer5 == 13) {  // cat 10
+        return rzChiSquared < 14.031f;
+      } else if (layer4 == 4 and layer5 == 12) {  // cat 12
+        return rzChiSquared < 8.760f;
+      } else if (layer4 == 4 and layer5 == 5) {  // cat 11
+        return rzChiSquared < 3.607f;
+      } else if (layer4 == 7 and layer5 == 13) {  // cat 9
+        return rzChiSquared < 16.620;
+      } else if (layer4 == 7 and layer5 == 8) {  // cat 8
+        return rzChiSquared < 17.910f;
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 13 and layer5 == 14) {
-        return rzChiSquared < 297.446f;
-      } else if (layer4 == 8 and layer5 == 14) {
-        return rzChiSquared < 451.141f;
-      } else if (layer4 == 8 and layer5 == 9) {
-        return rzChiSquared < 518.339f;
+      if (layer4 == 13 and layer5 == 14) {  // cat 7
+        return rzChiSquared < 8.950f;
+      } else if (layer4 == 8 and layer5 == 14) {  // cat 6
+        return rzChiSquared < 14.837f;
+      } else if (layer4 == 8 and layer5 == 9) {  // cat 5
+        return rzChiSquared < 18.519f;
       }
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9 and layer5 == 10) {
-        return rzChiSquared < 341.75f;
-      } else if (layer4 == 9 and layer5 == 15) {
-        return rzChiSquared < 341.75f;
+      if (layer4 == 9 and layer5 == 10) {  // cat 3
+        return rzChiSquared < 15.093f;
+      } else if (layer4 == 9 and layer5 == 15) {  // cat 4
+        return rzChiSquared < 11.200f;
       }
     } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 12 and layer5 == 13) {
-        return rzChiSquared < 392.655f;
-      } else if (layer4 == 5 and layer5 == 12) {
-        return rzChiSquared < 341.75f;
-      } else if (layer4 == 5 and layer5 == 6) {
-        return rzChiSquared < 112.537f;
+      if (layer4 == 12 and layer5 == 13) {  // cat 20
+        return rzChiSquared < 12.868f;
+      } else if (layer4 == 5 and layer5 == 12) {  // cat 19
+        return rzChiSquared < 6.128f;
+      } else if (layer4 == 5 and layer5 == 6) {  // cat 18
+        return rzChiSquared < 2.987f;
       }
     } else if (layer1 == 2 and layer2 == 3 and layer4 == 7) {
-      if (layer4 == 13 and layer5 == 14) {
-        return rzChiSquared < 595.545f;
-      } else if (layer4 == 8 and layer5 == 14) {
-        return rzChiSquared < 74.198f;
+      if (layer4 == 13 and layer5 == 14) {  // cat 17
+        return rzChiSquared < 19.446f;
+      } else if (layer4 == 8 and layer5 == 14) {  // cat 16
+        return rzChiSquared < 17.520f;
       }
     } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 14 and layer5 == 15) {
-        return rzChiSquared < 518.339f;
-      } else if (layer4 == 9 and layer5 == 10) {
-        return rzChiSquared < 8.046f;
-      } else if (layer4 == 9 and layer5 == 15) {
-        return rzChiSquared < 451.141f;
+      if (layer4 == 14 and layer5 == 15) {  // cat 15
+        return rzChiSquared < 14.71f;
+      } else if (layer4 == 9 and layer5 == 15) {  // cat 14
+        return rzChiSquared < 18.213f;
       }
-    } else if (layer1 == 3 and layer2 == 7 and layer3 == 8 and layer4 == 14 and layer5 == 15) {
-      return rzChiSquared < 56.207f;
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      if (layer4 == 10 and layer5 == 11) {
-        return rzChiSquared < 64.578f;
-      } else if (layer4 == 10 and layer5 == 16) {
-        return rzChiSquared < 85.250f;
-      } else if (layer4 == 15 and layer5 == 16) {
-        return rzChiSquared < 85.250f;
+      if (layer4 == 10 and layer5 == 11) {  // cat 0
+        return rzChiSquared < 10.016f;
+      } else if (layer4 == 10 and layer5 == 16) {  // cat 1
+        return rzChiSquared < 87.671f;
+      } else if (layer4 == 15 and layer5 == 16) {  // cat 2
+        return rzChiSquared < 5.844f;
       }
     }
     return true;
@@ -660,7 +658,8 @@ namespace lst {
                                                                     float& quintupletRadius,
                                                                     float& centerX,
                                                                     float& centerY,
-                                                                    unsigned int pixelSegmentArrayIndex) {
+                                                                    unsigned int pixelSegmentArrayIndex,
+                                                                    const float ptCut) {
     unsigned int T5InnerT3Index = quintupletsInGPU.tripletIndices[2 * quintupletIndex];
     unsigned int T5OuterT3Index = quintupletsInGPU.tripletIndices[2 * quintupletIndex + 1];
 
@@ -682,6 +681,7 @@ namespace lst {
                                        rzChiSquaredTemp,
                                        rPhiChiSquaredTemp,
                                        rPhiChiSquaredInwardsTemp,
+                                       ptCut,
                                        false))
       return false;
 
@@ -707,8 +707,11 @@ namespace lst {
     uint16_t lowerModuleIndices[Params_T5::kLayers] = {
         lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
-    float zPix[Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
     float rtPix[Params_pLS::kLayers] = {mdsInGPU.anchorRt[pixelInnerMDIndex], mdsInGPU.anchorRt[pixelOuterMDIndex]};
+    float xPix[Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
+    float yPix[Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
+    float zPix[Params_pLS::kLayers] = {mdsInGPU.anchorZ[pixelInnerMDIndex], mdsInGPU.anchorZ[pixelOuterMDIndex]};
+
     float zs[Params_T5::kLayers] = {mdsInGPU.anchorZ[firstMDIndex],
                                     mdsInGPU.anchorZ[secondMDIndex],
                                     mdsInGPU.anchorZ[thirdMDIndex],
@@ -720,9 +723,32 @@ namespace lst {
                                      mdsInGPU.anchorRt[fourthMDIndex],
                                      mdsInGPU.anchorRt[fifthMDIndex]};
 
-    rzChiSquared = computePT5RZChiSquared(acc, modulesInGPU, lowerModuleIndices, rtPix, zPix, rts, zs);
+    float pixelSegmentPt = segmentsInGPU.ptIn[pixelSegmentArrayIndex];
+    float pixelSegmentPx = segmentsInGPU.px[pixelSegmentArrayIndex];
+    float pixelSegmentPy = segmentsInGPU.py[pixelSegmentArrayIndex];
+    float pixelSegmentPz = segmentsInGPU.pz[pixelSegmentArrayIndex];
+    int pixelSegmentCharge = segmentsInGPU.charge[pixelSegmentArrayIndex];
 
-    if (/*pixelRadius*/ 0 < 5.0f * kR1GeVf) {  // FIXME: pixelRadius is not defined yet
+    rzChiSquared = 0;
+
+    //get the appropriate centers
+    pixelRadius = segmentsInGPU.circleRadius[pixelSegmentArrayIndex];
+
+    if (pixelRadius < 5.0f * kR1GeVf) {  //only apply r-z chi2 cuts for <5GeV tracks
+      rzChiSquared = computePT5RZChiSquared(acc,
+                                            modulesInGPU,
+                                            lowerModuleIndices,
+                                            rtPix,
+                                            xPix,
+                                            yPix,
+                                            zPix,
+                                            rts,
+                                            zs,
+                                            pixelSegmentPt,
+                                            pixelSegmentPx,
+                                            pixelSegmentPy,
+                                            pixelSegmentPz,
+                                            pixelSegmentCharge);
       if (not passPT5RZChiSquaredCuts(modulesInGPU,
                                       lowerModuleIndex1,
                                       lowerModuleIndex2,
@@ -745,10 +771,9 @@ namespace lst {
                                     mdsInGPU.anchorY[fourthMDIndex],
                                     mdsInGPU.anchorY[fifthMDIndex]};
 
-    //get the appropriate radii and centers
+    //get the appropriate centers
     centerX = segmentsInGPU.circleCenterX[pixelSegmentArrayIndex];
     centerY = segmentsInGPU.circleCenterY[pixelSegmentArrayIndex];
-    pixelRadius = segmentsInGPU.circleRadius[pixelSegmentArrayIndex];
 
     float T5CenterX = quintupletsInGPU.regressionG[quintupletIndex];
     float T5CenterY = quintupletsInGPU.regressionF[quintupletIndex];
@@ -768,8 +793,6 @@ namespace lst {
         return false;
     }
 
-    float xPix[] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
-    float yPix[] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
     rPhiChiSquaredInwards = computePT5RPhiChiSquaredInwards(T5CenterX, T5CenterY, quintupletRadius, xPix, yPix);
 
     if (quintupletsInGPU.regressionRadius[quintupletIndex] < 5.0f * kR1GeVf) {
@@ -791,29 +814,71 @@ namespace lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RZChiSquared(TAcc const& acc,
-                                                              lst::Modules const& modulesInGPU,
-                                                              uint16_t* lowerModuleIndices,
-                                                              float* rtPix,
-                                                              float* zPix,
-                                                              float* rts,
-                                                              float* zs) {
-    //use the two anchor hits of the pixel segment to compute the slope
-    //then compute the pseudo chi squared of the five outer hits
-
-    float slope = (zPix[1] - zPix[0]) / (rtPix[1] - rtPix[0]);
+                                                              struct lst::Modules const& modulesInGPU,
+                                                              const uint16_t* lowerModuleIndices,
+                                                              const float* rtPix,
+                                                              const float* xPix,
+                                                              const float* yPix,
+                                                              const float* zPix,
+                                                              const float* rts,
+                                                              const float* zs,
+                                                              float pixelSegmentPt,
+                                                              float pixelSegmentPx,
+                                                              float pixelSegmentPy,
+                                                              float pixelSegmentPz,
+                                                              int pixelSegmentCharge) {
     float residual = 0;
     float error2 = 0;
-    //hardcoded array indices!!!
     float RMSE = 0;
+
+    // the pixel positions are in unit of cm, and need to be divided by 100 to be in consistent with unit mm.
+    float Px = pixelSegmentPx, Py = pixelSegmentPy, Pz = pixelSegmentPz;
+    int charge = pixelSegmentCharge;
+    float x1 = xPix[1] / 100;
+    float y1 = yPix[1] / 100;
+    float z1 = zPix[1] / 100;
+    float r1 = rtPix[1] / 100;
+
+    float a = -100 / lst::kR1GeVf * charge;
+
     for (size_t i = 0; i < Params_T5::kLayers; i++) {
-      uint16_t& lowerModuleIndex = lowerModuleIndices[i];
+      float zsi = zs[i] / 100;
+      float rtsi = rts[i] / 100;
+      uint16_t lowerModuleIndex = lowerModuleIndices[i];
       const int moduleType = modulesInGPU.moduleType[lowerModuleIndex];
       const int moduleSide = modulesInGPU.sides[lowerModuleIndex];
       const int moduleSubdet = modulesInGPU.subdets[lowerModuleIndex];
 
-      residual = (moduleSubdet == lst::Barrel) ? (zs[i] - zPix[0]) - slope * (rts[i] - rtPix[0])
-                                               : (rts[i] - rtPix[0]) - (zs[i] - zPix[0]) / slope;
-      const float& drdz = modulesInGPU.drdzs[lowerModuleIndex];
+      // calculation is detailed documented here https://indico.cern.ch/event/1185895/contributions/4982756/attachments/2526561/4345805/helix%20pT3%20summarize.pdf
+      float diffr, diffz;
+      float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
+
+      float rou = a / p;
+      if (moduleSubdet == lst::Endcap) {
+        float s = (zsi - z1) * p / Pz;
+        float x = x1 + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
+        float y = y1 + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
+        diffr = alpaka::math::abs(acc, rtsi - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
+      }
+
+      if (moduleSubdet == lst::Barrel) {
+        float paraA = r1 * r1 + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y1 * Px - x1 * Py) / a - rtsi * rtsi;
+        float paraB = 2 * (x1 * Px + y1 * Py) / a;
+        float paraC = 2 * (y1 * Px - x1 * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
+        float A = paraB * paraB + paraC * paraC;
+        float B = 2 * paraA * paraB;
+        float C = paraA * paraA - paraC * paraC;
+        float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+        float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+        float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z1;
+        float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z1;
+        float diffz1 = alpaka::math::abs(acc, solz1 - zsi) * 100;
+        float diffz2 = alpaka::math::abs(acc, solz2 - zsi) * 100;
+        diffz = alpaka::math::min(acc, diffz1, diffz2);
+      }
+
+      residual = moduleSubdet == lst::Barrel ? diffz : diffr;
+
       //PS Modules
       if (moduleType == 0) {
         error2 = kPixelPSZpitch * kPixelPSZpitch;
@@ -824,6 +889,7 @@ namespace lst {
 
       //special dispensation to tilted PS modules!
       if (moduleType == 0 and moduleSubdet == lst::Barrel and moduleSide != Center) {
+        float drdz = modulesInGPU.drdzs[lowerModuleIndex];
         error2 /= (1.f + drdz * drdz);
       }
       RMSE += (residual * residual) / error2;
@@ -845,7 +911,8 @@ namespace lst {
                                   unsigned int* connectedPixelSize,
                                   unsigned int* connectedPixelIndex,
                                   unsigned int nPixelSegments,
-                                  lst::ObjectRanges rangesInGPU) const {
+                                  lst::ObjectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -899,7 +966,8 @@ namespace lst {
                                                          quintupletRadius,
                                                          centerX,
                                                          centerY,
-                                                         static_cast<unsigned int>(i_pLS));
+                                                         static_cast<unsigned int>(i_pLS),
+                                                         ptCut);
             if (success) {
               unsigned int totOccupancyPixelQuintuplets =
                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuintupletsInGPU.totOccupancyPixelQuintuplets, 1u);

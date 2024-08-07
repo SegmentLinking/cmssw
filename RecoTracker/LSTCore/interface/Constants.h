@@ -34,11 +34,6 @@ namespace lst {
                                                    alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
   }
 
-// If a compile time flag does not define PT_CUT, default to 0.8 (GeV)
-#ifndef PT_CUT
-  constexpr float PT_CUT = 0.8f;
-#endif
-
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
 

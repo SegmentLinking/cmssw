@@ -29,7 +29,6 @@ usage()
   echo "  -G    GPU (CUDA) backend        (Compile for CUDA)"
   echo "  -R    ROCm backend              (Compile for ROCm)"
   echo "  -A    All backends              (Compile for all backends, including ROCm)"
-  echo "  -P    PT Cut Value              (In GeV, Default is 0.8, Works only for standalone version of code)"
   echo "  -w    Warning mode              (Print extra warning outputs)"
   echo
   exit
@@ -49,7 +48,6 @@ while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
     R) ROCMBACKEND=true;;
     A) ALLBACKENDS=true;;
     w) PRINTWARNINGS=true;;
-    P) PTCUTVALUE=$OPTARG;;
     h) usage;;
     :) usage;;
   esac
@@ -67,7 +65,6 @@ if [ -z ${CUDABACKEND} ]; then CUDABACKEND=false; fi
 if [ -z ${ROCMBACKEND} ]; then ROCMBACKEND=false; fi
 if [ -z ${ALLBACKENDS} ]; then ALLBACKENDS=false; fi
 if [ -z ${PRINTWARNINGS} ]; then PRINTWARNINGS=false; fi
-if [ -z ${PTCUTVALUE} ]; then PTCUTVALUE=0.8; fi
 
 # Default to only CPU and CUDA backends
 if [ "${CPUBACKEND}" == false ] && [ "${CUDABACKEND}" == false ] && [ "${ROCMBACKEND}" == false ]; then
@@ -106,7 +103,6 @@ echo "  CPUBACKEND        : ${CPUBACKEND}"                    | tee -a ${LOG}
 echo "  CUDABACKEND       : ${CUDABACKEND}"                   | tee -a ${LOG}
 echo "  ROCMBACKEND       : ${ROCMBACKEND}"                   | tee -a ${LOG}
 echo "  PRINTWARNINGS     : ${PRINTWARNINGS}"                 | tee -a ${LOG}
-echo "  PTCUTVALUE        : ${PTCUTVALUE} GeV"                | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
 echo "  (cf. Run > sh $(basename $0) -h to see all options)"  | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
@@ -173,8 +169,6 @@ if $PRINTWARNINGS; then
     PRINTWARNINGSOPT="LSTWARNINGSFLAG=-DWARNINGS"
 fi
 
-PTCUTOPT="PTCUTFLAG=-DPT_CUT=${PTCUTVALUE}"
-
 ###
 ###
 ### Making Line Segment Tracking Library
@@ -187,9 +181,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then
@@ -224,9 +218,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j 2>&1 | tee -a ${LOG}
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} -j 2>&1 | tee -a ${LOG}
 else
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j >> ${LOG} 2>&1
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} -j >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/lst_cpu ]; then

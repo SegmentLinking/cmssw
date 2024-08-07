@@ -279,7 +279,8 @@ namespace lst {
                                                       uint16_t innerLowerModuleIndex,
                                                       uint16_t outerLowerModuleIndex,
                                                       unsigned int innerMDIndex,
-                                                      unsigned int outerMDIndex) {
+                                                      unsigned int outerMDIndex,
+                                                      const float ptCut) {
     float sdMuls = (modulesInGPU.subdets[innerLowerModuleIndex] == lst::Barrel)
                        ? kMiniMulsPtScaleBarrel[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : kMiniMulsPtScaleEndcap[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -463,7 +464,8 @@ namespace lst {
                                                                   float& dPhiMax,
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
-                                                                  float& dPhiChangeMax) {
+                                                                  float& dPhiChangeMax,
+                                                                  const float ptCut) {
     float sdMuls = (modulesInGPU.subdets[innerLowerModuleIndex] == lst::Barrel)
                        ? kMiniMulsPtScaleBarrel[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : kMiniMulsPtScaleEndcap[modulesInGPU.layers[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -521,7 +523,8 @@ namespace lst {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     float innerMDAlpha = mdsInGPU.dphichanges[innerMDIndex];
     float outerMDAlpha = mdsInGPU.dphichanges[outerMDIndex];
@@ -553,7 +556,8 @@ namespace lst {
                                                                   float& dPhiMax,
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
-                                                                  float& dPhiChangeMax) {
+                                                                  float& dPhiChangeMax,
+                                                                  const float ptCut) {
     float xIn, yIn, zIn, rtIn, xOut, yOut, zOut, rtOut;
 
     xIn = mdsInGPU.anchorX[innerMDIndex];
@@ -637,7 +641,8 @@ namespace lst {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     float innerMDAlpha = mdsInGPU.dphichanges[innerMDIndex];
     float outerMDAlpha = mdsInGPU.dphichanges[outerMDIndex];
@@ -669,7 +674,8 @@ namespace lst {
                                                             float& dPhiMax,
                                                             float& dPhiChange,
                                                             float& dPhiChangeMin,
-                                                            float& dPhiChangeMax) {
+                                                            float& dPhiChangeMax,
+                                                            const float ptCut) {
     if (modulesInGPU.subdets[innerLowerModuleIndex] == lst::Barrel and
         modulesInGPU.subdets[outerLowerModuleIndex] == lst::Barrel) {
       return runSegmentDefaultAlgoBarrel(acc,
@@ -684,7 +690,8 @@ namespace lst {
                                          dPhiMax,
                                          dPhiChange,
                                          dPhiChangeMin,
-                                         dPhiChangeMax);
+                                         dPhiChangeMax,
+                                         ptCut);
     } else {
       return runSegmentDefaultAlgoEndcap(acc,
                                          modulesInGPU,
@@ -698,7 +705,8 @@ namespace lst {
                                          dPhiMax,
                                          dPhiChange,
                                          dPhiChangeMin,
-                                         dPhiChangeMax);
+                                         dPhiChangeMax,
+                                         ptCut);
     }
   };
 
@@ -708,7 +716,8 @@ namespace lst {
                                   lst::Modules modulesInGPU,
                                   lst::MiniDoublets mdsInGPU,
                                   lst::Segments segmentsInGPU,
-                                  lst::ObjectRanges rangesInGPU) const {
+                                  lst::ObjectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const blockThreadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -762,12 +771,15 @@ namespace lst {
                                       dPhiMax,
                                       dPhiChange,
                                       dPhiChangeMin,
-                                      dPhiChangeMax)) {
+                                      dPhiChangeMax,
+                                      ptCut)) {
               unsigned int totOccupancySegments = alpaka::atomicOp<alpaka::AtomicAdd>(
                   acc, &segmentsInGPU.totOccupancySegments[innerLowerModuleIndex], 1u);
               if (static_cast<int>(totOccupancySegments) >= rangesInGPU.segmentModuleOccupancy[innerLowerModuleIndex]) {
 #ifdef WARNINGS
-                printf("Segment excess alert! Module index = %d\n", innerLowerModuleIndex);
+                printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
+                       innerLowerModuleIndex,
+                       totOccupancySegments);
 #endif
               } else {
                 unsigned int segmentModuleIdx =
@@ -801,7 +813,8 @@ namespace lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   lst::Modules modulesInGPU,
                                   lst::ObjectRanges rangesInGPU,
-                                  lst::MiniDoublets mdsInGPU) const {
+                                  lst::MiniDoublets mdsInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -812,8 +825,24 @@ namespace lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Initialize variables outside of the for loop.
-      int occupancy, category_number, eta_number;
+      // Occupancy matrix for 0.8 GeV pT Cut
+      constexpr int p08_occupancy_matrix[4][4] = {
+          {572, 300, 183, 62},  // category 0
+          {191, 128, 0, 0},     // category 1
+          {0, 107, 102, 0},     // category 2
+          {0, 64, 79, 85}       // category 3
+      };
+
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.9%
+      constexpr int p06_occupancy_matrix[4][4] = {
+          {936, 351, 256, 61},  // category 0
+          {1358, 763, 0, 0},    // category 1
+          {0, 210, 268, 0},     // category 2
+          {0, 60, 97, 96}       // category 3
+      };
+
+      // Select the appropriate occupancy matrix based on ptCut
+      const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (uint16_t i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         if (modulesInGPU.nConnectedModules[i] == 0) {
@@ -827,60 +856,18 @@ namespace lst {
         short module_subdets = modulesInGPU.subdets[i];
         float module_eta = alpaka::math::abs(acc, modulesInGPU.eta[i]);
 
-        if (module_layers <= 3 && module_subdets == 5)
-          category_number = 0;
-        else if (module_layers >= 4 && module_subdets == 5)
-          category_number = 1;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings >= 11)
-          category_number = 2;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings >= 8)
-          category_number = 2;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings <= 10)
-          category_number = 3;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings <= 7)
-          category_number = 3;
-        else
-          category_number = -1;
+        int category_number = lst::getCategoryNumber(module_layers, module_subdets, module_rings);
+        int eta_number = lst::getEtaBin(module_eta);
 
-        if (module_eta < 0.75f)
-          eta_number = 0;
-        else if (module_eta < 1.5f)
-          eta_number = 1;
-        else if (module_eta < 2.25f)
-          eta_number = 2;
-        else if (module_eta < 3.0f)
-          eta_number = 3;
-        else
-          eta_number = -1;
-
-        if (category_number == 0 && eta_number == 0)
-          occupancy = 572;
-        else if (category_number == 0 && eta_number == 1)
-          occupancy = 300;
-        else if (category_number == 0 && eta_number == 2)
-          occupancy = 183;
-        else if (category_number == 0 && eta_number == 3)
-          occupancy = 62;
-        else if (category_number == 1 && eta_number == 0)
-          occupancy = 191;
-        else if (category_number == 1 && eta_number == 1)
-          occupancy = 128;
-        else if (category_number == 2 && eta_number == 1)
-          occupancy = 107;
-        else if (category_number == 2 && eta_number == 2)
-          occupancy = 102;
-        else if (category_number == 3 && eta_number == 1)
-          occupancy = 64;
-        else if (category_number == 3 && eta_number == 2)
-          occupancy = 79;
-        else if (category_number == 3 && eta_number == 3)
-          occupancy = 85;
-        else {
-          occupancy = 0;
-#ifdef WARNINGS
-          printf("Unhandled case in createSegmentArrayRanges! Module index = %i\n", i);
-#endif
+        int occupancy = 0;
+        if (category_number != -1 && eta_number != -1) {
+          occupancy = occupancy_matrix[category_number][eta_number];
         }
+#ifdef WARNINGS
+        else {
+          printf("Unhandled case in createSegmentArrayRanges! Module index = %i\n", i);
+        }
+#endif
 
         int nTotSegs = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalSegments, occupancy);
         rangesInGPU.segmentModuleIndices[i] = nTotSegs;

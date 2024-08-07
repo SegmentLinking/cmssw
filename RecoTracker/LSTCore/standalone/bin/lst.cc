@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
       cxxopts::value<std::string>()->default_value("trackingNtuple/tree"))(
       "o,output", "Output file name", cxxopts::value<std::string>())(
       "N,nmatch", "N match for MTV-like matching", cxxopts::value<int>()->default_value("9"))(
+      "p,ptCut", "Min pT cut In GeV", cxxopts::value<float>()->default_value("0.8"))(
       "n,nevents", "N events to loop over", cxxopts::value<int>()->default_value("-1"))(
       "x,event_index", "specific event index to process", cxxopts::value<int>()->default_value("-1"))(
       "g,pdg_id", "The simhit pdgId match option", cxxopts::value<int>()->default_value("0"))(
@@ -143,6 +144,10 @@ int main(int argc, char **argv) {
       ana.output_tfile = new TFile("debug.root", "recreate");
     }
   }
+
+  //_______________________________________________________________________________
+  // --ptCut
+  ana.ptCut = result["ptCut"].as<float>();
 
   //_______________________________________________________________________________
   // --nmatch
@@ -268,6 +273,7 @@ int main(int argc, char **argv) {
   std::cout << " ana.mode: " << ana.mode << std::endl;
   std::cout << " ana.streams: " << ana.streams << std::endl;
   std::cout << " ana.verbose: " << ana.verbose << std::endl;
+  std::cout << " ana.ptCut: " << ana.ptCut << std::endl;
   std::cout << " ana.nmatch_threshold: " << ana.nmatch_threshold << std::endl;
   std::cout << " ana.tc_pls_triplets: " << ana.tc_pls_triplets << std::endl;
   std::cout << " ana.no_pls_dupclean: " << ana.no_pls_dupclean << std::endl;
@@ -307,7 +313,9 @@ void run_lst() {
   // Load various maps used in the lst reconstruction
   TStopwatch full_timer;
   full_timer.Start();
-  auto hostESData = lst::loadAndFillESHost();
+  // Determine which maps to use based on given pt cut for standalone.
+  std::string ptCutString = (ana.ptCut >= 0.8) ? "0.8" : "0.6";
+  auto hostESData = lst::loadAndFillESHost(ptCutString);
   auto deviceESData = cms::alpakatools::CopyToDevice<lst::LSTESData<DevHost>>::copyAsync(queues[0], *hostESData.get());
   float timeForMapLoading = full_timer.RealTime() * 1000;
 
@@ -386,7 +394,7 @@ void run_lst() {
   full_timer.Start();
   std::vector<lst::Event<Acc3D> *> events;
   for (int s = 0; s < ana.streams; s++) {
-    lst::Event<Acc3D> *event = new lst::Event<Acc3D>(ana.verbose >= 2, queues[s], &deviceESData);
+    lst::Event<Acc3D> *event = new lst::Event<Acc3D>(ana.verbose >= 2, ana.ptCut, queues[s], &deviceESData);
     events.push_back(event);
   }
   float timeForEventCreation = full_timer.RealTime() * 1000;

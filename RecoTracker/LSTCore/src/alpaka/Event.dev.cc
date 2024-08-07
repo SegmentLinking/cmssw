@@ -268,7 +268,7 @@ void lst::Event<Acc3D>::addPixelSegmentToEvent(std::vector<unsigned int> const& 
 
     lst::createMDArrayRangesGPU createMDArrayRangesGPU_kernel;
     auto const createMDArrayRangesGPUTask(alpaka::createTaskKernel<Acc3D>(
-        createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU));
+        createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU, ptCut));
 
     alpaka::enqueue(queue, createMDArrayRangesGPUTask);
     alpaka::wait(queue);
@@ -302,7 +302,8 @@ void lst::Event<Acc3D>::addPixelSegmentToEvent(std::vector<unsigned int> const& 
                                                                             createSegmentArrayRanges_kernel,
                                                                             *modulesBuffers_->data(),
                                                                             *rangesInGPU,
-                                                                            *mdsInGPU));
+                                                                            *mdsInGPU,
+                                                                            ptCut));
 
     alpaka::enqueue(queue, createSegmentArrayRangesTask);
     alpaka::wait(queue);
@@ -412,7 +413,7 @@ void lst::Event<Acc3D>::createMiniDoublets() {
 
   lst::createMDArrayRangesGPU createMDArrayRangesGPU_kernel;
   auto const createMDArrayRangesGPUTask(alpaka::createTaskKernel<Acc3D>(
-      createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU));
+      createMDArrayRangesGPU_workDiv, createMDArrayRangesGPU_kernel, *modulesBuffers_->data(), *rangesInGPU, ptCut));
 
   alpaka::enqueue(queue, createMDArrayRangesGPUTask);
   alpaka::wait(queue);
@@ -443,7 +444,8 @@ void lst::Event<Acc3D>::createMiniDoublets() {
                                                                            *modulesBuffers_->data(),
                                                                            *hitsInGPU,
                                                                            *mdsInGPU,
-                                                                           *rangesInGPU));
+                                                                           *rangesInGPU,
+                                                                           ptCut));
 
   alpaka::enqueue(queue, createMiniDoubletsInGPUv2Task);
 
@@ -488,7 +490,8 @@ void lst::Event<Acc3D>::createSegmentsWithModuleMap() {
                                                                        *modulesBuffers_->data(),
                                                                        *mdsInGPU,
                                                                        *segmentsInGPU,
-                                                                       *rangesInGPU));
+                                                                       *rangesInGPU,
+                                                                       ptCut));
 
   alpaka::enqueue(queue, createSegmentsInGPUv2Task);
 
@@ -525,7 +528,8 @@ void lst::Event<Acc3D>::createTriplets() {
                                                                             createTripletArrayRanges_kernel,
                                                                             *modulesBuffers_->data(),
                                                                             *rangesInGPU,
-                                                                            *segmentsInGPU));
+                                                                            *segmentsInGPU,
+                                                                            ptCut));
 
     alpaka::enqueue(queue, createTripletArrayRangesTask);
     alpaka::wait(queue);
@@ -597,7 +601,8 @@ void lst::Event<Acc3D>::createTriplets() {
                                                                        *tripletsInGPU,
                                                                        *rangesInGPU,
                                                                        alpaka::getPtrNative(index_gpu_buf),
-                                                                       nonZeroModules));
+                                                                       nonZeroModules,
+                                                                       ptCut));
 
   alpaka::enqueue(queue, createTripletsInGPUv2Task);
 
@@ -876,7 +881,8 @@ void lst::Event<Acc3D>::createPixelTriplets() {
                                       *pixelTripletsInGPU,
                                       alpaka::getPtrNative(connectedPixelSize_dev_buf),
                                       alpaka::getPtrNative(connectedPixelIndex_dev_buf),
-                                      nInnerSegments));
+                                      nInnerSegments,
+                                      ptCut));
 
   alpaka::enqueue(queue, createPixelTripletsInGPUFromMapv2Task);
   alpaka::wait(queue);
@@ -917,7 +923,8 @@ void lst::Event<Acc3D>::createQuintuplets() {
                                       createEligibleModulesListForQuintupletsGPU_kernel,
                                       *modulesBuffers_->data(),
                                       *tripletsInGPU,
-                                      *rangesInGPU));
+                                      *rangesInGPU,
+                                      ptCut));
 
   alpaka::enqueue(queue, createEligibleModulesListForQuintupletsGPUTask);
   alpaka::wait(queue);
@@ -955,7 +962,8 @@ void lst::Event<Acc3D>::createQuintuplets() {
                                                                           *tripletsInGPU,
                                                                           *quintupletsInGPU,
                                                                           *rangesInGPU,
-                                                                          nEligibleT5Modules));
+                                                                          nEligibleT5Modules,
+                                                                          ptCut));
 
   alpaka::enqueue(queue, createQuintupletsInGPUv2Task);
 
@@ -1106,7 +1114,8 @@ void lst::Event<Acc3D>::createPixelQuintuplets() {
                                       alpaka::getPtrNative(connectedPixelSize_dev_buf),
                                       alpaka::getPtrNative(connectedPixelIndex_dev_buf),
                                       nInnerSegments,
-                                      *rangesInGPU));
+                                      *rangesInGPU,
+                                      ptCut));
 
   alpaka::enqueue(queue, createPixelQuintupletsInGPUFromMapv2Task);
 

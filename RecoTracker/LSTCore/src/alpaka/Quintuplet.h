@@ -1362,7 +1362,8 @@ namespace lst {
                                                                    unsigned int firstMDIndex,
                                                                    unsigned int secondMDIndex,
                                                                    unsigned int thirdMDIndex,
-                                                                   unsigned int fourthMDIndex) {
+                                                                   unsigned int fourthMDIndex,
+                                                                   const float ptCut) {
     bool isPS_InLo = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == lst::PS);
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == lst::PS);
 
@@ -1375,7 +1376,7 @@ namespace lst {
     float z_OutLo = mdsInGPU.anchorZ[thirdMDIndex];
 
     float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax));
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
 
     float rtRatio_OutLoInLo = rt_OutLo / rt_InLo;  // Outer segment beginning rt divided by inner segment beginning rt;
     float dzDrtScale =
@@ -1403,7 +1404,7 @@ namespace lst {
     float dzErr = (zpitch_InLo + zpitch_OutLo) * (zpitch_InLo + zpitch_OutLo) * 2.f;
 
     float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) * (r3_InLo / rt_InLo);
-    float muls2 = thetaMuls2 * 9.f / (lst::ptCut * lst::ptCut) * 16.f;
+    float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
     dzErr += muls2 * drt_OutLo_InLo * drt_OutLo_InLo / 3.f * coshEta * coshEta;
     dzErr = alpaka::math::sqrt(acc, dzErr);
 
@@ -1516,8 +1517,7 @@ namespace lst {
     float betaInCut =
         alpaka::math::asin(
             acc,
-            alpaka::math::min(
-                acc, (-rt_InSeg * corrF + drt_tl_axis) * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+            alpaka::math::min(acc, (-rt_InSeg * corrF + drt_tl_axis) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / drt_InSeg);
 
     //Cut #5: first beta cut
@@ -1581,8 +1581,7 @@ namespace lst {
     const float dBetaROut2 = dBetaROut * dBetaROut;
 
     float betaOutCut =
-        alpaka::math::asin(acc,
-                           alpaka::math::min(acc, drt_tl_axis * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+        alpaka::math::asin(acc, alpaka::math::min(acc, drt_tl_axis * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
@@ -1614,7 +1613,8 @@ namespace lst {
                                                                    unsigned int firstMDIndex,
                                                                    unsigned int secondMDIndex,
                                                                    unsigned int thirdMDIndex,
-                                                                   unsigned int fourthMDIndex) {
+                                                                   unsigned int fourthMDIndex,
+                                                                   const float ptCut) {
     bool isPS_InLo = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == lst::PS);
     bool isPS_OutLo = (modulesInGPU.moduleType[outerInnerLowerModuleIndex] == lst::PS);
 
@@ -1627,7 +1627,7 @@ namespace lst {
     float z_OutLo = mdsInGPU.anchorZ[thirdMDIndex];
 
     float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax));
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
 
     float dzDrtScale =
         alpaka::math::tan(acc, alpha1GeV_OutLo) / alpha1GeV_OutLo;  // The track can bend in r-z plane slightly
@@ -1675,7 +1675,7 @@ namespace lst {
     float drtErr =
         zGeom1_another * zGeom1_another * drtSDIn * drtSDIn / dzSDIn / dzSDIn * (1.f - 2.f * kZ + 2.f * kZ * kZ);
     const float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f) * (rIn / rt_InLo);
-    const float muls2 = thetaMuls2 * 9.f / (lst::ptCut * lst::ptCut) * 16.f;
+    const float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
     drtErr += muls2 * multDzDr * multDzDr / 3.f * coshEta * coshEta;
     drtErr = alpaka::math::sqrt(acc, drtErr);
 
@@ -1767,7 +1767,7 @@ namespace lst {
     const float corrF = 1.f;
     float betaInCut =
         alpaka::math::asin(
-            acc, alpaka::math::min(acc, (-sdIn_dr * corrF + dr) * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+            acc, alpaka::math::min(acc, (-sdIn_dr * corrF + dr) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdIn_d);
 
     //Cut #6: first beta cut
@@ -1832,7 +1832,7 @@ namespace lst {
 
     const float dBetaROut2 = dBetaROut * dBetaROut;
     float betaOutCut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, dr * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+        alpaka::math::asin(acc, alpaka::math::min(acc, dr * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
@@ -1864,7 +1864,8 @@ namespace lst {
                                                                    unsigned int firstMDIndex,
                                                                    unsigned int secondMDIndex,
                                                                    unsigned int thirdMDIndex,
-                                                                   unsigned int fourthMDIndex) {
+                                                                   unsigned int fourthMDIndex,
+                                                                   const float ptCut) {
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
     float rt_OutLo = mdsInGPU.anchorRt[thirdMDIndex];
@@ -1874,7 +1875,7 @@ namespace lst {
     float z_OutLo = mdsInGPU.anchorZ[thirdMDIndex];
 
     float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax));
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
 
     float dzDrtScale =
         alpaka::math::tan(acc, alpha1GeV_OutLo) / alpha1GeV_OutLo;  // The track can bend in r-z plane slightly
@@ -1916,7 +1917,7 @@ namespace lst {
     float kZ = (z_OutLo - z_InLo) / dzSDIn;
     float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rt_OutLo - rt_InLo) / 50.f);
 
-    float muls2 = thetaMuls2 * 9.f / (lst::ptCut * lst::ptCut) * 16.f;
+    float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
 
     float drtErr = alpaka::math::sqrt(
         acc,
@@ -2008,7 +2009,7 @@ namespace lst {
     const float corrF = 1.f;
     float betaInCut =
         alpaka::math::asin(
-            acc, alpaka::math::min(acc, (-sdIn_dr * corrF + dr) * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+            acc, alpaka::math::min(acc, (-sdIn_dr * corrF + dr) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdIn_d);
 
     //Cut #6: first beta cut
@@ -2061,7 +2062,7 @@ namespace lst {
 
     float dBetaROut2 = 0;  //TODO-RH
     float betaOutCut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, dr * lst::k2Rinv1GeVf / lst::ptCut, lst::kSinAlphaMax)) +
+        alpaka::math::asin(acc, alpaka::math::min(acc, dr * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
@@ -2093,7 +2094,8 @@ namespace lst {
                                                                 unsigned int firstMDIndex,
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
-                                                                unsigned int fourthMDIndex) {
+                                                                unsigned int fourthMDIndex,
+                                                                const float ptCut) {
     short innerInnerLowerModuleSubdet = modulesInGPU.subdets[innerInnerLowerModuleIndex];
     short innerOuterLowerModuleSubdet = modulesInGPU.subdets[innerOuterLowerModuleIndex];
     short outerInnerLowerModuleSubdet = modulesInGPU.subdets[outerInnerLowerModuleIndex];
@@ -2114,7 +2116,8 @@ namespace lst {
                                           firstMDIndex,
                                           secondMDIndex,
                                           thirdMDIndex,
-                                          fourthMDIndex);
+                                          fourthMDIndex,
+                                          ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Barrel and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
       return runQuintupletDefaultAlgoBBEE(acc,
@@ -2130,7 +2133,8 @@ namespace lst {
                                           firstMDIndex,
                                           secondMDIndex,
                                           thirdMDIndex,
-                                          fourthMDIndex);
+                                          fourthMDIndex,
+                                          ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Barrel and
                outerInnerLowerModuleSubdet == lst::Barrel and outerOuterLowerModuleSubdet == lst::Endcap) {
       return runQuintupletDefaultAlgoBBBB(acc,
@@ -2146,7 +2150,8 @@ namespace lst {
                                           firstMDIndex,
                                           secondMDIndex,
                                           thirdMDIndex,
-                                          fourthMDIndex);
+                                          fourthMDIndex,
+                                          ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Endcap and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
       return runQuintupletDefaultAlgoBBEE(acc,
@@ -2162,7 +2167,8 @@ namespace lst {
                                           firstMDIndex,
                                           secondMDIndex,
                                           thirdMDIndex,
-                                          fourthMDIndex);
+                                          fourthMDIndex,
+                                          ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Endcap and innerOuterLowerModuleSubdet == lst::Endcap and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
       return runQuintupletDefaultAlgoEEEE(acc,
@@ -2178,7 +2184,8 @@ namespace lst {
                                           firstMDIndex,
                                           secondMDIndex,
                                           thirdMDIndex,
-                                          fourthMDIndex);
+                                          fourthMDIndex,
+                                          ptCut);
     }
 
     return false;
@@ -2206,7 +2213,8 @@ namespace lst {
                                                                float& rzChiSquared,
                                                                float& chiSquared,
                                                                float& nonAnchorChiSquared,
-                                                               bool& TightCutFlag) {
+                                                               bool& TightCutFlag,
+                                                               const float ptCut) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex];
@@ -2240,7 +2248,8 @@ namespace lst {
                                       firstMDIndex,
                                       secondMDIndex,
                                       thirdMDIndex,
-                                      fourthMDIndex))
+                                      fourthMDIndex,
+                                      ptCut))
       return false;
 
     if (not runQuintupletAlgoSelector(acc,
@@ -2256,7 +2265,8 @@ namespace lst {
                                       firstMDIndex,
                                       secondMDIndex,
                                       fourthMDIndex,
-                                      fifthMDIndex))
+                                      fifthMDIndex,
+                                      ptCut))
       return false;
 
     float x1 = mdsInGPU.anchorX[firstMDIndex];
@@ -2544,7 +2554,8 @@ namespace lst {
                                   lst::Triplets tripletsInGPU,
                                   lst::Quintuplets quintupletsInGPU,
                                   lst::ObjectRanges rangesInGPU,
-                                  uint16_t nEligibleT5Modules) const {
+                                  uint16_t nEligibleT5Modules,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -2599,14 +2610,17 @@ namespace lst {
                                                     rzChiSquared,
                                                     chiSquared,
                                                     nonAnchorChiSquared,
-                                                    TightCutFlag);
+                                                    TightCutFlag,
+                                                    ptCut);
 
             if (success) {
               int totOccupancyQuintuplets =
                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quintupletsInGPU.totOccupancyQuintuplets[lowerModule1], 1u);
               if (totOccupancyQuintuplets >= rangesInGPU.quintupletModuleOccupancy[lowerModule1]) {
 #ifdef WARNINGS
-                printf("Quintuplet excess alert! Module index = %d\n", lowerModule1);
+                printf("Quintuplet excess alert! Module index = %d, Occupancy = %d\n",
+                       lowerModule1,
+                       totOccupancyQuintuplets);
 #endif
               } else {
                 int quintupletModuleIndex =
@@ -2669,7 +2683,8 @@ namespace lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   lst::Modules modulesInGPU,
                                   lst::Triplets tripletsInGPU,
-                                  lst::ObjectRanges rangesInGPU) const {
+                                  lst::ObjectRanges rangesInGPU,
+                                  const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -2682,8 +2697,24 @@ namespace lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Initialize variables outside of the for loop.
-      int occupancy, category_number, eta_number;
+      // Occupancy matrix for 0.8 GeV pT Cut
+      constexpr int p08_occupancy_matrix[4][4] = {
+          {336, 414, 231, 146},  // category 0
+          {0, 0, 0, 0},          // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 0, 191, 106}       // category 3
+      };
+
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
+      constexpr int p06_occupancy_matrix[4][4] = {
+          {325, 237, 217, 176},  // category 0
+          {0, 0, 0, 0},          // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 0, 129, 180}       // category 3
+      };
+
+      // Select the appropriate occupancy matrix based on ptCut
+      const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (int i = globalThreadIdx[2]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[2]) {
         // Condition for a quintuple to exist for a module
@@ -2702,52 +2733,18 @@ namespace lst {
 
         int nEligibleT5Modules = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nEligibleT5Modulesx, 1);
 
-        if (module_layers <= 3 && module_subdets == 5)
-          category_number = 0;
-        else if (module_layers >= 4 && module_subdets == 5)
-          category_number = 1;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings >= 11)
-          category_number = 2;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings >= 8)
-          category_number = 2;
-        else if (module_layers <= 2 && module_subdets == 4 && module_rings <= 10)
-          category_number = 3;
-        else if (module_layers >= 3 && module_subdets == 4 && module_rings <= 7)
-          category_number = 3;
-        else
-          category_number = -1;
+        int category_number = lst::getCategoryNumber(module_layers, module_subdets, module_rings);
+        int eta_number = lst::getEtaBin(module_eta);
 
-        if (module_eta < 0.75f)
-          eta_number = 0;
-        else if (module_eta < 1.5f)
-          eta_number = 1;
-        else if (module_eta < 2.25f)
-          eta_number = 2;
-        else if (module_eta < 3.0f)
-          eta_number = 3;
-        else
-          eta_number = -1;
-
-        if (category_number == 0 && eta_number == 0)
-          occupancy = 336;
-        else if (category_number == 0 && eta_number == 1)
-          occupancy = 414;
-        else if (category_number == 0 && eta_number == 2)
-          occupancy = 231;
-        else if (category_number == 0 && eta_number == 3)
-          occupancy = 146;
-        else if (category_number == 3 && eta_number == 1)
-          occupancy = 0;
-        else if (category_number == 3 && eta_number == 2)
-          occupancy = 191;
-        else if (category_number == 3 && eta_number == 3)
-          occupancy = 106;
-        else {
-          occupancy = 0;
-#ifdef WARNINGS
-          printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
-#endif
+        int occupancy = 0;
+        if (category_number != -1 && eta_number != -1) {
+          occupancy = occupancy_matrix[category_number][eta_number];
         }
+#ifdef WARNINGS
+        else {
+          printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
+        }
+#endif
 
         int nTotQ = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalQuintupletsx, occupancy);
         rangesInGPU.quintupletModuleIndices[i] = nTotQ;
