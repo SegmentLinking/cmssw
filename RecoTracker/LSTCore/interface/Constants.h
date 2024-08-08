@@ -14,23 +14,21 @@ namespace lst {
   using Buf = alpaka::Buf<TDev, TData, alpaka_common::Dim1D, alpaka_common::Idx>;
 
   // Allocation wrapper function to make integration of the caching allocator easier and reduce code boilerplate.
-  template <typename T, typename TAcc, typename TSize, typename TQueue>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<alpaka::Dev<TAcc>, T> allocBufWrapper(TAcc const& devAccIn,
-                                                                            TSize nElements,
-                                                                            TQueue queue) {
+  template <typename T, typename TDev, typename TSize, typename TQueue>
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<TDev, T> allocBufWrapper(TDev const& dev, TSize nElements, TQueue queue) {
 #ifdef CACHE_ALLOC
     return cms::alpakatools::allocCachedBuf<T, alpaka_common::Idx>(
-        devAccIn, queue, alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
+        dev, queue, alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
 #else
-    return alpaka::allocBuf<T, alpaka_common::Idx>(devAccIn,
+    return alpaka::allocBuf<T, alpaka_common::Idx>(dev,
                                                    alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
 #endif
   }
 
   // Second allocation wrapper function when queue is not given. Reduces code boilerplate.
-  template <typename T, typename TAcc, typename TSize>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<alpaka::Dev<TAcc>, T> allocBufWrapper(TAcc const& devAccIn, TSize nElements) {
-    return alpaka::allocBuf<T, alpaka_common::Idx>(devAccIn,
+  template <typename T, typename TDev, typename TSize>
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<TDev, T> allocBufWrapper(TDev const& dev, TSize nElements) {
+    return alpaka::allocBuf<T, alpaka_common::Idx>(dev,
                                                    alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
   }
 

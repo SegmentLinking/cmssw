@@ -34,24 +34,24 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff& buf) {
-      pixelIndices = alpaka::getPtrNative(buf.pixelIndices_buf);
-      T5Indices = alpaka::getPtrNative(buf.T5Indices_buf);
-      nPixelQuintuplets = alpaka::getPtrNative(buf.nPixelQuintuplets_buf);
-      totOccupancyPixelQuintuplets = alpaka::getPtrNative(buf.totOccupancyPixelQuintuplets_buf);
-      isDup = alpaka::getPtrNative(buf.isDup_buf);
-      score = alpaka::getPtrNative(buf.score_buf);
-      eta = alpaka::getPtrNative(buf.eta_buf);
-      phi = alpaka::getPtrNative(buf.phi_buf);
-      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
-      hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
-      lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
-      pixelRadius = alpaka::getPtrNative(buf.pixelRadius_buf);
-      quintupletRadius = alpaka::getPtrNative(buf.quintupletRadius_buf);
-      centerX = alpaka::getPtrNative(buf.centerX_buf);
-      centerY = alpaka::getPtrNative(buf.centerY_buf);
-      rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
-      rPhiChiSquared = alpaka::getPtrNative(buf.rPhiChiSquared_buf);
-      rPhiChiSquaredInwards = alpaka::getPtrNative(buf.rPhiChiSquaredInwards_buf);
+      pixelIndices = buf.pixelIndices_buf.data();
+      T5Indices = buf.T5Indices_buf.data();
+      nPixelQuintuplets = buf.nPixelQuintuplets_buf.data();
+      totOccupancyPixelQuintuplets = buf.totOccupancyPixelQuintuplets_buf.data();
+      isDup = buf.isDup_buf.data();
+      score = buf.score_buf.data();
+      eta = buf.eta_buf.data();
+      phi = buf.phi_buf.data();
+      logicalLayers = buf.logicalLayers_buf.data();
+      hitIndices = buf.hitIndices_buf.data();
+      lowerModuleIndices = buf.lowerModuleIndices_buf.data();
+      pixelRadius = buf.pixelRadius_buf.data();
+      quintupletRadius = buf.quintupletRadius_buf.data();
+      centerX = buf.centerX_buf.data();
+      centerY = buf.centerY_buf.data();
+      rzChiSquared = buf.rzChiSquared_buf.data();
+      rPhiChiSquared = buf.rPhiChiSquared_buf.data();
+      rPhiChiSquaredInwards = buf.rPhiChiSquaredInwards_buf.data();
     }
   };
 
@@ -100,7 +100,6 @@ namespace lst {
           rPhiChiSquaredInwards_buf(allocBufWrapper<float>(devAccIn, maxPixelQuintuplets, queue)) {
       alpaka::memset(queue, nPixelQuintuplets_buf, 0u);
       alpaka::memset(queue, totOccupancyPixelQuintuplets_buf, 0u);
-      alpaka::wait(queue);
     }
 
     inline PixelQuintuplets const* data() const { return &data_; }
@@ -201,7 +200,7 @@ namespace lst {
     pixelQuintupletsInGPU.rzChiSquared[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintupletsInGPU.rPhiChiSquared[pixelQuintupletIndex] = rPhiChiSquared;
     pixelQuintupletsInGPU.rPhiChiSquaredInwards[pixelQuintupletIndex] = rPhiChiSquaredInwards;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT5RZChiSquaredCuts(lst::Modules const& modulesInGPU,
                                                               uint16_t lowerModuleIndex1,
@@ -291,7 +290,7 @@ namespace lst {
       }
     }
     return true;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT5RPhiChiSquaredCuts(lst::Modules const& modulesInGPU,
                                                                 uint16_t lowerModuleIndex1,
@@ -381,7 +380,7 @@ namespace lst {
       }
     }
     return true;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeChiSquaredpT5(TAcc const& acc,
@@ -427,7 +426,7 @@ namespace lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / (sigma2);
     }
     return chiSquared;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegression_pT5(TAcc const& acc,
@@ -513,7 +512,7 @@ namespace lst {
       }
 #endif
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RPhiChiSquared(TAcc const& acc,
@@ -536,7 +535,7 @@ namespace lst {
     chiSquared = computeChiSquaredpT5(acc, 5, xs, ys, delta1, delta2, slopes, isFlat, g, f, radius);
 
     return chiSquared;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RPhiChiSquaredInwards(
       float g, float f, float r, float* xPix, float* yPix) {
@@ -551,7 +550,7 @@ namespace lst {
     }
     chiSquared *= 0.5f;
     return chiSquared;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT5RPhiChiSquaredInwardsCuts(lst::Modules const& modulesInGPU,
                                                                        uint16_t lowerModuleIndex1,
@@ -641,7 +640,7 @@ namespace lst {
       }
     }
     return true;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelQuintupletDefaultAlgo(TAcc const& acc,
@@ -787,7 +786,7 @@ namespace lst {
     centerY = (centerY + T5CenterY) / 2;
 
     return true;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RZChiSquared(TAcc const& acc,
@@ -831,7 +830,7 @@ namespace lst {
 
     RMSE = alpaka::math::sqrt(acc, 0.2f * RMSE);  // Divided by the degree of freedom 5.
     return RMSE;
-  };
+  }
 
   struct createPixelQuintupletsInGPUFromMapv2 {
     template <typename TAcc>

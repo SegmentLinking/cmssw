@@ -36,24 +36,24 @@ namespace lst {
 #endif
     template <typename TBuff>
     void setData(TBuff& buf) {
-      segmentIndices = alpaka::getPtrNative(buf.segmentIndices_buf);
-      lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
-      nTriplets = alpaka::getPtrNative(buf.nTriplets_buf);
-      totOccupancyTriplets = alpaka::getPtrNative(buf.totOccupancyTriplets_buf);
-      nMemoryLocations = alpaka::getPtrNative(buf.nMemoryLocations_buf);
-      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
-      hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
-      betaIn = alpaka::getPtrNative(buf.betaIn_buf);
-      circleRadius = alpaka::getPtrNative(buf.circleRadius_buf);
-      circleCenterX = alpaka::getPtrNative(buf.circleCenterX_buf);
-      circleCenterY = alpaka::getPtrNative(buf.circleCenterY_buf);
-      partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
-      partOfT5 = alpaka::getPtrNative(buf.partOfT5_buf);
-      partOfPT3 = alpaka::getPtrNative(buf.partOfPT3_buf);
+      segmentIndices = buf.segmentIndices_buf.data();
+      lowerModuleIndices = buf.lowerModuleIndices_buf.data();
+      nTriplets = buf.nTriplets_buf.data();
+      totOccupancyTriplets = buf.totOccupancyTriplets_buf.data();
+      nMemoryLocations = buf.nMemoryLocations_buf.data();
+      logicalLayers = buf.logicalLayers_buf.data();
+      hitIndices = buf.hitIndices_buf.data();
+      betaIn = buf.betaIn_buf.data();
+      circleRadius = buf.circleRadius_buf.data();
+      circleCenterX = buf.circleCenterX_buf.data();
+      circleCenterY = buf.circleCenterY_buf.data();
+      partOfPT5 = buf.partOfPT5_buf.data();
+      partOfT5 = buf.partOfT5_buf.data();
+      partOfPT3 = buf.partOfPT3_buf.data();
 #ifdef CUT_VALUE_DEBUG
-      zOut = alpaka::getPtrNative(buf.zOut_buf);
-      rtOut = alpaka::getPtrNative(buf.rtOut_buf);
-      betaInCut = alpaka::getPtrNative(buf.betaInCut_buf);
+      zOut = buf.zOut_buf.data();
+      rtOut = buf.rtOut_buf.data();
+      betaInCut = buf.betaInCut_buf.data();
 #endif
     }
   };
@@ -202,7 +202,7 @@ namespace lst {
     tripletsInGPU.rtOut[tripletIndex] = rtOut;
     tripletsInGPU.betaInCut[tripletIndex] = betaInCut;
 #endif
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRZConstraint(TAcc const& acc,
@@ -262,7 +262,7 @@ namespace lst {
     } else {
       return alpaka::math::abs(acc, residual) < 5;
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintBBB(TAcc const& acc,
@@ -361,7 +361,7 @@ namespace lst {
 
     //Cut #3: first beta cut
     return alpaka::math::abs(acc, betaIn) < betaInCut;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintBBE(TAcc const& acc,
@@ -482,7 +482,7 @@ namespace lst {
 
     //Cut #4: first beta cut
     return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintEEE(TAcc const& acc,
@@ -605,7 +605,7 @@ namespace lst {
 
     //Cut #4: first beta cut
     return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraint(TAcc const& acc,
@@ -707,7 +707,7 @@ namespace lst {
                                        betaInCut);
     }
     return false;  // failsafe
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusFromThreeAnchorHits(
@@ -740,7 +740,7 @@ namespace lst {
       radius = alpaka::math::sqrt(acc, g * g + f * f - c);
 
     return radius;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletConstraintsAndAlgo(TAcc const& acc,
@@ -806,7 +806,7 @@ namespace lst {
 
     circleRadius = computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3, circleCenterX, circleCenterY);
     return true;
-  };
+  }
 
   struct createTripletsInGPUv2 {
     template <typename TAcc>

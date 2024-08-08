@@ -56,42 +56,42 @@ namespace lst {
 
     template <typename TBuf>
     void setData(TBuf& buf) {
-      nMemoryLocations = alpaka::getPtrNative(buf.nMemoryLocations_buf);
-      anchorHitIndices = alpaka::getPtrNative(buf.anchorHitIndices_buf);
-      outerHitIndices = alpaka::getPtrNative(buf.outerHitIndices_buf);
-      moduleIndices = alpaka::getPtrNative(buf.moduleIndices_buf);
-      nMDs = alpaka::getPtrNative(buf.nMDs_buf);
-      totOccupancyMDs = alpaka::getPtrNative(buf.totOccupancyMDs_buf);
-      dphichanges = alpaka::getPtrNative(buf.dphichanges_buf);
-      dzs = alpaka::getPtrNative(buf.dzs_buf);
-      dphis = alpaka::getPtrNative(buf.dphis_buf);
-      shiftedXs = alpaka::getPtrNative(buf.shiftedXs_buf);
-      shiftedYs = alpaka::getPtrNative(buf.shiftedYs_buf);
-      shiftedZs = alpaka::getPtrNative(buf.shiftedZs_buf);
-      noShiftedDphis = alpaka::getPtrNative(buf.noShiftedDphis_buf);
-      noShiftedDphiChanges = alpaka::getPtrNative(buf.noShiftedDphiChanges_buf);
-      anchorX = alpaka::getPtrNative(buf.anchorX_buf);
-      anchorY = alpaka::getPtrNative(buf.anchorY_buf);
-      anchorZ = alpaka::getPtrNative(buf.anchorZ_buf);
-      anchorRt = alpaka::getPtrNative(buf.anchorRt_buf);
-      anchorPhi = alpaka::getPtrNative(buf.anchorPhi_buf);
-      anchorEta = alpaka::getPtrNative(buf.anchorEta_buf);
-      anchorHighEdgeX = alpaka::getPtrNative(buf.anchorHighEdgeX_buf);
-      anchorHighEdgeY = alpaka::getPtrNative(buf.anchorHighEdgeY_buf);
-      anchorLowEdgeX = alpaka::getPtrNative(buf.anchorLowEdgeX_buf);
-      anchorLowEdgeY = alpaka::getPtrNative(buf.anchorLowEdgeY_buf);
-      outerX = alpaka::getPtrNative(buf.outerX_buf);
-      outerY = alpaka::getPtrNative(buf.outerY_buf);
-      outerZ = alpaka::getPtrNative(buf.outerZ_buf);
-      outerRt = alpaka::getPtrNative(buf.outerRt_buf);
-      outerPhi = alpaka::getPtrNative(buf.outerPhi_buf);
-      outerEta = alpaka::getPtrNative(buf.outerEta_buf);
-      outerHighEdgeX = alpaka::getPtrNative(buf.outerHighEdgeX_buf);
-      outerHighEdgeY = alpaka::getPtrNative(buf.outerHighEdgeY_buf);
-      outerLowEdgeX = alpaka::getPtrNative(buf.outerLowEdgeX_buf);
-      outerLowEdgeY = alpaka::getPtrNative(buf.outerLowEdgeY_buf);
-      anchorLowEdgePhi = alpaka::getPtrNative(buf.anchorLowEdgePhi_buf);
-      anchorHighEdgePhi = alpaka::getPtrNative(buf.anchorHighEdgePhi_buf);
+      nMemoryLocations = buf.nMemoryLocations_buf.data();
+      anchorHitIndices = buf.anchorHitIndices_buf.data();
+      outerHitIndices = buf.outerHitIndices_buf.data();
+      moduleIndices = buf.moduleIndices_buf.data();
+      nMDs = buf.nMDs_buf.data();
+      totOccupancyMDs = buf.totOccupancyMDs_buf.data();
+      dphichanges = buf.dphichanges_buf.data();
+      dzs = buf.dzs_buf.data();
+      dphis = buf.dphis_buf.data();
+      shiftedXs = buf.shiftedXs_buf.data();
+      shiftedYs = buf.shiftedYs_buf.data();
+      shiftedZs = buf.shiftedZs_buf.data();
+      noShiftedDphis = buf.noShiftedDphis_buf.data();
+      noShiftedDphiChanges = buf.noShiftedDphiChanges_buf.data();
+      anchorX = buf.anchorX_buf.data();
+      anchorY = buf.anchorY_buf.data();
+      anchorZ = buf.anchorZ_buf.data();
+      anchorRt = buf.anchorRt_buf.data();
+      anchorPhi = buf.anchorPhi_buf.data();
+      anchorEta = buf.anchorEta_buf.data();
+      anchorHighEdgeX = buf.anchorHighEdgeX_buf.data();
+      anchorHighEdgeY = buf.anchorHighEdgeY_buf.data();
+      anchorLowEdgeX = buf.anchorLowEdgeX_buf.data();
+      anchorLowEdgeY = buf.anchorLowEdgeY_buf.data();
+      outerX = buf.outerX_buf.data();
+      outerY = buf.outerY_buf.data();
+      outerZ = buf.outerZ_buf.data();
+      outerRt = buf.outerRt_buf.data();
+      outerPhi = buf.outerPhi_buf.data();
+      outerEta = buf.outerEta_buf.data();
+      outerHighEdgeX = buf.outerHighEdgeX_buf.data();
+      outerHighEdgeY = buf.outerHighEdgeY_buf.data();
+      outerLowEdgeX = buf.outerLowEdgeX_buf.data();
+      outerLowEdgeY = buf.outerLowEdgeY_buf.data();
+      anchorLowEdgePhi = buf.anchorLowEdgePhi_buf.data();
+      anchorHighEdgePhi = buf.anchorHighEdgePhi_buf.data();
     }
   };
 
@@ -181,7 +181,6 @@ namespace lst {
           outerLowEdgeY_buf(allocBufWrapper<float>(devAccIn, nMemoryLoc, queue)) {
       alpaka::memset(queue, nMDs_buf, 0u);
       alpaka::memset(queue, totOccupancyMDs_buf, 0u);
-      alpaka::wait(queue);
     }
 
     inline MiniDoublets const* data() const { return &data_; }
@@ -260,7 +259,7 @@ namespace lst {
     mdsInGPU.outerHighEdgeY[idx] = hitsInGPU.highEdgeYs[outerHitIndex];
     mdsInGPU.outerLowEdgeX[idx] = hitsInGPU.lowEdgeXs[outerHitIndex];
     mdsInGPU.outerLowEdgeY[idx] = hitsInGPU.lowEdgeYs[outerHitIndex];
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float isTighterTiltedModules(lst::Modules const& modulesInGPU, uint16_t moduleIndex) {
     // The "tighter" tilted modules are the subset of tilted modules that have smaller spacing
@@ -280,7 +279,7 @@ namespace lst {
         return false;
     } else
       return false;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float moduleGapSize(struct lst::Modules const& modulesInGPU, uint16_t moduleIndex) {
     float miniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
@@ -331,7 +330,7 @@ namespace lst {
     }
 
     return moduleSeparation;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float dPhiThreshold(
@@ -390,7 +389,7 @@ namespace lst {
     else {
       return miniSlope + alpaka::math::sqrt(acc, miniMuls * miniMuls + miniPVoff * miniPVoff + miniLum * miniLum);
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_INLINE ALPAKA_FN_ACC void shiftStripHits(TAcc const& acc,
@@ -556,7 +555,7 @@ namespace lst {
     shiftedCoords[0] = xn;
     shiftedCoords[1] = yn;
     shiftedCoords[2] = zn;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgo(TAcc const& acc,
@@ -628,7 +627,7 @@ namespace lst {
                                              zUpper,
                                              rtUpper);
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoBarrel(TAcc const& acc,
@@ -755,7 +754,7 @@ namespace lst {
     }
 
     return alpaka::math::abs(acc, dPhiChange) < miniCut;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoEndcap(TAcc const& acc,
@@ -866,7 +865,7 @@ namespace lst {
     noShiftedDphichange = noShiftedDphi / dzFrac * (1.f + dzFrac);
 
     return alpaka::math::abs(acc, dPhiChange) < miniCut;
-  };
+  }
 
   struct createMiniDoubletsInGPUv2 {
     template <typename TAcc>

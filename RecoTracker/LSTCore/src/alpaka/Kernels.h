@@ -18,23 +18,23 @@ namespace lst {
                                                              unsigned int quintupletIndex,
                                                              bool secondpass = false) {
     quintupletsInGPU.isDup[quintupletIndex] |= 1 + secondpass;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelTripletFromMemory(lst::PixelTriplets& pixelTripletsInGPU,
                                                                unsigned int pixelTripletIndex) {
     pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelQuintupletFromMemory(lst::PixelQuintuplets& pixelQuintupletsInGPU,
                                                                   unsigned int pixelQuintupletIndex) {
     pixelQuintupletsInGPU.isDup[pixelQuintupletIndex] = true;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelSegmentFromMemory(lst::Segments& segmentsInGPU,
                                                                unsigned int pixelSegmentArrayIndex,
                                                                bool secondpass = false) {
     segmentsInGPU.isDup[pixelSegmentArrayIndex] |= 1 + secondpass;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT5(unsigned int ix,
                                                  unsigned int jx,
@@ -61,7 +61,7 @@ namespace lst {
       }
     }
     return nMatched;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT5(unsigned int ix,
                                                   unsigned int jx,
@@ -88,7 +88,7 @@ namespace lst {
       }
     }
     return nMatched;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void checkHitspT3(unsigned int ix,
                                                    unsigned int jx,
@@ -140,7 +140,7 @@ namespace lst {
 
     matched[0] = npMatched;
     matched[1] = nMatched;
-  };
+  }
 
   struct removeDupQuintupletsInGPUAfterBuild {
     template <typename TAcc>

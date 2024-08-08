@@ -28,25 +28,25 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff& buf) {
-      nHits = alpaka::getPtrNative(buf.nHits_buf);
-      xs = alpaka::getPtrNative(buf.xs_buf);
-      ys = alpaka::getPtrNative(buf.ys_buf);
-      zs = alpaka::getPtrNative(buf.zs_buf);
-      moduleIndices = alpaka::getPtrNative(buf.moduleIndices_buf);
-      idxs = alpaka::getPtrNative(buf.idxs_buf);
-      detid = alpaka::getPtrNative(buf.detid_buf);
-      rts = alpaka::getPtrNative(buf.rts_buf);
-      phis = alpaka::getPtrNative(buf.phis_buf);
-      etas = alpaka::getPtrNative(buf.etas_buf);
-      highEdgeXs = alpaka::getPtrNative(buf.highEdgeXs_buf);
-      highEdgeYs = alpaka::getPtrNative(buf.highEdgeYs_buf);
-      lowEdgeXs = alpaka::getPtrNative(buf.lowEdgeXs_buf);
-      lowEdgeYs = alpaka::getPtrNative(buf.lowEdgeYs_buf);
-      hitRanges = alpaka::getPtrNative(buf.hitRanges_buf);
-      hitRangesLower = alpaka::getPtrNative(buf.hitRangesLower_buf);
-      hitRangesUpper = alpaka::getPtrNative(buf.hitRangesUpper_buf);
-      hitRangesnLower = alpaka::getPtrNative(buf.hitRangesnLower_buf);
-      hitRangesnUpper = alpaka::getPtrNative(buf.hitRangesnUpper_buf);
+      nHits = buf.nHits_buf.data();
+      xs = buf.xs_buf.data();
+      ys = buf.ys_buf.data();
+      zs = buf.zs_buf.data();
+      moduleIndices = buf.moduleIndices_buf.data();
+      idxs = buf.idxs_buf.data();
+      detid = buf.detid_buf.data();
+      rts = buf.rts_buf.data();
+      phis = buf.phis_buf.data();
+      etas = buf.etas_buf.data();
+      highEdgeXs = buf.highEdgeXs_buf.data();
+      highEdgeYs = buf.highEdgeYs_buf.data();
+      lowEdgeXs = buf.lowEdgeXs_buf.data();
+      lowEdgeYs = buf.lowEdgeYs_buf.data();
+      hitRanges = buf.hitRanges_buf.data();
+      hitRangesLower = buf.hitRangesLower_buf.data();
+      hitRangesUpper = buf.hitRangesUpper_buf.data();
+      hitRangesnLower = buf.hitRangesnLower_buf.data();
+      hitRangesnUpper = buf.hitRangesnUpper_buf.data();
     }
   };
 
@@ -100,7 +100,6 @@ namespace lst {
       alpaka::memset(queue, hitRangesUpper_buf, 0xff);
       alpaka::memset(queue, hitRangesnLower_buf, 0xff);
       alpaka::memset(queue, hitRangesnUpper_buf, 0xff);
-      alpaka::wait(queue);
     }
 
     inline Hits const* data() const { return &data_; }
@@ -113,7 +112,7 @@ namespace lst {
     float rt = alpaka::math::sqrt(acc, x * x + y * y);
     float eta = ((z > 0) - (z < 0)) * alpaka::math::acosh(acc, r3 / rt);
     return eta;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float phi_mpi_pi(TAcc const& acc, float x) {
@@ -123,24 +122,24 @@ namespace lst {
     constexpr float o2pi = 1.f / (2.f * float(M_PI));
     float n = alpaka::math::round(acc, x * o2pi);
     return x - n * float(2.f * float(M_PI));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float phi(TAcc const& acc, float x, float y) {
     return phi_mpi_pi(acc, float(M_PI) + alpaka::math::atan2(acc, -y, -x));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float deltaPhi(TAcc const& acc, float x1, float y1, float x2, float y2) {
     float phi1 = phi(acc, x1, y1);
     float phi2 = phi(acc, x2, y2);
     return phi_mpi_pi(acc, (phi2 - phi1));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float deltaPhiChange(TAcc const& acc, float x1, float y1, float x2, float y2) {
     return deltaPhi(acc, x1, y1, x2 - x1, y2 - y1);
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float calculate_dPhi(float phi1, float phi2) {
     // Calculate dPhi
@@ -154,7 +153,7 @@ namespace lst {
     }
 
     return dPhi;
-  };
+  }
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int binary_search(const unsigned int* data,  // Array that we are searching over
                                                         unsigned int search_val,  // Value we want to find in data array
@@ -175,7 +174,7 @@ namespace lst {
     }
     // Couldn't find search value in array.
     return -1;
-  };
+  }
 
   struct moduleRangesKernel {
     template <typename TAcc>

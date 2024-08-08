@@ -89,10 +89,10 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
 
   auto endcapGeometryBuffers =
       EndcapGeometryBuffer<alpaka_common::DevHost>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
-  std::memcpy(alpaka::getPtrNative(endcapGeometryBuffers.geoMapDetId_buf),
+  std::memcpy(endcapGeometryBuffers.geoMapDetId_buf.data(),
               endcapGeometry.geoMapDetId_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(unsigned int));
-  std::memcpy(alpaka::getPtrNative(endcapGeometryBuffers.geoMapPhi_buf),
+  std::memcpy(endcapGeometryBuffers.geoMapPhi_buf.data(),
               endcapGeometry.geoMapPhi_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(float));
 

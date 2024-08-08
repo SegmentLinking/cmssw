@@ -40,34 +40,34 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff& buf) {
-      hitRanges = alpaka::getPtrNative(buf.hitRanges_buf);
-      hitRangesLower = alpaka::getPtrNative(buf.hitRangesLower_buf);
-      hitRangesUpper = alpaka::getPtrNative(buf.hitRangesUpper_buf);
-      hitRangesnLower = alpaka::getPtrNative(buf.hitRangesnLower_buf);
-      hitRangesnUpper = alpaka::getPtrNative(buf.hitRangesnUpper_buf);
-      mdRanges = alpaka::getPtrNative(buf.mdRanges_buf);
-      segmentRanges = alpaka::getPtrNative(buf.segmentRanges_buf);
-      trackletRanges = alpaka::getPtrNative(buf.trackletRanges_buf);
-      tripletRanges = alpaka::getPtrNative(buf.tripletRanges_buf);
-      trackCandidateRanges = alpaka::getPtrNative(buf.trackCandidateRanges_buf);
-      quintupletRanges = alpaka::getPtrNative(buf.quintupletRanges_buf);
+      hitRanges = buf.hitRanges_buf.data();
+      hitRangesLower = buf.hitRangesLower_buf.data();
+      hitRangesUpper = buf.hitRangesUpper_buf.data();
+      hitRangesnLower = buf.hitRangesnLower_buf.data();
+      hitRangesnUpper = buf.hitRangesnUpper_buf.data();
+      mdRanges = buf.mdRanges_buf.data();
+      segmentRanges = buf.segmentRanges_buf.data();
+      trackletRanges = buf.trackletRanges_buf.data();
+      tripletRanges = buf.tripletRanges_buf.data();
+      trackCandidateRanges = buf.trackCandidateRanges_buf.data();
+      quintupletRanges = buf.quintupletRanges_buf.data();
 
-      nEligibleT5Modules = alpaka::getPtrNative(buf.nEligibleT5Modules_buf);
-      indicesOfEligibleT5Modules = alpaka::getPtrNative(buf.indicesOfEligibleT5Modules_buf);
+      nEligibleT5Modules = buf.nEligibleT5Modules_buf.data();
+      indicesOfEligibleT5Modules = buf.indicesOfEligibleT5Modules_buf.data();
 
-      quintupletModuleIndices = alpaka::getPtrNative(buf.quintupletModuleIndices_buf);
-      quintupletModuleOccupancy = alpaka::getPtrNative(buf.quintupletModuleOccupancy_buf);
-      miniDoubletModuleIndices = alpaka::getPtrNative(buf.miniDoubletModuleIndices_buf);
-      miniDoubletModuleOccupancy = alpaka::getPtrNative(buf.miniDoubletModuleOccupancy_buf);
-      segmentModuleIndices = alpaka::getPtrNative(buf.segmentModuleIndices_buf);
-      segmentModuleOccupancy = alpaka::getPtrNative(buf.segmentModuleOccupancy_buf);
-      tripletModuleIndices = alpaka::getPtrNative(buf.tripletModuleIndices_buf);
-      tripletModuleOccupancy = alpaka::getPtrNative(buf.tripletModuleOccupancy_buf);
+      quintupletModuleIndices = buf.quintupletModuleIndices_buf.data();
+      quintupletModuleOccupancy = buf.quintupletModuleOccupancy_buf.data();
+      miniDoubletModuleIndices = buf.miniDoubletModuleIndices_buf.data();
+      miniDoubletModuleOccupancy = buf.miniDoubletModuleOccupancy_buf.data();
+      segmentModuleIndices = buf.segmentModuleIndices_buf.data();
+      segmentModuleOccupancy = buf.segmentModuleOccupancy_buf.data();
+      tripletModuleIndices = buf.tripletModuleIndices_buf.data();
+      tripletModuleOccupancy = buf.tripletModuleOccupancy_buf.data();
 
-      device_nTotalMDs = alpaka::getPtrNative(buf.device_nTotalMDs_buf);
-      device_nTotalSegs = alpaka::getPtrNative(buf.device_nTotalSegs_buf);
-      device_nTotalTrips = alpaka::getPtrNative(buf.device_nTotalTrips_buf);
-      device_nTotalQuints = alpaka::getPtrNative(buf.device_nTotalQuints_buf);
+      device_nTotalMDs = buf.device_nTotalMDs_buf.data();
+      device_nTotalSegs = buf.device_nTotalSegs_buf.data();
+      device_nTotalTrips = buf.device_nTotalTrips_buf.data();
+      device_nTotalQuints = buf.device_nTotalQuints_buf.data();
     }
   };
 
@@ -143,7 +143,6 @@ namespace lst {
       alpaka::memset(queue, trackCandidateRanges_buf, 0xff);
       alpaka::memset(queue, quintupletRanges_buf, 0xff);
       alpaka::memset(queue, quintupletModuleIndices_buf, 0xff);
-      alpaka::wait(queue);
       data_.setData(*this);
     }
 

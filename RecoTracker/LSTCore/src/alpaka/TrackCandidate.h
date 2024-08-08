@@ -34,23 +34,23 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff& buf) {
-      trackCandidateType = alpaka::getPtrNative(buf.trackCandidateType_buf);
-      directObjectIndices = alpaka::getPtrNative(buf.directObjectIndices_buf);
-      objectIndices = alpaka::getPtrNative(buf.objectIndices_buf);
-      nTrackCandidates = alpaka::getPtrNative(buf.nTrackCandidates_buf);
-      nTrackCandidatespT3 = alpaka::getPtrNative(buf.nTrackCandidatespT3_buf);
-      nTrackCandidatespT5 = alpaka::getPtrNative(buf.nTrackCandidatespT5_buf);
-      nTrackCandidatespLS = alpaka::getPtrNative(buf.nTrackCandidatespLS_buf);
-      nTrackCandidatesT5 = alpaka::getPtrNative(buf.nTrackCandidatesT5_buf);
+      trackCandidateType = buf.trackCandidateType_buf.data();
+      directObjectIndices = buf.directObjectIndices_buf.data();
+      objectIndices = buf.objectIndices_buf.data();
+      nTrackCandidates = buf.nTrackCandidates_buf.data();
+      nTrackCandidatespT3 = buf.nTrackCandidatespT3_buf.data();
+      nTrackCandidatespT5 = buf.nTrackCandidatespT5_buf.data();
+      nTrackCandidatespLS = buf.nTrackCandidatespLS_buf.data();
+      nTrackCandidatesT5 = buf.nTrackCandidatesT5_buf.data();
 
-      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
-      hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
-      pixelSeedIndex = alpaka::getPtrNative(buf.pixelSeedIndex_buf);
-      lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
+      logicalLayers = buf.logicalLayers_buf.data();
+      hitIndices = buf.hitIndices_buf.data();
+      pixelSeedIndex = buf.pixelSeedIndex_buf.data();
+      lowerModuleIndices = buf.lowerModuleIndices_buf.data();
 
-      centerX = alpaka::getPtrNative(buf.centerX_buf);
-      centerY = alpaka::getPtrNative(buf.centerY_buf);
-      radius = alpaka::getPtrNative(buf.radius_buf);
+      centerX = buf.centerX_buf.data();
+      centerY = buf.centerY_buf.data();
+      radius = buf.radius_buf.data();
     }
   };
 
@@ -102,7 +102,6 @@ namespace lst {
       alpaka::memset(queue, lowerModuleIndices_buf, 0u);
       alpaka::memset(queue, hitIndices_buf, 0u);
       alpaka::memset(queue, pixelSeedIndex_buf, 0);
-      alpaka::wait(queue);
     }
 
     inline TrackCandidates const* data() const { return &data_; }
@@ -126,7 +125,7 @@ namespace lst {
     trackCandidatesInGPU.hitIndices[Params_pT5::kHits * trackCandidateIndex + 1] = hitIndices.z;
     trackCandidatesInGPU.hitIndices[Params_pT5::kHits * trackCandidateIndex + 2] = hitIndices.y;
     trackCandidatesInGPU.hitIndices[Params_pT5::kHits * trackCandidateIndex + 3] = hitIndices.w;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateToMemory(lst::TrackCandidates& trackCandidatesInGPU,
                                                                 short trackCandidateType,
@@ -163,7 +162,7 @@ namespace lst {
     trackCandidatesInGPU.centerX[trackCandidateIndex] = __F2H(centerX);
     trackCandidatesInGPU.centerY[trackCandidateIndex] = __F2H(centerY);
     trackCandidatesInGPU.radius[trackCandidateIndex] = __F2H(radius);
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkPixelHits(unsigned int ix,
                                                     unsigned int jx,
@@ -203,7 +202,7 @@ namespace lst {
         npMatched++;
     }
     return npMatched;
-  };
+  }
 
   struct crossCleanpT3 {
     template <typename TAcc>

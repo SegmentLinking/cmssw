@@ -19,8 +19,8 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff const& buf) {
-      geoMapDetId = alpaka::getPtrNative(buf.geoMapDetId_buf);
-      geoMapPhi = alpaka::getPtrNative(buf.geoMapPhi_buf);
+      geoMapDetId = buf.geoMapDetId_buf.data();
+      geoMapPhi = buf.geoMapPhi_buf.data();
     }
   };
 

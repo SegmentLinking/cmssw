@@ -72,44 +72,44 @@ namespace lst {
       } else {
         return false;
       }
-    };
+    }
 
     static bool parseIsLower(bool isInvertedx, unsigned int detId) {
       return (isInvertedx) ? !(detId & 1) : (detId & 1);
-    };
+    }
 
     static unsigned int parsePartnerModuleId(unsigned int detId, bool isLowerx, bool isInvertedx) {
       return isLowerx ? (isInvertedx ? detId - 1 : detId + 1) : (isInvertedx ? detId + 1 : detId - 1);
-    };
+    }
 
     template <typename TBuff>
     void setData(TBuff const& buf) {
-      detIds = alpaka::getPtrNative(buf.detIds_buf);
-      moduleMap = alpaka::getPtrNative(buf.moduleMap_buf);
-      mapdetId = alpaka::getPtrNative(buf.mapdetId_buf);
-      mapIdx = alpaka::getPtrNative(buf.mapIdx_buf);
-      nConnectedModules = alpaka::getPtrNative(buf.nConnectedModules_buf);
-      drdzs = alpaka::getPtrNative(buf.drdzs_buf);
-      dxdys = alpaka::getPtrNative(buf.dxdys_buf);
-      nModules = alpaka::getPtrNative(buf.nModules_buf);
-      nLowerModules = alpaka::getPtrNative(buf.nLowerModules_buf);
-      partnerModuleIndices = alpaka::getPtrNative(buf.partnerModuleIndices_buf);
+      detIds = buf.detIds_buf.data();
+      moduleMap = buf.moduleMap_buf.data();
+      mapdetId = buf.mapdetId_buf.data();
+      mapIdx = buf.mapIdx_buf.data();
+      nConnectedModules = buf.nConnectedModules_buf.data();
+      drdzs = buf.drdzs_buf.data();
+      dxdys = buf.dxdys_buf.data();
+      nModules = buf.nModules_buf.data();
+      nLowerModules = buf.nLowerModules_buf.data();
+      partnerModuleIndices = buf.partnerModuleIndices_buf.data();
 
-      layers = alpaka::getPtrNative(buf.layers_buf);
-      rings = alpaka::getPtrNative(buf.rings_buf);
-      modules = alpaka::getPtrNative(buf.modules_buf);
-      rods = alpaka::getPtrNative(buf.rods_buf);
-      subdets = alpaka::getPtrNative(buf.subdets_buf);
-      sides = alpaka::getPtrNative(buf.sides_buf);
-      eta = alpaka::getPtrNative(buf.eta_buf);
-      r = alpaka::getPtrNative(buf.r_buf);
-      isInverted = alpaka::getPtrNative(buf.isInverted_buf);
-      isLower = alpaka::getPtrNative(buf.isLower_buf);
-      isAnchor = alpaka::getPtrNative(buf.isAnchor_buf);
-      moduleType = alpaka::getPtrNative(buf.moduleType_buf);
-      moduleLayerType = alpaka::getPtrNative(buf.moduleLayerType_buf);
-      lstLayers = alpaka::getPtrNative(buf.lstLayers_buf);
-      connectedPixels = alpaka::getPtrNative(buf.connectedPixels_buf);
+      layers = buf.layers_buf.data();
+      rings = buf.rings_buf.data();
+      modules = buf.modules_buf.data();
+      rods = buf.rods_buf.data();
+      subdets = buf.subdets_buf.data();
+      sides = buf.sides_buf.data();
+      eta = buf.eta_buf.data();
+      r = buf.r_buf.data();
+      isInverted = buf.isInverted_buf.data();
+      isLower = buf.isLower_buf.data();
+      isAnchor = buf.isAnchor_buf.data();
+      moduleType = buf.moduleType_buf.data();
+      moduleLayerType = buf.moduleLayerType_buf.data();
+      lstLayers = buf.lstLayers_buf.data();
+      connectedPixels = buf.connectedPixels_buf.data();
     }
   };
 
@@ -212,7 +212,6 @@ namespace lst {
         alpaka::memcpy(queue, lstLayers_buf, src.lstLayers_buf);
         alpaka::memcpy(queue, connectedPixels_buf, src.connectedPixels_buf);
       }
-      alpaka::wait(queue);
     }
 
     template <typename TQueue, typename TDevSrc>

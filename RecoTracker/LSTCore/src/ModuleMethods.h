@@ -12,6 +12,7 @@
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace lst {
   struct ModuleMetaData {
@@ -80,10 +81,10 @@ namespace lst {
     nPixels = connectedPix_size;
 
     // Now we re-initialize connectedPixels_buf since nPixels is now known
-    modulesBuf.connectedPixels_buf = allocBufWrapper<unsigned int>(cms::alpakatools::host(), nPixels);
+    modulesBuf.connectedPixels_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(nPixels);
     modulesBuf.data_.setData(modulesBuf);
 
-    unsigned int* connectedPixels = alpaka::getPtrNative(modulesBuf.connectedPixels_buf);
+    unsigned int* connectedPixels = modulesBuf.connectedPixels_buf.data();
 
     for (unsigned int icondet = 0; icondet < totalSizes; icondet++) {
       connectedPixels[icondet] = mmd.detIdToIndex.at(connectedModuleDetIds[icondet]);
@@ -94,13 +95,13 @@ namespace lst {
     for (unsigned int icondet = 0; icondet < totalSizes_neg; icondet++) {
       connectedPixels[icondet + totalSizes + totalSizes_pos] = mmd.detIdToIndex.at(connectedModuleDetIds_neg[icondet]);
     }
-  };
+  }
 
   inline void fillConnectedModuleArrayExplicit(ModulesBuffer<alpaka_common::DevHost>& modulesBuf,
                                                ModuleMetaData const& mmd,
                                                ModuleConnectionMap const& moduleConnectionMap) {
-    uint16_t* moduleMap = alpaka::getPtrNative(modulesBuf.moduleMap_buf);
-    uint16_t* nConnectedModules = alpaka::getPtrNative(modulesBuf.nConnectedModules_buf);
+    uint16_t* moduleMap = modulesBuf.moduleMap_buf.data();
+    uint16_t* nConnectedModules = modulesBuf.nConnectedModules_buf.data();
 
     for (auto it = mmd.detIdToIndex.begin(); it != mmd.detIdToIndex.end(); ++it) {
       unsigned int detId = it->first;
@@ -111,11 +112,11 @@ namespace lst {
         moduleMap[index * max_connected_modules + i] = mmd.detIdToIndex.at(connectedModules[i]);
       }
     }
-  };
+  }
 
   inline void fillMapArraysExplicit(ModulesBuffer<alpaka_common::DevHost>& modulesBuf, ModuleMetaData const& mmd) {
-    uint16_t* mapIdx = alpaka::getPtrNative(modulesBuf.mapIdx_buf);
-    unsigned int* mapdetId = alpaka::getPtrNative(modulesBuf.mapdetId_buf);
+    uint16_t* mapIdx = modulesBuf.mapIdx_buf.data();
+    unsigned int* mapdetId = modulesBuf.mapdetId_buf.data();
 
     unsigned int counter = 0;
     for (auto it = mmd.detIdToIndex.begin(); it != mmd.detIdToIndex.end(); ++it) {
@@ -125,7 +126,7 @@ namespace lst {
       mapdetId[counter] = detId;
       counter++;
     }
-  };
+  }
 
   inline void setDerivedQuantities(unsigned int detId,
                                    unsigned short& layer,
@@ -148,7 +149,7 @@ namespace lst {
 
     r = std::sqrt(m_x * m_x + m_y * m_y + m_z * m_z);
     eta = ((m_z > 0) - (m_z < 0)) * std::acosh(r / std::sqrt(m_x * m_x + m_y * m_y));
-  };
+  }
 
   inline void loadCentroidsFromFile(const char* filePath, ModuleMetaData& mmd, uint16_t& nModules) {
     std::ifstream ifile(filePath, std::ios::binary);
@@ -185,7 +186,7 @@ namespace lst {
     mmd.detIdToIndex[1] = counter;  //pixel module is the last module in the module list
     counter++;
     nModules = counter;
-  };
+  }
 
   inline ModulesBuffer<alpaka_common::DevHost> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
                                                                    const char* moduleMetaDataFilePath,
@@ -205,26 +206,26 @@ namespace lst {
     ModulesBuffer<alpaka_common::DevHost> modulesBuf(cms::alpakatools::host(), nModules, 0);
 
     // Getting the underlying data pointers
-    unsigned int* host_detIds = alpaka::getPtrNative(modulesBuf.detIds_buf);
-    short* host_layers = alpaka::getPtrNative(modulesBuf.layers_buf);
-    short* host_rings = alpaka::getPtrNative(modulesBuf.rings_buf);
-    short* host_rods = alpaka::getPtrNative(modulesBuf.rods_buf);
-    short* host_modules = alpaka::getPtrNative(modulesBuf.modules_buf);
-    short* host_subdets = alpaka::getPtrNative(modulesBuf.subdets_buf);
-    short* host_sides = alpaka::getPtrNative(modulesBuf.sides_buf);
-    float* host_eta = alpaka::getPtrNative(modulesBuf.eta_buf);
-    float* host_r = alpaka::getPtrNative(modulesBuf.r_buf);
-    bool* host_isInverted = alpaka::getPtrNative(modulesBuf.isInverted_buf);
-    bool* host_isLower = alpaka::getPtrNative(modulesBuf.isLower_buf);
-    bool* host_isAnchor = alpaka::getPtrNative(modulesBuf.isAnchor_buf);
-    ModuleType* host_moduleType = alpaka::getPtrNative(modulesBuf.moduleType_buf);
-    ModuleLayerType* host_moduleLayerType = alpaka::getPtrNative(modulesBuf.moduleLayerType_buf);
-    float* host_dxdys = alpaka::getPtrNative(modulesBuf.dxdys_buf);
-    float* host_drdzs = alpaka::getPtrNative(modulesBuf.drdzs_buf);
-    uint16_t* host_nModules = alpaka::getPtrNative(modulesBuf.nModules_buf);
-    uint16_t* host_nLowerModules = alpaka::getPtrNative(modulesBuf.nLowerModules_buf);
-    uint16_t* host_partnerModuleIndices = alpaka::getPtrNative(modulesBuf.partnerModuleIndices_buf);
-    int* host_lstLayers = alpaka::getPtrNative(modulesBuf.lstLayers_buf);
+    unsigned int* host_detIds = modulesBuf.detIds_buf.data();
+    short* host_layers = modulesBuf.layers_buf.data();
+    short* host_rings = modulesBuf.rings_buf.data();
+    short* host_rods = modulesBuf.rods_buf.data();
+    short* host_modules = modulesBuf.modules_buf.data();
+    short* host_subdets = modulesBuf.subdets_buf.data();
+    short* host_sides = modulesBuf.sides_buf.data();
+    float* host_eta = modulesBuf.eta_buf.data();
+    float* host_r = modulesBuf.r_buf.data();
+    bool* host_isInverted = modulesBuf.isInverted_buf.data();
+    bool* host_isLower = modulesBuf.isLower_buf.data();
+    bool* host_isAnchor = modulesBuf.isAnchor_buf.data();
+    ModuleType* host_moduleType = modulesBuf.moduleType_buf.data();
+    ModuleLayerType* host_moduleLayerType = modulesBuf.moduleLayerType_buf.data();
+    float* host_dxdys = modulesBuf.dxdys_buf.data();
+    float* host_drdzs = modulesBuf.drdzs_buf.data();
+    uint16_t* host_nModules = modulesBuf.nModules_buf.data();
+    uint16_t* host_nLowerModules = modulesBuf.nLowerModules_buf.data();
+    uint16_t* host_partnerModuleIndices = modulesBuf.partnerModuleIndices_buf.data();
+    int* host_lstLayers = modulesBuf.lstLayers_buf.data();
 
     //reassign detIdToIndex indices here
     nLowerModules = (nModules - 1) / 2;
@@ -335,6 +336,6 @@ namespace lst {
     fillMapArraysExplicit(modulesBuf, mmd);
 
     return modulesBuf;
-  };
+  }
 }  // namespace lst
 #endif

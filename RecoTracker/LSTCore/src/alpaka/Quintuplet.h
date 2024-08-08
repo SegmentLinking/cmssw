@@ -46,30 +46,30 @@ namespace lst {
 
     template <typename TBuff>
     void setData(TBuff& buf) {
-      tripletIndices = alpaka::getPtrNative(buf.tripletIndices_buf);
-      lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
-      nQuintuplets = alpaka::getPtrNative(buf.nQuintuplets_buf);
-      totOccupancyQuintuplets = alpaka::getPtrNative(buf.totOccupancyQuintuplets_buf);
-      nMemoryLocations = alpaka::getPtrNative(buf.nMemoryLocations_buf);
-      innerRadius = alpaka::getPtrNative(buf.innerRadius_buf);
-      bridgeRadius = alpaka::getPtrNative(buf.bridgeRadius_buf);
-      outerRadius = alpaka::getPtrNative(buf.outerRadius_buf);
-      pt = alpaka::getPtrNative(buf.pt_buf);
-      eta = alpaka::getPtrNative(buf.eta_buf);
-      phi = alpaka::getPtrNative(buf.phi_buf);
-      score_rphisum = alpaka::getPtrNative(buf.score_rphisum_buf);
-      layer = alpaka::getPtrNative(buf.layer_buf);
-      isDup = alpaka::getPtrNative(buf.isDup_buf);
-      TightCutFlag = alpaka::getPtrNative(buf.TightCutFlag_buf);
-      partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
-      regressionRadius = alpaka::getPtrNative(buf.regressionRadius_buf);
-      regressionG = alpaka::getPtrNative(buf.regressionG_buf);
-      regressionF = alpaka::getPtrNative(buf.regressionF_buf);
-      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
-      hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
-      rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
-      chiSquared = alpaka::getPtrNative(buf.chiSquared_buf);
-      nonAnchorChiSquared = alpaka::getPtrNative(buf.nonAnchorChiSquared_buf);
+      tripletIndices = buf.tripletIndices_buf.data();
+      lowerModuleIndices = buf.lowerModuleIndices_buf.data();
+      nQuintuplets = buf.nQuintuplets_buf.data();
+      totOccupancyQuintuplets = buf.totOccupancyQuintuplets_buf.data();
+      nMemoryLocations = buf.nMemoryLocations_buf.data();
+      innerRadius = buf.innerRadius_buf.data();
+      bridgeRadius = buf.bridgeRadius_buf.data();
+      outerRadius = buf.outerRadius_buf.data();
+      pt = buf.pt_buf.data();
+      eta = buf.eta_buf.data();
+      phi = buf.phi_buf.data();
+      score_rphisum = buf.score_rphisum_buf.data();
+      layer = buf.layer_buf.data();
+      isDup = buf.isDup_buf.data();
+      TightCutFlag = buf.TightCutFlag_buf.data();
+      partOfPT5 = buf.partOfPT5_buf.data();
+      regressionRadius = buf.regressionRadius_buf.data();
+      regressionG = buf.regressionG_buf.data();
+      regressionF = buf.regressionF_buf.data();
+      logicalLayers = buf.logicalLayers_buf.data();
+      hitIndices = buf.hitIndices_buf.data();
+      rzChiSquared = buf.rzChiSquared_buf.data();
+      chiSquared = buf.chiSquared_buf.data();
+      nonAnchorChiSquared = buf.nonAnchorChiSquared_buf.data();
     }
   };
 
@@ -136,7 +136,6 @@ namespace lst {
       alpaka::memset(queue, isDup_buf, 0u);
       alpaka::memset(queue, TightCutFlag_buf, false);
       alpaka::memset(queue, partOfPT5_buf, false);
-      alpaka::wait(queue);
     }
 
     inline Quintuplets const* data() const { return &data_; }
@@ -148,7 +147,7 @@ namespace lst {
                                                            float secondMin,
                                                            float secondMax) {
     return ((firstMin <= secondMin) && (secondMin < firstMax)) || ((secondMin < firstMin) && (firstMin < secondMax));
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuintupletToMemory(lst::Triplets const& tripletsInGPU,
                                                             lst::Quintuplets& quintupletsInGPU,
@@ -230,7 +229,7 @@ namespace lst {
     quintupletsInGPU.rzChiSquared[quintupletIndex] = rzChiSquared;
     quintupletsInGPU.chiSquared[quintupletIndex] = rPhiChiSquared;
     quintupletsInGPU.nonAnchorChiSquared[quintupletIndex] = nonAnchorChiSquared;
-  };
+  }
 
   //90% constraint
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passChiSquaredConstraint(lst::Modules const& modulesInGPU,
@@ -313,7 +312,7 @@ namespace lst {
     }
 
     return true;
-  };
+  }
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
   template <typename TAcc>
@@ -749,7 +748,7 @@ namespace lst {
       }
     }
     return true;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool T5HasCommonMiniDoublet(lst::Triplets const& tripletsInGPU,
@@ -764,7 +763,7 @@ namespace lst {
         segmentsInGPU.mdIndices[2 * outerInnerSegmentIndex];  //outer triplet inner segment inner MD index
 
     return (innerOuterOuterMiniDoubletIndex == outerInnerInnerMiniDoubletIndex);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeErrorInRadius(TAcc const& acc,
@@ -796,7 +795,7 @@ namespace lst {
         }
       }
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE12378(TAcc const& acc,
@@ -820,7 +819,7 @@ namespace lst {
                                 innerInvRadiusMax,
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
+  }
 
   /*bounds for high Pt taken from : http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_efficiency/efficiencies/new_efficiencies/efficiencies_20210513_T5_recovering_high_Pt_efficiencies/highE_radius_matching/highE_bounds.txt */
   template <typename TAcc>
@@ -845,7 +844,7 @@ namespace lst {
     bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
 
     return checkIntervalOverlap(innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBBE(TAcc const& acc,
@@ -869,7 +868,7 @@ namespace lst {
     bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
 
     return checkIntervalOverlap(innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE23478(TAcc const& acc,
@@ -893,7 +892,7 @@ namespace lst {
                                 innerInvRadiusMax,
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE34578(TAcc const& acc,
@@ -917,7 +916,7 @@ namespace lst {
                                 innerInvRadiusMax,
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBEEE(TAcc const& acc,
@@ -947,7 +946,7 @@ namespace lst {
                                 innerInvRadiusMax,
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBEEEE(TAcc const& acc,
@@ -978,7 +977,7 @@ namespace lst {
                                 alpaka::math::max(acc, innerInvRadiusMax, 1.0 / innerRadiusMin2S),
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0 / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0 / bridgeRadiusMin2S));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiEEEEE(TAcc const& acc,
@@ -1009,7 +1008,7 @@ namespace lst {
                                 alpaka::math::max(acc, innerInvRadiusMax, 1.0 / innerRadiusMin2S),
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0 / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0 / bridgeRadiusMin2S));
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegression(TAcc const& acc,
@@ -1096,7 +1095,7 @@ namespace lst {
 #endif
       }
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusUsingRegression(TAcc const& acc,
@@ -1194,7 +1193,7 @@ namespace lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) / sigmas2[i];
     }
     return radius;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeChiSquared(TAcc const& acc,
@@ -1240,7 +1239,7 @@ namespace lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / sigma2;
     }
     return chiSquared;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterationsT5(TAcc const& acc,
@@ -1346,7 +1345,7 @@ namespace lst {
       //2nd update
       pt_beta = dr * lst::k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);  //get a better pt estimate
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoBBBB(TAcc const& acc,
@@ -1598,7 +1597,7 @@ namespace lst {
 
     float dBeta = betaIn - betaOut;
     return dBeta * dBeta <= dBetaCut2;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoBBEE(TAcc const& acc,
@@ -1848,7 +1847,7 @@ namespace lst {
     float dBeta = betaIn - betaOut;
     //Cut #7: Cut on dBet
     return dBeta * dBeta <= dBetaCut2;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoEEEE(TAcc const& acc,
@@ -2077,7 +2076,7 @@ namespace lst {
     float dBeta = betaIn - betaOut;
     //Cut #7: Cut on dBeta
     return dBeta * dBeta <= dBetaCut2;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletAlgoSelector(TAcc const& acc,
@@ -2182,7 +2181,7 @@ namespace lst {
     }
 
     return false;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgo(TAcc const& acc,
@@ -2533,7 +2532,7 @@ namespace lst {
                                             regressionF,
                                             regressionRadius);
     return true;
-  };
+  }
 
   struct createQuintupletsInGPUv2 {
     template <typename TAcc>
