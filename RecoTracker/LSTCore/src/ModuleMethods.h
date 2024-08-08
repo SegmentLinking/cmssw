@@ -12,6 +12,7 @@
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace lst {
   struct ModuleMetaData {
@@ -80,7 +81,7 @@ namespace lst {
     nPixels = connectedPix_size;
 
     // Now we re-initialize connectedPixels_buf since nPixels is now known
-    modulesBuf.connectedPixels_buf = allocBufWrapper<unsigned int>(cms::alpakatools::host(), nPixels);
+    modulesBuf.connectedPixels_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(nPixels);
     modulesBuf.data_.setData(modulesBuf);
 
     unsigned int* connectedPixels = modulesBuf.connectedPixels_buf.data();

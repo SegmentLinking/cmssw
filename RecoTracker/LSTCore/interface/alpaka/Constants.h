@@ -36,25 +36,24 @@ namespace lst {
 #endif
 
   // Adjust grid and block sizes based on backend configuration
-  template <typename Vec>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE WorkDiv3D createWorkDiv(const Vec& blocksPerGrid,
-                                                          const Vec& threadsPerBlock,
-                                                          const Vec& elementsPerThreadArg) {
+  template <typename Vec, typename TAcc = ALPAKA_ACCELERATOR_NAMESPACE::Acc<typename Vec::Dim>>
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE WorkDiv<typename Vec::Dim> createWorkDiv(const Vec& blocksPerGrid,
+                                                                           const Vec& threadsPerBlock,
+                                                                           const Vec& elementsPerThreadArg) {
     Vec adjustedBlocks = blocksPerGrid;
     Vec adjustedThreads = threadsPerBlock;
 
-    // Serial execution, so all launch parameters set to 1.
-#if defined(ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED)
-    adjustedBlocks = Vec::all(static_cast<Idx>(1));
-    adjustedThreads = Vec::all(static_cast<Idx>(1));
-#endif
+    // special overrides for CPU/host cases
+    if constexpr (std::is_same_v<Platform, alpaka::PlatformCpu>) {
+      adjustedBlocks = Vec::all(static_cast<Idx>(1));
 
-    // Threads enabled, set number of blocks to 1.
-#if defined(ALPAKA_ACC_CPU_B_SEQ_T_THREADS_ENABLED)
-    adjustedBlocks = Vec::all(static_cast<Idx>(1));
-#endif
+      if constexpr (std::is_same_v<typename alpaka::AccToTag<TAcc>, alpaka::TagCpuSerial>) {
+        // Serial execution, set threads to 1 as well
+        adjustedThreads = Vec::all(static_cast<Idx>(1));  // probably redundant
+      }
+    }
 
-    return WorkDiv3D(adjustedBlocks, adjustedThreads, elementsPerThreadArg);
+    return WorkDiv<typename Vec::Dim>(adjustedBlocks, adjustedThreads, elementsPerThreadArg);
   }
 
   // The constants below are usually used in functions like alpaka::math::min(),
