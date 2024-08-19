@@ -1,5 +1,10 @@
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 lst::EndcapGeometry::EndcapGeometry(std::string const& filename) { load(filename); }
 
 void lst::EndcapGeometry::load(std::string const& filename) {
