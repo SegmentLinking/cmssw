@@ -80,9 +80,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       void initSync(bool verbose);
 
-      int* superbinCPU;
-      int8_t* pixelTypeCPU;
-
       const uint16_t nModules_;
       const uint16_t nLowerModules_;
       const unsigned int nPixels_;
@@ -131,7 +128,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   std::vector<int> const& charge,
                                   std::vector<unsigned int> const& seedIdx,
                                   std::vector<int> const& superbin,
-                                  std::vector<int8_t> const& pixelType,
+                                  std::vector<int> const& pixelType,
                                   std::vector<char> const& isQuad);
 
       void createMiniDoublets();

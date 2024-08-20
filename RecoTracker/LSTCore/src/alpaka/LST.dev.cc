@@ -77,14 +77,13 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
   std::vector<unsigned int> hitIdxs(ph2_detId.size());
 
   std::vector<int> superbin_vec;
-  std::vector<int8_t> pixelType_vec;
+  std::vector<int> pixelType_vec;
   std::vector<char> isQuad_vec;
   std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
   const int hit_size = trkX.size();
 
   for (size_t iSeed = 0; iSeed < n_see; iSeed++) {
     XYZVector p3LH(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
-    XYZVector p3LH_helper(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
     float ptIn = p3LH.rho();
     float eta = p3LH.eta();
     float ptErr = see_ptErr[iSeed];
@@ -94,7 +93,7 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       XYZVector p3PCA(see_px[iSeed], see_py[iSeed], see_pz[iSeed]);
       XYZVector r3PCA(calculateR3FromPCA(p3PCA, see_dxy[iSeed], see_dz[iSeed]));
 
-      float pixelSegmentDeltaPhiChange = (r3LH - p3LH_helper).phi();  //FIXME: this looks like a bug
+      float pixelSegmentDeltaPhiChange = (r3LH - p3LH).phi();
       float etaErr = see_etaErr[iSeed];
       float px = p3LH.x();
       float py = p3LH.y();
@@ -104,12 +103,12 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       int pixtype = -1;
 
       if (ptIn >= 2.0)
-        pixtype = 0;
+        pixtype = static_cast<int>(::lst::kPixelType::highPt);
       else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
         if (pixelSegmentDeltaPhiChange >= 0)
-          pixtype = 1;
+          pixtype = static_cast<int>(::lst::kPixelType::lowPtPosCurv);
         else
-          pixtype = 2;
+          pixtype = static_cast<int>(::lst::kPixelType::lowPtNegCurv);
       } else
         continue;
 

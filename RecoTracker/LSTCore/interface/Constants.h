@@ -32,6 +32,9 @@ namespace lst {
                                                    alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
   }
 
+  // Named constants for pixelTypes
+  enum kPixelType { highPt = 0, lowPtPosCurv = 1, lowPtNegCurv = 2 };
+
 // If a compile time flag does not define PT_CUT, default to 0.8 (GeV)
 #ifndef PT_CUT
   constexpr float PT_CUT = 0.8f;
@@ -52,7 +55,7 @@ namespace lst {
 
   constexpr unsigned int size_superbins = 45000;
 
-  //defining the constant host device variables right up here
+  // Defining the constant host device variables right up here
   // Currently pixel tracks treated as LSs with 2 double layers (IT layers 1+2 and 3+4) and 4 hits. To be potentially handled better in the future.
   struct Params_pLS {
     static constexpr int kLayers = 2, kHits = 4;
