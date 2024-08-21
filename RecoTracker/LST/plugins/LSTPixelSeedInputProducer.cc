@@ -39,9 +39,9 @@ private:
 
 LSTPixelSeedInputProducer::LSTPixelSeedInputProducer(edm::ParameterSet const& iConfig)
     : mfToken_(esConsumes()),
-      beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
-      lstPixelSeedInputPutToken_(produces<LSTPixelSeedInput>()),
-      lstPixelSeedsPutToken_(produces<TrajectorySeedCollection>()) {
+      beamSpotToken_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
+      lstPixelSeedInputPutToken_(produces()),
+      lstPixelSeedsPutToken_(produces()) {
   seedTokens_ = edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("seedTracks"),
                                       [&](const edm::InputTag& tag) { return consumes<edm::View<reco::Track>>(tag); });
 }

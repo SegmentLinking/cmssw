@@ -735,10 +735,12 @@ void Event::createPixelTriplets() {
 
   // TODO: check if a map/reduction to just eligible pLSs would speed up the kernel
   // the current selection still leaves a significant fraction of unmatchable pLSs
-  for (unsigned int i = 0; i < nInnerSegments; i++) { // loop over # pLS
-    int pixelType = pixelTypes[i]; // Get pixel type for this pLS
-    int superbin = superbins[i]; // Get superbin for this pixel
-    if ((superbin < 0) or (superbin >= (int)size_superbins) or ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
+  for (unsigned int i = 0; i < nInnerSegments; i++) {  // loop over # pLS
+    int pixelType = pixelTypes[i];                     // Get pixel type for this pLS
+    int superbin = superbins[i];                       // Get superbin for this pixel
+    if ((superbin < 0) or (superbin >= (int)size_superbins) or
+        ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and
+         (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
       connectedPixelSize_host[i] = 0;
       connectedPixelIndex_host[i] = 0;
       continue;
@@ -931,9 +933,11 @@ void Event::createPixelQuintuplets() {
 
   // Loop over # pLS
   for (unsigned int i = 0; i < nInnerSegments; i++) {
-    int pixelType = pixelTypes[i]; // Get pixel type for this pLS
-    int superbin = superbins[i]; // Get superbin for this pixel
-    if ((superbin < 0) or (superbin >= (int)size_superbins) or ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
+    int pixelType = pixelTypes[i];  // Get pixel type for this pLS
+    int superbin = superbins[i];    // Get superbin for this pixel
+    if ((superbin < 0) or (superbin >= (int)size_superbins) or
+        ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and
+         (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
       connectedPixelIndex_host[i] = 0;
       connectedPixelSize_host[i] = 0;
       continue;

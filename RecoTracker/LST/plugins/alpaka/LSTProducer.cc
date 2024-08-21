@@ -26,9 +26,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class LSTProducer : public stream::SynchronizingEDProducer<> {
   public:
     LSTProducer(edm::ParameterSet const& config)
-        : lstPixelSeedInputToken_{consumes<LSTPixelSeedInput>(config.getParameter<edm::InputTag>("pixelSeedInput"))},
-          lstPhase2OTHitsInputToken_{
-              consumes<LSTPhase2OTHitsInput>(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
+        : lstPixelSeedInputToken_{consumes(config.getParameter<edm::InputTag>("pixelSeedInput"))},
+          lstPhase2OTHitsInputToken_{consumes(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
           lstESToken_{esConsumes()},
           verbose_(config.getParameter<bool>("verbose")),
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),

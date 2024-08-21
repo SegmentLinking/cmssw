@@ -57,16 +57,14 @@ private:
 };
 
 LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
-    : lstOutputToken_(consumes<LSTOutput>(iConfig.getParameter<edm::InputTag>("lstOutput"))),
-      lstPhase2OTHitsInputToken_{consumes<LSTPhase2OTHitsInput>(iConfig.getParameter<edm::InputTag>("phase2OTHits"))},
-      lstPixelSeedToken_{consumes<TrajectorySeedCollection>(iConfig.getParameter<edm::InputTag>("lstPixelSeeds"))},
+    : lstOutputToken_(consumes(iConfig.getParameter<edm::InputTag>("lstOutput"))),
+      lstPhase2OTHitsInputToken_{consumes(iConfig.getParameter<edm::InputTag>("phase2OTHits"))},
+      lstPixelSeedToken_{consumes(iConfig.getParameter<edm::InputTag>("lstPixelSeeds"))},
       includeT5s_(iConfig.getParameter<bool>("includeT5s")),
       includeNonpLSTSs_(iConfig.getParameter<bool>("includeNonpLSTSs")),
       mfToken_(esConsumes()),
-      propagatorAlongToken_{
-          esConsumes<Propagator, TrackingComponentsRecord>(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
-      propagatorOppositeToken_{esConsumes<Propagator, TrackingComponentsRecord>(
-          iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
+      propagatorAlongToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
+      propagatorOppositeToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
       tGeomToken_(esConsumes()),
       seedCreator_(SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator",
                                                      iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"),
@@ -77,15 +75,15 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       // - The minimal set for TCs is t5TCsLST, pTTCsLST and pLSTCsLST.
       //   That would complicate the handling of collections though,
       //   so it is deferred to when we have a clearer picture of what's needed.
-      trajectorySeedPutToken_(produces<TrajectorySeedCollection>("")),
-      trajectorySeedpLSPutToken_(produces<TrajectorySeedCollection>("pLSTSsLST")),
-      trackCandidatePutToken_(produces<TrackCandidateCollection>("")),
-      trackCandidatepTCPutToken_(produces<TrackCandidateCollection>("pTCsLST")),
-      trackCandidateT5TCPutToken_(produces<TrackCandidateCollection>("t5TCsLST")),
-      trackCandidateNopLSTCPutToken_(produces<TrackCandidateCollection>("nopLSTCsLST")),
-      trackCandidatepTTCPutToken_(produces<TrackCandidateCollection>("pTTCsLST")),
-      trackCandidatepLSTCPutToken_(produces<TrackCandidateCollection>("pLSTCsLST")),
-      seedStopInfoPutToken_(produces<std::vector<SeedStopInfo>>()) {}
+      trajectorySeedPutToken_(produces("")),
+      trajectorySeedpLSPutToken_(produces("pLSTSsLST")),
+      trackCandidatePutToken_(produces("")),
+      trackCandidatepTCPutToken_(produces("pTCsLST")),
+      trackCandidateT5TCPutToken_(produces("t5TCsLST")),
+      trackCandidateNopLSTCPutToken_(produces("nopLSTCsLST")),
+      trackCandidatepTTCPutToken_(produces("pTTCsLST")),
+      trackCandidatepLSTCPutToken_(produces("pLSTCsLST")),
+      seedStopInfoPutToken_(produces()) {}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;

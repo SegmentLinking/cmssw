@@ -49,8 +49,8 @@ namespace lst {
 
     inline EndcapGeometryDev const* data() const { return &data_; }
 
-    private:
-      EndcapGeometryDev data_;
+  private:
+    EndcapGeometryDev data_;
   };
 
 }  // namespace lst
