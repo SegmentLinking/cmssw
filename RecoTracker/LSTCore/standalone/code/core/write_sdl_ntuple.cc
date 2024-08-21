@@ -624,8 +624,13 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
   std::vector<int> sim_t3_matched(n_accepted_simtrk);
   std::vector<std::vector<int>> t3_matched_simIdx;
 
+  // printf("Num T3s: %d\n", event->getNumberOfTriplets());
+
+  int nT3s = 0;
+
   for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modulesInGPU.nLowerModules); ++lowerModuleIdx) {
     int nTriplets = tripletsInGPU.nTriplets[lowerModuleIdx];
+    nT3s += nTriplets;
     for (unsigned int idx = 0; idx < nTriplets; idx++) {
       unsigned int tripletIndex = rangesInGPU.tripletModuleIndices[lowerModuleIdx] + idx;
       float pt = __H2F(tripletsInGPU.circleRadius[tripletIndex]) * 2 * SDL::k2Rinv1GeVf;
@@ -770,6 +775,8 @@ void setTripletOutputBranches(SDL::Event<SDL::Acc>* event) {
       }
     }
   }
+
+  // printf("Num T3s: %d\n", nT3s);
 
   vector<int> t3_isDuplicate(t3_matched_simIdx.size());
   for (unsigned int i = 0; i < t3_matched_simIdx.size(); i++) {

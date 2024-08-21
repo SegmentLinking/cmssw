@@ -150,6 +150,7 @@ namespace SDL {
       alpaka::memset(queue, partOfPT5_buf, false);
       alpaka::memset(queue, partOfT5_buf, false);
       alpaka::memset(queue, partOfPT3_buf, false);
+      // printf("Max number of triplets: %d\n", maxTriplets);
     }
   };
 
@@ -261,9 +262,9 @@ namespace SDL {
                                                        float& circleCenterX, 
                                                        float& circleCenterY) {
 
-    //following Philip's layer number prescription
-    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
-    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
+    // following Philip's layer number prescription
+    // const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
+    // const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
     const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
 
     //get the rt and z
@@ -459,7 +460,7 @@ namespace SDL {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
-    if (Pt > 100 || alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
+    if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
         slope = (z2 - z1) / (r2 - r1);
@@ -477,187 +478,273 @@ namespace SDL {
       rzChiSquared = 12 * residual3_linear * residual3_linear;
 
       // return rzChiSquared < 2.806f;
-      return rzChiSquared < 2.39f;
+      // return rzChiSquared < 2.39f;
+      // return rzChiSquared < 7.76e-13;
+      // return rzChiSquared < 2.77f;
     }
 
-    // 99% efficiency
-    // residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
-    // return true;
-    
+    residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    return true;
+
+    //tuned
     // if (layer1==7) {
     //   if (layer2==8) {
     //     if (layer3==9) {
-    //       return rzChiSquared < 58.48f;
+    //       return rzChiSquared < 55.54f;
     //     } else if (layer3==14) {
-    //       return rzChiSquared < 2.888f;
+    //       return rzChiSquared < 2.93f;
     //     }
     //   } else if (layer2==13) {
-    //     return rzChiSquared < 17.775f;
+    //     return rzChiSquared < 10.21;
     //   }
     // } else if (layer1==8) {
     //   if (layer2==9) {
     //     if (layer3==10) {
-    //       return rzChiSquared < 56.08f;
+    //       return rzChiSquared < 54.35f;
     //     } else if (layer3==15) {
-    //       return rzChiSquared < 2.791f;
+    //       return rzChiSquared < 2.84f;
     //     } 
     //   } else if (layer2==14) {
-    //     return rzChiSquared < 23.15f;
+    //     return rzChiSquared < 6.72f;
     //   }
     // } else if (layer1==9) {
     //   if (layer2==10) {
     //     if (layer3==11) {
-    //       return rzChiSquared < 70.975f;
+    //       return rzChiSquared < 62.583f;
     //     } else if (layer3==16) {
-    //       return rzChiSquared < 2.76f;
+    //       return rzChiSquared < 2.802f;
     //     }
     //   } else if (layer2==15) {
-    //     return rzChiSquared < 21.65f;
+    //     return rzChiSquared < 4.71f;
     //   }
     // } else if (layer1==1) {
     //   if (layer2==7) {
-    //     return rzChiSquared < 78.57f;
+    //     return rzChiSquared < 78.52f;
     //   } else if (layer2==2) {
     //     if (layer3==7) {
-    //       return rzChiSquared < 80.2f;
+    //       return rzChiSquared < 76.99f;
     //     } else if (layer3==3) {
-    //       return rzChiSquared < 302.492f;
+    //       return rzChiSquared < 276.84f;
     //     }
     //   }
     // } else if (layer1==2) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 84.78f;
+    //       return rzChiSquared < 86.34f;
     //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.862f;
+    //       return rzChiSquared < 2.861f;
     //     }
     //   } else if (layer2==3) {
     //     if (layer3==7) {
-    //       return rzChiSquared < 38.373f;
+    //       return rzChiSquared < 37.61f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 3.034f;
+    //       return rzChiSquared < 3.015f;
     //     } else if (layer3==4) {
-    //       return rzChiSquared < 3.455f;
+    //       return rzChiSquared < 3.417f;
     //     }
     //   }
     // } else if (layer1==3) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 54.422f;
+    //       return rzChiSquared < 42.679f;
     //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.768f;
+    //       return rzChiSquared < 2.834f;
     //     }
     //   } else if (layer2==12) {
-    //     return rzChiSquared < 16.57f;
+    //     return rzChiSquared < 9.75f;
     //   } else if (layer2==4) {
     //     if (layer3==5) {
-    //       return rzChiSquared < 26.99f;
+    //       return rzChiSquared < 15.14f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 19.97f;
+    //       return rzChiSquared < 20.31f;
     //     }
     //   }
     // } else if (layer1==4) {
     //   if (layer2==12) {
-    //     return rzChiSquared < 28.118f;
+    //     return rzChiSquared < 12.19f;
     //   } else if (layer2==5) {
     //     if (layer3==6) {
-    //       return rzChiSquared < 49.019f;
+    //       return rzChiSquared < 27.74f;
     //     } else if (layer3==12) {
     //       return rzChiSquared < 25.248f;
     //     }
     //   }
-    // } else if (layer1==5) {
-    //   return rzChiSquared < 10.93f;
-    // }
+    // } 
+    // return false;
+    
+    // 99% efficiency
+    // if (layer1==7) {
+    //   if (layer2==8) {
+    //     if (layer3==9) {
+    //       return rzChiSquared < 54.816784f;
+    //     } else if (layer3==14) {
+    //       return rzChiSquared < 2.9269447f;
+    //     }
+    //   } else if (layer2==13) {
+    //     return rzChiSquared < 17.853952f;
+    //   }
+    // } else if (layer1==8) {
+    //   if (layer2==9) {
+    //     if (layer3==10) {
+    //       return rzChiSquared < 53.870045f;
+    //     } else if (layer3==15) {
+    //       return rzChiSquared < 2.836795f;
+    //     } 
+    //   } else if (layer2==14) {
+    //     return rzChiSquared < 24.36788f;
+    //   }
+    // } else if (layer1==9) {
+    //   if (layer2==10) {
+    //     if (layer3==11) {
+    //       return rzChiSquared < 62.583008f;
+    //     } else if (layer3==16) {
+    //       return rzChiSquared < 2.8023736f;
+    //     }
+    //   } else if (layer2==15) {
+    //     return rzChiSquared < 22.561533f;
+    //   }
+    // } else if (layer1==1) {
+    //   if (layer2==7) {
+    //     return rzChiSquared < 77.83836f;
+    //   } else if (layer2==2) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 76.98332f;
+    //     } else if (layer3==3) {
+    //       return rzChiSquared < 276.90335f;
+    //     }
+    //   }
+    // } else if (layer1==2) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 86.34117f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.8567498f;
+    //     }
+    //   } else if (layer2==3) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 37.31426f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 3.006263f;
+    //     } else if (layer3==4) {
+    //       return rzChiSquared < 3.4151812f;
+    //     }
+    //   }
+    // } else if (layer1==3) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 42.679012f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.8280241f;
+    //     }
+    //   } else if (layer2==12) {
+    //     return rzChiSquared < 17.046991f;
+    //   } else if (layer2==4) {
+    //     if (layer3==5) {
+    //       return rzChiSquared < 26.711906f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 20.294582f;
+    //     }
+    //   }
+    // } else if (layer1==4) {
+    //   if (layer2==12) {
+    //     return rzChiSquared < 28.821428f;
+    //   } else if (layer2==5) {
+    //     if (layer3==6) {
+    //       return rzChiSquared < 49.0191f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 24.94786f;
+    //     }
+    //   }
+    // } 
     // return false;
     
     // 95% efficiency
-    if (layer1==7) {
-      if (layer2==8) {
-        if (layer3==9) {
-          return rzChiSquared < 28.97f;
-        } else if (layer3==14) {
-          return rzChiSquared < 2.41f;
-        }
-      } else if (layer2==13) {
-        return rzChiSquared < 12.23f;
-      }
-    } else if (layer1==8) {
-      if (layer2==9) {
-        if (layer3==10) {
-          return rzChiSquared < 27.08f;
-        } else if (layer3==15) {
-          return rzChiSquared < 2.28f;
-        } 
-      } else if (layer2==14) {
-        return rzChiSquared < 15.92f;
-      }
-    } else if (layer1==9) {
-      if (layer2==10) {
-        if (layer3==11) {
-          return rzChiSquared < 27.21f;
-        } else if (layer3==16) {
-          return rzChiSquared < 2.25f;
-        }
-      } else if (layer2==15) {
-        return rzChiSquared < 13.59f;
-      }
-    } else if (layer1==1) {
-      if (layer2==7) {
-        return rzChiSquared < 36.98f;
-      } else if (layer2==2) {
-        if (layer3==7) {
-          return rzChiSquared < 31.75f;
-        } else if (layer3==3) {
-          return rzChiSquared < 93.12f;
-        }
-      }
-    } else if (layer1==2) {
-      if (layer2==7) {
-        if (layer3==8) {
-          return rzChiSquared < 36.83f;
-        } else if (layer3==13) {
-          return rzChiSquared < 2.47f;
-        }
-      } else if (layer2==3) {
-        if (layer3==7) {
-          return rzChiSquared < 16.24f;
-        } else if (layer3==12) {
-          return rzChiSquared < 2.36f;
-        } else if (layer3==4) {
-          return rzChiSquared < 2.79f;
-        }
-      }
-    } else if (layer1==3) {
-      if (layer2==7) {
-        if (layer3==8) {
-          return rzChiSquared < 38.97f;
-        } else if (layer3==13) {
-          return rzChiSquared < 2.21f;
-        }
-      } else if (layer2==12) {
-        return rzChiSquared < 11.68f;
-      } else if (layer2==4) {
-        if (layer3==5) {
-          return rzChiSquared < 18.87f;
-        } else if (layer3==12) {
-          return rzChiSquared < 11.1f;
-        }
-      }
-    } else if (layer1==4) {
-      if (layer2==12) {
-        return rzChiSquared < 12.18f;
-      } else if (layer2==5) {
-        if (layer3==6) {
-          return rzChiSquared < 32.53f;
-        } else if (layer3==12) {
-          return rzChiSquared < 13.27f;
-        }
-      }
-    } else if (layer1==5) {
-      return rzChiSquared < 5.3f;
-    } 
-    return false;
+    // if (layer1==7) {
+    //   if (layer2==8) {
+    //     if (layer3==9) {
+    //       return rzChiSquared < 28.97f;
+    //     } else if (layer3==14) {
+    //       return rzChiSquared < 2.41f;
+    //     }
+    //   } else if (layer2==13) {
+    //     return rzChiSquared < 12.23f;
+    //   }
+    // } else if (layer1==8) {
+    //   if (layer2==9) {
+    //     if (layer3==10) {
+    //       return rzChiSquared < 27.08f;
+    //     } else if (layer3==15) {
+    //       return rzChiSquared < 2.28f;
+    //     } 
+    //   } else if (layer2==14) {
+    //     return rzChiSquared < 15.92f;
+    //   }
+    // } else if (layer1==9) {
+    //   if (layer2==10) {
+    //     if (layer3==11) {
+    //       return rzChiSquared < 27.21f;
+    //     } else if (layer3==16) {
+    //       return rzChiSquared < 2.25f;
+    //     }
+    //   } else if (layer2==15) {
+    //     return rzChiSquared < 13.59f;
+    //   }
+    // } else if (layer1==1) {
+    //   if (layer2==7) {
+    //     return rzChiSquared < 36.98f;
+    //   } else if (layer2==2) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 31.75f;
+    //     } else if (layer3==3) {
+    //       return rzChiSquared < 93.12f;
+    //     }
+    //   }
+    // } else if (layer1==2) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 36.83f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.47f;
+    //     }
+    //   } else if (layer2==3) {
+    //     if (layer3==7) {
+    //       return rzChiSquared < 16.24f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 2.36f;
+    //     } else if (layer3==4) {
+    //       return rzChiSquared < 2.79f;
+    //     }
+    //   }
+    // } else if (layer1==3) {
+    //   if (layer2==7) {
+    //     if (layer3==8) {
+    //       return rzChiSquared < 38.97f;
+    //     } else if (layer3==13) {
+    //       return rzChiSquared < 2.21f;
+    //     }
+    //   } else if (layer2==12) {
+    //     return rzChiSquared < 11.68f;
+    //   } else if (layer2==4) {
+    //     if (layer3==5) {
+    //       return rzChiSquared < 18.87f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 11.1f;
+    //     }
+    //   }
+    // } else if (layer1==4) {
+    //   if (layer2==12) {
+    //     return rzChiSquared < 12.18f;
+    //   } else if (layer2==5) {
+    //     if (layer3==6) {
+    //       return rzChiSquared < 32.53f;
+    //     } else if (layer3==12) {
+    //       return rzChiSquared < 13.27f;
+    //     }
+    //   }
+    // } else if (layer1==5) {
+    //   return rzChiSquared < 5.3f;
+    // } 
+    // return false;
   };
 
   template <typename TAcc>
@@ -1268,6 +1355,38 @@ namespace SDL {
 
     circleRadius = computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3, circleCenterX, circleCenterY);
 
+    // if (not(passRZConstraint(acc,
+    //                          modulesInGPU,
+    //                          mdsInGPU,
+    //                          segmentsInGPU,
+    //                          innerInnerLowerModuleIndex,
+    //                          middleLowerModuleIndex,
+    //                          outerOuterLowerModuleIndex,
+    //                          firstMDIndex,
+    //                          secondMDIndex,
+    //                          thirdMDIndex)))
+    //   return false;
+
+    if (not(passPointingConstraint(acc,
+                                   modulesInGPU,
+                                   mdsInGPU,
+                                   segmentsInGPU,
+                                   innerInnerLowerModuleIndex,
+                                   middleLowerModuleIndex,
+                                   outerOuterLowerModuleIndex,
+                                   firstMDIndex,
+                                   secondMDIndex,
+                                   thirdMDIndex,
+                                   zOut,
+                                   rtOut,
+                                   middleLowerModuleIndex,
+                                   innerSegmentIndex,
+                                   outerSegmentIndex,
+                                   betaIn,
+                                   betaInCut,
+                                   ptCut)))
+      return false;
+
     if (not(passRZConstraint(acc,
                             modulesInGPU,
                             mdsInGPU,
@@ -1283,38 +1402,6 @@ namespace SDL {
                             circleRadius,
                             circleCenterX, 
                             circleCenterY)))
-      return false;
-
-    // if (not(passRZConstraint(acc,
-    //                          modulesInGPU,
-    //                          mdsInGPU,
-    //                          segmentsInGPU,
-    //                          innerInnerLowerModuleIndex,
-    //                          middleLowerModuleIndex,
-    //                          outerOuterLowerModuleIndex,
-    //                          firstMDIndex,
-    //                          secondMDIndex,
-    //                          thirdMDIndex)))
-    //   return false;
-
-    if (not(passPointingConstraint(acc,
-                                  modulesInGPU,
-                                  mdsInGPU,
-                                  segmentsInGPU,
-                                  innerInnerLowerModuleIndex,
-                                  middleLowerModuleIndex,
-                                  outerOuterLowerModuleIndex,
-                                  firstMDIndex,
-                                  secondMDIndex,
-                                  thirdMDIndex,
-                                  zOut,
-                                  rtOut,
-                                  middleLowerModuleIndex,
-                                  innerSegmentIndex,
-                                  outerSegmentIndex,
-                                  betaIn,
-                                  betaInCut,
-                                  ptCut)))
       return false;
 
     return true;
