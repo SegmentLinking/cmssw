@@ -128,7 +128,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   std::vector<int> const& charge,
                                   std::vector<unsigned int> const& seedIdx,
                                   std::vector<int> const& superbin,
-                                  std::vector<int> const& pixelType,
+                                  std::vector<int8_t> const& pixelType,
                                   std::vector<char> const& isQuad);
 
       void createMiniDoublets();

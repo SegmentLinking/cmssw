@@ -33,7 +33,7 @@ namespace lst {
   }
 
   // Named constants for pixelTypes
-  enum kPixelType { highPt = 0, lowPtPosCurv = 1, lowPtNegCurv = 2 };
+  enum PixelType : int8_t { kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };
 
 // If a compile time flag does not define PT_CUT, default to 0.8 (GeV)
 #ifndef PT_CUT

@@ -233,7 +233,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
                                    std::vector<int> const& charge,
                                    std::vector<unsigned int> const& seedIdx,
                                    std::vector<int> const& superbin,
-                                   std::vector<int> const& pixelType,
+                                   std::vector<int8_t> const& pixelType,
                                    std::vector<char> const& isQuad) {
   unsigned int size = ptIn.size();
 
@@ -704,7 +704,7 @@ void Event::createPixelTriplets() {
   }
 
   auto superbins_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
-  auto pixelTypes_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
+  auto pixelTypes_buf = allocBufWrapper<int8_t>(devHost, n_max_pixel_segments_per_module, queue);
 
   alpaka::memcpy(queue, superbins_buf, segmentsBuffers->superbin_buf);
   alpaka::memcpy(queue, pixelTypes_buf, segmentsBuffers->pixelType_buf);
@@ -735,34 +735,39 @@ void Event::createPixelTriplets() {
 
   // TODO: check if a map/reduction to just eligible pLSs would speed up the kernel
   // the current selection still leaves a significant fraction of unmatchable pLSs
-  for (unsigned int i = 0; i < nInnerSegments; i++) {  // loop over # pLS
-    int pixelType = pixelTypes[i];                     // Get pixel type for this pLS
-    int superbin = superbins[i];                       // Get superbin for this pixel
+  for (unsigned int i = 0; i < nInnerSegments; i++) {                           // loop over # pLS
+    ::lst::PixelType pixelType = static_cast<::lst::PixelType>(pixelTypes[i]);  // Get pixel type for this pLS
+    int superbin = superbins[i];                                                // Get superbin for this pixel
     if ((superbin < 0) or (superbin >= (int)size_superbins) or
-        ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and
-         (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
+        ((pixelType != ::lst::PixelType::kHighPt) and (pixelType != ::lst::PixelType::kLowPtPosCurv) and
+         (pixelType != ::lst::PixelType::kLowPtNegCurv))) {
       connectedPixelSize_host[i] = 0;
       connectedPixelIndex_host[i] = 0;
       continue;
     }
 
     // Used pixel type to select correct size-index arrays
-    if (pixelType == static_cast<int>(::lst::kPixelType::highPt)) {
-      connectedPixelSize_host[i] =
-          pixelMapping_.connectedPixelsSizes[superbin];  // number of connected modules to this pixel
-      auto connectedIdxBase = pixelMapping_.connectedPixelsIndex[superbin];
-      connectedPixelIndex_host[i] =
-          connectedIdxBase;  // index to get start of connected modules for this superbin in map
-    } else if (pixelType == static_cast<int>(::lst::kPixelType::lowPtPosCurv)) {
-      connectedPixelSize_host[i] =
-          pixelMapping_.connectedPixelsSizesPos[superbin];  // number of pixel connected modules
-      auto connectedIdxBase = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
-      connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
-    } else if (pixelType == static_cast<int>(::lst::kPixelType::lowPtNegCurv)) {
-      connectedPixelSize_host[i] =
-          pixelMapping_.connectedPixelsSizesNeg[superbin];  // number of pixel connected modules
-      auto connectedIdxBase = pixelMapping_.connectedPixelsIndexNeg[superbin] + pixelIndexOffsetNeg;
-      connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
+    unsigned int connectedIdxBase;
+    switch (pixelType) {
+      case ::lst::PixelType::kHighPt:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizes[superbin];  // number of connected modules to this pixel
+        connectedIdxBase = pixelMapping_.connectedPixelsIndex[superbin];
+        connectedPixelIndex_host[i] =
+            connectedIdxBase;  // index to get start of connected modules for this superbin in map
+        break;
+      case ::lst::PixelType::kLowPtPosCurv:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizesPos[superbin];  // number of pixel connected modules
+        connectedIdxBase = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
+        connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
+        break;
+      case ::lst::PixelType::kLowPtNegCurv:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizesNeg[superbin];  // number of pixel connected modules
+        connectedIdxBase = pixelMapping_.connectedPixelsIndexNeg[superbin] + pixelIndexOffsetNeg;
+        connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
+        break;
     }
   }
 
@@ -902,7 +907,7 @@ void Event::createPixelQuintuplets() {
   }
 
   auto superbins_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
-  auto pixelTypes_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
+  auto pixelTypes_buf = allocBufWrapper<int8_t>(devHost, n_max_pixel_segments_per_module, queue);
 
   alpaka::memcpy(queue, superbins_buf, segmentsBuffers->superbin_buf);
   alpaka::memcpy(queue, pixelTypes_buf, segmentsBuffers->pixelType_buf);
@@ -933,30 +938,37 @@ void Event::createPixelQuintuplets() {
 
   // Loop over # pLS
   for (unsigned int i = 0; i < nInnerSegments; i++) {
-    int pixelType = pixelTypes[i];  // Get pixel type for this pLS
-    int superbin = superbins[i];    // Get superbin for this pixel
+    ::lst::PixelType pixelType = static_cast<::lst::PixelType>(pixelTypes[i]);  // Get pixel type for this pLS
+    int superbin = superbins[i];                                                // Get superbin for this pixel
     if ((superbin < 0) or (superbin >= (int)size_superbins) or
-        ((pixelType != ::lst::kPixelType::highPt) and (pixelType != ::lst::kPixelType::lowPtPosCurv) and
-         (pixelType != ::lst::kPixelType::lowPtNegCurv))) {
+        ((pixelType != ::lst::PixelType::kHighPt) and (pixelType != ::lst::PixelType::kLowPtPosCurv) and
+         (pixelType != ::lst::PixelType::kLowPtNegCurv))) {
       connectedPixelIndex_host[i] = 0;
       connectedPixelSize_host[i] = 0;
       continue;
     }
 
     // Used pixel type to select correct size-index arrays
-    if (pixelType == static_cast<int>(::lst::kPixelType::highPt)) {
-      connectedPixelSize_host[i] =
-          pixelMapping_.connectedPixelsSizes[superbin];  //number of connected modules to this pixel
-      unsigned int connectedIdxBase = pixelMapping_.connectedPixelsIndex[superbin];
-      connectedPixelIndex_host[i] = connectedIdxBase;
-    } else if (pixelType == static_cast<int>(::lst::kPixelType::lowPtPosCurv)) {
-      connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesPos[superbin];  //number of pixel connected modules
-      unsigned int connectedIdxBase = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
-      connectedPixelIndex_host[i] = connectedIdxBase;
-    } else if (pixelType == static_cast<int>(::lst::kPixelType::lowPtNegCurv)) {
-      connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesNeg[superbin];  //number of pixel connected modules
-      unsigned int connectedIdxBase = pixelMapping_.connectedPixelsIndexNeg[superbin] + pixelIndexOffsetNeg;
-      connectedPixelIndex_host[i] = connectedIdxBase;
+    unsigned int connectedIdxBase;
+    switch (pixelType) {
+      case ::lst::PixelType::kHighPt:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizes[superbin];  //number of connected modules to this pixel
+        connectedIdxBase = pixelMapping_.connectedPixelsIndex[superbin];
+        connectedPixelIndex_host[i] = connectedIdxBase;
+        break;
+      case ::lst::PixelType::kLowPtPosCurv:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizesPos[superbin];  //number of pixel connected modules
+        connectedIdxBase = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
+        connectedPixelIndex_host[i] = connectedIdxBase;
+        break;
+      case ::lst::PixelType::kLowPtNegCurv:
+        connectedPixelSize_host[i] =
+            pixelMapping_.connectedPixelsSizesNeg[superbin];  //number of pixel connected modules
+        connectedIdxBase = pixelMapping_.connectedPixelsIndexNeg[superbin] + pixelIndexOffsetNeg;
+        connectedPixelIndex_host[i] = connectedIdxBase;
+        break;
     }
   }
 
