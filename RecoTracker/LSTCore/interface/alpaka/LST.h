@@ -96,7 +96,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::vector<int> in_charge_vec_;
       std::vector<unsigned int> in_seedIdx_vec_;
       std::vector<int> in_superbin_vec_;
-      std::vector<int8_t> in_pixelType_vec_;
+      std::vector<::lst::PixelType> in_pixelType_vec_;
       std::vector<char> in_isQuad_vec_;
       std::vector<std::vector<unsigned int>> out_tc_hitIdxs_;
       std::vector<unsigned int> out_tc_len_;

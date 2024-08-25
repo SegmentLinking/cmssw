@@ -338,7 +338,7 @@ void run_lst() {
   std::vector<std::vector<int>> out_charge_vec;
   std::vector<std::vector<unsigned int>> out_seedIdx_vec;
   std::vector<std::vector<int>> out_superbin_vec;
-  std::vector<std::vector<int8_t>> out_pixelType_vec;
+  std::vector<std::vector<::lst::PixelType>> out_pixelType_vec;
   std::vector<std::vector<char>> out_isQuad_vec;
   std::vector<int> evt_num;
   std::vector<TString> file_name;

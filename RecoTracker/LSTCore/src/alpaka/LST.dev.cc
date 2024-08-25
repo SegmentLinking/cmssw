@@ -77,7 +77,7 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
   std::vector<unsigned int> hitIdxs(ph2_detId.size());
 
   std::vector<int> superbin_vec;
-  std::vector<int8_t> pixelType_vec;
+  std::vector<::lst::PixelType> pixelType_vec;
   std::vector<char> isQuad_vec;
   std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
   const int hit_size = trkX.size();
@@ -100,15 +100,15 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       float pz = p3LH.z();
 
       int charge = see_q[iSeed];
-      int pixtype = -1;
+      ::lst::PixelType pixtype = ::lst::PixelType::kInvalid;
 
       if (ptIn >= 2.0)
-        pixtype = static_cast<int8_t>(::lst::PixelType::kHighPt);
+        pixtype = ::lst::PixelType::kHighPt;
       else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
         if (pixelSegmentDeltaPhiChange >= 0)
-          pixtype = static_cast<int8_t>(::lst::PixelType::kLowPtPosCurv);
+          pixtype = ::lst::PixelType::kLowPtPosCurv;
         else
-          pixtype = static_cast<int8_t>(::lst::PixelType::kLowPtNegCurv);
+          pixtype = ::lst::PixelType::kLowPtNegCurv;
       } else
         continue;
 

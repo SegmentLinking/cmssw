@@ -31,7 +31,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int* nSegments;             //number of segments per inner lower module
     unsigned int* totOccupancySegments;  //number of segments per inner lower module
     uint4* pLSHitsIdxs;
-    int8_t* pixelType;
+    ::lst::PixelType* pixelType;
     char* isQuad;
     char* isDup;
     bool* partOfPT5;
@@ -107,7 +107,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     Buf<TDev, unsigned int> nSegments_buf;
     Buf<TDev, unsigned int> totOccupancySegments_buf;
     Buf<TDev, uint4> pLSHitsIdxs_buf;
-    Buf<TDev, int8_t> pixelType_buf;
+    Buf<TDev, ::lst::PixelType> pixelType_buf;
     Buf<TDev, char> isQuad_buf;
     Buf<TDev, char> isDup_buf;
     Buf<TDev, bool> partOfPT5_buf;
@@ -150,7 +150,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           nSegments_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules + 1, queue)),
           totOccupancySegments_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules + 1, queue)),
           pLSHitsIdxs_buf(allocBufWrapper<uint4>(devAccIn, maxPixelSegments, queue)),
-          pixelType_buf(allocBufWrapper<int8_t>(devAccIn, maxPixelSegments, queue)),
+          pixelType_buf(allocBufWrapper<::lst::PixelType>(devAccIn, maxPixelSegments, queue)),
           isQuad_buf(allocBufWrapper<char>(devAccIn, maxPixelSegments, queue)),
           isDup_buf(allocBufWrapper<char>(devAccIn, maxPixelSegments, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
