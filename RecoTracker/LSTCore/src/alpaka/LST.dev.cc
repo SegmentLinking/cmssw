@@ -5,6 +5,7 @@
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 #include "Math/Vector3D.h"
+#include "Math/VectorUtil.h"
 using XYZVector = ROOT::Math::XYZVector;
 
 namespace {
@@ -93,7 +94,8 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       XYZVector p3PCA(see_px[iSeed], see_py[iSeed], see_pz[iSeed]);
       XYZVector r3PCA(calculateR3FromPCA(p3PCA, see_dxy[iSeed], see_dz[iSeed]));
 
-      float pixelSegmentDeltaPhiChange = (r3LH - p3LH).phi();
+      // The charge could be used directly in the line below
+      float pixelSegmentDeltaPhiChange = ROOT::Math::VectorUtil::DeltaPhi(r3LH, p3LH);
       float etaErr = see_etaErr[iSeed];
       float px = p3LH.x();
       float py = p3LH.y();

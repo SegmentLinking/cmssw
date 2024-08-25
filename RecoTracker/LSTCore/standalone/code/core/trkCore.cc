@@ -710,6 +710,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
       TVector3 seedSD_r3 = r3LH;
       TVector3 seedSD_p3 = p3LH;
 
+      // The charge could be used directly in the line below
       float pixelSegmentDeltaPhiChange = r3LH.DeltaPhi(p3LH);
       float etaErr = trk.see_etaErr()[iSeed];
       float px = p3LH.X();
