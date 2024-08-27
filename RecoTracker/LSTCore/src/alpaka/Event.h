@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_Event_h
 #define RecoTracker_LSTCore_src_alpaka_Event_h
 
+#include <optional>
+
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
@@ -47,36 +49,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       unsigned int nTotalSegments_;
 
       //Device stuff
-      ObjectRanges* rangesInGPU;
-      ObjectRangesBuffer<Device>* rangesBuffers;
-      Hits* hitsInGPU;
-      HitsBuffer<Device>* hitsBuffers;
-      MiniDoublets* mdsInGPU;
-      MiniDoubletsBuffer<Device>* miniDoubletsBuffers;
-      Segments* segmentsInGPU;
-      SegmentsBuffer<Device>* segmentsBuffers;
-      Triplets* tripletsInGPU;
-      TripletsBuffer<Device>* tripletsBuffers;
-      Quintuplets* quintupletsInGPU;
-      QuintupletsBuffer<Device>* quintupletsBuffers;
-      TrackCandidates* trackCandidatesInGPU;
-      TrackCandidatesBuffer<Device>* trackCandidatesBuffers;
-      PixelTriplets* pixelTripletsInGPU;
-      PixelTripletsBuffer<Device>* pixelTripletsBuffers;
-      PixelQuintuplets* pixelQuintupletsInGPU;
-      PixelQuintupletsBuffer<Device>* pixelQuintupletsBuffers;
+      std::optional<ObjectRanges> rangesInGPU;
+      std::optional<ObjectRangesBuffer<Device>> rangesBuffers;
+      std::optional<Hits> hitsInGPU;
+      std::optional<HitsBuffer<Device>> hitsBuffers;
+      std::optional<MiniDoublets> mdsInGPU;
+      std::optional<MiniDoubletsBuffer<Device>> miniDoubletsBuffers;
+      std::optional<Segments> segmentsInGPU;
+      std::optional<SegmentsBuffer<Device>> segmentsBuffers;
+      std::optional<Triplets> tripletsInGPU;
+      std::optional<TripletsBuffer<Device>> tripletsBuffers;
+      std::optional<Quintuplets> quintupletsInGPU;
+      std::optional<QuintupletsBuffer<Device>> quintupletsBuffers;
+      std::optional<TrackCandidates> trackCandidatesInGPU;
+      std::optional<TrackCandidatesBuffer<Device>> trackCandidatesBuffers;
+      std::optional<PixelTriplets> pixelTripletsInGPU;
+      std::optional<PixelTripletsBuffer<Device>> pixelTripletsBuffers;
+      std::optional<PixelQuintuplets> pixelQuintupletsInGPU;
+      std::optional<PixelQuintupletsBuffer<Device>> pixelQuintupletsBuffers;
 
       //CPU interface stuff
-      ObjectRangesBuffer<DevHost>* rangesInCPU;
-      HitsBuffer<DevHost>* hitsInCPU;
-      MiniDoubletsBuffer<DevHost>* mdsInCPU;
-      SegmentsBuffer<DevHost>* segmentsInCPU;
-      TripletsBuffer<DevHost>* tripletsInCPU;
-      TrackCandidatesBuffer<DevHost>* trackCandidatesInCPU;
-      ModulesBuffer<DevHost>* modulesInCPU;
-      QuintupletsBuffer<DevHost>* quintupletsInCPU;
-      PixelTripletsBuffer<DevHost>* pixelTripletsInCPU;
-      PixelQuintupletsBuffer<DevHost>* pixelQuintupletsInCPU;
+      std::optional<ObjectRangesBuffer<DevHost>> rangesInCPU;
+      std::optional<HitsBuffer<DevHost>> hitsInCPU;
+      std::optional<MiniDoubletsBuffer<DevHost>> mdsInCPU;
+      std::optional<SegmentsBuffer<DevHost>> segmentsInCPU;
+      std::optional<TripletsBuffer<DevHost>> tripletsInCPU;
+      std::optional<TrackCandidatesBuffer<DevHost>> trackCandidatesInCPU;
+      std::optional<ModulesBuffer<DevHost>> modulesInCPU;
+      std::optional<QuintupletsBuffer<DevHost>> quintupletsInCPU;
+      std::optional<PixelTripletsBuffer<DevHost>> pixelTripletsInCPU;
+      std::optional<PixelQuintupletsBuffer<DevHost>> pixelQuintupletsInCPU;
 
       void initSync(bool verbose);
 
@@ -186,18 +188,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // (has no effect on repeated calls)
       // set to false may allow faster operation with concurrent calls of get*
       // HANDLE WITH CARE
-      HitsBuffer<DevHost>* getHits(bool sync = true);
-      HitsBuffer<DevHost>* getHitsInCMSSW(bool sync = true);
-      ObjectRangesBuffer<DevHost>* getRanges(bool sync = true);
-      MiniDoubletsBuffer<DevHost>* getMiniDoublets(bool sync = true);
-      SegmentsBuffer<DevHost>* getSegments(bool sync = true);
-      TripletsBuffer<DevHost>* getTriplets(bool sync = true);
-      QuintupletsBuffer<DevHost>* getQuintuplets(bool sync = true);
-      PixelTripletsBuffer<DevHost>* getPixelTriplets(bool sync = true);
-      PixelQuintupletsBuffer<DevHost>* getPixelQuintuplets(bool sync = true);
-      TrackCandidatesBuffer<DevHost>* getTrackCandidates(bool sync = true);
-      TrackCandidatesBuffer<DevHost>* getTrackCandidatesInCMSSW(bool sync = true);
-      ModulesBuffer<DevHost>* getModules(bool isFull = false, bool sync = true);
+      HitsBuffer<DevHost>& getHits(bool sync = true);
+      HitsBuffer<DevHost>& getHitsInCMSSW(bool sync = true);
+      ObjectRangesBuffer<DevHost>& getRanges(bool sync = true);
+      MiniDoubletsBuffer<DevHost>& getMiniDoublets(bool sync = true);
+      SegmentsBuffer<DevHost>& getSegments(bool sync = true);
+      TripletsBuffer<DevHost>& getTriplets(bool sync = true);
+      QuintupletsBuffer<DevHost>& getQuintuplets(bool sync = true);
+      PixelTripletsBuffer<DevHost>& getPixelTriplets(bool sync = true);
+      PixelQuintupletsBuffer<DevHost>& getPixelQuintuplets(bool sync = true);
+      TrackCandidatesBuffer<DevHost>& getTrackCandidates(bool sync = true);
+      TrackCandidatesBuffer<DevHost>& getTrackCandidatesInCMSSW(bool sync = true);
+      ModulesBuffer<DevHost>& getModules(bool isFull = false, bool sync = true);
     };
 
   }  // namespace lst

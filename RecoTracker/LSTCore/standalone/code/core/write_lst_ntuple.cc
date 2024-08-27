@@ -226,7 +226,7 @@ void setOutputBranches(Event* event) {
   std::vector<std::vector<int>> tc_matched_simIdx;
 
   // ============ Track candidates =============
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
   unsigned int nTrackCandidates = *trackCandidates->nTrackCandidates;
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     // Compute reco quantities of track candidate based on final object
@@ -291,10 +291,10 @@ void setOptionalOutputBranches(Event* event) {
 //________________________________________________________________________________________________________________________________
 void setPixelQuintupletOutputBranches(Event* event) {
   // ============ pT5 =============
-  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets()->data();
-  Quintuplets const* quintuplets = event->getQuintuplets()->data();
-  Segments const* segments = event->getSegments()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
+  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets().data();
+  Quintuplets const* quintuplets = event->getQuintuplets().data();
+  Segments const* segments = event->getSegments().data();
+  ::lst::Modules const* modules = event->getModules().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   unsigned int nPixelQuintuplets =
@@ -366,9 +366,9 @@ void setPixelQuintupletOutputBranches(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void setQuintupletOutputBranches(Event* event) {
-  Quintuplets const* quintuplets = event->getQuintuplets()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
+  Quintuplets const* quintuplets = event->getQuintuplets().data();
+  ObjectRanges const* ranges = event->getRanges().data();
+  ::lst::Modules const* modules = event->getModules().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   std::vector<int> sim_t5_matched(n_accepted_simtrk);
@@ -437,9 +437,9 @@ void setQuintupletOutputBranches(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void setPixelTripletOutputBranches(Event* event) {
-  PixelTriplets const* pixelTriplets = event->getPixelTriplets()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  Segments const* segments = event->getSegments()->data();
+  PixelTriplets const* pixelTriplets = event->getPixelTriplets().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  Segments const* segments = event->getSegments().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   unsigned int nPixelTriplets = *pixelTriplets->nPixelTriplets;
@@ -501,12 +501,12 @@ void setPixelTripletOutputBranches(Event* event) {
 //________________________________________________________________________________________________________________________________
 void setGnnNtupleBranches(Event* event) {
   // Get relevant information
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
 
   std::set<unsigned int> mds_used_in_sg;
   std::map<unsigned int, unsigned int> md_index_map;
@@ -642,8 +642,8 @@ void setGnnNtupleBranches(Event* event) {
 //________________________________________________________________________________________________________________________________
 void setGnnNtupleMiniDoublet(Event* event, unsigned int MD) {
   // Get relevant information
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
 
   // Get the hit indices
   unsigned int hit0 = miniDoublets->anchorHitIndices[MD];
@@ -710,7 +710,7 @@ void setGnnNtupleMiniDoublet(Event* event, unsigned int MD) {
 //________________________________________________________________________________________________________________________________
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(Event* event, unsigned int idx) {
   // Get the type of the track candidate
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
   short type = trackCandidates->trackCandidateType[idx];
 
   enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
@@ -744,9 +744,9 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(Event* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
-  Quintuplets const* quintuplets = event->getQuintuplets()->data();
-  Segments const* segments = event->getSegments()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
+  Quintuplets const* quintuplets = event->getQuintuplets().data();
+  Segments const* segments = event->getSegments().data();
 
   //
   // pictorial representation of a pT5
@@ -856,9 +856,9 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(Event* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
-  Triplets const* triplets = event->getTriplets()->data();
-  Segments const* segments = event->getSegments()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
+  Triplets const* triplets = event->getTriplets().data();
+  Segments const* segments = event->getSegments().data();
 
   //
   // pictorial representation of a pT3
@@ -890,8 +890,8 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT5(Event* event,
                                                                                               unsigned int idx) {
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
-  Quintuplets const* quintuplets = event->getQuintuplets()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
+  Quintuplets const* quintuplets = event->getQuintuplets().data();
   unsigned int T5 = trackCandidates->directObjectIndices[idx];
   std::vector<unsigned int> hits = getHitsFromT5(event, T5);
 
@@ -924,8 +924,8 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(Event* event,
                                                                                                unsigned int idx) {
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
-  Segments const* segments = event->getSegments()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
+  Segments const* segments = event->getSegments().data();
 
   // Getting pLS index
   unsigned int pLS = trackCandidates->directObjectIndices[idx];
@@ -944,8 +944,8 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 
 //________________________________________________________________________________________________________________________________
 void printHitMultiplicities(Event* event) {
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
 
   int nHits = 0;
   for (unsigned int idx = 0; idx <= *(modules->nLowerModules);
@@ -959,8 +959,8 @@ void printHitMultiplicities(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void printMiniDoubletMultiplicities(Event* event) {
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  ::lst::Modules const* modules = event->getModules().data();
 
   int nMiniDoublets = 0;
   int totOccupancyMiniDoublets = 0;
@@ -986,10 +986,10 @@ void printAllObjects(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void printMDs(Event* event) {
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
 
   // Then obtain the lower module index
   for (unsigned int idx = 0; idx <= *(modules->nLowerModules); ++idx) {
@@ -1008,11 +1008,11 @@ void printMDs(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void printLSs(Event* event) {
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
 
   int nSegments = 0;
   for (unsigned int i = 0; i < *(modules->nLowerModules); ++i) {
@@ -1040,11 +1040,11 @@ void printLSs(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void printpLSs(Event* event) {
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
 
   unsigned int i = *(modules->nLowerModules);
   unsigned int idx = i;  //modules->lowerModuleIndices[i];
@@ -1070,11 +1070,11 @@ void printpLSs(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void printT3s(Event* event) {
-  Triplets const* triplets = event->getTriplets()->data();
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  Hits const* hitsEvt = event->getHits()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
+  Triplets const* triplets = event->getTriplets().data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  Hits const* hitsEvt = event->getHits().data();
+  ::lst::Modules const* modules = event->getModules().data();
   int nTriplets = 0;
   for (unsigned int i = 0; i < *(modules->nLowerModules); ++i) {
     // unsigned int idx = modules->lowerModuleIndices[i];
@@ -1112,12 +1112,12 @@ void printT3s(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void debugPrintOutlierMultiplicities(Event* event) {
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
-  Triplets const* triplets = event->getTriplets()->data();
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  ::lst::Modules const* modules = event->getModules()->data();
-  ObjectRanges const* ranges = event->getRanges()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
+  Triplets const* triplets = event->getTriplets().data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  ::lst::Modules const* modules = event->getModules().data();
+  ObjectRanges const* ranges = event->getRanges().data();
   //int nTrackCandidates = 0;
   for (unsigned int idx = 0; idx <= *(modules->nLowerModules); ++idx) {
     if (trackCandidates->nTrackCandidates[idx] > 50000) {

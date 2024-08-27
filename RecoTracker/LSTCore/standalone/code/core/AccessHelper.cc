@@ -9,7 +9,7 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 //____________________________________________________________________________________________
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHitIdxsAndHitTypes(
     Event* event, std::vector<unsigned int> hits) {
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   std::vector<unsigned int> hitidxs;
   std::vector<unsigned int> hittypes;
   for (auto& hit : hits) {
@@ -28,10 +28,10 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHi
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getPixelHitsFrompLS(Event* event, unsigned int pLS) {
-  Segments const* segments = event->getSegments()->data();
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
-  ObjectRanges const* rangesEvt = event->getRanges()->data();
-  ::lst::Modules const* modulesEvt = event->getModules()->data();
+  Segments const* segments = event->getSegments().data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
+  ObjectRanges const* rangesEvt = event->getRanges().data();
+  ::lst::Modules const* modulesEvt = event->getModules().data();
   const unsigned int pLS_offset = rangesEvt->segmentModuleIndices[*(modulesEvt->nLowerModules)];
   unsigned int MD_1 = segments->mdIndices[2 * (pLS + pLS_offset)];
   unsigned int MD_2 = segments->mdIndices[2 * (pLS + pLS_offset) + 1];
@@ -47,7 +47,7 @@ std::vector<unsigned int> getPixelHitsFrompLS(Event* event, unsigned int pLS) {
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getPixelHitIdxsFrompLS(Event* event, unsigned int pLS) {
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   std::vector<unsigned int> hits = getPixelHitsFrompLS(event, pLS);
   std::vector<unsigned int> hitidxs;
   for (auto& hit : hits)
@@ -74,7 +74,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getHitsFromMD(Event* event, unsigned int MD) {
-  MiniDoublets const* miniDoublets = event->getMiniDoublets()->data();
+  MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   unsigned int hit_1 = miniDoublets->anchorHitIndices[MD];
   unsigned int hit_2 = miniDoublets->outerHitIndices[MD];
   return {hit_1, hit_2};
@@ -92,7 +92,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getMDsFromLS(Event* event, unsigned int LS) {
-  Segments const* segments = event->getSegments()->data();
+  Segments const* segments = event->getSegments().data();
   unsigned int MD_1 = segments->mdIndices[2 * LS];
   unsigned int MD_2 = segments->mdIndices[2 * LS + 1];
   return {MD_1, MD_2};
@@ -118,7 +118,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getLSsFromT3(Event* event, unsigned int T3) {
-  Triplets const* triplets = event->getTriplets()->data();
+  Triplets const* triplets = event->getTriplets().data();
   unsigned int LS_1 = triplets->segmentIndices[2 * T3];
   unsigned int LS_2 = triplets->segmentIndices[2 * T3 + 1];
   return {LS_1, LS_2};
@@ -153,7 +153,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getT3sFromT5(Event* event, unsigned int T5) {
-  Quintuplets const* quintuplets = event->getQuintuplets()->data();
+  Quintuplets const* quintuplets = event->getQuintuplets().data();
   unsigned int T3_1 = quintuplets->tripletIndices[2 * T5];
   unsigned int T3_2 = quintuplets->tripletIndices[2 * T5 + 1];
   return {T3_1, T3_2};
@@ -190,7 +190,7 @@ std::vector<unsigned int> getHitsFromT5(Event* event, unsigned int T5) {
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getHitIdxsFromT5(Event* event, unsigned int T5) {
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   std::vector<unsigned int> hits = getHitsFromT5(event, T5);
   std::vector<unsigned int> hitidxs;
   for (auto& hit : hits)
@@ -201,7 +201,7 @@ std::vector<unsigned int> getHitIdxsFromT5(Event* event, unsigned int T5) {
 std::vector<unsigned int> getModuleIdxsFromT5(Event* event, unsigned int T5) {
   std::vector<unsigned int> hits = getHitsFromT5(event, T5);
   std::vector<unsigned int> module_idxs;
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   for (auto& hitIdx : hits) {
     module_idxs.push_back(hitsEvt->moduleIndices[hitIdx]);
   }
@@ -225,16 +225,16 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 unsigned int getPixelLSFrompT3(Event* event, unsigned int pT3) {
-  PixelTriplets const* pixelTriplets = event->getPixelTriplets()->data();
-  ObjectRanges const* rangesEvt = event->getRanges()->data();
-  ::lst::Modules const* modulesEvt = event->getModules()->data();
+  PixelTriplets const* pixelTriplets = event->getPixelTriplets().data();
+  ObjectRanges const* rangesEvt = event->getRanges().data();
+  ::lst::Modules const* modulesEvt = event->getModules().data();
   const unsigned int pLS_offset = rangesEvt->segmentModuleIndices[*(modulesEvt->nLowerModules)];
   return pixelTriplets->pixelSegmentIndices[pT3] - pLS_offset;
 }
 
 //____________________________________________________________________________________________
 unsigned int getT3FrompT3(Event* event, unsigned int pT3) {
-  PixelTriplets const* pixelTriplets = event->getPixelTriplets()->data();
+  PixelTriplets const* pixelTriplets = event->getPixelTriplets().data();
   return pixelTriplets->tripletIndices[pT3];
 }
 
@@ -274,7 +274,7 @@ std::vector<unsigned int> getHitsFrompT3(Event* event, unsigned int pT3) {
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getHitIdxsFrompT3(Event* event, unsigned int pT3) {
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   std::vector<unsigned int> hits = getHitsFrompT3(event, pT3);
   std::vector<unsigned int> hitidxs;
   for (auto& hit : hits)
@@ -285,7 +285,7 @@ std::vector<unsigned int> getHitIdxsFrompT3(Event* event, unsigned int pT3) {
 std::vector<unsigned int> getModuleIdxsFrompT3(Event* event, unsigned int pT3) {
   std::vector<unsigned int> hits = getOuterTrackerHitsFrompT3(event, pT3);
   std::vector<unsigned int> module_idxs;
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   for (auto& hitIdx : hits) {
     module_idxs.push_back(hitsEvt->moduleIndices[hitIdx]);
   }
@@ -314,16 +314,16 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 //____________________________________________________________________________________________
 unsigned int getPixelLSFrompT5(Event* event, unsigned int pT5) {
-  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets()->data();
-  ObjectRanges const* rangesEvt = event->getRanges()->data();
-  ::lst::Modules const* modulesEvt = event->getModules()->data();
+  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets().data();
+  ObjectRanges const* rangesEvt = event->getRanges().data();
+  ::lst::Modules const* modulesEvt = event->getModules().data();
   const unsigned int pLS_offset = rangesEvt->segmentModuleIndices[*(modulesEvt->nLowerModules)];
   return pixelQuintuplets->pixelIndices[pT5] - pLS_offset;
 }
 
 //____________________________________________________________________________________________
 unsigned int getT5FrompT5(Event* event, unsigned int pT5) {
-  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets()->data();
+  PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets().data();
   return pixelQuintuplets->T5Indices[pT5];
 }
 
@@ -369,7 +369,7 @@ std::vector<unsigned int> getHitsFrompT5(Event* event, unsigned int pT5) {
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getHitIdxsFrompT5(Event* event, unsigned int pT5) {
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   std::vector<unsigned int> hits = getHitsFrompT5(event, pT5);
   std::vector<unsigned int> hitidxs;
   for (auto& hit : hits)
@@ -381,7 +381,7 @@ std::vector<unsigned int> getHitIdxsFrompT5(Event* event, unsigned int pT5) {
 std::vector<unsigned int> getModuleIdxsFrompT5(Event* event, unsigned int pT5) {
   std::vector<unsigned int> hits = getOuterTrackerHitsFrompT5(event, pT5);
   std::vector<unsigned int> module_idxs;
-  Hits const* hitsEvt = event->getHits()->data();
+  Hits const* hitsEvt = event->getHits().data();
   for (auto& hitIdx : hits) {
     module_idxs.push_back(hitsEvt->moduleIndices[hitIdx]);
   }
@@ -412,7 +412,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 //____________________________________________________________________________________________
 std::vector<unsigned int> getLSsFromTC(Event* event, unsigned int TC) {
   // Get the type of the track candidate
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
   short type = trackCandidates->trackCandidateType[TC];
   unsigned int objidx = trackCandidates->directObjectIndices[TC];
   switch (type) {
@@ -435,7 +435,7 @@ std::vector<unsigned int> getLSsFromTC(Event* event, unsigned int TC) {
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(Event* event,
                                                                                              unsigned TC) {
   // Get the type of the track candidate
-  TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
   short type = trackCandidates->trackCandidateType[TC];
   unsigned int objidx = trackCandidates->directObjectIndices[TC];
   switch (type) {

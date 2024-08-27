@@ -253,8 +253,8 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::getOutput(ALPAKA_ACCELERATOR_NAMESP
   std::vector<int> tc_seedIdx;
   std::vector<short> tc_trackCandidateType;
 
-  HitsBuffer<alpaka::DevCpu>& hitsInGPU = (*event.getHitsInCMSSW(false));  // sync on next line
-  TrackCandidates const* trackCandidates = event.getTrackCandidatesInCMSSW()->data();
+  HitsBuffer<alpaka::DevCpu>& hitsInGPU = event.getHitsInCMSSW(false);  // sync on next line
+  TrackCandidates const* trackCandidates = event.getTrackCandidatesInCMSSW().data();
 
   unsigned int nTrackCandidates = *trackCandidates->nTrackCandidates;
 
