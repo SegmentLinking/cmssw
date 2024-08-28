@@ -95,7 +95,7 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       XYZVector r3PCA(calculateR3FromPCA(p3PCA, see_dxy[iSeed], see_dz[iSeed]));
 
       // The charge could be used directly in the line below
-      float pixelSegmentDeltaPhiChange = ROOT::Math::VectorUtil::DeltaPhi(r3LH, p3LH);
+      float pixelSegmentDeltaPhiChange = ROOT::Math::VectorUtil::DeltaPhi(p3LH, r3LH);
       float etaErr = see_etaErr[iSeed];
       float px = p3LH.x();
       float py = p3LH.y();
