@@ -23,10 +23,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   class Event {
   private:
-    Queue queue;
-    Device devAcc;
-    DevHost devHost;
-    bool addObjects;
+    Queue& queue_;
+    Device devAcc_;
+    bool addObjects_;
 
     std::array<unsigned int, 6> n_hits_by_layer_barrel_;
     std::array<unsigned int, 5> n_hits_by_layer_endcap_;
@@ -43,36 +42,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int nTotalSegments_;
 
     //Device stuff
-    std::optional<ObjectRanges> rangesInGPU;
-    std::optional<ObjectRangesBuffer<Device>> rangesBuffers;
-    std::optional<Hits> hitsInGPU;
-    std::optional<HitsBuffer<Device>> hitsBuffers;
-    std::optional<MiniDoublets> mdsInGPU;
-    std::optional<MiniDoubletsBuffer<Device>> miniDoubletsBuffers;
-    std::optional<Segments> segmentsInGPU;
-    std::optional<SegmentsBuffer<Device>> segmentsBuffers;
-    std::optional<Triplets> tripletsInGPU;
-    std::optional<TripletsBuffer<Device>> tripletsBuffers;
-    std::optional<Quintuplets> quintupletsInGPU;
-    std::optional<QuintupletsBuffer<Device>> quintupletsBuffers;
-    std::optional<TrackCandidates> trackCandidatesInGPU;
-    std::optional<TrackCandidatesBuffer<Device>> trackCandidatesBuffers;
-    std::optional<PixelTriplets> pixelTripletsInGPU;
-    std::optional<PixelTripletsBuffer<Device>> pixelTripletsBuffers;
-    std::optional<PixelQuintuplets> pixelQuintupletsInGPU;
-    std::optional<PixelQuintupletsBuffer<Device>> pixelQuintupletsBuffers;
+    std::optional<ObjectRanges> rangesInGPU_;
+    std::optional<ObjectRangesBuffer<Device>> rangesBuffers_;
+    std::optional<Hits> hitsInGPU_;
+    std::optional<HitsBuffer<Device>> hitsBuffers_;
+    std::optional<MiniDoublets> mdsInGPU_;
+    std::optional<MiniDoubletsBuffer<Device>> miniDoubletsBuffers_;
+    std::optional<Segments> segmentsInGPU_;
+    std::optional<SegmentsBuffer<Device>> segmentsBuffers_;
+    std::optional<Triplets> tripletsInGPU_;
+    std::optional<TripletsBuffer<Device>> tripletsBuffers_;
+    std::optional<Quintuplets> quintupletsInGPU_;
+    std::optional<QuintupletsBuffer<Device>> quintupletsBuffers_;
+    std::optional<TrackCandidates> trackCandidatesInGPU_;
+    std::optional<TrackCandidatesBuffer<Device>> trackCandidatesBuffers_;
+    std::optional<PixelTriplets> pixelTripletsInGPU_;
+    std::optional<PixelTripletsBuffer<Device>> pixelTripletsBuffers_;
+    std::optional<PixelQuintuplets> pixelQuintupletsInGPU_;
+    std::optional<PixelQuintupletsBuffer<Device>> pixelQuintupletsBuffers_;
 
     //CPU interface stuff
-    std::optional<ObjectRangesBuffer<DevHost>> rangesInCPU;
-    std::optional<HitsBuffer<DevHost>> hitsInCPU;
-    std::optional<MiniDoubletsBuffer<DevHost>> mdsInCPU;
-    std::optional<SegmentsBuffer<DevHost>> segmentsInCPU;
-    std::optional<TripletsBuffer<DevHost>> tripletsInCPU;
-    std::optional<TrackCandidatesBuffer<DevHost>> trackCandidatesInCPU;
-    std::optional<ModulesBuffer<DevHost>> modulesInCPU;
-    std::optional<QuintupletsBuffer<DevHost>> quintupletsInCPU;
-    std::optional<PixelTripletsBuffer<DevHost>> pixelTripletsInCPU;
-    std::optional<PixelQuintupletsBuffer<DevHost>> pixelQuintupletsInCPU;
+    std::optional<ObjectRangesBuffer<DevHost>> rangesInCPU_;
+    std::optional<HitsBuffer<DevHost>> hitsInCPU_;
+    std::optional<MiniDoubletsBuffer<DevHost>> mdsInCPU_;
+    std::optional<SegmentsBuffer<DevHost>> segmentsInCPU_;
+    std::optional<TripletsBuffer<DevHost>> tripletsInCPU_;
+    std::optional<TrackCandidatesBuffer<DevHost>> trackCandidatesInCPU_;
+    std::optional<ModulesBuffer<DevHost>> modulesInCPU_;
+    std::optional<QuintupletsBuffer<DevHost>> quintupletsInCPU_;
+    std::optional<PixelTripletsBuffer<DevHost>> pixelTripletsInCPU_;
+    std::optional<PixelQuintupletsBuffer<DevHost>> pixelQuintupletsInCPU_;
 
     void initSync(bool verbose);
 
@@ -86,10 +85,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
-    Event(bool verbose, Queue const& q, const LSTESData<Device>* deviceESData)
-        : queue(q),
-          devAcc(alpaka::getDev(q)),
-          devHost(cms::alpakatools::host()),
+    Event(bool verbose, Queue& q, const LSTESData<Device>* deviceESData)
+        : queue_(q),
+          devAcc_(alpaka::getDev(q)),
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),
@@ -100,7 +98,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       initSync(verbose);
     }
     void resetEventSync();  // synchronizes
-    void wait() const { alpaka::wait(queue); }
+    void wait() const { alpaka::wait(queue_); }
 
     // Calls the appropriate hit function, then increments the counter
     void addHitToEvent(std::vector<float> const& x,
