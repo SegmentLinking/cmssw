@@ -280,8 +280,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 unsigned int innerSegmentIndex,
                                                                 float& betaIn,
                                                                 float& betaInCut) {
-    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == ::lst::PS);
-    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == ::lst::PS);
+    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == PS);
+    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == PS);
 
     float rtIn = mdsInGPU.anchorRt[firstMDIndex];
     float rtMid = mdsInGPU.anchorRt[secondMDIndex];
@@ -378,8 +378,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 unsigned int outerSegmentIndex,
                                                                 float& betaIn,
                                                                 float& betaInCut) {
-    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == ::lst::PS);
-    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == ::lst::PS);
+    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == PS);
+    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == PS);
 
     float rtIn = mdsInGPU.anchorRt[firstMDIndex];
     float rtMid = mdsInGPU.anchorRt[secondMDIndex];
@@ -402,7 +402,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    bool isOutSgInnerMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == ::lst::PS;
+    bool isOutSgInnerMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == PS;
     float rtGeom1 = isOutSgInnerMDPS ? kPixelPSZpitch : kStrip2SZpitch;
     float zGeom1 = alpaka::math::copysign(acc, zGeom, zIn);
     float rtLo = rtIn * (1.f + (zOut - zIn - zGeom1) / (zIn + zGeom1 + dLum) / dzDrtScale) -
@@ -514,8 +514,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    bool isOutSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == ::lst::PS;
-    bool isInSgInnerMDPS = modulesInGPU.moduleType[innerInnerLowerModuleIndex] == ::lst::PS;
+    bool isOutSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == PS;
+    bool isInSgInnerMDPS = modulesInGPU.moduleType[innerInnerLowerModuleIndex] == PS;
 
     float rtGeom = (isInSgInnerMDPS and isOutSgOuterMDPS)  ? 2.f * kPixelPSZpitch
                    : (isInSgInnerMDPS or isOutSgOuterMDPS) ? kPixelPSZpitch + kStrip2SZpitch
@@ -529,7 +529,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if ((rtOut < rtLo) || (rtOut > rtHi))
       return false;
 
-    bool isInSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == ::lst::PS;
+    bool isInSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == PS;
 
     float drtSDIn = rtMid - rtIn;
     float dzSDIn = zMid - zIn;
@@ -622,8 +622,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     short middleLowerModuleSubdet = modulesInGPU.subdets[middleLowerModuleIndex];
     short outerOuterLowerModuleSubdet = modulesInGPU.subdets[outerOuterLowerModuleIndex];
 
-    if (innerInnerLowerModuleSubdet == ::lst::Barrel and middleLowerModuleSubdet == ::lst::Barrel and
-        outerOuterLowerModuleSubdet == ::lst::Barrel) {
+    if (innerInnerLowerModuleSubdet == Barrel and middleLowerModuleSubdet == Barrel and
+        outerOuterLowerModuleSubdet == Barrel) {
       return passPointingConstraintBBB(acc,
                                        modulesInGPU,
                                        mdsInGPU,
@@ -639,8 +639,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        innerSegmentIndex,
                                        betaIn,
                                        betaInCut);
-    } else if (innerInnerLowerModuleSubdet == ::lst::Barrel and middleLowerModuleSubdet == ::lst::Barrel and
-               outerOuterLowerModuleSubdet == ::lst::Endcap) {
+    } else if (innerInnerLowerModuleSubdet == Barrel and middleLowerModuleSubdet == Barrel and
+               outerOuterLowerModuleSubdet == Endcap) {
       return passPointingConstraintBBE(acc,
                                        modulesInGPU,
                                        mdsInGPU,
@@ -658,8 +658,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        outerSegmentIndex,
                                        betaIn,
                                        betaInCut);
-    } else if (innerInnerLowerModuleSubdet == ::lst::Barrel and middleLowerModuleSubdet == ::lst::Endcap and
-               outerOuterLowerModuleSubdet == ::lst::Endcap) {
+    } else if (innerInnerLowerModuleSubdet == Barrel and middleLowerModuleSubdet == Endcap and
+               outerOuterLowerModuleSubdet == Endcap) {
       return passPointingConstraintBBE(acc,
                                        modulesInGPU,
                                        mdsInGPU,
@@ -680,8 +680,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     }
 
-    else if (innerInnerLowerModuleSubdet == ::lst::Endcap and middleLowerModuleSubdet == ::lst::Endcap and
-             outerOuterLowerModuleSubdet == ::lst::Endcap) {
+    else if (innerInnerLowerModuleSubdet == Endcap and middleLowerModuleSubdet == Endcap and
+             outerOuterLowerModuleSubdet == Endcap) {
       return passPointingConstraintEEE(acc,
                                        modulesInGPU,
                                        mdsInGPU,

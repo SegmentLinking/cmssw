@@ -1,5 +1,7 @@
 #include <alpaka/alpaka.hpp>
 
+#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -18,8 +20,6 @@
 #include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
-
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -86,7 +86,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
     edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
-    device::ESGetToken<::lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
+    device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_, nopLSDupClean_, tcpLSTriplets_;
     edm::EDPutTokenT<LSTOutput> lstOutputToken_;
 

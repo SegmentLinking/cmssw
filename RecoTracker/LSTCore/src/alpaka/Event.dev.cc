@@ -180,8 +180,8 @@ void Event::addHitToEvent(std::vector<float> const& x,
   alpaka::exec<Acc3D>(queue,
                       hit_loop_workdiv,
                       HitLoopKernel{},
-                      ::lst::Endcap,
-                      ::lst::TwoS,
+                      Endcap,
+                      TwoS,
                       nModules_,
                       nEndCapMap_,
                       endcapGeometryBuffers_.geoMapDetId_buf.data(),
@@ -214,7 +214,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
                                    std::vector<int> const& charge,
                                    std::vector<unsigned int> const& seedIdx,
                                    std::vector<int> const& superbin,
-                                   std::vector<::lst::PixelType> const& pixelType,
+                                   std::vector<PixelType> const& pixelType,
                                    std::vector<char> const& isQuad) {
   unsigned int size = ptIn.size();
 
@@ -685,7 +685,7 @@ void Event::createPixelTriplets() {
   }
 
   auto superbins_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
-  auto pixelTypes_buf = allocBufWrapper<::lst::PixelType>(devHost, n_max_pixel_segments_per_module, queue);
+  auto pixelTypes_buf = allocBufWrapper<PixelType>(devHost, n_max_pixel_segments_per_module, queue);
 
   alpaka::memcpy(queue, superbins_buf, segmentsBuffers->superbin_buf);
   alpaka::memcpy(queue, pixelTypes_buf, segmentsBuffers->pixelType_buf);
@@ -717,11 +717,11 @@ void Event::createPixelTriplets() {
   // TODO: check if a map/reduction to just eligible pLSs would speed up the kernel
   // the current selection still leaves a significant fraction of unmatchable pLSs
   for (unsigned int i = 0; i < nInnerSegments; i++) {  // loop over # pLS
-    ::lst::PixelType pixelType = pixelTypes[i];        // Get pixel type for this pLS
+    PixelType pixelType = pixelTypes[i];               // Get pixel type for this pLS
     int superbin = superbins[i];                       // Get superbin for this pixel
     if ((superbin < 0) or (superbin >= (int)size_superbins) or
-        ((pixelType != ::lst::PixelType::kHighPt) and (pixelType != ::lst::PixelType::kLowPtPosCurv) and
-         (pixelType != ::lst::PixelType::kLowPtNegCurv))) {
+        ((pixelType != PixelType::kHighPt) and (pixelType != PixelType::kLowPtPosCurv) and
+         (pixelType != PixelType::kLowPtNegCurv))) {
       connectedPixelSize_host[i] = 0;
       connectedPixelIndex_host[i] = 0;
       continue;
@@ -729,21 +729,21 @@ void Event::createPixelTriplets() {
 
     // Used pixel type to select correct size-index arrays
     switch (pixelType) {
-      case ::lst::PixelType::kInvalid:
+      case PixelType::kInvalid:
         break;
-      case ::lst::PixelType::kHighPt:
+      case PixelType::kHighPt:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizes[superbin];
         // index to get start of connected modules for this superbin in map
         connectedPixelIndex_host[i] = pixelMapping_.connectedPixelsIndex[superbin];
         break;
-      case ::lst::PixelType::kLowPtPosCurv:
+      case PixelType::kLowPtPosCurv:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesPos[superbin];
         // index to get start of connected modules for this superbin in map
         connectedPixelIndex_host[i] = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
         break;
-      case ::lst::PixelType::kLowPtNegCurv:
+      case PixelType::kLowPtNegCurv:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesNeg[superbin];
         // index to get start of connected modules for this superbin in map
@@ -888,7 +888,7 @@ void Event::createPixelQuintuplets() {
   }
 
   auto superbins_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
-  auto pixelTypes_buf = allocBufWrapper<::lst::PixelType>(devHost, n_max_pixel_segments_per_module, queue);
+  auto pixelTypes_buf = allocBufWrapper<PixelType>(devHost, n_max_pixel_segments_per_module, queue);
 
   alpaka::memcpy(queue, superbins_buf, segmentsBuffers->superbin_buf);
   alpaka::memcpy(queue, pixelTypes_buf, segmentsBuffers->pixelType_buf);
@@ -919,11 +919,11 @@ void Event::createPixelQuintuplets() {
 
   // Loop over # pLS
   for (unsigned int i = 0; i < nInnerSegments; i++) {
-    ::lst::PixelType pixelType = pixelTypes[i];  // Get pixel type for this pLS
-    int superbin = superbins[i];                 // Get superbin for this pixel
+    PixelType pixelType = pixelTypes[i];  // Get pixel type for this pLS
+    int superbin = superbins[i];          // Get superbin for this pixel
     if ((superbin < 0) or (superbin >= (int)size_superbins) or
-        ((pixelType != ::lst::PixelType::kHighPt) and (pixelType != ::lst::PixelType::kLowPtPosCurv) and
-         (pixelType != ::lst::PixelType::kLowPtNegCurv))) {
+        ((pixelType != PixelType::kHighPt) and (pixelType != PixelType::kLowPtPosCurv) and
+         (pixelType != PixelType::kLowPtNegCurv))) {
       connectedPixelSize_host[i] = 0;
       connectedPixelIndex_host[i] = 0;
       continue;
@@ -931,21 +931,21 @@ void Event::createPixelQuintuplets() {
 
     // Used pixel type to select correct size-index arrays
     switch (pixelType) {
-      case ::lst::PixelType::kInvalid:
+      case PixelType::kInvalid:
         break;
-      case ::lst::PixelType::kHighPt:
+      case PixelType::kHighPt:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizes[superbin];
         // index to get start of connected modules for this superbin in map
         connectedPixelIndex_host[i] = pixelMapping_.connectedPixelsIndex[superbin];
         break;
-      case ::lst::PixelType::kLowPtPosCurv:
+      case PixelType::kLowPtPosCurv:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesPos[superbin];
         // index to get start of connected modules for this superbin in map
         connectedPixelIndex_host[i] = pixelMapping_.connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
         break;
-      case ::lst::PixelType::kLowPtNegCurv:
+      case PixelType::kLowPtNegCurv:
         // number of connected modules to this pixel
         connectedPixelSize_host[i] = pixelMapping_.connectedPixelsSizesNeg[superbin];
         // index to get start of connected modules for this superbin in map
@@ -1030,7 +1030,7 @@ void Event::addMiniDoubletsToEventExplicit() {
 
   for (unsigned int i = 0; i < nLowerModules_; i++) {
     if (!(nMDsCPU[i] == 0 or module_hitRanges[i * 2] == -1)) {
-      if (module_subdets[i] == ::lst::Barrel) {
+      if (module_subdets[i] == Barrel) {
         n_minidoublets_by_layer_barrel_[module_layers[i] - 1] += nMDsCPU[i];
       } else {
         n_minidoublets_by_layer_endcap_[module_layers[i] - 1] += nMDsCPU[i];
@@ -1058,7 +1058,7 @@ void Event::addSegmentsToEventExplicit() {
 
   for (unsigned int i = 0; i < nLowerModules_; i++) {
     if (!(nSegmentsCPU[i] == 0)) {
-      if (module_subdets[i] == ::lst::Barrel) {
+      if (module_subdets[i] == Barrel) {
         n_segments_by_layer_barrel_[module_layers[i] - 1] += nSegmentsCPU[i];
       } else {
         n_segments_by_layer_endcap_[module_layers[i] - 1] += nSegmentsCPU[i];
@@ -1090,7 +1090,7 @@ void Event::addQuintupletsToEventExplicit() {
 
   for (uint16_t i = 0; i < nLowerModules_; i++) {
     if (!(nQuintupletsCPU[i] == 0 or module_quintupletModuleIndices[i] == -1)) {
-      if (module_subdets[i] == ::lst::Barrel) {
+      if (module_subdets[i] == Barrel) {
         n_quintuplets_by_layer_barrel_[module_layers[i] - 1] += nQuintupletsCPU[i];
       } else {
         n_quintuplets_by_layer_endcap_[module_layers[i] - 1] += nQuintupletsCPU[i];
@@ -1118,7 +1118,7 @@ void Event::addTripletsToEventExplicit() {
 
   for (uint16_t i = 0; i < nLowerModules_; i++) {
     if (nTripletsCPU[i] != 0) {
-      if (module_subdets[i] == ::lst::Barrel) {
+      if (module_subdets[i] == Barrel) {
         n_triplets_by_layer_barrel_[module_layers[i] - 1] += nTripletsCPU[i];
       } else {
         n_triplets_by_layer_endcap_[module_layers[i] - 1] += nTripletsCPU[i];

@@ -2,7 +2,7 @@
 
 #include "Event.h"
 
-using namespace ALPAKA_ACCELERATOR_NAMESPACE;
+using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
 #include "Math/Vector3D.h"
 #include "Math/VectorUtil.h"
@@ -20,25 +20,25 @@ namespace {
   }
 }  // namespace
 
-void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> const& see_px,
-                                                          std::vector<float> const& see_py,
-                                                          std::vector<float> const& see_pz,
-                                                          std::vector<float> const& see_dxy,
-                                                          std::vector<float> const& see_dz,
-                                                          std::vector<float> const& see_ptErr,
-                                                          std::vector<float> const& see_etaErr,
-                                                          std::vector<float> const& see_stateTrajGlbX,
-                                                          std::vector<float> const& see_stateTrajGlbY,
-                                                          std::vector<float> const& see_stateTrajGlbZ,
-                                                          std::vector<float> const& see_stateTrajGlbPx,
-                                                          std::vector<float> const& see_stateTrajGlbPy,
-                                                          std::vector<float> const& see_stateTrajGlbPz,
-                                                          std::vector<int> const& see_q,
-                                                          std::vector<std::vector<int>> const& see_hitIdx,
-                                                          std::vector<unsigned int> const& ph2_detId,
-                                                          std::vector<float> const& ph2_x,
-                                                          std::vector<float> const& ph2_y,
-                                                          std::vector<float> const& ph2_z) {
+void LST::prepareInput(std::vector<float> const& see_px,
+                       std::vector<float> const& see_py,
+                       std::vector<float> const& see_pz,
+                       std::vector<float> const& see_dxy,
+                       std::vector<float> const& see_dz,
+                       std::vector<float> const& see_ptErr,
+                       std::vector<float> const& see_etaErr,
+                       std::vector<float> const& see_stateTrajGlbX,
+                       std::vector<float> const& see_stateTrajGlbY,
+                       std::vector<float> const& see_stateTrajGlbZ,
+                       std::vector<float> const& see_stateTrajGlbPx,
+                       std::vector<float> const& see_stateTrajGlbPy,
+                       std::vector<float> const& see_stateTrajGlbPz,
+                       std::vector<int> const& see_q,
+                       std::vector<std::vector<int>> const& see_hitIdx,
+                       std::vector<unsigned int> const& ph2_detId,
+                       std::vector<float> const& ph2_x,
+                       std::vector<float> const& ph2_y,
+                       std::vector<float> const& ph2_z) {
   unsigned int count = 0;
   auto n_see = see_stateTrajGlbPx.size();
   std::vector<float> px_vec;
@@ -78,7 +78,7 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
   std::vector<unsigned int> hitIdxs(ph2_detId.size());
 
   std::vector<int> superbin_vec;
-  std::vector<::lst::PixelType> pixelType_vec;
+  std::vector<PixelType> pixelType_vec;
   std::vector<char> isQuad_vec;
   std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
   const int hit_size = trkX.size();
@@ -102,15 +102,15 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
       float pz = p3LH.z();
 
       int charge = see_q[iSeed];
-      ::lst::PixelType pixtype = ::lst::PixelType::kInvalid;
+      PixelType pixtype = PixelType::kInvalid;
 
       if (ptIn >= 2.0)
-        pixtype = ::lst::PixelType::kHighPt;
+        pixtype = PixelType::kHighPt;
       else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
         if (pixelSegmentDeltaPhiChange >= 0)
-          pixtype = ::lst::PixelType::kLowPtPosCurv;
+          pixtype = PixelType::kLowPtPosCurv;
         else
-          pixtype = ::lst::PixelType::kLowPtNegCurv;
+          pixtype = PixelType::kLowPtNegCurv;
       } else
         continue;
 
@@ -212,10 +212,10 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::prepareInput(std::vector<float> con
   in_isQuad_vec_ = isQuad_vec;
 }
 
-std::vector<unsigned int> ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::getHitIdxs(short trackCandidateType,
-                                                                             unsigned int TCIdx,
-                                                                             unsigned int const* TCHitIndices,
-                                                                             unsigned int const* hitIndices) {
+std::vector<unsigned int> LST::getHitIdxs(short trackCandidateType,
+                                          unsigned int TCIdx,
+                                          unsigned int const* TCHitIndices,
+                                          unsigned int const* hitIndices) {
   std::vector<unsigned int> hits;
 
   unsigned int maxNHits = 0;
@@ -247,7 +247,7 @@ std::vector<unsigned int> ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::getHitIdxs(sho
   return hits;
 }
 
-void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::getOutput(ALPAKA_ACCELERATOR_NAMESPACE::lst::Event& event) {
+void LST::getOutput(Event& event) {
   std::vector<std::vector<unsigned int>> tc_hitIdxs;
   std::vector<unsigned int> tc_len;
   std::vector<int> tc_seedIdx;
@@ -275,31 +275,31 @@ void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::getOutput(ALPAKA_ACCELERATOR_NAMESP
   out_tc_trackCandidateType_ = tc_trackCandidateType;
 }
 
-void ALPAKA_ACCELERATOR_NAMESPACE::lst::LST::run(Queue& queue,
-                                                 bool verbose,
-                                                 LSTESData<Device> const* deviceESData,
-                                                 std::vector<float> const& see_px,
-                                                 std::vector<float> const& see_py,
-                                                 std::vector<float> const& see_pz,
-                                                 std::vector<float> const& see_dxy,
-                                                 std::vector<float> const& see_dz,
-                                                 std::vector<float> const& see_ptErr,
-                                                 std::vector<float> const& see_etaErr,
-                                                 std::vector<float> const& see_stateTrajGlbX,
-                                                 std::vector<float> const& see_stateTrajGlbY,
-                                                 std::vector<float> const& see_stateTrajGlbZ,
-                                                 std::vector<float> const& see_stateTrajGlbPx,
-                                                 std::vector<float> const& see_stateTrajGlbPy,
-                                                 std::vector<float> const& see_stateTrajGlbPz,
-                                                 std::vector<int> const& see_q,
-                                                 std::vector<std::vector<int>> const& see_hitIdx,
-                                                 std::vector<unsigned int> const& ph2_detId,
-                                                 std::vector<float> const& ph2_x,
-                                                 std::vector<float> const& ph2_y,
-                                                 std::vector<float> const& ph2_z,
-                                                 bool no_pls_dupclean,
-                                                 bool tc_pls_triplets) {
-  auto event = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event(verbose, queue, deviceESData);
+void LST::run(Queue& queue,
+              bool verbose,
+              LSTESData<Device> const* deviceESData,
+              std::vector<float> const& see_px,
+              std::vector<float> const& see_py,
+              std::vector<float> const& see_pz,
+              std::vector<float> const& see_dxy,
+              std::vector<float> const& see_dz,
+              std::vector<float> const& see_ptErr,
+              std::vector<float> const& see_etaErr,
+              std::vector<float> const& see_stateTrajGlbX,
+              std::vector<float> const& see_stateTrajGlbY,
+              std::vector<float> const& see_stateTrajGlbZ,
+              std::vector<float> const& see_stateTrajGlbPx,
+              std::vector<float> const& see_stateTrajGlbPy,
+              std::vector<float> const& see_stateTrajGlbPz,
+              std::vector<int> const& see_q,
+              std::vector<std::vector<int>> const& see_hitIdx,
+              std::vector<unsigned int> const& ph2_detId,
+              std::vector<float> const& ph2_x,
+              std::vector<float> const& ph2_y,
+              std::vector<float> const& ph2_z,
+              bool no_pls_dupclean,
+              bool tc_pls_triplets) {
+  auto event = Event(verbose, queue, deviceESData);
   prepareInput(see_px,
                see_py,
                see_pz,

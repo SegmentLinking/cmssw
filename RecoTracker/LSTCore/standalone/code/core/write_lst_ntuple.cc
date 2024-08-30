@@ -294,7 +294,7 @@ void setPixelQuintupletOutputBranches(Event* event) {
   PixelQuintuplets const* pixelQuintuplets = event->getPixelQuintuplets().data();
   Quintuplets const* quintuplets = event->getQuintuplets().data();
   Segments const* segments = event->getSegments().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   unsigned int nPixelQuintuplets =
@@ -368,7 +368,7 @@ void setPixelQuintupletOutputBranches(Event* event) {
 void setQuintupletOutputBranches(Event* event) {
   Quintuplets const* quintuplets = event->getQuintuplets().data();
   ObjectRanges const* ranges = event->getRanges().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
   std::vector<int> sim_t5_matched(n_accepted_simtrk);
@@ -438,7 +438,7 @@ void setQuintupletOutputBranches(Event* event) {
 //________________________________________________________________________________________________________________________________
 void setPixelTripletOutputBranches(Event* event) {
   PixelTriplets const* pixelTriplets = event->getPixelTriplets().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   Segments const* segments = event->getSegments().data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
 
@@ -504,7 +504,7 @@ void setGnnNtupleBranches(Event* event) {
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
   TrackCandidates const* trackCandidates = event->getTrackCandidates().data();
 
@@ -944,7 +944,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 
 //________________________________________________________________________________________________________________________________
 void printHitMultiplicities(Event* event) {
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
 
   int nHits = 0;
@@ -960,7 +960,7 @@ void printHitMultiplicities(Event* event) {
 //________________________________________________________________________________________________________________________________
 void printMiniDoubletMultiplicities(Event* event) {
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
 
   int nMiniDoublets = 0;
   int totOccupancyMiniDoublets = 0;
@@ -988,7 +988,7 @@ void printAllObjects(Event* event) {
 void printMDs(Event* event) {
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
 
   // Then obtain the lower module index
@@ -1011,7 +1011,7 @@ void printLSs(Event* event) {
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
 
   int nSegments = 0;
@@ -1043,7 +1043,7 @@ void printpLSs(Event* event) {
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
 
   unsigned int i = *(modules->nLowerModules);
@@ -1074,7 +1074,7 @@ void printT3s(Event* event) {
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   int nTriplets = 0;
   for (unsigned int i = 0; i < *(modules->nLowerModules); ++i) {
     // unsigned int idx = modules->lowerModuleIndices[i];
@@ -1116,7 +1116,7 @@ void debugPrintOutlierMultiplicities(Event* event) {
   Triplets const* triplets = event->getTriplets().data();
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
-  ::lst::Modules const* modules = event->getModules().data();
+  Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
   //int nTrackCandidates = 0;
   for (unsigned int idx = 0; idx <= *(modules->nLowerModules); ++idx) {

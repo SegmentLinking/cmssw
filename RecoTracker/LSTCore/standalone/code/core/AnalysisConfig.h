@@ -100,7 +100,7 @@ public:
   std::map<int, std::vector<std::vector<float>>> moduleSimHits;
   std::map<int, int> modulePopulation;
 
-  ::lst::ModuleConnectionMap moduleConnectiongMapLoose;
+  lst::ModuleConnectionMap moduleConnectiongMapLoose;
 
   // Boolean to trigger whether to run cut_value_ntupling
   bool do_cut_value_ntuple;

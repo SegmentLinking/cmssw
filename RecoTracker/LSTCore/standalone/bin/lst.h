@@ -1,6 +1,9 @@
 #ifndef lst_h
 #define lst_h
 
+#include "Event.h"
+#include "LST.h"
+
 #include <vector>
 #include <map>
 #include <tuple>
@@ -13,9 +16,6 @@
 #include "Trktree.h"
 #include "rooutil.h"
 #include "cxxopts.h"
-
-#include "Event.h"
-#include "LST.h"
 
 // Efficiency study modules
 #include "AnalysisConfig.h"

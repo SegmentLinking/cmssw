@@ -4,8 +4,6 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
 
-using ::lst::Modules;
-
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct Hits {
     unsigned int* nHits;
