@@ -12,26 +12,6 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 void Event::initSync(bool verbose) {
   alpaka::wait(queue);  // other calls can be asynchronous
   addObjects = verbose;
-  hitsInGPU = std::nullopt;
-  mdsInGPU = std::nullopt;
-  segmentsInGPU = std::nullopt;
-  tripletsInGPU = std::nullopt;
-  quintupletsInGPU = std::nullopt;
-  trackCandidatesInGPU = std::nullopt;
-  pixelTripletsInGPU = std::nullopt;
-  pixelQuintupletsInGPU = std::nullopt;
-  rangesInGPU = std::nullopt;
-
-  hitsInCPU = std::nullopt;
-  rangesInCPU = std::nullopt;
-  mdsInCPU = std::nullopt;
-  segmentsInCPU = std::nullopt;
-  tripletsInCPU = std::nullopt;
-  trackCandidatesInCPU = std::nullopt;
-  modulesInCPU = std::nullopt;
-  quintupletsInCPU = std::nullopt;
-  pixelTripletsInCPU = std::nullopt;
-  pixelQuintupletsInCPU = std::nullopt;
 
   //reset the arrays
   for (int i = 0; i < 6; i++) {
@@ -71,73 +51,35 @@ void Event::resetEventSync() {
       n_quintuplets_by_layer_endcap_[i] = 0;
     }
   }
-  if (hitsInGPU) {
-    hitsInGPU = std::nullopt;
-    hitsBuffers = std::nullopt;
-  }
-  if (mdsInGPU) {
-    mdsInGPU = std::nullopt;
-    miniDoubletsBuffers = std::nullopt;
-  }
-  if (rangesInGPU) {
-    rangesInGPU = std::nullopt;
-    rangesBuffers = std::nullopt;
-  }
-  if (segmentsInGPU) {
-    segmentsInGPU = std::nullopt;
-    segmentsBuffers = std::nullopt;
-  }
-  if (tripletsInGPU) {
-    tripletsInGPU = std::nullopt;
-    tripletsBuffers = std::nullopt;
-  }
-  if (quintupletsInGPU) {
-    quintupletsInGPU = std::nullopt;
-    quintupletsBuffers = std::nullopt;
-  }
-  if (trackCandidatesInGPU) {
-    trackCandidatesInGPU = std::nullopt;
-    trackCandidatesBuffers = std::nullopt;
-  }
-  if (pixelTripletsInGPU) {
-    pixelTripletsInGPU = std::nullopt;
-    pixelTripletsBuffers = std::nullopt;
-  }
-  if (pixelQuintupletsInGPU) {
-    pixelQuintupletsInGPU = std::nullopt;
-    pixelQuintupletsBuffers = std::nullopt;
-  }
+  hitsInGPU.reset();
+  hitsBuffers.reset();
+  mdsInGPU.reset();
+  miniDoubletsBuffers.reset();
+  rangesInGPU.reset();
+  rangesBuffers.reset();
+  segmentsInGPU.reset();
+  segmentsBuffers.reset();
+  tripletsInGPU.reset();
+  tripletsBuffers.reset();
+  quintupletsInGPU.reset();
+  quintupletsBuffers.reset();
+  trackCandidatesInGPU.reset();
+  trackCandidatesBuffers.reset();
+  pixelTripletsInGPU.reset();
+  pixelTripletsBuffers.reset();
+  pixelQuintupletsInGPU.reset();
+  pixelQuintupletsBuffers.reset();
 
-  if (hitsInCPU) {
-    hitsInCPU = std::nullopt;
-  }
-  if (rangesInCPU) {
-    rangesInCPU = std::nullopt;
-  }
-  if (mdsInCPU) {
-    mdsInCPU = std::nullopt;
-  }
-  if (segmentsInCPU) {
-    segmentsInCPU = std::nullopt;
-  }
-  if (tripletsInCPU) {
-    tripletsInCPU = std::nullopt;
-  }
-  if (quintupletsInCPU) {
-    quintupletsInCPU = std::nullopt;
-  }
-  if (pixelTripletsInCPU) {
-    pixelTripletsInCPU = std::nullopt;
-  }
-  if (pixelQuintupletsInCPU) {
-    pixelQuintupletsInCPU = std::nullopt;
-  }
-  if (trackCandidatesInCPU) {
-    trackCandidatesInCPU = std::nullopt;
-  }
-  if (modulesInCPU) {
-    modulesInCPU = std::nullopt;
-  }
+  hitsInCPU.reset();
+  rangesInCPU.reset();
+  mdsInCPU.reset();
+  segmentsInCPU.reset();
+  tripletsInCPU.reset();
+  quintupletsInCPU.reset();
+  pixelTripletsInCPU.reset();
+  pixelQuintupletsInCPU.reset();
+  trackCandidatesInCPU.reset();
+  modulesInCPU.reset();
 }
 
 void Event::addHitToEvent(std::vector<float> const& x,
@@ -150,14 +92,14 @@ void Event::addHitToEvent(std::vector<float> const& x,
 
   // Initialize space on device/host for next event.
   if (!hitsInGPU) {
-    hitsInGPU = Hits();
-    hitsBuffers = HitsBuffer<Device>(nModules_, nHits, devAcc, queue);
+    hitsInGPU.emplace();
+    hitsBuffers.emplace(nModules_, nHits, devAcc, queue);
     hitsInGPU->setData(*hitsBuffers);
   }
 
   if (!rangesInGPU) {
-    rangesInGPU = ObjectRanges();
-    rangesBuffers = ObjectRangesBuffer<Device>(nModules_, nLowerModules_, devAcc, queue);
+    rangesInGPU.emplace();
+    rangesBuffers.emplace(nModules_, nLowerModules_, devAcc, queue);
     rangesInGPU->setData(*rangesBuffers);
   }
 
@@ -253,8 +195,8 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
     *nTotalMDs_buf_h.data() += n_max_pixel_md_per_modules;
     unsigned int nTotalMDs = *nTotalMDs_buf_h.data();
 
-    mdsInGPU = MiniDoublets();
-    miniDoubletsBuffers = MiniDoubletsBuffer<Device>(nTotalMDs, nLowerModules_, devAcc, queue);
+    mdsInGPU.emplace();
+    miniDoubletsBuffers.emplace(nTotalMDs, nLowerModules_, devAcc, queue);
     mdsInGPU->setData(*miniDoubletsBuffers);
 
     alpaka::memcpy(queue, miniDoubletsBuffers->nMemoryLocations_buf, nTotalMDs_buf_h);
@@ -279,9 +221,8 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
 
     nTotalSegments_ += n_max_pixel_segments_per_module;
 
-    segmentsInGPU = Segments();
-    segmentsBuffers =
-        SegmentsBuffer<Device>(nTotalSegments_, nLowerModules_, n_max_pixel_segments_per_module, devAcc, queue);
+    segmentsInGPU.emplace();
+    segmentsBuffers.emplace(nTotalSegments_, nLowerModules_, n_max_pixel_segments_per_module, devAcc, queue);
     segmentsInGPU->setData(*segmentsBuffers);
 
     alpaka::memcpy(queue, segmentsBuffers->nMemoryLocations_buf, nTotalSegments_view);
@@ -378,8 +319,8 @@ void Event::createMiniDoublets() {
   unsigned int nTotalMDs = *nTotalMDs_buf_h.data();
 
   if (!mdsInGPU) {
-    mdsInGPU = MiniDoublets();
-    miniDoubletsBuffers = MiniDoubletsBuffer<Device>(nTotalMDs, nLowerModules_, devAcc, queue);
+    mdsInGPU.emplace();
+    miniDoubletsBuffers.emplace(nTotalMDs, nLowerModules_, devAcc, queue);
     mdsInGPU->setData(*miniDoubletsBuffers);
   }
 
@@ -413,9 +354,8 @@ void Event::createMiniDoublets() {
 
 void Event::createSegmentsWithModuleMap() {
   if (!segmentsInGPU) {
-    segmentsInGPU = Segments();
-    segmentsBuffers =
-        SegmentsBuffer<Device>(nTotalSegments_, nLowerModules_, n_max_pixel_segments_per_module, devAcc, queue);
+    segmentsInGPU.emplace();
+    segmentsBuffers.emplace(nTotalSegments_, nLowerModules_, n_max_pixel_segments_per_module, devAcc, queue);
     segmentsInGPU->setData(*segmentsBuffers);
   }
 
@@ -463,8 +403,8 @@ void Event::createTriplets() {
     alpaka::memcpy(queue, maxTriplets_buf_h, rangesBuffers->device_nTotalTrips_buf);
     alpaka::wait(queue);  // wait to get the value before using it
 
-    tripletsInGPU = Triplets();
-    tripletsBuffers = TripletsBuffer<Device>(*maxTriplets_buf_h.data(), nLowerModules_, devAcc, queue);
+    tripletsInGPU.emplace();
+    tripletsBuffers.emplace(*maxTriplets_buf_h.data(), nLowerModules_, devAcc, queue);
     tripletsInGPU->setData(*tripletsBuffers);
 
     alpaka::memcpy(queue, tripletsBuffers->nMemoryLocations_buf, maxTriplets_buf_h);
@@ -537,9 +477,8 @@ void Event::createTriplets() {
 
 void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   if (!trackCandidatesInGPU) {
-    trackCandidatesInGPU = TrackCandidates();
-    trackCandidatesBuffers =
-        TrackCandidatesBuffer<Device>(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devAcc, queue);
+    trackCandidatesInGPU.emplace();
+    trackCandidatesBuffers.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devAcc, queue);
     trackCandidatesInGPU->setData(*trackCandidatesBuffers);
   }
 
@@ -679,8 +618,8 @@ void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
 
 void Event::createPixelTriplets() {
   if (!pixelTripletsInGPU) {
-    pixelTripletsInGPU = PixelTriplets();
-    pixelTripletsBuffers = PixelTripletsBuffer<Device>(n_max_pixel_triplets, devAcc, queue);
+    pixelTripletsInGPU.emplace();
+    pixelTripletsBuffers.emplace(n_max_pixel_triplets, devAcc, queue);
     pixelTripletsInGPU->setData(*pixelTripletsBuffers);
   }
 
@@ -814,8 +753,8 @@ void Event::createQuintuplets() {
   auto nTotalQuintuplets = *nTotalQuintuplets_buf.data();
 
   if (!quintupletsInGPU) {
-    quintupletsInGPU = Quintuplets();
-    quintupletsBuffers = QuintupletsBuffer<Device>(nTotalQuintuplets, nLowerModules_, devAcc, queue);
+    quintupletsInGPU.emplace();
+    quintupletsBuffers.emplace(nTotalQuintuplets, nLowerModules_, devAcc, queue);
     quintupletsInGPU->setData(*quintupletsBuffers);
 
     alpaka::memcpy(queue, quintupletsBuffers->nMemoryLocations_buf, nTotalQuintuplets_buf);
@@ -876,14 +815,13 @@ void Event::pixelLineSegmentCleaning(bool no_pls_dupclean) {
 
 void Event::createPixelQuintuplets() {
   if (!pixelQuintupletsInGPU) {
-    pixelQuintupletsInGPU = PixelQuintuplets();
-    pixelQuintupletsBuffers = PixelQuintupletsBuffer<Device>(n_max_pixel_quintuplets, devAcc, queue);
+    pixelQuintupletsInGPU.emplace();
+    pixelQuintupletsBuffers.emplace(n_max_pixel_quintuplets, devAcc, queue);
     pixelQuintupletsInGPU->setData(*pixelQuintupletsBuffers);
   }
   if (!trackCandidatesInGPU) {
-    trackCandidatesInGPU = TrackCandidates();
-    trackCandidatesBuffers =
-        TrackCandidatesBuffer<Device>(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devAcc, queue);
+    trackCandidatesInGPU.emplace();
+    trackCandidatesBuffers.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devAcc, queue);
     trackCandidatesInGPU->setData(*trackCandidatesBuffers);
   }
 
@@ -1332,7 +1270,7 @@ HitsBuffer<alpaka_common::DevHost>& Event::getHits(bool sync)  //std::shared_ptr
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nHits = *nHits_buf_h.data();
-    hitsInCPU = HitsBuffer<DevHost>(nModules_, nHits, devHost, queue);
+    hitsInCPU.emplace(nModules_, nHits, devHost, queue);
     hitsInCPU->setData(*hitsInCPU);
 
     alpaka::memcpy(queue, hitsInCPU->nHits_buf, hitsBuffers->nHits_buf);
@@ -1355,7 +1293,7 @@ HitsBuffer<alpaka_common::DevHost>& Event::getHitsInCMSSW(bool sync) {
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nHits = *nHits_buf_h.data();
-    hitsInCPU = HitsBuffer<DevHost>(nModules_, nHits, devHost, queue);
+    hitsInCPU.emplace(nModules_, nHits, devHost, queue);
     hitsInCPU->setData(*hitsInCPU);
 
     alpaka::memcpy(queue, hitsInCPU->nHits_buf, hitsBuffers->nHits_buf);
@@ -1368,7 +1306,7 @@ HitsBuffer<alpaka_common::DevHost>& Event::getHitsInCMSSW(bool sync) {
 
 ObjectRangesBuffer<alpaka_common::DevHost>& Event::getRanges(bool sync) {
   if (!rangesInCPU) {
-    rangesInCPU = ObjectRangesBuffer<DevHost>(nModules_, nLowerModules_, devHost, queue);
+    rangesInCPU.emplace(nModules_, nLowerModules_, devHost, queue);
     rangesInCPU->setData(*rangesInCPU);
 
     alpaka::memcpy(queue, rangesInCPU->hitRanges_buf, rangesBuffers->hitRanges_buf);
@@ -1390,7 +1328,7 @@ MiniDoubletsBuffer<alpaka_common::DevHost>& Event::getMiniDoublets(bool sync) {
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nMemHost = *nMemHost_buf_h.data();
-    mdsInCPU = MiniDoubletsBuffer<DevHost>(nMemHost, nLowerModules_, devHost, queue);
+    mdsInCPU.emplace(nMemHost, nLowerModules_, devHost, queue);
     mdsInCPU->setData(*mdsInCPU);
 
     alpaka::memcpy(queue, mdsInCPU->nMemoryLocations_buf, miniDoubletsBuffers->nMemoryLocations_buf);
@@ -1413,7 +1351,7 @@ SegmentsBuffer<alpaka_common::DevHost>& Event::getSegments(bool sync) {
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nMemHost = *nMemHost_buf_h.data();
-    segmentsInCPU = SegmentsBuffer<DevHost>(nMemHost, nLowerModules_, n_max_pixel_segments_per_module, devHost, queue);
+    segmentsInCPU.emplace(nMemHost, nLowerModules_, n_max_pixel_segments_per_module, devHost, queue);
     segmentsInCPU->setData(*segmentsInCPU);
 
     alpaka::memcpy(queue, segmentsInCPU->nMemoryLocations_buf, segmentsBuffers->nMemoryLocations_buf);
@@ -1449,7 +1387,7 @@ TripletsBuffer<alpaka_common::DevHost>& Event::getTriplets(bool sync) {
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nMemHost = *nMemHost_buf_h.data();
-    tripletsInCPU = TripletsBuffer<DevHost>(nMemHost, nLowerModules_, devHost, queue);
+    tripletsInCPU.emplace(nMemHost, nLowerModules_, devHost, queue);
     tripletsInCPU->setData(*tripletsInCPU);
 
     alpaka::memcpy(queue, tripletsInCPU->nMemoryLocations_buf, tripletsBuffers->nMemoryLocations_buf);
@@ -1486,7 +1424,7 @@ QuintupletsBuffer<alpaka_common::DevHost>& Event::getQuintuplets(bool sync) {
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nMemHost = *nMemHost_buf_h.data();
-    quintupletsInCPU = QuintupletsBuffer<DevHost>(nMemHost, nLowerModules_, devHost, queue);
+    quintupletsInCPU.emplace(nMemHost, nLowerModules_, devHost, queue);
     quintupletsInCPU->setData(*quintupletsInCPU);
 
     alpaka::memcpy(queue, quintupletsInCPU->nMemoryLocations_buf, quintupletsBuffers->nMemoryLocations_buf);
@@ -1523,7 +1461,7 @@ PixelTripletsBuffer<alpaka_common::DevHost>& Event::getPixelTriplets(bool sync) 
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nPixelTriplets = *nPixelTriplets_buf_h.data();
-    pixelTripletsInCPU = PixelTripletsBuffer<DevHost>(nPixelTriplets, devHost, queue);
+    pixelTripletsInCPU.emplace(nPixelTriplets, devHost, queue);
     pixelTripletsInCPU->setData(*pixelTripletsInCPU);
 
     alpaka::memcpy(queue, pixelTripletsInCPU->nPixelTriplets_buf, pixelTripletsBuffers->nPixelTriplets_buf);
@@ -1563,7 +1501,7 @@ PixelQuintupletsBuffer<alpaka_common::DevHost>& Event::getPixelQuintuplets(bool 
     alpaka::wait(queue);  // wait for the value before using
 
     auto const nPixelQuintuplets = *nPixelQuintuplets_buf_h.data();
-    pixelQuintupletsInCPU = PixelQuintupletsBuffer<DevHost>(nPixelQuintuplets, devHost, queue);
+    pixelQuintupletsInCPU.emplace(nPixelQuintuplets, devHost, queue);
     pixelQuintupletsInCPU->setData(*pixelQuintupletsInCPU);
 
     alpaka::memcpy(queue, pixelQuintupletsInCPU->nPixelQuintuplets_buf, pixelQuintupletsBuffers->nPixelQuintuplets_buf);
@@ -1597,8 +1535,7 @@ TrackCandidatesBuffer<alpaka_common::DevHost>& Event::getTrackCandidates(bool sy
     // Get nTrackCanHost parameter to initialize host based trackCandidatesInCPU
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue, 1u);
     alpaka::memcpy(queue, nTrackCanHost_buf_h, trackCandidatesBuffers->nTrackCandidates_buf);
-    trackCandidatesInCPU =
-        TrackCandidatesBuffer<DevHost>(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devHost, queue);
+    trackCandidatesInCPU.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devHost, queue);
     trackCandidatesInCPU->setData(*trackCandidatesInCPU);
     alpaka::wait(queue);  // wait here before we get nTrackCanHost and trackCandidatesInCPU becomes usable
 
@@ -1636,8 +1573,7 @@ TrackCandidatesBuffer<alpaka_common::DevHost>& Event::getTrackCandidatesInCMSSW(
     // Get nTrackCanHost parameter to initialize host based trackCandidatesInCPU
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue, 1u);
     alpaka::memcpy(queue, nTrackCanHost_buf_h, trackCandidatesBuffers->nTrackCandidates_buf);
-    trackCandidatesInCPU =
-        TrackCandidatesBuffer<DevHost>(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devHost, queue);
+    trackCandidatesInCPU.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, devHost, queue);
     trackCandidatesInCPU->setData(*trackCandidatesInCPU);
     alpaka::wait(queue);  // wait for the value before using and trackCandidatesInCPU becomes usable
 
@@ -1663,7 +1599,7 @@ TrackCandidatesBuffer<alpaka_common::DevHost>& Event::getTrackCandidatesInCMSSW(
 ModulesBuffer<alpaka_common::DevHost>& Event::getModules(bool isFull, bool sync) {
   if (!modulesInCPU) {
     // The last input here is just a small placeholder for the allocation.
-    modulesInCPU = ModulesBuffer<DevHost>(devHost, nModules_, nPixels_);
+    modulesInCPU.emplace(devHost, nModules_, nPixels_);
 
     modulesInCPU->copyFromSrc(queue, modulesBuffers_, isFull);
     if (sync)
