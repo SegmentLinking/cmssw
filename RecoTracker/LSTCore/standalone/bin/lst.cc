@@ -3,6 +3,7 @@
 #include <typeinfo>
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using namespace ::lst;
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char **argv) {
@@ -340,7 +341,7 @@ void run_lst() {
   std::vector<std::vector<int>> out_charge_vec;
   std::vector<std::vector<unsigned int>> out_seedIdx_vec;
   std::vector<std::vector<int>> out_superbin_vec;
-  std::vector<std::vector<::lst::PixelType>> out_pixelType_vec;
+  std::vector<std::vector<PixelType>> out_pixelType_vec;
   std::vector<std::vector<char>> out_isQuad_vec;
   std::vector<int> evt_num;
   std::vector<TString> file_name;

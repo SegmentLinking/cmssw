@@ -610,7 +610,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
                                            std::vector<std::vector<int>> &out_charge_vec,
                                            std::vector<std::vector<unsigned int>> &out_seedIdx_vec,
                                            std::vector<std::vector<int>> &out_superbin_vec,
-                                           std::vector<std::vector<::lst::PixelType>> &out_pixelType_vec,
+                                           std::vector<std::vector<PixelType>> &out_pixelType_vec,
                                            std::vector<std::vector<char>> &out_isQuad_vec) {
   unsigned int count = 0;
   auto n_see = trk.see_stateTrajGlbPx().size();
@@ -651,7 +651,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
   std::vector<unsigned int> hitIdxs(trk.ph2_detId().size());
 
   std::vector<int> superbin_vec;
-  std::vector<::lst::PixelType> pixelType_vec;
+  std::vector<PixelType> pixelType_vec;
   std::vector<char> isQuad_vec;
   std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
   const int hit_size = trkX.size();
@@ -719,14 +719,14 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
       int charge = trk.see_q()[iSeed];
       unsigned int seedIdx = iSeed;
 
-      ::lst::PixelType pixtype = ::lst::PixelType::kInvalid;
+      PixelType pixtype = PixelType::kInvalid;
       if (ptIn >= 2.0) {
-        pixtype = ::lst::PixelType::kHighPt;
+        pixtype = PixelType::kHighPt;
       } else if (ptIn >= (PT_CUT - 2 * ptErr) and ptIn < 2.0) {
         if (pixelSegmentDeltaPhiChange >= 0) {
-          pixtype = ::lst::PixelType::kLowPtPosCurv;
+          pixtype = PixelType::kLowPtPosCurv;
         } else {
-          pixtype = ::lst::PixelType::kLowPtNegCurv;
+          pixtype = PixelType::kLowPtNegCurv;
         }
       } else {
         continue;
@@ -866,7 +866,7 @@ float addInputsToEventPreLoad(LSTEvent *event,
                               std::vector<int> charge_vec,
                               std::vector<unsigned int> seedIdx_vec,
                               std::vector<int> superbin_vec,
-                              std::vector<::lst::PixelType> pixelType_vec,
+                              std::vector<PixelType> pixelType_vec,
                               std::vector<char> isQuad_vec) {
   TStopwatch my_timer;
 
