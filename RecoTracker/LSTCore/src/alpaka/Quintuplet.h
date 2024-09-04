@@ -2489,8 +2489,8 @@ namespace lst {
                                                innerRadius,
                                                outerRadius,
                                                bridgeRadius);
-    TightCutFlag = TightCutFlag and (inference > lst::t5dnn::kLSTWp2);  // T5-in-TC cut
-    if (inference <= lst::t5dnn::kLSTWp2)                               // T5-building cut
+    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
       return false;
 #endif
 
