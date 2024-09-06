@@ -143,12 +143,15 @@ namespace lst::t5dnn {
       x_5[col] = alpaka::math::exp(acc, x_4[col]) / (alpaka::math::exp(acc, x_4[col]) + 1);
     }
 
-    // Get the bin index based on abs(t5_eta)
+    // Get the bin index based on abs(t5_eta) and t5_pt
     float abs_t5_eta = alpaka::math::abs(acc, t5_eta);
+    float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
+
+    unsigned int pt_index = (t5_pt > 5) ? 1 : 0;
     unsigned int bin_index = (abs_t5_eta > 2.5f) ? 9 : static_cast<unsigned int>(abs_t5_eta / 0.25f);
 
     // Compare x_5[0] to the cut value for the relevant bin
-    return x_5[0] > kLSTWp[bin_index];
+    return x_5[0] > kLSTWp[pt_index][bin_index];
   }
 
 }  //namespace lst::t5dnn

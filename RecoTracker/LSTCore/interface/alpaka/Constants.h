@@ -86,8 +86,9 @@ namespace lst {
   namespace t5dnn {
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float Z_max = 267.2349854f;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float R_max = 110.1099396f;
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kLSTWp[10] = {
-        0.4069, 0.4174, 0.5, 0.539, 0.3421, 0.3174, 0.3481, 0.4968, 0.693, 0.761};
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kLSTWp[2][10] = {
+        {0.4301, 0.4419, 0.4762, 0.5147, 0.347, 0.3538, 0.4061, 0.5284, 0.7186, 0.7806},
+        {0.2504, 0.3244, 0.3069, 0.4128, 0.2115, 0.2105, 0.2568, 0.2435, 0.3587, 0.2614}};
   }  // namespace t5dnn
 
 }  //namespace lst
