@@ -3059,13 +3059,13 @@ namespace SDL {
                                                     ptCut);
 
             if (success) {
-              int totOccupancyQuintuplets =
-                  alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quintupletsInGPU.totOccupancyQuintuplets[lowerModule1], 1u);
-              if (totOccupancyQuintuplets >= rangesInGPU.quintupletModuleOccupancy[lowerModule1]) {
-#ifdef Warnings
-                printf("Quintuplet excess alert! Module index = %d\n", lowerModule1);
-#endif
-              } else {
+//               int totOccupancyQuintuplets =
+//                   alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quintupletsInGPU.totOccupancyQuintuplets[lowerModule1], 1u);
+//               if (totOccupancyQuintuplets >= rangesInGPU.quintupletModuleOccupancy[lowerModule1]) {
+// #ifdef Warnings
+//                 printf("Quintuplet excess alert! Module index = %d\n", lowerModule1);
+// #endif
+//               } else {
                 int quintupletModuleIndex =
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quintupletsInGPU.nQuintuplets[lowerModule1], 1u);
                 //this if statement should never get executed!
@@ -3112,7 +3112,7 @@ namespace SDL {
 
                   tripletsInGPU.partOfT5[quintupletsInGPU.tripletIndices[2 * quintupletIndex]] = true;
                   tripletsInGPU.partOfT5[quintupletsInGPU.tripletIndices[2 * quintupletIndex + 1]] = true;
-                }
+                // }
               }
             }
           }
@@ -3203,7 +3203,7 @@ namespace SDL {
           printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
 #endif
         }
-
+        occupancy = 2000;
         int nTotQ = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalQuintupletsx, occupancy);
         rangesInGPU.quintupletModuleIndices[i] = nTotQ;
         rangesInGPU.indicesOfEligibleT5Modules[nEligibleT5Modules] = i;

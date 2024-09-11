@@ -277,8 +277,8 @@ namespace SDL {
     const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
 
     //get the type of module: ps or 2s
-    const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
-    const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
+    // const int moduleType1 = modulesInGPU.moduleType[innerInnerLowerModuleIndex];  //0 is ps, 1 is 2s
+    // const int moduleType2 = modulesInGPU.moduleType[middleLowerModuleIndex];
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
 
     //get the x,y position of each MD
@@ -290,17 +290,17 @@ namespace SDL {
     const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
     const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
 
-    //use the second MD as the initial point to provide x0,y0,z0 and rt0.
-    float x_init = x1;
-    float y_init = y1;
-    float z_init = z1;
-    float rt_init = r1;
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1){
-      x_init = x2;
-      y_init = y2;
-      z_init = z2;
-      rt_init = r2;
-    } 
+    //use the third MD as the initial point to provide x0,y0,z0 and rt0.
+    float x_init = x2;
+    float y_init = y2;
+    float z_init = z2;
+    float rt_init = r2;
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+      x_init = x1;
+      y_init = y1;
+      z_init = z1;
+      rt_init = r1;
+    }
 
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
     float x_center = circleCenterX / 100;
@@ -388,24 +388,24 @@ namespace SDL {
     if (y3 > y2 && y2 > y1)
       Py = alpaka::math::abs(acc, Py);
 
-    float AO = alpaka::math::sqrt(acc, (x3 - x_center) * (x3 - x_center) + (y3 - y_center) * (y3 - y_center)); 
+    float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center)); 
     float BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
-    float AB2 = (x3 - x_init) * (x3 - x_init) + (y3 - y_init) * (y3 - y_init); 
+    float AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init); 
     float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
     float ds = circleRadius / 100 * dPhi;
 
-    float Pz = (z3 - z_init) / ds * Pt; 
+    float Pz = (z_init-z1) / ds * Pt; 
 
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1) {
-      AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+      AO = alpaka::math::sqrt(acc, (x3 - x_center) * (x3 - x_center) + (y3 - y_center) * (y3 - y_center));
       BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
-      AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init);
+      AB2 = (x3 - x_init) * (x3 - x_init) + (y3 - y_init) * (y3 - y_init);
       dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
       ds = circleRadius / 100 * dPhi;
 
-      Pz = (z_init - z1) / ds * Pt;
+      Pz = (z3 - z_init) / ds * Pt;
     } 
 
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
@@ -421,28 +421,28 @@ namespace SDL {
 
     float rou = a / p;
     // for endcap
-    float s = (z2 - z_init) * p / Pz;
+    float s = (z3 - z_init) * p / Pz;
     float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
     float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
-    diffr = (r2 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;  
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1){
-      s = (z3 - z_init) * p / Pz;
+    diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100; 
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+      s = (z2 - z_init) * p / Pz;
       x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
       y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
-      diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
+      diffr = (r2 - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
     }
 
     // for barrel
     bool calDiffz = false;
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1) {
-      calDiffz = (layer3 <= 6);
-    } else {
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
       calDiffz = (layer2 <= 6);
+    } else {
+      calDiffz = (layer3 <= 6);
     }
     if (calDiffz) {
-      float paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r2 * r2;
-      if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1) {
-        paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
+      float paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
+      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+        paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r2 * r2;
       }
       float paraB = 2 * (x_init * Px + y_init * Py) / a;
       float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
@@ -453,11 +453,11 @@ namespace SDL {
       float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
       float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
       float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
-      float diffz1 = (solz1 - z2) * 100;
-      float diffz2 = (solz2 - z2) * 100;
-      if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1) {
-        diffz1 = (solz1 - z3) * 100;
-        diffz2 = (solz2 - z3) * 100;
+      float diffz1 = (solz1 - z3) * 100;
+      float diffz2 = (solz2 - z3) * 100;
+      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+        diffz1 = (solz1 - z2) * 100;
+        diffz2 = (solz2 - z2) * 100;
       }
       // Alpaka : Needs to be moved over
       if (alpaka::math::isnan(acc, diffz1))
@@ -468,12 +468,9 @@ namespace SDL {
         diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
       }
     }
-
-    //PS PS 2S Modules
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1){
-      error = 5.0f; 
-    } //PS PS PS Modules
-    else if (moduleType2 == 0) {
+    
+    //PS PS PS Modules
+    if (moduleType3 == 0) {
       error = 0.15f;
     } else  //2S modules
     {
@@ -481,19 +478,19 @@ namespace SDL {
     }
 
     //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
-    float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
-    short side = modulesInGPU.sides[middleLowerModuleIndex];
-    short subdets = modulesInGPU.subdets[middleLowerModuleIndex];
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1){
-      drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[outerOuterLowerModuleIndex]);
-      side = modulesInGPU.sides[outerOuterLowerModuleIndex];
-      subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
+    float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[outerOuterLowerModuleIndex]);
+    short side = modulesInGPU.sides[outerOuterLowerModuleIndex];
+    short subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+      drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
+      side = modulesInGPU.sides[middleLowerModuleIndex];
+      subdets = modulesInGPU.subdets[middleLowerModuleIndex];
     }
 
 
-    residual = (layer2 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
-    if (moduleType1 == 0 && moduleType2 == 0 && moduleType3 == 1){
-      residual = (layer3 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
+    residual = (layer3 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+      residual = (layer2 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
     }
 
     float projection_missing = 1;
@@ -511,13 +508,16 @@ namespace SDL {
 
     if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
       float slope;
-      if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1) { //PSPS2S
-        slope = (z2 - z1) / (r2 - r1);
-      } else {
+      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) { //reg 5 and 19 use MD2
         slope = (z3 - z1) / (r3 - r1);
+      } else {
+        slope = (z2 - z1) / (r2 - r1);
       }
 
       float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
+      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+        residual3_linear = (layer2 <= 6) ? ((z2 - z1) - slope * (r2 - r1)) : ((r2 - r1) - (z2 - z1) / slope);
+      }
 
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
@@ -527,268 +527,203 @@ namespace SDL {
       rzChiSquared = -12 * residual3_linear * residual3_linear;
 
       return rzChiSquared > -2.7711823f;
+      // return rzChiSquared > -1.7e-10;
     }
 
     // residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
     // return true;
 
-    //tuned
+    // moderate cuts
     if (layer1==7) {
       if (layer2==8) {
         if (layer3==9) {
-          return rzChiSquared < 29.667437f;   // Region 0
+          return rzChiSquared < 65.47191f;   // Region 0
         } else if (layer3==14) {
           return rzChiSquared < 3.3200853f;   // Region 1
         }
       } else if (layer2==13) {
-        return rzChiSquared < 1.8804228;      // Region 2
+        return rzChiSquared < 17.194584f;      // Region 2
       }
     } else if (layer1==8) {
       if (layer2==9) {
         if (layer3==10) {
-          return rzChiSquared < 24.75731f;    // Region 3
+          return rzChiSquared < 114.91959f;    // Region 3
         } else if (layer3==15) {
-          return rzChiSquared < 3.3569515f;   // Region 4
+          return rzChiSquared < 3.4359624f;   // Region 4
         } 
       } else if (layer2==14) {
-        return rzChiSquared < 1.2428248f;     // Region 5
+        return rzChiSquared < 4.6487956f;     // Region 5
       }
     } else if (layer1==9) {
       if (layer2==10) {
         if (layer3==11) {
-          return rzChiSquared < 20.516153f;    // Region 6
+          return rzChiSquared < 950.34314f;    // Region 6
         } else if (layer3==16) {
-          return rzChiSquared < 2.9004831f;    // Region 7
+          return rzChiSquared < 3.095819f;    // Region 7
         }
       } else if (layer2==15) {
-        return rzChiSquared < 0.9011718f;     // Region 8
+        return rzChiSquared < 11.477617f;     // Region 8
       }
     } else if (layer1==1) {
       if (layer2==7) {
-        return rzChiSquared < 36.812286f;     // Region 9
+        residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+        // rzChiSquared = 12* (residual*residual)/(0.15f*0.15f);
+        return alpaka::math::abs(acc, residual) < 1.0f;     // Region 9
       } else if (layer2==2) {
         if (layer3==7) {
-          return rzChiSquared < 92.937614f;   // Region 10
+          return rzChiSquared < 96.949936f;   // Region 10
         } else if (layer3==3) {
-          return rzChiSquared < 76.57082f;    // Region 11
+          return rzChiSquared < 458.43982f;    // Region 11
         }
       }
     } else if (layer1==2) {
       if (layer2==7) {
         if (layer3==8) {
-          return rzChiSquared < 67.10026f;   // Region 12
+          return rzChiSquared < 218.82303f;   // Region 12
         } else if (layer3==13) {
-          return rzChiSquared < 3.094744f;    // Region 13
+          return rzChiSquared < 3.155554f;    // Region 13
         }
       } else if (layer2==3) {
         if (layer3==7) {
-          return rzChiSquared < 154.36745f;    // Region 14
+          return rzChiSquared < 235.5005f;    // Region 14
         } else if (layer3==12) {
-          return rzChiSquared < 3.1420124f;    // Region 15
+          return rzChiSquared < 3.8522234f;    // Region 15
         } else if (layer3==4) {
-          return rzChiSquared < 2.5940578f;   // Region 16
+          return rzChiSquared < 3.5852437f;   // Region 16
         }
       }
     } else if (layer1==3) {
       if (layer2==7) {
         if (layer3==8) {
-          return rzChiSquared < 5.5030065f;   // Region 17
+          return rzChiSquared < 42.68f;   // Region 17
         } else if (layer3==13) {
-          return rzChiSquared < 3.203401f;   // Region 18
+          return rzChiSquared < 3.853796f;   // Region 18
         }
       } else if (layer2==12) {
-        return rzChiSquared < 3.3987854f;     // Region 19
+        return rzChiSquared < 6.2774787f;     // Region 19
       } else if (layer2==4) {
+        residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+        // rzChiSquared = 12* (residual*residual)/(5.0f*5.0f);
         if (layer3==5) {
-          return rzChiSquared < 3.3961515f;   // Region 20
+          // return rzChiSquared < 3.3961515f;   // Region 20
+          return alpaka::math::abs(acc, residual) < 3.7127972f;
         } else if (layer3==12) {
-          return rzChiSquared < 11.563031f;   // Region 21
+          // return rzChiSquared < 11.563031f;   // Region 21
+          return alpaka::math::abs(acc, residual) < 5.0f;
         }
       }
     } else if (layer1==4) {
+      residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+      // rzChiSquared = 12* (residual*residual)/(5.0f*5.0f);
       if (layer2==12) {
-        return rzChiSquared < 3.492655f;      // Region 22
+        // return rzChiSquared < 3.492655f;      // Region 22
+        return alpaka::math::abs(acc, residual) < 6.3831687f;
       } else if (layer2==5) {
         if (layer3==6) {
-          return rzChiSquared < 4.5789695f;    // Region 23
+          // return rzChiSquared < 4.5789695f;    // Region 23
+          return alpaka::math::abs(acc, residual) < 4.362525f;
         } else if (layer3==12) {
-          return rzChiSquared < 10.949434f;   // Region 24
+          // return rzChiSquared < 10.949434f;   // Region 24
+          return alpaka::math::abs(acc, residual) < 5.0f;
         }
       }
     } 
     return false;
-    
-    // 99% efficiency
+
+    // // loose cuts
     // if (layer1==7) {
     //   if (layer2==8) {
     //     if (layer3==9) {
-    //       return rzChiSquared < 11.508443f;
+    //       return rzChiSquared < 142.79022f;   // Region 0
     //     } else if (layer3==14) {
-    //       return rzChiSquared < 2.9402843f;
+    //       return rzChiSquared < 8.584737f;   // Region 1
     //     }
     //   } else if (layer2==13) {
-    //     return rzChiSquared < 3.4204564f;
+    //     return rzChiSquared < 17.194584f;      // Region 2
     //   }
     // } else if (layer1==8) {
     //   if (layer2==9) {
     //     if (layer3==10) {
-    //       return rzChiSquared < 15.607118f;
+    //       return rzChiSquared < 214.07211f;    // Region 3
     //     } else if (layer3==15) {
-    //       return rzChiSquared < 2.8363636f;
+    //       return rzChiSquared < 5.5700583f;   // Region 4
     //     } 
     //   } else if (layer2==14) {
-    //     return rzChiSquared < 4.7437077f;
+    //     return rzChiSquared < 3.4963913f;     // Region 5
     //   }
     // } else if (layer1==9) {
     //   if (layer2==10) {
     //     if (layer3==11) {
-    //       return rzChiSquared < 18.890594f;
+    //       return rzChiSquared < 950.34314f;    // Region 6
     //     } else if (layer3==16) {
-    //       return rzChiSquared < 2.8023736f;
+    //       return rzChiSquared < 7.585157f;    // Region 7
     //     }
     //   } else if (layer2==15) {
-    //     return rzChiSquared < 4.5140405f;
+    //     return rzChiSquared < 11.395248f;     // Region 8
     //   }
     // } else if (layer1==1) {
     //   if (layer2==7) {
-    //     return rzChiSquared < 14.706372f;
+    //     residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    //     // rzChiSquared = 12* (residual*residual)/(0.15f*0.15f);
+    //     return alpaka::math::abs(acc, residual) < 1.0f;     // Region 9
     //   } else if (layer2==2) {
     //     if (layer3==7) {
-    //       return rzChiSquared < 45.626938f;
+    //       return rzChiSquared < 515.60394f;   // Region 10
     //     } else if (layer3==3) {
-    //       return rzChiSquared < 73.24f;
+    //       return rzChiSquared < 681.4253f;    // Region 11
     //     }
     //   }
     // } else if (layer1==2) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 46.438114f;
+    //       return rzChiSquared < 218.82303f;   // Region 12
     //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.8614419f;
+    //       return rzChiSquared < 3.2897258f;    // Region 13
     //     }
     //   } else if (layer2==3) {
     //     if (layer3==7) {
-    //       return rzChiSquared < 217.64236f;
+    //       return rzChiSquared < 235.5005f;    // Region 14
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 3.0141585f;
+    //       return rzChiSquared < 21.714891f;    // Region 15
     //     } else if (layer3==4) {
-    //       return rzChiSquared < 3.413266f;
+    //       return rzChiSquared < 3.7066107f;   // Region 16
     //     }
     //   }
     // } else if (layer1==3) {
     //   if (layer2==7) {
     //     if (layer3==8) {
-    //       return rzChiSquared < 5.5030065f;
+    //       return rzChiSquared < 42.68f;   // Region 17
     //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.831275f;
+    //       return rzChiSquared < 7.694526f;   // Region 18
     //     }
     //   } else if (layer2==12) {
-    //     return rzChiSquared < 6.1314178f;
+    //     return rzChiSquared < 6.2774787f;     // Region 19
     //   } else if (layer2==4) {
+    //     residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    //     // rzChiSquared = 12* (residual*residual)/(5.0f*5.0f);
     //     if (layer3==5) {
-    //       return rzChiSquared < 5.681462f;
+    //       // return rzChiSquared < 3.3961515f;   // Region 20
+    //       return alpaka::math::abs(acc, residual) < 3.7127972f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 8.155935f;
+    //       // return rzChiSquared < 11.563031f;   // Region 21
+    //       return alpaka::math::abs(acc, residual) < 5.0f;
     //     }
     //   }
     // } else if (layer1==4) {
+    //   residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    //   // rzChiSquared = 12* (residual*residual)/(5.0f*5.0f);
     //   if (layer2==12) {
-    //     return rzChiSquared < 6.567115f;
+    //     // return rzChiSquared < 3.492655f;      // Region 22
+    //     return alpaka::math::abs(acc, residual) < 6.3831687f;
     //   } else if (layer2==5) {
     //     if (layer3==6) {
-    //       return rzChiSquared < 8.081377f;
+    //       // return rzChiSquared < 4.5789695f;    // Region 23
+    //       return alpaka::math::abs(acc, residual) < 4.362525f;
     //     } else if (layer3==12) {
-    //       return rzChiSquared < 9.189673f;
+    //       // return rzChiSquared < 10.949434f;   // Region 24
+    //       return alpaka::math::abs(acc, residual) < 7.36537f;
     //     }
     //   }
-    // } 
-    // return false;
-    
-    // 95% efficiency
-    // if (layer1==7) {
-    //   if (layer2==8) {
-    //     if (layer3==9) {
-    //       return rzChiSquared < 28.97f;
-    //     } else if (layer3==14) {
-    //       return rzChiSquared < 2.41f;
-    //     }
-    //   } else if (layer2==13) {
-    //     return rzChiSquared < 12.23f;
-    //   }
-    // } else if (layer1==8) {
-    //   if (layer2==9) {
-    //     if (layer3==10) {
-    //       return rzChiSquared < 27.08f;
-    //     } else if (layer3==15) {
-    //       return rzChiSquared < 2.28f;
-    //     } 
-    //   } else if (layer2==14) {
-    //     return rzChiSquared < 15.92f;
-    //   }
-    // } else if (layer1==9) {
-    //   if (layer2==10) {
-    //     if (layer3==11) {
-    //       return rzChiSquared < 27.21f;
-    //     } else if (layer3==16) {
-    //       return rzChiSquared < 2.25f;
-    //     }
-    //   } else if (layer2==15) {
-    //     return rzChiSquared < 13.59f;
-    //   }
-    // } else if (layer1==1) {
-    //   if (layer2==7) {
-    //     return rzChiSquared < 36.98f;
-    //   } else if (layer2==2) {
-    //     if (layer3==7) {
-    //       return rzChiSquared < 31.75f;
-    //     } else if (layer3==3) {
-    //       return rzChiSquared < 93.12f;
-    //     }
-    //   }
-    // } else if (layer1==2) {
-    //   if (layer2==7) {
-    //     if (layer3==8) {
-    //       return rzChiSquared < 36.83f;
-    //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.47f;
-    //     }
-    //   } else if (layer2==3) {
-    //     if (layer3==7) {
-    //       return rzChiSquared < 16.24f;
-    //     } else if (layer3==12) {
-    //       return rzChiSquared < 2.36f;
-    //     } else if (layer3==4) {
-    //       return rzChiSquared < 2.79f;
-    //     }
-    //   }
-    // } else if (layer1==3) {
-    //   if (layer2==7) {
-    //     if (layer3==8) {
-    //       return rzChiSquared < 38.97f;
-    //     } else if (layer3==13) {
-    //       return rzChiSquared < 2.21f;
-    //     }
-    //   } else if (layer2==12) {
-    //     return rzChiSquared < 11.68f;
-    //   } else if (layer2==4) {
-    //     if (layer3==5) {
-    //       return rzChiSquared < 18.87f;
-    //     } else if (layer3==12) {
-    //       return rzChiSquared < 11.1f;
-    //     }
-    //   }
-    // } else if (layer1==4) {
-    //   if (layer2==12) {
-    //     return rzChiSquared < 12.18f;
-    //   } else if (layer2==5) {
-    //     if (layer3==6) {
-    //       return rzChiSquared < 32.53f;
-    //     } else if (layer3==12) {
-    //       return rzChiSquared < 13.27f;
-    //     }
-    //   }
-    // } else if (layer1==5) {
-    //   return rzChiSquared < 5.3f;
     // } 
     // return false;
   };
@@ -1527,14 +1462,14 @@ namespace SDL {
                                                         ptCut);
 
             if (success) {
-              unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
-                  acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
-              if (static_cast<int>(totOccupancyTriplets) >=
-                  rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
-#ifdef Warnings
-                printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
-#endif
-              } else {
+//               unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
+//                   acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
+//               if (static_cast<int>(totOccupancyTriplets) >=
+//                   rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
+// #ifdef Warnings
+//                 printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
+// #endif
+//               } else {
                 unsigned int tripletModuleIndex =
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, &tripletsInGPU.nTriplets[innerInnerLowerModuleIndex], 1u);
                 unsigned int tripletIndex =
@@ -1584,7 +1519,7 @@ namespace SDL {
                                    circleCenterY,
                                    tripletIndex);
 #endif
-              }
+              // }
             }
           }
         }
@@ -1676,7 +1611,7 @@ namespace SDL {
 #endif
         }
 
-        // occupancy = 2000;
+        occupancy = 2000;
         rangesInGPU.tripletModuleOccupancy[i] = occupancy;
         unsigned int nTotT = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalTriplets, occupancy);
         rangesInGPU.tripletModuleIndices[i] = nTotT;
