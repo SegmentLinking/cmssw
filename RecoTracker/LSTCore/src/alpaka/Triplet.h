@@ -557,7 +557,7 @@ namespace SDL {
     } else if (layer1==9) {
       if (layer2==10) {
         if (layer3==11) {
-          return rzChiSquared < 950.34314f;    // Region 6
+          return rzChiSquared < 97.34339f;    // Region 6
         } else if (layer3==16) {
           return rzChiSquared < 3.095819f;    // Region 7
         }
@@ -1462,14 +1462,14 @@ namespace SDL {
                                                         ptCut);
 
             if (success) {
-//               unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
-//                   acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
-//               if (static_cast<int>(totOccupancyTriplets) >=
-//                   rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
-// #ifdef Warnings
-//                 printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
-// #endif
-//               } else {
+              unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
+                  acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
+              if (static_cast<int>(totOccupancyTriplets) >=
+                  rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
+#ifdef Warnings
+                printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
+#endif
+              } else {
                 unsigned int tripletModuleIndex =
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, &tripletsInGPU.nTriplets[innerInnerLowerModuleIndex], 1u);
                 unsigned int tripletIndex =
@@ -1519,7 +1519,7 @@ namespace SDL {
                                    circleCenterY,
                                    tripletIndex);
 #endif
-              // }
+              }
             }
           }
         }
@@ -1610,8 +1610,6 @@ namespace SDL {
           printf("Unhandled case in createTripletArrayRanges! Module index = %i\n", i);
 #endif
         }
-
-        occupancy = 2000;
         rangesInGPU.tripletModuleOccupancy[i] = occupancy;
         unsigned int nTotT = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalTriplets, occupancy);
         rangesInGPU.tripletModuleIndices[i] = nTotT;
