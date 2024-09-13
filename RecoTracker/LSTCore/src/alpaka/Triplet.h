@@ -563,67 +563,6 @@ namespace SDL {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRZConstraint(TAcc const& acc,
-                                                       struct SDL::modules& modulesInGPU,
-                                                       struct SDL::miniDoublets& mdsInGPU,
-                                                       struct SDL::segments& segmentsInGPU,
-                                                       uint16_t& innerInnerLowerModuleIndex,
-                                                       uint16_t& middleLowerModuleIndex,
-                                                       uint16_t& outerOuterLowerModuleIndex,
-                                                       unsigned int& firstMDIndex,
-                                                       unsigned int& secondMDIndex,
-                                                       unsigned int& thirdMDIndex) {
-    //get the rt and z
-    const float& r1 = mdsInGPU.anchorRt[firstMDIndex];
-    const float& r2 = mdsInGPU.anchorRt[secondMDIndex];
-    const float& r3 = mdsInGPU.anchorRt[thirdMDIndex];
-
-    const float& z1 = mdsInGPU.anchorZ[firstMDIndex];
-    const float& z2 = mdsInGPU.anchorZ[secondMDIndex];
-    const float& z3 = mdsInGPU.anchorZ[thirdMDIndex];
-
-    // Using sdl_layer numbering convention defined in ModuleMethods.h
-    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
-    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
-    const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
-
-    const float residual = z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1);
-
-    if (layer1 == 12 and layer2 == 13 and layer3 == 14) {
-      return false;
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      return alpaka::math::abs(acc, residual) < 0.53f;
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 13 and layer2 == 14 and layer3 == 15) {
-      return false;
-    } else if (layer1 == 14 and layer2 == 15 and layer3 == 16) {
-      return false;
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      return alpaka::math::abs(acc, residual) < 1.21f;
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-      return alpaka::math::abs(acc, residual) < 1.f;
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      return alpaka::math::abs(acc, residual) < 1.f;
-    } else if (layer1 == 3 and layer2 == 4 and layer3 == 5) {
-      return alpaka::math::abs(acc, residual) < 2.7f;
-    } else if (layer1 == 4 and layer2 == 5 and layer3 == 6) {
-      return alpaka::math::abs(acc, residual) < 3.06f;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else if (layer1 == 9 and layer2 == 10 and layer3 == 11) {
-      return alpaka::math::abs(acc, residual) < 1;
-    } else {
-      return alpaka::math::abs(acc, residual) < 5;
-    }
-  };
-
-
-  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintBBB(TAcc const& acc,
                                                                 struct SDL::modules& modulesInGPU,
                                                                 struct SDL::miniDoublets& mdsInGPU,
@@ -1136,18 +1075,6 @@ namespace SDL {
     unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * innerSegmentIndex];
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex + 1];
-
-    // if (not(passRZConstraint(acc,
-    //                          modulesInGPU,
-    //                          mdsInGPU,
-    //                          segmentsInGPU,
-    //                          innerInnerLowerModuleIndex,
-    //                          middleLowerModuleIndex,
-    //                          outerOuterLowerModuleIndex,
-    //                          firstMDIndex,
-    //                          secondMDIndex,
-    //                          thirdMDIndex)))
-    //   return false;
 
     if (not(passPointingConstraint(acc,
                                    modulesInGPU,
