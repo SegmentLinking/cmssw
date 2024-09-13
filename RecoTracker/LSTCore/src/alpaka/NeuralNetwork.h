@@ -12,6 +12,31 @@
 
 namespace lst::t5dnn {
 
+  template <int FEATURES>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
+    for (unsigned int col = 0; col < FEATURES; ++col) {
+      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
+    }
+  }
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
+    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
+  }
+
+  template <int IN_FEATURES, int OUT_FEATURES>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
+                                                   float (&output)[OUT_FEATURES],
+                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
+                                                   const float (&biases)[OUT_FEATURES]) {
+    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
+      output[i] = biases[i];
+      for (int j = 0; j < IN_FEATURES; ++j) {
+        output[i] += input[j] * weights[j][i];
+      }
+    }
+  }
+
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc,
                                                     lst::Modules const& modulesInGPU,
@@ -67,8 +92,12 @@ namespace lst::t5dnn {
 
     float t5_eta = mdsInGPU.anchorEta[md_idx_for_t5_eta_phi];
 
+    // Constants
+    constexpr unsigned int kinputFeatures = 24;
+    constexpr unsigned int khiddenFeatures = 32;
+
     // Build DNN input vector (corresponding output N-tuple branch noted in parenthetical in comment)
-    float x[24] = {
+    float x[kinputFeatures] = {
         mdsInGPU.anchorEta[mdIndex1],                                    // inner T3 anchor hit 1 eta (t3_0_eta)
         mdsInGPU.anchorZ[mdIndex1] / t5dnn::Z_max,                       // inner T3 anchor hit 1 z (t3_0_z)
         alpaka::math::sqrt(acc, x1 * x1 + y1 * y1) / t5dnn::R_max,       // inner T3 anchor hit 1 r (t3_0_r)
@@ -95,63 +124,36 @@ namespace lst::t5dnn {
         alpaka::math::log10(acc, outerRadius)                            // T5 outer radius (t5_outerRadius)
     };
 
-    // (0): Linear(in_features=24, out_features=32, bias=True) => x = x*W_T + b
-    float x_0[32];
-    for (unsigned int col = 0; col < 32; ++col) {
-      x_0[col] = 0;
-      for (unsigned int inner = 0; inner < 24; ++inner) {
-        x_0[col] += x[inner] * wgtT_0[inner][col];
-      }
-      x_0[col] += bias_0[col];
-    }
+    // Layer 1: Linear
+    float x_1[khiddenFeatures];
+    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_0, bias_0);
 
-    // (1): ReLU()
-    float x_1[32];
-    for (unsigned int col = 0; col < 32; ++col) {
-      x_1[col] = (x_0[col] > 0.f) ? x_0[col] : 0.f;
-    }
+    // Layer 1: ReLU
+    relu_activation<khiddenFeatures>(x_1);
 
-    // (2): Linear(in_features=32, out_features=32, bias=True) => x = x*W_T + b
-    float x_2[32];
-    for (unsigned int col = 0; col < 32; ++col) {
-      x_2[col] = 0;
-      for (unsigned int inner = 0; inner < 32; ++inner) {
-        x_2[col] += x_1[inner] * wgtT_2[inner][col];
-      }
-      x_2[col] += bias_2[col];
-    }
+    // Layer 2: Linear
+    float x_2[khiddenFeatures];
+    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_2, bias_2);
 
-    // (3): ReLU()
-    float x_3[32];
-    for (unsigned int col = 0; col < 32; ++col) {
-      x_3[col] = (x_2[col] > 0.f) ? x_2[col] : 0.f;
-    }
+    // Layer 2: ReLU
+    relu_activation<khiddenFeatures>(x_2);
 
-    // (4): Linear(in_features=32, out_features=1, bias=True) => x = x*W_T + b
-    float x_4[1];
-    for (unsigned int col = 0; col < 1; ++col) {
-      x_4[col] = 0;
-      for (unsigned int inner = 0; inner < 32; ++inner) {
-        x_4[col] += x_3[inner] * wgtT_4[inner][col];
-      }
-      x_4[col] += bias_4[col];
-    }
+    // Layer 3: Linear
+    float x_3[1];
+    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_4, bias_4);
 
-    // (5): Sigmoid()
-    float x_5[1];
-    for (unsigned int col = 0; col < 1; ++col) {
-      x_5[col] = alpaka::math::exp(acc, x_4[col]) / (alpaka::math::exp(acc, x_4[col]) + 1);
-    }
+    // Layer 3: Sigmoid
+    float x_5 = sigmoid_activation(acc, x_3[0]);
 
     // Get the bin index based on abs(t5_eta) and t5_pt
     float abs_t5_eta = alpaka::math::abs(acc, t5_eta);
     float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
 
-    unsigned int pt_index = (t5_pt > 5) ? 1 : 0;
-    unsigned int bin_index = (abs_t5_eta > 2.5f) ? 9 : static_cast<unsigned int>(abs_t5_eta / 0.25f);
+    uint8_t pt_index = (t5_pt > 5) ? 1 : 0;
+    uint8_t bin_index = (abs_t5_eta > 2.5f) ? 9 : static_cast<unsigned int>(abs_t5_eta / 0.25f);
 
-    // Compare x_5[0] to the cut value for the relevant bin
-    return x_5[0] > kLSTWp[pt_index][bin_index];
+    // Compare x_5 to the cut value for the relevant bin
+    return x_5 > kLSTWp[pt_index][bin_index];
   }
 
 }  //namespace lst::t5dnn
