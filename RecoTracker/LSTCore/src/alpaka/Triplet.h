@@ -295,7 +295,7 @@ namespace SDL {
     float y_init = y2;
     float z_init = z2;
     float rt_init = r2;
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
       x_init = x1;
       y_init = y1;
       z_init = z1;
@@ -397,7 +397,7 @@ namespace SDL {
 
     float Pz = (z_init-z1) / ds * Pt; 
 
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
       AO = alpaka::math::sqrt(acc, (x3 - x_center) * (x3 - x_center) + (y3 - y_center) * (y3 - y_center));
       BO =
         alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
@@ -425,7 +425,7 @@ namespace SDL {
     float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
     float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
     diffr = (r3 - alpaka::math::sqrt(acc, x * x + y * y)) * 100; 
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
       s = (z2 - z_init) * p / Pz;
       x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
       y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
@@ -434,14 +434,14 @@ namespace SDL {
 
     // for barrel
     bool calDiffz = false;
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
       calDiffz = (layer2 <= 6);
     } else {
       calDiffz = (layer3 <= 6);
     }
     if (calDiffz) {
       float paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
-      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+      if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
         paraA = rt_init * rt_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r2 * r2;
       }
       float paraB = 2 * (x_init * Px + y_init * Py) / a;
@@ -455,7 +455,7 @@ namespace SDL {
       float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
       float diffz1 = (solz1 - z3) * 100;
       float diffz2 = (solz2 - z3) * 100;
-      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+      if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
         diffz1 = (solz1 - z2) * 100;
         diffz2 = (solz2 - z2) * 100;
       }
@@ -481,7 +481,7 @@ namespace SDL {
     float drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[outerOuterLowerModuleIndex]);
     short side = modulesInGPU.sides[outerOuterLowerModuleIndex];
     short subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
       drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[middleLowerModuleIndex]);
       side = modulesInGPU.sides[middleLowerModuleIndex];
       subdets = modulesInGPU.subdets[middleLowerModuleIndex];
@@ -489,7 +489,7 @@ namespace SDL {
 
 
     residual = (layer3 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+    if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
       residual = (layer2 <= 6 && ((side == SDL::Center) or (drdz < 1))) ? diffz : diffr;
     }
 
@@ -508,14 +508,14 @@ namespace SDL {
 
     if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
       float slope;
-      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) { //reg 5 and 19 use MD2
+      if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) { //reg 5 and 19 use MD2
         slope = (z3 - z1) / (r3 - r1);
       } else {
         slope = (z2 - z1) / (r2 - r1);
       }
 
       float residual3_linear = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
-      if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
+      if ((layer1 == 4 && layer2 == 5 && layer3 == 6) || (layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
         residual3_linear = (layer2 <= 6) ? ((z2 - z1) - slope * (r2 - r1)) : ((r2 - r1) - (z2 - z1) / slope);
       }
 
@@ -620,8 +620,8 @@ namespace SDL {
         return alpaka::math::abs(acc, residual) < 6.3831687f;
       } else if (layer2==5) {
         if (layer3==6) {
-          // return rzChiSquared < 4.5789695f;    // Region 23
-          return alpaka::math::abs(acc, residual) < 4.362525f;
+          return rzChiSquared < 9.185956f;    // Region 23
+          // return alpaka::math::abs(acc, residual) < 4.362525f;
         } else if (layer3==12) {
           // return rzChiSquared < 10.949434f;   // Region 24
           return alpaka::math::abs(acc, residual) < 5.0f;
@@ -1462,14 +1462,14 @@ namespace SDL {
                                                         ptCut);
 
             if (success) {
-              unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
-                  acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
-              if (static_cast<int>(totOccupancyTriplets) >=
-                  rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
-#ifdef Warnings
-                printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
-#endif
-              } else {
+              // unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
+              //     acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
+//               if (static_cast<int>(totOccupancyTriplets) >=
+//                   rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
+// #ifdef Warnings
+//                 printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
+// #endif
+//               } else {
                 unsigned int tripletModuleIndex =
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, &tripletsInGPU.nTriplets[innerInnerLowerModuleIndex], 1u);
                 unsigned int tripletIndex =
@@ -1519,7 +1519,7 @@ namespace SDL {
                                    circleCenterY,
                                    tripletIndex);
 #endif
-              }
+              // }
             }
           }
         }
@@ -1610,6 +1610,7 @@ namespace SDL {
           printf("Unhandled case in createTripletArrayRanges! Module index = %i\n", i);
 #endif
         }
+        occupancy = 2000;
         rangesInGPU.tripletModuleOccupancy[i] = occupancy;
         unsigned int nTotT = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalTriplets, occupancy);
         rangesInGPU.tripletModuleIndices[i] = nTotT;
