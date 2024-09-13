@@ -10,6 +10,5 @@ hltLST = cms.EDProducer('LSTProducer@alpaka',
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')
     )
-    mightGet = cms.optional.untracked.vstring
 )
 

@@ -25,7 +25,7 @@ from ..modules.hltInitialStepTrackSelectionHighPuritypLSTCLST_cfi import *
 _HLTInitialStepSequenceLST = cms.Sequence(
      hltInitialStepSeeds
     +hltInitialStepSeedTracksLST
-    +hltHighPtTripletStepSeedingSequence
+    +HLTHighPtTripletStepSeedingSequence
     +hltHighPtTripletStepSeedTracksLST
     +hltPixelSeedInputLST
     +hltSiPhase2RecHits # Probably need to move elsewhere in the final setup

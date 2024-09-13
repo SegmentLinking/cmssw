@@ -42,7 +42,6 @@ _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
         TTRHBuilder = cms.string('WithTrackAngle'),
         forceKinematicWithRegionDirection = cms.bool(False)
     )
-    mightGet = cms.optional.untracked.vstring
 )
 
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
