@@ -1,5 +1,10 @@
 #include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+
 lst::TiltedGeometry::TiltedGeometry(std::string const& filename) { load(filename); }
 
 void lst::TiltedGeometry::load(std::string const& filename) {

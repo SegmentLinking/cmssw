@@ -1,17 +1,19 @@
 #ifndef trkCore_h
 #define trkCore_h
 
+#include "Event.h"
+
 #include "Trktree.h"
 #include "TCanvas.h"
 #include "TSystem.h"
 #include "AnalysisConfig.h"
 #include "ModuleConnectionMap.h"
 #include "lst_math.h"
-#include "Event.h"
 #include <numeric>
 #include <filesystem>
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using ::lst::PixelType;
 
 // --------------------- ======================== ---------------------
 
@@ -68,7 +70,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
                                            std::vector<std::vector<int>> &out_charge_vec,
                                            std::vector<std::vector<unsigned int>> &out_seedIdx_vec,
                                            std::vector<std::vector<int>> &out_superbin_vec,
-                                           std::vector<std::vector<int8_t>> &out_pixelType_vec,
+                                           std::vector<std::vector<PixelType>> &out_pixelType_vec,
                                            std::vector<std::vector<char>> &out_isQuad_vec);
 
 float addInputsToEventPreLoad(LSTEvent *event,
@@ -94,7 +96,7 @@ float addInputsToEventPreLoad(LSTEvent *event,
                               std::vector<int> charge_vec,
                               std::vector<unsigned int> seedIdx_vec,
                               std::vector<int> superbin_vec,
-                              std::vector<int8_t> pixelType_vec,
+                              std::vector<PixelType> pixelType_vec,
                               std::vector<char> isQuad_vec);
 
 void printTimingInformation(std::vector<std::vector<float>> &timing_information, float fullTime, float fullavg);

@@ -209,8 +209,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     mdsInGPU.moduleIndices[idx] = lowerModuleIdx;
     unsigned int anchorHitIndex, outerHitIndex;
-    if (modulesInGPU.moduleType[lowerModuleIdx] == ::lst::PS and
-        modulesInGPU.moduleLayerType[lowerModuleIdx] == ::lst::Strip) {
+    if (modulesInGPU.moduleType[lowerModuleIdx] == PS and modulesInGPU.moduleLayerType[lowerModuleIdx] == Strip) {
       mdsInGPU.anchorHitIndices[idx] = upperHitIdx;
       mdsInGPU.outerHitIndices[idx] = lowerHitIdx;
 
@@ -271,10 +270,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     short side = modulesInGPU.sides[moduleIndex];
     short rod = modulesInGPU.rods[moduleIndex];
 
-    if (subdet == ::lst::Barrel) {
-      if ((side != ::lst::Center and layer == 3) or (side == ::lst::NegZ and layer == 2 and rod > 5) or
-          (side == ::lst::PosZ and layer == 2 and rod < 8) or (side == ::lst::NegZ and layer == 1 and rod > 9) or
-          (side == ::lst::PosZ and layer == 1 and rod < 4))
+    if (subdet == Barrel) {
+      if ((side != Center and layer == 3) or (side == NegZ and layer == 2 and rod > 5) or
+          (side == PosZ and layer == 2 and rod < 8) or (side == NegZ and layer == 1 and rod > 9) or
+          (side == PosZ and layer == 1 and rod < 4))
         return true;
       else
         return false;
@@ -319,11 +318,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float moduleSeparation = 0;
 
-    if (subdet == ::lst::Barrel and side == ::lst::Center) {
+    if (subdet == Barrel and side == Center) {
       moduleSeparation = miniDeltaFlat[iL];
     } else if (isTighterTiltedModules(modulesInGPU, moduleIndex)) {
       moduleSeparation = miniDeltaTilted[iL];
-    } else if (subdet == ::lst::Endcap) {
+    } else if (subdet == Endcap) {
       moduleSeparation = miniDeltaEndcap[iL][iR];
     } else  //Loose tilted modules
     {
@@ -348,19 +347,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int iL = modulesInGPU.layers[moduleIndex] - 1;
     const float miniSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rt * k2Rinv1GeVf / ptCut, kSinAlphaMax));
     const float rLayNominal =
-        ((modulesInGPU.subdets[moduleIndex] == ::lst::Barrel) ? kMiniRminMeanBarrel[iL] : kMiniRminMeanEndcap[iL]);
+        ((modulesInGPU.subdets[moduleIndex] == Barrel) ? kMiniRminMeanBarrel[iL] : kMiniRminMeanEndcap[iL]);
     const float miniPVoff = 0.1f / rLayNominal;
-    const float miniMuls =
-        ((modulesInGPU.subdets[moduleIndex] == ::lst::Barrel) ? kMiniMulsPtScaleBarrel[iL] * 3.f / ptCut
-                                                              : kMiniMulsPtScaleEndcap[iL] * 3.f / ptCut);
-    const bool isTilted =
-        modulesInGPU.subdets[moduleIndex] == ::lst::Barrel and modulesInGPU.sides[moduleIndex] != ::lst::Center;
+    const float miniMuls = ((modulesInGPU.subdets[moduleIndex] == Barrel) ? kMiniMulsPtScaleBarrel[iL] * 3.f / ptCut
+                                                                          : kMiniMulsPtScaleEndcap[iL] * 3.f / ptCut);
+    const bool isTilted = modulesInGPU.subdets[moduleIndex] == Barrel and modulesInGPU.sides[moduleIndex] != Center;
     //the lower module is sent in irrespective of its layer type. We need to fetch the drdz properly
 
     float drdz;
     if (isTilted) {
-      if (modulesInGPU.moduleType[moduleIndex] == ::lst::PS and
-          modulesInGPU.moduleLayerType[moduleIndex] == ::lst::Strip) {
+      if (modulesInGPU.moduleType[moduleIndex] == PS and modulesInGPU.moduleLayerType[moduleIndex] == Strip) {
         drdz = modulesInGPU.drdzs[moduleIndex];
       } else {
         drdz = modulesInGPU.drdzs[modulesInGPU.partnerModuleIndices[moduleIndex]];
@@ -379,12 +375,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Return the threshold value
     // =================================================================
     // Following condition is met if the module is central and flatly lying
-    if (modulesInGPU.subdets[moduleIndex] == ::lst::Barrel and modulesInGPU.sides[moduleIndex] == ::lst::Center) {
+    if (modulesInGPU.subdets[moduleIndex] == Barrel and modulesInGPU.sides[moduleIndex] == Center) {
       return miniSlope + alpaka::math::sqrt(acc, miniMuls * miniMuls + miniPVoff * miniPVoff);
     }
     // Following condition is met if the module is central and tilted
-    else if (modulesInGPU.subdets[moduleIndex] == ::lst::Barrel and
-             modulesInGPU.sides[moduleIndex] != ::lst::Center)  //all types of tilted modules
+    else if (modulesInGPU.subdets[moduleIndex] == Barrel and
+             modulesInGPU.sides[moduleIndex] != Center)  //all types of tilted modules
     {
       return miniSlope +
              alpaka::math::sqrt(acc, miniMuls * miniMuls + miniPVoff * miniPVoff + miniTilt2 * miniSlope * miniSlope);
@@ -453,11 +449,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float absdzprime;  // The distance between the two points after shifting
     const float& drdz_ = modulesInGPU.drdzs[lowerModuleIndex];
     // Assign hit pointers based on their hit type
-    if (modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS) {
+    if (modulesInGPU.moduleType[lowerModuleIndex] == PS) {
       // TODO: This is somewhat of an mystery.... somewhat confused why this is the case
-      if (modulesInGPU.subdets[lowerModuleIndex] == ::lst::Barrel
-              ? modulesInGPU.moduleLayerType[lowerModuleIndex] != ::lst::Pixel
-              : modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel) {
+      if (modulesInGPU.subdets[lowerModuleIndex] == Barrel ? modulesInGPU.moduleLayerType[lowerModuleIndex] != Pixel
+                                                           : modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel) {
         xo = xUpper;
         yo = yUpper;
         xp = xLower;
@@ -482,7 +477,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     // If it is endcap some of the math gets simplified (and also computers don't like infinities)
-    isEndcap = modulesInGPU.subdets[lowerModuleIndex] == ::lst::Endcap;
+    isEndcap = modulesInGPU.subdets[lowerModuleIndex] == Endcap;
 
     // NOTE: TODO: Keep in mind that the sin(atan) function can be simplified to something like x / sqrt(1 + x^2) and similar for cos
     // I am not sure how slow sin, atan, cos, functions are in c++. If x / sqrt(1 + x^2) are faster change this later to reduce arithmetic computation time
@@ -497,8 +492,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     moduleSeparation = moduleGapSize(modulesInGPU, lowerModuleIndex);
 
     // Sign flips if the pixel is later layer
-    if (modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS and
-        modulesInGPU.moduleLayerType[lowerModuleIndex] != ::lst::Pixel) {
+    if (modulesInGPU.moduleType[lowerModuleIndex] == PS and modulesInGPU.moduleLayerType[lowerModuleIndex] != Pixel) {
       moduleSeparation *= -1;
     }
 
@@ -550,7 +544,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 angleA));  // module separation sign is for shifting in radial direction for z-axis direction take care of the sign later
 
     // Depending on which one as closer to the interactin point compute the new z wrt to the pixel properly
-    if (modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel) {
+    if (modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel) {
       abszn = alpaka::math::abs(acc, zp) + absdzprime;
     } else {
       abszn = alpaka::math::abs(acc, zp) - absdzprime;
@@ -587,7 +581,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float zUpper,
                                                      float rtUpper) {
     dz = zLower - zUpper;
-    const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS ? 2.f : 10.f;
+    const float dzCut = modulesInGPU.moduleType[lowerModuleIndex] == PS ? 2.f : 10.f;
     const float sign = ((dz > 0) - (dz < 0)) * ((zLower > 0) - (zLower < 0));
     const float invertedcrossercut = (alpaka::math::abs(acc, dz) > 2) * sign;
 
@@ -596,7 +590,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float miniCut = 0;
 
-    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel
+    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel
                   ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex)
                   : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex);
 
@@ -604,7 +598,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3085
     float xn = 0.f, yn = 0.f;  // , zn = 0;
     float shiftedRt2;
-    if (modulesInGPU.sides[lowerModuleIndex] != ::lst::Center)  // If barrel and not center it is tilted
+    if (modulesInGPU.sides[lowerModuleIndex] != Center)  // If barrel and not center it is tilted
     {
       // Shift the hits and calculate new xn, yn position
       float shiftedCoords[3];
@@ -627,7 +621,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       yn = shiftedCoords[1];
 
       // Lower or the upper hit needs to be modified depending on which one was actually shifted
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel) {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zUpper;
@@ -656,10 +650,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Cut #3: The dphi change going from lower Hit to upper Hit
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3076
-    if (modulesInGPU.sides[lowerModuleIndex] != ::lst::Center) {
+    if (modulesInGPU.sides[lowerModuleIndex] != Center) {
       // When it is tilted, use the new shifted positions
       // TODO: This is somewhat of an mystery.... somewhat confused why this is the case
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] != ::lst::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] != Pixel) {
         // dPhi Change should be calculated so that the upper hit has higher rt.
         // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
         // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
@@ -726,7 +720,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
     // Cut #2 : drt cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3100
-    const float drtCut = modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS ? 2.f : 10.f;
+    const float drtCut = modulesInGPU.moduleType[lowerModuleIndex] == PS ? 2.f : 10.f;
     drt = rtLower - rtUpper;
     if (alpaka::math::abs(acc, drt) >= drtCut)
       return false;
@@ -754,9 +748,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     yn = shiftedCoords[1];
     zn = shiftedCoords[2];
 
-    if (modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS) {
+    if (modulesInGPU.moduleType[lowerModuleIndex] == PS) {
       // Appropriate lower or upper hit is modified after checking which one was actually shifted
-      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel) {
+      if (modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel) {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zUpper;
@@ -779,12 +773,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // dz needs to change if it is a PS module where the strip hits are shifted in order to properly account for the case when a tilted module falls under "endcap logic"
     // if it was an endcap it will have zero effect
-    if (modulesInGPU.moduleType[lowerModuleIndex] == ::lst::PS) {
-      dz = modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel ? zLower - zn : zUpper - zn;
+    if (modulesInGPU.moduleType[lowerModuleIndex] == PS) {
+      dz = modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel ? zLower - zn : zUpper - zn;
     }
 
     float miniCut = 0;
-    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == ::lst::Pixel
+    miniCut = modulesInGPU.moduleLayerType[lowerModuleIndex] == Pixel
                   ? dPhiThreshold(acc, rtLower, modulesInGPU, lowerModuleIndex, dPhi, dz)
                   : dPhiThreshold(acc, rtUpper, modulesInGPU, lowerModuleIndex, dPhi, dz);
 
@@ -824,7 +818,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                float yUpper,
                                                float zUpper,
                                                float rtUpper) {
-    if (modulesInGPU.subdets[lowerModuleIndex] == ::lst::Barrel) {
+    if (modulesInGPU.subdets[lowerModuleIndex] == Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
                                              modulesInGPU,
                                              lowerModuleIndex,

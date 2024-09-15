@@ -209,26 +209,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                               uint16_t lowerModuleIndex4,
                                                               uint16_t lowerModuleIndex5,
                                                               float rzChiSquared) {
-    const int layer1 = modulesInGPU.layers[lowerModuleIndex1] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex1] == ::lst::TwoS);
-    const int layer2 = modulesInGPU.layers[lowerModuleIndex2] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex2] == ::lst::TwoS);
-    const int layer3 = modulesInGPU.layers[lowerModuleIndex3] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex3] == ::lst::TwoS);
-    const int layer4 = modulesInGPU.layers[lowerModuleIndex4] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex4] == ::lst::TwoS);
-    const int layer5 = modulesInGPU.layers[lowerModuleIndex5] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex5] == ::lst::TwoS);
+    const int layer1 =
+        modulesInGPU.layers[lowerModuleIndex1] + 6 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap and modulesInGPU.moduleType[lowerModuleIndex1] == TwoS);
+    const int layer2 =
+        modulesInGPU.layers[lowerModuleIndex2] + 6 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap and modulesInGPU.moduleType[lowerModuleIndex2] == TwoS);
+    const int layer3 =
+        modulesInGPU.layers[lowerModuleIndex3] + 6 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap and modulesInGPU.moduleType[lowerModuleIndex3] == TwoS);
+    const int layer4 =
+        modulesInGPU.layers[lowerModuleIndex4] + 6 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap and modulesInGPU.moduleType[lowerModuleIndex4] == TwoS);
+    const int layer5 =
+        modulesInGPU.layers[lowerModuleIndex5] + 6 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap and modulesInGPU.moduleType[lowerModuleIndex5] == TwoS);
 
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 12 and layer5 == 13) {
@@ -299,26 +294,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 uint16_t lowerModuleIndex4,
                                                                 uint16_t lowerModuleIndex5,
                                                                 float rPhiChiSquared) {
-    const int layer1 = modulesInGPU.layers[lowerModuleIndex1] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex1] == ::lst::TwoS);
-    const int layer2 = modulesInGPU.layers[lowerModuleIndex2] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex2] == ::lst::TwoS);
-    const int layer3 = modulesInGPU.layers[lowerModuleIndex3] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex3] == ::lst::TwoS);
-    const int layer4 = modulesInGPU.layers[lowerModuleIndex4] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex4] == ::lst::TwoS);
-    const int layer5 = modulesInGPU.layers[lowerModuleIndex5] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex5] == ::lst::TwoS);
+    const int layer1 =
+        modulesInGPU.layers[lowerModuleIndex1] + 6 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap and modulesInGPU.moduleType[lowerModuleIndex1] == TwoS);
+    const int layer2 =
+        modulesInGPU.layers[lowerModuleIndex2] + 6 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap and modulesInGPU.moduleType[lowerModuleIndex2] == TwoS);
+    const int layer3 =
+        modulesInGPU.layers[lowerModuleIndex3] + 6 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap and modulesInGPU.moduleType[lowerModuleIndex3] == TwoS);
+    const int layer4 =
+        modulesInGPU.layers[lowerModuleIndex4] + 6 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap and modulesInGPU.moduleType[lowerModuleIndex4] == TwoS);
+    const int layer5 =
+        modulesInGPU.layers[lowerModuleIndex5] + 6 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap and modulesInGPU.moduleType[lowerModuleIndex5] == TwoS);
 
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 12 and layer5 == 13) {
@@ -446,7 +436,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         need not always be a PS strip module, but all non-anchor hits sit on strip
         modules.
         */
-    ::lst::ModuleType moduleType;
+    ModuleType moduleType;
     short moduleSubdet, moduleSide;
     float inv1 = kWidthPS / kWidth2S;
     float inv2 = kPixelPSZpitch / kWidth2S;
@@ -458,21 +448,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float& drdz = modulesInGPU.drdzs[lowerModuleIndices[i]];
       slopes[i] = modulesInGPU.dxdys[lowerModuleIndices[i]];
       //category 1 - barrel PS flat
-      if (moduleSubdet == ::lst::Barrel and moduleType == ::lst::PS and moduleSide == ::lst::Center) {
+      if (moduleSubdet == Barrel and moduleType == PS and moduleSide == Center) {
         delta1[i] = inv1;
         delta2[i] = inv1;
         slopes[i] = -999.f;
         isFlat[i] = true;
       }
       //category 2 - barrel 2S
-      else if (moduleSubdet == ::lst::Barrel and moduleType == ::lst::TwoS) {
+      else if (moduleSubdet == Barrel and moduleType == TwoS) {
         delta1[i] = 1.f;
         delta2[i] = 1.f;
         slopes[i] = -999.f;
         isFlat[i] = true;
       }
       //category 3 - barrel PS tilted
-      else if (moduleSubdet == ::lst::Barrel and moduleType == ::lst::PS and moduleSide != ::lst::Center) {
+      else if (moduleSubdet == Barrel and moduleType == PS and moduleSide != Center) {
         delta1[i] = inv1;
         isFlat[i] = false;
 
@@ -483,7 +473,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         }
       }
       //category 4 - endcap PS
-      else if (moduleSubdet == ::lst::Endcap and moduleType == ::lst::PS) {
+      else if (moduleSubdet == Endcap and moduleType == PS) {
         delta1[i] = inv1;
         isFlat[i] = false;
         /*
@@ -498,7 +488,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         }
       }
       //category 5 - endcap 2S
-      else if (moduleSubdet == ::lst::Endcap and moduleType == ::lst::TwoS) {
+      else if (moduleSubdet == Endcap and moduleType == TwoS) {
         delta1[i] = 1.f;
         delta2[i] = 500.f * inv1;
         isFlat[i] = false;
@@ -559,26 +549,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                        uint16_t lowerModuleIndex4,
                                                                        uint16_t lowerModuleIndex5,
                                                                        float rPhiChiSquared) {
-    const int layer1 = modulesInGPU.layers[lowerModuleIndex1] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex1] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex1] == ::lst::TwoS);
-    const int layer2 = modulesInGPU.layers[lowerModuleIndex2] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex2] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex2] == ::lst::TwoS);
-    const int layer3 = modulesInGPU.layers[lowerModuleIndex3] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex3] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex3] == ::lst::TwoS);
-    const int layer4 = modulesInGPU.layers[lowerModuleIndex4] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex4] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex4] == ::lst::TwoS);
-    const int layer5 = modulesInGPU.layers[lowerModuleIndex5] +
-                       6 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap) +
-                       5 * (modulesInGPU.subdets[lowerModuleIndex5] == ::lst::Endcap and
-                            modulesInGPU.moduleType[lowerModuleIndex5] == ::lst::TwoS);
+    const int layer1 =
+        modulesInGPU.layers[lowerModuleIndex1] + 6 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex1] == Endcap and modulesInGPU.moduleType[lowerModuleIndex1] == TwoS);
+    const int layer2 =
+        modulesInGPU.layers[lowerModuleIndex2] + 6 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex2] == Endcap and modulesInGPU.moduleType[lowerModuleIndex2] == TwoS);
+    const int layer3 =
+        modulesInGPU.layers[lowerModuleIndex3] + 6 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex3] == Endcap and modulesInGPU.moduleType[lowerModuleIndex3] == TwoS);
+    const int layer4 =
+        modulesInGPU.layers[lowerModuleIndex4] + 6 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex4] == Endcap and modulesInGPU.moduleType[lowerModuleIndex4] == TwoS);
+    const int layer5 =
+        modulesInGPU.layers[lowerModuleIndex5] + 6 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap) +
+        5 * (modulesInGPU.subdets[lowerModuleIndex5] == Endcap and modulesInGPU.moduleType[lowerModuleIndex5] == TwoS);
 
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 12 and layer5 == 13) {
@@ -664,8 +649,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const int moduleSide = modulesInGPU.sides[lowerModuleIndex];
       const int moduleSubdet = modulesInGPU.subdets[lowerModuleIndex];
 
-      residual = (moduleSubdet == ::lst::Barrel) ? (zs[i] - zPix[0]) - slope * (rts[i] - rtPix[0])
-                                                 : (rts[i] - rtPix[0]) - (zs[i] - zPix[0]) / slope;
+      residual = (moduleSubdet == Barrel) ? (zs[i] - zPix[0]) - slope * (rts[i] - rtPix[0])
+                                          : (rts[i] - rtPix[0]) - (zs[i] - zPix[0]) / slope;
       const float& drdz = modulesInGPU.drdzs[lowerModuleIndex];
       //PS Modules
       if (moduleType == 0) {
@@ -676,7 +661,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
 
       //special dispensation to tilted PS modules!
-      if (moduleType == 0 and moduleSubdet == ::lst::Barrel and moduleSide != ::lst::Center) {
+      if (moduleType == 0 and moduleSubdet == Barrel and moduleSide != Center) {
         error2 /= (1.f + drdz * drdz);
       }
       RMSE += (residual * residual) / error2;
@@ -858,7 +843,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           uint16_t quintupletLowerModuleIndex = modulesInGPU.connectedPixels[iLSModule];
           if (quintupletLowerModuleIndex >= *modulesInGPU.nLowerModules)
             continue;
-          if (modulesInGPU.moduleType[quintupletLowerModuleIndex] == ::lst::TwoS)
+          if (modulesInGPU.moduleType[quintupletLowerModuleIndex] == TwoS)
             continue;
           uint16_t pixelModuleIndex = *modulesInGPU.nLowerModules;
           if (segmentsInGPU.isDup[i_pLS])
@@ -936,10 +921,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 segmentsInGPU.partOfPT5[i_pLS] = true;
                 quintupletsInGPU.partOfPT5[quintupletIndex] = true;
               }  // tot occupancy
-            }    // end success
-          }      // end T5
-        }        // end iLS
-      }          // end i_pLS
+            }  // end success
+          }  // end T5
+        }  // end iLS
+      }  // end i_pLS
     }
   };
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

@@ -28,7 +28,6 @@ namespace lst {
   struct EndcapGeometryBuffer {
     Buf<TDev, unsigned int> geoMapDetId_buf;
     Buf<TDev, float> geoMapPhi_buf;
-    EndcapGeometryDev data_;
 
     EndcapGeometryBuffer(TDev const& dev, unsigned int nEndCapMap)
         : geoMapDetId_buf(allocBufWrapper<unsigned int>(dev, nEndCapMap)),
@@ -49,6 +48,9 @@ namespace lst {
     }
 
     inline EndcapGeometryDev const* data() const { return &data_; }
+
+  private:
+    EndcapGeometryDev data_;
   };
 
 }  // namespace lst

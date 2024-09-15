@@ -1,13 +1,9 @@
 #ifndef RecoTracker_LSTCore_interface_TiltedGeometry_h
 #define RecoTracker_LSTCore_interface_TiltedGeometry_h
 
-#include <vector>
 #include <map>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <string>
-#include <stdexcept>
+#include <vector>
 
 namespace lst {
   class TiltedGeometry {

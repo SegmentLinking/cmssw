@@ -1,12 +1,10 @@
 #ifndef RecoTracker_LSTCore_interface_ModuleConnectionMap_h
 #define RecoTracker_LSTCore_interface_ModuleConnectionMap_h
 
-#include <iostream>
-#include <fstream>
-#include <vector>
+#include <array>
 #include <map>
-#include <sstream>
-#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace lst {
   class ModuleConnectionMap {

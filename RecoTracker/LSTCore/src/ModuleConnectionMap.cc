@@ -1,5 +1,10 @@
 #include "RecoTracker/LSTCore/interface/ModuleConnectionMap.h"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <algorithm>
+
 lst::ModuleConnectionMap::ModuleConnectionMap() {}
 
 lst::ModuleConnectionMap::ModuleConnectionMap(std::string const& filename) { load(filename); }

@@ -21,9 +21,8 @@ private:
 };
 
 LSTPhase2OTHitsInputProducer::LSTPhase2OTHitsInputProducer(edm::ParameterSet const& iConfig)
-    : phase2OTRecHitToken_(
-          consumes<Phase2TrackerRecHit1DCollectionNew>(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
-      lstPhase2OTHitsInputPutToken_(produces<LSTPhase2OTHitsInput>()) {}
+    : phase2OTRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
+      lstPhase2OTHitsInputPutToken_(produces()) {}
 
 void LSTPhase2OTHitsInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;

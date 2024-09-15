@@ -2,12 +2,8 @@
 #define RecoTracker_LSTCore_interface_EndcapGeometry_h
 
 #include <map>
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
-#include <stdexcept>
 
 namespace lst {
   class EndcapGeometry {

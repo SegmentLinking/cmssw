@@ -2,6 +2,9 @@
 
 #include <typeinfo>
 
+using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using namespace ::lst;
+
 //___________________________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char **argv) {
   //********************************************************************************
@@ -338,7 +341,7 @@ void run_lst() {
   std::vector<std::vector<int>> out_charge_vec;
   std::vector<std::vector<unsigned int>> out_seedIdx_vec;
   std::vector<std::vector<int>> out_superbin_vec;
-  std::vector<std::vector<int8_t>> out_pixelType_vec;
+  std::vector<std::vector<PixelType>> out_pixelType_vec;
   std::vector<std::vector<char>> out_isQuad_vec;
   std::vector<int> evt_num;
   std::vector<TString> file_name;
@@ -383,10 +386,9 @@ void run_lst() {
 
   full_timer.Reset();
   full_timer.Start();
-  std::vector<ALPAKA_ACCELERATOR_NAMESPACE::lst::Event *> events;
+  std::vector<LSTEvent *> events;
   for (int s = 0; s < ana.streams; s++) {
-    ALPAKA_ACCELERATOR_NAMESPACE::lst::Event *event =
-        new ALPAKA_ACCELERATOR_NAMESPACE::lst::Event(ana.verbose >= 2, queues[s], &deviceESData);
+    LSTEvent *event = new LSTEvent(ana.verbose >= 2, queues[s], &deviceESData);
     events.push_back(event);
   }
   float timeForEventCreation = full_timer.RealTime() * 1000;
