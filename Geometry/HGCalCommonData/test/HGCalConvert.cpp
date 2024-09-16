@@ -83,13 +83,13 @@
 
 struct wafer {
   int thick, partial, orient, cassette;
-  wafer(int t = 0, int p = 0, int o = 0, int c = 0) : thick(t), partial(p), orient(o), cassette(c){};
+  wafer(int t = 0, int p = 0, int o = 0, int c = 0) : thick(t), partial(p), orient(o), cassette(c) {}
 };
 
 struct layerInfo {
   int layer, type;
   std::vector<double> deltaR;
-  layerInfo(int ly, int ty, std::vector<double> dR) : layer(ly), type(ty), deltaR(dR){};
+  layerInfo(int ly, int ty, std::vector<double> dR) : layer(ly), type(ty), deltaR(dR) {}
 };
 
 struct tile {
@@ -108,7 +108,7 @@ struct tile {
 
 struct tileZone {
   tileZone(int l0 = 0, int r0 = 0, int r1 = 0, int f0 = 0, int f1 = 0, int c0 = 0)
-      : layer(l0), rmin(r0), rmax(r1), phimin(f0), phimax(f1), cassette(c0){};
+      : layer(l0), rmin(r0), rmax(r1), phimin(f0), phimax(f1), cassette(c0) {}
   int layer, rmin, rmax, phimin, phimax, cassette;
 };
 
@@ -1151,7 +1151,7 @@ void ConvertScintillator::makeTitle(const char* outfile,
                                     int lmax,
                                     bool debug) {
   const int zside = 1;
-  const int phiCassette = 24;
+  const int phiCassette = HGCalProperty::kHGCalTilePhisWord;
   std::vector<tileZone> zones;
   for (int layer = lmin; layer <= lmax; ++layer) {
     tileZone tile0;
@@ -1744,10 +1744,11 @@ void ConvertScintillatorV1::makeTitle(std::ofstream& fout,
                                       int mode,
                                       bool debug) {
   const int zside = 1;
+  int tilePhisWord = (mode > 0) ? HGCalProperty::kHGCalFineTilePhisWord : HGCalProperty::kHGCalTilePhisWord;
   std::vector<tileZone> zones;
   if ((debug % 10) > 0)
     std::cout << "makeTile called with Layer:" << lmin << ":" << lmax << " nphi " << nphis << " mode " << mode
-              << " nmodules " << module.size() << std::endl;
+              << " nmodules " << module.size() << " tilePhisWord " << tilePhisWord << std::endl;
   for (int layer = lmin; layer <= lmax; ++layer) {
     tileZone tile0;
     int kk, irmin, irmax;
@@ -1783,19 +1784,19 @@ void ConvertScintillatorV1::makeTitle(std::ofstream& fout,
         tile0.cassette = (cassette_ == 0) ? 0 : 1;
       } else if ((tile0.rmin != irmin) || (tile0.rmax != irmax)) {
         if (cassette_ != 0) {
-          if (tile0.cassette * HGCalProperty::kHGCalTilePhisWord < tile0.phimax) {
+          if (tile0.cassette * tilePhisWord < tile0.phimax) {
             do {
               int phimax = tile0.phimax;
-              tile0.phimax = tile0.cassette * HGCalProperty::kHGCalTilePhisWord;
+              tile0.phimax = tile0.cassette * tilePhisWord;
               zones.push_back(tile0);
               tile0.phimin = tile0.phimax + 1;
               tile0.phimax = phimax;
               ++tile0.cassette;
-            } while (tile0.cassette * HGCalProperty::kHGCalTilePhisWord < tile0.phimax);
+            } while (tile0.cassette * tilePhisWord < tile0.phimax);
           }
         }
         zones.push_back(tile0);
-        int cassette = (cassette_ == 0) ? 0 : (1 + ((phi - 1) / HGCalProperty::kHGCalTilePhisWord));
+        int cassette = (cassette_ == 0) ? 0 : (1 + ((phi - 1) / tilePhisWord));
         tile0.layer = layer;
         tile0.rmin = irmin;
         tile0.rmax = irmax;
