@@ -206,9 +206,9 @@ namespace lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRZConstraint(TAcc const& acc,
-                                                       struct SDL::modules& modulesInGPU,
-                                                       struct SDL::miniDoublets& mdsInGPU,
-                                                       struct SDL::segments& segmentsInGPU,
+                                                       struct lst::Modules const& modulesInGPU,
+                                                       struct lst::MiniDoublets const& mdsInGPU,
+                                                       struct lst::Segments const& segmentsInGPU,
                                                        uint16_t& innerInnerLowerModuleIndex,
                                                        uint16_t& middleLowerModuleIndex,
                                                        uint16_t& outerOuterLowerModuleIndex,
@@ -220,9 +220,9 @@ namespace lst {
                                                        float& circleCenterY) {
 
     // Using lst_layer numbering convention defined in ModuleMethods.h
-    const int layer1 = modulesInGPU.sdlLayers[innerInnerLowerModuleIndex];
-    const int layer2 = modulesInGPU.sdlLayers[middleLowerModuleIndex];
-    const int layer3 = modulesInGPU.sdlLayers[outerOuterLowerModuleIndex];
+    const int layer1 = modulesInGPU.lstLayers[innerInnerLowerModuleIndex];
+    const int layer2 = modulesInGPU.lstLayers[middleLowerModuleIndex];
+    const int layer3 = modulesInGPU.lstLayers[outerOuterLowerModuleIndex];
 
     //get r and z
     const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
@@ -395,8 +395,7 @@ namespace lst {
     }
 
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
-    float Bz = SDL::magnetic_field;
-    float a = -0.299792 * Bz * charge;
+    float a = -2.f * k2Rinv1GeVf * 100 * charge;
     float rou = a / p;
 
     float rzChiSquared = 0;
@@ -408,7 +407,7 @@ namespace lst {
     short subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
 
     //calculate residual
-    if (layer3 <= 6 && ((side == SDL::Center) or (drdz < 1))) { // for barrel
+    if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) { // for barrel
       float paraA = r_init * r_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
       float paraB = 2 * (x_init * Px + y_init * Py) / a;
       float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
@@ -444,11 +443,11 @@ namespace lst {
 
     float projection_missing = 1;
     if (drdz < 1)
-      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+      projection_missing = ((subdets == lst::Endcap) or (side == lst::Center))
                                 ? 1.f
                                 : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
     if (drdz > 1)
-      projection_missing = ((subdets == SDL::Endcap) or (side == SDL::Center))
+      projection_missing = ((subdets == lst::Endcap) or (side == lst::Center))
                                 ? 1.f
                                 : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
     error = error * projection_missing;
