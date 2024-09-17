@@ -60,7 +60,7 @@ void LSTPixelSeedInputProducer::fillDescriptions(edm::ConfigurationDescriptions&
 
 void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
   // Setup
-  const auto& mf = iSetup.getData(mfToken_);
+  auto const& mf = iSetup.getData(mfToken_);
   auto const& bs = iEvent.get(beamSpotToken_);
 
   // Vector definitions
@@ -83,7 +83,7 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
 
   for (size_t iColl = 0; iColl < seedTokens_.size(); ++iColl) {
     // Get seed tokens
-    const auto& seedToken = seedTokens_[iColl];
+    auto const& seedToken = seedTokens_[iColl];
     auto const& seedTracks = iEvent.get(seedToken);
 
     if (seedTracks.empty())
@@ -98,10 +98,10 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
     edm::ProductID id = seedTracks[0].seedRef().id();
 
     for (size_t iSeed = 0; iSeed < seedTrackRefs.size(); ++iSeed) {
-      const auto& seedTrackRef = seedTrackRefs[iSeed];
-      const auto& seedTrack = *seedTrackRef;
-      const auto& seedRef = seedTrack.seedRef();
-      const auto& seed = *seedRef;
+      auto const& seedTrackRef = seedTrackRefs[iSeed];
+      auto const& seedTrack = *seedTrackRef;
+      auto const& seedRef = seedTrack.seedRef();
+      auto const& seed = *seedRef;
 
       if (seedRef.id() != id)
         throw cms::Exception("LogicError")
@@ -149,21 +149,21 @@ void LSTPixelSeedInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, c
     }
   }
 
-  LSTPixelSeedInput pixelSeedInput(see_px,
-                                   see_py,
-                                   see_pz,
-                                   see_dxy,
-                                   see_dz,
-                                   see_ptErr,
-                                   see_etaErr,
-                                   see_stateTrajGlbX,
-                                   see_stateTrajGlbY,
-                                   see_stateTrajGlbZ,
-                                   see_stateTrajGlbPx,
-                                   see_stateTrajGlbPy,
-                                   see_stateTrajGlbPz,
-                                   see_q,
-                                   see_hitIdx);
+  LSTPixelSeedInput pixelSeedInput(std::move(see_px),
+                                   std::move(see_py),
+                                   std::move(see_pz),
+                                   std::move(see_dxy),
+                                   std::move(see_dz),
+                                   std::move(see_ptErr),
+                                   std::move(see_etaErr),
+                                   std::move(see_stateTrajGlbX),
+                                   std::move(see_stateTrajGlbY),
+                                   std::move(see_stateTrajGlbZ),
+                                   std::move(see_stateTrajGlbPx),
+                                   std::move(see_stateTrajGlbPy),
+                                   std::move(see_stateTrajGlbPz),
+                                   std::move(see_q),
+                                   std::move(see_hitIdx));
   iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
   iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
 }

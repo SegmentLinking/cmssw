@@ -3,7 +3,6 @@
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="RecoTracker/LSTCore"/>
-<flags CXXFLAGS="-DLST_IS_CMSSW_PACKAGE"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>

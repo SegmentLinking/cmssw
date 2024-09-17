@@ -1,35 +1,310 @@
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/LST.h"
 
 #include "Event.h"
+
+using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
 #include "Math/Vector3D.h"
 using XYZVector = ROOT::Math::XYZVector;
 
-void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
-                             bool verbose,
-                             const LSTESData<SDL::Dev>* deviceESData,
-                             const std::vector<float> see_px,
-                             const std::vector<float> see_py,
-                             const std::vector<float> see_pz,
-                             const std::vector<float> see_dxy,
-                             const std::vector<float> see_dz,
-                             const std::vector<float> see_ptErr,
-                             const std::vector<float> see_etaErr,
-                             const std::vector<float> see_stateTrajGlbX,
-                             const std::vector<float> see_stateTrajGlbY,
-                             const std::vector<float> see_stateTrajGlbZ,
-                             const std::vector<float> see_stateTrajGlbPx,
-                             const std::vector<float> see_stateTrajGlbPy,
-                             const std::vector<float> see_stateTrajGlbPz,
-                             const std::vector<int> see_q,
-                             const std::vector<std::vector<int>> see_hitIdx,
-                             const std::vector<unsigned int> ph2_detId,
-                             const std::vector<float> ph2_x,
-                             const std::vector<float> ph2_y,
-                             const std::vector<float> ph2_z,
-                             bool no_pls_dupclean,
-                             bool tc_pls_triplets) {
-  auto event = SDL::Event<Acc>(verbose, queue, deviceESData);
+namespace {
+  XYZVector calculateR3FromPCA(const XYZVector& p3, float dxy, float dz) {
+    const float pt = p3.rho();
+    const float p = p3.r();
+    const float vz = dz * pt * pt / p / p;
+
+    const float vx = -dxy * p3.y() / pt - p3.x() / p * p3.z() / p * dz;
+    const float vy = dxy * p3.x() / pt - p3.y() / p * p3.z() / p * dz;
+    return {vx, vy, vz};
+  }
+}  // namespace
+
+template <>
+void lst::LST<Acc3D>::prepareInput(std::vector<float> const& see_px,
+                                   std::vector<float> const& see_py,
+                                   std::vector<float> const& see_pz,
+                                   std::vector<float> const& see_dxy,
+                                   std::vector<float> const& see_dz,
+                                   std::vector<float> const& see_ptErr,
+                                   std::vector<float> const& see_etaErr,
+                                   std::vector<float> const& see_stateTrajGlbX,
+                                   std::vector<float> const& see_stateTrajGlbY,
+                                   std::vector<float> const& see_stateTrajGlbZ,
+                                   std::vector<float> const& see_stateTrajGlbPx,
+                                   std::vector<float> const& see_stateTrajGlbPy,
+                                   std::vector<float> const& see_stateTrajGlbPz,
+                                   std::vector<int> const& see_q,
+                                   std::vector<std::vector<int>> const& see_hitIdx,
+                                   std::vector<unsigned int> const& ph2_detId,
+                                   std::vector<float> const& ph2_x,
+                                   std::vector<float> const& ph2_y,
+                                   std::vector<float> const& ph2_z,
+                                   const float ptCut) {
+  unsigned int count = 0;
+  auto n_see = see_stateTrajGlbPx.size();
+  std::vector<float> px_vec;
+  px_vec.reserve(n_see);
+  std::vector<float> py_vec;
+  py_vec.reserve(n_see);
+  std::vector<float> pz_vec;
+  pz_vec.reserve(n_see);
+  std::vector<unsigned int> hitIndices_vec0;
+  hitIndices_vec0.reserve(n_see);
+  std::vector<unsigned int> hitIndices_vec1;
+  hitIndices_vec1.reserve(n_see);
+  std::vector<unsigned int> hitIndices_vec2;
+  hitIndices_vec2.reserve(n_see);
+  std::vector<unsigned int> hitIndices_vec3;
+  hitIndices_vec3.reserve(n_see);
+  std::vector<float> ptIn_vec;
+  ptIn_vec.reserve(n_see);
+  std::vector<float> ptErr_vec;
+  ptErr_vec.reserve(n_see);
+  std::vector<float> etaErr_vec;
+  etaErr_vec.reserve(n_see);
+  std::vector<float> eta_vec;
+  eta_vec.reserve(n_see);
+  std::vector<float> phi_vec;
+  phi_vec.reserve(n_see);
+  std::vector<int> charge_vec;
+  charge_vec.reserve(n_see);
+  std::vector<unsigned int> seedIdx_vec;
+  seedIdx_vec.reserve(n_see);
+  std::vector<float> deltaPhi_vec;
+  deltaPhi_vec.reserve(n_see);
+  std::vector<float> trkX = ph2_x;
+  std::vector<float> trkY = ph2_y;
+  std::vector<float> trkZ = ph2_z;
+  std::vector<unsigned int> hitId = ph2_detId;
+  std::vector<unsigned int> hitIdxs(ph2_detId.size());
+
+  std::vector<int> superbin_vec;
+  std::vector<int8_t> pixelType_vec;
+  std::vector<char> isQuad_vec;
+  std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
+  const int hit_size = trkX.size();
+
+  for (size_t iSeed = 0; iSeed < n_see; iSeed++) {
+    XYZVector p3LH(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
+    XYZVector p3LH_helper(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
+    float ptIn = p3LH.rho();
+    float eta = p3LH.eta();
+    float ptErr = see_ptErr[iSeed];
+
+    if ((ptIn > ptCut - 2 * ptErr)) {
+      XYZVector r3LH(see_stateTrajGlbX[iSeed], see_stateTrajGlbY[iSeed], see_stateTrajGlbZ[iSeed]);
+      XYZVector p3PCA(see_px[iSeed], see_py[iSeed], see_pz[iSeed]);
+      XYZVector r3PCA(calculateR3FromPCA(p3PCA, see_dxy[iSeed], see_dz[iSeed]));
+
+      float pixelSegmentDeltaPhiChange = (r3LH - p3LH_helper).phi();  //FIXME: this looks like a bug
+      float etaErr = see_etaErr[iSeed];
+      float px = p3LH.x();
+      float py = p3LH.y();
+      float pz = p3LH.z();
+
+      int charge = see_q[iSeed];
+      int pixtype = -1;
+
+      if (ptIn >= 2.0)
+        pixtype = 0;
+      else if (ptIn >= (ptCut - 2 * ptErr) and ptIn < 2.0) {
+        if (pixelSegmentDeltaPhiChange >= 0)
+          pixtype = 1;
+        else
+          pixtype = 2;
+      } else
+        continue;
+
+      unsigned int hitIdx0 = hit_size + count;
+      count++;
+      unsigned int hitIdx1 = hit_size + count;
+      count++;
+      unsigned int hitIdx2 = hit_size + count;
+      count++;
+      unsigned int hitIdx3;
+      if (see_hitIdx[iSeed].size() <= 3)
+        hitIdx3 = hitIdx2;
+      else {
+        hitIdx3 = hit_size + count;
+        count++;
+      }
+
+      trkX.push_back(r3PCA.x());
+      trkY.push_back(r3PCA.y());
+      trkZ.push_back(r3PCA.z());
+      trkX.push_back(p3PCA.rho());
+      float p3PCA_Eta = p3PCA.eta();
+      trkY.push_back(p3PCA_Eta);
+      float p3PCA_Phi = p3PCA.phi();
+      trkZ.push_back(p3PCA_Phi);
+      trkX.push_back(r3LH.x());
+      trkY.push_back(r3LH.y());
+      trkZ.push_back(r3LH.z());
+      hitId.push_back(1);
+      hitId.push_back(1);
+      hitId.push_back(1);
+      if (see_hitIdx[iSeed].size() > 3) {
+        trkX.push_back(r3LH.x());
+        trkY.push_back(see_dxy[iSeed]);
+        trkZ.push_back(see_dz[iSeed]);
+        hitId.push_back(1);
+      }
+      px_vec.push_back(px);
+      py_vec.push_back(py);
+      pz_vec.push_back(pz);
+
+      hitIndices_vec0.push_back(hitIdx0);
+      hitIndices_vec1.push_back(hitIdx1);
+      hitIndices_vec2.push_back(hitIdx2);
+      hitIndices_vec3.push_back(hitIdx3);
+      ptIn_vec.push_back(ptIn);
+      ptErr_vec.push_back(ptErr);
+      etaErr_vec.push_back(etaErr);
+      eta_vec.push_back(eta);
+      float phi = p3LH.phi();
+      phi_vec.push_back(phi);
+      charge_vec.push_back(charge);
+      seedIdx_vec.push_back(iSeed);
+      deltaPhi_vec.push_back(pixelSegmentDeltaPhiChange);
+
+      hitIdxs.push_back(see_hitIdx[iSeed][0]);
+      hitIdxs.push_back(see_hitIdx[iSeed][1]);
+      hitIdxs.push_back(see_hitIdx[iSeed][2]);
+      char isQuad = false;
+      if (see_hitIdx[iSeed].size() > 3) {
+        isQuad = true;
+        hitIdxs.push_back(see_hitIdx[iSeed][3]);
+      }
+      float neta = 25.;
+      float nphi = 72.;
+      float nz = 25.;
+      int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
+      int phibin = (p3PCA_Phi + 3.14159265358979323846) / ((2. * 3.14159265358979323846) / nphi);
+      int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
+      int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
+      superbin_vec.push_back(isuperbin);
+      pixelType_vec.push_back(pixtype);
+      isQuad_vec.push_back(isQuad);
+    }
+  }
+
+  in_trkX_ = trkX;
+  in_trkY_ = trkY;
+  in_trkZ_ = trkZ;
+  in_hitId_ = hitId;
+  in_hitIdxs_ = hitIdxs;
+  in_hitIndices_vec0_ = hitIndices_vec0;
+  in_hitIndices_vec1_ = hitIndices_vec1;
+  in_hitIndices_vec2_ = hitIndices_vec2;
+  in_hitIndices_vec3_ = hitIndices_vec3;
+  in_deltaPhi_vec_ = deltaPhi_vec;
+  in_ptIn_vec_ = ptIn_vec;
+  in_ptErr_vec_ = ptErr_vec;
+  in_px_vec_ = px_vec;
+  in_py_vec_ = py_vec;
+  in_pz_vec_ = pz_vec;
+  in_eta_vec_ = eta_vec;
+  in_etaErr_vec_ = etaErr_vec;
+  in_phi_vec_ = phi_vec;
+  in_charge_vec_ = charge_vec;
+  in_seedIdx_vec_ = seedIdx_vec;
+  in_superbin_vec_ = superbin_vec;
+  in_pixelType_vec_ = pixelType_vec;
+  in_isQuad_vec_ = isQuad_vec;
+}
+
+template <>
+std::vector<unsigned int> lst::LST<Acc3D>::getHitIdxs(short trackCandidateType,
+                                                      unsigned int TCIdx,
+                                                      unsigned int const* TCHitIndices,
+                                                      unsigned int const* hitIndices) {
+  std::vector<unsigned int> hits;
+
+  unsigned int maxNHits = 0;
+  if (trackCandidateType == 7)
+    maxNHits = Params_pT5::kHits;  // pT5
+  else if (trackCandidateType == 5)
+    maxNHits = Params_pT3::kHits;  // pT3
+  else if (trackCandidateType == 4)
+    maxNHits = Params_T5::kHits;  // T5
+  else if (trackCandidateType == 8)
+    maxNHits = Params_pLS::kHits;  // pLS
+
+  for (unsigned int i = 0; i < maxNHits; i++) {
+    unsigned int hitIdxInGPU = TCHitIndices[Params_pT5::kHits * TCIdx + i];
+    unsigned int hitIdx =
+        (trackCandidateType == 8)
+            ? hitIdxInGPU
+            : hitIndices[hitIdxInGPU];  // Hit indices are stored differently in the standalone for pLS.
+
+    // For p objects, the 3rd and 4th hit maybe the same,
+    // due to the way pLS hits are stored in the standalone.
+    // This is because pixel seeds can be either triplets or quadruplets.
+    if (trackCandidateType != 4 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
+      continue;
+
+    hits.push_back(hitIdx);
+  }
+
+  return hits;
+}
+
+template <>
+void lst::LST<Acc3D>::getOutput(lst::Event<Acc3D>& event) {
+  std::vector<std::vector<unsigned int>> tc_hitIdxs;
+  std::vector<unsigned int> tc_len;
+  std::vector<int> tc_seedIdx;
+  std::vector<short> tc_trackCandidateType;
+
+  lst::HitsBuffer<alpaka::DevCpu>& hitsInGPU = (*event.getHitsInCMSSW());
+  lst::TrackCandidates const* trackCandidates = event.getTrackCandidatesInCMSSW()->data();
+
+  unsigned int nTrackCandidates = *trackCandidates->nTrackCandidates;
+  for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
+    short trackCandidateType = trackCandidates->trackCandidateType[idx];
+    std::vector<unsigned int> hit_idx =
+        getHitIdxs(trackCandidateType, idx, trackCandidates->hitIndices, hitsInGPU.data()->idxs);
+
+    tc_hitIdxs.push_back(hit_idx);
+    tc_len.push_back(hit_idx.size());
+    tc_seedIdx.push_back(trackCandidates->pixelSeedIndex[idx]);
+    tc_trackCandidateType.push_back(trackCandidateType);
+  }
+
+  out_tc_hitIdxs_ = tc_hitIdxs;
+  out_tc_len_ = tc_len;
+  out_tc_seedIdx_ = tc_seedIdx;
+  out_tc_trackCandidateType_ = tc_trackCandidateType;
+}
+
+template <>
+template <>
+void lst::LST<Acc3D>::run(Queue& queue,
+                          bool verbose,
+                          const float ptCut,
+                          LSTESData<Device> const* deviceESData,
+                          std::vector<float> const& see_px,
+                          std::vector<float> const& see_py,
+                          std::vector<float> const& see_pz,
+                          std::vector<float> const& see_dxy,
+                          std::vector<float> const& see_dz,
+                          std::vector<float> const& see_ptErr,
+                          std::vector<float> const& see_etaErr,
+                          std::vector<float> const& see_stateTrajGlbX,
+                          std::vector<float> const& see_stateTrajGlbY,
+                          std::vector<float> const& see_stateTrajGlbZ,
+                          std::vector<float> const& see_stateTrajGlbPx,
+                          std::vector<float> const& see_stateTrajGlbPy,
+                          std::vector<float> const& see_stateTrajGlbPz,
+                          std::vector<int> const& see_q,
+                          std::vector<std::vector<int>> const& see_hitIdx,
+                          std::vector<unsigned int> const& ph2_detId,
+                          std::vector<float> const& ph2_x,
+                          std::vector<float> const& ph2_y,
+                          std::vector<float> const& ph2_z,
+                          bool no_pls_dupclean,
+                          bool tc_pls_triplets) {
+  auto event = lst::Event<Acc3D>(verbose, ptCut, queue, deviceESData);
   prepareInput(see_px,
                see_py,
                see_pz,
@@ -48,7 +323,8 @@ void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
                ph2_detId,
                ph2_x,
                ph2_y,
-               ph2_z);
+               ph2_z,
+               ptCut);
 
   event.addHitToEvent(in_trkX_, in_trkY_, in_trkZ_, in_hitId_, in_hitIdxs_);
   event.addPixelSegmentToEvent(in_hitIndices_vec0_,
@@ -156,270 +432,4 @@ void SDL::LST<SDL::Acc>::run(SDL::QueueAcc& queue,
   getOutput(event);
 
   event.resetEvent();
-}
-
-namespace {
-  XYZVector calculateR3FromPCA(const XYZVector& p3, const float dxy, const float dz) {
-    const float pt = p3.rho();
-    const float p = p3.r();
-    const float vz = dz * pt * pt / p / p;
-
-    const float vx = -dxy * p3.y() / pt - p3.x() / p * p3.z() / p * dz;
-    const float vy = dxy * p3.x() / pt - p3.y() / p * p3.z() / p * dz;
-    return {vx, vy, vz};
-  }
-}  // namespace
-
-void SDL::LST<SDL::Acc>::prepareInput(const std::vector<float> see_px,
-                                      const std::vector<float> see_py,
-                                      const std::vector<float> see_pz,
-                                      const std::vector<float> see_dxy,
-                                      const std::vector<float> see_dz,
-                                      const std::vector<float> see_ptErr,
-                                      const std::vector<float> see_etaErr,
-                                      const std::vector<float> see_stateTrajGlbX,
-                                      const std::vector<float> see_stateTrajGlbY,
-                                      const std::vector<float> see_stateTrajGlbZ,
-                                      const std::vector<float> see_stateTrajGlbPx,
-                                      const std::vector<float> see_stateTrajGlbPy,
-                                      const std::vector<float> see_stateTrajGlbPz,
-                                      const std::vector<int> see_q,
-                                      const std::vector<std::vector<int>> see_hitIdx,
-                                      const std::vector<unsigned int> ph2_detId,
-                                      const std::vector<float> ph2_x,
-                                      const std::vector<float> ph2_y,
-                                      const std::vector<float> ph2_z) {
-  unsigned int count = 0;
-  auto n_see = see_stateTrajGlbPx.size();
-  std::vector<float> px_vec;
-  px_vec.reserve(n_see);
-  std::vector<float> py_vec;
-  py_vec.reserve(n_see);
-  std::vector<float> pz_vec;
-  pz_vec.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec0;
-  hitIndices_vec0.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec1;
-  hitIndices_vec1.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec2;
-  hitIndices_vec2.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec3;
-  hitIndices_vec3.reserve(n_see);
-  std::vector<float> ptIn_vec;
-  ptIn_vec.reserve(n_see);
-  std::vector<float> ptErr_vec;
-  ptErr_vec.reserve(n_see);
-  std::vector<float> etaErr_vec;
-  etaErr_vec.reserve(n_see);
-  std::vector<float> eta_vec;
-  eta_vec.reserve(n_see);
-  std::vector<float> phi_vec;
-  phi_vec.reserve(n_see);
-  std::vector<int> charge_vec;
-  charge_vec.reserve(n_see);
-  std::vector<unsigned int> seedIdx_vec;
-  seedIdx_vec.reserve(n_see);
-  std::vector<float> deltaPhi_vec;
-  deltaPhi_vec.reserve(n_see);
-  std::vector<float> trkX = ph2_x;
-  std::vector<float> trkY = ph2_y;
-  std::vector<float> trkZ = ph2_z;
-  std::vector<unsigned int> hitId = ph2_detId;
-  std::vector<unsigned int> hitIdxs(ph2_detId.size());
-
-  std::vector<int> superbin_vec;
-  std::vector<int8_t> pixelType_vec;
-  std::vector<char> isQuad_vec;
-  std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
-  const int hit_size = trkX.size();
-
-  for (size_t iSeed = 0; iSeed < n_see; iSeed++) {
-    XYZVector p3LH(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
-    XYZVector p3LH_helper(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
-    float ptIn = p3LH.rho();
-    float eta = p3LH.eta();
-    float ptErr = see_ptErr[iSeed];
-
-    if ((ptIn > 0.8 - 2 * ptErr)) {
-      XYZVector r3LH(see_stateTrajGlbX[iSeed], see_stateTrajGlbY[iSeed], see_stateTrajGlbZ[iSeed]);
-      XYZVector p3PCA(see_px[iSeed], see_py[iSeed], see_pz[iSeed]);
-      XYZVector r3PCA(calculateR3FromPCA(p3PCA, see_dxy[iSeed], see_dz[iSeed]));
-
-      float pixelSegmentDeltaPhiChange = (r3LH - p3LH_helper).phi();  //FIXME: this looks like a bug
-      float etaErr = see_etaErr[iSeed];
-      float px = p3LH.x();
-      float py = p3LH.y();
-      float pz = p3LH.z();
-
-      int charge = see_q[iSeed];
-      int pixtype = -1;
-
-      if (ptIn >= 2.0)
-        pixtype = 0;
-      else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
-        if (pixelSegmentDeltaPhiChange >= 0)
-          pixtype = 1;
-        else
-          pixtype = 2;
-      } else
-        continue;
-
-      unsigned int hitIdx0 = hit_size + count;
-      count++;
-      unsigned int hitIdx1 = hit_size + count;
-      count++;
-      unsigned int hitIdx2 = hit_size + count;
-      count++;
-      unsigned int hitIdx3;
-      if (see_hitIdx[iSeed].size() <= 3)
-        hitIdx3 = hitIdx2;
-      else {
-        hitIdx3 = hit_size + count;
-        count++;
-      }
-
-      trkX.push_back(r3PCA.x());
-      trkY.push_back(r3PCA.y());
-      trkZ.push_back(r3PCA.z());
-      trkX.push_back(p3PCA.rho());
-      float p3PCA_Eta = p3PCA.eta();
-      trkY.push_back(p3PCA_Eta);
-      float p3PCA_Phi = p3PCA.phi();
-      trkZ.push_back(p3PCA_Phi);
-      trkX.push_back(r3LH.x());
-      trkY.push_back(r3LH.y());
-      trkZ.push_back(r3LH.z());
-      hitId.push_back(1);
-      hitId.push_back(1);
-      hitId.push_back(1);
-      if (see_hitIdx[iSeed].size() > 3) {
-        trkX.push_back(r3LH.x());
-        trkY.push_back(see_dxy[iSeed]);
-        trkZ.push_back(see_dz[iSeed]);
-        hitId.push_back(1);
-      }
-      px_vec.push_back(px);
-      py_vec.push_back(py);
-      pz_vec.push_back(pz);
-
-      hitIndices_vec0.push_back(hitIdx0);
-      hitIndices_vec1.push_back(hitIdx1);
-      hitIndices_vec2.push_back(hitIdx2);
-      hitIndices_vec3.push_back(hitIdx3);
-      ptIn_vec.push_back(ptIn);
-      ptErr_vec.push_back(ptErr);
-      etaErr_vec.push_back(etaErr);
-      eta_vec.push_back(eta);
-      float phi = p3LH.phi();
-      phi_vec.push_back(phi);
-      charge_vec.push_back(charge);
-      seedIdx_vec.push_back(iSeed);
-      deltaPhi_vec.push_back(pixelSegmentDeltaPhiChange);
-
-      hitIdxs.push_back(see_hitIdx[iSeed][0]);
-      hitIdxs.push_back(see_hitIdx[iSeed][1]);
-      hitIdxs.push_back(see_hitIdx[iSeed][2]);
-      char isQuad = false;
-      if (see_hitIdx[iSeed].size() > 3) {
-        isQuad = true;
-        hitIdxs.push_back(see_hitIdx[iSeed][3]);
-      }
-      float neta = 25.;
-      float nphi = 72.;
-      float nz = 25.;
-      int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
-      int phibin = (p3PCA_Phi + 3.14159265358979323846) / ((2. * 3.14159265358979323846) / nphi);
-      int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
-      int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
-      superbin_vec.push_back(isuperbin);
-      pixelType_vec.push_back(pixtype);
-      isQuad_vec.push_back(isQuad);
-    }
-  }
-
-  in_trkX_ = trkX;
-  in_trkY_ = trkY;
-  in_trkZ_ = trkZ;
-  in_hitId_ = hitId;
-  in_hitIdxs_ = hitIdxs;
-  in_hitIndices_vec0_ = hitIndices_vec0;
-  in_hitIndices_vec1_ = hitIndices_vec1;
-  in_hitIndices_vec2_ = hitIndices_vec2;
-  in_hitIndices_vec3_ = hitIndices_vec3;
-  in_deltaPhi_vec_ = deltaPhi_vec;
-  in_ptIn_vec_ = ptIn_vec;
-  in_ptErr_vec_ = ptErr_vec;
-  in_px_vec_ = px_vec;
-  in_py_vec_ = py_vec;
-  in_pz_vec_ = pz_vec;
-  in_eta_vec_ = eta_vec;
-  in_etaErr_vec_ = etaErr_vec;
-  in_phi_vec_ = phi_vec;
-  in_charge_vec_ = charge_vec;
-  in_seedIdx_vec_ = seedIdx_vec;
-  in_superbin_vec_ = superbin_vec;
-  in_pixelType_vec_ = pixelType_vec;
-  in_isQuad_vec_ = isQuad_vec;
-}
-
-void SDL::LST<SDL::Acc>::getOutput(SDL::Event<SDL::Acc>& event) {
-  std::vector<std::vector<unsigned int>> tc_hitIdxs;
-  std::vector<unsigned int> tc_len;
-  std::vector<int> tc_seedIdx;
-  std::vector<short> tc_trackCandidateType;
-
-  SDL::hitsBuffer<alpaka::DevCpu>& hitsInGPU = (*event.getHitsInCMSSW());
-  SDL::trackCandidatesBuffer<alpaka::DevCpu>& trackCandidatesInGPU = (*event.getTrackCandidatesInCMSSW());
-
-  unsigned int nTrackCandidates = *trackCandidatesInGPU.nTrackCandidates;
-  for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
-    short trackCandidateType = trackCandidatesInGPU.trackCandidateType[idx];
-    std::vector<unsigned int> hit_idx =
-        getHitIdxs(trackCandidateType, idx, trackCandidatesInGPU.hitIndices, hitsInGPU.idxs);
-
-    tc_hitIdxs.push_back(hit_idx);
-    tc_len.push_back(hit_idx.size());
-    tc_seedIdx.push_back(trackCandidatesInGPU.pixelSeedIndex[idx]);
-    tc_trackCandidateType.push_back(trackCandidateType);
-  }
-
-  out_tc_hitIdxs_ = tc_hitIdxs;
-  out_tc_len_ = tc_len;
-  out_tc_seedIdx_ = tc_seedIdx;
-  out_tc_trackCandidateType_ = tc_trackCandidateType;
-}
-
-std::vector<unsigned int> SDL::LST<SDL::Acc>::getHitIdxs(const short trackCandidateType,
-                                                         const unsigned int TCIdx,
-                                                         const unsigned int* TCHitIndices,
-                                                         const unsigned int* hitIndices) {
-  std::vector<unsigned int> hits;
-
-  unsigned int maxNHits = 0;
-  if (trackCandidateType == 7)
-    maxNHits = Params_pT5::kHits;  // pT5
-  else if (trackCandidateType == 5)
-    maxNHits = Params_pT3::kHits;  // pT3
-  else if (trackCandidateType == 4)
-    maxNHits = Params_T5::kHits;  // T5
-  else if (trackCandidateType == 8)
-    maxNHits = Params_pLS::kHits;  // pLS
-
-  for (unsigned int i = 0; i < maxNHits; i++) {
-    unsigned int hitIdxInGPU = TCHitIndices[Params_pT5::kHits * TCIdx + i];
-    unsigned int hitIdx =
-        (trackCandidateType == 8)
-            ? hitIdxInGPU
-            : hitIndices[hitIdxInGPU];  // Hit indices are stored differently in the standalone for pLS.
-
-    // For p objects, the 3rd and 4th hit maybe the same,
-    // due to the way pLS hits are stored in the standalone.
-    // This is because pixel seeds can be either triplets or quadruplets.
-    if (trackCandidateType != 4 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
-      continue;
-
-    hits.push_back(hitIdx);
-  }
-
-  return hits;
 }

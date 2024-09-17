@@ -1,5 +1,7 @@
 #include "trkCore.h"
 
+using namespace ALPAKA_ACCELERATOR_NAMESPACE;
+
 //___________________________________________________________________________________________________________________________________________________________________________________________
 bool goodEvent() {
   if (ana.specific_event_index >= 0) {
@@ -20,7 +22,7 @@ bool goodEvent() {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runMiniDoublet(SDL::Event<SDL::Acc> *event, int evt) {
+float runMiniDoublet(lst::Event<Acc3D> *event, int evt) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Mini-Doublet start " << evt << std::endl;
@@ -72,7 +74,7 @@ float runMiniDoublet(SDL::Event<SDL::Acc> *event, int evt) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runSegment(SDL::Event<SDL::Acc> *event) {
+float runSegment(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Segment start" << std::endl;
@@ -109,7 +111,7 @@ float runSegment(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runT3(SDL::Event<SDL::Acc> *event) {
+float runT3(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco T3 start" << std::endl;
@@ -150,7 +152,7 @@ float runT3(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runpT3(SDL::Event<SDL::Acc> *event) {
+float runpT3(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Triplet pT3 start" << std::endl;
@@ -166,7 +168,7 @@ float runpT3(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runQuintuplet(SDL::Event<SDL::Acc> *event) {
+float runQuintuplet(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Quintuplet start" << std::endl;
@@ -211,7 +213,7 @@ float runQuintuplet(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runPixelLineSegment(SDL::Event<SDL::Acc> *event, bool no_pls_dupclean) {
+float runPixelLineSegment(lst::Event<Acc3D> *event, bool no_pls_dupclean) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Line Segment start" << std::endl;
@@ -225,7 +227,7 @@ float runPixelLineSegment(SDL::Event<SDL::Acc> *event, bool no_pls_dupclean) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runPixelQuintuplet(SDL::Event<SDL::Acc> *event) {
+float runPixelQuintuplet(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Quintuplet start" << std::endl;
@@ -241,7 +243,7 @@ float runPixelQuintuplet(SDL::Event<SDL::Acc> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runTrackCandidate(SDL::Event<SDL::Acc> *event, bool no_pls_dupclean, bool tc_pls_triplets) {
+float runTrackCandidate(lst::Event<Acc3D> *event, bool no_pls_dupclean, bool tc_pls_triplets) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco TrackCandidate start" << std::endl;
@@ -499,13 +501,13 @@ float drfracSimHitConsistentWithHelix(int isimtrk, int isimhitidx) {
   int charge = trk.sim_q()[isimtrk];
 
   // Construct helix object
-  SDLMath::Helix helix(pt, eta, phi, vx, vy, vz, charge);
+  lst_math::Helix helix(pt, eta, phi, vx, vy, vz, charge);
 
   return drfracSimHitConsistentWithHelix(helix, isimhitidx);
 }
 
 //__________________________________________________________________________________________
-float drfracSimHitConsistentWithHelix(SDLMath::Helix &helix, int isimhitidx) {
+float drfracSimHitConsistentWithHelix(lst_math::Helix &helix, int isimhitidx) {
   // Sim hit vector
   std::vector<float> point = {trk.simhit_x()[isimhitidx], trk.simhit_y()[isimhitidx], trk.simhit_z()[isimhitidx]};
 
@@ -537,13 +539,13 @@ float distxySimHitConsistentWithHelix(int isimtrk, int isimhitidx) {
   int charge = trk.sim_q()[isimtrk];
 
   // Construct helix object
-  SDLMath::Helix helix(pt, eta, phi, vx, vy, vz, charge);
+  lst_math::Helix helix(pt, eta, phi, vx, vy, vz, charge);
 
   return distxySimHitConsistentWithHelix(helix, isimhitidx);
 }
 
 //__________________________________________________________________________________________
-float distxySimHitConsistentWithHelix(SDLMath::Helix &helix, int isimhitidx) {
+float distxySimHitConsistentWithHelix(lst_math::Helix &helix, int isimhitidx) {
   // Sim hit vector
   std::vector<float> point = {trk.simhit_x()[isimhitidx], trk.simhit_y()[isimhitidx], trk.simhit_z()[isimhitidx]};
 
@@ -693,7 +695,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
     float eta = p3LH.Eta();
     float ptErr = trk.see_ptErr()[iSeed];
 
-    if ((ptIn > PT_CUT - 2 * ptErr)) {
+    if ((ptIn > ana.ptCut - 2 * ptErr)) {
       TVector3 r3LH(trk.see_stateTrajGlbX()[iSeed], trk.see_stateTrajGlbY()[iSeed], trk.see_stateTrajGlbZ()[iSeed]);
       TVector3 p3PCA(trk.see_px()[iSeed], trk.see_py()[iSeed], trk.see_pz()[iSeed]);
       TVector3 r3PCA(calculateR3FromPCA(p3PCA, trk.see_dxy()[iSeed], trk.see_dz()[iSeed]));
@@ -715,7 +717,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
       int pixtype = -1;
       if (ptIn >= 2.0) { /*ptbin = 1;*/
         pixtype = 0;
-      } else if (ptIn >= (PT_CUT - 2 * ptErr) and ptIn < 2.0) {
+      } else if (ptIn >= (ana.ptCut - 2 * ptErr) and ptIn < 2.0) {
         // ptbin = 0;
         if (pixelSegmentDeltaPhiChange >= 0) {
           pixtype = 1;
@@ -837,7 +839,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float addInputsToEventPreLoad(SDL::Event<SDL::Acc> *event,
+float addInputsToEventPreLoad(lst::Event<Acc3D> *event,
                               bool useOMP,
                               std::vector<float> trkX,
                               std::vector<float> trkY,
@@ -1141,7 +1143,7 @@ void writeMetaData() {
 // DEPRECATED FUNCTIONS
 
 //__________________________________________________________________________________________
-[[deprecated]] float addInputsToLineSegmentTracking(SDL::Event<SDL::Acc> &event, bool useOMP) {
+[[deprecated]] float addInputsToLineSegmentTracking(lst::Event<Acc3D> &event, bool useOMP) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Loading Inputs (i.e. outer tracker hits, and pixel line segements) to the Line Segment Tracking.... "
@@ -1193,7 +1195,7 @@ void writeMetaData() {
     float ptErr = trk.see_ptErr()[iSeed];
     float eta = p3LH.Eta();
 
-    if ((ptIn > 0.8 - 2 * ptErr)) {
+    if ((ptIn > ana.ptCut - 2 * ptErr)) {
       TVector3 r3LH(trk.see_stateTrajGlbX()[iSeed], trk.see_stateTrajGlbY()[iSeed], trk.see_stateTrajGlbZ()[iSeed]);
       TVector3 p3PCA(trk.see_px()[iSeed], trk.see_py()[iSeed], trk.see_pz()[iSeed]);
       TVector3 r3PCA(calculateR3FromPCA(p3PCA, trk.see_dxy()[iSeed], trk.see_dz()[iSeed]));
@@ -1218,7 +1220,7 @@ void writeMetaData() {
       int pixtype = -1;
       if (ptIn >= 2.0) { /*ptbin = 1;*/
         pixtype = 0;
-      } else if (ptIn >= (0.8 - 2 * ptErr) and ptIn < 2.0) {
+      } else if (ptIn >= (ana.ptCut - 2 * ptErr) and ptIn < 2.0) {
         // ptbin = 0;
         if (pixelSegmentDeltaPhiChange >= 0) {
           pixtype = 1;
@@ -1336,6 +1338,6 @@ void writeMetaData() {
 }
 
 //__________________________________________________________________________________________
-[[deprecated]] float addInputsToLineSegmentTrackingUsingExplicitMemory(SDL::Event<SDL::Acc> &event) {
+[[deprecated]] float addInputsToLineSegmentTrackingUsingExplicitMemory(lst::Event<Acc3D> &event) {
   return addInputsToLineSegmentTracking(event, true);
 }

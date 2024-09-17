@@ -8,23 +8,30 @@
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 // LST includes
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/LST.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
   public:
-    LSTModulesDevESProducer(edm::ParameterSet const& iConfig) : ESProducer(iConfig) { setWhatProduced(this); }
+    LSTModulesDevESProducer(edm::ParameterSet const& iConfig)
+        : ESProducer(iConfig), ptCutLabel_(iConfig.getParameter<std::string>("ptCutLabel")) {
+      setWhatProduced(this, &LSTModulesDevESProducer::produce, ptCutLabel_);
+    }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
+      desc.add<std::string>("ptCutLabel", "0.8");
       descriptions.addWithDefaultLabel(desc);
     }
 
-    std::unique_ptr<SDL::LSTESData<SDL::DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
-      return SDL::loadAndFillESHost();
+    std::unique_ptr<lst::LSTESData<DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
+      return lst::loadAndFillESHost(ptCutLabel_);
     }
+
+  private:
+    std::string ptCutLabel_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

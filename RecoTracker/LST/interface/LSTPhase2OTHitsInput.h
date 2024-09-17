@@ -9,11 +9,11 @@
 class LSTPhase2OTHitsInput {
 public:
   LSTPhase2OTHitsInput() = default;
-  LSTPhase2OTHitsInput(std::vector<unsigned int> detId,
-                       std::vector<float> x,
-                       std::vector<float> y,
-                       std::vector<float> z,
-                       std::vector<TrackingRecHit const*> hits) {
+  LSTPhase2OTHitsInput(std::vector<unsigned int> const& detId,
+                       std::vector<float> const& x,
+                       std::vector<float> const& y,
+                       std::vector<float> const& z,
+                       std::vector<TrackingRecHit const*> const& hits) {
     detId_ = std::move(detId);
     x_ = std::move(x);
     y_ = std::move(y);

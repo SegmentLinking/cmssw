@@ -7,18 +7,22 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source $DIR/code/rooutil/thisrooutil.sh
 
 ARCH=$(uname -m)
-if [[ $(hostname) == *lnx4555* ]]; then
-  export SCRAM_ARCH=el9_amd64_gcc12
-elif [[ $ARCH == "aarch64" || $ARCH == "arm64" ]]; then
-  export SCRAM_ARCH=el9_aarch64_gcc12
-else
-  export SCRAM_ARCH=el8_amd64_gcc12
-fi
-export CMSSW_VERSION=CMSSW_14_1_0_pre5
+if [ -z ${CMSSW_SEARCH_PATH+x} ]; then 
+  if [[ $(hostname) == *lnx4555* ]]; then
+    export SCRAM_ARCH=el9_amd64_gcc12
+  elif [[ $ARCH == "aarch64" || $ARCH == "arm64" ]]; then
+    export SCRAM_ARCH=el9_aarch64_gcc12
+  else
+    export SCRAM_ARCH=el8_amd64_gcc12
+  fi
+  export CMSSW_VERSION=CMSSW_14_1_0_pre5
 
-source /cvmfs/cms.cern.ch/cmsset_default.sh
-cd /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/cmssw/$CMSSW_VERSION/src
-eval `scramv1 runtime -sh`
+  source /cvmfs/cms.cern.ch/cmsset_default.sh
+  cd /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/cmssw/$CMSSW_VERSION/src
+  eval `scramv1 runtime -sh`
+else
+  cd $CMSSW_BASE/src
+fi
 
 # Export paths to libraries we need
 export BOOST_ROOT=$(scram tool info boost | grep BOOST_BASE | cut -d'=' -f2)
@@ -32,7 +36,7 @@ echo "Setup following ROOT. Make sure the appropriate setup file has been run. O
 which root
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export LD_LIBRARY_PATH=$DIR/SDL:$DIR:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$DIR/LST:$DIR:$LD_LIBRARY_PATH
 export PATH=$DIR/bin:$PATH
 export PATH=$DIR/efficiency/bin:$PATH
 export PATH=$DIR/efficiency/python:$PATH

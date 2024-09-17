@@ -1,6 +1,6 @@
 // -*- C++ -*-
-#ifndef SDL_H
-#define SDL_H
+#ifndef LSTEff_H
+#define LSTEff_H
 #include "Math/LorentzVector.h"
 #include "Math/Point3D.h"
 #include "TMath.h"
@@ -13,7 +13,7 @@
 #include <unistd.h>
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> > LorentzVector;
 
-class SDL {
+class LSTEff {
 private:
 protected:
   unsigned int index;
@@ -610,7 +610,7 @@ public:
 };
 
 #ifndef __CINT__
-extern SDL sdl;
+extern LSTEff lstEff;
 #endif
 
 namespace tas {

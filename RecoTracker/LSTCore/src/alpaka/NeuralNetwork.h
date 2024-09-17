@@ -1,8 +1,8 @@
-#ifndef NeuralNetwork_cuh
-#define NeuralNetwork_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_NeuralNetwork_h
+#define RecoTracker_LSTCore_src_alpaka_NeuralNetwork_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
 
 #include "NeuralNetworkWeights.h"
 #include "Segment.h"
@@ -10,23 +10,23 @@
 #include "Hit.h"
 #include "Triplet.h"
 
-namespace T5DNN {
+namespace lst::t5dnn {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc,
-                                                    struct SDL::modules& modulesInGPU,
-                                                    struct SDL::miniDoublets& mdsInGPU,
-                                                    struct SDL::segments& segmentsInGPU,
-                                                    struct SDL::triplets& tripletsInGPU,
+                                                    lst::Modules const& modulesInGPU,
+                                                    lst::MiniDoublets const& mdsInGPU,
+                                                    lst::Segments const& segmentsInGPU,
+                                                    lst::Triplets const& tripletsInGPU,
                                                     const float* xVec,
                                                     const float* yVec,
                                                     const unsigned int* mdIndices,
                                                     const uint16_t* lowerModuleIndices,
-                                                    const unsigned int& innerTripletIndex,
-                                                    const unsigned int& outerTripletIndex,
-                                                    const float& innerRadius,
-                                                    const float& outerRadius,
-                                                    const float& bridgeRadius) {
+                                                    unsigned int innerTripletIndex,
+                                                    unsigned int outerTripletIndex,
+                                                    float innerRadius,
+                                                    float outerRadius,
+                                                    float bridgeRadius) {
     // Unpack x-coordinates of hits
     float x1 = xVec[0];
     float x2 = xVec[1];
@@ -51,7 +51,6 @@ namespace T5DNN {
     uint16_t lowerModuleIndex3 = lowerModuleIndices[2];
     uint16_t lowerModuleIndex4 = lowerModuleIndices[3];
     uint16_t lowerModuleIndex5 = lowerModuleIndices[4];
-
     // Compute some convenience variables
     short layer2_adjustment = 0;
     if (modulesInGPU.layers[lowerModuleIndex1] == 1) {
@@ -67,7 +66,7 @@ namespace T5DNN {
 
     // Build DNN input vector (corresponding output N-tuple branch noted in parenthetical in comment)
     float x[38] = {
-        SDL::temp_log10(acc, 2 * SDL::k2Rinv1GeVf * innerRadius),        // inner T3 pT (t3_pt)
+        alpaka::math::log10(acc, 2 * lst::k2Rinv1GeVf * innerRadius),    // inner T3 pT (t3_pt)
         mdsInGPU.anchorEta[mdIndex1],                                    // inner T3 anchor hit 1 eta (t3_0_eta)
         mdsInGPU.anchorPhi[mdIndex1],                                    // inner T3 anchor hit 1 phi (t3_0_phi)
         mdsInGPU.anchorZ[mdIndex1],                                      // inner T3 anchor hit 1 z (t3_0_z)
@@ -83,7 +82,7 @@ namespace T5DNN {
         mdsInGPU.anchorZ[mdIndex3],                                      // inner T3 anchor hit 3 z (t3_4_z)
         alpaka::math::sqrt(acc, x3 * x3 + y3 * y3),                      // inner T3 anchor hit 3 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex3] + 6 * is_endcap3),  // inner T3 anchor hit 3 layer (t3_4_layer)
-        SDL::temp_log10(acc, 2 * SDL::k2Rinv1GeVf * outerRadius),        // outer T3 pT (t3_pt)
+        alpaka::math::log10(acc, 2 * lst::k2Rinv1GeVf * outerRadius),    // outer T3 pT (t3_pt)
         mdsInGPU.anchorEta[mdIndex3],                                    // outer T3 anchor hit 4 eta (t3_0_eta)
         mdsInGPU.anchorPhi[mdIndex3],                                    // outer T3 anchor hit 4 phi (t3_0_phi)
         mdsInGPU.anchorZ[mdIndex3],                                      // outer T3 anchor hit 3 eta (t3_0_z)
@@ -99,12 +98,12 @@ namespace T5DNN {
         mdsInGPU.anchorZ[mdIndex5],                                      // outer T3 anchor hit 5 z (t3_4_z)
         alpaka::math::sqrt(acc, x5 * x5 + y5 * y5),                      // outer T3 anchor hit 5 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex5] + 6 * is_endcap5),  // outer T3 anchor hit 5 layer (t3_4_layer)
-        SDL::temp_log10(acc, (innerRadius + outerRadius) * SDL::k2Rinv1GeVf),  // T5 pT (t5_pt)
-        mdsInGPU.anchorEta[md_idx_for_t5_eta_phi],                             // T5 eta (t5_eta)
-        mdsInGPU.anchorPhi[md_idx_for_t5_eta_phi],                             // T5 phi (t5_phi)
-        SDL::temp_log10(acc, innerRadius),                                     // T5 inner radius (t5_innerRadius)
-        SDL::temp_log10(acc, bridgeRadius),                                    // T5 bridge radius (t5_bridgeRadius)
-        SDL::temp_log10(acc, outerRadius)                                      // T5 outer radius (t5_outerRadius)
+        alpaka::math::log10(acc, (innerRadius + outerRadius) * lst::k2Rinv1GeVf),  // T5 pT (t5_pt)
+        mdsInGPU.anchorEta[md_idx_for_t5_eta_phi],                                 // T5 eta (t5_eta)
+        mdsInGPU.anchorPhi[md_idx_for_t5_eta_phi],                                 // T5 phi (t5_phi)
+        alpaka::math::log10(acc, innerRadius),                                     // T5 inner radius (t5_innerRadius)
+        alpaka::math::log10(acc, bridgeRadius),                                    // T5 bridge radius (t5_bridgeRadius)
+        alpaka::math::log10(acc, outerRadius)                                      // T5 outer radius (t5_outerRadius)
     };
 
     // (0): Linear(in_features=38, out_features=32, bias=True) => x = x*W_T + b
@@ -157,6 +156,7 @@ namespace T5DNN {
 
     return x_5[0];
   }
-}  // namespace T5DNN
+
+}  //namespace lst::t5dnn
 
 #endif

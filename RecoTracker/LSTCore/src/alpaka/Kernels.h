@@ -1,34 +1,36 @@
-#ifndef Kernels_cuh
-#define Kernels_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_Kernels_h
+#define RecoTracker_LSTCore_src_alpaka_Kernels_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
 
 #include "Hit.h"
 #include "MiniDoublet.h"
+#include "ObjectRanges.h"
 #include "Segment.h"
 #include "Triplet.h"
 #include "Quintuplet.h"
+#include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
 
-namespace SDL {
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(struct SDL::quintuplets& quintupletsInGPU,
+namespace lst {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(lst::Quintuplets& quintupletsInGPU,
                                                              unsigned int quintupletIndex,
                                                              bool secondpass = false) {
     quintupletsInGPU.isDup[quintupletIndex] |= 1 + secondpass;
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelTripletFromMemory(struct SDL::pixelTriplets& pixelTripletsInGPU,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelTripletFromMemory(lst::PixelTriplets& pixelTripletsInGPU,
                                                                unsigned int pixelTripletIndex) {
     pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelQuintupletFromMemory(struct SDL::pixelQuintuplets& pixelQuintupletsInGPU,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelQuintupletFromMemory(lst::PixelQuintuplets& pixelQuintupletsInGPU,
                                                                   unsigned int pixelQuintupletIndex) {
     pixelQuintupletsInGPU.isDup[pixelQuintupletIndex] = true;
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelSegmentFromMemory(struct SDL::segments& segmentsInGPU,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelSegmentFromMemory(lst::Segments& segmentsInGPU,
                                                                unsigned int pixelSegmentArrayIndex,
                                                                bool secondpass = false) {
     segmentsInGPU.isDup[pixelSegmentArrayIndex] |= 1 + secondpass;
@@ -36,7 +38,7 @@ namespace SDL {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT5(unsigned int ix,
                                                  unsigned int jx,
-                                                 struct SDL::quintuplets& quintupletsInGPU) {
+                                                 lst::Quintuplets const& quintupletsInGPU) {
     unsigned int hits1[Params_T5::kHits];
     unsigned int hits2[Params_T5::kHits];
 
@@ -63,7 +65,7 @@ namespace SDL {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT5(unsigned int ix,
                                                   unsigned int jx,
-                                                  struct SDL::pixelQuintuplets& pixelQuintupletsInGPU) {
+                                                  lst::PixelQuintuplets const& pixelQuintupletsInGPU) {
     unsigned int hits1[Params_pT5::kHits];
     unsigned int hits2[Params_pT5::kHits];
 
@@ -90,7 +92,7 @@ namespace SDL {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void checkHitspT3(unsigned int ix,
                                                    unsigned int jx,
-                                                   struct SDL::pixelTriplets& pixelTripletsInGPU,
+                                                   lst::PixelTriplets const& pixelTripletsInGPU,
                                                    int* matched) {
     int phits1[Params_pLS::kHits];
     int phits2[Params_pLS::kHits];
@@ -117,7 +119,7 @@ namespace SDL {
     int hits1[Params_T3::kHits];
     int hits2[Params_T3::kHits];
 
-    for (int i = 0; i < Params_pLS::kHits; i++) {
+    for (int i = 0; i < Params_T3::kHits; i++) {
       hits1[i] = pixelTripletsInGPU.hitIndices[Params_pT3::kHits * ix + i + 4];  // Omitting the pLS hits
       hits2[i] = pixelTripletsInGPU.hitIndices[Params_pT3::kHits * jx + i + 4];  // Omitting the pLS hits
     }
@@ -143,9 +145,9 @@ namespace SDL {
   struct removeDupQuintupletsInGPUAfterBuild {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::quintuplets quintupletsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::Modules modulesInGPU,
+                                  lst::Quintuplets quintupletsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -166,7 +168,7 @@ namespace SDL {
             float eta2 = __H2F(quintupletsInGPU.eta[jx]);
             float phi2 = __H2F(quintupletsInGPU.phi[jx]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = SDL::calculate_dPhi(phi1, phi2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
             float score_rphisum2 = __H2F(quintupletsInGPU.score_rphisum[jx]);
 
             if (dEta > 0.1f)
@@ -193,8 +195,8 @@ namespace SDL {
   struct removeDupQuintupletsInGPUBeforeTC {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::quintuplets quintupletsInGPU,
-                                  struct SDL::objectRanges rangesInGPU) const {
+                                  lst::Quintuplets quintupletsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -238,7 +240,7 @@ namespace SDL {
               float score_rphisum2 = __H2F(quintupletsInGPU.score_rphisum[jx]);
 
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
-              float dPhi = SDL::calculate_dPhi(phi1, phi2);
+              float dPhi = lst::calculate_dPhi(phi1, phi2);
 
               if (dEta > 0.1f)
                 continue;
@@ -267,7 +269,7 @@ namespace SDL {
 
   struct removeDupPixelTripletsInGPUFromMap {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, struct SDL::pixelTriplets pixelTripletsInGPU) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc, lst::PixelTriplets pixelTripletsInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -304,7 +306,7 @@ namespace SDL {
 
   struct removeDupPixelQuintupletsInGPUFromMap {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, struct SDL::pixelQuintuplets pixelQuintupletsInGPU) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc, lst::PixelQuintuplets pixelQuintupletsInGPU) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -332,8 +334,8 @@ namespace SDL {
   struct checkHitspLS {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  struct SDL::modules modulesInGPU,
-                                  struct SDL::segments segmentsInGPU,
+                                  lst::Modules modulesInGPU,
+                                  lst::Segments segmentsInGPU,
                                   bool secondpass) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
@@ -341,8 +343,8 @@ namespace SDL {
       int pixelModuleIndex = *modulesInGPU.nLowerModules;
       unsigned int nPixelSegments = segmentsInGPU.nSegments[pixelModuleIndex];
 
-      if (nPixelSegments > N_MAX_PIXEL_SEGMENTS_PER_MODULE)
-        nPixelSegments = N_MAX_PIXEL_SEGMENTS_PER_MODULE;
+      if (nPixelSegments > n_max_pixel_segments_per_module)
+        nPixelSegments = n_max_pixel_segments_per_module;
 
       for (unsigned int ix = globalThreadIdx[1]; ix < nPixelSegments; ix += gridThreadExtent[1]) {
         if (secondpass && (!segmentsInGPU.isQuad[ix] || (segmentsInGPU.isDup[ix] & 1)))
@@ -409,7 +411,7 @@ namespace SDL {
           }
           if (secondpass) {
             float dEta = alpaka::math::abs(acc, eta_pix1 - eta_pix2);
-            float dPhi = SDL::calculate_dPhi(phi_pix1, phi_pix2);
+            float dPhi = lst::calculate_dPhi(phi_pix1, phi_pix2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if ((npMatched >= 1) || (dR2 < 1e-5f)) {
@@ -420,5 +422,5 @@ namespace SDL {
       }
     }
   };
-}  // namespace SDL
+}  // namespace lst
 #endif

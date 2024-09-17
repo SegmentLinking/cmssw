@@ -196,7 +196,7 @@ void initializeInputsAndOutputs() {
   ana.events_tchain = RooUtil::FileUtil::createTChain(ana.input_tree_name, ana.input_file_list_tstring);
 
   // This is a standard thing SNT does pretty much every looper we use
-  ana.looper.init(ana.events_tchain, &sdl, ana.n_events);
+  ana.looper.init(ana.events_tchain, &lstEff, ana.n_events);
 
   // Set the cutflow object output file
   ana.cutflow.setTFile(ana.output_tfile);

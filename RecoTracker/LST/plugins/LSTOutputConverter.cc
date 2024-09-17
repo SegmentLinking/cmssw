@@ -117,10 +117,10 @@ void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::E
   auto const& lstOutput = iEvent.get(lstOutputToken_);
   auto const& phase2OTRecHits = iEvent.get(lstPhase2OTHitsInputToken_);
   auto const& pixelSeeds = iEvent.get(lstPixelSeedToken_);
-  const auto& mf = iSetup.getData(mfToken_);
-  const auto& propAlo = iSetup.getData(propagatorAlongToken_);
-  const auto& propOppo = iSetup.getData(propagatorOppositeToken_);
-  const auto& tracker = iSetup.getData(tGeomToken_);
+  auto const& mf = iSetup.getData(mfToken_);
+  auto const& propAlo = iSetup.getData(propagatorAlongToken_);
+  auto const& propOppo = iSetup.getData(propagatorOppositeToken_);
+  auto const& tracker = iSetup.getData(tGeomToken_);
 
   // Vector definitions
   std::vector<std::vector<unsigned int>> const& lstTC_hitIdx = lstOutput.hitIdx();

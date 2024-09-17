@@ -7,9 +7,9 @@ run_rocm()
     nevents=$3
     shift 3
     # ROCm backend
-    sdl_make_tracklooper -mR $*
+    lst_make_tracklooper -mR $*
     for s_value in 1 2 4 6 8; do
-        sdl -n ${NEVENTS} -o ${OUTDIR}/rocm_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst -n ${NEVENTS} -o ${OUTDIR}/rocm_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
@@ -20,9 +20,9 @@ run_cuda()
     nevents=$3
     shift 3
     # CUDA backend
-    sdl_make_tracklooper -mG $*
+    lst_make_tracklooper -mG $*
     for s_value in 1 2 4 6 8; do
-        sdl -n ${NEVENTS} -o ${OUTDIR}/cuda_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst -n ${NEVENTS} -o ${OUTDIR}/cuda_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
@@ -33,9 +33,9 @@ run_cpu()
     nevents=$3
     shift 3
     # CPU backend
-    sdl_make_tracklooper -mC $*
+    lst_make_tracklooper -mC $*
     for s_value in 1 4 16 32 64; do
-        sdl -n ${NEVENTS} -o ${OUTDIR}/cpu_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst -n ${NEVENTS} -o ${OUTDIR}/cpu_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
@@ -151,6 +151,6 @@ fi
 echo "Total Timing Summary"
 grep -h "Time for map " timing_temp.txt | cut -d " " -f 6 | awk '{ SUM += $1} END { print "Average time for map loading =",SUM/5,"ms" }' # 5 is the number of stream values run
 grep -h "Time for input " timing_temp.txt | cut -d " " -f 6 | awk '{ SUM += $1} END { print "Average time for input loading =",SUM/5,"ms" }' # 5 is the number of stream values run
-grep -h "Time for event " timing_temp.txt | cut -d " " -f 6 | awk '{ SUM += $1} END { print "Average time for SDL::Event creation =",SUM/21,"ms"}' # 5 is the number of total streams run (1+2+4+6+8)
+grep -h "Time for event " timing_temp.txt | cut -d " " -f 6 | awk '{ SUM += $1} END { print "Average time for lst::Event creation =",SUM/21,"ms"}' # 5 is the number of total streams run (1+2+4+6+8)
 echo "   Evt    Hits       MD       LS      T3       T5       pLS       pT5      pT3      TC       Reset    Event     Short             Rate"
 grep -hr "avg " timing_temp.txt # space is needed to not get certain bad lines 

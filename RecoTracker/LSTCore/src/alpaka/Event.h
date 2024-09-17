@@ -1,31 +1,35 @@
-#ifndef Event_cuh
-#define Event_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_Event_h
+#define RecoTracker_LSTCore_src_alpaka_Event_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Module.h"
-#include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/LST.h"
 
 #include "Hit.h"
-#include "ModuleMethods.h"
 #include "Segment.h"
 #include "Triplet.h"
 #include "Kernels.h"
 #include "Quintuplet.h"
 #include "MiniDoublet.h"
+#include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
 #include "TrackCandidate.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
-namespace SDL {
+namespace lst {
+
+  using namespace ALPAKA_ACCELERATOR_NAMESPACE;
+
   template <typename TAcc>
-  class Event {};
+  class Event;
 
   template <>
-  class Event<SDL::Acc> {
+  class Event<Acc3D> {
   private:
-    QueueAcc queue;
-    Dev devAcc;
+    Queue queue;
+    const float ptCut;
+    Device devAcc;
     DevHost devHost;
     bool addObjects;
 
@@ -44,56 +48,56 @@ namespace SDL {
 
     //Device stuff
     unsigned int nTotalSegments;
-    struct objectRanges* rangesInGPU;
-    struct objectRangesBuffer<Dev>* rangesBuffers;
-    struct hits* hitsInGPU;
-    struct hitsBuffer<Dev>* hitsBuffers;
-    struct miniDoublets* mdsInGPU;
-    struct miniDoubletsBuffer<Dev>* miniDoubletsBuffers;
-    struct segments* segmentsInGPU;
-    struct segmentsBuffer<Dev>* segmentsBuffers;
-    struct triplets* tripletsInGPU;
-    struct tripletsBuffer<Dev>* tripletsBuffers;
-    struct quintuplets* quintupletsInGPU;
-    struct quintupletsBuffer<Dev>* quintupletsBuffers;
-    struct trackCandidates* trackCandidatesInGPU;
-    struct trackCandidatesBuffer<Dev>* trackCandidatesBuffers;
-    struct pixelTriplets* pixelTripletsInGPU;
-    struct pixelTripletsBuffer<Dev>* pixelTripletsBuffers;
-    struct pixelQuintuplets* pixelQuintupletsInGPU;
-    struct pixelQuintupletsBuffer<Dev>* pixelQuintupletsBuffers;
+    ObjectRanges* rangesInGPU;
+    ObjectRangesBuffer<Device>* rangesBuffers;
+    Hits* hitsInGPU;
+    HitsBuffer<Device>* hitsBuffers;
+    MiniDoublets* mdsInGPU;
+    MiniDoubletsBuffer<Device>* miniDoubletsBuffers;
+    Segments* segmentsInGPU;
+    SegmentsBuffer<Device>* segmentsBuffers;
+    Triplets* tripletsInGPU;
+    TripletsBuffer<Device>* tripletsBuffers;
+    Quintuplets* quintupletsInGPU;
+    QuintupletsBuffer<Device>* quintupletsBuffers;
+    TrackCandidates* trackCandidatesInGPU;
+    TrackCandidatesBuffer<Device>* trackCandidatesBuffers;
+    PixelTriplets* pixelTripletsInGPU;
+    PixelTripletsBuffer<Device>* pixelTripletsBuffers;
+    PixelQuintuplets* pixelQuintupletsInGPU;
+    PixelQuintupletsBuffer<Device>* pixelQuintupletsBuffers;
 
     //CPU interface stuff
-    objectRangesBuffer<alpaka::DevCpu>* rangesInCPU;
-    hitsBuffer<alpaka::DevCpu>* hitsInCPU;
-    miniDoubletsBuffer<alpaka::DevCpu>* mdsInCPU;
-    segmentsBuffer<alpaka::DevCpu>* segmentsInCPU;
-    tripletsBuffer<alpaka::DevCpu>* tripletsInCPU;
-    trackCandidatesBuffer<alpaka::DevCpu>* trackCandidatesInCPU;
-    modulesBuffer<alpaka::DevCpu>* modulesInCPU;
-    quintupletsBuffer<alpaka::DevCpu>* quintupletsInCPU;
-    pixelTripletsBuffer<alpaka::DevCpu>* pixelTripletsInCPU;
-    pixelQuintupletsBuffer<alpaka::DevCpu>* pixelQuintupletsInCPU;
+    ObjectRangesBuffer<DevHost>* rangesInCPU;
+    HitsBuffer<DevHost>* hitsInCPU;
+    MiniDoubletsBuffer<DevHost>* mdsInCPU;
+    SegmentsBuffer<DevHost>* segmentsInCPU;
+    TripletsBuffer<DevHost>* tripletsInCPU;
+    TrackCandidatesBuffer<DevHost>* trackCandidatesInCPU;
+    ModulesBuffer<DevHost>* modulesInCPU;
+    QuintupletsBuffer<DevHost>* quintupletsInCPU;
+    PixelTripletsBuffer<DevHost>* pixelTripletsInCPU;
+    PixelQuintupletsBuffer<DevHost>* pixelQuintupletsInCPU;
 
     void init(bool verbose);
 
     int* superbinCPU;
     int8_t* pixelTypeCPU;
 
-    // Stuff that used to be global
     const uint16_t nModules_;
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
     const unsigned int nEndCapMap_;
-    const std::shared_ptr<const modulesBuffer<Dev>> modulesBuffers_;
-    const std::shared_ptr<const pixelMap> pixelMapping_;
-    const std::shared_ptr<const EndcapGeometryBuffer<Dev>> endcapGeometryBuffers_;
+    const std::shared_ptr<const ModulesBuffer<Device>> modulesBuffers_;
+    const std::shared_ptr<const PixelMap> pixelMapping_;
+    const std::shared_ptr<const EndcapGeometryBuffer<Device>> endcapGeometryBuffers_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
     template <typename TQueue>
-    Event(bool verbose, TQueue const& q, const LSTESData<Dev>* deviceESData)
+    Event(bool verbose, const float pt_cut, TQueue const& q, const LSTESData<Device>* deviceESData)
         : queue(q),
+          ptCut(pt_cut),
           devAcc(alpaka::getDev(q)),
           devHost(cms::alpakatools::host()),
           nModules_(deviceESData->nModules),
@@ -103,34 +107,38 @@ namespace SDL {
           modulesBuffers_(deviceESData->modulesBuffers),
           pixelMapping_(deviceESData->pixelMapping),
           endcapGeometryBuffers_(deviceESData->endcapGeometryBuffers) {
+      if (pt_cut < 0.6f) {
+        throw std::invalid_argument("Minimum pT cut must be at least 0.6 GeV. Provided value: " +
+                                    std::to_string(pt_cut));
+      }
       init(verbose);
     }
     void resetEvent();
 
-    void addHitToEvent(
-        std::vector<float> x,
-        std::vector<float> y,
-        std::vector<float> z,
-        std::vector<unsigned int> detId,
-        std::vector<unsigned int> idxInNtuple);  //call the appropriate hit function, then increment the counter here
-    void addPixelSegmentToEvent(std::vector<unsigned int> hitIndices0,
-                                std::vector<unsigned int> hitIndices1,
-                                std::vector<unsigned int> hitIndices2,
-                                std::vector<unsigned int> hitIndices3,
-                                std::vector<float> dPhiChange,
-                                std::vector<float> ptIn,
-                                std::vector<float> ptErr,
-                                std::vector<float> px,
-                                std::vector<float> py,
-                                std::vector<float> pz,
-                                std::vector<float> eta,
-                                std::vector<float> etaErr,
-                                std::vector<float> phi,
-                                std::vector<int> charge,
-                                std::vector<unsigned int> seedIdx,
-                                std::vector<int> superbin,
-                                std::vector<int8_t> pixelType,
-                                std::vector<char> isQuad);
+    // Calls the appropriate hit function, then increments the counter
+    void addHitToEvent(std::vector<float> const& x,
+                       std::vector<float> const& y,
+                       std::vector<float> const& z,
+                       std::vector<unsigned int> const& detId,
+                       std::vector<unsigned int> const& idxInNtuple);
+    void addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
+                                std::vector<unsigned int> const& hitIndices1,
+                                std::vector<unsigned int> const& hitIndices2,
+                                std::vector<unsigned int> const& hitIndices3,
+                                std::vector<float> const& dPhiChange,
+                                std::vector<float> const& ptIn,
+                                std::vector<float> const& ptErr,
+                                std::vector<float> const& px,
+                                std::vector<float> const& py,
+                                std::vector<float> const& pz,
+                                std::vector<float> const& eta,
+                                std::vector<float> const& etaErr,
+                                std::vector<float> const& phi,
+                                std::vector<int> const& charge,
+                                std::vector<unsigned int> const& seedIdx,
+                                std::vector<int> const& superbin,
+                                std::vector<int8_t> const& pixelType,
+                                std::vector<char> const& isQuad);
 
     // functions that map the objects to the appropriate modules
     void addMiniDoubletsToEventExplicit();
@@ -186,19 +194,19 @@ namespace SDL {
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
-    objectRangesBuffer<alpaka::DevCpu>* getRanges();
-    hitsBuffer<alpaka::DevCpu>* getHits();
-    hitsBuffer<alpaka::DevCpu>* getHitsInCMSSW();
-    miniDoubletsBuffer<alpaka::DevCpu>* getMiniDoublets();
-    segmentsBuffer<alpaka::DevCpu>* getSegments();
-    tripletsBuffer<alpaka::DevCpu>* getTriplets();
-    quintupletsBuffer<alpaka::DevCpu>* getQuintuplets();
-    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidates();
-    trackCandidatesBuffer<alpaka::DevCpu>* getTrackCandidatesInCMSSW();
-    pixelTripletsBuffer<alpaka::DevCpu>* getPixelTriplets();
-    pixelQuintupletsBuffer<alpaka::DevCpu>* getPixelQuintuplets();
-    modulesBuffer<alpaka::DevCpu>* getModules(bool isFull = false);
+    ObjectRangesBuffer<DevHost>* getRanges();
+    HitsBuffer<DevHost>* getHits();
+    HitsBuffer<DevHost>* getHitsInCMSSW();
+    MiniDoubletsBuffer<DevHost>* getMiniDoublets();
+    SegmentsBuffer<DevHost>* getSegments();
+    TripletsBuffer<DevHost>* getTriplets();
+    QuintupletsBuffer<DevHost>* getQuintuplets();
+    TrackCandidatesBuffer<DevHost>* getTrackCandidates();
+    TrackCandidatesBuffer<DevHost>* getTrackCandidatesInCMSSW();
+    PixelTripletsBuffer<DevHost>* getPixelTriplets();
+    PixelQuintupletsBuffer<DevHost>* getPixelQuintuplets();
+    ModulesBuffer<DevHost>* getModules(bool isFull = false);
   };
 
-}  // namespace SDL
+}  // namespace lst
 #endif

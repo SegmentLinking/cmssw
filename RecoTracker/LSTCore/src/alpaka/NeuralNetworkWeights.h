@@ -1,9 +1,10 @@
-#ifndef NeuralNetworkWeights_cuh
-#define NeuralNetworkWeights_cuh
+#ifndef RecoTracker_LSTCore_src_alpaka_NeuralNetworkWeights_h
+#define RecoTracker_LSTCore_src_alpaka_NeuralNetworkWeights_h
 
 #include <alpaka/alpaka.hpp>
 
-namespace T5DNN {
+namespace lst::t5dnn {
+
   ALPAKA_STATIC_ACC_MEM_GLOBAL const float bias_0[32] = {
       -4.5069356f, -5.8842053f, 1.0793180f,  -0.1540973f, -0.4705772f, 6.4027028f,  -0.6620818f, -7.0734525f,
       0.6211641f,  4.9630723f,  3.4310920f,  -0.8856288f, 4.5843782f,  -6.0180559f, 0.0126438f,  -1.5725276f,
@@ -306,6 +307,7 @@ namespace T5DNN {
       {-0.3354485f}, {0.0831025f}, {0.1333673f},  {0.0490410f},  {0.0484894f},  {0.0436755f},  {-0.1479877f},
       {0.1540713f},  {0.0021261f}, {-0.0845848f}, {-0.0564973f},
   };
-}  // namespace T5DNN
+
+}  //namespace lst::t5dnn
 
 #endif

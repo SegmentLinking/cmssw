@@ -1,7 +1,7 @@
 #ifndef process_h
 #define process_h
 
-#include "SDL.h"
+#include "LSTEff.h"
 #include "rooutil.h"
 #include "cxxopts.h"
 #include "helper.h"
