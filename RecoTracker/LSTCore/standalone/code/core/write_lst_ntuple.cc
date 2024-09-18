@@ -624,29 +624,28 @@ void setPixelTripletOutputBranches(lst::Event<Acc3D>* event) {
 //________________________________________________________________________________________________________________________________
 void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   // Get relevant information
-  lst::Hits const* Hits = event->getHits()->data();
-  lst::Modules const* Modules = event->getModules()->data();
+  lst::Hits const* hits = event->getHits()->data();
+  lst::Modules const* modules = event->getModules()->data();
 
-  // Hits
-  std::vector<unsigned int> hits = getHitsFromT3(event, iT3);
-  unsigned int hit0 = hits[0];
-  unsigned int hit2 = hits[2];
-  unsigned int hit4 = hits[4];
+  std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
+  unsigned int hit0 = hitIdx[0];
+  unsigned int hit2 = hitIdx[2];
+  unsigned int hit4 = hitIdx[4];
 
   // Hit locations
-  const float hit0_x = Hits->xs[hit0];
-  const float hit0_y = Hits->ys[hit0];
-  const float hit0_z = Hits->zs[hit0];
+  const float hit0_x = hits->xs[hit0];
+  const float hit0_y = hits->ys[hit0];
+  const float hit0_z = hits->zs[hit0];
   const float hit0_r = sqrt(hit0_x * hit0_x + hit0_y * hit0_y);
   lst_math::Hit hitA(hit0_x, hit0_y, hit0_z);
-  const float hit2_x = Hits->xs[hit2];
-  const float hit2_y = Hits->ys[hit2];
-  const float hit2_z = Hits->zs[hit2];
+  const float hit2_x = hits->xs[hit2];
+  const float hit2_y = hits->ys[hit2];
+  const float hit2_z = hits->zs[hit2];
   const float hit2_r = sqrt(hit2_x * hit2_x + hit2_y * hit2_y);
   lst_math::Hit hitB(hit2_x, hit2_y, hit2_z);
-  const float hit4_x = Hits->xs[hit4];
-  const float hit4_y = Hits->ys[hit4];
-  const float hit4_z = Hits->zs[hit4];
+  const float hit4_x = hits->xs[hit4];
+  const float hit4_y = hits->ys[hit4];
+  const float hit4_z = hits->zs[hit4];
   const float hit4_r = sqrt(hit4_x * hit4_x + hit4_y * hit4_y);
   lst_math::Hit hitC(hit4_x, hit4_y, hit4_z);
 
@@ -669,32 +668,32 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   ana.tx->pushbackToBranch<float>("t5_t3_4_eta", hitC.eta());
   ana.tx->pushbackToBranch<float>("t5_t3_4_phi", hitC.phi());
 
-  const int hit0_subdet = trk.ph2_subdet()[Hits->idxs[hit0]];
+  const int hit0_subdet = trk.ph2_subdet()[hits->idxs[hit0]];
   const int hit0_is_endcap = hit0_subdet == 4;
-  const int hit0_layer = trk.ph2_layer()[Hits->idxs[hit0]] + 6 * (hit0_is_endcap);
-  const int hit0_detId = trk.ph2_detId()[Hits->idxs[hit0]];
-  const int hit2_subdet = trk.ph2_subdet()[Hits->idxs[hit2]];
+  const int hit0_layer = trk.ph2_layer()[hits->idxs[hit0]] + 6 * (hit0_is_endcap);
+  const int hit0_detId = trk.ph2_detId()[hits->idxs[hit0]];
+  const int hit2_subdet = trk.ph2_subdet()[hits->idxs[hit2]];
   const int hit2_is_endcap = hit2_subdet == 4;
-  const int hit2_layer = trk.ph2_layer()[Hits->idxs[hit2]] + 6 * (hit2_is_endcap);
-  const int hit2_detId = trk.ph2_detId()[Hits->idxs[hit2]];
-  const int hit4_subdet = trk.ph2_subdet()[Hits->idxs[hit4]];
+  const int hit2_layer = trk.ph2_layer()[hits->idxs[hit2]] + 6 * (hit2_is_endcap);
+  const int hit2_detId = trk.ph2_detId()[hits->idxs[hit2]];
+  const int hit4_subdet = trk.ph2_subdet()[hits->idxs[hit4]];
   const int hit4_is_endcap = hit4_subdet == 4;
-  const int hit4_layer = trk.ph2_layer()[Hits->idxs[hit4]] + 6 * (hit4_is_endcap);
-  const int hit4_detId = trk.ph2_detId()[Hits->idxs[hit4]];
+  const int hit4_layer = trk.ph2_layer()[hits->idxs[hit4]] + 6 * (hit4_is_endcap);
+  const int hit4_detId = trk.ph2_detId()[hits->idxs[hit4]];
 
-  unsigned int module0 = Hits->moduleIndices[hits[0]];
-  unsigned int module1 = Hits->moduleIndices[hits[2]];
-  unsigned int module2 = Hits->moduleIndices[hits[4]];
+  unsigned int module0 = hits->moduleIndices[hit0];
+  unsigned int module1 = hits->moduleIndices[hit2];
+  unsigned int module2 = hits->moduleIndices[hit4];
 
   ana.tx->pushbackToBranch<int>("t5_t3_0_detId", hit0_detId);
   ana.tx->pushbackToBranch<int>("t5_t3_0_layer", hit0_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_0_moduleType", Modules->moduleType[module0]);
+  ana.tx->pushbackToBranch<int>("t5_t3_0_moduleType", modules->moduleType[module0]);
   ana.tx->pushbackToBranch<int>("t5_t3_2_detId", hit2_detId);
   ana.tx->pushbackToBranch<int>("t5_t3_2_layer", hit2_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_2_moduleType", Modules->moduleType[module1]);
+  ana.tx->pushbackToBranch<int>("t5_t3_2_moduleType", modules->moduleType[module1]);
   ana.tx->pushbackToBranch<int>("t5_t3_4_detId", hit4_detId);
   ana.tx->pushbackToBranch<int>("t5_t3_4_layer", hit4_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_4_moduleType", Modules->moduleType[module2]);
+  ana.tx->pushbackToBranch<int>("t5_t3_4_moduleType", modules->moduleType[module2]);
 
   float g, f;
   lst::DevHost const& devHost = cms::alpakatools::host();
@@ -708,21 +707,21 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
 
 //________________________________________________________________________________________________________________________________
 void setT5DNNBranches(lst::Event<Acc3D>* event) {
-  lst::Triplets const* Triplets = event->getTriplets()->data();
-  lst::Modules const* Modules = event->getModules()->data();
-  lst::ObjectRanges const* Ranges = event->getRanges()->data();
-  lst::Quintuplets const* Quintuplets = event->getQuintuplets()->data();
-  lst::TrackCandidates const* TrackCandidates = event->getTrackCandidates()->data();
+  lst::Triplets const* triplets = event->getTriplets()->data();
+  lst::Modules const* modules = event->getModules()->data();
+  lst::ObjectRanges const* ranges = event->getRanges()->data();
+  lst::Quintuplets const* quintuplets = event->getQuintuplets()->data();
+  lst::TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
 
-  std::unordered_set<unsigned int> all_T3s;
-  std::unordered_map<unsigned int, unsigned int> T3_index_map;
+  std::unordered_set<unsigned int> allT3s;
+  std::unordered_map<unsigned int, unsigned int> t3_index_map;
 
-  for (unsigned int idx = 0; idx < *(Modules->nLowerModules); ++idx) {
-    for (unsigned int jdx = 0; jdx < Triplets->nTriplets[idx]; ++jdx) {
-      unsigned int T3_idx = Ranges->tripletModuleIndices[idx] + jdx;
-      if (all_T3s.insert(T3_idx).second) {
-        T3_index_map[T3_idx] = all_T3s.size() - 1;
-        fillT5DNNBranches(event, T3_idx);
+  for (unsigned int idx = 0; idx < *(modules->nLowerModules); ++idx) {
+    for (unsigned int jdx = 0; jdx < triplets->nTriplets[idx]; ++jdx) {
+      unsigned int t3Idx = ranges->tripletModuleIndices[idx] + jdx;
+      if (allT3s.insert(t3Idx).second) {
+        t3_index_map[t3Idx] = allT3s.size() - 1;
+        fillT5DNNBranches(event, t3Idx);
       }
     }
   }
@@ -730,25 +729,25 @@ void setT5DNNBranches(lst::Event<Acc3D>* event) {
   std::unordered_map<unsigned int, unsigned int> t5_tc_index_map;
   std::unordered_set<unsigned int> t5s_used_in_tc;
 
-  for (unsigned int idx = 0; idx < *(TrackCandidates->nTrackCandidates); idx++) {
-    if (TrackCandidates->trackCandidateType[idx] == kT5) {
-      unsigned int objidx = TrackCandidates->directObjectIndices[idx];
-      t5s_used_in_tc.insert(objidx);
-      t5_tc_index_map[objidx] = idx;
+  for (unsigned int idx = 0; idx < *(trackCandidates->nTrackCandidates); idx++) {
+    if (trackCandidates->trackCandidateType[idx] == kT5) {
+      unsigned int objIdx = trackCandidates->directObjectIndices[idx];
+      t5s_used_in_tc.insert(objIdx);
+      t5_tc_index_map[objIdx] = idx;
     }
   }
 
-  for (unsigned int idx = 0; idx < *(Modules->nLowerModules); ++idx) {
-    for (unsigned int jdx = 0; jdx < Quintuplets->nQuintuplets[idx]; ++jdx) {
-      unsigned int T5_idx = Ranges->quintupletModuleIndices[idx] + jdx;
-      std::vector<unsigned int> T3s = getT3sFromT5(event, T5_idx);
+  for (unsigned int idx = 0; idx < *(modules->nLowerModules); ++idx) {
+    for (unsigned int jdx = 0; jdx < quintuplets->nQuintuplets[idx]; ++jdx) {
+      unsigned int t5Idx = ranges->quintupletModuleIndices[idx] + jdx;
+      std::vector<unsigned int> t3sIdx = getT3sFromT5(event, t5Idx);
 
-      ana.tx->pushbackToBranch<int>("t5_t3_idx0", T3_index_map[T3s[0]]);
-      ana.tx->pushbackToBranch<int>("t5_t3_idx1", T3_index_map[T3s[1]]);
+      ana.tx->pushbackToBranch<int>("t5_t3_idx0", t3_index_map[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<int>("t5_t3_idx1", t3_index_map[t3sIdx[1]]);
 
-      if (t5s_used_in_tc.find(T5_idx) != t5s_used_in_tc.end()) {
+      if (t5s_used_in_tc.find(t5Idx) != t5s_used_in_tc.end()) {
         ana.tx->pushbackToBranch<int>("t5_partOfTC", 1);
-        ana.tx->pushbackToBranch<int>("t5_tc_idx", t5_tc_index_map[T5_idx]);
+        ana.tx->pushbackToBranch<int>("t5_tc_idx", t5_tc_index_map[t5Idx]);
       } else {
         ana.tx->pushbackToBranch<int>("t5_partOfTC", 0);
         ana.tx->pushbackToBranch<int>("t5_tc_idx", -999);
