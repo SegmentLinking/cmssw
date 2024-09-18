@@ -622,13 +622,13 @@ void setPixelTripletOutputBranches(lst::Event<Acc3D>* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int T3) {
+void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   // Get relevant information
   lst::Hits const* Hits = event->getHits()->data();
   lst::Modules const* Modules = event->getModules()->data();
 
   // Hits
-  std::vector<unsigned int> hits = getHitsFromT3(event, T3);
+  std::vector<unsigned int> hits = getHitsFromT3(event, iT3);
   unsigned int hit0 = hits[0];
   unsigned int hit2 = hits[2];
   unsigned int hit4 = hits[4];
@@ -696,14 +696,10 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int T3) {
   ana.tx->pushbackToBranch<int>("t3_4_layer", hit4_layer);
   ana.tx->pushbackToBranch<int>("t3_4_moduleType", Modules->moduleType[module2]);
 
-  // Constants
-  const float kRinv1GeVf = (2.99792458e-3 * 3.8);
-  const float k2Rinv1GeVf = kRinv1GeVf / 2.;
-
   float g, f;
   lst::DevHost const& devHost = cms::alpakatools::host();
   float radius = lst::computeRadiusFromThreeAnchorHits(devHost, hit0_x, hit0_y, hit2_x, hit2_y, hit4_x, hit4_y, g, f);
-  ana.tx->pushbackToBranch<float>("t3_pt", kRinv1GeVf * radius);
+  ana.tx->pushbackToBranch<float>("t3_pt", lst::k2Rinv1GeVf * 2 * radius);
 
   // Angles
   ana.tx->pushbackToBranch<float>("t3_eta", hitC.eta());
