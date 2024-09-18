@@ -21,6 +21,13 @@ jobs:
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||
         github.event.comment.user.login == 'VourMa' ||
+        github.event.comment.user.login == 'aashayarora' ||
+        github.event.comment.user.login == 'bucket420' ||
+        github.event.comment.user.login == 'jchismar' ||
+        github.event.comment.user.login == 'kk428' ||
+        github.event.comment.user.login == 'mmasciov' ||
+        github.event.comment.user.login == 'pwittich' ||
+        github.event.comment.user.login == 'sgnoohc' ||
         github.event.comment.user.login == 'slava77devel' ||
         github.event.comment.user.login == 'slava77'
       )
