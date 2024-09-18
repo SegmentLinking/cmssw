@@ -99,24 +99,24 @@ namespace lst::t5dnn {
     // Build DNN input vector (corresponding output N-tuple branch noted in parenthetical in comment)
     float x[kinputFeatures] = {
         mdsInGPU.anchorEta[mdIndex1],                                    // inner T3 anchor hit 1 eta (t3_0_eta)
-        mdsInGPU.anchorZ[mdIndex1] / t5dnn::Z_max,                       // inner T3 anchor hit 1 z (t3_0_z)
-        alpaka::math::sqrt(acc, x1 * x1 + y1 * y1) / t5dnn::R_max,       // inner T3 anchor hit 1 r (t3_0_r)
+        mdsInGPU.anchorZ[mdIndex1] / kZ_max,                             // inner T3 anchor hit 1 z (t3_0_z)
+        alpaka::math::sqrt(acc, x1 * x1 + y1 * y1) / kR_max,             // inner T3 anchor hit 1 r (t3_0_r)
         float(modulesInGPU.layers[lowerModuleIndex1] + 6 * is_endcap1),  // inner T3 anchor hit 1 layer (t3_0_layer)
         mdsInGPU.anchorEta[mdIndex2],                                    // inner T3 anchor hit 2 eta (t3_2_eta)
-        mdsInGPU.anchorZ[mdIndex2] / t5dnn::Z_max,                       // inner T3 anchor hit 2 z (t3_2_z)
-        alpaka::math::sqrt(acc, x2 * x2 + y2 * y2) / t5dnn::R_max,       // inner T3 anchor hit 2 r (t3_2_r)
+        mdsInGPU.anchorZ[mdIndex2] / kZ_max,                             // inner T3 anchor hit 2 z (t3_2_z)
+        alpaka::math::sqrt(acc, x2 * x2 + y2 * y2) / kR_max,             // inner T3 anchor hit 2 r (t3_2_r)
         float(modulesInGPU.layers[lowerModuleIndex2] + 6 * is_endcap2),  // inner T3 anchor hit 2 layer (t3_2_layer)
         mdsInGPU.anchorEta[mdIndex3],                                    // inner T3 anchor hit 3 eta (t3_4_eta)
-        mdsInGPU.anchorZ[mdIndex3] / t5dnn::Z_max,                       // inner T3 anchor hit 3 z (t3_4_z)
-        alpaka::math::sqrt(acc, x3 * x3 + y3 * y3) / t5dnn::R_max,       // inner T3 anchor hit 3 r (t3_4_r)
+        mdsInGPU.anchorZ[mdIndex3] / kZ_max,                             // inner T3 anchor hit 3 z (t3_4_z)
+        alpaka::math::sqrt(acc, x3 * x3 + y3 * y3) / kR_max,             // inner T3 anchor hit 3 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex3] + 6 * is_endcap3),  // inner T3 anchor hit 3 layer (t3_4_layer)
         mdsInGPU.anchorEta[mdIndex4],                                    // outer T3 anchor hit 4 eta (t3_2_eta)
-        mdsInGPU.anchorZ[mdIndex4] / t5dnn::Z_max,                       // outer T3 anchor hit 4 z (t3_2_z)
-        alpaka::math::sqrt(acc, x4 * x4 + y4 * y4) / t5dnn::R_max,       // outer T3 anchor hit 4 r (t3_2_r)
+        mdsInGPU.anchorZ[mdIndex4] / kZ_max,                             // outer T3 anchor hit 4 z (t3_2_z)
+        alpaka::math::sqrt(acc, x4 * x4 + y4 * y4) / kR_max,             // outer T3 anchor hit 4 r (t3_2_r)
         float(modulesInGPU.layers[lowerModuleIndex4] + 6 * is_endcap4),  // outer T3 anchor hit 4 layer (t3_2_layer)
         mdsInGPU.anchorEta[mdIndex5],                                    // outer T3 anchor hit 5 eta (t3_4_eta)
-        mdsInGPU.anchorZ[mdIndex5] / t5dnn::Z_max,                       // outer T3 anchor hit 5 z (t3_4_z)
-        alpaka::math::sqrt(acc, x5 * x5 + y5 * y5) / t5dnn::R_max,       // outer T3 anchor hit 5 r (t3_4_r)
+        mdsInGPU.anchorZ[mdIndex5] / kZ_max,                             // outer T3 anchor hit 5 z (t3_4_z)
+        alpaka::math::sqrt(acc, x5 * x5 + y5 * y5) / kR_max,             // outer T3 anchor hit 5 r (t3_4_r)
         float(modulesInGPU.layers[lowerModuleIndex5] + 6 * is_endcap5),  // outer T3 anchor hit 5 layer (t3_4_layer)
         t5_eta,                                                          // T5 eta (t5_eta)
         alpaka::math::log10(acc, innerRadius),                           // T5 inner radius (t5_innerRadius)
@@ -150,10 +150,10 @@ namespace lst::t5dnn {
     float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
 
     uint8_t pt_index = (t5_pt > 5) ? 1 : 0;
-    uint8_t bin_index = (abs_t5_eta > 2.5f) ? 9 : static_cast<unsigned int>(abs_t5_eta / 0.25f);
+    uint8_t bin_index = (abs_t5_eta > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(abs_t5_eta / 0.25f);
 
     // Compare x_5 to the cut value for the relevant bin
-    return x_5 > kLSTWp[pt_index][bin_index];
+    return x_5 > kWp[pt_index][bin_index];
   }
 
 }  //namespace lst::t5dnn
