@@ -163,36 +163,36 @@ void createT5DNNBranches() {
   ana.tx->createBranch<std::vector<int>>("t5_t3_idx1");
   ana.tx->createBranch<std::vector<int>>("t5_tc_idx");
   ana.tx->createBranch<std::vector<int>>("t5_partOfTC");
-  ana.tx->createBranch<std::vector<float>>("t3_pt");
-  ana.tx->createBranch<std::vector<float>>("t3_eta");
-  ana.tx->createBranch<std::vector<float>>("t3_phi");
-  ana.tx->createBranch<std::vector<float>>("t3_0_r");
-  ana.tx->createBranch<std::vector<float>>("t3_0_x");
-  ana.tx->createBranch<std::vector<float>>("t3_0_y");
-  ana.tx->createBranch<std::vector<float>>("t3_0_z");
-  ana.tx->createBranch<std::vector<float>>("t3_0_eta");
-  ana.tx->createBranch<std::vector<float>>("t3_0_phi");
-  ana.tx->createBranch<std::vector<int>>("t3_0_detId");
-  ana.tx->createBranch<std::vector<int>>("t3_0_layer");
-  ana.tx->createBranch<std::vector<int>>("t3_0_moduleType");
-  ana.tx->createBranch<std::vector<float>>("t3_2_r");
-  ana.tx->createBranch<std::vector<float>>("t3_2_x");
-  ana.tx->createBranch<std::vector<float>>("t3_2_y");
-  ana.tx->createBranch<std::vector<float>>("t3_2_z");
-  ana.tx->createBranch<std::vector<float>>("t3_2_eta");
-  ana.tx->createBranch<std::vector<float>>("t3_2_phi");
-  ana.tx->createBranch<std::vector<int>>("t3_2_detId");
-  ana.tx->createBranch<std::vector<int>>("t3_2_layer");
-  ana.tx->createBranch<std::vector<int>>("t3_2_moduleType");
-  ana.tx->createBranch<std::vector<float>>("t3_4_r");
-  ana.tx->createBranch<std::vector<float>>("t3_4_x");
-  ana.tx->createBranch<std::vector<float>>("t3_4_y");
-  ana.tx->createBranch<std::vector<float>>("t3_4_z");
-  ana.tx->createBranch<std::vector<float>>("t3_4_eta");
-  ana.tx->createBranch<std::vector<float>>("t3_4_phi");
-  ana.tx->createBranch<std::vector<int>>("t3_4_detId");
-  ana.tx->createBranch<std::vector<int>>("t3_4_layer");
-  ana.tx->createBranch<std::vector<int>>("t3_4_moduleType");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_pt");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_eta");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_r");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_x");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_y");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_z");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_eta");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_0_phi");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_0_detId");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_0_layer");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_0_moduleType");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_r");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_x");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_y");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_z");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_eta");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_2_phi");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_2_detId");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_2_layer");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_2_moduleType");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_r");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_x");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_y");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_z");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_eta");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_4_phi");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_4_detId");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_4_layer");
+  ana.tx->createBranch<std::vector<int>>("t5_t3_4_moduleType");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -650,24 +650,24 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   const float hit4_r = sqrt(hit4_x * hit4_x + hit4_y * hit4_y);
   lst_math::Hit hitC(hit4_x, hit4_y, hit4_z);
 
-  ana.tx->pushbackToBranch<float>("t3_0_r", hit0_r);
-  ana.tx->pushbackToBranch<float>("t3_0_x", hit0_x);
-  ana.tx->pushbackToBranch<float>("t3_0_y", hit0_y);
-  ana.tx->pushbackToBranch<float>("t3_0_z", hit0_z);
-  ana.tx->pushbackToBranch<float>("t3_0_eta", hitA.eta());
-  ana.tx->pushbackToBranch<float>("t3_0_phi", hitA.phi());
-  ana.tx->pushbackToBranch<float>("t3_2_r", hit2_r);
-  ana.tx->pushbackToBranch<float>("t3_2_x", hit2_x);
-  ana.tx->pushbackToBranch<float>("t3_2_y", hit2_y);
-  ana.tx->pushbackToBranch<float>("t3_2_z", hit2_z);
-  ana.tx->pushbackToBranch<float>("t3_2_eta", hitB.eta());
-  ana.tx->pushbackToBranch<float>("t3_2_phi", hitB.phi());
-  ana.tx->pushbackToBranch<float>("t3_4_r", hit4_r);
-  ana.tx->pushbackToBranch<float>("t3_4_x", hit4_x);
-  ana.tx->pushbackToBranch<float>("t3_4_y", hit4_y);
-  ana.tx->pushbackToBranch<float>("t3_4_z", hit4_z);
-  ana.tx->pushbackToBranch<float>("t3_4_eta", hitC.eta());
-  ana.tx->pushbackToBranch<float>("t3_4_phi", hitC.phi());
+  ana.tx->pushbackToBranch<float>("t5_t3_0_r", hit0_r);
+  ana.tx->pushbackToBranch<float>("t5_t3_0_x", hit0_x);
+  ana.tx->pushbackToBranch<float>("t5_t3_0_y", hit0_y);
+  ana.tx->pushbackToBranch<float>("t5_t3_0_z", hit0_z);
+  ana.tx->pushbackToBranch<float>("t5_t3_0_eta", hitA.eta());
+  ana.tx->pushbackToBranch<float>("t5_t3_0_phi", hitA.phi());
+  ana.tx->pushbackToBranch<float>("t5_t3_2_r", hit2_r);
+  ana.tx->pushbackToBranch<float>("t5_t3_2_x", hit2_x);
+  ana.tx->pushbackToBranch<float>("t5_t3_2_y", hit2_y);
+  ana.tx->pushbackToBranch<float>("t5_t3_2_z", hit2_z);
+  ana.tx->pushbackToBranch<float>("t5_t3_2_eta", hitB.eta());
+  ana.tx->pushbackToBranch<float>("t5_t3_2_phi", hitB.phi());
+  ana.tx->pushbackToBranch<float>("t5_t3_4_r", hit4_r);
+  ana.tx->pushbackToBranch<float>("t5_t3_4_x", hit4_x);
+  ana.tx->pushbackToBranch<float>("t5_t3_4_y", hit4_y);
+  ana.tx->pushbackToBranch<float>("t5_t3_4_z", hit4_z);
+  ana.tx->pushbackToBranch<float>("t5_t3_4_eta", hitC.eta());
+  ana.tx->pushbackToBranch<float>("t5_t3_4_phi", hitC.phi());
 
   const int hit0_subdet = trk.ph2_subdet()[Hits->idxs[hit0]];
   const int hit0_is_endcap = hit0_subdet == 4;
@@ -686,24 +686,24 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   unsigned int module1 = Hits->moduleIndices[hits[2]];
   unsigned int module2 = Hits->moduleIndices[hits[4]];
 
-  ana.tx->pushbackToBranch<int>("t3_0_detId", hit0_detId);
-  ana.tx->pushbackToBranch<int>("t3_0_layer", hit0_layer);
-  ana.tx->pushbackToBranch<int>("t3_0_moduleType", Modules->moduleType[module0]);
-  ana.tx->pushbackToBranch<int>("t3_2_detId", hit2_detId);
-  ana.tx->pushbackToBranch<int>("t3_2_layer", hit2_layer);
-  ana.tx->pushbackToBranch<int>("t3_2_moduleType", Modules->moduleType[module1]);
-  ana.tx->pushbackToBranch<int>("t3_4_detId", hit4_detId);
-  ana.tx->pushbackToBranch<int>("t3_4_layer", hit4_layer);
-  ana.tx->pushbackToBranch<int>("t3_4_moduleType", Modules->moduleType[module2]);
+  ana.tx->pushbackToBranch<int>("t5_t3_0_detId", hit0_detId);
+  ana.tx->pushbackToBranch<int>("t5_t3_0_layer", hit0_layer);
+  ana.tx->pushbackToBranch<int>("t5_t3_0_moduleType", Modules->moduleType[module0]);
+  ana.tx->pushbackToBranch<int>("t5_t3_2_detId", hit2_detId);
+  ana.tx->pushbackToBranch<int>("t5_t3_2_layer", hit2_layer);
+  ana.tx->pushbackToBranch<int>("t5_t3_2_moduleType", Modules->moduleType[module1]);
+  ana.tx->pushbackToBranch<int>("t5_t3_4_detId", hit4_detId);
+  ana.tx->pushbackToBranch<int>("t5_t3_4_layer", hit4_layer);
+  ana.tx->pushbackToBranch<int>("t5_t3_4_moduleType", Modules->moduleType[module2]);
 
   float g, f;
   lst::DevHost const& devHost = cms::alpakatools::host();
   float radius = lst::computeRadiusFromThreeAnchorHits(devHost, hit0_x, hit0_y, hit2_x, hit2_y, hit4_x, hit4_y, g, f);
-  ana.tx->pushbackToBranch<float>("t3_pt", lst::k2Rinv1GeVf * 2 * radius);
+  ana.tx->pushbackToBranch<float>("t5_t3_pt", lst::k2Rinv1GeVf * 2 * radius);
 
   // Angles
-  ana.tx->pushbackToBranch<float>("t3_eta", hitC.eta());
-  ana.tx->pushbackToBranch<float>("t3_phi", hitA.phi());
+  ana.tx->pushbackToBranch<float>("t5_t3_eta", hitC.eta());
+  ana.tx->pushbackToBranch<float>("t5_t3_phi", hitA.phi());
 }
 
 //________________________________________________________________________________________________________________________________
