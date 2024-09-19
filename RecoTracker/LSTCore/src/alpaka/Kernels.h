@@ -12,6 +12,7 @@
 #include "Quintuplet.h"
 #include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
+#include "Quadruplet.h"
 
 namespace lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(lst::Quintuplets& quintupletsInGPU,

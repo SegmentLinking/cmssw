@@ -12,6 +12,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
   trackCandidatesInGPU = nullptr;
   pixelTripletsInGPU = nullptr;
   pixelQuintupletsInGPU = nullptr;
+  quadrupletsInGPU = nullptr;
   rangesInGPU = nullptr;
 
   hitsInCPU = nullptr;
@@ -24,6 +25,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
   quintupletsInCPU = nullptr;
   pixelTripletsInCPU = nullptr;
   pixelQuintupletsInCPU = nullptr;
+  quadrupletsInCPU = nullptr;
 
   //reset the arrays
   for (int i = 0; i < 6; i++) {
@@ -33,6 +35,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
+    n_quadruplets_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -40,6 +43,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
+      n_quadruplets_by_layer_endcap_[i] = 0;
     }
   }
 }
@@ -53,6 +57,7 @@ void lst::Event<Acc3D>::resetEvent() {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
+    n_quadruplets_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -60,6 +65,7 @@ void lst::Event<Acc3D>::resetEvent() {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
+      n_quadruplets_by_layer_endcap_[i] = 0;
     }
   }
   if (hitsInGPU) {
@@ -107,6 +113,11 @@ void lst::Event<Acc3D>::resetEvent() {
     delete pixelQuintupletsBuffers;
     pixelQuintupletsInGPU = nullptr;
   }
+  if (quadrupletsInGPU) {
+    delete quadrupletsInGPU;
+    delete quadrupletsBuffers;
+    quadrupletsInGPU = nullptr;
+  }
 
   if (hitsInCPU != nullptr) {
     delete hitsInCPU;
@@ -147,6 +158,10 @@ void lst::Event<Acc3D>::resetEvent() {
   if (modulesInCPU != nullptr) {
     delete modulesInCPU;
     modulesInCPU = nullptr;
+  }
+  if (quadrupletsInCPU != nullptr) {
+    delete quadrupletsInCPU;
+    quadrupletsInCPU = nullptr;
   }
 }
 
@@ -1159,6 +1174,83 @@ void lst::Event<Acc3D>::createPixelQuintuplets() {
 #endif
 }
 
+void lst::Event<Acc3D>::createQuadruplets() {
+  Vec3D const threadsPerBlockCreateQuads{1, 1, 1024};
+  Vec3D const blocksPerGridCreateQuads{1, 1, 1};
+  WorkDiv3D const createEligibleModulesListForQuadrupletsGPU_workDiv =
+      createWorkDiv(blocksPerGridCreateQuads, threadsPerBlockCreateQuads, elementsPerThread);
+
+  lst::createEligibleModulesListForQuadrupletsGPU createEligibleModulesListForQuadrupletsGPU_kernel;
+  auto const createEligibleModulesListForQuadrupletsGPUTask(
+      alpaka::createTaskKernel<Acc3D>(createEligibleModulesListForQuadrupletsGPU_workDiv,
+                                      createEligibleModulesListForQuadrupletsGPU_kernel,
+                                      *modulesBuffers_->data(),
+                                      *tripletsInGPU,
+                                      *rangesInGPU,
+                                      ptCut));
+
+  alpaka::enqueue(queue, createEligibleModulesListForQuadrupletsGPUTask);
+  alpaka::wait(queue);
+
+  auto nEligibleT4Modules_buf = allocBufWrapper<uint16_t>(devHost, 1, queue);
+  auto nTotalQuadruplets_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+
+  alpaka::memcpy(queue, nEligibleT4Modules_buf, rangesBuffers->nEligibleT4Modules_buf);
+  alpaka::memcpy(queue, nTotalQuadruplets_buf, rangesBuffers->device_nTotalQuads_buf);
+  alpaka::wait(queue);
+
+  uint16_t nEligibleT4Modules = *alpaka::getPtrNative(nEligibleT4Modules_buf);
+  unsigned int nTotalQuadruplets = *alpaka::getPtrNative(nTotalQuadruplets_buf);
+
+  if (quadrupletsInGPU == nullptr) {
+    quadrupletsInGPU = new lst::Quadruplets();
+    quadrupletsBuffers = new lst::QuadrupletsBuffer<Device>(nTotalQuadruplets, nLowerModules_, devAcc, queue);
+    quadrupletsInGPU->setData(*quadrupletsBuffers);
+
+    alpaka::memcpy(queue, quadrupletsBuffers->nMemoryLocations_buf, nTotalQuadruplets_buf);
+    alpaka::wait(queue);
+  }
+
+  Vec3D const threadsPerBlockQuads{1, 8, 32};
+  Vec3D const blocksPerGridQuads{std::max((int)nEligibleT4Modules, 1), 1, 1};
+  WorkDiv3D const createQuadrupletsInGPUv2_workDiv =
+      createWorkDiv(blocksPerGridQuads, threadsPerBlockQuads, elementsPerThread);
+
+  lst::createQuadrupletsInGPUv2 createQuadrupletsInGPUv2_kernel;
+  auto const createQuadrupletsInGPUv2Task(alpaka::createTaskKernel<Acc3D>(createQuadrupletsInGPUv2_workDiv,
+                                                                       createQuadrupletsInGPUv2_kernel,
+                                                                       *modulesBuffers_->data(),
+                                                                       *mdsInGPU,
+                                                                       *segmentsInGPU,
+                                                                       *tripletsInGPU,
+                                                                       *quadrupletsInGPU,
+                                                                       *rangesInGPU,
+                                                                       nEligibleT4Modules,
+                                                                       ptCut));
+
+  alpaka::enqueue(queue, createQuadrupletsInGPUv2Task);
+
+  Vec3D const threadsPerBlockAddQuad{1, 1, 1024};
+  Vec3D const blocksPerGridAddQuad{1, 1, 1};
+  WorkDiv3D const addQuadrupletRangesToEventExplicit_workDiv =
+      createWorkDiv(blocksPerGridAddQuad, threadsPerBlockAddQuad, elementsPerThread);
+
+  lst::addQuadrupletRangesToEventExplicit addQuadrupletRangesToEventExplicit_kernel;
+  auto const addQuadrupletRangesToEventExplicitTask(
+      alpaka::createTaskKernel<Acc3D>(addQuadrupletRangesToEventExplicit_workDiv,
+                                      addQuadrupletRangesToEventExplicit_kernel,
+                                      *modulesBuffers_->data(),
+                                      *quadrupletsInGPU,
+                                      *rangesInGPU));
+
+  alpaka::enqueue(queue, addQuadrupletRangesToEventExplicitTask);
+  alpaka::wait(queue);
+
+  if (addObjects) {
+    addQuadrupletsToEventExplicit();
+  }
+}
+
 void lst::Event<Acc3D>::addMiniDoubletsToEventExplicit() {
   auto nMDsCPU_buf = allocBufWrapper<unsigned int>(devHost, nLowerModules_, queue);
   alpaka::memcpy(queue, nMDsCPU_buf, miniDoubletsBuffers->nMDs_buf, nLowerModules_);
@@ -1269,6 +1361,37 @@ void lst::Event<Acc3D>::addTripletsToEventExplicit() {
         n_triplets_by_layer_barrel_[module_layers[i] - 1] += nTripletsCPU[i];
       } else {
         n_triplets_by_layer_endcap_[module_layers[i] - 1] += nTripletsCPU[i];
+      }
+    }
+  }
+}
+
+void lst::Event<Acc3D>::addQuadrupletsToEventExplicit() {
+  auto nQuadrupletsCPU_buf = allocBufWrapper<unsigned int>(devHost, nLowerModules_, queue);
+  alpaka::memcpy(queue, nQuadrupletsCPU_buf, quadrupletsBuffers->nQuadruplets_buf);
+
+  auto module_subdets_buf = allocBufWrapper<short>(devHost, nModules_, queue);
+  alpaka::memcpy(queue, module_subdets_buf, modulesBuffers_->subdets_buf, nModules_);
+
+  auto module_layers_buf = allocBufWrapper<short>(devHost, nLowerModules_, queue);
+  alpaka::memcpy(queue, module_layers_buf, modulesBuffers_->layers_buf, nLowerModules_);
+
+  auto module_quadrupletModuleIndices_buf = allocBufWrapper<int>(devHost, nLowerModules_, queue);
+  alpaka::memcpy(queue, module_quadrupletModuleIndices_buf, rangesBuffers->quadrupletModuleIndices_buf);
+
+  alpaka::wait(queue);
+
+  unsigned int* nQuadrupletsCPU = alpaka::getPtrNative(nQuadrupletsCPU_buf);
+  short* module_subdets = alpaka::getPtrNative(module_subdets_buf);
+  short* module_layers = alpaka::getPtrNative(module_layers_buf);
+  int* module_quadrupletModuleIndices = alpaka::getPtrNative(module_quadrupletModuleIndices_buf);
+
+  for (uint16_t i = 0; i < nLowerModules_; i++) {
+    if (!(nQuadrupletsCPU[i] == 0 or module_quadrupletModuleIndices[i] == -1)) {
+      if (module_subdets[i] == Barrel) {
+        n_quadruplets_by_layer_barrel_[module_layers[i] - 1] += nQuadrupletsCPU[i];
+      } else {
+        n_quadruplets_by_layer_endcap_[module_layers[i] - 1] += nQuadrupletsCPU[i];
       }
     }
   }
@@ -1498,6 +1621,33 @@ int lst::Event<Acc3D>::getNumberOfT5TrackCandidates() {
   int nTrackCandidatesT5 = *alpaka::getPtrNative(nTrackCandidatesT5_buf);
 
   return nTrackCandidatesT5;
+}
+
+unsigned int lst::Event<Acc3D>::getNumberOfQuadruplets() {
+  unsigned int quadruplets = 0;
+  for (auto& it : n_quadruplets_by_layer_barrel_) {
+    quadruplets += it;
+  }
+  for (auto& it : n_quadruplets_by_layer_endcap_) {
+    quadruplets += it;
+  }
+
+  return quadruplets;
+}
+
+unsigned int lst::Event<Acc3D>::getNumberOfQuadrupletsByLayer(unsigned int layer) {
+  if (layer == 6)
+    return n_quadruplets_by_layer_barrel_[layer];
+  else
+    return n_quadruplets_by_layer_barrel_[layer] + n_quintuplets_by_layer_endcap_[layer];
+}
+
+unsigned int lst::Event<Acc3D>::getNumberOfQuadrupletsByLayerBarrel(unsigned int layer) {
+  return n_quadruplets_by_layer_barrel_[layer];
+}
+
+unsigned int lst::Event<Acc3D>::getNumberOfQuadrupletsByLayerEndcap(unsigned int layer) {
+  return n_quadruplets_by_layer_endcap_[layer];
 }
 
 lst::HitsBuffer<DevHost>* lst::Event<Acc3D>::getHits()  //std::shared_ptr should take care of garbage collection
@@ -1834,4 +1984,40 @@ lst::ModulesBuffer<DevHost>* lst::Event<Acc3D>::getModules(bool isFull) {
     modulesInCPU->copyFromSrc(queue, *modulesBuffers_, isFull);
   }
   return modulesInCPU;
+}
+
+lst::QuadrupletsBuffer<DevHost>* lst::Event<Acc3D>::getQuadruplets() {
+  if (quadrupletsInCPU == nullptr) {
+    // Get nMemoryLocations parameter to initialize host based quadrupletsInCPU
+    auto nMemHost_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+    alpaka::memcpy(queue, nMemHost_buf, quadrupletsBuffers->nMemoryLocations_buf);
+    alpaka::wait(queue);
+
+    unsigned int nMemHost = *alpaka::getPtrNative(nMemHost_buf);
+    quadrupletsInCPU = new lst::QuadrupletsBuffer<DevHost>(nMemHost, nLowerModules_, devHost, queue);
+    quadrupletsInCPU->setData(*quadrupletsInCPU);
+
+    *alpaka::getPtrNative(quadrupletsInCPU->nMemoryLocations_buf) = nMemHost;
+    alpaka::memcpy(queue, quadrupletsInCPU->nQuadruplets_buf, quadrupletsBuffers->nQuadruplets_buf);
+    alpaka::memcpy(
+        queue, quadrupletsInCPU->totOccupancyQuadruplets_buf, quadrupletsBuffers->totOccupancyQuadruplets_buf);
+    alpaka::memcpy(queue, quadrupletsInCPU->tripletIndices_buf, quadrupletsBuffers->tripletIndices_buf, 2 * nMemHost);
+    alpaka::memcpy(queue,
+                   quadrupletsInCPU->lowerModuleIndices_buf,
+                   quadrupletsBuffers->lowerModuleIndices_buf,
+                   Params_T4::kLayers * nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->innerRadius_buf, quadrupletsBuffers->innerRadius_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->bridgeRadius_buf, quadrupletsBuffers->bridgeRadius_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->outerRadius_buf, quadrupletsBuffers->outerRadius_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->isDup_buf, quadrupletsBuffers->isDup_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->score_rphisum_buf, quadrupletsBuffers->score_rphisum_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->eta_buf, quadrupletsBuffers->eta_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->phi_buf, quadrupletsBuffers->phi_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->chiSquared_buf, quadrupletsBuffers->chiSquared_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->rzChiSquared_buf, quadrupletsBuffers->rzChiSquared_buf, nMemHost);
+    alpaka::memcpy(
+        queue, quadrupletsInCPU->nonAnchorChiSquared_buf, quadrupletsBuffers->nonAnchorChiSquared_buf, nMemHost);
+    alpaka::wait(queue);
+  }
+  return quadrupletsInCPU;
 }

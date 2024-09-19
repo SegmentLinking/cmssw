@@ -14,6 +14,7 @@
 #include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
 #include "TrackCandidate.h"
+#include "Quadruplet.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
@@ -45,6 +46,8 @@ namespace lst {
     std::array<unsigned int, 5> n_trackCandidates_by_layer_endcap_;
     std::array<unsigned int, 6> n_quintuplets_by_layer_barrel_;
     std::array<unsigned int, 5> n_quintuplets_by_layer_endcap_;
+    std::array<unsigned int, 6> n_quadruplets_by_layer_barrel_;
+    std::array<unsigned int, 5> n_quadruplets_by_layer_endcap_;
 
     //Device stuff
     unsigned int nTotalSegments;
@@ -66,6 +69,8 @@ namespace lst {
     PixelTripletsBuffer<Device>* pixelTripletsBuffers;
     PixelQuintuplets* pixelQuintupletsInGPU;
     PixelQuintupletsBuffer<Device>* pixelQuintupletsBuffers;
+    Quadruplets* quadrupletsInGPU;
+    QuadrupletsBuffer<Device>* quadrupletsBuffers;
 
     //CPU interface stuff
     ObjectRangesBuffer<DevHost>* rangesInCPU;
@@ -78,6 +83,7 @@ namespace lst {
     QuintupletsBuffer<DevHost>* quintupletsInCPU;
     PixelTripletsBuffer<DevHost>* pixelTripletsInCPU;
     PixelQuintupletsBuffer<DevHost>* pixelQuintupletsInCPU;
+    QuadrupletsBuffer<DevHost>* quadrupletsInCPU;
 
     void init(bool verbose);
 
@@ -145,6 +151,7 @@ namespace lst {
     void addSegmentsToEventExplicit();
     void addTripletsToEventExplicit();
     void addQuintupletsToEventExplicit();
+    void addQuadrupletsToEventExplicit();
     void resetObjectsInModule();
 
     void createMiniDoublets();
@@ -158,6 +165,7 @@ namespace lst {
     void createPixelTriplets();
     void createPixelQuintuplets();
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
+    void createQuadruplets();
 
     unsigned int getNumberOfHits();
     unsigned int getNumberOfHitsByLayer(unsigned int layer);
@@ -194,6 +202,11 @@ namespace lst {
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
+    unsigned int getNumberOfQuadruplets();
+    unsigned int getNumberOfQuadrupletsByLayer(unsigned int layer);
+    unsigned int getNumberOfQuadrupletsByLayerBarrel(unsigned int layer);
+    unsigned int getNumberOfQuadrupletsByLayerEndcap(unsigned int layer);
+
     ObjectRangesBuffer<DevHost>* getRanges();
     HitsBuffer<DevHost>* getHits();
     HitsBuffer<DevHost>* getHitsInCMSSW();
@@ -206,6 +219,7 @@ namespace lst {
     PixelTripletsBuffer<DevHost>* getPixelTriplets();
     PixelQuintupletsBuffer<DevHost>* getPixelQuintuplets();
     ModulesBuffer<DevHost>* getModules(bool isFull = false);
+    QuadrupletsBuffer<DevHost>* getQuadruplets();
   };
 
 }  // namespace lst

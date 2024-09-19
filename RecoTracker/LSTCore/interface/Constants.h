@@ -60,6 +60,9 @@ namespace lst {
   struct Params_T3 {
     static constexpr int kLayers = 3, kHits = 6;
   };
+  struct Params_T4 {
+    static constexpr int kLayers = 4, kHits = 8;
+  };
   struct Params_pT3 {
     static constexpr int kLayers = 5, kHits = 10;
   };

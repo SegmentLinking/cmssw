@@ -429,6 +429,22 @@ void lst::LST<Acc3D>::run(Queue& queue,
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
   }
 
+  event.createQuadruplets();
+  if (verbose) {
+    printf("# of Quadruplets produced: %d\n", event.getNumberOfQuadruplets());
+    printf("# of Quadruplets produced layer 1-2-3-4: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(0));
+    printf("# of Quadruplets produced layer 2: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(1));
+    printf("# of Quadruplets produced layer 3: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(2));
+    printf("# of Quadruplets produced layer 4: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(3));
+    printf("# of Quadruplets produced layer 5: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(4));
+    printf("# of Quadruplets produced layer 6: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(5));
+    printf("# of Quadruplets produced endcap layer 1: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(0));
+    printf("# of Quadruplets produced endcap layer 2: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(1));
+    printf("# of Quadruplets produced endcap layer 3: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(2));
+    printf("# of Quadruplets produced endcap layer 4: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(3));
+    printf("# of Quadruplets produced endcap layer 5: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(4));
+  }
+
   getOutput(event);
 
   event.resetEvent();
