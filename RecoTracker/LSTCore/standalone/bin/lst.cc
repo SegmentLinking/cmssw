@@ -400,6 +400,7 @@ void run_lst() {
     float timing_pT5;
     float timing_pT3;
     float timing_TC;
+    float timing_T4;
 
 #pragma omp for  // nowait// private(event)
     for (int evt = 0; evt < static_cast<int>(out_lstInputHC.size()); evt++) {
@@ -425,6 +426,7 @@ void run_lst() {
       timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);
+      timing_T4 = runQuadruplet(events.at(omp_get_thread_num()));
 
       if (ana.verbose == 4) {
 #pragma omp critical
@@ -470,6 +472,7 @@ void run_lst() {
                                     timing_pT5,
                                     timing_pT3,
                                     timing_TC,
+                                    timing_T4,
                                     timing_resetEvent});
     }
 
