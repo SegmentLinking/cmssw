@@ -2,6 +2,8 @@
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
+constexpr int NUM_HITS = 3;  // Used by T5 DNN
+
 //________________________________________________________________________________________________________________________________
 void createOutputBranches() {
   createRequiredOutputBranches();
@@ -158,7 +160,7 @@ void createOptionalOutputBranches() {
 
 //________________________________________________________________________________________________________________________________
 void createT5DNNBranches() {
-  // T3 branches for T5 DNN
+  // Common branches
   ana.tx->createBranch<std::vector<int>>("t5_t3_idx0");
   ana.tx->createBranch<std::vector<int>>("t5_t3_idx1");
   ana.tx->createBranch<std::vector<int>>("t5_tc_idx");
@@ -166,33 +168,21 @@ void createT5DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_t3_pt");
   ana.tx->createBranch<std::vector<float>>("t5_t3_eta");
   ana.tx->createBranch<std::vector<float>>("t5_t3_phi");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_r");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_x");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_y");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_z");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_eta");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_0_phi");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_0_detId");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_0_layer");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_0_moduleType");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_r");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_x");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_y");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_z");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_eta");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_2_phi");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_2_detId");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_2_layer");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_2_moduleType");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_r");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_x");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_y");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_z");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_eta");
-  ana.tx->createBranch<std::vector<float>>("t5_t3_4_phi");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_4_detId");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_4_layer");
-  ana.tx->createBranch<std::vector<int>>("t5_t3_4_moduleType");
+
+  // Hit-specific branches
+  std::array<std::string, NUM_HITS> hitIndices = {"0", "2", "4"};
+  std::array<std::string, 9> hitProperties = {"r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType"};
+
+  for (const auto& idx : hitIndices) {
+    for (const auto& prop : hitProperties) {
+      std::string branchName = "t5_t3_" + idx + "_" + prop;
+      if (prop == "detId" || prop == "layer" || prop == "moduleType") {
+        ana.tx->createBranch<std::vector<int>>(branchName);
+      } else {
+        ana.tx->createBranch<std::vector<float>>(branchName);
+      }
+    }
+  }
 }
 
 //________________________________________________________________________________________________________________________________
@@ -623,86 +613,58 @@ void setPixelTripletOutputBranches(lst::Event<Acc3D>* event) {
 
 //________________________________________________________________________________________________________________________________
 void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
-  // Get relevant information
   lst::Hits const* hits = event->getHits()->data();
   lst::Modules const* modules = event->getModules()->data();
 
   std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
-  unsigned int hit0 = hitIdx[0];
-  unsigned int hit2 = hitIdx[2];
-  unsigned int hit4 = hitIdx[4];
+  std::array<unsigned int, NUM_HITS> hitIndices = {hitIdx[0], hitIdx[2], hitIdx[4]};
 
-  // Hit locations
-  const float hit0_x = hits->xs[hit0];
-  const float hit0_y = hits->ys[hit0];
-  const float hit0_z = hits->zs[hit0];
-  const float hit0_r = sqrt(hit0_x * hit0_x + hit0_y * hit0_y);
-  lst_math::Hit hitA(hit0_x, hit0_y, hit0_z);
-  const float hit2_x = hits->xs[hit2];
-  const float hit2_y = hits->ys[hit2];
-  const float hit2_z = hits->zs[hit2];
-  const float hit2_r = sqrt(hit2_x * hit2_x + hit2_y * hit2_y);
-  lst_math::Hit hitB(hit2_x, hit2_y, hit2_z);
-  const float hit4_x = hits->xs[hit4];
-  const float hit4_y = hits->ys[hit4];
-  const float hit4_z = hits->zs[hit4];
-  const float hit4_r = sqrt(hit4_x * hit4_x + hit4_y * hit4_y);
-  lst_math::Hit hitC(hit4_x, hit4_y, hit4_z);
+  std::array<lst_math::Hit, NUM_HITS> hitObjects;
+  std::array<float, NUM_HITS> hitR;
 
-  ana.tx->pushbackToBranch<float>("t5_t3_0_r", hit0_r);
-  ana.tx->pushbackToBranch<float>("t5_t3_0_x", hit0_x);
-  ana.tx->pushbackToBranch<float>("t5_t3_0_y", hit0_y);
-  ana.tx->pushbackToBranch<float>("t5_t3_0_z", hit0_z);
-  ana.tx->pushbackToBranch<float>("t5_t3_0_eta", hitA.eta());
-  ana.tx->pushbackToBranch<float>("t5_t3_0_phi", hitA.phi());
-  ana.tx->pushbackToBranch<float>("t5_t3_2_r", hit2_r);
-  ana.tx->pushbackToBranch<float>("t5_t3_2_x", hit2_x);
-  ana.tx->pushbackToBranch<float>("t5_t3_2_y", hit2_y);
-  ana.tx->pushbackToBranch<float>("t5_t3_2_z", hit2_z);
-  ana.tx->pushbackToBranch<float>("t5_t3_2_eta", hitB.eta());
-  ana.tx->pushbackToBranch<float>("t5_t3_2_phi", hitB.phi());
-  ana.tx->pushbackToBranch<float>("t5_t3_4_r", hit4_r);
-  ana.tx->pushbackToBranch<float>("t5_t3_4_x", hit4_x);
-  ana.tx->pushbackToBranch<float>("t5_t3_4_y", hit4_y);
-  ana.tx->pushbackToBranch<float>("t5_t3_4_z", hit4_z);
-  ana.tx->pushbackToBranch<float>("t5_t3_4_eta", hitC.eta());
-  ana.tx->pushbackToBranch<float>("t5_t3_4_phi", hitC.phi());
+  for (int i = 0; i < NUM_HITS; ++i) {
+    unsigned int hit = hitIndices[i];
+    float x = hits->xs[hit];
+    float y = hits->ys[hit];
+    float z = hits->zs[hit];
+    hitObjects[i] = lst_math::Hit(x, y, z);
+    hitR[i] = sqrt(x * x + y * y);
 
-  const int hit0_subdet = trk.ph2_subdet()[hits->idxs[hit0]];
-  const int hit0_is_endcap = hit0_subdet == 4;
-  const int hit0_layer = trk.ph2_layer()[hits->idxs[hit0]] + 6 * (hit0_is_endcap);
-  const int hit0_detId = trk.ph2_detId()[hits->idxs[hit0]];
-  const int hit2_subdet = trk.ph2_subdet()[hits->idxs[hit2]];
-  const int hit2_is_endcap = hit2_subdet == 4;
-  const int hit2_layer = trk.ph2_layer()[hits->idxs[hit2]] + 6 * (hit2_is_endcap);
-  const int hit2_detId = trk.ph2_detId()[hits->idxs[hit2]];
-  const int hit4_subdet = trk.ph2_subdet()[hits->idxs[hit4]];
-  const int hit4_is_endcap = hit4_subdet == 4;
-  const int hit4_layer = trk.ph2_layer()[hits->idxs[hit4]] + 6 * (hit4_is_endcap);
-  const int hit4_detId = trk.ph2_detId()[hits->idxs[hit4]];
+    std::string idx = std::to_string(i * 2);  // "0", "2", "4"
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_r", hitR[i]);
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_x", x);
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_y", y);
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_z", z);
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_eta", hitObjects[i].eta());
+    ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_phi", hitObjects[i].phi());
 
-  unsigned int module0 = hits->moduleIndices[hit0];
-  unsigned int module1 = hits->moduleIndices[hit2];
-  unsigned int module2 = hits->moduleIndices[hit4];
+    int subdet = trk.ph2_subdet()[hits->idxs[hit]];
+    int is_endcap = subdet == 4;
+    int layer = trk.ph2_layer()[hits->idxs[hit]] + 6 * is_endcap;
+    int detId = trk.ph2_detId()[hits->idxs[hit]];
+    unsigned int module = hits->moduleIndices[hit];
 
-  ana.tx->pushbackToBranch<int>("t5_t3_0_detId", hit0_detId);
-  ana.tx->pushbackToBranch<int>("t5_t3_0_layer", hit0_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_0_moduleType", modules->moduleType[module0]);
-  ana.tx->pushbackToBranch<int>("t5_t3_2_detId", hit2_detId);
-  ana.tx->pushbackToBranch<int>("t5_t3_2_layer", hit2_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_2_moduleType", modules->moduleType[module1]);
-  ana.tx->pushbackToBranch<int>("t5_t3_4_detId", hit4_detId);
-  ana.tx->pushbackToBranch<int>("t5_t3_4_layer", hit4_layer);
-  ana.tx->pushbackToBranch<int>("t5_t3_4_moduleType", modules->moduleType[module2]);
+    ana.tx->pushbackToBranch<int>("t5_t3_" + idx + "_detId", detId);
+    ana.tx->pushbackToBranch<int>("t5_t3_" + idx + "_layer", layer);
+    ana.tx->pushbackToBranch<int>("t5_t3_" + idx + "_moduleType", modules->moduleType[module]);
+  }
 
   float g, f;
   lst::DevHost const& devHost = cms::alpakatools::host();
-  float radius = lst::computeRadiusFromThreeAnchorHits(devHost, hit0_x, hit0_y, hit2_x, hit2_y, hit4_x, hit4_y, g, f);
+  float radius = lst::computeRadiusFromThreeAnchorHits(devHost,
+                                                       hitObjects[0].x(),
+                                                       hitObjects[0].y(),
+                                                       hitObjects[1].x(),
+                                                       hitObjects[1].y(),
+                                                       hitObjects[2].x(),
+                                                       hitObjects[2].y(),
+                                                       g,
+                                                       f);
   ana.tx->pushbackToBranch<float>("t5_t3_pt", lst::k2Rinv1GeVf * 2 * radius);
 
   // Angles
-  ana.tx->pushbackToBranch<float>("t5_t3_eta", hitC.eta());
-  ana.tx->pushbackToBranch<float>("t5_t3_phi", hitA.phi());
+  ana.tx->pushbackToBranch<float>("t5_t3_eta", hitObjects[2].eta());
+  ana.tx->pushbackToBranch<float>("t5_t3_phi", hitObjects[0].phi());
 }
 
 //________________________________________________________________________________________________________________________________
