@@ -78,6 +78,7 @@ l1t::GlobalBoard::GlobalBoard()
       m_currentLumi(0),
       m_isDebugEnabled(edm::isDebugEnabled()) {
   m_uGtAlgBlk.reset();
+  m_uGtAXOScore.reset();
 
   m_gtlAlgorithmOR.reset();
   m_gtlDecisionWord.reset();
@@ -192,9 +193,9 @@ void l1t::GlobalBoard::receiveCaloObjectData(const edm::Event& iEvent,
 
           nObj++;
         }  //end loop over EG in bx
-      }    //end loop over bx
-    }      //end if over valid EG data
-  }        //end if ReceiveEG data
+      }  //end loop over bx
+    }  //end if over valid EG data
+  }  //end if ReceiveEG data
 
   if (receiveTau) {
     edm::Handle<BXVector<l1t::Tau>> tauData;
@@ -226,9 +227,9 @@ void l1t::GlobalBoard::receiveCaloObjectData(const edm::Event& iEvent,
           nObj++;
 
         }  //end loop over tau in bx
-      }    //end loop over bx
-    }      //end if over valid tau data
-  }        //end if ReceiveTau data
+      }  //end loop over bx
+    }  //end if over valid tau data
+  }  //end if ReceiveTau data
 
   if (receiveJet) {
     edm::Handle<BXVector<l1t::Jet>> jetData;
@@ -259,9 +260,9 @@ void l1t::GlobalBoard::receiveCaloObjectData(const edm::Event& iEvent,
                                 << "  Qual " << jet->hwQual() << "  Iso " << jet->hwIso();
           nObj++;
         }  //end loop over jet in bx
-      }    //end loop over bx
-    }      //end if over valid jet data
-  }        //end if ReceiveJet data
+      }  //end loop over bx
+    }  //end if over valid jet data
+  }  //end if ReceiveJet data
 
   if (receiveEtSums) {
     edm::Handle<BXVector<l1t::EtSum>> etSumData;
@@ -321,7 +322,7 @@ void l1t::GlobalBoard::receiveCaloObjectData(const edm::Event& iEvent,
 */
 
         }  //end loop over EtSum objects in bx
-      }    //end loop over Bx
+      }  //end loop over Bx
     }
   }
 
@@ -413,9 +414,9 @@ void l1t::GlobalBoard::receiveMuonObjectData(const edm::Event& iEvent,
                                 << mu->hwPhiAtVtx() << "  Qual " << mu->hwQual() << "  Iso " << mu->hwIso();
           nObj++;
         }  //end loop over muons in bx
-      }    //end loop over bx
-    }      //end if over valid muon data
-  }        //end if ReceiveMuon data
+      }  //end loop over bx
+    }  //end if over valid muon data
+  }  //end if ReceiveMuon data
 }
 
 // receive muon shower data from Global Muon Trigger
@@ -477,9 +478,9 @@ void l1t::GlobalBoard::receiveMuonShowerObjectData(const edm::Event& iEvent,
           }
           nObj++;
         }  //end loop over muon showers in bx
-      }    //end loop over bx
-    }      //end if over valid muon shower data
-  }        //end if ReceiveMuonShower data
+      }  //end loop over bx
+    }  //end if over valid muon shower data
+  }  //end if ReceiveMuonShower data
 }
 
 // receive data from Global External Conditions
@@ -514,9 +515,25 @@ void l1t::GlobalBoard::receiveExternalData(const edm::Event& iEvent,
         for (std::vector<GlobalExtBlk>::const_iterator ext = extData->begin(i); ext != extData->end(i); ++ext) {
           (*m_candL1External).push_back(i, &(*ext));
         }  //end loop over ext in bx
-      }    //end loop over bx
-    }      //end if over valid ext data
-  }        //end if ReceiveExt data
+      }  //end loop over bx
+    }  //end if over valid ext data
+  }  //end if ReceiveExt data
+}
+
+// fill axo score value per bx in event
+void l1t::GlobalBoard::fillAXOScore(int iBxInEvent, std::unique_ptr<AXOL1TLScoreBxCollection>& AxoScoreRecord) {
+  m_uGtAXOScore.reset();
+  m_uGtAXOScore.setbxInEventNr((iBxInEvent & 0xF));
+
+  //save stored condition score if Bx is zero, else set to 0
+  float scorevalue = 0.0;
+  if (iBxInEvent == 0) {
+    scorevalue = m_storedAXOScore;
+  }
+
+  //set dataformat value
+  m_uGtAXOScore.setAXOScore(scorevalue);
+  AxoScoreRecord->push_back(iBxInEvent, m_uGtAXOScore);
 }
 
 // run GTL
@@ -681,6 +698,12 @@ void l1t::GlobalBoard::runGTL(const edm::Event&,
           axol1tlCondition->evaluateConditionStoreResult(iBxInEvent);
 
           cMapResults[itCond->first] = axol1tlCondition;
+
+          //for optional software-only saving of axol1tl score
+          //m_storedAXOScore < 0.0 ensures only sets once per condition if score not default of -999
+          if (m_saveAXOScore && m_storedAXOScore < 0.0) {
+            m_storedAXOScore = axol1tlCondition->getScore();
+          }
 
           if (m_verbosity && m_isDebugEnabled) {
             std::ostringstream myCout;
@@ -1098,7 +1121,7 @@ void l1t::GlobalBoard::runFDL(const edm::Event& iEvent,
               // change bit to false in prescaled word and final decision word
               m_uGtAlgBlk.setAlgoDecisionInterm(iBit, false);
             }  //if Prescale counter reached zero
-          }    //if prescale factor is not 1 (ie. no prescale)
+          }  //if prescale factor is not 1 (ie. no prescale)
           else {
             temp_algPrescaledOr = true;
           }
@@ -1108,7 +1131,7 @@ void l1t::GlobalBoard::runFDL(const edm::Event& iEvent,
           edm::LogWarning("L1TGlobal") << "\nWarning: algoBit >= prescaleFactorsAlgoTrig.size() in bx " << iBxInEvent;
         }
       }  //if algo bit is set true
-    }    //loop over alg bits
+    }  //loop over alg bits
 
     m_algPrescaledOr = temp_algPrescaledOr;  //temp
 
@@ -1195,6 +1218,10 @@ void l1t::GlobalBoard::reset() {
   resetExternal();
 
   m_uGtAlgBlk.reset();
+
+  //reset AXO score
+  m_storedAXOScore = -999.0;
+  m_uGtAXOScore.reset();
 
   m_gtlDecisionWord.reset();
   m_gtlAlgorithmOR.reset();

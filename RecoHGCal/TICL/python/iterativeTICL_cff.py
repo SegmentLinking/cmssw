@@ -17,6 +17,7 @@ from RecoHGCal.TICL.trackstersMergeProducer_cfi import trackstersMergeProducer a
 from RecoHGCal.TICL.tracksterSelectionTf_cfi import *
 
 from RecoHGCal.TICL.tracksterLinksProducer_cfi import tracksterLinksProducer as _tracksterLinksProducer
+from RecoHGCal.TICL.superclustering_cff import *
 from RecoHGCal.TICL.ticlCandidateProducer_cfi import ticlCandidateProducer as _ticlCandidateProducer
 
 from RecoHGCal.TICL.mtdSoAProducer_cfi import mtdSoAProducer as _mtdSoAProducer
@@ -37,15 +38,15 @@ ticlCandidate = _ticlCandidateProducer.clone()
 mtdSoA = _mtdSoAProducer.clone()
 
 pfTICL = _pfTICLProducer.clone()
-ticl_v5.toModify(pfTICL, ticlCandidateSrc = cms.InputTag('ticlCandidate'), isTICLv5 = cms.bool(True))
+ticl_v5.toModify(pfTICL, ticlCandidateSrc = cms.InputTag('ticlCandidate'), isTICLv5 = cms.bool(True), useTimingAverage=True)
 
 ticlPFTask = cms.Task(pfTICL)
 
 ticlIterationsTask = cms.Task(
-    ticlCLUE3DHighStepTask,
-    ticlPassthroughStepTask
-
+    ticlCLUE3DHighStepTask
 )
+
+ticl_v5.toModify(ticlIterationsTask , func=lambda x : x.add(ticlPassthroughStepTask))
 ''' For future separate iterations
 ,ticlCLUE3DEMStepTask,
 ,ticlCLUE3DHADStepTask
@@ -64,7 +65,8 @@ ticlIterLabels = ["CLUE3DHigh"]
 '''
 
 ticlTracksterMergeTask = cms.Task(ticlTrackstersMerge)
-ticlTracksterLinksTask = cms.Task(ticlTracksterLinks)
+ticlTracksterLinksTask = cms.Task(ticlTracksterLinks, ticlSuperclusteringTask) 
+
 
 mergeTICLTask = cms.Task(ticlLayerTileTask
     ,ticlIterationsTask
