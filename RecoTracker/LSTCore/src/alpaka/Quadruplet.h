@@ -2570,11 +2570,23 @@ namespace lst {
         for (unsigned int innerTripletArrayIndex = globalThreadIdx[1]; innerTripletArrayIndex < nInnerTriplets;
              innerTripletArrayIndex += gridThreadExtent[1]) {
           unsigned int innerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule1] + innerTripletArrayIndex;
+          if (tripletsInGPU.partOfPT5[innerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in pT5s
+          if (tripletsInGPU.partOfPT3[innerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in pT3s
+          if (tripletsInGPU.partOfT5[innerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in T5s
           uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 1];
           unsigned int nOuterTriplets = tripletsInGPU.nTriplets[lowerModule2];
           for (unsigned int outerTripletArrayIndex = globalThreadIdx[2]; outerTripletArrayIndex < nOuterTriplets;
                outerTripletArrayIndex += gridThreadExtent[2]) {
             unsigned int outerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule2] + outerTripletArrayIndex;
+            if (tripletsInGPU.partOfPT5[outerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in pT5s
+            if (tripletsInGPU.partOfPT3[outerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in pT3s
+            if (tripletsInGPU.partOfT5[outerTripletIndex])
+              continue;  //don't create T4s for T3s accounted in T5s
             uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
 

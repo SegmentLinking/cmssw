@@ -136,6 +136,8 @@ void createOptionalOutputBranches() {
 
   // T4 branches
   ana.tx->createBranch<std::vector<float>>("t4_count");
+  ana.tx->createBranch<std::vector<int>>("t4_moduleType_binary");
+  ana.tx->createBranch<std::vector<int>>("t4_layer_binary");
 
   // Occupancy branches
   ana.tx->createBranch<std::vector<int>>("module_layers");
@@ -601,16 +603,16 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       // float eta = __H2F(quadruplets->eta[quadrupletIndex]);
       // float phi = __H2F(quadruplets->phi[quadrupletIndex]);
 
-      // std::vector<unsigned int> hit_idx = getHitIdxsFromT5(event, quintupletIndex);
-      // std::vector<unsigned int> hit_type = getHitTypesFromT5(event, quintupletIndex);
-      // std::vector<unsigned int> module_idx = getModuleIdxsFromT5(event, quintupletIndex);
+      std::vector<unsigned int> hit_idx = getHitIdxsFromT4(event, quadrupletIndex);
+      std::vector<unsigned int> hit_type = getHitTypesFromT4(event, quadrupletIndex);
+      std::vector<unsigned int> module_idx = getModuleIdxsFromT4(event, quadrupletIndex);
 
-      // int layer_binary = 0;
-      // int moduleType_binary = 0;
-      // for (size_t i = 0; i < module_idx.size(); i += 2) {
-      //   layer_binary |= (1 << (modules->layers[module_idx[i]] + 6 * (modules->subdets[module_idx[i]] == 4)));
-      //   moduleType_binary |= (modules->moduleType[module_idx[i]] << i);
-      // }
+      int layer_binary = 0;
+      int moduleType_binary = 0;
+      for (size_t i = 0; i < module_idx.size(); i += 2) {
+        layer_binary |= (1 << (modules->layers[module_idx[i]] + 6 * (modules->subdets[module_idx[i]] == 4)));
+        moduleType_binary |= (modules->moduleType[module_idx[i]] << i);
+      }
 
       // std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
 
@@ -623,8 +625,8 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       // ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets->outerRadius[quintupletIndex]));
       // ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets->chiSquared[quintupletIndex]);
       // ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets->rzChiSquared[quintupletIndex]);
-      // ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
-      // ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
+      ana.tx->pushbackToBranch<int>("t4_layer_binary", layer_binary);
+      ana.tx->pushbackToBranch<int>("t4_moduleType_binary", moduleType_binary);
       ana.tx->pushbackToBranch<float>("t4_count", 1);
 
       // t5_matched_simIdx.push_back(simidx);
