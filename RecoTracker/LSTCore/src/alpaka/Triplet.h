@@ -209,15 +209,15 @@ namespace lst {
                                                        struct lst::Modules const& modulesInGPU,
                                                        struct lst::MiniDoublets const& mdsInGPU,
                                                        struct lst::Segments const& segmentsInGPU,
-                                                       uint16_t& innerInnerLowerModuleIndex,
-                                                       uint16_t& middleLowerModuleIndex,
-                                                       uint16_t& outerOuterLowerModuleIndex,
-                                                       unsigned int& firstMDIndex,
-                                                       unsigned int& secondMDIndex,
-                                                       unsigned int& thirdMDIndex,
-                                                       float& circleRadius,
-                                                       float& circleCenterX, 
-                                                       float& circleCenterY) {
+                                                       uint16_t innerInnerLowerModuleIndex,
+                                                       uint16_t middleLowerModuleIndex,
+                                                       uint16_t outerOuterLowerModuleIndex,
+                                                       unsigned int firstMDIndex,
+                                                       unsigned int secondMDIndex,
+                                                       unsigned int thirdMDIndex,
+                                                       float circleRadius,
+                                                       float circleCenterX, 
+                                                       float circleCenterY) {
 
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.lstLayers[innerInnerLowerModuleIndex];
@@ -233,23 +233,26 @@ namespace lst {
     const float z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
     const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
 
-    float residual = 100 * (z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    //use linear approximation for regions 9 and 20-24 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
+    float residual = 100 * alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+
+    //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 1 && layer2 == 7) {
-      return alpaka::math::abs(acc, residual) < 1.0f;          // Region 9
+      return residual < 1.0f;          // Region 9
     } else if (layer1 == 3 && layer2==4) {
       if (layer3 == 5) {
-        return alpaka::math::abs(acc, residual) < 3.7127972f;  // Region 20
+        return residual < 3.7127972f;  // Region 20
       } else if (layer3 == 12) {
-        return alpaka::math::abs(acc, residual) < 5.0f;        // Region 21
+        return residual < 5.0f;        // Region 21
       }
     } else if (layer1 == 4) {
       if (layer2 == 12) {
-        return alpaka::math::abs(acc, residual) < 6.3831687f;  // Region 22
+        return residual < 6.3831687f;  // Region 22
       } else if (layer2 == 5) {
         if (layer3 == 6) {
-          return alpaka::math::abs(acc, residual) < 4.362525f; // Region 23
+          return residual < 4.362525f; // Region 23
         } else if (layer3 == 12) {
-          return alpaka::math::abs(acc, residual) < 5.0f;      // Region 24
+          return residual < 5.0f;      // Region 24
         }
       }
     } 
@@ -280,7 +283,7 @@ namespace lst {
     float z_other = z1;
     float r_other = r1;
 
-    //use MD2 for regions 5 and 19
+    //use MD2 for regions 5 and 19 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
     if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
       x_init = x1;
       y_init = y1;
@@ -372,14 +375,14 @@ namespace lst {
       }
     }
 
-    //But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
+    //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
       Px = -alpaka::math::abs(acc, Px);
-    if (x3 > x2 && x2 > x1)
+    else if (x3 > x2 && x2 > x1)
       Px = alpaka::math::abs(acc, Px);
     if (y3 < y2 && y2 < y1)
       Py = -alpaka::math::abs(acc, Py);
-    if (y3 > y2 && y2 > y1)
+    else if (y3 > y2 && y2 > y1)
       Py = alpaka::math::abs(acc, Py);
 
     float AO = alpaka::math::sqrt(acc, (x_other - x_center) * (x_other - x_center) + (y_other - y_center) * (y_other - y_center)); 
@@ -454,7 +457,7 @@ namespace lst {
 
     rzChiSquared = 12 * (residual * residual) / (error * error);
 
-    //helix calculation failed, use linear approximation
+    //helix calculation returns NaN, use linear approximation
     if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
       float slope = (z_other - z1) / (r_other - r1);
 
@@ -466,7 +469,8 @@ namespace lst {
       return rzChiSquared < 2.7711823f;
     }
 
-    // cuts
+    //cuts for different regions
+    //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 7) {
       if (layer2 == 8) {
         if (layer3 == 9) {
