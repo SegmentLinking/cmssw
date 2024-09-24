@@ -234,25 +234,25 @@ namespace lst {
     const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
 
     //use linear approximation for regions 9 and 20-24 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
-    float residual = 100 * alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
+    float residual = alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
 
     //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 1 && layer2 == 7) {
-      return residual < 1.0f;          // Region 9
+      return residual < 0.001f;          // Region 9
     } else if (layer1 == 3 && layer2==4) {
       if (layer3 == 5) {
-        return residual < 3.7127972f;  // Region 20
+        return residual < 0.0037127972f;  // Region 20
       } else if (layer3 == 12) {
-        return residual < 5.0f;        // Region 21
+        return residual < 0.005f;        // Region 21
       }
     } else if (layer1 == 4) {
       if (layer2 == 12) {
-        return residual < 6.3831687f;  // Region 22
+        return residual < 0.0063831687f;  // Region 22
       } else if (layer2 == 5) {
         if (layer3 == 6) {
-          return residual < 4.362525f; // Region 23
+          return residual < 0.004362525f; // Region 23
         } else if (layer3 == 12) {
-          return residual < 5.0f;      // Region 24
+          return residual < 0.005f;      // Region 24
         }
       }
     } 
@@ -283,6 +283,8 @@ namespace lst {
     float z_other = z1;
     float r_other = r1;
 
+    float dz = z2 - z1;
+
     //use MD2 for regions 5 and 19 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
     if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
       x_init = x1;
@@ -297,6 +299,8 @@ namespace lst {
       y_other = y3;
       z_other = z3;
       r_other = r3;
+
+      dz = z3 - z1;
     }
 
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
@@ -336,13 +340,17 @@ namespace lst {
         charge = 1;
       else
         charge = -1;
+    } else {
+#ifdef WARNINGS
+      printf("The charge cannot be computed!\n");
+#endif
     }
 
     //get the absolute value of px and py at the initial point
     float pseudo_phi = alpaka::math::atan(
         acc, (y_init - y_center) / (x_init - x_center));  //actually represent pi/2-phi, wrt helix axis z
     float Px = Pt * alpaka::math::abs(acc, alpaka::math::sin(acc, pseudo_phi)),
-          Py = Pt * alpaka::math::abs(acc, cos(pseudo_phi));
+          Py = Pt * alpaka::math::abs(acc, alpaka::math::cos(acc, pseudo_phi));
 
     //Above line only gives you the correct value of Px and Py, but signs of Px and Py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
@@ -390,12 +398,7 @@ namespace lst {
     float AB2 = (x_other - x_init) * (x_other - x_init) + (y_other - y_init) * (y_other - y_init); 
     float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
     float ds = circleRadius / 100 * dPhi;
-    float Pz = (z2 - z1) / ds * Pt; 
-
-    //for regions 5 and 19
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
-      Pz = (z3 - z1) / ds * Pt;
-    }
+    float Pz = dz / ds * Pt; 
 
     float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
     float a = -2.f * k2Rinv1GeVf * 100 * charge;
@@ -463,10 +466,9 @@ namespace lst {
 
       residual = (layer3 <= 6) ? ((z_target - z1) - slope * (r_target - r1)) : ((r_target - r1) - (z_target - z1) / slope);
       residual = (moduleType3 == 0) ? residual / 0.15f : residual / 5.0f;
-      residual = residual * 100;
 
       rzChiSquared = 12 * residual * residual;
-      return rzChiSquared < 2.7711823f;
+      return rzChiSquared < 2.7711823e-4;
     }
 
     //cuts for different regions
