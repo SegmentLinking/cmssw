@@ -140,7 +140,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run CMSSW 21034.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run CMSSW 24834.703${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
           status: in_progress
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
@@ -148,7 +148,7 @@ jobs:
       - name: Build and run PR
         timeout-minutes: 200
         id: build-and-run
-        uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
+        uses: SegmentLinking/TrackLooper-actions/cmssw@upgrade_to_14_2_x
         with:
           pr-number: ${{ github.event.issue.number }}
           low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true' || 'false' }}
@@ -194,7 +194,7 @@ jobs:
         with:
           token: ${{ steps.app-token-end.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run CMSSW 21034.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run CMSSW 24834.703${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
           conclusion: ${{ job.status }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
