@@ -238,21 +238,21 @@ namespace lst {
 
     //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 1 && layer2 == 7) {
-      return residual < 0.001f;          // Region 9
+      return residual < 0.01f;          // Region 9
     } else if (layer1 == 3 && layer2==4) {
       if (layer3 == 5) {
-        return residual < 0.0037127972f;  // Region 20
+        return residual < 0.037127972f;  // Region 20
       } else if (layer3 == 12) {
-        return residual < 0.005f;        // Region 21
+        return residual < 0.05f;        // Region 21
       }
     } else if (layer1 == 4) {
       if (layer2 == 12) {
-        return residual < 0.0063831687f;  // Region 22
+        return residual < 0.063831687f;  // Region 22
       } else if (layer2 == 5) {
         if (layer3 == 6) {
-          return residual < 0.004362525f; // Region 23
+          return residual < 0.04362525f; // Region 23
         } else if (layer3 == 12) {
-          return residual < 0.005f;      // Region 24
+          return residual < 0.05f;      // Region 24
         }
       }
     } 
@@ -347,10 +347,10 @@ namespace lst {
     }
 
     //get the absolute value of px and py at the initial point
-    float pseudo_phi = alpaka::math::atan(
-        acc, (y_init - y_center) / (x_init - x_center));  //actually represent pi/2-phi, wrt helix axis z
-    float Px = Pt * alpaka::math::abs(acc, alpaka::math::sin(acc, pseudo_phi)),
-          Py = Pt * alpaka::math::abs(acc, alpaka::math::cos(acc, pseudo_phi));
+    float cot_phi_abs = alpaka::math::abs(acc, (y_init - y_center) / (x_init - x_center)); //absolute value of cot(phi)
+    float Px = Pt * cot_phi_abs / alpaka::math::sqrt(acc, 1 + cot_phi_abs * cot_phi_abs);  //Px = Pt * cos(phi)
+    float Py = Px / cot_phi_abs; //Py = Pt * sin(phi)
+    
 
     //Above line only gives you the correct value of Px and Py, but signs of Px and Py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
