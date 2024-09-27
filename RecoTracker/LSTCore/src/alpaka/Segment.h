@@ -202,46 +202,26 @@ namespace lst {
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float moduleGapSize_seg(short layer, short ring, short subdet, short side, short rod) {
-    static constexpr float miniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
-    static constexpr float miniDeltaFlat[6] = {0.26f, 0.16f, 0.16f, 0.18f, 0.18f, 0.18f};
-    static constexpr float miniDeltaLooseTilted[3] = {0.4f, 0.4f, 0.4f};
-    static constexpr float miniDeltaEndcap[5][15] = {
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
-
     unsigned int iL = layer - 1;
     unsigned int iR = ring - 1;
 
     float moduleSeparation = 0;
 
     if (subdet == Barrel and side == Center) {
-      moduleSeparation = miniDeltaFlat[iL];
+      moduleSeparation = kMiniDeltaFlat[iL];
     } else if (isTighterTiltedModules_seg(subdet, layer, side, rod)) {
-      moduleSeparation = miniDeltaTilted[iL];
+      moduleSeparation = kMiniDeltaTilted[iL];
     } else if (subdet == Endcap) {
-      moduleSeparation = miniDeltaEndcap[iL][iR];
+      moduleSeparation = kMiniDeltaEndcap[iL][iR];
     } else  //Loose tilted modules
     {
-      moduleSeparation = miniDeltaLooseTilted[iL];
+      moduleSeparation = kMiniDeltaLooseTilted[iL];
     }
 
     return moduleSeparation;
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float moduleGapSize_seg(lst::Modules const& modulesInGPU, unsigned int moduleIndex) {
-    static constexpr float miniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
-    static constexpr float miniDeltaFlat[6] = {0.26f, 0.16f, 0.16f, 0.18f, 0.18f, 0.18f};
-    static constexpr float miniDeltaLooseTilted[3] = {0.4f, 0.4f, 0.4f};
-    static constexpr float miniDeltaEndcap[5][15] = {
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
-        {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
-
     unsigned int iL = modulesInGPU.layers[moduleIndex] - 1;
     unsigned int iR = modulesInGPU.rings[moduleIndex] - 1;
     short subdet = modulesInGPU.subdets[moduleIndex];
@@ -250,14 +230,14 @@ namespace lst {
     float moduleSeparation = 0;
 
     if (subdet == Barrel and side == Center) {
-      moduleSeparation = miniDeltaFlat[iL];
+      moduleSeparation = kMiniDeltaFlat[iL];
     } else if (isTighterTiltedModules_seg(modulesInGPU, moduleIndex)) {
-      moduleSeparation = miniDeltaTilted[iL];
+      moduleSeparation = kMiniDeltaTilted[iL];
     } else if (subdet == Endcap) {
-      moduleSeparation = miniDeltaEndcap[iL][iR];
+      moduleSeparation = kMiniDeltaEndcap[iL][iR];
     } else  //Loose tilted modules
     {
-      moduleSeparation = miniDeltaLooseTilted[iL];
+      moduleSeparation = kMiniDeltaLooseTilted[iL];
     }
 
     return moduleSeparation;
