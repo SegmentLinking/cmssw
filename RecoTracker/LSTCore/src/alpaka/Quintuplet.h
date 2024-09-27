@@ -1244,14 +1244,14 @@ namespace lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterations(TAcc const& acc,
-                                                               float& betaIn,
-                                                               float& betaOut,
-                                                               float betaAv,
-                                                               float& pt_beta,
-                                                               float sdIn_dr,
-                                                               float sdOut_dr,
-                                                               float dr,
-                                                               float lIn) {
+                                                             float& betaIn,
+                                                             float& betaOut,
+                                                             float betaAv,
+                                                             float& pt_beta,
+                                                             float sdIn_dr,
+                                                             float sdOut_dr,
+                                                             float dr,
+                                                             float lIn) {
     if (lIn == 0) {
       betaOut += alpaka::math::copysign(
           acc,
