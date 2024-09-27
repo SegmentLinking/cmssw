@@ -102,6 +102,27 @@ Note that the destination (device-side) type `TDst` can be different from or the
 
 The `CopyToDevice` class template is partially specialized for all `PortableCollection` instantiations.
 
+#### Data products with `memcpy()`ed pointers
+
+If the data product in question contains pointers to memory elsewhere within the data product, after the `alpaka::memcpy()` calls in the `copyAsync()` those pointers still point to device memory, and need to be updated. **Such data products are generally discouraged.** Nevertheless, such pointers can be updated without any additional synchronization by implementing a `postCopy()` function in the `CopyToHost` specialization along (extending the `CopyToHost` example [above](#edproducer))
+```cpp
+namespace cms::alpakatools {
+  template <>
+  struct CopyToHost<TSrc> {
+    // copyAsync() definition from above
+
+    static void postCopy(TDst& obj) {
+      // modify obj
+      // any modifications must be such that the postCopy() can be
+      // skipped when the obj originates from the host (i.e. on CPU backends)
+    }
+  };
+}
+```
+The `postCopy()` is called after the operations enqueued in the `copyAsync()` have finished. The code in `postCopy()` must be such that the call to `postCopy()` can be omitted on CPU backends.
+
+Note that for `CopyToDevice` such `postCopy()` functionality is **not** provided. It should be possible to a issue kernel call (via an intermediate host-side function) from the `CopyToDevice::copyAsync()` function to achieve the same effect.
+
 ### `PortableCollection`
 
 For more information see [`DataFormats/Portable/README.md`](../../DataFormats/Portable/README.md) and [`DataFormats/SoATemplate/README.md`](../../DataFormats/SoATemplate/README.md).
@@ -358,13 +379,8 @@ There are a few different options for using Alpaka-based modules in the CMSSW co
 In all cases the configuration must load the necessary `ProcessAccelerator` objects (see below) For accelerators used in production, these are aggregated in `Configuration.StandardSequences.Accelerators_cff`. The `runTheMatrix.py` handles the loading of this `Accelerators_cff` automatically. The HLT menus also load the necessary `ProcessAccelerator`s.
 ```python
 ## Load explicitly
-# One ProcessAccelerator for each accelerator technology
+# One ProcessAccelerator for each accelerator technology, plus a generic one for Alpaka
 process.load("Configuration.StandardSequences.Accelerators_cff")
-
-# And one ProcessAccelerator for Alpaka
-# (eventually to be absorbed to Accelerators_cff)
-process.load("HeterogeneousCore.AlpakaCore.ProcessAcceleratorAlpaka_cfi")
-
 ```
 
 ### Explicit module type (non-portable)

@@ -61,8 +61,6 @@ namespace pixelCPEforDevice {
   struct CommonParams {
     float theThicknessB;
     float theThicknessE;
-    float thePitchX;
-    float thePitchY;
 
     uint16_t maxModuleStride;
     uint8_t numberOfLaddersInBarrel;
@@ -77,6 +75,8 @@ namespace pixelCPEforDevice {
 
     float shiftX;
     float shiftY;
+    float thePitchX;
+    float thePitchY;
     float chargeWidthX;
     float chargeWidthY;
     uint16_t pixmx;  // max pix charge
@@ -234,17 +234,16 @@ namespace pixelCPEforDevice {
     if (cp.minCol[ic] == 0 || cp.maxCol[ic] == uint32_t(detParams.nCols - 1))
       cp.ysize[ic] = -cp.ysize[ic];
 
-    // apply the lorentz offset correction
-    float xoff = 0.5f * float(detParams.nRows) * comParams.thePitchX;
-    float yoff = 0.5f * float(detParams.nCols) * comParams.thePitchY;
-
-    //correction for bigpixels for phase1
-    xoff = xoff + TrackerTraits::bigPixXCorrection * comParams.thePitchX;
-    yoff = yoff + TrackerTraits::bigPixYCorrection * comParams.thePitchY;
-
-    // apply the lorentz offset correction
-    auto xPos = detParams.shiftX + (comParams.thePitchX * 0.5f * float(mx)) - xoff;
-    auto yPos = detParams.shiftY + (comParams.thePitchY * 0.5f * float(my)) - yoff;
+    // Compute the position relative to the center of the module, taking into account the corrections for
+    // the Phase 1 big pixels, the module pitch, and the Lorentz shift.
+    // Use an explicit FMA instruction instead of simply (position * pitch + shift) to make sure that
+    // different compiler optimizations do not produce different code on different architectures.
+    float xPos = std::fmaf(0.5f * ((float)mx - (float)detParams.nRows) - TrackerTraits::bigPixXCorrection,
+                           detParams.thePitchX,
+                           detParams.shiftX);
+    float yPos = std::fmaf(0.5f * ((float)my - (float)detParams.nCols) - TrackerTraits::bigPixYCorrection,
+                           detParams.thePitchY,
+                           detParams.shiftY);
 
     float cotalpha = 0, cotbeta = 0;
 
@@ -252,7 +251,7 @@ namespace pixelCPEforDevice {
 
     auto thickness = detParams.isBarrel ? comParams.theThicknessB : comParams.theThicknessE;
 
-    auto xcorr = correction(cp.maxRow[ic] - cp.minRow[ic],
+    auto xCorr = correction(cp.maxRow[ic] - cp.minRow[ic],
                             cp.q_f_X[ic],
                             cp.q_l_X[ic],
                             llxl,
@@ -260,11 +259,11 @@ namespace pixelCPEforDevice {
                             detParams.chargeWidthX,  // lorentz shift in cm
                             thickness,
                             cotalpha,
-                            comParams.thePitchX,
+                            detParams.thePitchX,
                             TrackerTraits::isBigPixX(cp.minRow[ic]),
                             TrackerTraits::isBigPixX(cp.maxRow[ic]));
 
-    auto ycorr = correction(cp.maxCol[ic] - cp.minCol[ic],
+    auto yCorr = correction(cp.maxCol[ic] - cp.minCol[ic],
                             cp.q_f_Y[ic],
                             cp.q_l_Y[ic],
                             llyl,
@@ -272,12 +271,12 @@ namespace pixelCPEforDevice {
                             detParams.chargeWidthY,  // lorentz shift in cm
                             thickness,
                             cotbeta,
-                            comParams.thePitchY,
+                            detParams.thePitchY,
                             TrackerTraits::isBigPixY(cp.minCol[ic]),
                             TrackerTraits::isBigPixY(cp.maxCol[ic]));
 
-    cp.xpos[ic] = xPos + xcorr;
-    cp.ypos[ic] = yPos + ycorr;
+    cp.xpos[ic] = xPos + xCorr;
+    cp.ypos[ic] = yPos + yCorr;
   }
 
   template <typename TrackerTraits>
@@ -375,7 +374,7 @@ namespace pixelCPEforDevice {
     cp.status[ic].isOneY = isOneY;
     cp.status[ic].isBigY = (isOneY & isBigY) | isEdgeY;
 
-    auto xoff = -float(TrackerTraits::xOffset) * comParams.thePitchX;
+    auto xoff = -float(TrackerTraits::xOffset) * detParams.thePitchX;
     int low_value = 0;
     int high_value = kNumErrorBins - 1;
     int bin_value = float(kNumErrorBins) * (cp.xpos[ic] + xoff) / (2 * xoff);
