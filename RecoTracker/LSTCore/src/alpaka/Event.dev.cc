@@ -2010,16 +2010,11 @@ lst::QuadrupletsBuffer<DevHost>* lst::Event<Acc3D>::getQuadruplets() {
                    quadrupletsBuffers->lowerModuleIndices_buf,
                    Params_T4::kLayers * nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->innerRadius_buf, quadrupletsBuffers->innerRadius_buf, nMemHost);
-    alpaka::memcpy(queue, quadrupletsInCPU->bridgeRadius_buf, quadrupletsBuffers->bridgeRadius_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->outerRadius_buf, quadrupletsBuffers->outerRadius_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->isDup_buf, quadrupletsBuffers->isDup_buf, nMemHost);
-    alpaka::memcpy(queue, quadrupletsInCPU->score_rphisum_buf, quadrupletsBuffers->score_rphisum_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->eta_buf, quadrupletsBuffers->eta_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->phi_buf, quadrupletsBuffers->phi_buf, nMemHost);
-    alpaka::memcpy(queue, quadrupletsInCPU->chiSquared_buf, quadrupletsBuffers->chiSquared_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->rzChiSquared_buf, quadrupletsBuffers->rzChiSquared_buf, nMemHost);
-    alpaka::memcpy(
-        queue, quadrupletsInCPU->nonAnchorChiSquared_buf, quadrupletsBuffers->nonAnchorChiSquared_buf, nMemHost);
     alpaka::wait(queue);
   }
   return quadrupletsInCPU;
