@@ -1697,6 +1697,7 @@ lst::ObjectRangesBuffer<DevHost>* lst::Event<Acc3D>::getRanges() {
 
     alpaka::memcpy(queue, rangesInCPU->hitRanges_buf, rangesBuffers->hitRanges_buf);
     alpaka::memcpy(queue, rangesInCPU->quintupletModuleIndices_buf, rangesBuffers->quintupletModuleIndices_buf);
+    alpaka::memcpy(queue, rangesInCPU->quadrupletModuleIndices_buf, rangesBuffers->quadrupletModuleIndices_buf);
     alpaka::memcpy(queue, rangesInCPU->miniDoubletModuleIndices_buf, rangesBuffers->miniDoubletModuleIndices_buf);
     alpaka::memcpy(queue, rangesInCPU->segmentModuleIndices_buf, rangesBuffers->segmentModuleIndices_buf);
     alpaka::memcpy(queue, rangesInCPU->tripletModuleIndices_buf, rangesBuffers->tripletModuleIndices_buf);

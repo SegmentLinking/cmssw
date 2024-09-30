@@ -2453,7 +2453,7 @@ namespace lst {
 
     computeSigmasForRegressionT4(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegressionT4(acc,
-                                                    Params_T5::kLayers,
+                                                    Params_T4::kLayers,
                                                     xVec,
                                                     yVec,
                                                     delta1,
@@ -2502,7 +2502,7 @@ namespace lst {
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[Params_T5::kLayers], nonAnchorDelta2[Params_T5::kLayers], nonAnchorSlopes[Params_T5::kLayers];
+    float nonAnchorDelta1[Params_T4::kLayers], nonAnchorDelta2[Params_T4::kLayers], nonAnchorSlopes[Params_T4::kLayers];
     float nonAnchorxs[] = {mdsInGPU.outerX[firstMDIndex],
                            mdsInGPU.outerX[secondMDIndex],
                            mdsInGPU.outerX[thirdMDIndex],
@@ -2521,10 +2521,10 @@ namespace lst {
                                nonAnchorDelta2,
                                nonAnchorSlopes,
                                isFlat,
-                               Params_T5::kLayers,
+                               Params_T4::kLayers,
                                false);
     nonAnchorChiSquared = computeT4ChiSquared(acc,
-                                            Params_T5::kLayers,
+                                            Params_T4::kLayers,
                                             nonAnchorxs,
                                             nonAnchorys,
                                             nonAnchorDelta1,
