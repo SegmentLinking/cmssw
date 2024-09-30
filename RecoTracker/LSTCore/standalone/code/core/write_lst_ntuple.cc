@@ -2,7 +2,7 @@
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 
-constexpr int NUM_HITS = 3;  // Used by T5 DNN
+constexpr int NUM_HITS = 6;  // Used by T5 DNN
 
 //________________________________________________________________________________________________________________________________
 void createOutputBranches() {
@@ -170,7 +170,7 @@ void createT5DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_t3_phi");
 
   // Hit-specific branches
-  std::array<std::string, NUM_HITS> hitIndices = {"0", "2", "4"};
+  std::array<std::string, NUM_HITS> hitIndices = {"0", "1", "2", "3", "4", "5"};
   std::array<std::string, 9> hitProperties = {"r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType"};
 
   for (const auto& idx : hitIndices) {
@@ -617,20 +617,19 @@ void fillT5DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
   lst::Modules const* modules = event->getModules()->data();
 
   std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
-  std::array<unsigned int, NUM_HITS> hitIndices = {hitIdx[0], hitIdx[2], hitIdx[4]};
 
   std::array<lst_math::Hit, NUM_HITS> hitObjects;
   std::array<float, NUM_HITS> hitR;
 
   for (int i = 0; i < NUM_HITS; ++i) {
-    unsigned int hit = hitIndices[i];
+    unsigned int hit = hitIdx[i];
     float x = hits->xs[hit];
     float y = hits->ys[hit];
     float z = hits->zs[hit];
     hitObjects[i] = lst_math::Hit(x, y, z);
     hitR[i] = sqrt(x * x + y * y);
 
-    std::string idx = std::to_string(i * 2);  // "0", "2", "4"
+    std::string idx = std::to_string(i);
     ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_r", hitR[i]);
     ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_x", x);
     ana.tx->pushbackToBranch<float>("t5_t3_" + idx + "_y", y);
