@@ -750,8 +750,13 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
 
   for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modules->nLowerModules); ++lowerModuleIdx) {
     int nQuadruplets = quadruplets->nQuadruplets[lowerModuleIdx];
+    if (nQuadruplets!=0) std::cout<<nQuadruplets<<std::endl;
     for (unsigned int idx = 0; idx < nQuadruplets; idx++) {
+      std::cout<<"lowerModuleIdx:"<<lowerModuleIdx<<std::endl;
+      std::cout<<"ranges:"<<ranges->quadrupletModuleIndices[lowerModuleIdx]<<std::endl;
+      std::cout<<"ranges(T3 comparison):"<<ranges->quintupletModuleIndices[lowerModuleIdx]<<std::endl;
       unsigned int quadrupletIndex = ranges->quadrupletModuleIndices[lowerModuleIdx] + idx;
+      std::cout<<"enter the loop:"<<quadrupletIndex<<std::endl;
       // float pt = __H2F(quintuplets->innerRadius[quintupletIndex]) * lst::k2Rinv1GeVf * 2;
       // float eta = __H2F(quadruplets->eta[quadrupletIndex]);
       // float phi = __H2F(quadruplets->phi[quadrupletIndex]);
@@ -789,6 +794,7 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       //     sim_t5_matched.at(simtrk) += 1;
       //   }
       // }
+    
     }
   }
 
