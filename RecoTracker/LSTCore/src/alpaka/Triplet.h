@@ -306,101 +306,70 @@ namespace lst {
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
     float x_center = circleCenterX / 100;
     float y_center = circleCenterY / 100;
-    float Pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
+    float pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
 
     //determine the charge
     int charge = 0;
-    float slope12 = (y2 - y1) / (x2 - x1);
-    float slope23 = (y3 - y2) / (x3 - x2);
-    if (slope12 > 0 and slope23 < 0) {
-      if (x1 < x2 and x2 < x3)
-        charge = 1;
-      else if (x1 > x2 and x2 > x3)
-        charge = 1;
-      else if (y1 < y2 and y2 < y3)
-        charge = -1;
-      else if (y1 > y2 and y2 > y3)
-        charge = -1;
-    } else if (slope12 < 0 and slope23 > 0) {
-      if (x1 < x2 and x2 < x3)
-        charge = -1;
-      else if (x1 > x2 and x2 > x3)
-        charge = -1;
-      else if (y1 < y2 and y2 < y3)
-        charge = 1;
-      else if (y1 > y2 and y2 > y3)
-        charge = 1;
-    } else if (slope12 > 0 and slope23 > 0) {
-      if (slope12 > slope23)
-        charge = 1;
-      else
-        charge = -1;
-    } else if (slope12 < 0 and slope23 < 0) {
-      if (slope12 > slope23)
-        charge = 1;
-      else
-        charge = -1;
-    } else {
-#ifdef WARNINGS
-      printf("The charge cannot be computed!\n");
-#endif
-    }
+    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
+      charge = -1;
+    else
+      charge = 1;
 
     //get the absolute value of px and py at the initial point
     float cot_phi_abs = alpaka::math::abs(acc, (y_init - y_center) / (x_init - x_center)); //absolute value of cot(phi)
-    float Px = Pt * cot_phi_abs / alpaka::math::sqrt(acc, 1 + cot_phi_abs * cot_phi_abs);  //Px = Pt * cos(phi)
-    float Py = Px / cot_phi_abs; //Py = Pt * sin(phi)
+    float px = pt * cot_phi_abs / alpaka::math::sqrt(acc, 1 + cot_phi_abs * cot_phi_abs);  //px = pt * cos(phi)
+    float py = px / cot_phi_abs; //py = pt * sin(phi)
     
 
-    //Above line only gives you the correct value of Px and Py, but signs of Px and Py calculated below.
+    //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
     if (x_init > x_center && y_init > y_center)  //1st quad
     {
       if (charge == 1)
-        Py = -Py;
+        py = -py;
       if (charge == -1)
-        Px = -Px;
+        px = -px;
     }
     if (x_init < x_center && y_init > y_center)  //2nd quad
     {
       if (charge == -1) {
-        Px = -Px;
-        Py = -Py;
+        px = -px;
+        py = -py;
       }
     }
     if (x_init < x_center && y_init < y_center)  //3rd quad
     {
       if (charge == 1)
-        Px = -Px;
+        px = -px;
       if (charge == -1)
-        Py = -Py;
+        py = -py;
     }
     if (x_init > x_center && y_init < y_center)  //4th quad
     {
       if (charge == 1) {
-        Px = -Px;
-        Py = -Py;
+        px = -px;
+        py = -py;
       }
     }
 
-    //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
+    //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of px,py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
-      Px = -alpaka::math::abs(acc, Px);
+      px = -alpaka::math::abs(acc, px);
     else if (x3 > x2 && x2 > x1)
-      Px = alpaka::math::abs(acc, Px);
+      px = alpaka::math::abs(acc, px);
     if (y3 < y2 && y2 < y1)
-      Py = -alpaka::math::abs(acc, Py);
+      py = -alpaka::math::abs(acc, py);
     else if (y3 > y2 && y2 > y1)
-      Py = alpaka::math::abs(acc, Py);
+      py = alpaka::math::abs(acc, py);
 
     float AO = alpaka::math::sqrt(acc, (x_other - x_center) * (x_other - x_center) + (y_other - y_center) * (y_other - y_center)); 
     float BO = alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
     float AB2 = (x_other - x_init) * (x_other - x_init) + (y_other - y_init) * (y_other - y_init); 
     float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
     float ds = circleRadius / 100 * dPhi;
-    float Pz = dz / ds * Pt; 
+    float pz = dz / ds * pt; 
 
-    float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
+    float p = alpaka::math::sqrt(acc, px * px + py * py + pz * pz);
     float a = -2.f * k2Rinv1GeVf * 100 * charge;
     float rou = a / p;
 
@@ -414,16 +383,16 @@ namespace lst {
 
     //calculate residual
     if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) { // for barrel
-      float paraA = r_init * r_init + 2 * (Px * Px + Py * Py) / (a * a) + 2 * (y_init * Px - x_init * Py) / a - r3 * r3;
-      float paraB = 2 * (x_init * Px + y_init * Py) / a;
-      float paraC = 2 * (y_init * Px - x_init * Py) / a + 2 * (Px * Px + Py * Py) / (a * a);
+      float paraA = r_init * r_init + 2 * (px * px + py * py) / (a * a) + 2 * (y_init * px - x_init * py) / a - r3 * r3;
+      float paraB = 2 * (x_init * px + y_init * py) / a;
+      float paraC = 2 * (y_init * px - x_init * py) / a + 2 * (px * px + py * py) / (a * a);
       float A = paraB * paraB + paraC * paraC;
       float B = 2 * paraA * paraB;
       float C = paraA * paraA - paraC * paraC;
       float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
       float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-      float solz1 = alpaka::math::asin(acc, sol1) / rou * Pz / p + z_init;
-      float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
+      float solz1 = alpaka::math::asin(acc, sol1) / rou * pz / p + z_init;
+      float solz2 = alpaka::math::asin(acc, sol2) / rou * pz / p + z_init;
       float diffz1 = (solz1 - z3) * 100;
       float diffz2 = (solz2 - z3) * 100;
       if (alpaka::math::isnan(acc, diffz1))
@@ -434,9 +403,9 @@ namespace lst {
         residual = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
       }
     } else { // for endcap
-      float s = (z_target - z_init) * p / Pz;
-      float x = x_init + Px / a * alpaka::math::sin(acc, rou * s) - Py / a * (1 - alpaka::math::cos(acc, rou * s));
-      float y = y_init + Py / a * alpaka::math::sin(acc, rou * s) + Px / a * (1 - alpaka::math::cos(acc, rou * s));
+      float s = (z_target - z_init) * p / pz;
+      float x = x_init + px / a * alpaka::math::sin(acc, rou * s) - py / a * (1 - alpaka::math::cos(acc, rou * s));
+      float y = y_init + py / a * alpaka::math::sin(acc, rou * s) + px / a * (1 - alpaka::math::cos(acc, rou * s));
       residual = (r_target - alpaka::math::sqrt(acc, x * x + y * y)) * 100; 
     }
     
