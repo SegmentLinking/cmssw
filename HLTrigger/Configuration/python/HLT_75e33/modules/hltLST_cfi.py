@@ -12,3 +12,8 @@ hltLST = cms.EDProducer('LSTProducer@alpaka',
     )
 )
 
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
+(seedingLST & trackingLST).toModify(hltLST, nopLSDupClean = cms.bool(True),
+                                            tcpLSTriplets = cms.bool(True) )
+

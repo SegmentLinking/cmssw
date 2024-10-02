@@ -47,3 +47,6 @@ _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 trackingLST.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
 
+from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
+(seedingLST & trackingLST).toModify(hltInitialStepTrackCandidates, includeNonpLSTSs = cms.bool(True))
+
