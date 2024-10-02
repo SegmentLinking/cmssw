@@ -118,6 +118,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t5_isDuplicate");
   ana.tx->createBranch<std::vector<int>>("t5_foundDuplicate");
   ana.tx->createBranch<std::vector<float>>("t5_pt");
+  ana.tx->createBranch<std::vector<float>>("t5_pMatched");
   ana.tx->createBranch<std::vector<float>>("t5_eta");
   ana.tx->createBranch<std::vector<float>>("t5_phi");
   ana.tx->createBranch<std::vector<float>>("t5_score_rphisum");
@@ -504,10 +505,12 @@ void setQuintupletOutputBranches(lst::Event<Acc3D>* event) {
         moduleType_binary |= (modules->moduleType[module_idx[i]] << i);
       }
 
-      std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
+      float percent_matched;
+      std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type, false, &percent_matched);
 
       ana.tx->pushbackToBranch<int>("t5_isFake", static_cast<int>(simidx.size() == 0));
       ana.tx->pushbackToBranch<float>("t5_pt", pt);
+      ana.tx->pushbackToBranch<float>("t5_pMatched", percent_matched);
       ana.tx->pushbackToBranch<float>("t5_eta", eta);
       ana.tx->pushbackToBranch<float>("t5_phi", phi);
       ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets->innerRadius[quintupletIndex]));
