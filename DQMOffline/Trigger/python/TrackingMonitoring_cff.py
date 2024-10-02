@@ -118,6 +118,53 @@ phase2_tracker.toModify(iterHLTTracksMonitoringHLT,
                         TrackProducer    = 'hltGeneralTracks',
                         allTrackProducer = 'hltGeneralTracks')
 
+# LST track collections
+initialSteppTTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/initialStepTrackSelectionHighPuritypTTCLST',
+    TrackProducer    = 'hltInitialStepTrackSelectionHighPuritypTTCLST',
+    allTrackProducer = 'hltInitialStepTrackSelectionHighPuritypTTCLST',
+    doEffFromHitPatternVsPU   = False,
+    doEffFromHitPatternVsBX   = False,
+    doEffFromHitPatternVsLUMI = False
+)
+
+initialSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/initialStepTrackSelectionHighPuritypLSTCLST',
+    TrackProducer    = 'hltInitialStepTrackSelectionHighPuritypLSTCLST',
+    allTrackProducer = 'hltInitialStepTrackSelectionHighPuritypLSTCLST',
+    doEffFromHitPatternVsPU   = False,
+    doEffFromHitPatternVsBX   = False,
+    doEffFromHitPatternVsLUMI = False
+)
+
+initialStepT5TCLSTTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/initialStepTracksT5TCLST',
+    TrackProducer    = 'hltInitialStepTracksT5TCLST',
+    allTrackProducer = 'hltInitialStepTracksT5TCLST',
+    doEffFromHitPatternVsPU   = False,
+    doEffFromHitPatternVsBX   = False,
+    doEffFromHitPatternVsLUMI = False
+)
+
+highPtTripletSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/highPtTripletStepTrackSelectionHighPuritypLSTCLST',
+    TrackProducer    = 'hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST',
+    allTrackProducer = 'hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST',
+    doEffFromHitPatternVsPU   = False,
+    doEffFromHitPatternVsBX   = False,
+    doEffFromHitPatternVsLUMI = False
+)
+
+highPtTripletStepTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/highPtTripletStepTrackSelectionHighPurity',
+    TrackProducer    = 'hltHighPtTripletStepTrackSelectionHighPurity',
+    allTrackProducer = 'hltHighPtTripletStepTrackSelectionHighPurity',
+    doEffFromHitPatternVsPU   = False,
+    doEffFromHitPatternVsBX   = False,
+    doEffFromHitPatternVsLUMI = False
+)
+
+
 iter3TracksMonitoringHLT = trackingMonHLT.clone(
     FolderName       = 'HLT/Tracking/iter3Merged',
     TrackProducer    = 'hltIter3Merged',
@@ -250,6 +297,11 @@ trkHLTDQMSourceExtra = cms.Sequence(
 from Configuration.Eras.Modifier_run3_common_cff import run3_common
 run3_common.toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + doubletRecoveryHPTracksMonitoringHLT )) # + iter0HPTracksMonitoringHLT ))
 phase2_tracker.toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT))
+
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+trackingLST.toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialSteppLSTCLSTTracksMonitoringHLT + initialStepT5TCLSTTracksMonitoringHLT + highPtTripletStepTracksMonitoringHLT))
+from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
+(seedingLST & trackingLST).toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialStepT5TCLSTTracksMonitoringHLT + highPtTripletSteppLSTCLSTTracksMonitoringHLT))
 
 run3_common.toReplaceWith(trackingMonitorHLTall, cms.Sequence(pixelTracksMonitoringHLT + iter0TracksMonitoringHLT + iterHLTTracksMonitoringHLT))
 run3_common.toReplaceWith(egmTrackingMonitorHLT, cms.Sequence(gsfTracksMonitoringHLT))
