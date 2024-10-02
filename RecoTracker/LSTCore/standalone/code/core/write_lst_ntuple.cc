@@ -518,6 +518,7 @@ void setQuintupletOutputBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets->outerRadius[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets->chiSquared[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets->rzChiSquared[quintupletIndex]);
+      ana.tx->pushbackToBranch<float>("t5_nonAnchorChiSquared", quintuplets->nonAnchorChiSquared[quintupletIndex]);
       ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
 
