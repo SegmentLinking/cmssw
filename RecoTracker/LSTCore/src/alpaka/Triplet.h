@@ -525,63 +525,9 @@ namespace lst {
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
-    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == lst::PS);
-    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == lst::PS);
-
     float rtIn = mdsInGPU.anchorRt[firstMDIndex];
     float rtMid = mdsInGPU.anchorRt[secondMDIndex];
-    rtOut = mdsInGPU.anchorRt[thirdMDIndex];
-
-    float zIn = mdsInGPU.anchorZ[firstMDIndex];
-    float zMid = mdsInGPU.anchorZ[secondMDIndex];
-    zOut = mdsInGPU.anchorZ[thirdMDIndex];
-
-    float alpha1GeVOut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
-
-    float rtRatio_OutIn = rtOut / rtIn;  // Outer segment beginning rt divided by inner segment beginning rt;
-    float dzDrtScale = alpaka::math::tan(acc, alpha1GeVOut) / alpha1GeVOut;  // The track can bend in r-z plane slightly
-    float zpitchIn = (isPSIn ? lst::kPixelPSZpitch : lst::kStrip2SZpitch);
-    float zpitchOut = (isPSOut ? lst::kPixelPSZpitch : lst::kStrip2SZpitch);
-
-    const float zHi =
-        zIn + (zIn + lst::kDeltaZLum) * (rtRatio_OutIn - 1.f) * (zIn < 0.f ? 1.f : dzDrtScale) + (zpitchIn + zpitchOut);
-    const float zLo = zIn + (zIn - lst::kDeltaZLum) * (rtRatio_OutIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) -
-                      (zpitchIn + zpitchOut);  //slope-correction only on outer end
-
-    //Cut 1 - z compatibility
-    if ((zOut < zLo) || (zOut > zHi))
-      return false;
-
-    float drt_OutIn = (rtOut - rtIn);
-
-    float r3In = alpaka::math::sqrt(acc, zIn * zIn + rtIn * rtIn);
     float drt_InSeg = rtMid - rtIn;
-    float dz_InSeg = zMid - zIn;
-    float dr3_InSeg =
-        alpaka::math::sqrt(acc, rtMid * rtMid + zMid * zMid) - alpaka::math::sqrt(acc, rtIn * rtIn + zIn * zIn);
-
-    float coshEta = dr3_InSeg / drt_InSeg;
-    float dzErr = (zpitchIn + zpitchOut) * (zpitchIn + zpitchOut) * 2.f;
-
-    float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rtOut - rtIn) / 50.f) * (r3In / rtIn);
-    float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
-    dzErr += muls2 * drt_OutIn * drt_OutIn / 3.f * coshEta * coshEta;
-    dzErr = alpaka::math::sqrt(acc, dzErr);
-
-    // Constructing upper and lower bound
-    const float dzMean = dz_InSeg / drt_InSeg * drt_OutIn;
-    const float zWindow =
-        dzErr / drt_InSeg * drt_OutIn +
-        (zpitchIn + zpitchOut);  //FIXME for lst::ptCut lower than ~0.8 need to add curv path correction
-    const float zLoPointed = zIn + dzMean * (zIn > 0.f ? 1.f : dzDrtScale) - zWindow;
-    const float zHiPointed = zIn + dzMean * (zIn < 0.f ? 1.f : dzDrtScale) + zWindow;
-
-    // Constructing upper and lower bound
-
-    // Cut #2: Pointed Z (Inner segment two MD points to outer segment inner MD)
-    if ((zOut < zLoPointed) || (zOut > zHiPointed))
-      return false;
 
     // raw betaIn value without any correction, based on the mini-doublet hit positions
     float alpha_InLo = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
@@ -627,72 +573,6 @@ namespace lst {
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
-    bool isPSIn = (modulesInGPU.moduleType[innerInnerLowerModuleIndex] == lst::PS);
-    bool isPSOut = (modulesInGPU.moduleType[outerOuterLowerModuleIndex] == lst::PS);
-
-    float rtIn = mdsInGPU.anchorRt[firstMDIndex];
-    float rtMid = mdsInGPU.anchorRt[secondMDIndex];
-    rtOut = mdsInGPU.anchorRt[thirdMDIndex];
-
-    float zIn = mdsInGPU.anchorZ[firstMDIndex];
-    float zMid = mdsInGPU.anchorZ[secondMDIndex];
-    zOut = mdsInGPU.anchorZ[thirdMDIndex];
-
-    float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
-
-    float dzDrtScale =
-        alpaka::math::tan(acc, alpha1GeV_OutLo) / alpha1GeV_OutLo;  // The track can bend in r-z plane slightly
-    float zpitchIn = (isPSIn ? lst::kPixelPSZpitch : lst::kStrip2SZpitch);
-    float zpitchOut = (isPSOut ? lst::kPixelPSZpitch : lst::kStrip2SZpitch);
-    float zGeom = zpitchIn + zpitchOut;
-
-    // Cut #0: Preliminary (Only here in endcap case)
-    if (zIn * zOut <= 0)
-      return false;
-
-    float dLum = alpaka::math::copysign(acc, lst::kDeltaZLum, zIn);
-    bool isOutSgInnerMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == lst::PS;
-    float rtGeom1 = isOutSgInnerMDPS ? lst::kPixelPSZpitch : lst::kStrip2SZpitch;
-    float zGeom1 = alpaka::math::copysign(acc, zGeom, zIn);
-    float rtLo = rtIn * (1.f + (zOut - zIn - zGeom1) / (zIn + zGeom1 + dLum) / dzDrtScale) -
-                 rtGeom1;  //slope correction only on the lower end
-
-    //Cut #1: rt condition
-    float zInForHi = zIn - zGeom1 - dLum;
-    if (zInForHi * zIn < 0) {
-      zInForHi = alpaka::math::copysign(acc, 0.1f, zIn);
-    }
-    float rtHi = rtIn * (1.f + (zOut - zIn + zGeom1) / zInForHi) + rtGeom1;
-
-    //Cut #2: rt condition
-    if ((rtOut < rtLo) || (rtOut > rtHi))
-      return false;
-
-    float rIn = alpaka::math::sqrt(acc, zIn * zIn + rtIn * rtIn);
-
-    const float drtSDIn = rtMid - rtIn;
-    const float dzSDIn = zMid - zIn;
-    const float dr3SDIn =
-        alpaka::math::sqrt(acc, rtMid * rtMid + zMid * zMid) - alpaka::math::sqrt(acc, rtIn * rtIn + zIn * zIn);
-
-    const float coshEta = dr3SDIn / drtSDIn;  //direction estimate
-    const float dzOutInAbs = alpaka::math::abs(acc, zOut - zIn);
-    const float multDzDr = dzOutInAbs * coshEta / (coshEta * coshEta - 1.f);
-    const float zGeom1_another = lst::kPixelPSZpitch;
-    const float kZ = (zOut - zIn) / dzSDIn;
-    float drtErr =
-        zGeom1_another * zGeom1_another * drtSDIn * drtSDIn / dzSDIn / dzSDIn * (1.f - 2.f * kZ + 2.f * kZ * kZ);
-    const float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2 * (rtOut - rtIn) / 50.f) * (rIn / rtIn);
-    const float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
-    drtErr += muls2 * multDzDr * multDzDr / 3.f * coshEta * coshEta;
-    drtErr = alpaka::math::sqrt(acc, drtErr);
-
-    //Cut #3: rt-z pointed
-
-    if ((kZ < 0) || (rtOut < rtLo) || (rtOut > rtHi))
-      return false;
-
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
 
@@ -748,75 +628,6 @@ namespace lst {
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
-    float rtIn = mdsInGPU.anchorRt[firstMDIndex];
-    float rtMid = mdsInGPU.anchorRt[secondMDIndex];
-    rtOut = mdsInGPU.anchorRt[thirdMDIndex];
-
-    float zIn = mdsInGPU.anchorZ[firstMDIndex];
-    float zMid = mdsInGPU.anchorZ[secondMDIndex];
-    zOut = mdsInGPU.anchorZ[thirdMDIndex];
-
-    float alpha1GeV_Out =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax));
-
-    float dzDrtScale =
-        alpaka::math::tan(acc, alpha1GeV_Out) / alpha1GeV_Out;  // The track can bend in r-z plane slightly
-
-    // Cut #0: Preliminary (Only here in endcap case)
-    if (zIn * zOut <= 0)
-      return false;
-
-    float dLum = alpaka::math::copysign(acc, lst::kDeltaZLum, zIn);
-    bool isOutSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == lst::PS;
-    bool isInSgInnerMDPS = modulesInGPU.moduleType[innerInnerLowerModuleIndex] == lst::PS;
-
-    float rtGeom = (isInSgInnerMDPS and isOutSgOuterMDPS)  ? 2.f * lst::kPixelPSZpitch
-                   : (isInSgInnerMDPS or isOutSgOuterMDPS) ? lst::kPixelPSZpitch + lst::kStrip2SZpitch
-                                                           : 2.f * lst::kStrip2SZpitch;
-
-    float dz = zOut - zIn;
-    const float rtLo = rtIn * (1.f + dz / (zIn + dLum) / dzDrtScale) - rtGeom;  //slope correction only on the lower end
-    const float rtHi = rtIn * (1.f + dz / (zIn - dLum)) + rtGeom;
-
-    //Cut #1: rt condition
-    if ((rtOut < rtLo) || (rtOut > rtHi))
-      return false;
-
-    bool isInSgOuterMDPS = modulesInGPU.moduleType[outerOuterLowerModuleIndex] == lst::PS;
-
-    float drtSDIn = rtMid - rtIn;
-    float dzSDIn = zMid - zIn;
-    float dr3SDIn =
-        alpaka::math::sqrt(acc, rtMid * rtMid + zMid * zMid) - alpaka::math::sqrt(acc, rtIn * rtIn + zIn * zIn);
-
-    float coshEta = dr3SDIn / drtSDIn;  //direction estimate
-    float dzOutInAbs = alpaka::math::abs(acc, zOut - zIn);
-    float multDzDr = dzOutInAbs * coshEta / (coshEta * coshEta - 1.f);
-
-    float kZ = (zOut - zIn) / dzSDIn;
-    float thetaMuls2 = (kMulsInGeV * kMulsInGeV) * (0.1f + 0.2f * (rtOut - rtIn) / 50.f);
-
-    float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
-
-    float drtErr = alpaka::math::sqrt(
-        acc,
-        lst::kPixelPSZpitch * lst::kPixelPSZpitch * 2.f / (dzSDIn * dzSDIn) * (dzOutInAbs * dzOutInAbs) +
-            muls2 * multDzDr * multDzDr / 3.f * coshEta * coshEta);
-
-    float drtMean = drtSDIn * dzOutInAbs / alpaka::math::abs(acc, dzSDIn);
-    float rtWindow = drtErr + rtGeom;
-    float rtLo_point = rtIn + drtMean / dzDrtScale - rtWindow;
-    float rtHi_point = rtIn + drtMean + rtWindow;
-
-    // Cut #3: rt-z pointed
-    // https://github.com/slava77/cms-tkph2-ntuple/blob/superDoubletLinked-91X-noMock/doubletAnalysis.C#L3765
-
-    if (isInSgInnerMDPS and isInSgOuterMDPS)  // If both PS then we can point
-    {
-      if ((kZ < 0) || (rtOut < rtLo_point) || (rtOut > rtHi_point))
-        return false;
-    }
-
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
     float sdIn_alpha = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
