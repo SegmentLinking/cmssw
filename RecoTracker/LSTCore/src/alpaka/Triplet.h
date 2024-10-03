@@ -1020,26 +1020,6 @@ namespace lst {
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * outerSegmentIndex + 1];
 
-    if (not(passPointingConstraint(acc,
-                                   modulesInGPU,
-                                   mdsInGPU,
-                                   segmentsInGPU,
-                                   innerInnerLowerModuleIndex,
-                                   middleLowerModuleIndex,
-                                   outerOuterLowerModuleIndex,
-                                   firstMDIndex,
-                                   secondMDIndex,
-                                   thirdMDIndex,
-                                   zOut,
-                                   rtOut,
-                                   middleLowerModuleIndex,
-                                   innerSegmentIndex,
-                                   outerSegmentIndex,
-                                   betaIn,
-                                   betaInCut,
-                                   ptCut)))
-      return false;
-
     float x1 = mdsInGPU.anchorX[firstMDIndex];
     float x2 = mdsInGPU.anchorX[secondMDIndex];
     float x3 = mdsInGPU.anchorX[thirdMDIndex];
@@ -1062,6 +1042,26 @@ namespace lst {
                              circleRadius,
                              circleCenterX, 
                              circleCenterY)))
+      return false;
+
+    if (not(passPointingConstraint(acc,
+                                   modulesInGPU,
+                                   mdsInGPU,
+                                   segmentsInGPU,
+                                   innerInnerLowerModuleIndex,
+                                   middleLowerModuleIndex,
+                                   outerOuterLowerModuleIndex,
+                                   firstMDIndex,
+                                   secondMDIndex,
+                                   thirdMDIndex,
+                                   zOut,
+                                   rtOut,
+                                   middleLowerModuleIndex,
+                                   innerSegmentIndex,
+                                   outerSegmentIndex,
+                                   betaIn,
+                                   betaInCut,
+                                   ptCut)))
       return false;
 
     return true;
