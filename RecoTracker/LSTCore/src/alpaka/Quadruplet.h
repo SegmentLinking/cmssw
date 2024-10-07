@@ -118,9 +118,9 @@ namespace lst {
                                                             uint16_t lowerModule2,
                                                             uint16_t lowerModule3,
                                                             uint16_t lowerModule4,
-                                                            // float innerRadius,
-                                                            // float outerRadius,
-                                                            // float pt,
+                                                            float innerRadius,
+                                                            float outerRadius,
+                                                            float pt,
                                                             float eta,
                                                             float phi,
                                                             // float scores,
@@ -133,9 +133,9 @@ namespace lst {
     quadrupletsInGPU.lowerModuleIndices[Params_T4::kLayers * quadrupletIndex + 1] = lowerModule2;
     quadrupletsInGPU.lowerModuleIndices[Params_T4::kLayers * quadrupletIndex + 2] = lowerModule3;
     quadrupletsInGPU.lowerModuleIndices[Params_T4::kLayers * quadrupletIndex + 3] = lowerModule4;
-    // quadrupletsInGPU.innerRadius[quadrupletIndex] = __F2H(innerRadius);
-    // quadrupletsInGPU.outerRadius[quadrupletIndex] = __F2H(outerRadius);
-    // quadrupletsInGPU.pt[quadrupletIndex] = __F2H(pt);
+    quadrupletsInGPU.innerRadius[quadrupletIndex] = __F2H(innerRadius);
+    quadrupletsInGPU.outerRadius[quadrupletIndex] = __F2H(outerRadius);
+    quadrupletsInGPU.pt[quadrupletIndex] = __F2H(pt);
     quadrupletsInGPU.eta[quadrupletIndex] = __F2H(eta);
     quadrupletsInGPU.phi[quadrupletIndex] = __F2H(phi);
     quadrupletsInGPU.layer[quadrupletIndex] = layer;
@@ -2249,7 +2249,8 @@ namespace lst {
               continue;  //don't create T4s for T3s accounted in T5s
             uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
-
+            float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
+            float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
             // float innerRadius, outerRadius, rzChiSquared;  //required for making distributions
 
             // bool success = runQuadrupletDefaultAlgo(acc,
@@ -2303,7 +2304,7 @@ namespace lst {
                       mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
                   float eta =
                       mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
-                  // float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
+                  float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
                   addQuadrupletToMemory(tripletsInGPU,
                                         quadrupletsInGPU,
                                         innerTripletIndex,
@@ -2312,10 +2313,10 @@ namespace lst {
                                         lowerModule2,
                                         lowerModule3,
                                         lowerModule4,
-                                        // innerRadius,
-                                        // outerRadius,
+                                        innerRadius,
+                                        outerRadius,
                                         // rzChiSquared,
-                                        // pt,
+                                        pt,
                                         eta,
                                         phi,
                                         // scores,

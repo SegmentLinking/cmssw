@@ -150,9 +150,17 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
 
   // T4 branches
-  ana.tx->createBranch<std::vector<float>>("t4_count");
-  ana.tx->createBranch<std::vector<int>>("t4_moduleType_binary");
+  ana.tx->createBranch<std::vector<int>>("sim_T4_matched");
+  ana.tx->createBranch<std::vector<int>>("t4_isFake");
+  ana.tx->createBranch<std::vector<int>>("t4_isDuplicate");
+  ana.tx->createBranch<std::vector<int>>("t4_moduleType_binary"); 
   ana.tx->createBranch<std::vector<int>>("t4_layer_binary");
+  ana.tx->createBranch<std::vector<int>>("t4_region");
+  ana.tx->createBranch<std::vector<float>>("t4_innerRadius");
+  ana.tx->createBranch<std::vector<float>>("t4_outerRadius");
+   ana.tx->createBranch<std::vector<float>>("t4_pt");
+  ana.tx->createBranch<std::vector<float>>("t4_eta");
+  ana.tx->createBranch<std::vector<float>>("t4_phi");
 
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -173,6 +181,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t5_occupancies");
   ana.tx->createBranch<int>("pT3_occupancies");
   ana.tx->createBranch<int>("pT5_occupancies");
+  ana.tx->createBranch<std::vector<int>>("t4_occupancies");
 
   // T5 DNN branches
   createT5DNNBranches();
@@ -435,6 +444,7 @@ void setOccupancyBranches(LSTEvent* event) {
   auto pixelQuintuplets = event->getPixelQuintuplets();
   auto pixelTriplets = event->getPixelTriplets();
   auto trackCandidates = event->getTrackCandidates();
+  lst::Quadruplets const& quadrupletsInGPU = (*event->getQuadruplets()->data());
 
   std::vector<int> moduleLayer;
   std::vector<int> moduleSubdet;
@@ -449,6 +459,7 @@ void setOccupancyBranches(LSTEvent* event) {
   std::vector<int> segmentOccupancy;
   std::vector<int> mdOccupancy;
   std::vector<int> quintupletOccupancy;
+  std::vector<int> quadrupletOccupancy;
 
   for (unsigned int lowerIdx = 0; lowerIdx <= modules.nLowerModules(); lowerIdx++) {
     //layer = 0, subdet = 0 => pixel module
@@ -467,6 +478,7 @@ void setOccupancyBranches(LSTEvent* event) {
     if (lowerIdx < modules.nLowerModules()) {
       quintupletOccupancy.push_back(quintuplets.totOccupancyQuintuplets()[lowerIdx]);
       tripletOccupancy.push_back(triplets.totOccupancyTriplets()[lowerIdx]);
+      quadrupletOccupancy.push_back(quadrupletsInGPU.totOccupancyQuadruplets[lowerIdx]);
     }
   }
 
@@ -485,6 +497,7 @@ void setOccupancyBranches(LSTEvent* event) {
   ana.tx->setBranch<int>("pT3_occupancies", pixelTriplets.totOccupancyPixelTriplets());
   ana.tx->setBranch<std::vector<int>>("t5_occupancies", quintupletOccupancy);
   ana.tx->setBranch<int>("pT5_occupancies", pixelQuintuplets.totOccupancyPixelQuintuplets());
+  ana.tx->setBranch<std::vector<int>>("t4_occupancies", quadrupletOccupancy);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -744,22 +757,23 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
   lst::ObjectRanges const* ranges = event->getRanges()->data();
   lst::Modules const* modules = event->getModules()->data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
-
-  // std::vector<int> sim_t5_matched(n_accepted_simtrk);
-  // std::vector<std::vector<int>> t5_matched_simIdx;
+  // if (n_accepted_simtrk !=0) printf("n_accepted_simtrk: %i\n", n_accepted_simtrk);
+  std::vector<int> sim_t4_matched(n_accepted_simtrk);
+  std::vector<std::vector<int>> t4_matched_simIdx;
 
   for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < *(modules->nLowerModules); ++lowerModuleIdx) {
     int nQuadruplets = quadruplets->nQuadruplets[lowerModuleIdx];
-    if (nQuadruplets!=0) std::cout<<nQuadruplets<<std::endl;
+    // if (nQuadruplets!=0) std::cout<<nQuadruplets<<std::endl;
     for (unsigned int idx = 0; idx < nQuadruplets; idx++) {
-      std::cout<<"lowerModuleIdx:"<<lowerModuleIdx<<std::endl;
-      std::cout<<"ranges:"<<ranges->quadrupletModuleIndices[lowerModuleIdx]<<std::endl;
-      std::cout<<"ranges(T3 comparison):"<<ranges->quintupletModuleIndices[lowerModuleIdx]<<std::endl;
+      // std::cout<<"lowerModuleIdx:"<<lowerModuleIdx<<std::endl;
+      // std::cout<<"ranges:"<<ranges->quadrupletModuleIndices[lowerModuleIdx]<<std::endl;
+      // std::cout<<"ranges(T3 comparison):"<<ranges->quintupletModuleIndices[lowerModuleIdx]<<std::endl;
       unsigned int quadrupletIndex = ranges->quadrupletModuleIndices[lowerModuleIdx] + idx;
-      std::cout<<"enter the loop:"<<quadrupletIndex<<std::endl;
+      // std::cout<<"enter the loop:"<<quadrupletIndex<<std::endl;
       // float pt = __H2F(quintuplets->innerRadius[quintupletIndex]) * lst::k2Rinv1GeVf * 2;
-      // float eta = __H2F(quadruplets->eta[quadrupletIndex]);
-      // float phi = __H2F(quadruplets->phi[quadrupletIndex]);
+      float pt = __H2F(quadruplets->pt[quadrupletIndex]); 
+      float eta = __H2F(quadruplets->eta[quadrupletIndex]);
+      float phi = __H2F(quadruplets->phi[quadrupletIndex]);
 
       std::vector<unsigned int> hit_idx = getHitIdxsFromT4(event, quadrupletIndex);
       std::vector<unsigned int> hit_type = getHitTypesFromT4(event, quadrupletIndex);
@@ -767,53 +781,120 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
 
       int layer_binary = 0;
       int moduleType_binary = 0;
+      std::vector<int> layers;
       for (size_t i = 0; i < module_idx.size(); i += 2) {
         layer_binary |= (1 << (modules->layers[module_idx[i]] + 6 * (modules->subdets[module_idx[i]] == 4)));
         moduleType_binary |= (modules->moduleType[module_idx[i]] << i);
+        layers.push_back(modules->layers[module_idx[i]] + 6 * (modules->subdets[module_idx[i]] == 4) + 5 * (modules->subdets[module_idx[i]] == 4 && modules->moduleType[module_idx[i]] == 1)); 
       }
 
-      // std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
+      // std::vector<float> matchedfracs;
+      // std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type, ana.verbose, .75 , true, matchedfracs);
+      std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
 
-      // ana.tx->pushbackToBranch<int>("t5_isFake", static_cast<int>(simidx.size() == 0));
-      // ana.tx->pushbackToBranch<float>("t5_pt", pt);
-      // ana.tx->pushbackToBranch<float>("t4_eta", eta);
-      // ana.tx->pushbackToBranch<float>("t4_phi", phi);
-      // ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets->innerRadius[quintupletIndex]));
-      // ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets->bridgeRadius[quintupletIndex]));
-      // ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets->outerRadius[quintupletIndex]));
-      // ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets->chiSquared[quintupletIndex]);
-      // ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets->rzChiSquared[quintupletIndex]);
-      ana.tx->pushbackToBranch<int>("t4_layer_binary", layer_binary);
-      ana.tx->pushbackToBranch<int>("t4_moduleType_binary", moduleType_binary);
-      ana.tx->pushbackToBranch<float>("t4_count", 1);
-
-      // t5_matched_simIdx.push_back(simidx);
-
-      // for (auto& simtrk : simidx) {
-      //   if (simtrk < n_accepted_simtrk) {
-      //     sim_t5_matched.at(simtrk) += 1;
+      // int isPerfect = 0;
+      // for (auto& frac : matchedfracs) {
+      //   if (frac > 0.99) {
+      //     isPerfect = 1;
+      //     break;
       //   }
       // }
+
+      ana.tx->pushbackToBranch<int>("t4_isFake", static_cast<int>(simidx.size() == 0));
+      // ana.tx->pushbackToBranch<int>("t4_isPerfect", isPerfect);
+      ana.tx->pushbackToBranch<float>("t4_pt", pt);
+      ana.tx->pushbackToBranch<float>("t4_eta", eta);
+      ana.tx->pushbackToBranch<float>("t4_phi", phi);
+      ana.tx->pushbackToBranch<float>("t4_innerRadius", __H2F(quadruplets->innerRadius[quadrupletIndex]));
+      ana.tx->pushbackToBranch<float>("t4_outerRadius", __H2F(quadruplets->outerRadius[quadrupletIndex]));
+      // ana.tx->pushbackToBranch<float>("t4_rzChiSquared", quadruplets->rzChiSquared[quadrupletIndex]);
+      ana.tx->pushbackToBranch<int>("t4_layer_binary", layer_binary);
+      ana.tx->pushbackToBranch<int>("t4_moduleType_binary", moduleType_binary);
+      
+      int region = -1;
+      if (layers[0]==7 and layers[1]==8 and layers[2]==9 and layers[3]==10) {
+        region = 0;
+      } else if (layers[0]==7 and layers[1]==8 and layers[2]==9 and layers[3]==15) {
+        region = 1;
+      } else if (layers[0]==7 and layers[1]==8 and layers[2]==14 and layers[3]==15) {
+        region = 2;
+      } else if (layers[0]==8 and layers[1]==9 and layers[2]==10 and layers[3]==11) {
+        region = 3;
+      } else if (layers[0]==8 and layers[1]==9 and layers[2]==10 and layers[3]==16) {
+        region = 4;
+      } else if (layers[0]==8 and layers[1]==9 and layers[2]==15 and layers[3]==16) {
+        region = 5;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==3 and layers[3]==4) {
+        region = 6;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==3 and layers[3]==7) {
+        region = 7;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==3 and layers[3]==12) {
+        region = 8;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==7 and layers[3]==8) {
+        region = 9;
+      } else if (layers[0]==1 and layers[1]==2 and layers[2]==7 and layers[3]==13) {
+        region = 10;
+      } else if (layers[0]==1 and layers[1]==7 and layers[2]==8 and layers[3]==9) {
+        region = 11;
+      } else if (layers[0]==1 and layers[1]==7 and layers[2]==8 and layers[3]==14) {
+        region = 12;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==4 and layers[3]==5) {
+        region = 13;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==4 and layers[3]==12) {
+        region = 14;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==7 and layers[3]==8) {
+        region = 15;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==7 and layers[3]==13) {
+        region = 16;
+      } else if (layers[0]==2 and layers[1]==3 and layers[2]==12 and layers[3]==13) {
+        region = 17;
+      } else if (layers[0]==2 and layers[1]==7 and layers[2]==8 and layers[3]==9) {
+        region = 18;
+      } else if (layers[0]==2 and layers[1]==7 and layers[2]==8 and layers[3]==14) {
+        region = 19;
+      }else if (layers[0]==2 and layers[1]==7 and layers[2]==13 and layers[3]==14) {
+        region = 20;
+      } else if (layers[0]==3 and layers[1]==4 and layers[2]==5 and layers[3]==6) {
+        region = 21;
+      } else if (layers[0]==3 and layers[1]==7 and layers[2]==8 and layers[3]==14) {
+        region = 22;
+      } else if (layers[0]==3 and layers[1]==7 and layers[2]==13 and layers[3]==14) {
+        region = 23;
+      } else if (layers[0]==3 and layers[1]==4 and layers[2]==12 and layers[3]==13) {
+        region = 24;
+      } else if (layers[0]==3 and layers[1]==4 and layers[2]==5 and layers[3]==12) {
+        region = 25;
+      }
+      ana.tx->pushbackToBranch<int>("t4_region", region);
+
+      t4_matched_simIdx.push_back(simidx);
+
+      for (auto& simtrk : simidx) {
+        if (simtrk < n_accepted_simtrk) {
+          sim_t4_matched.at(simtrk) += 1;
+        }
+      }
     
     }
   }
 
-  // std::vector<int> t5_isDuplicate(t5_matched_simIdx.size());
-  // for (unsigned int i = 0; i < t5_matched_simIdx.size(); i++) {
-  //   bool isDuplicate = false;
-  //   for (unsigned int isim = 0; isim < t5_matched_simIdx[i].size(); isim++) {
-  //     int simidx = t5_matched_simIdx[i][isim];
-  //     if (simidx < n_accepted_simtrk) {
-  //       if (sim_t5_matched[simidx] > 1) {
-  //         isDuplicate = true;
-  //       }
-  //     }
-  //   }
-  //   t5_isDuplicate[i] = isDuplicate;
-  // }
-  // ana.tx->setBranch<std::vector<int>>("sim_T5_matched", sim_t5_matched);
+  std::vector<int> t4_isDuplicate(t4_matched_simIdx.size());
+  for (unsigned int i = 0; i < t4_matched_simIdx.size(); i++) {
+    t4_isDuplicate[i] = false;
+    // bool isDuplicate = false;
+    // for (unsigned int isim = 0; isim < t5_matched_simIdx[i].size(); isim++) {
+    //   int simidx = t5_matched_simIdx[i][isim];
+    //   if (simidx < n_accepted_simtrk) {
+    //     if (sim_t5_matched[simidx] > 1) {
+    //       isDuplicate = true;
+    //     }
+    //   }
+    // }
+    // t5_isDuplicate[i] = isDuplicate;
+  }
+  ana.tx->setBranch<std::vector<int>>("sim_T4_matched", sim_t4_matched);
+  ana.tx->setBranch<std::vector<int>>("t4_isDuplicate", t4_isDuplicate);
   // ana.tx->setBranch<std::vector<std::vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
-  // ana.tx->setBranch<std::vector<int>>("t5_isDuplicate", t5_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________

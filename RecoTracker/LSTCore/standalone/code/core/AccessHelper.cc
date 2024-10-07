@@ -492,7 +492,7 @@ std::vector<unsigned int> getMDsFromT4(lst::Event<Acc3D>* event, unsigned int T4
   std::vector<unsigned int> MDs_0 = getMDsFromLS(event, LSs[0]);
   std::vector<unsigned int> MDs_1 = getMDsFromLS(event, LSs[1]);
   std::vector<unsigned int> MDs_2 = getMDsFromLS(event, LSs[2]);
-  return {MDs_0[0], MDs_0[1], MDs_1[1], MDs_2[1]};
+  return {MDs_0[0], MDs_0[1], MDs_2[0], MDs_2[1]};
 }
 
 //____________________________________________________________________________________________

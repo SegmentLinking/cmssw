@@ -106,6 +106,12 @@ int main(int argc, char** argv) {
               /* q     */ charge,
               /* pass  */ [&](unsigned int isim) { return lstEff.getVI("sim_pT3_matched").at(isim) > 0; },
               /* sel   */ sels[isel]));
+          list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */ TString("T4_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */ [&](unsigned int isim) { return lstEff.sim_T4_matched().at(isim) > 0; },
+            /* sel   */ sels[isel]));
         }
       }
     }
@@ -198,6 +204,14 @@ int main(int argc, char** argv) {
         /* eta   */ [&]() { return lstEff.getVF("pT3_eta"); },
         /* phi   */ [&]() { return lstEff.getVF("pT3_phi"); },
         /* type  */ [&]() { return std::vector<int>(lstEff.getVF("pT3_pt").size(), 1); }));
+    list_FRSetDef.push_back(RecoTrackSetDefinition(
+        /* name  */ "T4",
+        /* pass  */ [&](unsigned int it4) { return lstEff.t4_isFake().at(it4) > 0; },
+        /* sel   */ [&](unsigned int it4) { return 1; },
+        /* pt    */ tas::t4_pt,
+        /* eta   */ tas::t4_eta,
+        /* phi   */ tas::t4_phi,
+        /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::t4_pt().size(), 1)); }));
   }
 
   bookFakeRateSets(list_FRSetDef);
@@ -287,6 +301,15 @@ int main(int argc, char** argv) {
         /* eta   */ [&]() { return lstEff.getVF("pT3_eta"); },
         /* phi   */ [&]() { return lstEff.getVF("pT3_phi"); },
         /* type  */ [&]() { return std::vector<int>(lstEff.getVF("pT3_pt").size(), 1); }));
+    list_DRSetDef.push_back(RecoTrackSetDefinition(
+        /* name  */ "T4",
+        /* pass  */ [&](unsigned int iT4) { return lstEff.t4_isDuplicate().at(iT4) > 0; },
+        /* sel   */ [&](unsigned int iT4) { return 1; },
+        /* pt    */ tas::t4_pt,
+        /* eta   */ tas::t4_eta,
+        /* phi   */ tas::t4_phi,
+        /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::t4_pt().size(), 1)); }));
+        printf("t4_pt.size: %i", tas::t4_pt().size());
   }
 
   bookDuplicateRateSets(list_DRSetDef);
