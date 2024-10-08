@@ -316,11 +316,9 @@ namespace lst {
       charge = 1;
 
     //get the absolute value of px and py at the initial point
-    float cot_phi_abs = alpaka::math::abs(acc, (y_init - y_center) / (x_init - x_center)); //absolute value of cot(phi)
-    float px = pt * cot_phi_abs / alpaka::math::sqrt(acc, 1 + cot_phi_abs * cot_phi_abs);  //px = pt * cos(phi)
-    float py = px / cot_phi_abs; //py = pt * sin(phi)
+    float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc,(y_init - y_center)) * 100;
+    float py = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (x_init - x_center)) * 100;
     
-
     //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
     if (x_init > x_center && y_init > y_center)  //1st quad
@@ -416,18 +414,17 @@ namespace lst {
       error = 5.0f;         //2S
     }
 
-    float projection_missing = 1;
+    float projection_missing2 = 1;
     if (drdz < 1)
-      projection_missing = ((subdets == lst::Endcap) or (side == lst::Center))
+      projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
                                 ? 1.f
-                                : 1 / alpaka::math::sqrt(acc, 1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+                                : 1 / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
     if (drdz > 1)
-      projection_missing = ((subdets == lst::Endcap) or (side == lst::Center))
+      projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
                                 ? 1.f
-                                : drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
-    error = error * projection_missing;
+                                : drdz * drdz / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
 
-    rzChiSquared = 12 * (residual * residual) / (error * error);
+    rzChiSquared = 12 * (residual * residual) / (error * error * projection_missing2);
 
     //helix calculation returns NaN, use linear approximation
     if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
