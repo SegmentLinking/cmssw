@@ -96,12 +96,13 @@ namespace lst {
   namespace t5dnn {
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kZ_max = 267.2349854f;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR_max = 110.1099396f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
     // pt, eta binned
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kPtBins][kEtaBins] = {
-        {0.4301, 0.4419, 0.4762, 0.5147, 0.347, 0.3538, 0.4061, 0.5284, 0.7186, 0.7806},
-        {0.2504, 0.3244, 0.3069, 0.4128, 0.2115, 0.2105, 0.2568, 0.2435, 0.3587, 0.2614}};
+        {0.2747, 0.2954, 0.3673, 0.4729, 0.419, 0.464, 0.4843, 0.5571, 0.6796, 0.6885},
+        {0.1696, 0.255, 0.2716, 0.3713, 0.1902, 0.1597, 0.1446, 0.095, 0.1797, 0.1104}};
   }  // namespace t5dnn
 
 }  //namespace lst
