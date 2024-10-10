@@ -189,8 +189,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     QuintupletsBuffer<DevHost>& getQuintuplets(bool sync = true);
     PixelTripletsBuffer<DevHost>& getPixelTriplets(bool sync = true);
     PixelQuintupletsBuffer<DevHost>& getPixelQuintuplets(bool sync = true);
-    const TrackCandidatesHostCollection& getTrackCandidates(bool sync = true);
-    const TrackCandidatesHostCollection& getTrackCandidatesInCMSSW(bool sync = true);
+    const TrackCandidatesConst& getTrackCandidatesWithSelection(bool inCMSSW, bool sync);
+    const TrackCandidatesConst& getTrackCandidates(bool sync = true) {
+      return getTrackCandidatesWithSelection(false, sync);
+    }
+    const TrackCandidatesConst& getTrackCandidatesInCMSSW(bool sync = true) {
+      return getTrackCandidatesWithSelection(true, sync);
+    }
     ModulesBuffer<DevHost>& getModules(bool isFull = false, bool sync = true);
   };
 

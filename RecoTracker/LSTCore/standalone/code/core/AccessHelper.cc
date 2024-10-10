@@ -412,7 +412,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 //____________________________________________________________________________________________
 std::vector<unsigned int> getLSsFromTC(Event* event, unsigned int iTC) {
   // Get the type of the track candidate
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[iTC];
   unsigned int objidx = trackCandidates.directObjectIndices()[iTC];
   switch (type) {
@@ -435,7 +435,7 @@ std::vector<unsigned int> getLSsFromTC(Event* event, unsigned int iTC) {
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(Event* event,
                                                                                              unsigned iTC) {
   // Get the type of the track candidate
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[iTC];
   unsigned int objidx = trackCandidates.directObjectIndices()[iTC];
   switch (type) {
