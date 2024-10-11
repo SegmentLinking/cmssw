@@ -85,23 +85,45 @@ namespace lst::t5dnn {
     constexpr unsigned int kinputFeatures = 18;
     constexpr unsigned int khiddenFeatures = 32;
 
-    // Build DNN input vector (corresponding output N-tuple branch noted in parenthetical in comment)
+    float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
+    float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
+    float eta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex3]);  // inner T3 anchor hit 3 eta (t3_4_eta)
+    float eta4 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex4]);  // outer T3 anchor hit 4 eta (t3_2_eta)
+    float eta5 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex5]);  // outer T3 anchor hit 5 eta (t3_4_eta)
+
+    float z1 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex1]);  // inner T3 anchor hit 1 z (t3_0_z)
+    float z2 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex2]);  // inner T3 anchor hit 2 z (t3_2_z)
+    float z3 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex3]);  // inner T3 anchor hit 3 z (t3_4_z)
+    float z4 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex4]);  // outer T3 anchor hit 4 z (t3_2_z)
+    float z5 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex5]);  // outer T3 anchor hit 5 z (t3_4_z)
+
+    float r1 = alpaka::math::sqrt(acc, x1 * x1 + y1 * y1);  // inner T3 anchor hit 1 r (t3_0_r)
+    float r2 = alpaka::math::sqrt(acc, x2 * x2 + y2 * y2);  // inner T3 anchor hit 2 r (t3_2_r)
+    float r3 = alpaka::math::sqrt(acc, x3 * x3 + y3 * y3);  // inner T3 anchor hit 3 r (t3_4_r)
+    float r4 = alpaka::math::sqrt(acc, x4 * x4 + y4 * y4);  // outer T3 anchor hit 4 r (t3_2_r)
+    float r5 = alpaka::math::sqrt(acc, x5 * x5 + y5 * y5);  // outer T3 anchor hit 5 r (t3_4_r)
+
+    // Build the input feature vector using pairwise differences after the first hit
     float x[kinputFeatures] = {
-        alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]) / kEta_norm,  // inner T3 anchor hit 1 eta (t3_0_eta)
-        alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex1]) / kZ_max,       // inner T3 anchor hit 1 z (t3_0_z)
-        alpaka::math::sqrt(acc, x1 * x1 + y1 * y1) / kR_max,               // inner T3 anchor hit 1 r (t3_0_r)
-        alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]) / kEta_norm,  // inner T3 anchor hit 2 eta (t3_2_eta)
-        alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex2]) / kZ_max,       // inner T3 anchor hit 2 z (t3_2_z)
-        alpaka::math::sqrt(acc, x2 * x2 + y2 * y2) / kR_max,               // inner T3 anchor hit 2 r (t3_2_r)
-        alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex3]) / kEta_norm,  // inner T3 anchor hit 3 eta (t3_4_eta)
-        alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex3]) / kZ_max,       // inner T3 anchor hit 3 z (t3_4_z)
-        alpaka::math::sqrt(acc, x3 * x3 + y3 * y3) / kR_max,               // inner T3 anchor hit 3 r (t3_4_r)
-        alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex4]) / kEta_norm,  // outer T3 anchor hit 4 eta (t3_2_eta)
-        alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex4]) / kZ_max,       // outer T3 anchor hit 4 z (t3_2_z)
-        alpaka::math::sqrt(acc, x4 * x4 + y4 * y4) / kR_max,               // outer T3 anchor hit 4 r (t3_2_r)
-        alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex5]) / kEta_norm,  // outer T3 anchor hit 5 eta (t3_4_eta)
-        alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex5]) / kZ_max,       // outer T3 anchor hit 5 z (t3_4_z)
-        alpaka::math::sqrt(acc, x5 * x5 + y5 * y5) / kR_max,               // outer T3 anchor hit 5 r (t3_4_r)
+        eta1 / kEta_norm,  // inner T3: First hit eta normalized
+        z1 / kZ_max,       // inner T3: First hit z normalized
+        r1 / kR_max,       // inner T3: First hit r normalized
+
+        eta2 - eta1,         // inner T3: Difference in eta between hit 2 and 1
+        (z2 - z1) / kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
+        (r2 - r1) / kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
+
+        eta3 - eta2,         // inner T3: Difference in eta between hit 3 and 2
+        (z3 - z2) / kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
+        (r3 - r2) / kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
+
+        eta4 - eta3,         // outer T3: Difference in eta between hit 4 and 3
+        (z4 - z3) / kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
+        (r4 - r3) / kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
+
+        eta5 - eta4,         // outer T3: Difference in eta between hit 5 and 4
+        (z5 - z4) / kZ_max,  // outer T3: Difference in z between hit 5 and 4 normalized
+        (r5 - r4) / kR_max,  // outer T3: Difference in r between hit 5 and 4 normalized
 
         alpaka::math::log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
         alpaka::math::log10(acc, bridgeRadius),  // T5 bridge radius (t5_bridgeRadius)
