@@ -144,12 +144,14 @@ namespace lst {
     inline void setData(QuintupletsBuffer& buf) { data_.setData(buf); }
   };
 
+#ifdef USE_RADIUSMATCH
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool checkIntervalOverlap(float firstMin,
                                                            float firstMax,
                                                            float secondMin,
                                                            float secondMax) {
     return ((firstMin <= secondMin) && (secondMin < firstMax)) || ((secondMin < firstMin) && (firstMin < secondMax));
   };
+#endif
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuintupletToMemory(lst::Triplets const& tripletsInGPU,
                                                             lst::Quintuplets& quintupletsInGPU,
@@ -767,6 +769,7 @@ namespace lst {
     return (innerOuterOuterMiniDoubletIndex == outerInnerInnerMiniDoubletIndex);
   };
 
+#ifdef USE_RADIUSMATCH
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeErrorInRadius(TAcc const& acc,
                                                            float* x1Vec,
@@ -1011,6 +1014,7 @@ namespace lst {
                                 alpaka::math::min(acc, bridgeInvRadiusMin, 1.0 / bridgeRadiusMax2S),
                                 alpaka::math::max(acc, bridgeInvRadiusMax, 1.0 / bridgeRadiusMin2S));
   };
+#endif
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegression(TAcc const& acc,
@@ -2290,6 +2294,7 @@ namespace lst {
     float x3Vec[] = {x3, x3, x3};
     float y3Vec[] = {y3, y3, y3};
 
+#ifdef USE_RADIUSMATCH
     if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Endcap and
         modulesInGPU.moduleType[lowerModuleIndex1] == lst::TwoS) {
       x1Vec[1] = mdsInGPU.anchorLowEdgeX[firstMDIndex];
@@ -2349,6 +2354,7 @@ namespace lst {
 
     float outerRadiusMin2S, outerRadiusMax2S;
     computeErrorInRadius(acc, x3Vec, y3Vec, x1Vec, y1Vec, x2Vec, y2Vec, outerRadiusMin2S, outerRadiusMax2S);
+#endif
 
     float g, f;
     outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
@@ -2383,6 +2389,8 @@ namespace lst {
 #else
     rzChiSquared = -1;
 #endif
+
+#ifdef USE_RADIUSMATCH
     if (innerRadius < 0.95f * ptCut / (2.f * k2Rinv1GeVf))
       return false;
 
@@ -2450,6 +2458,7 @@ namespace lst {
     //compute regression radius right here - this computation is expensive!!!
     if (not matchedRadii)
       return false;
+#endif
 
     float xVec[] = {x1, x2, x3, x4, x5};
     float yVec[] = {y1, y2, y3, y4, y5};
