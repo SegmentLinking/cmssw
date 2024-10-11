@@ -2286,6 +2286,7 @@ namespace lst {
     float y4 = mdsInGPU.anchorY[fourthMDIndex];
     float y5 = mdsInGPU.anchorY[fifthMDIndex];
 
+#ifdef USE_RADIUSMATCH
     //construct the arrays
     float x1Vec[] = {x1, x1, x1};
     float y1Vec[] = {y1, y1, y1};
@@ -2294,7 +2295,6 @@ namespace lst {
     float x3Vec[] = {x3, x3, x3};
     float y3Vec[] = {y3, y3, y3};
 
-#ifdef USE_RADIUSMATCH
     if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Endcap and
         modulesInGPU.moduleType[lowerModuleIndex1] == lst::TwoS) {
       x1Vec[1] = mdsInGPU.anchorLowEdgeX[firstMDIndex];
