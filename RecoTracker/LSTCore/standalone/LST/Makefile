@@ -70,7 +70,7 @@ CMSSW_WERRORS_CPU    = -Werror=pointer-arith -Werror=overlength-strings -Werror=
 CMSSW_WERRORS_CUDA   = $(patsubst %,-Xcompiler %,$(CMSSW_WERRORS_CPU))
 CMSSW_WERRORS_ROCM   = $(CMSSW_WERRORS_CPU)
 CACHEFLAG_FLAGS      = -DCACHE_ALLOC
-T5CUTFLAGS           = $(T5DNNFLAG) $(T5RZCHI2FLAG) $(T5RPHICHI2FLAG)
+T5CUTFLAGS           = $(T5DNNFLAG) $(T5RZCHI2FLAG)
 
 LD_CPU               = g++
 SOFLAGS_CPU          = -g -shared -fPIC
