@@ -108,11 +108,11 @@ public:
   // Boolean to trigger whether to write ntuple or not
   bool do_write_ntuple;
 
+  // Boolean to write optional objects
+  bool do_optional_output;
+
   // Boolean to write lower level objects
   bool do_lower_level;
-
-  // Boolean to write gnn ntuple
-  bool gnn_ntuple;
 
   // String to hold the MAKETARGET setting from compile
   std::string compilation_target;

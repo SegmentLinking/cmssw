@@ -17,7 +17,7 @@ using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
 void createOutputBranches();
 void createRequiredOutputBranches();
 void createOptionalOutputBranches();
-void createGnnNtupleBranches();
+void createLowLevelBranches();
 
 void fillOutputBranches(LSTEvent* event);
 void setOutputBranches(LSTEvent* event);
@@ -25,8 +25,8 @@ void setOptionalOutputBranches(LSTEvent* event);
 void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
 void setPixelTripletOutputBranches(LSTEvent* event);
-void setGnnNtupleBranches(LSTEvent* event);
-void setGnnNtupleMiniDoublet(LSTEvent* event, unsigned int MD);
+void setLowLevelBranches(LSTEvent* event);
+void setLowLevelMiniDoublet(LSTEvent* event, unsigned int MD);
 
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(LSTEvent* event, unsigned int);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(LSTEvent* event,

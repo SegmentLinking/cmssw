@@ -6,14 +6,13 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 void createOutputBranches() {
   createRequiredOutputBranches();
   createOptionalOutputBranches();
+  createLowLevelBranches();
 }
 
 //________________________________________________________________________________________________________________________________
 void fillOutputBranches(Event* event) {
   setOutputBranches(event);
   setOptionalOutputBranches(event);
-  if (ana.gnn_ntuple)
-    setGnnNtupleBranches(event);
 
   // Now actually fill the ttree
   ana.tx->fill();
@@ -52,7 +51,6 @@ void createRequiredOutputBranches() {
 
 //________________________________________________________________________________________________________________________________
 void createOptionalOutputBranches() {
-#ifdef CUT_VALUE_DEBUG
   // Event-wide branches
   // ana.tx->createBranch<float>("evt_dummy");
 
@@ -133,12 +131,10 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
-
-#endif
 }
 
 //________________________________________________________________________________________________________________________________
-void createGnnNtupleBranches() {
+void createLowLevelBranches() {
   // Mini Doublets
   ana.tx->createBranch<std::vector<float>>("MD_pt");
   ana.tx->createBranch<std::vector<float>>("MD_eta");
@@ -177,6 +173,7 @@ void createGnnNtupleBranches() {
   ana.tx->createBranch<std::vector<float>>("LS_sim_vy");
   ana.tx->createBranch<std::vector<float>>("LS_sim_vz");
   ana.tx->createBranch<std::vector<int>>("LS_isInTrueTC");
+  ana.tx->createBranch<std::vector<bool>>("LS_isDBScanDup");
 
   // TC's LS
   ana.tx->createBranch<std::vector<std::vector<int>>>("tc_lsIdx");
@@ -279,13 +276,10 @@ void setOutputBranches(Event* event) {
 
 //________________________________________________________________________________________________________________________________
 void setOptionalOutputBranches(Event* event) {
-#ifdef CUT_VALUE_DEBUG
-
   setPixelQuintupletOutputBranches(event);
   setQuintupletOutputBranches(event);
   setPixelTripletOutputBranches(event);
-
-#endif
+  setLowLevelBranches(event);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -499,7 +493,7 @@ void setPixelTripletOutputBranches(Event* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setGnnNtupleBranches(Event* event) {
+void setLowLevelBranches(Event* event) {
   // Get relevant information
   Segments const* segments = event->getSegments().data();
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
@@ -552,7 +546,7 @@ void setGnnNtupleBranches(Event* event) {
     //     // Get the actual index to the mini-doublet using ranges
     //     unsigned int mdIdx = ranges->miniDoubletModuleIndices[idx] + jdx;
 
-    //     setGnnNtupleMiniDoublet(event, mdIdx);
+    //     setLowLevelMiniDoublet(event, mdIdx);
     // }
 
     // Loop over segments
@@ -566,13 +560,13 @@ void setGnnNtupleBranches(Event* event) {
       if (mds_used_in_sg.find(MDs[0]) == mds_used_in_sg.end()) {
         mds_used_in_sg.insert(MDs[0]);
         md_index_map[MDs[0]] = mds_used_in_sg.size() - 1;
-        setGnnNtupleMiniDoublet(event, MDs[0]);
+        setLowLevelMiniDoublet(event, MDs[0]);
       }
 
       if (mds_used_in_sg.find(MDs[1]) == mds_used_in_sg.end()) {
         mds_used_in_sg.insert(MDs[1]);
         md_index_map[MDs[1]] = mds_used_in_sg.size() - 1;
-        setGnnNtupleMiniDoublet(event, MDs[1]);
+        setLowLevelMiniDoublet(event, MDs[1]);
       }
 
       ana.tx->pushbackToBranch<int>("LS_MD_idx0", md_index_map[MDs[0]]);
@@ -592,6 +586,7 @@ void setGnnNtupleBranches(Event* event) {
       ana.tx->pushbackToBranch<float>("LS_pt", pt);
       ana.tx->pushbackToBranch<float>("LS_eta", eta);
       ana.tx->pushbackToBranch<float>("LS_phi", phi);
+      ana.tx->pushbackToBranch<bool>("LS_isDBScanDup", segments->isDBScanDup[sgIdx]);
       // ana.tx->pushbackToBranch<int>("LS_layer0", layer0);
       // ana.tx->pushbackToBranch<int>("LS_layer1", layer1);
 
@@ -640,7 +635,7 @@ void setGnnNtupleBranches(Event* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setGnnNtupleMiniDoublet(Event* event, unsigned int MD) {
+void setLowLevelMiniDoublet(Event* event, unsigned int MD) {
   // Get relevant information
   MiniDoublets const* miniDoublets = event->getMiniDoublets().data();
   Hits const* hitsEvt = event->getHits().data();

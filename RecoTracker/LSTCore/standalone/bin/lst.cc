@@ -62,7 +62,8 @@ int main(int argc, char **argv) {
       "w,write_ntuple", "Write Ntuple", cxxopts::value<int>()->default_value("1"))(
       "s,streams", "Set number of streams", cxxopts::value<int>()->default_value("1"))(
       "d,debug", "Run debug job. i.e. overrides output option to 'debug.root' and 'recreate's the file.")(
-      "l,lower_level", "write lower level objects ntuple results")("G,gnn_ntuple", "write gnn input variable ntuple")(
+      "O,optional_output", "Write optional objects in output LST ntuple")(
+      "l,lower_level", "Write lower level objects in output LST ntuple")(
       "j,nsplit_jobs", "Enable splitting jobs by N blocks (--job_index must be set)", cxxopts::value<int>())(
       "I,job_index",
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
@@ -225,25 +226,30 @@ int main(int argc, char **argv) {
   // --optimization
 
   //_______________________________________________________________________________
-  // --lower_level
-  if (result.count("lower_level")) {
-    ana.do_lower_level = true;
-  } else {
-    ana.do_lower_level = false;
-  }
-
-  //_______________________________________________________________________________
-  // --gnn_ntuple
-  if (result.count("gnn_ntuple")) {
-    ana.gnn_ntuple = true;
-    // If one is not provided then throw error
+  // --optional_output
+  if (result.count("optional_output")) {
+    ana.do_optional_output = true;
     if (not ana.do_write_ntuple) {
       std::cout << options.help() << std::endl;
-      std::cout << "ERROR: option string --write_ntuple 1 and --gnn_ntuple must be set at the same time!" << std::endl;
+      std::cout << "ERROR: option string --write_ntuple 1 and --optional_output must be set at the same time!"
+                << std::endl;
       exit(1);
     }
   } else {
-    ana.gnn_ntuple = false;
+    ana.do_optional_output = false;
+  }
+
+  //_______________________________________________________________________________
+  // --lower_level
+  if (result.count("lower_level")) {
+    ana.do_lower_level = true;
+    if (not ana.do_write_ntuple) {
+      std::cout << options.help() << std::endl;
+      std::cout << "ERROR: option string --write_ntuple 1 and --lower_level must be set at the same time!" << std::endl;
+      exit(1);
+    }
+  } else {
+    ana.do_lower_level = false;
   }
 
   //_______________________________________________________________________________
@@ -315,9 +321,6 @@ void run_lst() {
 
   if (ana.do_write_ntuple) {
     createOutputBranches();
-    if (ana.gnn_ntuple) {
-      createGnnNtupleBranches();
-    }
   }
 
   std::vector<std::vector<float>> out_trkX;
