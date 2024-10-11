@@ -386,6 +386,18 @@ void Event::createSegmentsWithModuleMap() {
   }
 }
 
+void Event::DBScanLSDupRemoval() {
+  WorkDiv1D const DBScanDupRemoval_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});
+
+  alpaka::exec<Acc1D>(queue_,
+                      DBScanDupRemoval_workDiv,
+                      DBScanDupRemoval{},
+                      *modulesBuffers_.data(),
+                      *mdsInGPU_,
+                      *segmentsInGPU_,
+                      *rangesInGPU_);
+}
+
 void Event::createTriplets() {
   if (!tripletsInGPU_) {
     WorkDiv1D const createTripletArrayRanges_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});

@@ -47,6 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float* circleCenterX;
     float* circleCenterY;
     float* circleRadius;
+    bool* isDBScanDup;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -84,6 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       circleCenterX = buf.circleCenterX_buf.data();
       circleCenterY = buf.circleCenterY_buf.data();
       circleRadius = buf.circleRadius_buf.data();
+      isDBScanDup = buf.isDBScanDup_buf.data();
     }
   };
 
@@ -123,6 +125,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     Buf<TDev, float> circleCenterX_buf;
     Buf<TDev, float> circleCenterY_buf;
     Buf<TDev, float> circleRadius_buf;
+    Buf<TDev, bool> isDBScanDup_buf;
 
     Segments data_;
 
@@ -165,11 +168,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           score_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           circleCenterX_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           circleCenterY_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
-          circleRadius_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)) {
+          circleRadius_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
+          isDBScanDup_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)) {
       alpaka::memset(queue, nSegments_buf, 0u);
       alpaka::memset(queue, totOccupancySegments_buf, 0u);
       alpaka::memset(queue, partOfPT5_buf, false);
       alpaka::memset(queue, pLSHitsIdxs_buf, 0u);
+      alpaka::memset(queue, isDBScanDup_buf, false);
     }
 
     inline Segments const* data() const { return &data_; }
@@ -787,6 +792,107 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             }
           }
         }
+      }
+    }
+  };
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void DBScan(TAcc const& acc,
+                                              Segments& segmentsInGPU,
+                                              MiniDoublets const& mdsInGPU,
+                                              bool isDuplicate,
+                                              unsigned int segmentIndex) {
+    segmentsInGPU.isDBScanDup[segmentIndex] = false;
+  }
+
+  struct DBScanDupRemoval {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  Modules modulesInGPU,
+                                  MiniDoublets mdsInGPU,
+                                  Segments segmentsInGPU,
+                                  ObjectRanges rangesInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      alpaka::syncBlockThreads(acc);
+
+      // DBScan for segments
+      for (uint16_t innerLowerModuleIndex = globalThreadIdx[0]; innerLowerModuleIndex < *modulesInGPU.nLowerModules; innerLowerModuleIndex += gridThreadExtent[0]) {
+          for (uint16_t segmentIndex = rangesInGPU.segmentRanges[innerLowerModuleIndex * 2]; segmentIndex < rangesInGPU.segmentRanges[innerLowerModuleIndex * 2 + 1]; segmentIndex++) {
+              // DBScan(acc, segmentsInGPU, mdsInGPU, false, segmentIndex);
+              continue;
+          }
+        //   for (uint16_t segmentIndex = rangesInGPU.segmentRanges[innerLowerModuleIndex * 2]; segmentIndex < rangesInGPU.segmentRanges[innerLowerModuleIndex * 2 + 1]; segmentIndex++) {
+              
+        //       float segmentPx = segmentsInGPU.px[segmentIndex];
+        //       float segmentPy = segmentsInGPU.py[segmentIndex];
+        //       float segmentEta = segmentsInGPU.eta[segmentIndex];
+        //       float segmentPhi = segmentsInGPU.phi[segmentIndex];
+
+        //       float segmentPt = alpaka::math::sqrt(acc, segmentPx * segmentPx + segmentPy * segmentPy);
+        //       float segmentPtinv = 1.f / segmentPt;
+              
+        //       unsigned int innerMDidx = segmentsInGPU.mdIndices[segmentIndex * 2];
+        //       unsigned int outerMDidx = segmentsInGPU.mdIndices[segmentIndex * 2 + 1];
+
+        //       float mdPt1 = mdsInGPU.anchorRt[innerMDidx] * k2Rinv1GeVf / alpaka::math::sin(acc, mdsInGPU.dphichanges[innerMDidx]);
+        //       float mdPt2 = mdsInGPU.anchorRt[outerMDidx] * k2Rinv1GeVf / alpaka::math::sin(acc, mdsInGPU.dphichanges[outerMDidx]);
+
+        //       float mdPt1inv = 1.f / mdPt1;
+        //       float mdPt2inv = 1.f / mdPt2;
+        //       float md1Eta = mdsInGPU.anchorEta[innerMDidx];
+        //       float md1Phi = mdsInGPU.anchorPhi[innerMDidx];
+        //       float md2Eta = mdsInGPU.anchorEta[outerMDidx];
+        //       float md2Phi = mdsInGPU.anchorPhi[outerMDidx];
+
+        //       alpaka::syncBlockThreads(acc);
+
+        //       // Run DBScan
+        //       for (uint16_t testSegmentIndex = segmentIndex + 1; testSegmentIndex < rangesInGPU.segmentRanges[innerLowerModuleIndex * 2 + 1]; testSegmentIndex++) {
+                  
+        //           float testSegmentPx = segmentsInGPU.px[testSegmentIndex];
+        //           float testSegmentPy = segmentsInGPU.py[testSegmentIndex];
+        //           float testSegmentEta = segmentsInGPU.eta[testSegmentIndex];
+        //           float testSegmentPhi = segmentsInGPU.phi[testSegmentIndex];
+
+        //           float testSegmentPt = alpaka::math::sqrt(acc, testSegmentPx * testSegmentPx + testSegmentPy * testSegmentPy);
+        //           float testSegmentPtinv = 1.f / testSegmentPt;
+
+        //           unsigned int testInnerMDidx = segmentsInGPU.mdIndices[testSegmentIndex * 2];
+        //           unsigned int testOuterMDidx = segmentsInGPU.mdIndices[testSegmentIndex * 2 + 1];
+
+        //           float testMdPt1 = mdsInGPU.anchorRt[testInnerMDidx] * k2Rinv1GeVf / alpaka::math::sin(acc, mdsInGPU.dphichanges[testInnerMDidx]);
+        //           float testMdPt2 = mdsInGPU.anchorRt[testOuterMDidx] * k2Rinv1GeVf / alpaka::math::sin(acc, mdsInGPU.dphichanges[testOuterMDidx]);
+
+        //           float testMdPt1inv = 1.f / testMdPt1;
+        //           float testMdPt2inv = 1.f / testMdPt2;
+        //           float testMd1Eta = mdsInGPU.anchorEta[testInnerMDidx];
+        //           float testMd1Phi = mdsInGPU.anchorPhi[testInnerMDidx];
+        //           float testMd2Eta = mdsInGPU.anchorEta[testOuterMDidx];
+        //           float testMd2Phi = mdsInGPU.anchorPhi[testOuterMDidx];
+
+        //           // Calculate squared distance
+        //           float distance2 = (testSegmentPtinv - segmentPtinv) * (testSegmentPtinv - segmentPtinv) +
+        //                             (testSegmentEta - segmentEta) * (testSegmentEta - segmentEta) +
+        //                             (testSegmentPhi - segmentPhi) * (testSegmentPhi - segmentPhi) +
+        //                             (testMdPt1inv - mdPt1inv) * (testMdPt1inv - mdPt1inv) +
+        //                             (testMdPt2inv - mdPt2inv) * (testMdPt2inv - mdPt2inv) +
+        //                             (testMd1Eta - md1Eta) * (testMd1Eta - md1Eta) +
+        //                             (testMd1Phi - md1Phi) * (testMd1Phi - md1Phi) +
+        //                             (testMd2Eta - md2Eta) * (testMd2Eta - md2Eta) +
+        //                             (testMd2Phi - md2Phi) * (testMd2Phi - md2Phi);
+
+        //           float distance = alpaka::math::sqrt(acc, distance2);
+
+        //           alpaka::syncBlockThreads(acc);
+
+        //           if (distance < 1e-4f) { // eps = 0.01
+        //               segmentsInGPU.isDBScanDup[testSegmentIndex] = 1;
+        //           }
+        //       }
+        //   alpaka::syncBlockThreads(acc);
+        // }
       }
     }
   };

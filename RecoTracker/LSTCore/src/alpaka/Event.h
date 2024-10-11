@@ -176,6 +176,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     int getNumberOfPixelTrackCandidates();
     int getNumberOfT5TrackCandidates();
 
+    void DBScanLSDupRemoval();
+
     // sync adds alpaka::wait at the end of filling a buffer during lazy fill
     // (has no effect on repeated calls)
     // set to false may allow faster operation with concurrent calls of get*

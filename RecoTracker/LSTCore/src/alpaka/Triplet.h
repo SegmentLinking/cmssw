@@ -752,6 +752,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleRadius,
                                                                    float& circleCenterX,
                                                                    float& circleCenterY) {
+    
+    // if (segmentsInGPU.isDBScanDup[innerSegmentIndex] || segmentsInGPU.isDBScanDup[outerSegmentIndex])
+    //   return false;
+      
     //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
     if (segmentsInGPU.mdIndices[2 * innerSegmentIndex + 1] != segmentsInGPU.mdIndices[2 * outerSegmentIndex])
       return false;

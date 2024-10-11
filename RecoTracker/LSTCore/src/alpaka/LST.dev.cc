@@ -372,6 +372,8 @@ void LST::run(Queue& queue,
     printf("# of Segments produced endcap layer 5:  %d\n", event.getNumberOfSegmentsByLayerEndcap(4));
   }
 
+  event.DBScanLSDupRemoval();
+
   event.createTriplets();
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
