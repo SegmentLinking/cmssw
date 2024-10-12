@@ -1981,14 +1981,34 @@ namespace lst {
     rzChiSquared = -1;
 #endif
 
-    float xVec[] = {x1, x2, x3, x4, x5};
-    float yVec[] = {y1, y2, y3, y4, y5};
     const uint16_t lowerModuleIndices[] = {
         lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
+
+#ifdef USE_T5_DNN
+    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
+    bool inference = lst::t5dnn::runInference(acc,
+                                              modulesInGPU,
+                                              mdsInGPU,
+                                              segmentsInGPU,
+                                              tripletsInGPU,
+                                              mdIndices,
+                                              lowerModuleIndices,
+                                              innerTripletIndex,
+                                              outerTripletIndex,
+                                              innerRadius,
+                                              outerRadius,
+                                              bridgeRadius);
+    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
+      return false;
+#endif
 
     // 5 categories for sigmas
     float sigmas2[5], delta1[5], delta2[5], slopes[5];
     bool isFlat[5];
+
+    float xVec[] = {x1, x2, x3, x4, x5};
+    float yVec[] = {y1, y2, y3, y4, y5};
 
     computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegression(acc,
@@ -2003,27 +2023,6 @@ namespace lst {
                                                     regressionF,
                                                     sigmas2,
                                                     chiSquared);
-
-#ifdef USE_T5_DNN
-    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
-    float inference = lst::t5dnn::runInference(acc,
-                                               modulesInGPU,
-                                               mdsInGPU,
-                                               segmentsInGPU,
-                                               tripletsInGPU,
-                                               xVec,
-                                               yVec,
-                                               mdIndices,
-                                               lowerModuleIndices,
-                                               innerTripletIndex,
-                                               outerTripletIndex,
-                                               innerRadius,
-                                               outerRadius,
-                                               bridgeRadius);
-    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
-    if (!inference)                             // T5-building cut
-      return false;
-#endif
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!

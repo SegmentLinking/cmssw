@@ -43,8 +43,6 @@ namespace lst::t5dnn {
                                                     lst::MiniDoublets const& mdsInGPU,
                                                     lst::Segments const& segmentsInGPU,
                                                     lst::Triplets const& tripletsInGPU,
-                                                    const float* xVec,
-                                                    const float* yVec,
                                                     const unsigned int* mdIndices,
                                                     const uint16_t* lowerModuleIndices,
                                                     unsigned int innerTripletIndex,
@@ -52,34 +50,12 @@ namespace lst::t5dnn {
                                                     float innerRadius,
                                                     float outerRadius,
                                                     float bridgeRadius) {
-    // Unpack x-coordinates of hits
-    float x1 = xVec[0];
-    float x2 = xVec[1];
-    float x3 = xVec[2];
-    float x4 = xVec[3];
-    float x5 = xVec[4];
-    // Unpack y-coordinates of hits
-    float y1 = yVec[0];
-    float y2 = yVec[1];
-    float y3 = yVec[2];
-    float y4 = yVec[3];
-    float y5 = yVec[4];
     // Unpack module indices
     unsigned int mdIndex1 = mdIndices[0];
     unsigned int mdIndex2 = mdIndices[1];
     unsigned int mdIndex3 = mdIndices[2];
     unsigned int mdIndex4 = mdIndices[3];
     unsigned int mdIndex5 = mdIndices[4];
-
-    // Compute some convenience variables
-    short layer2_adjustment = 0;
-    if (modulesInGPU.layers[lowerModuleIndices[0]] == 1) {
-      layer2_adjustment = 1;  // get upper segment to be in second layer
-    }
-    unsigned int md_idx_for_t5_eta_phi =
-        segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex + layer2_adjustment]];
-
-    float t5_eta = mdsInGPU.anchorEta[md_idx_for_t5_eta_phi];
 
     // Constants
     constexpr unsigned int kinputFeatures = 18;
@@ -97,11 +73,11 @@ namespace lst::t5dnn {
     float z4 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex4]);  // outer T3 anchor hit 4 z (t3_2_z)
     float z5 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex5]);  // outer T3 anchor hit 5 z (t3_4_z)
 
-    float r1 = alpaka::math::sqrt(acc, x1 * x1 + y1 * y1);  // inner T3 anchor hit 1 r (t3_0_r)
-    float r2 = alpaka::math::sqrt(acc, x2 * x2 + y2 * y2);  // inner T3 anchor hit 2 r (t3_2_r)
-    float r3 = alpaka::math::sqrt(acc, x3 * x3 + y3 * y3);  // inner T3 anchor hit 3 r (t3_4_r)
-    float r4 = alpaka::math::sqrt(acc, x4 * x4 + y4 * y4);  // outer T3 anchor hit 4 r (t3_2_r)
-    float r5 = alpaka::math::sqrt(acc, x5 * x5 + y5 * y5);  // outer T3 anchor hit 5 r (t3_4_r)
+    float r1 = mdsInGPU.anchorRt[mdIndex1];  // inner T3 anchor hit 1 r (t3_0_r)
+    float r2 = mdsInGPU.anchorRt[mdIndex2];  // inner T3 anchor hit 2 r (t3_2_r)
+    float r3 = mdsInGPU.anchorRt[mdIndex3];  // inner T3 anchor hit 3 r (t3_4_r)
+    float r4 = mdsInGPU.anchorRt[mdIndex4];  // outer T3 anchor hit 4 r (t3_2_r)
+    float r5 = mdsInGPU.anchorRt[mdIndex5];  // outer T3 anchor hit 5 r (t3_4_r)
 
     // Build the input feature vector using pairwise differences after the first hit
     float x[kinputFeatures] = {
@@ -151,12 +127,20 @@ namespace lst::t5dnn {
     // Layer 3: Sigmoid
     float x_5 = sigmoid_activation(acc, x_3[0]);
 
+    // Compute some convenience variables for t5_eta
+    short layer2_adjustment = 0;
+    if (modulesInGPU.layers[lowerModuleIndices[0]] == 1) {
+      layer2_adjustment = 1;  // get upper segment to be in second layer
+    }
+    unsigned int md_idx_for_t5_eta_phi =
+        segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex + layer2_adjustment]];
+
     // Get the bin index based on abs(t5_eta) and t5_pt
-    float abs_t5_eta = alpaka::math::abs(acc, t5_eta);
+    float t5_eta = alpaka::math::abs(acc, mdsInGPU.anchorEta[md_idx_for_t5_eta_phi]);
     float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
 
     uint8_t pt_index = (t5_pt > 5) ? 1 : 0;
-    uint8_t bin_index = (abs_t5_eta > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(abs_t5_eta / 0.25f);
+    uint8_t bin_index = (t5_eta > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(t5_eta / 0.25f);
 
     // Compare x_5 to the cut value for the relevant bin
     return x_5 > kWp[pt_index][bin_index];
