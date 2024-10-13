@@ -14,6 +14,7 @@ namespace lst::t5dnn {
 
   template <int FEATURES>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
+#pragma unroll FEATURES
     for (unsigned int col = 0; col < FEATURES; ++col) {
       input[col] = (input[col] > 0.f) ? input[col] : 0.f;
     }
@@ -29,8 +30,10 @@ namespace lst::t5dnn {
                                                    float (&output)[OUT_FEATURES],
                                                    const float (&weights)[IN_FEATURES][OUT_FEATURES],
                                                    const float (&biases)[OUT_FEATURES]) {
+#pragma unroll OUT_FEATURES
     for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
       output[i] = biases[i];
+#pragma unroll IN_FEATURES
       for (int j = 0; j < IN_FEATURES; ++j) {
         output[i] += input[j] * weights[j][i];
       }
