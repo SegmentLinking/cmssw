@@ -1917,26 +1917,10 @@ namespace lst {
     outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
     bridgeRadius = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4, g, f);
     innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
-    g = tripletsInGPU.circleCenterX[innerTripletIndex];
-    f = tripletsInGPU.circleCenterY[innerTripletIndex];
-
-    const uint16_t lowerModuleIndices[] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
 #ifdef USE_T5_DNN
     unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
-    bool inference = lst::t5dnn::runInference(acc,
-                                              modulesInGPU,
-                                              mdsInGPU,
-                                              segmentsInGPU,
-                                              tripletsInGPU,
-                                              mdIndices,
-                                              lowerModuleIndices,
-                                              innerTripletIndex,
-                                              outerTripletIndex,
-                                              innerRadius,
-                                              outerRadius,
-                                              bridgeRadius);
+    bool inference = lst::t5dnn::runInference(acc, mdsInGPU, mdIndices, innerRadius, outerRadius, bridgeRadius);
     TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;
@@ -1976,6 +1960,9 @@ namespace lst {
                                       ptCut))
       return false;
 
+    g = tripletsInGPU.circleCenterX[innerTripletIndex];
+    f = tripletsInGPU.circleCenterY[innerTripletIndex];
+
 #ifdef USE_RZCHI2
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
 
@@ -2009,6 +1996,9 @@ namespace lst {
 
     float xVec[] = {x1, x2, x3, x4, x5};
     float yVec[] = {y1, y2, y3, y4, y5};
+
+    const uint16_t lowerModuleIndices[] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
     computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegression(acc,

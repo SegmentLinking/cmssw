@@ -2,13 +2,10 @@
 #define RecoTracker_LSTCore_src_alpaka_NeuralNetwork_h
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
-#include "RecoTracker/LSTCore/interface/Module.h"
 
 #include "NeuralNetworkWeights.h"
-#include "Segment.h"
 #include "MiniDoublet.h"
 #include "Hit.h"
-#include "Triplet.h"
 
 namespace lst::t5dnn {
 
@@ -42,27 +39,21 @@ namespace lst::t5dnn {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc,
-                                                    lst::Modules const& modulesInGPU,
                                                     lst::MiniDoublets const& mdsInGPU,
-                                                    lst::Segments const& segmentsInGPU,
-                                                    lst::Triplets const& tripletsInGPU,
                                                     const unsigned int* mdIndices,
-                                                    const uint16_t* lowerModuleIndices,
-                                                    unsigned int innerTripletIndex,
-                                                    unsigned int outerTripletIndex,
                                                     float innerRadius,
                                                     float outerRadius,
                                                     float bridgeRadius) {
+    // Constants
+    constexpr unsigned int kinputFeatures = 18;
+    constexpr unsigned int khiddenFeatures = 32;
+
     // Unpack module indices
     unsigned int mdIndex1 = mdIndices[0];
     unsigned int mdIndex2 = mdIndices[1];
     unsigned int mdIndex3 = mdIndices[2];
     unsigned int mdIndex4 = mdIndices[3];
     unsigned int mdIndex5 = mdIndices[4];
-
-    // Constants
-    constexpr unsigned int kinputFeatures = 18;
-    constexpr unsigned int khiddenFeatures = 32;
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
     float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
@@ -109,41 +100,27 @@ namespace lst::t5dnn {
         alpaka::math::log10(acc, outerRadius)    // T5 outer radius (t5_outerRadius)
     };
 
-    // Layer 1: Linear
-    float x_1[khiddenFeatures];
-    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_0, bias_0);
+    float x_1[khiddenFeatures];  // Layer 1 output
+    float x_2[khiddenFeatures];  // Layer 2 output
+    float x_3[1];                // Layer 3 linear output
 
-    // Layer 1: ReLU
+    // Layer 1: Linear + Relu
+    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_layer1, bias_layer1);
     relu_activation<khiddenFeatures>(x_1);
 
-    // Layer 2: Linear
-    float x_2[khiddenFeatures];
-    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_2, bias_2);
-
-    // Layer 2: ReLU
+    // Layer 2: Linear + Relu
+    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_layer2, bias_layer2);
     relu_activation<khiddenFeatures>(x_2);
 
-    // Layer 3: Linear
-    float x_3[1];
-    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_4, bias_4);
-
-    // Layer 3: Sigmoid
+    // Layer 3: Linear + Sigmoid
+    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
     float x_5 = sigmoid_activation(acc, x_3[0]);
 
-    // Compute some convenience variables for t5_eta
-    short layer2_adjustment = 0;
-    if (modulesInGPU.layers[lowerModuleIndices[0]] == 1) {
-      layer2_adjustment = 1;  // get upper segment to be in second layer
-    }
-    unsigned int md_idx_for_t5_eta_phi =
-        segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex + layer2_adjustment]];
-
-    // Get the bin index based on abs(t5_eta) and t5_pt
-    float t5_eta = alpaka::math::abs(acc, mdsInGPU.anchorEta[md_idx_for_t5_eta_phi]);
+    // Get the bin index based on abs(eta) of first hit and t5_pt
     float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
 
-    uint8_t pt_index = (t5_pt > 5) ? 1 : 0;
-    uint8_t bin_index = (t5_eta > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(t5_eta / 0.25f);
+    uint8_t pt_index = (t5_pt > 5);
+    uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
 
     // Compare x_5 to the cut value for the relevant bin
     return x_5 > kWp[pt_index][bin_index];
