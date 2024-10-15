@@ -206,9 +206,9 @@ namespace lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRZConstraint(TAcc const& acc,
-                                                       struct lst::Modules const& modulesInGPU,
-                                                       struct lst::MiniDoublets const& mdsInGPU,
-                                                       struct lst::Segments const& segmentsInGPU,
+                                                       lst::Modules const& modulesInGPU,
+                                                       lst::MiniDoublets const& mdsInGPU,
+                                                       lst::Segments const& segmentsInGPU,
                                                        uint16_t innerInnerLowerModuleIndex,
                                                        uint16_t middleLowerModuleIndex,
                                                        uint16_t outerOuterLowerModuleIndex,
@@ -547,7 +547,7 @@ namespace lst {
             acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / drt_InSeg);
 
-    //Cut #3: first beta cut
+    //Beta cut
     return alpaka::math::abs(acc, betaIn) < betaInCut;
   };
 
@@ -603,7 +603,7 @@ namespace lst {
         alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + dr) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdIn_d);
 
-    //Cut #4: first beta cut
+    //Beta cut
     return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
   };
 
@@ -658,7 +658,7 @@ namespace lst {
         alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + dr) * lst::k2Rinv1GeVf / ptCut, lst::kSinAlphaMax)) +
         (0.02f / sdIn_d);
 
-    //Cut #4: first beta cut
+    //Beta cut
     return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
   };
 
