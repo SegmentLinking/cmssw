@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_alpaka_MiniDoubletsSoA_h
-#define RecoTracker_LSTCore_interface_alpaka_MiniDoubletsSoA_h
+#ifndef RecoTracker_LSTCore_interface_alpaka_MiniDoubletsDeviceCollection_h
+#define RecoTracker_LSTCore_interface_alpaka_MiniDoubletsDeviceCollection_h
 
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
 

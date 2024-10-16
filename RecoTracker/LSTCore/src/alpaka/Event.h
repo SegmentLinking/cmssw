@@ -48,8 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<Hits> hitsInGPU_;
     std::optional<HitsBuffer<Device>> hitsBuffers_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
-    std::optional<Segments> segmentsInGPU_;
-    std::optional<SegmentsBuffer<Device>> segmentsBuffers_;
+    std::optional<SegmentsDeviceCollection> segmentsDC_;
     std::optional<Triplets> tripletsInGPU_;
     std::optional<TripletsBuffer<Device>> tripletsBuffers_;
     std::optional<Quintuplets> quintupletsInGPU_;
@@ -64,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<ObjectRangesBuffer<DevHost>> rangesInCPU_;
     std::optional<HitsBuffer<DevHost>> hitsInCPU_;
     std::optional<MiniDoubletsHostCollection> miniDoubletsHC_;
-    std::optional<SegmentsBuffer<DevHost>> segmentsInCPU_;
+    std::optional<SegmentsHostCollection> segmentsHC_;
     std::optional<TripletsBuffer<DevHost>> tripletsInCPU_;
     std::optional<TrackCandidatesHostCollection> trackCandidatesHC_;
     std::optional<ModulesBuffer<DevHost>> modulesInCPU_;
@@ -184,7 +183,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ObjectRangesBuffer<DevHost>& getRanges(bool sync = true);
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getMiniDoublets(bool sync = true);
-    SegmentsBuffer<DevHost>& getSegments(bool sync = true);
+    template <typename TSoA, typename TDev = Device>
+    typename TSoA::ConstView getSegments(bool sync = true);
     TripletsBuffer<DevHost>& getTriplets(bool sync = true);
     QuintupletsBuffer<DevHost>& getQuintuplets(bool sync = true);
     PixelTripletsBuffer<DevHost>& getPixelTriplets(bool sync = true);

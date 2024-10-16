@@ -751,15 +751,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool T5HasCommonMiniDoublet(Triplets const& tripletsInGPU,
-                                                             Segments const& segmentsInGPU,
+                                                             SegmentsConst segments,
                                                              unsigned int innerTripletIndex,
                                                              unsigned int outerTripletIndex) {
     unsigned int innerOuterSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int outerInnerSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex];
     unsigned int innerOuterOuterMiniDoubletIndex =
-        segmentsInGPU.mdIndices[2 * innerOuterSegmentIndex + 1];  //inner triplet outer segment outer MD index
+        segments.mdIndices()[innerOuterSegmentIndex][1];  //inner triplet outer segment outer MD index
     unsigned int outerInnerInnerMiniDoubletIndex =
-        segmentsInGPU.mdIndices[2 * outerInnerSegmentIndex];  //outer triplet inner segment inner MD index
+        segments.mdIndices()[outerInnerSegmentIndex][0];  //outer triplet inner segment inner MD index
 
     return (innerOuterOuterMiniDoubletIndex == outerInnerInnerMiniDoubletIndex);
   }
@@ -1343,7 +1343,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoBBBB(TAcc const& acc,
                                                                    Modules const& modulesInGPU,
                                                                    MiniDoubletsConst mds,
-                                                                   Segments const& segmentsInGPU,
+                                                                   SegmentsConst segments,
                                                                    uint16_t innerInnerLowerModuleIndex,
                                                                    uint16_t innerOuterLowerModuleIndex,
                                                                    uint16_t outerInnerLowerModuleIndex,
@@ -1430,9 +1430,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     // First obtaining the raw betaIn and betaOut values without any correction and just purely based on the mini-doublet hit positions
-
-    float alpha_InLo = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
-    float alpha_OutLo = __H2F(segmentsInGPU.dPhiChanges[outerSegmentIndex]);
+    float alpha_InLo = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+    float alpha_OutLo = __H2F(segments.dPhiChanges()[outerSegmentIndex]);
 
     bool isEC_lastLayer = modulesInGPU.subdets[outerOuterLowerModuleIndex] == Endcap and
                           modulesInGPU.moduleType[outerOuterLowerModuleIndex] == TwoS;
@@ -1586,7 +1585,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoBBEE(TAcc const& acc,
                                                                    Modules const& modulesInGPU,
                                                                    MiniDoubletsConst mds,
-                                                                   Segments const& segmentsInGPU,
+                                                                   SegmentsConst segments,
                                                                    uint16_t innerInnerLowerModuleIndex,
                                                                    uint16_t innerOuterLowerModuleIndex,
                                                                    uint16_t outerInnerLowerModuleIndex,
@@ -1684,9 +1683,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, dPhi) > dPhiCut)
       return false;
 
-    float sdIn_alpha = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
-    float sdIn_alpha_min = __H2F(segmentsInGPU.dPhiChangeMins[innerSegmentIndex]);
-    float sdIn_alpha_max = __H2F(segmentsInGPU.dPhiChangeMaxs[innerSegmentIndex]);
+    float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+    float sdIn_alpha_min = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
+    float sdIn_alpha_max = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
     float sdOut_alpha = sdIn_alpha;
 
     float sdOut_alphaOut = phi_mpi_pi(acc,
@@ -1696,9 +1695,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                           mds.anchorPhi()[fourthMDIndex]);
 
     float sdOut_alphaOut_min = phi_mpi_pi(
-        acc, __H2F(segmentsInGPU.dPhiChangeMins[outerSegmentIndex]) - __H2F(segmentsInGPU.dPhiMins[outerSegmentIndex]));
+        acc, __H2F(segments.dPhiChangeMins()[outerSegmentIndex]) - __H2F(segments.dPhiMins()[outerSegmentIndex]));
     float sdOut_alphaOut_max = phi_mpi_pi(
-        acc, __H2F(segmentsInGPU.dPhiChangeMaxs[outerSegmentIndex]) - __H2F(segmentsInGPU.dPhiMaxs[outerSegmentIndex]));
+        acc, __H2F(segments.dPhiChangeMaxs()[outerSegmentIndex]) - __H2F(segments.dPhiMaxs()[outerSegmentIndex]));
 
     float tl_axis_x = mds.anchorX()[fourthMDIndex] - mds.anchorX()[firstMDIndex];
     float tl_axis_y = mds.anchorY()[fourthMDIndex] - mds.anchorY()[firstMDIndex];
@@ -1831,7 +1830,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgoEEEE(TAcc const& acc,
                                                                    Modules const& modulesInGPU,
                                                                    MiniDoubletsConst mds,
-                                                                   Segments const& segmentsInGPU,
+                                                                   SegmentsConst segments,
                                                                    uint16_t innerInnerLowerModuleIndex,
                                                                    uint16_t innerOuterLowerModuleIndex,
                                                                    uint16_t outerInnerLowerModuleIndex,
@@ -1933,13 +1932,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, dPhi) > dPhiCut)
       return false;
 
-    float sdIn_alpha = __H2F(segmentsInGPU.dPhiChanges[innerSegmentIndex]);
+    float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
     float sdOut_alpha = sdIn_alpha;  //weird
     float sdOut_dPhiPos = phi_mpi_pi(acc, mds.anchorPhi()[fourthMDIndex] - mds.anchorPhi()[thirdMDIndex]);
 
-    float sdOut_dPhiChange = __H2F(segmentsInGPU.dPhiChanges[outerSegmentIndex]);
-    float sdOut_dPhiChange_min = __H2F(segmentsInGPU.dPhiChangeMins[outerSegmentIndex]);
-    float sdOut_dPhiChange_max = __H2F(segmentsInGPU.dPhiChangeMaxs[outerSegmentIndex]);
+    float sdOut_dPhiChange = __H2F(segments.dPhiChanges()[outerSegmentIndex]);
+    float sdOut_dPhiChange_min = __H2F(segments.dPhiChangeMins()[outerSegmentIndex]);
+    float sdOut_dPhiChange_max = __H2F(segments.dPhiChangeMaxs()[outerSegmentIndex]);
 
     float sdOut_alphaOutRHmin = phi_mpi_pi(acc, sdOut_dPhiChange_min - sdOut_dPhiPos);
     float sdOut_alphaOutRHmax = phi_mpi_pi(acc, sdOut_dPhiChange_max - sdOut_dPhiPos);
@@ -1950,8 +1949,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float betaIn = sdIn_alpha - phi_mpi_pi(acc, phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
 
-    float sdIn_alphaRHmin = __H2F(segmentsInGPU.dPhiChangeMins[innerSegmentIndex]);
-    float sdIn_alphaRHmax = __H2F(segmentsInGPU.dPhiChangeMaxs[innerSegmentIndex]);
+    float sdIn_alphaRHmin = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
+    float sdIn_alphaRHmax = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
     float betaInRHmin = betaIn + sdIn_alphaRHmin - sdIn_alpha;
     float betaInRHmax = betaIn + sdIn_alphaRHmax - sdIn_alpha;
 
@@ -2056,7 +2055,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletAlgoSelector(TAcc const& acc,
                                                                 Modules const& modulesInGPU,
                                                                 MiniDoubletsConst mds,
-                                                                Segments const& segmentsInGPU,
+                                                                SegmentsConst segments,
                                                                 uint16_t innerInnerLowerModuleIndex,
                                                                 uint16_t innerOuterLowerModuleIndex,
                                                                 uint16_t outerInnerLowerModuleIndex,
@@ -2077,7 +2076,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return runQuintupletDefaultAlgoBBBB(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           innerInnerLowerModuleIndex,
                                           innerOuterLowerModuleIndex,
                                           outerInnerLowerModuleIndex,
@@ -2093,7 +2092,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return runQuintupletDefaultAlgoBBEE(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           innerInnerLowerModuleIndex,
                                           innerOuterLowerModuleIndex,
                                           outerInnerLowerModuleIndex,
@@ -2109,7 +2108,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return runQuintupletDefaultAlgoBBBB(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           innerInnerLowerModuleIndex,
                                           innerOuterLowerModuleIndex,
                                           outerInnerLowerModuleIndex,
@@ -2125,7 +2124,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return runQuintupletDefaultAlgoBBEE(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           innerInnerLowerModuleIndex,
                                           innerOuterLowerModuleIndex,
                                           outerInnerLowerModuleIndex,
@@ -2141,7 +2140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return runQuintupletDefaultAlgoEEEE(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           innerInnerLowerModuleIndex,
                                           innerOuterLowerModuleIndex,
                                           outerInnerLowerModuleIndex,
@@ -2161,7 +2160,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgo(TAcc const& acc,
                                                                Modules& modulesInGPU,
                                                                MiniDoubletsConst mds,
-                                                               Segments& segmentsInGPU,
+                                                               SegmentsConst segments,
                                                                Triplets& tripletsInGPU,
                                                                uint16_t lowerModuleIndex1,
                                                                uint16_t lowerModuleIndex2,
@@ -2186,24 +2185,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int fourthSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex + 1];
 
     unsigned int innerOuterOuterMiniDoubletIndex =
-        segmentsInGPU.mdIndices[2 * secondSegmentIndex + 1];  //inner triplet outer segment outer MD index
+        segments.mdIndices()[secondSegmentIndex][1];  //inner triplet outer segment outer MD index
     unsigned int outerInnerInnerMiniDoubletIndex =
-        segmentsInGPU.mdIndices[2 * thirdSegmentIndex];  //outer triplet inner segment inner MD index
+        segments.mdIndices()[thirdSegmentIndex][0];  //outer triplet inner segment inner MD index
 
     //this cut reduces the number of candidates by a factor of 3, i.e., 2 out of 3 warps can end right here!
     if (innerOuterOuterMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
       return false;
 
-    unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * firstSegmentIndex];
-    unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex];
-    unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex + 1];
-    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];
-    unsigned int fifthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
+    unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
+    unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
+    unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
+    unsigned int fourthMDIndex = segments.mdIndices()[thirdSegmentIndex][1];
+    unsigned int fifthMDIndex = segments.mdIndices()[fourthSegmentIndex][1];
 
     if (not runQuintupletAlgoSelector(acc,
                                       modulesInGPU,
                                       mds,
-                                      segmentsInGPU,
+                                      segments,
                                       lowerModuleIndex1,
                                       lowerModuleIndex2,
                                       lowerModuleIndex3,
@@ -2219,7 +2218,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (not runQuintupletAlgoSelector(acc,
                                       modulesInGPU,
                                       mds,
-                                      segmentsInGPU,
+                                      segments,
                                       lowerModuleIndex1,
                                       lowerModuleIndex2,
                                       lowerModuleIndex4,
@@ -2432,7 +2431,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float inference = t5dnn::runInference(acc,
                                           modulesInGPU,
                                           mds,
-                                          segmentsInGPU,
+                                          segments,
                                           tripletsInGPU,
                                           xVec,
                                           yVec,
@@ -2504,7 +2503,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
                                   MiniDoubletsConst mds,
-                                  Segments segmentsInGPU,
+                                  SegmentsConst segments,
                                   Triplets tripletsInGPU,
                                   Quintuplets quintupletsInGPU,
                                   ObjectRanges rangesInGPU,
@@ -2545,7 +2544,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             bool success = runQuintupletDefaultAlgo(acc,
                                                     modulesInGPU,
                                                     mds,
-                                                    segmentsInGPU,
+                                                    segments,
                                                     tripletsInGPU,
                                                     lowerModule1,
                                                     lowerModule2,
@@ -2583,12 +2582,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 } else {
                   unsigned int quintupletIndex =
                       rangesInGPU.quintupletModuleIndices[lowerModule1] + quintupletModuleIndex;
-                  float phi =
-                      mds.anchorPhi()[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
-                                                                                               layer2_adjustment]]];
-                  float eta =
-                      mds.anchorEta()[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
-                                                                                               layer2_adjustment]]];
+                  float phi = mds.anchorPhi()[segments.mdIndices()[tripletsInGPU.segmentIndices[2 * innerTripletIndex]]
+                                                                  [layer2_adjustment]];
+                  float eta = mds.anchorEta()[segments.mdIndices()[tripletsInGPU.segmentIndices[2 * innerTripletIndex]]
+                                                                  [layer2_adjustment]];
                   float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuintupletToMemory(tripletsInGPU,
