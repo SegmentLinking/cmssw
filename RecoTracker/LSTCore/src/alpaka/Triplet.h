@@ -5,6 +5,7 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "FWCore/Utilities/interface/isFinite.h"
 
 #include "Segment.h"
 #include "MiniDoublet.h"
@@ -381,7 +382,7 @@ namespace lst {
 
     //calculate residual
     if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) { // for barrel
-      float paraA = r_init * r_init + 2 * (px * px + py * py) / (a * a) + 2 * (y_init * px - x_init * py) / a - r3 * r3;
+      float paraA = r_init * r_init + 2 * (px * px + py * py) / (a * a) + 2 * (y_init * px - x_init * py) / a - r_target * r_target;
       float paraB = 2 * (x_init * px + y_init * py) / a;
       float paraC = 2 * (y_init * px - x_init * py) / a + 2 * (px * px + py * py) / (a * a);
       float A = paraB * paraB + paraC * paraC;
@@ -391,11 +392,11 @@ namespace lst {
       float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
       float solz1 = alpaka::math::asin(acc, sol1) / rou * pz / p + z_init;
       float solz2 = alpaka::math::asin(acc, sol2) / rou * pz / p + z_init;
-      float diffz1 = (solz1 - z3) * 100;
-      float diffz2 = (solz2 - z3) * 100;
-      if (alpaka::math::isnan(acc, diffz1))
+      float diffz1 = (solz1 - z_target) * 100;
+      float diffz2 = (solz2 - z_target) * 100;
+      if (edm::isNotFinite(diffz1))
         residual = diffz2;
-      else if (alpaka::math::isnan(acc, diffz2))
+      else if (edm::isNotFinite(diffz2))
         residual = diffz1;
       else {
         residual = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
@@ -427,7 +428,7 @@ namespace lst {
     rzChiSquared = 12 * (residual * residual) / (error * error * projection_missing2);
 
     //helix calculation returns NaN, use linear approximation
-    if (alpaka::math::isnan(acc, rzChiSquared) || circleRadius < 0) {
+    if (edm::isNotFinite(rzChiSquared) || circleRadius < 0) {
       float slope = (z_other - z1) / (r_other - r1);
 
       residual = (layer3 <= 6) ? ((z_target - z1) - slope * (r_target - r1)) : ((r_target - r1) - (z_target - z1) / slope);
