@@ -1900,300 +1900,30 @@ namespace lst {
                                                                struct lst::MiniDoublets& mdsInGPU,
                                                                struct lst::Segments& segmentsInGPU,
                                                                struct lst::Triplets& tripletsInGPU,
-                                                               uint16_t lowerModuleIndex1,
-                                                               uint16_t lowerModuleIndex2,
-                                                               uint16_t lowerModuleIndex3,
-                                                               uint16_t lowerModuleIndex4,
-                                                               uint16_t lowerModuleIndex5,
                                                                unsigned int innerTripletIndex,
-                                                               unsigned int outerTripletIndex,
-                                                               float& innerRadius,
-                                                               float& outerRadius,
-                                                               float& rzChiSquared,
-                                                               float& chiSquared,
-                                                               const float ptCut) {
-    unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
+                                                               unsigned int outerTripletIndex) {
+    // unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex];
-    unsigned int fourthSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex + 1];
+    // unsigned int fourthSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex + 1];
 
+    unsigned int innerOuterInnerMiniDoubletIndex =
+        segmentsInGPU.mdIndices[2 * secondSegmentIndex];  //inner triplet outer segment inner MD index
     unsigned int innerOuterOuterMiniDoubletIndex =
         segmentsInGPU.mdIndices[2 * secondSegmentIndex + 1];  //inner triplet outer segment outer MD index
     unsigned int outerInnerInnerMiniDoubletIndex =
         segmentsInGPU.mdIndices[2 * thirdSegmentIndex];  //outer triplet inner segment inner MD index
+    // unsigned int outerOuterInnerMiniDoubletIndex =
+    //     segmentsInGPU.mdIndices[2 * fourthSegmentIndex];  //outer triplet outer segment inner MD index
+    unsigned int outerOuterInnerMiniDoubletIndex =
+        segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];  //outer triplet outer segment inner MD index
 
-    //this cut reduces the number of candidates by a factor of 3, i.e., 2 out of 3 warps can end right here!
-    if (innerOuterOuterMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
+    //check if the 2 T3s have a common LS
+    if (innerOuterInnerMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
       return false;
+    if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
+      return false; 
 
-    unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * firstSegmentIndex];
-    unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex];
-    unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex + 1];
-    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];
-    unsigned int fifthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
-
-    if (not runQuadrupletAlgoSelector(acc,
-                                      modulesInGPU,
-                                      mdsInGPU,
-                                      segmentsInGPU,
-                                      lowerModuleIndex1,
-                                      lowerModuleIndex2,
-                                      lowerModuleIndex3,
-                                      lowerModuleIndex4,
-                                      firstSegmentIndex,
-                                      thirdSegmentIndex,
-                                      firstMDIndex,
-                                      secondMDIndex,
-                                      thirdMDIndex,
-                                      fourthMDIndex,
-                                      ptCut))
-      return false;
-
-    if (not runQuadrupletAlgoSelector(acc,
-                                      modulesInGPU,
-                                      mdsInGPU,
-                                      segmentsInGPU,
-                                      lowerModuleIndex1,
-                                      lowerModuleIndex2,
-                                      lowerModuleIndex4,
-                                      lowerModuleIndex5,
-                                      firstSegmentIndex,
-                                      fourthSegmentIndex,
-                                      firstMDIndex,
-                                      secondMDIndex,
-                                      fourthMDIndex,
-                                      fifthMDIndex,
-                                      ptCut))
-      return false;
-
-    float x1 = mdsInGPU.anchorX[firstMDIndex];
-    float x2 = mdsInGPU.anchorX[secondMDIndex];
-    float x3 = mdsInGPU.anchorX[thirdMDIndex];
-    float x4 = mdsInGPU.anchorX[fourthMDIndex];
-    float x5 = mdsInGPU.anchorX[fifthMDIndex];
-
-    float y1 = mdsInGPU.anchorY[firstMDIndex];
-    float y2 = mdsInGPU.anchorY[secondMDIndex];
-    float y3 = mdsInGPU.anchorY[thirdMDIndex];
-    float y4 = mdsInGPU.anchorY[fourthMDIndex];
-    float y5 = mdsInGPU.anchorY[fifthMDIndex];
-
-    //construct the arrays
-    float x1Vec[] = {x1, x1, x1};
-    float y1Vec[] = {y1, y1, y1};
-    float x2Vec[] = {x2, x2, x2};
-    float y2Vec[] = {y2, y2, y2};
-    float x3Vec[] = {x3, x3, x3};
-    float y3Vec[] = {y3, y3, y3};
-
-    if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex1] == lst::TwoS) {
-      x1Vec[1] = mdsInGPU.anchorLowEdgeX[firstMDIndex];
-      x1Vec[2] = mdsInGPU.anchorHighEdgeX[firstMDIndex];
-
-      y1Vec[1] = mdsInGPU.anchorLowEdgeY[firstMDIndex];
-      y1Vec[2] = mdsInGPU.anchorHighEdgeY[firstMDIndex];
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex2] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex2] == lst::TwoS) {
-      x2Vec[1] = mdsInGPU.anchorLowEdgeX[secondMDIndex];
-      x2Vec[2] = mdsInGPU.anchorHighEdgeX[secondMDIndex];
-
-      y2Vec[1] = mdsInGPU.anchorLowEdgeY[secondMDIndex];
-      y2Vec[2] = mdsInGPU.anchorHighEdgeY[secondMDIndex];
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex3] == lst::TwoS) {
-      x3Vec[1] = mdsInGPU.anchorLowEdgeX[thirdMDIndex];
-      x3Vec[2] = mdsInGPU.anchorHighEdgeX[thirdMDIndex];
-
-      y3Vec[1] = mdsInGPU.anchorLowEdgeY[thirdMDIndex];
-      y3Vec[2] = mdsInGPU.anchorHighEdgeY[thirdMDIndex];
-    }
-
-    float innerRadiusMin2S, innerRadiusMax2S;
-    computeErrorInRadiusT4(acc, x1Vec, y1Vec, x2Vec, y2Vec, x3Vec, y3Vec, innerRadiusMin2S, innerRadiusMax2S);
-
-    for (int i = 0; i < 3; i++) {
-      x1Vec[i] = x4;
-      y1Vec[i] = y4;
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex4] == lst::TwoS) {
-      x1Vec[1] = mdsInGPU.anchorLowEdgeX[fourthMDIndex];
-      x1Vec[2] = mdsInGPU.anchorHighEdgeX[fourthMDIndex];
-
-      y1Vec[1] = mdsInGPU.anchorLowEdgeY[fourthMDIndex];
-      y1Vec[2] = mdsInGPU.anchorHighEdgeY[fourthMDIndex];
-    }
-
-    for (int i = 0; i < 3; i++) {
-      x2Vec[i] = x5;
-      y2Vec[i] = y5;
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex5] == lst::TwoS) {
-      x2Vec[1] = mdsInGPU.anchorLowEdgeX[fifthMDIndex];
-      x2Vec[2] = mdsInGPU.anchorHighEdgeX[fifthMDIndex];
-
-      y2Vec[1] = mdsInGPU.anchorLowEdgeY[fifthMDIndex];
-      y2Vec[2] = mdsInGPU.anchorHighEdgeY[fifthMDIndex];
-    }
-
-    float outerRadiusMin2S, outerRadiusMax2S;
-    computeErrorInRadiusT4(acc, x3Vec, y3Vec, x1Vec, y1Vec, x2Vec, y2Vec, outerRadiusMin2S, outerRadiusMax2S);
-
-    float g, f;
-    outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
-    innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
-    g = tripletsInGPU.circleCenterX[innerTripletIndex];
-    f = tripletsInGPU.circleCenterY[innerTripletIndex];
-
-#ifdef USE_RZCHI2
-    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
-
-    if (not passT4RZConstraint(acc,
-                               modulesInGPU,
-                               mdsInGPU,
-                               firstMDIndex,
-                               secondMDIndex,
-                               thirdMDIndex,
-                               fourthMDIndex,
-                               fifthMDIndex,
-                               lowerModuleIndex1,
-                               lowerModuleIndex2,
-                               lowerModuleIndex3,
-                               lowerModuleIndex4,
-                               lowerModuleIndex5,
-                               rzChiSquared,
-                               inner_pt,
-                               innerRadius,
-                               g,
-                               f))
-      return false;
-#else
-    rzChiSquared = -1;
-#endif
-    if (innerRadius < 0.95f * ptCut / (2.f * k2Rinv1GeVf))
-      return false;
-
-    //split by category
-    bool matchedRadii;
-    if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex4] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex5] == lst::Barrel) {
-      matchedRadii = T4matchRadiiBBBBB(acc, innerRadius, outerRadius);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = T4matchRadiiBBBBE(acc, innerRadius, outerRadius);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      if (modulesInGPU.layers[lowerModuleIndex1] == 1) {
-        matchedRadii =
-            T4matchRadiiBBBEE12378(acc, innerRadius, outerRadius, outerRadiusMin2S, outerRadiusMax2S);
-      } else if (modulesInGPU.layers[lowerModuleIndex1] == 2) {
-        matchedRadii =
-            T4matchRadiiBBBEE23478(acc, innerRadius, outerRadius, outerRadiusMin2S, outerRadiusMax2S);
-      } else {
-        matchedRadii =
-            T4matchRadiiBBBEE34578(acc, innerRadius, outerRadius, outerRadiusMin2S, outerRadiusMax2S);
-      }
-    }
-
-    else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-             modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-             modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-             modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-             modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = T4matchRadiiBBEEE(acc, innerRadius,  outerRadius, outerRadiusMin2S, outerRadiusMax2S);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = T4matchRadiiBEEEE(acc,
-                                     innerRadius,
-                                     outerRadius,
-                                     innerRadiusMin2S,
-                                     innerRadiusMax2S,
-                                     outerRadiusMin2S,
-                                     outerRadiusMax2S);
-    } else {
-      matchedRadii = T4matchRadiiEEEEE(acc,
-                                     innerRadius,
-                                     outerRadius,
-                                     innerRadiusMin2S,
-                                     innerRadiusMax2S,
-                                     outerRadiusMin2S,
-                                     outerRadiusMax2S);
-    }
-
-    //compute regression radius right here - this computation is expensive!!!
-    if (not matchedRadii)
-      return false;
-
-    float xVec[] = {x1, x2, x3, x4, x5};
-    float yVec[] = {y1, y2, y3, y4, y5};
-    const uint16_t lowerModuleIndices[] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
-
-    // 5 categories for sigmas
-    float sigmas2[5], delta1[5], delta2[5], slopes[5];
-    bool isFlat[5];
-
-    computeSigmasForRegressionT4(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
-
-
-#ifdef USE_T5_DNN
-    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
-    float inference = lst::t5dnn::runInference(acc,
-                                               modulesInGPU,
-                                               mdsInGPU,
-                                               segmentsInGPU,
-                                               tripletsInGPU,
-                                               xVec,
-                                               yVec,
-                                               mdIndices,
-                                               lowerModuleIndices,
-                                               innerTripletIndex,
-                                               outerTripletIndex,
-                                               innerRadius,
-                                               outerRadius);
-    if (inference <= lst::t5dnn::kLSTWp2)                               // T5-building cut
-      return false;
-#endif
-
-    //compute the other chisquared
-    //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[Params_T4::kLayers], nonAnchorDelta2[Params_T4::kLayers], nonAnchorSlopes[Params_T4::kLayers];
-    float nonAnchorxs[] = {mdsInGPU.outerX[firstMDIndex],
-                           mdsInGPU.outerX[secondMDIndex],
-                           mdsInGPU.outerX[thirdMDIndex],
-                           mdsInGPU.outerX[fourthMDIndex],
-                           mdsInGPU.outerX[fifthMDIndex]};
-    float nonAnchorys[] = {mdsInGPU.outerY[firstMDIndex],
-                           mdsInGPU.outerY[secondMDIndex],
-                           mdsInGPU.outerY[thirdMDIndex],
-                           mdsInGPU.outerY[fourthMDIndex],
-                           mdsInGPU.outerY[fifthMDIndex]};
-
-    computeSigmasForRegressionT4(acc,
-                               modulesInGPU,
-                               lowerModuleIndices,
-                               nonAnchorDelta1,
-                               nonAnchorDelta2,
-                               nonAnchorSlopes,
-                               isFlat,
-                               Params_T4::kLayers,
-                               false);
     return true;
   };
 
@@ -2250,27 +1980,18 @@ namespace lst {
             uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
             float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
-            float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
+            float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];   
             // float innerRadius, outerRadius, rzChiSquared;  //required for making distributions
 
-            // bool success = runQuadrupletDefaultAlgo(acc,
-            //                                         modulesInGPU,
-            //                                         mdsInGPU,
-            //                                         segmentsInGPU,
-            //                                         tripletsInGPU,
-            //                                         lowerModule1,
-            //                                         lowerModule2,
-            //                                         lowerModule3,
-            //                                         lowerModule4,
-            //                                         lowerModule5,
-            //                                         innerTripletIndex,
-            //                                         outerTripletIndex,
-            //                                         innerRadius,
-            //                                         outerRadius,
-            //                                         rzChiSquared,
-            //                                         ptCut);
-            bool success = true;
-            // int counter = 0;
+            //only selection right now is shared LS
+            bool success = runQuadrupletDefaultAlgo(acc,
+                                                    modulesInGPU,
+                                                    mdsInGPU,
+                                                    segmentsInGPU,
+                                                    tripletsInGPU,
+                                                    innerTripletIndex,
+                                                    outerTripletIndex);
+            // bool success = true;
 
             if (success) {
               int totOccupancyQuadruplets =
@@ -2355,18 +2076,18 @@ namespace lst {
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {336, 414, 231, 146},  // category 0
-          {0, 0, 0, 0},          // category 1
-          {0, 0, 0, 0},          // category 2
-          {0, 0, 191, 106}       // category 3
+          {5000, 5000, 5000, 5000},  // category 0
+          {5000, 5000, 5000, 5000},          // category 1
+          {5000, 5000, 5000, 5000},          // category 2
+          {5000, 5000, 5000, 5000}       // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
       constexpr int p06_occupancy_matrix[4][4] = {
-          {325, 237, 217, 176},  // category 0
-          {0, 0, 0, 0},          // category 1
-          {0, 0, 0, 0},          // category 2
-          {0, 0, 129, 180}       // category 3
+          {5000, 5000, 5000, 5000},  // category 0
+          {5000, 5000, 5000, 5000},          // category 1
+          {5000, 5000, 5000, 5000},          // category 2
+          {5000, 5000, 5000, 5000}       // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut
