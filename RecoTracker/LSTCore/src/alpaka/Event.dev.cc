@@ -1602,16 +1602,16 @@ PixelQuintupletsBuffer<alpaka_common::DevHost>& Event::getPixelQuintuplets(bool 
   return pixelQuintupletsInCPU_.value();
 }
 
-const TrackCandidatesHostCollection& Event::getTrackCandidates(bool sync) {
+const TrackCandidatesConst& Event::getTrackCandidatesWithSelection(bool inCMSSW, bool sync) {
   if (!trackCandidatesHC_) {
     // Get nTrackCanHost parameter to initialize host based instance
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
     alpaka::memcpy(
         queue_, nTrackCanHost_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
-    trackCandidatesHC_.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, queue_);
     alpaka::wait(queue_);  // wait here before we get nTrackCanHost and trackCandidatesInCPU becomes usable
 
     auto const nTrackCanHost = *nTrackCanHost_buf_h.data();
+    trackCandidatesHC_.emplace(nTrackCanHost, queue_);
 
     (*trackCandidatesHC_)->nTrackCandidates() = nTrackCanHost;
     alpaka::memcpy(
@@ -1622,50 +1622,22 @@ const TrackCandidatesHostCollection& Event::getTrackCandidates(bool sync) {
     alpaka::memcpy(queue_,
                    alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->pixelSeedIndex(), nTrackCanHost),
                    alpaka::createView(devAcc_, (*trackCandidatesDC_)->pixelSeedIndex(), nTrackCanHost));
-    alpaka::memcpy(queue_,
-                   alpaka::createView(cms::alpakatools::host(),
-                                      (*trackCandidatesHC_)->logicalLayers()->data(),
-                                      Params_pT5::kLayers * nTrackCanHost),
-                   alpaka::createView(
-                       devAcc_, (*trackCandidatesDC_)->logicalLayers()->data(), Params_pT5::kLayers * nTrackCanHost));
-    alpaka::memcpy(
-        queue_,
-        alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->directObjectIndices(), nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->directObjectIndices(), nTrackCanHost));
-    alpaka::memcpy(
-        queue_,
-        alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->objectIndices()->data(), 2 * nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->objectIndices()->data(), 2 * nTrackCanHost));
-    alpaka::memcpy(
-        queue_,
-        alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->trackCandidateType(), nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->trackCandidateType(), nTrackCanHost));
-    if (sync)
-      alpaka::wait(queue_);  // host consumers expect filled data
-  }
-  return trackCandidatesHC_.value();
-}
-
-const TrackCandidatesHostCollection& Event::getTrackCandidatesInCMSSW(bool sync) {
-  if (!trackCandidatesHC_) {
-    // Get nTrackCanHost parameter to initialize host based instance
-    auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
-    alpaka::memcpy(
-        queue_, nTrackCanHost_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
-    trackCandidatesHC_.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, queue_);
-    alpaka::wait(queue_);  // wait for the value before using and trackCandidatesInCPU becomes usable
-
-    auto const nTrackCanHost = *nTrackCanHost_buf_h.data();
-
-    (*trackCandidatesHC_)->nTrackCandidates() = nTrackCanHost;
-    alpaka::memcpy(
-        queue_,
-        alpaka::createView(
-            cms::alpakatools::host(), (*trackCandidatesHC_)->hitIndices()->data(), Params_pT5::kHits * nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->hitIndices()->data(), Params_pT5::kHits * nTrackCanHost));
-    alpaka::memcpy(queue_,
-                   alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->pixelSeedIndex(), nTrackCanHost),
-                   alpaka::createView(devAcc_, (*trackCandidatesDC_)->pixelSeedIndex(), nTrackCanHost));
+    if (not inCMSSW) {
+      alpaka::memcpy(queue_,
+                     alpaka::createView(cms::alpakatools::host(),
+                                        (*trackCandidatesHC_)->logicalLayers()->data(),
+                                        Params_pT5::kLayers * nTrackCanHost),
+                     alpaka::createView(
+                         devAcc_, (*trackCandidatesDC_)->logicalLayers()->data(), Params_pT5::kLayers * nTrackCanHost));
+      alpaka::memcpy(
+          queue_,
+          alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->directObjectIndices(), nTrackCanHost),
+          alpaka::createView(devAcc_, (*trackCandidatesDC_)->directObjectIndices(), nTrackCanHost));
+      alpaka::memcpy(queue_,
+                     alpaka::createView(
+                         cms::alpakatools::host(), (*trackCandidatesHC_)->objectIndices()->data(), 2 * nTrackCanHost),
+                     alpaka::createView(devAcc_, (*trackCandidatesDC_)->objectIndices()->data(), 2 * nTrackCanHost));
+    }
     alpaka::memcpy(
         queue_,
         alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->trackCandidateType(), nTrackCanHost),
@@ -1673,7 +1645,7 @@ const TrackCandidatesHostCollection& Event::getTrackCandidatesInCMSSW(bool sync)
     if (sync)
       alpaka::wait(queue_);  // host consumers expect filled data
   }
-  return trackCandidatesHC_.value();
+  return trackCandidatesHC_.value().const_view();
 }
 
 ModulesBuffer<alpaka_common::DevHost>& Event::getModules(bool isFull, bool sync) {

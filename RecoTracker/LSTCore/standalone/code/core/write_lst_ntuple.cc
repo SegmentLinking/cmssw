@@ -226,7 +226,7 @@ void setOutputBranches(Event* event) {
   std::vector<std::vector<int>> tc_matched_simIdx;
 
   // ============ Track candidates =============
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     // Compute reco quantities of track candidate based on final object
@@ -506,7 +506,7 @@ void setGnnNtupleBranches(Event* event) {
   Hits const* hitsEvt = event->getHits().data();
   Modules const* modules = event->getModules().data();
   ObjectRanges const* ranges = event->getRanges().data();
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
 
   std::set<unsigned int> mds_used_in_sg;
   std::map<unsigned int, unsigned int> md_index_map;
@@ -710,7 +710,7 @@ void setGnnNtupleMiniDoublet(Event* event, unsigned int MD) {
 //________________________________________________________________________________________________________________________________
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(Event* event, unsigned int idx) {
   // Get the type of the track candidate
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[idx];
 
   enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
@@ -744,7 +744,7 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(Event* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   Quintuplets const* quintuplets = event->getQuintuplets().data();
   SegmentsPixelConst segmentsPixel = event->getSegments<SegmentsPixelSoA>();
 
@@ -856,7 +856,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(Event* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   Triplets const* triplets = event->getTriplets().data();
   SegmentsPixelConst segmentsPixel = event->getSegments<SegmentsPixelSoA>();
 
@@ -890,7 +890,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT5(Event* event,
                                                                                               unsigned int idx) {
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   Quintuplets const* quintuplets = event->getQuintuplets().data();
   unsigned int T5 = trackCandidates.directObjectIndices()[idx];
   std::vector<unsigned int> hits = getHitsFromT5(event, T5);
@@ -924,7 +924,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(Event* event,
                                                                                                unsigned int idx) {
-  auto const& trackCandidates = event->getTrackCandidates().const_view();
+  auto const& trackCandidates = event->getTrackCandidates();
   SegmentsPixelConst segmentsPixel = event->getSegments<SegmentsPixelSoA>();
 
   // Getting pLS index
