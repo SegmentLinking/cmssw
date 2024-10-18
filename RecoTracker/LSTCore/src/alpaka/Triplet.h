@@ -281,8 +281,6 @@ namespace lst {
 
     float x_other = x1;
     float y_other = y1;
-    float z_other = z1;
-    float r_other = r1;
 
     float dz = z2 - z1;
 
@@ -298,8 +296,6 @@ namespace lst {
 
       x_other = x3;
       y_other = y3;
-      z_other = z3;
-      r_other = r3;
 
       dz = z3 - z1;
     }
@@ -429,13 +425,13 @@ namespace lst {
 
     //helix calculation returns NaN, use linear approximation
     if (edm::isNotFinite(rzChiSquared) || circleRadius < 0) {
-      float slope = (z_other - z1) / (r_other - r1);
+      float slope = (z3 - z1) / (r3 - r1);
 
-      residual = (layer3 <= 6) ? ((z_target - z1) - slope * (r_target - r1)) : ((r_target - r1) - (z_target - z1) / slope);
+      residual = (layer3 <= 6) ? ((z3 - z1) - slope * (r3 - r1)) : ((r3 - r1) - (z3 - z1) / slope);
       residual = (moduleType3 == 0) ? residual / 0.15f : residual / 5.0f;
 
       rzChiSquared = 12 * residual * residual;
-      return rzChiSquared < 2.7711823e-4;
+      return rzChiSquared < 2.8e-4;
     }
 
     //cuts for different regions
