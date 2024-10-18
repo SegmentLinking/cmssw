@@ -144,13 +144,6 @@ namespace lst {
     inline void setData(QuintupletsBuffer& buf) { data_.setData(buf); }
   };
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool checkIntervalOverlap(float firstMin,
-                                                           float firstMax,
-                                                           float secondMin,
-                                                           float secondMax) {
-    return ((firstMin <= secondMin) && (secondMin < firstMax)) || ((secondMin < firstMin) && (firstMin < secondMax));
-  };
-
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuintupletToMemory(lst::Triplets const& tripletsInGPU,
                                                             lst::Quintuplets& quintupletsInGPU,
                                                             unsigned int innerTripletIndex,
@@ -231,89 +224,6 @@ namespace lst {
     quintupletsInGPU.rzChiSquared[quintupletIndex] = rzChiSquared;
     quintupletsInGPU.chiSquared[quintupletIndex] = rPhiChiSquared;
     quintupletsInGPU.nonAnchorChiSquared[quintupletIndex] = nonAnchorChiSquared;
-  };
-
-  //90% constraint
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passChiSquaredConstraint(lst::Modules const& modulesInGPU,
-                                                               uint16_t lowerModuleIndex1,
-                                                               uint16_t lowerModuleIndex2,
-                                                               uint16_t lowerModuleIndex3,
-                                                               uint16_t lowerModuleIndex4,
-                                                               uint16_t lowerModuleIndex5,
-                                                               float chiSquared) {
-    // Using lstLayer numbering convention defined in ModuleMethods.h
-    const int layer1 = modulesInGPU.lstLayers[lowerModuleIndex1];
-    const int layer2 = modulesInGPU.lstLayers[lowerModuleIndex2];
-    const int layer3 = modulesInGPU.lstLayers[lowerModuleIndex3];
-    const int layer4 = modulesInGPU.lstLayers[lowerModuleIndex4];
-    const int layer5 = modulesInGPU.lstLayers[lowerModuleIndex5];
-
-    if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      if (layer4 == 10 and layer5 == 11) {
-        return chiSquared < 0.01788f;
-      } else if (layer4 == 10 and layer5 == 16) {
-        return chiSquared < 0.04725f;
-      } else if (layer4 == 15 and layer5 == 16) {
-        return chiSquared < 0.04725f;
-      }
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9 and layer5 == 10) {
-        return chiSquared < 0.01788f;
-      } else if (layer4 == 9 and layer5 == 15) {
-        return chiSquared < 0.08234f;
-      }
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 9) {
-        return chiSquared < 0.02360f;
-      } else if (layer4 == 8 and layer5 == 14) {
-        return chiSquared < 0.07167f;
-      } else if (layer4 == 13 and layer5 == 14) {
-        return chiSquared < 0.08234f;
-      }
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 7 and layer5 == 8) {
-        return chiSquared < 0.01026f;
-      } else if (layer4 == 7 and layer5 == 13) {
-        return chiSquared < 0.06238f;
-      } else if (layer4 == 12 and layer5 == 13) {
-        return chiSquared < 0.06238f;
-      }
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3 and layer4 == 4) {
-      if (layer5 == 5) {
-        return chiSquared < 0.04725f;
-      } else if (layer5 == 12) {
-        return chiSquared < 0.09461f;
-      }
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9 and layer5 == 10) {
-        return chiSquared < 0.00512f;
-      }
-      if (layer4 == 9 and layer5 == 15) {
-        return chiSquared < 0.04112f;
-      } else if (layer4 == 14 and layer5 == 15) {
-        return chiSquared < 0.06238f;
-      }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 14) {
-        return chiSquared < 0.07167f;
-      } else if (layer4 == 13 and layer5 == 14) {
-        return chiSquared < 0.06238f;
-      }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 5 and layer5 == 6) {
-        return chiSquared < 0.08234f;
-      } else if (layer4 == 5 and layer5 == 12) {
-        return chiSquared < 0.10870f;
-      } else if (layer4 == 12 and layer5 == 13) {
-        return chiSquared < 0.10870f;
-      }
-    } else if (layer1 == 3 and layer2 == 7 and layer3 == 8 and layer4 == 14 and layer5 == 15) {
-      return chiSquared < 0.09461f;
-    } else if (layer1 == 3 and layer2 == 4 and layer3 == 5 and layer4 == 12 and layer5 == 13) {
-      return chiSquared < 0.09461f;
-    }
-
-    return true;
   };
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
@@ -765,251 +675,6 @@ namespace lst {
         segmentsInGPU.mdIndices[2 * outerInnerSegmentIndex];  //outer triplet inner segment inner MD index
 
     return (innerOuterOuterMiniDoubletIndex == outerInnerInnerMiniDoubletIndex);
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeErrorInRadius(TAcc const& acc,
-                                                           float* x1Vec,
-                                                           float* y1Vec,
-                                                           float* x2Vec,
-                                                           float* y2Vec,
-                                                           float* x3Vec,
-                                                           float* y3Vec,
-                                                           float& minimumRadius,
-                                                           float& maximumRadius) {
-    //brute force
-    float candidateRadius;
-    float g, f;
-    minimumRadius = lst::lst_INF;
-    maximumRadius = 0.f;
-    for (size_t i = 0; i < 3; i++) {
-      float x1 = x1Vec[i];
-      float y1 = y1Vec[i];
-      for (size_t j = 0; j < 3; j++) {
-        float x2 = x2Vec[j];
-        float y2 = y2Vec[j];
-        for (size_t k = 0; k < 3; k++) {
-          float x3 = x3Vec[k];
-          float y3 = y3Vec[k];
-          candidateRadius = computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3, g, f);
-          maximumRadius = alpaka::math::max(acc, candidateRadius, maximumRadius);
-          minimumRadius = alpaka::math::min(acc, candidateRadius, minimumRadius);
-        }
-      }
-    }
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE12378(TAcc const& acc,
-                                                           float innerRadius,
-                                                           float bridgeRadius,
-                                                           float outerRadius,
-                                                           float bridgeRadiusMin2S,
-                                                           float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.178f;
-    float bridgeInvRadiusErrorBound = 0.507f;
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin,
-                                innerInvRadiusMax,
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
-
-  /*bounds for high Pt taken from : http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_efficiency/efficiencies/new_efficiencies/efficiencies_20210513_T5_recovering_high_Pt_efficiencies/highE_radius_matching/highE_bounds.txt */
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBBB(TAcc const& acc,
-                                                      float innerRadius,
-                                                      float bridgeRadius,
-                                                      float outerRadius) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.1512f;
-    float bridgeInvRadiusErrorBound = 0.1781f;
-
-    if (innerRadius > 2.0f / (2.f * k2Rinv1GeVf)) {
-      innerInvRadiusErrorBound = 0.4449f;
-      bridgeInvRadiusErrorBound = 0.4033f;
-    }
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax);
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBBE(TAcc const& acc,
-                                                      float innerRadius,
-                                                      float bridgeRadius,
-                                                      float outerRadius) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.1781f;
-    float bridgeInvRadiusErrorBound = 0.2167f;
-
-    if (innerRadius > 2.0f / (2.f * k2Rinv1GeVf)) {
-      innerInvRadiusErrorBound = 0.4750f;
-      bridgeInvRadiusErrorBound = 0.3903f;
-    }
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax);
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE23478(TAcc const& acc,
-                                                           float innerRadius,
-                                                           float bridgeRadius,
-                                                           float outerRadius,
-                                                           float bridgeRadiusMin2S,
-                                                           float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.2097f;
-    float bridgeInvRadiusErrorBound = 0.8557f;
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin,
-                                innerInvRadiusMax,
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBBEE34578(TAcc const& acc,
-                                                           float innerRadius,
-                                                           float bridgeRadius,
-                                                           float outerRadius,
-                                                           float bridgeRadiusMin2S,
-                                                           float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.066f;
-    float bridgeInvRadiusErrorBound = 0.617f;
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin,
-                                innerInvRadiusMax,
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBBEEE(TAcc const& acc,
-                                                      float innerRadius,
-                                                      float bridgeRadius,
-                                                      float outerRadius,
-                                                      float bridgeRadiusMin2S,
-                                                      float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 0.6376f;
-    float bridgeInvRadiusErrorBound = 2.1381f;
-
-    if (innerRadius > 2.0f / (2.f * k2Rinv1GeVf))  //as good as no selections!
-    {
-      innerInvRadiusErrorBound = 12.9173f;
-      bridgeInvRadiusErrorBound = 5.1700f;
-    }
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(innerInvRadiusMin,
-                                innerInvRadiusMax,
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0f / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0f / bridgeRadiusMin2S));
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiBEEEE(TAcc const& acc,
-                                                      float innerRadius,
-                                                      float bridgeRadius,
-                                                      float outerRadius,
-                                                      float innerRadiusMin2S,
-                                                      float innerRadiusMax2S,
-                                                      float bridgeRadiusMin2S,
-                                                      float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 1.9382f;
-    float bridgeInvRadiusErrorBound = 3.7280f;
-
-    if (innerRadius > 2.0f / (2.f * k2Rinv1GeVf)) {
-      innerInvRadiusErrorBound = 23.2713f;
-      bridgeInvRadiusErrorBound = 21.7980f;
-    }
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(alpaka::math::min(acc, innerInvRadiusMin, 1.0 / innerRadiusMax2S),
-                                alpaka::math::max(acc, innerInvRadiusMax, 1.0 / innerRadiusMin2S),
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0 / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0 / bridgeRadiusMin2S));
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool matchRadiiEEEEE(TAcc const& acc,
-                                                      float innerRadius,
-                                                      float bridgeRadius,
-                                                      float outerRadius,
-                                                      float innerRadiusMin2S,
-                                                      float innerRadiusMax2S,
-                                                      float bridgeRadiusMin2S,
-                                                      float bridgeRadiusMax2S) {
-    float innerInvRadiusMin, innerInvRadiusMax, bridgeInvRadiusMin, bridgeInvRadiusMax;
-
-    float innerInvRadiusErrorBound = 1.9382f;
-    float bridgeInvRadiusErrorBound = 2.2091f;
-
-    if (innerRadius > 2.0f / (2.f * k2Rinv1GeVf)) {
-      innerInvRadiusErrorBound = 22.5226f;
-      bridgeInvRadiusErrorBound = 21.0966f;
-    }
-
-    innerInvRadiusMax = (1.f + innerInvRadiusErrorBound) / innerRadius;
-    innerInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - innerInvRadiusErrorBound) / innerRadius);
-
-    bridgeInvRadiusMax = (1.f + bridgeInvRadiusErrorBound) / bridgeRadius;
-    bridgeInvRadiusMin = alpaka::math::max(acc, 0.f, (1.f - bridgeInvRadiusErrorBound) / bridgeRadius);
-
-    return checkIntervalOverlap(alpaka::math::min(acc, innerInvRadiusMin, 1.0 / innerRadiusMax2S),
-                                alpaka::math::max(acc, innerInvRadiusMax, 1.0 / innerRadiusMin2S),
-                                alpaka::math::min(acc, bridgeInvRadiusMin, 1.0 / bridgeRadiusMax2S),
-                                alpaka::math::max(acc, bridgeInvRadiusMax, 1.0 / bridgeRadiusMin2S));
   };
 
   template <typename TAcc>
@@ -2236,6 +1901,31 @@ namespace lst {
     unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * thirdSegmentIndex + 1];
     unsigned int fifthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
 
+    float x1 = mdsInGPU.anchorX[firstMDIndex];
+    float x2 = mdsInGPU.anchorX[secondMDIndex];
+    float x3 = mdsInGPU.anchorX[thirdMDIndex];
+    float x4 = mdsInGPU.anchorX[fourthMDIndex];
+    float x5 = mdsInGPU.anchorX[fifthMDIndex];
+
+    float y1 = mdsInGPU.anchorY[firstMDIndex];
+    float y2 = mdsInGPU.anchorY[secondMDIndex];
+    float y3 = mdsInGPU.anchorY[thirdMDIndex];
+    float y4 = mdsInGPU.anchorY[fourthMDIndex];
+    float y5 = mdsInGPU.anchorY[fifthMDIndex];
+
+    float g, f;
+    outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
+    bridgeRadius = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4, g, f);
+    innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
+
+#ifdef USE_T5_DNN
+    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
+    bool inference = lst::t5dnn::runInference(acc, mdsInGPU, mdIndices, innerRadius, outerRadius, bridgeRadius);
+    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
+      return false;
+#endif
+
     if (not runQuintupletAlgoSelector(acc,
                                       modulesInGPU,
                                       mdsInGPU,
@@ -2270,90 +1960,6 @@ namespace lst {
                                       ptCut))
       return false;
 
-    float x1 = mdsInGPU.anchorX[firstMDIndex];
-    float x2 = mdsInGPU.anchorX[secondMDIndex];
-    float x3 = mdsInGPU.anchorX[thirdMDIndex];
-    float x4 = mdsInGPU.anchorX[fourthMDIndex];
-    float x5 = mdsInGPU.anchorX[fifthMDIndex];
-
-    float y1 = mdsInGPU.anchorY[firstMDIndex];
-    float y2 = mdsInGPU.anchorY[secondMDIndex];
-    float y3 = mdsInGPU.anchorY[thirdMDIndex];
-    float y4 = mdsInGPU.anchorY[fourthMDIndex];
-    float y5 = mdsInGPU.anchorY[fifthMDIndex];
-
-    //construct the arrays
-    float x1Vec[] = {x1, x1, x1};
-    float y1Vec[] = {y1, y1, y1};
-    float x2Vec[] = {x2, x2, x2};
-    float y2Vec[] = {y2, y2, y2};
-    float x3Vec[] = {x3, x3, x3};
-    float y3Vec[] = {y3, y3, y3};
-
-    if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex1] == lst::TwoS) {
-      x1Vec[1] = mdsInGPU.anchorLowEdgeX[firstMDIndex];
-      x1Vec[2] = mdsInGPU.anchorHighEdgeX[firstMDIndex];
-
-      y1Vec[1] = mdsInGPU.anchorLowEdgeY[firstMDIndex];
-      y1Vec[2] = mdsInGPU.anchorHighEdgeY[firstMDIndex];
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex2] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex2] == lst::TwoS) {
-      x2Vec[1] = mdsInGPU.anchorLowEdgeX[secondMDIndex];
-      x2Vec[2] = mdsInGPU.anchorHighEdgeX[secondMDIndex];
-
-      y2Vec[1] = mdsInGPU.anchorLowEdgeY[secondMDIndex];
-      y2Vec[2] = mdsInGPU.anchorHighEdgeY[secondMDIndex];
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex3] == lst::TwoS) {
-      x3Vec[1] = mdsInGPU.anchorLowEdgeX[thirdMDIndex];
-      x3Vec[2] = mdsInGPU.anchorHighEdgeX[thirdMDIndex];
-
-      y3Vec[1] = mdsInGPU.anchorLowEdgeY[thirdMDIndex];
-      y3Vec[2] = mdsInGPU.anchorHighEdgeY[thirdMDIndex];
-    }
-
-    float innerRadiusMin2S, innerRadiusMax2S;
-    computeErrorInRadius(acc, x1Vec, y1Vec, x2Vec, y2Vec, x3Vec, y3Vec, innerRadiusMin2S, innerRadiusMax2S);
-
-    for (int i = 0; i < 3; i++) {
-      x1Vec[i] = x4;
-      y1Vec[i] = y4;
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex4] == lst::TwoS) {
-      x1Vec[1] = mdsInGPU.anchorLowEdgeX[fourthMDIndex];
-      x1Vec[2] = mdsInGPU.anchorHighEdgeX[fourthMDIndex];
-
-      y1Vec[1] = mdsInGPU.anchorLowEdgeY[fourthMDIndex];
-      y1Vec[2] = mdsInGPU.anchorHighEdgeY[fourthMDIndex];
-    }
-
-    float bridgeRadiusMin2S, bridgeRadiusMax2S;
-    computeErrorInRadius(acc, x2Vec, y2Vec, x3Vec, y3Vec, x1Vec, y1Vec, bridgeRadiusMin2S, bridgeRadiusMax2S);
-
-    for (int i = 0; i < 3; i++) {
-      x2Vec[i] = x5;
-      y2Vec[i] = y5;
-    }
-    if (modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap and
-        modulesInGPU.moduleType[lowerModuleIndex5] == lst::TwoS) {
-      x2Vec[1] = mdsInGPU.anchorLowEdgeX[fifthMDIndex];
-      x2Vec[2] = mdsInGPU.anchorHighEdgeX[fifthMDIndex];
-
-      y2Vec[1] = mdsInGPU.anchorLowEdgeY[fifthMDIndex];
-      y2Vec[2] = mdsInGPU.anchorHighEdgeY[fifthMDIndex];
-    }
-
-    float outerRadiusMin2S, outerRadiusMax2S;
-    computeErrorInRadius(acc, x3Vec, y3Vec, x1Vec, y1Vec, x2Vec, y2Vec, outerRadiusMin2S, outerRadiusMax2S);
-
-    float g, f;
-    outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
-    bridgeRadius = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4, g, f);
-    innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
     g = tripletsInGPU.circleCenterX[innerTripletIndex];
     f = tripletsInGPU.circleCenterY[innerTripletIndex];
 
@@ -2383,82 +1989,16 @@ namespace lst {
 #else
     rzChiSquared = -1;
 #endif
-    if (innerRadius < 0.95f * ptCut / (2.f * k2Rinv1GeVf))
-      return false;
-
-    //split by category
-    bool matchedRadii;
-    if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex4] == lst::Barrel and
-        modulesInGPU.subdets[lowerModuleIndex5] == lst::Barrel) {
-      matchedRadii = matchRadiiBBBBB(acc, innerRadius, bridgeRadius, outerRadius);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = matchRadiiBBBBE(acc, innerRadius, bridgeRadius, outerRadius);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      if (modulesInGPU.layers[lowerModuleIndex1] == 1) {
-        matchedRadii =
-            matchRadiiBBBEE12378(acc, innerRadius, bridgeRadius, outerRadius, bridgeRadiusMin2S, bridgeRadiusMax2S);
-      } else if (modulesInGPU.layers[lowerModuleIndex1] == 2) {
-        matchedRadii =
-            matchRadiiBBBEE23478(acc, innerRadius, bridgeRadius, outerRadius, bridgeRadiusMin2S, bridgeRadiusMax2S);
-      } else {
-        matchedRadii =
-            matchRadiiBBBEE34578(acc, innerRadius, bridgeRadius, outerRadius, bridgeRadiusMin2S, bridgeRadiusMax2S);
-      }
-    }
-
-    else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-             modulesInGPU.subdets[lowerModuleIndex2] == lst::Barrel and
-             modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-             modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-             modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = matchRadiiBBEEE(acc, innerRadius, bridgeRadius, outerRadius, bridgeRadiusMin2S, bridgeRadiusMax2S);
-    } else if (modulesInGPU.subdets[lowerModuleIndex1] == lst::Barrel and
-               modulesInGPU.subdets[lowerModuleIndex2] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex3] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex4] == lst::Endcap and
-               modulesInGPU.subdets[lowerModuleIndex5] == lst::Endcap) {
-      matchedRadii = matchRadiiBEEEE(acc,
-                                     innerRadius,
-                                     bridgeRadius,
-                                     outerRadius,
-                                     innerRadiusMin2S,
-                                     innerRadiusMax2S,
-                                     bridgeRadiusMin2S,
-                                     bridgeRadiusMax2S);
-    } else {
-      matchedRadii = matchRadiiEEEEE(acc,
-                                     innerRadius,
-                                     bridgeRadius,
-                                     outerRadius,
-                                     innerRadiusMin2S,
-                                     innerRadiusMax2S,
-                                     bridgeRadiusMin2S,
-                                     bridgeRadiusMax2S);
-    }
-
-    //compute regression radius right here - this computation is expensive!!!
-    if (not matchedRadii)
-      return false;
-
-    float xVec[] = {x1, x2, x3, x4, x5};
-    float yVec[] = {y1, y2, y3, y4, y5};
-    const uint16_t lowerModuleIndices[] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
     // 5 categories for sigmas
     float sigmas2[5], delta1[5], delta2[5], slopes[5];
     bool isFlat[5];
+
+    float xVec[] = {x1, x2, x3, x4, x5};
+    float yVec[] = {y1, y2, y3, y4, y5};
+
+    const uint16_t lowerModuleIndices[] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
 
     computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegression(acc,
@@ -2473,41 +2013,6 @@ namespace lst {
                                                     regressionF,
                                                     sigmas2,
                                                     chiSquared);
-
-#ifdef USE_T5_DNN
-    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
-    float inference = lst::t5dnn::runInference(acc,
-                                               modulesInGPU,
-                                               mdsInGPU,
-                                               segmentsInGPU,
-                                               tripletsInGPU,
-                                               xVec,
-                                               yVec,
-                                               mdIndices,
-                                               lowerModuleIndices,
-                                               innerTripletIndex,
-                                               outerTripletIndex,
-                                               innerRadius,
-                                               outerRadius,
-                                               bridgeRadius);
-    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
-    if (!inference)                             // T5-building cut
-      return false;
-#endif
-
-#ifdef USE_RPHICHI2
-    // extra chi squared cuts!
-    if (regressionRadius < 5.0f / (2.f * k2Rinv1GeVf)) {
-      if (not passChiSquaredConstraint(modulesInGPU,
-                                       lowerModuleIndex1,
-                                       lowerModuleIndex2,
-                                       lowerModuleIndex3,
-                                       lowerModuleIndex4,
-                                       lowerModuleIndex5,
-                                       chiSquared))
-        return false;
-    }
-#endif
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
