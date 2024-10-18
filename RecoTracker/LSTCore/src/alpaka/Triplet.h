@@ -217,16 +217,16 @@ namespace lst {
                                                        unsigned int secondMDIndex,
                                                        unsigned int thirdMDIndex,
                                                        float circleRadius,
-                                                       float circleCenterX, 
+                                                       float circleCenterX,
                                                        float circleCenterY) {
-
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.lstLayers[innerInnerLowerModuleIndex];
     const int layer2 = modulesInGPU.lstLayers[middleLowerModuleIndex];
     const int layer3 = modulesInGPU.lstLayers[outerOuterLowerModuleIndex];
 
+    //all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
     //get r and z
-    const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100; // all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
+    const float r1 = mdsInGPU.anchorRt[firstMDIndex] / 100;
     const float r2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
     const float r3 = mdsInGPU.anchorRt[thirdMDIndex] / 100;
 
@@ -239,24 +239,24 @@ namespace lst {
 
     //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 1 && layer2 == 7) {
-      return residual < 0.01f;          // Region 9
-    } else if (layer1 == 3 && layer2==4) {
+      return residual < 0.01f;  // Region 9
+    } else if (layer1 == 3 && layer2 == 4) {
       if (layer3 == 5) {
         return residual < 0.037127972f;  // Region 20
       } else if (layer3 == 12) {
-        return residual < 0.05f;        // Region 21
+        return residual < 0.05f;  // Region 21
       }
     } else if (layer1 == 4) {
       if (layer2 == 12) {
         return residual < 0.063831687f;  // Region 22
       } else if (layer2 == 5) {
         if (layer3 == 6) {
-          return residual < 0.04362525f; // Region 23
+          return residual < 0.04362525f;  // Region 23
         } else if (layer3 == 12) {
-          return residual < 0.05f;      // Region 24
+          return residual < 0.05f;  // Region 24
         }
       }
-    } 
+    }
 
     //get the type of module: 0 is ps, 1 is 2s
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
@@ -285,7 +285,7 @@ namespace lst {
     float dz = z2 - z1;
 
     //use MD2 for regions 5 and 19 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
-    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)){
+    if ((layer1 == 8 && layer2 == 14 && layer3 == 15) || (layer1 == 3 && layer2 == 12 && layer3 == 13)) {
       x_init = x1;
       y_init = y1;
       z_init = z1;
@@ -303,7 +303,7 @@ namespace lst {
     //use the 3 MDs to fit a circle. This is the circle parameters, for circle centers and circle radius
     float x_center = circleCenterX / 100;
     float y_center = circleCenterY / 100;
-    float pt = 2 * k2Rinv1GeVf * circleRadius; //k2Rinv1GeVf is already in cm^(-1)
+    float pt = 2 * k2Rinv1GeVf * circleRadius;  //k2Rinv1GeVf is already in cm^(-1)
 
     //determine the charge
     int charge = 0;
@@ -313,9 +313,9 @@ namespace lst {
       charge = 1;
 
     //get the absolute value of px and py at the initial point
-    float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc,(y_init - y_center)) * 100;
+    float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (y_init - y_center)) * 100;
     float py = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (x_init - x_center)) * 100;
-    
+
     //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
     if (x_init > x_center && y_init > y_center)  //1st quad
@@ -357,12 +357,14 @@ namespace lst {
     else if (y3 > y2 && y2 > y1)
       py = alpaka::math::abs(acc, py);
 
-    float AO = alpaka::math::sqrt(acc, (x_other - x_center) * (x_other - x_center) + (y_other - y_center) * (y_other - y_center)); 
-    float BO = alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
-    float AB2 = (x_other - x_init) * (x_other - x_init) + (y_other - y_init) * (y_other - y_init); 
-    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO)); //Law of Cosines
+    float AO = alpaka::math::sqrt(
+        acc, (x_other - x_center) * (x_other - x_center) + (y_other - y_center) * (y_other - y_center));
+    float BO =
+        alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
+    float AB2 = (x_other - x_init) * (x_other - x_init) + (y_other - y_init) * (y_other - y_init);
+    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO));  //Law of Cosines
     float ds = circleRadius / 100 * dPhi;
-    float pz = dz / ds * pt; 
+    float pz = dz / ds * pt;
 
     float p = alpaka::math::sqrt(acc, px * px + py * py + pz * pz);
     float a = -2.f * k2Rinv1GeVf * 100 * charge;
@@ -377,8 +379,9 @@ namespace lst {
     short subdets = modulesInGPU.subdets[outerOuterLowerModuleIndex];
 
     //calculate residual
-    if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) { // for barrel
-      float paraA = r_init * r_init + 2 * (px * px + py * py) / (a * a) + 2 * (y_init * px - x_init * py) / a - r_target * r_target;
+    if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) {  // for barrel
+      float paraA = r_init * r_init + 2 * (px * px + py * py) / (a * a) + 2 * (y_init * px - x_init * py) / a -
+                    r_target * r_target;
       float paraB = 2 * (x_init * px + y_init * py) / a;
       float paraC = 2 * (y_init * px - x_init * py) / a + 2 * (px * px + py * py) / (a * a);
       float A = paraB * paraB + paraC * paraC;
@@ -397,18 +400,18 @@ namespace lst {
       else {
         residual = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
       }
-    } else { // for endcap
+    } else {  // for endcap
       float s = (z_target - z_init) * p / pz;
       float x = x_init + px / a * alpaka::math::sin(acc, rou * s) - py / a * (1 - alpaka::math::cos(acc, rou * s));
       float y = y_init + py / a * alpaka::math::sin(acc, rou * s) + px / a * (1 - alpaka::math::cos(acc, rou * s));
-      residual = (r_target - alpaka::math::sqrt(acc, x * x + y * y)) * 100; 
+      residual = (r_target - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
     }
-    
+
     // error
-    if (moduleType3 == 0) { 
-      error = 0.15f;        //PS
-    } else  {              
-      error = 5.0f;         //2S
+    if (moduleType3 == 0) {
+      error = 0.15f;  //PS
+    } else {
+      error = 5.0f;  //2S
     }
 
     float projection_missing2 = 1;
@@ -436,67 +439,68 @@ namespace lst {
 
     //cuts for different regions
     //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
+    //for the logic behind the cuts, see https://github.com/SegmentLinking/cmssw/pull/92
     if (layer1 == 7) {
       if (layer2 == 8) {
         if (layer3 == 9) {
-          return rzChiSquared < 65.47191f;   // Region 0
+          return rzChiSquared < 65.47191f;  // Region 0
         } else if (layer3 == 14) {
-          return rzChiSquared < 3.3200853f;   // Region 1
+          return rzChiSquared < 3.3200853f;  // Region 1
         }
       } else if (layer2 == 13) {
-        return rzChiSquared < 17.194584f;      // Region 2
+        return rzChiSquared < 17.194584f;  // Region 2
       }
     } else if (layer1 == 8) {
       if (layer2 == 9) {
         if (layer3 == 10) {
-          return rzChiSquared < 114.91959f;    // Region 3
+          return rzChiSquared < 114.91959f;  // Region 3
         } else if (layer3 == 15) {
-          return rzChiSquared < 3.4359624f;   // Region 4
-        } 
+          return rzChiSquared < 3.4359624f;  // Region 4
+        }
       } else if (layer2 == 14) {
-        return rzChiSquared < 4.6487956f;     // Region 5
+        return rzChiSquared < 4.6487956f;  // Region 5
       }
     } else if (layer1 == 9) {
       if (layer2 == 10) {
         if (layer3 == 11) {
-          return rzChiSquared < 97.34339f;    // Region 6
+          return rzChiSquared < 97.34339f;  // Region 6
         } else if (layer3 == 16) {
-          return rzChiSquared < 3.095819f;    // Region 7
+          return rzChiSquared < 3.095819f;  // Region 7
         }
       } else if (layer2 == 15) {
-        return rzChiSquared < 11.477617f;     // Region 8
+        return rzChiSquared < 11.477617f;  // Region 8
       }
     } else if (layer1 == 1) {
       if (layer3 == 7) {
-        return rzChiSquared < 96.949936f;   // Region 10
+        return rzChiSquared < 96.949936f;  // Region 10
       } else if (layer3 == 3) {
-        return rzChiSquared < 458.43982f;    // Region 11
+        return rzChiSquared < 458.43982f;  // Region 11
       }
     } else if (layer1 == 2) {
       if (layer2 == 7) {
         if (layer3 == 8) {
-          return rzChiSquared < 218.82303f;   // Region 12
+          return rzChiSquared < 218.82303f;  // Region 12
         } else if (layer3 == 13) {
-          return rzChiSquared < 3.155554f;    // Region 13
+          return rzChiSquared < 3.155554f;  // Region 13
         }
       } else if (layer2 == 3) {
         if (layer3 == 7) {
-          return rzChiSquared < 235.5005f;    // Region 14
+          return rzChiSquared < 235.5005f;  // Region 14
         } else if (layer3 == 12) {
-          return rzChiSquared < 3.8522234f;    // Region 15
+          return rzChiSquared < 3.8522234f;  // Region 15
         } else if (layer3 == 4) {
-          return rzChiSquared < 3.5852437f;   // Region 16
+          return rzChiSquared < 3.5852437f;  // Region 16
         }
       }
     } else if (layer1 == 3) {
       if (layer2 == 7) {
         if (layer3 == 8) {
-          return rzChiSquared < 42.68f;   // Region 17
+          return rzChiSquared < 42.68f;  // Region 17
         } else if (layer3 == 13) {
-          return rzChiSquared < 3.853796f;   // Region 18
+          return rzChiSquared < 3.853796f;  // Region 18
         }
       } else if (layer2 == 12) {
-        return rzChiSquared < 6.2774787f;     // Region 19
+        return rzChiSquared < 6.2774787f;  // Region 19
       }
     }
     return false;
@@ -845,7 +849,7 @@ namespace lst {
                              secondMDIndex,
                              thirdMDIndex,
                              circleRadius,
-                             circleCenterX, 
+                             circleCenterX,
                              circleCenterY)))
       return false;
 
