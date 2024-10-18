@@ -38,7 +38,7 @@ namespace lst::t5dnn {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
                                                     lst::MiniDoublets const& mdsInGPU,
                                                     const unsigned int* mdIndices,
                                                     float innerRadius,
