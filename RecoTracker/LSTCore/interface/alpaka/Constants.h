@@ -83,22 +83,26 @@ namespace lst {
   // Since C++ can't represent infinity, lst_INF = 123456789 was used to represent infinity in the data table
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float lst_INF = 123456789.0;
 
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniDeltaFlat[6] = {0.26f, 0.16f, 0.16f, 0.18f, 0.18f, 0.18f};
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniDeltaLooseTilted[3] = {0.4f, 0.4f, 0.4f};
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniDeltaEndcap[5][15] = {
+      {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
+      {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
+      {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
+      {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
+      {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
+
   namespace t5dnn {
-
-    // Working points matching LST fake rate (43.9%) or signal acceptance (82.0%)
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kLSTWp1 = 0.3418833f;  // 94.0% TPR, 43.9% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kLSTWp2 = 0.6177366f;  // 82.0% TPR, 20.0% FPR
-    // Other working points
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp70 = 0.7776195f;    // 70.0% TPR, 10.0% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp75 = 0.7181118f;    // 75.0% TPR, 13.5% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp80 = 0.6492643f;    // 80.0% TPR, 17.9% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp85 = 0.5655319f;    // 85.0% TPR, 23.8% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp90 = 0.4592205f;    // 90.0% TPR, 32.6% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp95 = 0.3073708f;    // 95.0% TPR, 47.7% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp97p5 = 0.2001348f;  // 97.5% TPR, 61.2% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp99 = 0.1120605f;    // 99.0% TPR, 75.9% FPR
-    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp99p9 = 0.0218196f;  // 99.9% TPR, 95.4% FPR
-
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kZ_max = 267.2349854f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR_max = 110.1099396f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+    // pt, eta binned
+    constexpr unsigned int kPtBins = 2;
+    constexpr unsigned int kEtaBins = 10;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kPtBins][kEtaBins] = {
+        {0.2747, 0.2954, 0.3673, 0.4729, 0.419, 0.464, 0.4843, 0.5571, 0.6796, 0.6885},
+        {0.1696, 0.255, 0.2716, 0.3713, 0.1902, 0.1597, 0.1446, 0.095, 0.1797, 0.1104}};
   }  // namespace t5dnn
 
 }  //namespace lst

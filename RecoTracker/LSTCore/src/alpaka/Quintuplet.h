@@ -6,6 +6,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
+#include "FWCore/Utilities/interface/isFinite.h"
 
 #include "NeuralNetwork.h"
 #include "Segment.h"
@@ -555,9 +556,9 @@ namespace lst {
         float diffz1 = (solz1 - zsi) * 100;
         float diffz2 = (solz2 - zsi) * 100;
         // Alpaka : Needs to be moved over
-        if (alpaka::math::isnan(acc, diffz1))
+        if (edm::isNotFinite(diffz1))
           diffz = diffz2;
-        else if (alpaka::math::isnan(acc, diffz2))
+        else if (edm::isNotFinite(diffz2))
           diffz = diffz1;
         else {
           diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
@@ -604,7 +605,7 @@ namespace lst {
     // for set rzchi2 cut
     // if the 5 points are linear, helix calculation gives nan
     // Alpaka : Needs to be moved over
-    if (inner_pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
+    if (inner_pt > 100 || edm::isNotFinite(rzChiSquared)) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1)  //PSPS2S
       {
@@ -1243,15 +1244,15 @@ namespace lst {
   };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterationsT5(TAcc const& acc,
-                                                               float& betaIn,
-                                                               float& betaOut,
-                                                               float betaAv,
-                                                               float& pt_beta,
-                                                               float sdIn_dr,
-                                                               float sdOut_dr,
-                                                               float dr,
-                                                               float lIn) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterations(TAcc const& acc,
+                                                             float& betaIn,
+                                                             float& betaOut,
+                                                             float betaAv,
+                                                             float& pt_beta,
+                                                             float sdIn_dr,
+                                                             float sdOut_dr,
+                                                             float dr,
+                                                             float lIn) {
     if (lIn == 0) {
       betaOut += alpaka::math::copysign(
           acc,
@@ -1535,7 +1536,7 @@ namespace lst {
                                                 (mdsInGPU.anchorY[fourthMDIndex] - mdsInGPU.anchorY[thirdMDIndex]));
     float sdOut_d = mdsInGPU.anchorRt[fourthMDIndex] - mdsInGPU.anchorRt[thirdMDIndex];
 
-    lst::runDeltaBetaIterationsT5(acc, betaIn, betaOut, betaAv, pt_beta, rt_InSeg, sdOut_dr, drt_tl_axis, lIn);
+    lst::runDeltaBetaIterations(acc, betaIn, betaOut, betaAv, pt_beta, rt_InSeg, sdOut_dr, drt_tl_axis, lIn);
 
     const float betaInMMSF = (alpaka::math::abs(acc, betaInRHmin + betaInRHmax) > 0)
                                  ? (2.f * betaIn / alpaka::math::abs(acc, betaInRHmin + betaInRHmax))
@@ -1787,7 +1788,7 @@ namespace lst {
                                                 (mdsInGPU.anchorY[fourthMDIndex] - mdsInGPU.anchorY[thirdMDIndex]));
     float sdOut_d = mdsInGPU.anchorRt[fourthMDIndex] - mdsInGPU.anchorRt[thirdMDIndex];
 
-    lst::runDeltaBetaIterationsT5(acc, betaIn, betaOut, betaAv, pt_beta, sdIn_dr, sdOut_dr, dr, lIn);
+    lst::runDeltaBetaIterations(acc, betaIn, betaOut, betaAv, pt_beta, sdIn_dr, sdOut_dr, dr, lIn);
 
     const float betaInMMSF = (alpaka::math::abs(acc, betaInRHmin + betaInRHmax) > 0)
                                  ? (2.f * betaIn / alpaka::math::abs(acc, betaInRHmin + betaInRHmax))
@@ -2029,7 +2030,7 @@ namespace lst {
                                                 (mdsInGPU.anchorY[fourthMDIndex] - mdsInGPU.anchorY[thirdMDIndex]));
     float sdOut_d = mdsInGPU.anchorRt[fourthMDIndex] - mdsInGPU.anchorRt[thirdMDIndex];
 
-    lst::runDeltaBetaIterationsT5(acc, betaIn, betaOut, betaAv, pt_beta, sdIn_dr, sdOut_dr, dr, lIn);
+    lst::runDeltaBetaIterations(acc, betaIn, betaOut, betaAv, pt_beta, sdIn_dr, sdOut_dr, dr, lIn);
 
     const float betaInMMSF = (alpaka::math::abs(acc, betaInRHmin + betaInRHmax) > 0)
                                  ? (2.f * betaIn / alpaka::math::abs(acc, betaInRHmin + betaInRHmax))
@@ -2489,8 +2490,8 @@ namespace lst {
                                                innerRadius,
                                                outerRadius,
                                                bridgeRadius);
-    TightCutFlag = TightCutFlag and (inference > lst::t5dnn::kLSTWp2);  // T5-in-TC cut
-    if (inference <= lst::t5dnn::kLSTWp2)                               // T5-building cut
+    TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
       return false;
 #endif
 

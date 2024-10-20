@@ -15,7 +15,7 @@ if [ -z ${CMSSW_SEARCH_PATH+x} ]; then
   else
     export SCRAM_ARCH=el8_amd64_gcc12
   fi
-  export CMSSW_VERSION=CMSSW_14_1_0_pre5
+  export CMSSW_VERSION=CMSSW_14_2_0_pre1
 
   source /cvmfs/cms.cern.ch/cmsset_default.sh
   cd /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/cmssw/$CMSSW_VERSION/src

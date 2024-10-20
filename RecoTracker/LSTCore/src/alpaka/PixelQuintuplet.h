@@ -382,138 +382,6 @@ namespace lst {
   };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeChiSquaredpT5(TAcc const& acc,
-                                                            unsigned int nPoints,
-                                                            float* xs,
-                                                            float* ys,
-                                                            float* delta1,
-                                                            float* delta2,
-                                                            float* slopes,
-                                                            bool* isFlat,
-                                                            float g,
-                                                            float f,
-                                                            float radius) {
-    /*
-        Given values of (g, f, radius) and a set of points (and its uncertainties) compute chi squared
-        */
-    float c = g * g + f * f - radius * radius;
-    float chiSquared = 0.f;
-    float absArctanSlope, angleM, xPrime, yPrime, sigma2;
-    for (size_t i = 0; i < nPoints; i++) {
-      absArctanSlope = ((slopes[i] != lst::lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
-                                                    : 0.5f * float(M_PI));
-      if (xs[i] > 0 and ys[i] > 0) {
-        angleM = 0.5f * float(M_PI) - absArctanSlope;
-      } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + 0.5f * float(M_PI);
-      } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + 0.5f * float(M_PI));
-      } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(0.5f * float(M_PI) - absArctanSlope);
-      } else {
-        angleM = 0;
-      }
-      if (not isFlat[i]) {
-        xPrime = xs[i] * alpaka::math::cos(acc, angleM) + ys[i] * alpaka::math::sin(acc, angleM);
-        yPrime = ys[i] * alpaka::math::cos(acc, angleM) - xs[i] * alpaka::math::sin(acc, angleM);
-      } else {
-        xPrime = xs[i];
-        yPrime = ys[i];
-      }
-      sigma2 = 4 * ((xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
-      chiSquared += (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) *
-                    (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / (sigma2);
-    }
-    return chiSquared;
-  };
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegression_pT5(TAcc const& acc,
-                                                                     lst::Modules const& modulesInGPU,
-                                                                     const uint16_t* lowerModuleIndices,
-                                                                     float* delta1,
-                                                                     float* delta2,
-                                                                     float* slopes,
-                                                                     bool* isFlat,
-                                                                     unsigned int nPoints = 5,
-                                                                     bool anchorHits = true) {
-    /*
-        bool anchorHits required to deal with a weird edge case wherein
-        the hits ultimately used in the regression are anchor hits, but the
-        lower modules need not all be Pixel Modules (in case of PS). Similarly,
-        when we compute the chi squared for the non-anchor hits, the "partner module"
-        need not always be a PS strip module, but all non-anchor hits sit on strip
-        modules.
-        */
-    ModuleType moduleType;
-    short moduleSubdet, moduleSide;
-    float inv1 = kWidthPS / kWidth2S;
-    float inv2 = kPixelPSZpitch / kWidth2S;
-    float inv3 = kStripPSZpitch / kWidth2S;
-    for (size_t i = 0; i < nPoints; i++) {
-      moduleType = modulesInGPU.moduleType[lowerModuleIndices[i]];
-      moduleSubdet = modulesInGPU.subdets[lowerModuleIndices[i]];
-      moduleSide = modulesInGPU.sides[lowerModuleIndices[i]];
-      const float& drdz = modulesInGPU.drdzs[lowerModuleIndices[i]];
-      slopes[i] = modulesInGPU.dxdys[lowerModuleIndices[i]];
-      //category 1 - barrel PS flat
-      if (moduleSubdet == Barrel and moduleType == PS and moduleSide == Center) {
-        delta1[i] = inv1;
-        delta2[i] = inv1;
-        slopes[i] = -999.f;
-        isFlat[i] = true;
-      }
-      //category 2 - barrel 2S
-      else if (moduleSubdet == Barrel and moduleType == TwoS) {
-        delta1[i] = 1.f;
-        delta2[i] = 1.f;
-        slopes[i] = -999.f;
-        isFlat[i] = true;
-      }
-      //category 3 - barrel PS tilted
-      else if (moduleSubdet == Barrel and moduleType == PS and moduleSide != Center) {
-        delta1[i] = inv1;
-        isFlat[i] = false;
-
-        if (anchorHits) {
-          delta2[i] = (inv2 * drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz));
-        } else {
-          delta2[i] = (inv3 * drdz / alpaka::math::sqrt(acc, 1 + drdz * drdz));
-        }
-      }
-      //category 4 - endcap PS
-      else if (moduleSubdet == Endcap and moduleType == PS) {
-        delta1[i] = inv1;
-        isFlat[i] = false;
-        /*
-                despite the type of the module layer of the lower module index,
-                all anchor hits are on the pixel side and all non-anchor hits are
-                on the strip side!
-                */
-        if (anchorHits) {
-          delta2[i] = inv2;
-        } else {
-          delta2[i] = inv3;
-        }
-      }
-      //category 5 - endcap 2S
-      else if (moduleSubdet == Endcap and moduleType == TwoS) {
-        delta1[i] = 1.f;
-        delta2[i] = 500.f * inv1;
-        isFlat[i] = false;
-      }
-#ifdef WARNINGS
-      else {
-        printf("ERROR!!!!! I SHOULDN'T BE HERE!!!! subdet = %d, type = %d, side = %d\n",
-               moduleSubdet,
-               moduleType,
-               moduleSide);
-      }
-#endif
-    }
-  };
-
-  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RPhiChiSquared(TAcc const& acc,
                                                                 lst::Modules const& modulesInGPU,
                                                                 uint16_t* lowerModuleIndices,
@@ -530,8 +398,8 @@ namespace lst {
     bool isFlat[5];
     float chiSquared = 0;
 
-    computeSigmasForRegression_pT5(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
-    chiSquared = computeChiSquaredpT5(acc, 5, xs, ys, delta1, delta2, slopes, isFlat, g, f, radius);
+    computeSigmasForRegression(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
+    chiSquared = computeChiSquared(acc, 5, xs, ys, delta1, delta2, slopes, isFlat, g, f, radius);
 
     return chiSquared;
   };
