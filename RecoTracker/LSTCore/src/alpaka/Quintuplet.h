@@ -1655,8 +1655,16 @@ namespace lst {
     innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
 
 #ifdef USE_T5_DNN
-    unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
-    bool inference = lst::t5dnn::runInference(acc, mdsInGPU, mdIndices, innerRadius, outerRadius, bridgeRadius);
+    bool inference = lst::t5dnn::runInference(acc,
+                                              mdsInGPU,
+                                              firstMDIndex,
+                                              secondMDIndex,
+                                              thirdMDIndex,
+                                              fourthMDIndex,
+                                              fifthMDIndex,
+                                              innerRadius,
+                                              outerRadius,
+                                              bridgeRadius);
     TightCutFlag = TightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;

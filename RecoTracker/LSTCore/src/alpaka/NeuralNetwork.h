@@ -40,20 +40,17 @@ namespace lst::t5dnn {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
                                                    lst::MiniDoublets const& mdsInGPU,
-                                                   const unsigned int* mdIndices,
-                                                   float innerRadius,
-                                                   float outerRadius,
-                                                   float bridgeRadius) {
+                                                   const unsigned int mdIndex1,
+                                                   const unsigned int mdIndex2,
+                                                   const unsigned int mdIndex3,
+                                                   const unsigned int mdIndex4,
+                                                   const unsigned int mdIndex5,
+                                                   const float innerRadius,
+                                                   const float outerRadius,
+                                                   const float bridgeRadius) {
     // Constants
     constexpr unsigned int kinputFeatures = 18;
     constexpr unsigned int khiddenFeatures = 32;
-
-    // Unpack module indices
-    unsigned int mdIndex1 = mdIndices[0];
-    unsigned int mdIndex2 = mdIndices[1];
-    unsigned int mdIndex3 = mdIndices[2];
-    unsigned int mdIndex4 = mdIndices[3];
-    unsigned int mdIndex5 = mdIndices[4];
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
     float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
