@@ -1005,10 +1005,10 @@ namespace lst {
                 segmentsInGPU.partOfPT5[i_pLS] = true;
                 quintupletsInGPU.partOfPT5[quintupletIndex] = true;
               }  // tot occupancy
-            }    // end success
-          }      // end T5
-        }        // end iLS
-      }          // end i_pLS
+            }  // end success
+          }  // end T5
+        }  // end iLS
+      }  // end i_pLS
     }
   };
 }  // namespace lst

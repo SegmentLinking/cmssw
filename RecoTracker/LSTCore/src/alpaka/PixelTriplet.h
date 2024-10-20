@@ -1066,8 +1066,8 @@ namespace lst {
               }
             }
           }  // for outerTripletArrayIndex
-        }    // for iLSModule < iLSModule_max
-      }      // for i_pLS
+        }  // for iLSModule < iLSModule_max
+      }  // for i_pLS
     }
   };
 
