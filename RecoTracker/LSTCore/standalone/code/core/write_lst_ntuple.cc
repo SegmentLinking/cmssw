@@ -133,6 +133,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
+  ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
+  ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
 
   // Occupancy branches
   ana.tx->createBranch<std::vector<int>>("module_layers");
@@ -519,6 +521,8 @@ void setQuintupletOutputBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets->chiSquared[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets->rzChiSquared[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_nonAnchorChiSquared", quintuplets->nonAnchorChiSquared[quintupletIndex]);
+      ana.tx->pushbackToBranch<float>("t5_dBeta1", quintuplets->dBeta1[quintupletIndex]);
+      ana.tx->pushbackToBranch<float>("t5_dBeta2", quintuplets->dBeta2[quintupletIndex]);
       ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
 
