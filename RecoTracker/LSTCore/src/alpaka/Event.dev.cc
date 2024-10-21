@@ -1678,6 +1678,8 @@ lst::QuintupletsBuffer<DevHost>* lst::Event<Acc3D>::getQuintuplets() {
     alpaka::memcpy(queue, quintupletsInCPU->phi_buf, quintupletsBuffers->phi_buf, nMemHost);
     alpaka::memcpy(queue, quintupletsInCPU->chiSquared_buf, quintupletsBuffers->chiSquared_buf, nMemHost);
     alpaka::memcpy(queue, quintupletsInCPU->rzChiSquared_buf, quintupletsBuffers->rzChiSquared_buf, nMemHost);
+    alpaka::memcpy(queue, quintupletsInCPU->dBeta1_buf, quintupletsBuffers->dBeta1_buf, nMemHost);
+    alpaka::memcpy(queue, quintupletsInCPU->dBeta2_buf, quintupletsBuffers->dBeta2_buf, nMemHost);
     alpaka::memcpy(
         queue, quintupletsInCPU->nonAnchorChiSquared_buf, quintupletsBuffers->nonAnchorChiSquared_buf, nMemHost);
     alpaka::wait(queue);

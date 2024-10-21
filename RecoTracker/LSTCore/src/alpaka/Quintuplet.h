@@ -45,6 +45,9 @@ namespace lst {
     float* chiSquared;
     float* nonAnchorChiSquared;
 
+    float* dBeta1;
+    float* dBeta2;
+
     template <typename TBuff>
     void setData(TBuff& buf) {
       tripletIndices = alpaka::getPtrNative(buf.tripletIndices_buf);
@@ -71,6 +74,8 @@ namespace lst {
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
       chiSquared = alpaka::getPtrNative(buf.chiSquared_buf);
       nonAnchorChiSquared = alpaka::getPtrNative(buf.nonAnchorChiSquared_buf);
+      dBeta1 = alpaka::getPtrNative(buf.dBeta1_buf);
+      dBeta2 = alpaka::getPtrNative(buf.dBeta2_buf);
     }
   };
 
@@ -103,6 +108,8 @@ namespace lst {
     Buf<TDev, float> rzChiSquared_buf;
     Buf<TDev, float> chiSquared_buf;
     Buf<TDev, float> nonAnchorChiSquared_buf;
+    Buf<TDev, float> dBeta1_buf;
+    Buf<TDev, float> dBeta2_buf;
 
     Quintuplets data_;
 
@@ -131,7 +138,9 @@ namespace lst {
           hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T5::kHits * nTotalQuintuplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
           chiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
-          nonAnchorChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)) {
+          nonAnchorChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
+          dBeta1_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)),
+          dBeta2_buf(allocBufWrapper<float>(devAccIn, nTotalQuintuplets, queue)) {
       alpaka::memset(queue, nQuintuplets_buf, 0u);
       alpaka::memset(queue, totOccupancyQuintuplets_buf, 0u);
       alpaka::memset(queue, isDup_buf, 0u);
@@ -162,6 +171,8 @@ namespace lst {
                                                             float rzChiSquared,
                                                             float rPhiChiSquared,
                                                             float nonAnchorChiSquared,
+                                                            float dBeta1,
+                                                            float dBeta2,
                                                             float pt,
                                                             float eta,
                                                             float phi,
@@ -223,6 +234,8 @@ namespace lst {
     quintupletsInGPU.bridgeRadius[quintupletIndex] = bridgeRadius;
     quintupletsInGPU.rzChiSquared[quintupletIndex] = rzChiSquared;
     quintupletsInGPU.chiSquared[quintupletIndex] = rPhiChiSquared;
+    quintupletsInGPU.dBeta1[quintupletIndex] = dBeta1;
+    quintupletsInGPU.dBeta2[quintupletIndex] = dBeta2;
     quintupletsInGPU.nonAnchorChiSquared[quintupletIndex] = nonAnchorChiSquared;
   };
 
@@ -1029,6 +1042,7 @@ namespace lst {
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
                                                                 unsigned int fourthMDIndex,
+                                                                float& dBeta,
                                                                 const float ptCut) {
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
@@ -1186,7 +1200,7 @@ namespace lst {
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
 
-    float dBeta = betaIn - betaOut;
+    dBeta = betaIn - betaOut;
     return dBeta * dBeta <= dBetaCut2;
   };
 
@@ -1205,6 +1219,7 @@ namespace lst {
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
                                                                 unsigned int fourthMDIndex,
+                                                                float& dBeta,
                                                                 const float ptCut) {
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
@@ -1350,7 +1365,7 @@ namespace lst {
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
-    float dBeta = betaIn - betaOut;
+    dBeta = betaIn - betaOut;
 
     return dBeta * dBeta <= dBetaCut2;
   };
@@ -1370,6 +1385,7 @@ namespace lst {
                                                                 unsigned int secondMDIndex,
                                                                 unsigned int thirdMDIndex,
                                                                 unsigned int fourthMDIndex,
+                                                                float& dBeta,
                                                                 const float ptCut) {
     float rt_InLo = mdsInGPU.anchorRt[firstMDIndex];
     float rt_InOut = mdsInGPU.anchorRt[secondMDIndex];
@@ -1477,7 +1493,7 @@ namespace lst {
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
-    float dBeta = betaIn - betaOut;
+    dBeta = betaIn - betaOut;
 
     return dBeta * dBeta <= dBetaCut2;
   };
@@ -1497,6 +1513,7 @@ namespace lst {
                                                                      unsigned int secondMDIndex,
                                                                      unsigned int thirdMDIndex,
                                                                      unsigned int fourthMDIndex,
+                                                                     float& dBeta,
                                                                      const float ptCut) {
     short innerInnerLowerModuleSubdet = modulesInGPU.subdets[innerInnerLowerModuleIndex];
     short innerOuterLowerModuleSubdet = modulesInGPU.subdets[innerOuterLowerModuleIndex];
@@ -1519,6 +1536,7 @@ namespace lst {
                                        secondMDIndex,
                                        thirdMDIndex,
                                        fourthMDIndex,
+                                       dBeta,
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Barrel and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
@@ -1536,6 +1554,7 @@ namespace lst {
                                        secondMDIndex,
                                        thirdMDIndex,
                                        fourthMDIndex,
+                                       dBeta,
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Barrel and
                outerInnerLowerModuleSubdet == lst::Barrel and outerOuterLowerModuleSubdet == lst::Endcap) {
@@ -1553,6 +1572,7 @@ namespace lst {
                                        secondMDIndex,
                                        thirdMDIndex,
                                        fourthMDIndex,
+                                       dBeta,
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Barrel and innerOuterLowerModuleSubdet == lst::Endcap and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
@@ -1570,6 +1590,7 @@ namespace lst {
                                        secondMDIndex,
                                        thirdMDIndex,
                                        fourthMDIndex,
+                                       dBeta,
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == lst::Endcap and innerOuterLowerModuleSubdet == lst::Endcap and
                outerInnerLowerModuleSubdet == lst::Endcap and outerOuterLowerModuleSubdet == lst::Endcap) {
@@ -1587,6 +1608,7 @@ namespace lst {
                                        secondMDIndex,
                                        thirdMDIndex,
                                        fourthMDIndex,
+                                       dBeta,
                                        ptCut);
     }
 
@@ -1615,6 +1637,8 @@ namespace lst {
                                                                float& rzChiSquared,
                                                                float& chiSquared,
                                                                float& nonAnchorChiSquared,
+                                                               float& dBeta1,
+                                                               float& dBeta2,
                                                                bool& TightCutFlag,
                                                                const float ptCut) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
@@ -1684,6 +1708,7 @@ namespace lst {
                                            secondMDIndex,
                                            thirdMDIndex,
                                            fourthMDIndex,
+                                           dBeta1,
                                            ptCut))
       return false;
 
@@ -1701,6 +1726,7 @@ namespace lst {
                                            secondMDIndex,
                                            fourthMDIndex,
                                            fifthMDIndex,
+                                           dBeta2,
                                            ptCut))
       return false;
 
@@ -1836,7 +1862,7 @@ namespace lst {
             uint16_t lowerModule5 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionG, regressionF, regressionRadius, rzChiSquared,
-                chiSquared, nonAnchorChiSquared;  //required for making distributions
+                chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
 
             bool TightCutFlag = false;
             bool success = runQuintupletDefaultAlgo(acc,
@@ -1860,6 +1886,8 @@ namespace lst {
                                                     rzChiSquared,
                                                     chiSquared,
                                                     nonAnchorChiSquared,
+                                                    dBeta1,
+                                                    dBeta2,
                                                     TightCutFlag,
                                                     ptCut);
 
@@ -1909,6 +1937,8 @@ namespace lst {
                                         rzChiSquared,
                                         chiSquared,
                                         nonAnchorChiSquared,
+                                        dBeta1,
+                                        dBeta2,
                                         pt,
                                         eta,
                                         phi,
