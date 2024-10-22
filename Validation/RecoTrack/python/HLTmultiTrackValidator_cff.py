@@ -36,3 +36,16 @@ def _modifyForPhase2(trackvalidator):
 
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 phase2_tracker.toModify(hltTrackValidator, _modifyForPhase2)
+
+def _modifyForPhase2LSTTracking(trackvalidator):
+    trackvalidator.label = ["hltGeneralTracks","hltInitialStepTrackSelectionHighPuritypTTCLST","hltInitialStepTrackSelectionHighPuritypLSTCLST","hltInitialStepTracksT5TCLST","hltHighPtTripletStepTrackSelectionHighPurity","hltPhase2PixelTracks"]
+
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+trackingLST.toModify(hltTrackValidator, _modifyForPhase2LSTTracking)
+
+def _modifyForPhase2LSTSeeding(trackvalidator):
+    trackvalidator.label = ["hltGeneralTracks","hltInitialStepTrackSelectionHighPuritypTTCLST","hltInitialStepTracksT5TCLST","hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST","hltPhase2PixelTracks"]
+
+from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
+(seedingLST & trackingLST).toModify(hltTrackValidator, _modifyForPhase2LSTSeeding)
+
