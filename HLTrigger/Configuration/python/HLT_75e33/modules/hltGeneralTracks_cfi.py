@@ -25,6 +25,20 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
     writeOnlyTrkQuals = cms.bool(False)
 )
 
+_hltGeneralTracksSingleIterPatatrack = hltGeneralTracks.clone(
+    TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPurity"),
+    hasSelector = cms.vint32(0),
+    indivShareFrac = cms.vdouble(1.0),
+    selectedTrackQuals = cms.VInputTag(cms.InputTag("hltInitialStepTrackSelectionHighPurity")),
+    setsToMerge = cms.VPSet(cms.PSet(
+        pQual = cms.bool(True),
+        tLists = cms.vint32(0)
+    ))
+)
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+singleIterPatatrack.toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
+
 _hltGeneralTracksLST = hltGeneralTracks.clone(
     TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTrackSelectionHighPuritypLSTCLST", "hltInitialStepTracksT5TCLST", "hltHighPtTripletStepTrackSelectionHighPurity"),
     hasSelector = cms.vint32(0,0,0,0),
