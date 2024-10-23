@@ -8,3 +8,10 @@ hltPixelSeedInputLST = cms.EDProducer('LSTPixelSeedInputProducer',
     )
 )
 
+_hltPixelSeedInputLSTSingleIterPatatrack = hltPixelSeedInputLST.clone(
+    seedTracks = cms.VInputTag('hltInitialStepSeedTracksLST')
+)
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+singleIterPatatrack.toReplaceWith(hltPixelSeedInputLST, _hltPixelSeedInputLSTSingleIterPatatrack)
+

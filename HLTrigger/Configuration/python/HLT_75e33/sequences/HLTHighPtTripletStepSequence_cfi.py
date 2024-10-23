@@ -8,8 +8,9 @@ from ..sequences.HLTHighPtTripletStepSeedingSequence_cfi import *
 
 HLTHighPtTripletStepSequence = cms.Sequence(HLTHighPtTripletStepSeedingSequence+hltHighPtTripletStepTrackCandidates+hltHighPtTripletStepTracks+hltHighPtTripletStepTrackCutClassifier+hltHighPtTripletStepTrackSelectionHighPurity)
 
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
-trackingLST.toReplaceWith(HLTHighPtTripletStepSequence, HLTHighPtTripletStepSequence.copyAndExclude([HLTHighPtTripletStepSeedingSequence]))
+((~singleIterPatatrack) & trackingLST).toReplaceWith(HLTHighPtTripletStepSequence, HLTHighPtTripletStepSequence.copyAndExclude([HLTHighPtTripletStepSeedingSequence]))
 
 from ..modules.hltHighPtTripletStepTrackCandidatespLSTCLST_cfi import *
 from ..modules.hltHighPtTripletStepTrackspLSTCLST_cfi import *
@@ -19,4 +20,9 @@ _HLTHighPtTripletStepSequenceLSTSeeding = cms.Sequence(hltHighPtTripletStepTrack
 
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
 (seedingLST & trackingLST).toReplaceWith(HLTHighPtTripletStepSequence, _HLTHighPtTripletStepSequenceLSTSeeding)
+
+from ..modules.hltHighPtTripletStepClusters_cfi import *
+_HLTHighPtTripletStepSequenceLSTSeedingSingleIterPatatrack = cms.Sequence(hltHighPtTripletStepClusters+hltHighPtTripletStepTrackCandidatespLSTCLST+hltHighPtTripletStepTrackspLSTCLST+hltHighPtTripletStepTrackCutClassifierpLSTCLST+hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST)
+
+(singleIterPatatrack & seedingLST & trackingLST).toReplaceWith(HLTHighPtTripletStepSequence, _HLTHighPtTripletStepSequenceLSTSeedingSingleIterPatatrack)
 
