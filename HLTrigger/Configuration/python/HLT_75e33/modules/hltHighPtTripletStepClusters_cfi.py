@@ -20,3 +20,10 @@ _hltHighPtTripletStepClustersLST = hltHighPtTripletStepClusters.clone(
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 trackingLST.toReplaceWith(hltHighPtTripletStepClusters, _hltHighPtTripletStepClustersLST)
 
+_hltHighPtTripletStepClustersLSTSingleIterPatatrack = hltHighPtTripletStepClusters.clone(
+    trajectories = cms.InputTag("hltInitialStepTracksLST")
+)
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+(singleIterPatatrack & trackingLST).toReplaceWith(hltHighPtTripletStepClusters, _hltHighPtTripletStepClustersLSTSingleIterPatatrack)
+

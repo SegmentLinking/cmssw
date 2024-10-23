@@ -12,5 +12,6 @@ from ..sequences.HLTOtLocalRecoSequence_cfi import *
 HLTTrackingV61Sequence = cms.Sequence((HLTItLocalRecoSequence+HLTOtLocalRecoSequence+hltTrackerClusterCheck+HLTPhase2PixelTracksSequence+hltPhase2PixelVertices+HLTInitialStepSequence+HLTHighPtTripletStepSequence+hltGeneralTracks))
 
 from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
-singleIterPatatrack.toReplaceWith(HLTTrackingV61Sequence, HLTTrackingV61Sequence.copyAndExclude([HLTHighPtTripletStepSequence]))
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+(singleIterPatatrack & ~trackingLST).toReplaceWith(HLTTrackingV61Sequence, HLTTrackingV61Sequence.copyAndExclude([HLTHighPtTripletStepSequence]))
 

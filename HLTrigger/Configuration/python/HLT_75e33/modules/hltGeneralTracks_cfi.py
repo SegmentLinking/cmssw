@@ -53,6 +53,19 @@ _hltGeneralTracksLST = hltGeneralTracks.clone(
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 trackingLST.toReplaceWith(hltGeneralTracks, _hltGeneralTracksLST)
 
+_hltGeneralTracksLSTSingleIterPatatrack = hltGeneralTracks.clone(
+    TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTracksT5TCLST", "hltHighPtTripletStepTrackSelectionHighPurity"),
+    hasSelector = cms.vint32(0,0,0),
+    indivShareFrac = cms.vdouble(0.1,0.1,0.1),
+    selectedTrackQuals = cms.VInputTag(cms.InputTag("hltInitialStepTrackSelectionHighPuritypTTCLST"), cms.InputTag("hltInitialStepTracksT5TCLST"), cms.InputTag("hltHighPtTripletStepTrackSelectionHighPurity")),
+    setsToMerge = cms.VPSet(cms.PSet(
+        pQual = cms.bool(True),
+        tLists = cms.vint32(0,1,2)
+    ))
+)
+
+(singleIterPatatrack & trackingLST).toReplaceWith(hltGeneralTracks, _hltGeneralTracksLSTSingleIterPatatrack)
+
 _hltGeneralTracksLSTSeeding = hltGeneralTracks.clone(
             TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTracksT5TCLST", "hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST"),
             hasSelector = cms.vint32(0,0,0),
