@@ -97,12 +97,21 @@ namespace lst {
   };
   struct Params_T3 {
     static constexpr int kLayers = 3, kHits = 6;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_pT3 {
     static constexpr int kLayers = 5, kHits = 10;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_T5 {
     static constexpr int kLayers = 5, kHits = 10;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_pT5 {
     static constexpr int kLayers = 7, kHits = 14;

@@ -5,6 +5,7 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 
 #include "Segment.h"
 #include "MiniDoublet.h"
@@ -12,195 +13,57 @@
 #include "ObjectRanges.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
-  struct Triplets {
-    unsigned int* segmentIndices;
-    uint16_t* lowerModuleIndices;  //3 of them
-    unsigned int* nTriplets;
-    unsigned int* totOccupancyTriplets;
-    unsigned int* nMemoryLocations;
-    uint8_t* logicalLayers;
-    unsigned int* hitIndices;
-    FPX* betaIn;
-    float* circleRadius;
-    float* circleCenterX;
-    float* circleCenterY;
-    bool* partOfPT5;
-    bool* partOfT5;
-    bool* partOfPT3;
 
-#ifdef CUT_VALUE_DEBUG
-    //debug variables
-    float* zOut;
-    float* rtOut;
-    float* betaInCut;
-#endif
-    template <typename TBuff>
-    void setData(TBuff& buf) {
-      segmentIndices = buf.segmentIndices_buf.data();
-      lowerModuleIndices = buf.lowerModuleIndices_buf.data();
-      nTriplets = buf.nTriplets_buf.data();
-      totOccupancyTriplets = buf.totOccupancyTriplets_buf.data();
-      nMemoryLocations = buf.nMemoryLocations_buf.data();
-      logicalLayers = buf.logicalLayers_buf.data();
-      hitIndices = buf.hitIndices_buf.data();
-      betaIn = buf.betaIn_buf.data();
-      circleRadius = buf.circleRadius_buf.data();
-      circleCenterX = buf.circleCenterX_buf.data();
-      circleCenterY = buf.circleCenterY_buf.data();
-      partOfPT5 = buf.partOfPT5_buf.data();
-      partOfT5 = buf.partOfT5_buf.data();
-      partOfPT3 = buf.partOfPT3_buf.data();
-#ifdef CUT_VALUE_DEBUG
-      zOut = buf.zOut_buf.data();
-      rtOut = buf.rtOut_buf.data();
-      betaInCut = buf.betaInCut_buf.data();
-#endif
-    }
-  };
-
-  template <typename TDev>
-  struct TripletsBuffer {
-    Buf<TDev, unsigned int> segmentIndices_buf;
-    Buf<TDev, uint16_t> lowerModuleIndices_buf;
-    Buf<TDev, unsigned int> nTriplets_buf;
-    Buf<TDev, unsigned int> totOccupancyTriplets_buf;
-    Buf<TDev, unsigned int> nMemoryLocations_buf;
-    Buf<TDev, uint8_t> logicalLayers_buf;
-    Buf<TDev, unsigned int> hitIndices_buf;
-    Buf<TDev, FPX> betaIn_buf;
-    Buf<TDev, float> circleRadius_buf;
-    Buf<TDev, float> circleCenterX_buf;
-    Buf<TDev, float> circleCenterY_buf;
-    Buf<TDev, bool> partOfPT5_buf;
-    Buf<TDev, bool> partOfT5_buf;
-    Buf<TDev, bool> partOfPT3_buf;
-
-#ifdef CUT_VALUE_DEBUG
-    Buf<TDev, float> zOut_buf;
-    Buf<TDev, float> rtOut_buf;
-    Buf<TDev, float> deltaPhiPos_buf;
-    Buf<TDev, float> deltaPhi_buf;
-    Buf<TDev, float> zLo_buf;
-    Buf<TDev, float> zHi_buf;
-    Buf<TDev, float> zLoPointed_buf;
-    Buf<TDev, float> zHiPointed_buf;
-    Buf<TDev, float> dPhiCut_buf;
-    Buf<TDev, float> betaInCut_buf;
-    Buf<TDev, float> rtLo_buf;
-    Buf<TDev, float> rtHi_buf;
-#endif
-
-    Triplets data_;
-
-    template <typename TQueue, typename TDevAcc>
-    TripletsBuffer(unsigned int maxTriplets, unsigned int nLowerModules, TDevAcc const& devAccIn, TQueue& queue)
-        : segmentIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * maxTriplets, queue)),
-          lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, Params_T3::kLayers * maxTriplets, queue)),
-          nTriplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
-          totOccupancyTriplets_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules, queue)),
-          nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
-          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, maxTriplets * Params_T3::kLayers, queue)),
-          hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxTriplets * Params_T3::kHits, queue)),
-          betaIn_buf(allocBufWrapper<FPX>(devAccIn, maxTriplets, queue)),
-          circleRadius_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          circleCenterX_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          circleCenterY_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
-          partOfT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
-          partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue))
-#ifdef CUT_VALUE_DEBUG
-          ,
-          zOut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          rtOut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          deltaPhiPos_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          deltaPhi_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          zLo_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          zHi_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          zLoPointed_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          zHiPointed_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          dPhiCut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          betaInCut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          rtLo_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
-          rtHi_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue))
-#endif
-    {
-      alpaka::memset(queue, nTriplets_buf, 0u);
-      alpaka::memset(queue, totOccupancyTriplets_buf, 0u);
-      alpaka::memset(queue, partOfPT5_buf, false);
-      alpaka::memset(queue, partOfT5_buf, false);
-      alpaka::memset(queue, partOfPT3_buf, false);
-    }
-
-    inline Triplets const* data() const { return &data_; }
-    inline void setData(TripletsBuffer& buf) { data_.setData(buf); }
-  };
-
-#ifdef CUT_VALUE_DEBUG
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTripletToMemory(Modules const& modulesInGPU,
                                                          MiniDoubletsConst mds,
                                                          SegmentsConst segments,
-                                                         Triplets& tripletsInGPU,
+                                                         Triplets& triplets,
                                                          unsigned int innerSegmentIndex,
                                                          unsigned int outerSegmentIndex,
                                                          uint16_t innerInnerLowerModuleIndex,
                                                          uint16_t middleLowerModuleIndex,
                                                          uint16_t outerOuterLowerModuleIndex,
+#ifdef CUT_VALUE_DEBUG
                                                          float zOut,
                                                          float rtOut,
+#endif
                                                          float betaIn,
                                                          float betaInCut,
                                                          float circleRadius,
                                                          float circleCenterX,
                                                          float circleCenterY,
-                                                         unsigned int tripletIndex)
-#else
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTripletToMemory(Modules const& modulesInGPU,
-                                                         MiniDoubletsConst mds,
-                                                         SegmentsConst segments,
-                                                         Triplets& tripletsInGPU,
-                                                         unsigned int innerSegmentIndex,
-                                                         unsigned int outerSegmentIndex,
-                                                         uint16_t innerInnerLowerModuleIndex,
-                                                         uint16_t middleLowerModuleIndex,
-                                                         uint16_t outerOuterLowerModuleIndex,
-                                                         float betaIn,
-                                                         float circleRadius,
-                                                         float circleCenterX,
-                                                         float circleCenterY,
-                                                         unsigned int tripletIndex)
-#endif
-  {
-    tripletsInGPU.segmentIndices[tripletIndex * 2] = innerSegmentIndex;
-    tripletsInGPU.segmentIndices[tripletIndex * 2 + 1] = outerSegmentIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers] = innerInnerLowerModuleIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers + 1] = middleLowerModuleIndex;
-    tripletsInGPU.lowerModuleIndices[tripletIndex * Params_T3::kLayers + 2] = outerOuterLowerModuleIndex;
+                                                         unsigned int tripletIndex) {
+    triplets.segmentIndices()[tripletIndex][0] = innerSegmentIndex;
+    triplets.segmentIndices()[tripletIndex][1] = outerSegmentIndex;
+    triplets.lowerModuleIndices()[tripletIndex][0] = innerInnerLowerModuleIndex;
+    triplets.lowerModuleIndices()[tripletIndex][1] = middleLowerModuleIndex;
+    triplets.lowerModuleIndices()[tripletIndex][2] = outerOuterLowerModuleIndex;
 
-    tripletsInGPU.betaIn[tripletIndex] = __F2H(betaIn);
-    tripletsInGPU.circleRadius[tripletIndex] = circleRadius;
-    tripletsInGPU.circleCenterX[tripletIndex] = circleCenterX;
-    tripletsInGPU.circleCenterY[tripletIndex] = circleCenterY;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers] =
+    triplets.betaIn()[tripletIndex] = __F2H(betaIn);
+    triplets.radius()[tripletIndex] = circleRadius;
+    triplets.centerX()[tripletIndex] = circleCenterX;
+    triplets.centerY()[tripletIndex] = circleCenterY;
+    triplets.logicalLayers()[tripletIndex][0] =
         modulesInGPU.layers[innerInnerLowerModuleIndex] + (modulesInGPU.subdets[innerInnerLowerModuleIndex] == 4) * 6;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 1] =
+    triplets.logicalLayers()[tripletIndex][1] =
         modulesInGPU.layers[middleLowerModuleIndex] + (modulesInGPU.subdets[middleLowerModuleIndex] == 4) * 6;
-    tripletsInGPU.logicalLayers[tripletIndex * Params_T3::kLayers + 2] =
+    triplets.logicalLayers()[tripletIndex][2] =
         modulesInGPU.layers[outerOuterLowerModuleIndex] + (modulesInGPU.subdets[outerOuterLowerModuleIndex] == 4) * 6;
     //get the hits
     unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[innerSegmentIndex][1];
     unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
 
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits] = mds.anchorHitIndices()[firstMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 1] = mds.outerHitIndices()[firstMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 2] = mds.anchorHitIndices()[secondMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 3] = mds.outerHitIndices()[secondMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 4] = mds.anchorHitIndices()[thirdMDIndex];
-    tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 5] = mds.outerHitIndices()[thirdMDIndex];
+    triplets.hitIndices()[tripletIndex][0] = mds.anchorHitIndices()[firstMDIndex];
+    triplets.hitIndices()[tripletIndex][1] = mds.outerHitIndices()[firstMDIndex];
+    triplets.hitIndices()[tripletIndex][2] = mds.anchorHitIndices()[secondMDIndex];
+    triplets.hitIndices()[tripletIndex][3] = mds.outerHitIndices()[secondMDIndex];
+    triplets.hitIndices()[tripletIndex][4] = mds.anchorHitIndices()[thirdMDIndex];
+    triplets.hitIndices()[tripletIndex][5] = mds.outerHitIndices()[thirdMDIndex];
 #ifdef CUT_VALUE_DEBUG
-    tripletsInGPU.zOut[tripletIndex] = zOut;
-    tripletsInGPU.rtOut[tripletIndex] = rtOut;
-    tripletsInGPU.betaInCut[tripletIndex] = betaInCut;
+    triplets.zOut()[tripletIndex] = zOut;
+    triplets.rtOut()[tripletIndex] = rtOut;
+    triplets.betaInCut()[tripletIndex] = betaInCut;
 #endif
   }
 
@@ -798,14 +661,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return true;
   }
 
-  struct CreateTripletsInGPUv2 {
+  struct CreateTriplets {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   SegmentsOccupancyConst segmentsOccupancy,
-                                  Triplets tripletsInGPU,
+                                  Triplets triplets,
+                                  TripletsOccupancy tripletsOccupancy,
                                   ObjectRanges rangesInGPU,
                                   uint16_t* index_gpu,
                                   uint16_t nonZeroModules) const {
@@ -861,7 +725,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (success) {
               unsigned int totOccupancyTriplets =
                   alpaka::atomicAdd(acc,
-                                    &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex],
+                                    &tripletsOccupancy.totOccupancyTriplets()[innerInnerLowerModuleIndex],
                                     1u,
                                     alpaka::hierarchy::Threads{});
               if (static_cast<int>(totOccupancyTriplets) >=
@@ -871,43 +735,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
               } else {
                 unsigned int tripletModuleIndex = alpaka::atomicAdd(
-                    acc, &tripletsInGPU.nTriplets[innerInnerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+                    acc, &tripletsOccupancy.nTriplets()[innerInnerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
                 unsigned int tripletIndex =
                     rangesInGPU.tripletModuleIndices[innerInnerLowerModuleIndex] + tripletModuleIndex;
-#ifdef CUT_VALUE_DEBUG
                 addTripletToMemory(modulesInGPU,
                                    mds,
                                    segments,
-                                   tripletsInGPU,
+                                   triplets,
                                    innerSegmentIndex,
                                    outerSegmentIndex,
                                    innerInnerLowerModuleIndex,
                                    middleLowerModuleIndex,
                                    outerOuterLowerModuleIndex,
+#ifdef CUT_VALUE_DEBUG
                                    zOut,
                                    rtOut,
+#endif
                                    betaIn,
                                    betaInCut,
                                    circleRadius,
                                    circleCenterX,
                                    circleCenterY,
                                    tripletIndex);
-#else
-                addTripletToMemory(modulesInGPU,
-                                   mds,
-                                   segments,
-                                   tripletsInGPU,
-                                   innerSegmentIndex,
-                                   outerSegmentIndex,
-                                   innerInnerLowerModuleIndex,
-                                   middleLowerModuleIndex,
-                                   outerOuterLowerModuleIndex,
-                                   betaIn,
-                                   circleRadius,
-                                   circleCenterX,
-                                   circleCenterY,
-                                   tripletIndex);
-#endif
               }
             }
           }
@@ -1023,7 +872,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
-                                  Triplets tripletsInGPU,
+                                  TripletsOccupancyConst tripletsOccupancy,
                                   ObjectRanges rangesInGPU) const {
       // implementation is 1D with a single block
       static_assert(std::is_same_v<TAcc, ALPAKA_ACCELERATOR_NAMESPACE::Acc1D>, "Should be Acc1D");
@@ -1033,12 +882,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       for (uint16_t i = globalThreadIdx[0]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[0]) {
-        if (tripletsInGPU.nTriplets[i] == 0) {
+        if (tripletsOccupancy.nTriplets()[i] == 0) {
           rangesInGPU.tripletRanges[i * 2] = -1;
           rangesInGPU.tripletRanges[i * 2 + 1] = -1;
         } else {
           rangesInGPU.tripletRanges[i * 2] = rangesInGPU.tripletModuleIndices[i];
-          rangesInGPU.tripletRanges[i * 2 + 1] = rangesInGPU.tripletModuleIndices[i] + tripletsInGPU.nTriplets[i] - 1;
+          rangesInGPU.tripletRanges[i * 2 + 1] =
+              rangesInGPU.tripletModuleIndices[i] + tripletsOccupancy.nTriplets()[i] - 1;
         }
       }
     }

@@ -3,20 +3,26 @@
 
 #include <optional>
 
+#include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
+#include "RecoTracker/LSTCore/interface/PixelQuintupletsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/PixelTripletsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/QuintupletsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/TripletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
+#include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/PixelQuintupletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/PixelTripletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/QuintupletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TripletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
 
 #include "Hit.h"
-#include "Segment.h"
-#include "Triplet.h"
 #include "Kernels.h"
-#include "Quintuplet.h"
-#include "MiniDoublet.h"
-#include "PixelQuintuplet.h"
-#include "PixelTriplet.h"
-#include "TrackCandidate.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
@@ -49,27 +55,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<HitsBuffer<Device>> hitsBuffers_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
     std::optional<SegmentsDeviceCollection> segmentsDC_;
-    std::optional<Triplets> tripletsInGPU_;
-    std::optional<TripletsBuffer<Device>> tripletsBuffers_;
-    std::optional<Quintuplets> quintupletsInGPU_;
-    std::optional<QuintupletsBuffer<Device>> quintupletsBuffers_;
+    std::optional<TripletsDeviceCollection> tripletsDC_;
+    std::optional<QuintupletsDeviceCollection> quintupletsDC_;
     std::optional<TrackCandidatesDeviceCollection> trackCandidatesDC_;
-    std::optional<PixelTriplets> pixelTripletsInGPU_;
-    std::optional<PixelTripletsBuffer<Device>> pixelTripletsBuffers_;
-    std::optional<PixelQuintuplets> pixelQuintupletsInGPU_;
-    std::optional<PixelQuintupletsBuffer<Device>> pixelQuintupletsBuffers_;
+    std::optional<PixelTripletsDeviceCollection> pixelTripletsDC_;
+    std::optional<PixelQuintupletsDeviceCollection> pixelQuintupletsDC_;
 
     //CPU interface stuff
     std::optional<ObjectRangesBuffer<DevHost>> rangesInCPU_;
     std::optional<HitsBuffer<DevHost>> hitsInCPU_;
     std::optional<MiniDoubletsHostCollection> miniDoubletsHC_;
     std::optional<SegmentsHostCollection> segmentsHC_;
-    std::optional<TripletsBuffer<DevHost>> tripletsInCPU_;
+    std::optional<TripletsHostCollection> tripletsHC_;
     std::optional<TrackCandidatesHostCollection> trackCandidatesHC_;
     std::optional<ModulesBuffer<DevHost>> modulesInCPU_;
-    std::optional<QuintupletsBuffer<DevHost>> quintupletsInCPU_;
-    std::optional<PixelTripletsBuffer<DevHost>> pixelTripletsInCPU_;
-    std::optional<PixelQuintupletsBuffer<DevHost>> pixelQuintupletsInCPU_;
+    std::optional<QuintupletsHostCollection> quintupletsHC_;
+    std::optional<PixelTripletsHostCollection> pixelTripletsHC_;
+    std::optional<PixelQuintupletsHostCollection> pixelQuintupletsHC_;
 
     void initSync(bool verbose);
 
@@ -185,12 +187,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     typename TSoA::ConstView getMiniDoublets(bool sync = true);
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getSegments(bool sync = true);
-    TripletsBuffer<DevHost>& getTriplets(bool sync = true);
-    QuintupletsBuffer<DevHost>& getQuintuplets(bool sync = true);
-    PixelTripletsBuffer<DevHost>& getPixelTriplets(bool sync = true);
-    PixelQuintupletsBuffer<DevHost>& getPixelQuintuplets(bool sync = true);
-    const TrackCandidatesHostCollection& getTrackCandidates(bool sync = true);
-    const TrackCandidatesHostCollection& getTrackCandidatesInCMSSW(bool sync = true);
+    template <typename TSoA, typename TDev = Device>
+    typename TSoA::ConstView getTriplets(bool sync = true);
+    template <typename TSoA, typename TDev = Device>
+    typename TSoA::ConstView getQuintuplets(bool sync = true);
+    template <typename TDev = Device>
+    PixelTripletsConst getPixelTriplets(bool sync = true);
+    template <typename TDev = Device>
+    PixelQuintupletsConst getPixelQuintuplets(bool sync = true);
+    const TrackCandidatesConst& getTrackCandidatesWithSelection(bool inCMSSW, bool sync);
+    const TrackCandidatesConst& getTrackCandidates(bool sync = true) {
+      return getTrackCandidatesWithSelection(false, sync);
+    }
+    const TrackCandidatesConst& getTrackCandidatesInCMSSW(bool sync = true) {
+      return getTrackCandidatesWithSelection(true, sync);
+    }
     ModulesBuffer<DevHost>& getModules(bool isFull = false, bool sync = true);
   };
 
