@@ -254,15 +254,14 @@ void LST::getOutput(Event& event) {
   std::vector<int> tc_seedIdx;
   std::vector<short> tc_trackCandidateType;
 
-  HitsBuffer<alpaka::DevCpu>& hitsBuffer = event.getHitsInCMSSW(false);  // sync on next line
+  auto const hits = event.getHitsInCMSSW<HitsSoA>(false);  // sync on next line
   auto const& trackCandidates = event.getTrackCandidatesInCMSSW().const_view();
 
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
 
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     short trackCandidateType = trackCandidates.trackCandidateType()[idx];
-    std::vector<unsigned int> hit_idx =
-        getHitIdxs(trackCandidateType, trackCandidates.hitIndices()[idx], hitsBuffer.data()->idxs);
+    std::vector<unsigned int> hit_idx = getHitIdxs(trackCandidateType, trackCandidates.hitIndices()[idx], hits.idxs());
 
     tc_hitIdxs.push_back(hit_idx);
     tc_len.push_back(hit_idx.size());

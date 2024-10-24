@@ -3,15 +3,49 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 
 #include "Triplet.h"
 #include "Segment.h"
 #include "MiniDoublet.h"
 #include "Hit.h"
-#include "ObjectRanges.h"
 #include "Quintuplet.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPBB(TAcc const& acc,
+                                                                Modules const& modulesInGPU,
+                                                                ObjectOccupancyConst objectOccupancy,
+                                                                MiniDoubletsConst mds,
+                                                                SegmentsConst segments,
+                                                                SegmentsPixelConst segmentsPixel,
+                                                                uint16_t pixelModuleIndex,
+                                                                uint16_t outerInnerLowerModuleIndex,
+                                                                uint16_t outerOuterLowerModuleIndex,
+                                                                unsigned int innerSegmentIndex,
+                                                                unsigned int outerSegmentIndex,
+                                                                unsigned int firstMDIndex,
+                                                                unsigned int secondMDIndex,
+                                                                unsigned int thirdMDIndex,
+                                                                unsigned int fourthMDIndex);
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPEE(TAcc const& acc,
+                                                                Modules const& modulesInGPU,
+                                                                ObjectOccupancyConst objectOccupancy,
+                                                                MiniDoubletsConst mds,
+                                                                SegmentsConst segments,
+                                                                SegmentsPixelConst segmentsPixel,
+                                                                uint16_t pixelModuleIndex,
+                                                                uint16_t outerInnerLowerModuleIndex,
+                                                                uint16_t outerOuterLowerModuleIndex,
+                                                                unsigned int innerSegmentIndex,
+                                                                unsigned int outerSegmentIndex,
+                                                                unsigned int firstMDIndex,
+                                                                unsigned int secondMDIndex,
+                                                                unsigned int thirdMDIndex,
+                                                                unsigned int fourthMDIndex);
+
   // One pixel segment, one outer tracker triplet!
   struct PixelTriplets {
     unsigned int* pixelSegmentIndices;
@@ -211,7 +245,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTrackletDefaultAlgopT3(TAcc const& acc,
                                                                      Modules const& modulesInGPU,
-                                                                     ObjectRanges const& rangesInGPU,
+                                                                     ObjectOccupancyConst objectOccupancy,
                                                                      MiniDoubletsConst mds,
                                                                      SegmentsConst segments,
                                                                      SegmentsPixelConst segmentsPixel,
@@ -233,7 +267,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         (outerOuterLowerModuleSubdet == Barrel or outerOuterLowerModuleSubdet == Endcap)) {
       return runTripletDefaultAlgoPPBB(acc,
                                        modulesInGPU,
-                                       rangesInGPU,
+                                       objectOccupancy,
                                        mds,
                                        segments,
                                        segmentsPixel,
@@ -249,7 +283,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     } else if (outerInnerLowerModuleSubdet == Endcap and outerOuterLowerModuleSubdet == Endcap) {
       return runTripletDefaultAlgoPPEE(acc,
                                        modulesInGPU,
-                                       rangesInGPU,
+                                       objectOccupancy,
                                        mds,
                                        segments,
                                        segmentsPixel,
@@ -767,7 +801,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTripletDefaultAlgo(TAcc const& acc,
                                                                  Modules const& modulesInGPU,
-                                                                 ObjectRanges const& rangesInGPU,
+                                                                 ObjectOccupancyConst objectOccupancy,
                                                                  MiniDoubletsConst mds,
                                                                  SegmentsConst segments,
                                                                  SegmentsPixelConst segmentsPixel,
@@ -793,7 +827,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // pixel segment vs inner segment of the triplet
       if (not runPixelTrackletDefaultAlgopT3(acc,
                                              modulesInGPU,
-                                             rangesInGPU,
+                                             objectOccupancy,
                                              mds,
                                              segments,
                                              segmentsPixel,
@@ -807,7 +841,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       //pixel segment vs outer segment of triplet
       if (not runPixelTrackletDefaultAlgopT3(acc,
                                              modulesInGPU,
-                                             rangesInGPU,
+                                             objectOccupancy,
                                              mds,
                                              segments,
                                              segmentsPixel,
@@ -820,7 +854,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     //pt matching between the pixel ptin and the triplet circle pt
-    unsigned int pixelSegmentArrayIndex = pixelSegmentIndex - rangesInGPU.segmentModuleIndices[pixelModuleIndex];
+    unsigned int pixelSegmentArrayIndex = pixelSegmentIndex - objectOccupancy.segmentModuleIndices()[pixelModuleIndex];
     float pixelSegmentPt = segmentsPixel.ptIn()[pixelSegmentArrayIndex];
     float pixelSegmentPtError = segmentsPixel.ptErr()[pixelSegmentArrayIndex];
     float pixelSegmentPx = segmentsPixel.px()[pixelSegmentArrayIndex];
@@ -926,7 +960,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
-                                  ObjectRanges rangesInGPU,
+                                  ObjectOccupancyConst objectOccupancy,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   SegmentsPixelConst segmentsPixel,
@@ -965,7 +999,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterTriplets == 0)
             continue;
 
-          unsigned int pixelSegmentIndex = rangesInGPU.segmentModuleIndices[pixelModuleIndex] + i_pLS;
+          unsigned int pixelSegmentIndex = objectOccupancy.segmentModuleIndices()[pixelModuleIndex] + i_pLS;
 
           if (segmentsPixel.isDup()[i_pLS])
             continue;
@@ -987,7 +1021,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           for (unsigned int outerTripletArrayIndex = globalThreadIdx[2]; outerTripletArrayIndex < nOuterTriplets;
                outerTripletArrayIndex += gridThreadExtent[2]) {
             unsigned int outerTripletIndex =
-                rangesInGPU.tripletModuleIndices[tripletLowerModuleIndex] + outerTripletArrayIndex;
+                objectOccupancy.tripletModuleIndices()[tripletLowerModuleIndex] + outerTripletArrayIndex;
             if (modulesInGPU.moduleType[tripletsInGPU.lowerModuleIndices[3 * outerTripletIndex + 1]] == TwoS)
               continue;  //REMOVES PS-2S
 
@@ -997,7 +1031,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY;
             bool success = runPixelTripletDefaultAlgo(acc,
                                                       modulesInGPU,
-                                                      rangesInGPU,
+                                                      objectOccupancy,
                                                       mds,
                                                       segments,
                                                       segmentsPixel,
@@ -1161,7 +1195,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPBB(TAcc const& acc,
                                                                 Modules const& modulesInGPU,
-                                                                ObjectRanges const& rangesInGPU,
+                                                                ObjectOccupancyConst objectOccupancy,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
                                                                 SegmentsPixelConst segmentsPixel,
@@ -1201,7 +1235,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > 0.5f * float(M_PI))
       return false;
 
-    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - rangesInGPU.segmentModuleIndices[pixelModuleIndex];
+    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - objectOccupancy.segmentModuleIndices()[pixelModuleIndex];
     float ptIn = segmentsPixel.ptIn()[pixelSegmentArrayIndex];
     float ptSLo = ptIn;
     float px = segmentsPixel.px()[pixelSegmentArrayIndex];
@@ -1419,7 +1453,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runTripletDefaultAlgoPPEE(TAcc const& acc,
                                                                 Modules const& modulesInGPU,
-                                                                ObjectRanges const& rangesInGPU,
+                                                                ObjectOccupancyConst objectOccupancy,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
                                                                 SegmentsPixelConst segmentsPixel,
@@ -1457,7 +1491,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float y_OutLo = mds.anchorY()[thirdMDIndex];
     float y_OutUp = mds.anchorY()[fourthMDIndex];
 
-    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - rangesInGPU.segmentModuleIndices[pixelModuleIndex];
+    unsigned int pixelSegmentArrayIndex = innerSegmentIndex - objectOccupancy.segmentModuleIndices()[pixelModuleIndex];
 
     float ptIn = segmentsPixel.ptIn()[pixelSegmentArrayIndex];
     float ptSLo = ptIn;

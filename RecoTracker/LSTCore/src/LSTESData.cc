@@ -87,12 +87,12 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
   ModuleConnectionMap moduleConnectionMap;
   ::loadMapsHost(pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 
-  auto endcapGeometryBuffers =
-      EndcapGeometryBuffer<alpaka_common::DevHost>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
-  std::memcpy(endcapGeometryBuffers.geoMapDetId_buf.data(),
+  auto endcapGeometryDev =
+      std::make_unique<EndcapGeometryDevHostCollection>(endcapGeometry.nEndCapMap, cms::alpakatools::host());
+  std::memcpy(endcapGeometryDev->view().geoMapDetId(),
               endcapGeometry.geoMapDetId_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(unsigned int));
-  std::memcpy(endcapGeometryBuffers.geoMapPhi_buf.data(),
+  std::memcpy(endcapGeometryDev->view().geoMapPhi(),
               endcapGeometry.geoMapPhi_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(float));
 
@@ -113,6 +113,6 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
                                                              nPixels,
                                                              endcapGeometry.nEndCapMap,
                                                              std::move(modulesBuffers),
-                                                             std::move(endcapGeometryBuffers),
+                                                             std::move(endcapGeometryDev),
                                                              pixelMappingPtr);
 }

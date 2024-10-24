@@ -3,6 +3,7 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 
 #include "Segment.h"
 #include "MiniDoublet.h"
@@ -673,7 +674,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelQuintupletDefaultAlgo(TAcc const& acc,
                                                                     Modules const& modulesInGPU,
-                                                                    ObjectRanges const& rangesInGPU,
+                                                                    ObjectOccupancyConst objectOccupancy,
                                                                     MiniDoubletsConst mds,
                                                                     SegmentsConst segments,
                                                                     SegmentsPixelConst segmentsPixel,
@@ -697,7 +698,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (not runPixelTripletDefaultAlgo(acc,
                                        modulesInGPU,
-                                       rangesInGPU,
+                                       objectOccupancy,
                                        mds,
                                        segments,
                                        segmentsPixel,
@@ -831,7 +832,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   unsigned int* connectedPixelSize,
                                   unsigned int* connectedPixelIndex,
                                   unsigned int nPixelSegments,
-                                  ObjectRanges rangesInGPU) const {
+                                  ObjectOccupancyConst objectOccupancy) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -855,14 +856,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterQuintuplets == 0)
             continue;
 
-          unsigned int pixelSegmentIndex = rangesInGPU.segmentModuleIndices[pixelModuleIndex] + i_pLS;
+          unsigned int pixelSegmentIndex = objectOccupancy.segmentModuleIndices()[pixelModuleIndex] + i_pLS;
 
           //fetch the quintuplet
           for (unsigned int outerQuintupletArrayIndex = globalThreadIdx[2];
                outerQuintupletArrayIndex < nOuterQuintuplets;
                outerQuintupletArrayIndex += gridThreadExtent[2]) {
             unsigned int quintupletIndex =
-                rangesInGPU.quintupletModuleIndices[quintupletLowerModuleIndex] + outerQuintupletArrayIndex;
+                objectOccupancy.quintupletModuleIndices()[quintupletLowerModuleIndex] + outerQuintupletArrayIndex;
 
             if (quintupletsInGPU.isDup[quintupletIndex])
               continue;
@@ -871,7 +872,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             bool success = runPixelQuintupletDefaultAlgo(acc,
                                                          modulesInGPU,
-                                                         rangesInGPU,
+                                                         objectOccupancy,
                                                          mds,
                                                          segments,
                                                          segmentsPixel,

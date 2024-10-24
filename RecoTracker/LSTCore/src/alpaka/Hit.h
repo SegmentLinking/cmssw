@@ -3,108 +3,9 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/alpaka/HitsDeviceCollection.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
-  struct Hits {
-    unsigned int* nHits;
-    float* xs;
-    float* ys;
-    float* zs;
-    uint16_t* moduleIndices;
-    unsigned int* idxs;
-    unsigned int* detid;
-    float* rts;
-    float* phis;
-    float* etas;
-    float* highEdgeXs;
-    float* highEdgeYs;
-    float* lowEdgeXs;
-    float* lowEdgeYs;
-    int* hitRanges;
-    int* hitRangesLower;
-    int* hitRangesUpper;
-    int8_t* hitRangesnLower;
-    int8_t* hitRangesnUpper;
-
-    template <typename TBuff>
-    void setData(TBuff& buf) {
-      nHits = buf.nHits_buf.data();
-      xs = buf.xs_buf.data();
-      ys = buf.ys_buf.data();
-      zs = buf.zs_buf.data();
-      moduleIndices = buf.moduleIndices_buf.data();
-      idxs = buf.idxs_buf.data();
-      detid = buf.detid_buf.data();
-      rts = buf.rts_buf.data();
-      phis = buf.phis_buf.data();
-      etas = buf.etas_buf.data();
-      highEdgeXs = buf.highEdgeXs_buf.data();
-      highEdgeYs = buf.highEdgeYs_buf.data();
-      lowEdgeXs = buf.lowEdgeXs_buf.data();
-      lowEdgeYs = buf.lowEdgeYs_buf.data();
-      hitRanges = buf.hitRanges_buf.data();
-      hitRangesLower = buf.hitRangesLower_buf.data();
-      hitRangesUpper = buf.hitRangesUpper_buf.data();
-      hitRangesnLower = buf.hitRangesnLower_buf.data();
-      hitRangesnUpper = buf.hitRangesnUpper_buf.data();
-    }
-  };
-
-  template <typename TDev>
-  struct HitsBuffer {
-    Buf<TDev, unsigned int> nHits_buf;
-    Buf<TDev, float> xs_buf;
-    Buf<TDev, float> ys_buf;
-    Buf<TDev, float> zs_buf;
-    Buf<TDev, uint16_t> moduleIndices_buf;
-    Buf<TDev, unsigned int> idxs_buf;
-    Buf<TDev, unsigned int> detid_buf;
-    Buf<TDev, float> rts_buf;
-    Buf<TDev, float> phis_buf;
-    Buf<TDev, float> etas_buf;
-    Buf<TDev, float> highEdgeXs_buf;
-    Buf<TDev, float> highEdgeYs_buf;
-    Buf<TDev, float> lowEdgeXs_buf;
-    Buf<TDev, float> lowEdgeYs_buf;
-    Buf<TDev, int> hitRanges_buf;
-    Buf<TDev, int> hitRangesLower_buf;
-    Buf<TDev, int> hitRangesUpper_buf;
-    Buf<TDev, int8_t> hitRangesnLower_buf;
-    Buf<TDev, int8_t> hitRangesnUpper_buf;
-
-    Hits data_;
-
-    template <typename TQueue, typename TDevAcc>
-    HitsBuffer(unsigned int nModules, unsigned int nMaxHits, TDevAcc const& devAccIn, TQueue& queue)
-        : nHits_buf(allocBufWrapper<unsigned int>(devAccIn, 1u, queue)),
-          xs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          ys_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          zs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          moduleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, nMaxHits, queue)),
-          idxs_buf(allocBufWrapper<unsigned int>(devAccIn, nMaxHits, queue)),
-          detid_buf(allocBufWrapper<unsigned int>(devAccIn, nMaxHits, queue)),
-          rts_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          phis_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          etas_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          highEdgeXs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          highEdgeYs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          lowEdgeXs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          lowEdgeYs_buf(allocBufWrapper<float>(devAccIn, nMaxHits, queue)),
-          hitRanges_buf(allocBufWrapper<int>(devAccIn, nModules * 2, queue)),
-          hitRangesLower_buf(allocBufWrapper<int>(devAccIn, nModules, queue)),
-          hitRangesUpper_buf(allocBufWrapper<int>(devAccIn, nModules, queue)),
-          hitRangesnLower_buf(allocBufWrapper<int8_t>(devAccIn, nModules, queue)),
-          hitRangesnUpper_buf(allocBufWrapper<int8_t>(devAccIn, nModules, queue)) {
-      alpaka::memset(queue, hitRanges_buf, 0xff);
-      alpaka::memset(queue, hitRangesLower_buf, 0xff);
-      alpaka::memset(queue, hitRangesUpper_buf, 0xff);
-      alpaka::memset(queue, hitRangesnLower_buf, 0xff);
-      alpaka::memset(queue, hitRangesnUpper_buf, 0xff);
-    }
-
-    inline Hits const* data() const { return &data_; }
-    inline void setData(HitsBuffer& buf) { data_.setData(buf); }
-  };
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float eta(TAcc const& acc, float x, float y, float z) {
@@ -178,19 +79,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   struct ModuleRangesKernel {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, Modules modulesInGPU, Hits hitsInGPU, int nLowerModules) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  Modules modulesInGPU,
+                                  HitsOccupancy hitsOccupancy,
+                                  int nLowerModules) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       for (int lowerIndex = globalThreadIdx[2]; lowerIndex < nLowerModules; lowerIndex += gridThreadExtent[2]) {
         uint16_t upperIndex = modulesInGPU.partnerModuleIndices[lowerIndex];
-        if (hitsInGPU.hitRanges[lowerIndex * 2] != -1 && hitsInGPU.hitRanges[upperIndex * 2] != -1) {
-          hitsInGPU.hitRangesLower[lowerIndex] = hitsInGPU.hitRanges[lowerIndex * 2];
-          hitsInGPU.hitRangesUpper[lowerIndex] = hitsInGPU.hitRanges[upperIndex * 2];
-          hitsInGPU.hitRangesnLower[lowerIndex] =
-              hitsInGPU.hitRanges[lowerIndex * 2 + 1] - hitsInGPU.hitRanges[lowerIndex * 2] + 1;
-          hitsInGPU.hitRangesnUpper[lowerIndex] =
-              hitsInGPU.hitRanges[upperIndex * 2 + 1] - hitsInGPU.hitRanges[upperIndex * 2] + 1;
+        if (hitsOccupancy.hitRanges()[lowerIndex][0] != -1 && hitsOccupancy.hitRanges()[upperIndex][0] != -1) {
+          hitsOccupancy.hitRangesLower()[lowerIndex] = hitsOccupancy.hitRanges()[lowerIndex][0];
+          hitsOccupancy.hitRangesUpper()[lowerIndex] = hitsOccupancy.hitRanges()[upperIndex][0];
+          hitsOccupancy.hitRangesnLower()[lowerIndex] =
+              hitsOccupancy.hitRanges()[lowerIndex][1] - hitsOccupancy.hitRanges()[lowerIndex][0] + 1;
+          hitsOccupancy.hitRangesnUpper()[lowerIndex] =
+              hitsOccupancy.hitRanges()[upperIndex][1] - hitsOccupancy.hitRanges()[upperIndex][0] + 1;
         }
       }
     }
@@ -199,56 +103,62 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct HitLoopKernel {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
-                                  uint16_t Endcap,                  // Integer corresponding to endcap in module subdets
-                                  uint16_t TwoS,                    // Integer corresponding to TwoS in moduleType
-                                  unsigned int nModules,            // Number of modules
-                                  unsigned int nEndCapMap,          // Number of elements in endcap map
-                                  const unsigned int* geoMapDetId,  // DetId's from endcap map
-                                  const float* geoMapPhi,           // Phi values from endcap map
+                                  uint16_t Endcap,          // Integer corresponding to endcap in module subdets
+                                  uint16_t TwoS,            // Integer corresponding to TwoS in moduleType
+                                  unsigned int nModules,    // Number of modules
+                                  unsigned int nEndCapMap,  // Number of elements in endcap map
+                                  EndcapGeometryDevConst endcapGeometry,
                                   Modules modulesInGPU,
-                                  Hits hitsInGPU,
+                                  Hits hits,
+                                  HitsOccupancy hitsOccupancy,
                                   unsigned int nHits) const  // Total number of hits in event
     {
+      auto geoMapDetId = endcapGeometry.geoMapDetId();  // DetId's from endcap map
+      auto geoMapPhi = endcapGeometry.geoMapPhi();      // Phi values from endcap map
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
       for (unsigned int ihit = globalThreadIdx[2]; ihit < nHits; ihit += gridThreadExtent[2]) {
-        float ihit_x = hitsInGPU.xs[ihit];
-        float ihit_y = hitsInGPU.ys[ihit];
-        float ihit_z = hitsInGPU.zs[ihit];
-        int iDetId = hitsInGPU.detid[ihit];
+        float ihit_x = hits.xs()[ihit];
+        float ihit_y = hits.ys()[ihit];
+        float ihit_z = hits.zs()[ihit];
+        int iDetId = hits.detid()[ihit];
 
-        hitsInGPU.rts[ihit] = alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y);
-        hitsInGPU.phis[ihit] = phi(acc, ihit_x, ihit_y);
-        hitsInGPU.etas[ihit] =
+        hits.rts()[ihit] = alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y);
+        hits.phis()[ihit] = phi(acc, ihit_x, ihit_y);
+        hits.etas()[ihit] =
             ((ihit_z > 0) - (ihit_z < 0)) *
             alpaka::math::acosh(
-                acc,
-                alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y + ihit_z * ihit_z) / hitsInGPU.rts[ihit]);
+                acc, alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y + ihit_z * ihit_z) / hits.rts()[ihit]);
         int found_index = binary_search(modulesInGPU.mapdetId, iDetId, nModules);
         uint16_t lastModuleIndex = modulesInGPU.mapIdx[found_index];
 
-        hitsInGPU.moduleIndices[ihit] = lastModuleIndex;
+        hits.moduleIndices()[ihit] = lastModuleIndex;
 
         if (modulesInGPU.subdets[lastModuleIndex] == Endcap && modulesInGPU.moduleType[lastModuleIndex] == TwoS) {
           found_index = binary_search(geoMapDetId, iDetId, nEndCapMap);
           float phi = geoMapPhi[found_index];
           float cos_phi = alpaka::math::cos(acc, phi);
-          hitsInGPU.highEdgeXs[ihit] = ihit_x + 2.5f * cos_phi;
-          hitsInGPU.lowEdgeXs[ihit] = ihit_x - 2.5f * cos_phi;
+          hits.highEdgeXs()[ihit] = ihit_x + 2.5f * cos_phi;
+          hits.lowEdgeXs()[ihit] = ihit_x - 2.5f * cos_phi;
           float sin_phi = alpaka::math::sin(acc, phi);
-          hitsInGPU.highEdgeYs[ihit] = ihit_y + 2.5f * sin_phi;
-          hitsInGPU.lowEdgeYs[ihit] = ihit_y - 2.5f * sin_phi;
+          hits.highEdgeYs()[ihit] = ihit_y + 2.5f * sin_phi;
+          hits.lowEdgeYs()[ihit] = ihit_y - 2.5f * sin_phi;
         }
         // Need to set initial value if index hasn't been seen before.
-        int old = alpaka::atomicCas(
-            acc, &(hitsInGPU.hitRanges[lastModuleIndex * 2]), -1, static_cast<int>(ihit), alpaka::hierarchy::Threads{});
+        int old = alpaka::atomicCas(acc,
+                                    &(hitsOccupancy.hitRanges()[lastModuleIndex][0]),
+                                    -1,
+                                    static_cast<int>(ihit),
+                                    alpaka::hierarchy::Threads{});
         // For subsequent visits, stores the min value.
         if (old != -1)
-          alpaka::atomicMin(
-              acc, &hitsInGPU.hitRanges[lastModuleIndex * 2], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
+          alpaka::atomicMin(acc,
+                            &hitsOccupancy.hitRanges()[lastModuleIndex][0],
+                            static_cast<int>(ihit),
+                            alpaka::hierarchy::Threads{});
 
         alpaka::atomicMax(
-            acc, &hitsInGPU.hitRanges[lastModuleIndex * 2 + 1], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
+            acc, &hitsOccupancy.hitRanges()[lastModuleIndex][1], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
       }
     }
   };

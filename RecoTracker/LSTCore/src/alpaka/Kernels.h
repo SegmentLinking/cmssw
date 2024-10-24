@@ -3,10 +3,10 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 
 #include "Hit.h"
 #include "MiniDoublet.h"
-#include "ObjectRanges.h"
 #include "Segment.h"
 #include "Triplet.h"
 #include "Quintuplet.h"
@@ -147,14 +147,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
                                   Quintuplets quintupletsInGPU,
-                                  ObjectRanges rangesInGPU) const {
+                                  ObjectOccupancyConst objectOccupancy) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       for (unsigned int lowmod = globalThreadIdx[0]; lowmod < *modulesInGPU.nLowerModules;
            lowmod += gridThreadExtent[0]) {
         unsigned int nQuintuplets_lowmod = quintupletsInGPU.nQuintuplets[lowmod];
-        int quintupletModuleIndices_lowmod = rangesInGPU.quintupletModuleIndices[lowmod];
+        int quintupletModuleIndices_lowmod = objectOccupancy.quintupletModuleIndices()[lowmod];
 
         for (unsigned int ix1 = globalThreadIdx[1]; ix1 < nQuintuplets_lowmod; ix1 += gridThreadExtent[1]) {
           unsigned int ix = quintupletModuleIndices_lowmod + ix1;
@@ -194,27 +194,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   struct RemoveDupQuintupletsInGPUBeforeTC {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, Quintuplets quintupletsInGPU, ObjectRanges rangesInGPU) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  Quintuplets quintupletsInGPU,
+                                  ObjectOccupancyConst objectOccupancy) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
-      for (unsigned int lowmodIdx1 = globalThreadIdx[1]; lowmodIdx1 < *(rangesInGPU.nEligibleT5Modules);
+      for (unsigned int lowmodIdx1 = globalThreadIdx[1]; lowmodIdx1 < objectOccupancy.nEligibleT5Modules();
            lowmodIdx1 += gridThreadExtent[1]) {
-        uint16_t lowmod1 = rangesInGPU.indicesOfEligibleT5Modules[lowmodIdx1];
+        uint16_t lowmod1 = objectOccupancy.indicesOfEligibleT5Modules()[lowmodIdx1];
         unsigned int nQuintuplets_lowmod1 = quintupletsInGPU.nQuintuplets[lowmod1];
         if (nQuintuplets_lowmod1 == 0)
           continue;
 
-        unsigned int quintupletModuleIndices_lowmod1 = rangesInGPU.quintupletModuleIndices[lowmod1];
+        unsigned int quintupletModuleIndices_lowmod1 = objectOccupancy.quintupletModuleIndices()[lowmod1];
 
-        for (unsigned int lowmodIdx2 = globalThreadIdx[2] + lowmodIdx1; lowmodIdx2 < *(rangesInGPU.nEligibleT5Modules);
+        for (unsigned int lowmodIdx2 = globalThreadIdx[2] + lowmodIdx1;
+             lowmodIdx2 < objectOccupancy.nEligibleT5Modules();
              lowmodIdx2 += gridThreadExtent[2]) {
-          uint16_t lowmod2 = rangesInGPU.indicesOfEligibleT5Modules[lowmodIdx2];
+          uint16_t lowmod2 = objectOccupancy.indicesOfEligibleT5Modules()[lowmodIdx2];
           unsigned int nQuintuplets_lowmod2 = quintupletsInGPU.nQuintuplets[lowmod2];
           if (nQuintuplets_lowmod2 == 0)
             continue;
 
-          unsigned int quintupletModuleIndices_lowmod2 = rangesInGPU.quintupletModuleIndices[lowmod2];
+          unsigned int quintupletModuleIndices_lowmod2 = objectOccupancy.quintupletModuleIndices()[lowmod2];
 
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;

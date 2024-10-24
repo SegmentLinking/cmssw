@@ -5,11 +5,11 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
+#include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 
 #include "Segment.h"
 #include "MiniDoublet.h"
 #include "Hit.h"
-#include "ObjectRanges.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct Triplets {
@@ -806,7 +806,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsConst segments,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   Triplets tripletsInGPU,
-                                  ObjectRanges rangesInGPU,
+                                  ObjectRangesConst ranges,
+                                  ObjectOccupancyConst objectOccupancy,
                                   uint16_t* index_gpu,
                                   uint16_t nonZeroModules) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
@@ -826,7 +827,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         for (unsigned int innerSegmentArrayIndex = globalThreadIdx[1]; innerSegmentArrayIndex < nInnerSegments;
              innerSegmentArrayIndex += gridThreadExtent[1]) {
           unsigned int innerSegmentIndex =
-              rangesInGPU.segmentRanges[innerInnerLowerModuleIndex * 2] + innerSegmentArrayIndex;
+              ranges.segmentRanges()[innerInnerLowerModuleIndex][0] + innerSegmentArrayIndex;
 
           // middle lower module - outer lower module of inner segment
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
@@ -834,8 +835,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int nOuterSegments = segmentsOccupancy.nSegments()[middleLowerModuleIndex];
           for (unsigned int outerSegmentArrayIndex = globalThreadIdx[2]; outerSegmentArrayIndex < nOuterSegments;
                outerSegmentArrayIndex += gridThreadExtent[2]) {
-            unsigned int outerSegmentIndex =
-                rangesInGPU.segmentRanges[2 * middleLowerModuleIndex] + outerSegmentArrayIndex;
+            unsigned int outerSegmentIndex = ranges.segmentRanges()[middleLowerModuleIndex][0] + outerSegmentArrayIndex;
 
             uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
 
@@ -865,7 +865,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     1u,
                                     alpaka::hierarchy::Threads{});
               if (static_cast<int>(totOccupancyTriplets) >=
-                  rangesInGPU.tripletModuleOccupancy[innerInnerLowerModuleIndex]) {
+                  objectOccupancy.tripletModuleOccupancy()[innerInnerLowerModuleIndex]) {
 #ifdef WARNINGS
                 printf("Triplet excess alert! Module index = %d\n", innerInnerLowerModuleIndex);
 #endif
@@ -873,7 +873,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 unsigned int tripletModuleIndex = alpaka::atomicAdd(
                     acc, &tripletsInGPU.nTriplets[innerInnerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
                 unsigned int tripletIndex =
-                    rangesInGPU.tripletModuleIndices[innerInnerLowerModuleIndex] + tripletModuleIndex;
+                    objectOccupancy.tripletModuleIndices()[innerInnerLowerModuleIndex] + tripletModuleIndex;
 #ifdef CUT_VALUE_DEBUG
                 addTripletToMemory(modulesInGPU,
                                    mds,
@@ -920,7 +920,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
-                                  ObjectRanges rangesInGPU,
+                                  ObjectOccupancy objectOccupancy,
                                   SegmentsOccupancyConst segmentsOccupancy) const {
       // implementation is 1D with a single block
       static_assert(std::is_same_v<TAcc, ALPAKA_ACCELERATOR_NAMESPACE::Acc1D>, "Should be Acc1D");
@@ -941,8 +941,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       for (uint16_t i = globalThreadIdx[0]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[0]) {
         if (segmentsOccupancy.nSegments()[i] == 0) {
-          rangesInGPU.tripletModuleIndices[i] = nTotalTriplets;
-          rangesInGPU.tripletModuleOccupancy[i] = 0;
+          objectOccupancy.tripletModuleIndices()[i] = nTotalTriplets;
+          objectOccupancy.tripletModuleOccupancy()[i] = 0;
           continue;
         }
 
@@ -1006,15 +1006,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
         }
 
-        rangesInGPU.tripletModuleOccupancy[i] = occupancy;
+        objectOccupancy.tripletModuleOccupancy()[i] = occupancy;
         unsigned int nTotT = alpaka::atomicAdd(acc, &nTotalTriplets, occupancy, alpaka::hierarchy::Threads{});
-        rangesInGPU.tripletModuleIndices[i] = nTotT;
+        objectOccupancy.tripletModuleIndices()[i] = nTotT;
       }
 
       // Wait for all threads to finish before reporting final values
       alpaka::syncBlockThreads(acc);
       if (cms::alpakatools::once_per_block(acc)) {
-        *rangesInGPU.device_nTotalTrips = nTotalTriplets;
+        objectOccupancy.nTotalTrips() = nTotalTriplets;
       }
     }
   };
@@ -1024,7 +1024,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   Modules modulesInGPU,
                                   Triplets tripletsInGPU,
-                                  ObjectRanges rangesInGPU) const {
+                                  ObjectRanges ranges,
+                                  ObjectOccupancyConst objectOccupancy) const {
       // implementation is 1D with a single block
       static_assert(std::is_same_v<TAcc, ALPAKA_ACCELERATOR_NAMESPACE::Acc1D>, "Should be Acc1D");
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
@@ -1034,11 +1035,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       for (uint16_t i = globalThreadIdx[0]; i < *modulesInGPU.nLowerModules; i += gridThreadExtent[0]) {
         if (tripletsInGPU.nTriplets[i] == 0) {
-          rangesInGPU.tripletRanges[i * 2] = -1;
-          rangesInGPU.tripletRanges[i * 2 + 1] = -1;
+          ranges.tripletRanges()[i][0] = -1;
+          ranges.tripletRanges()[i][1] = -1;
         } else {
-          rangesInGPU.tripletRanges[i * 2] = rangesInGPU.tripletModuleIndices[i];
-          rangesInGPU.tripletRanges[i * 2 + 1] = rangesInGPU.tripletModuleIndices[i] + tripletsInGPU.nTriplets[i] - 1;
+          ranges.tripletRanges()[i][0] = objectOccupancy.tripletModuleIndices()[i];
+          ranges.tripletRanges()[i][1] = objectOccupancy.tripletModuleIndices()[i] + tripletsInGPU.nTriplets[i] - 1;
         }
       }
     }

@@ -2,7 +2,7 @@
 #define RecoTracker_LSTCore_interface_LSTESData_h
 
 #include "RecoTracker/LSTCore/interface/Constants.h"
-#include "RecoTracker/LSTCore/interface/EndcapGeometryBuffer.h"
+#include "RecoTracker/LSTCore/interface/EndcapGeometryDevSoA.h"
 #include "RecoTracker/LSTCore/interface/Module.h"
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
 
@@ -20,7 +20,7 @@ namespace lst {
     unsigned int nPixels;
     unsigned int nEndCapMap;
     ModulesBuffer<TDev> modulesBuffers;
-    EndcapGeometryBuffer<TDev> endcapGeometryBuffers;
+    std::unique_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometry;
     std::shared_ptr<const PixelMap> pixelMapping;
 
     LSTESData(uint16_t const& nModulesIn,
@@ -28,14 +28,14 @@ namespace lst {
               unsigned int const& nPixelsIn,
               unsigned int const& nEndCapMapIn,
               ModulesBuffer<TDev> const& modulesBuffersIn,
-              EndcapGeometryBuffer<TDev> const& endcapGeometryBuffersIn,
+              std::unique_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometryIn,
               std::shared_ptr<const PixelMap> const& pixelMappingIn)
         : nModules(nModulesIn),
           nLowerModules(nLowerModulesIn),
           nPixels(nPixelsIn),
           nEndCapMap(nEndCapMapIn),
           modulesBuffers(modulesBuffersIn),
-          endcapGeometryBuffers(endcapGeometryBuffersIn),
+          endcapGeometry(std::move(endcapGeometryIn)),
           pixelMapping(pixelMappingIn) {}
   };
 
@@ -44,6 +44,19 @@ namespace lst {
 }  // namespace lst
 
 namespace cms::alpakatools {
+
+  // The templated definition in CMSSW doesn't work when using CPU as the device
+  template <>
+  struct CopyToDevice<PortableHostCollection<lst::EndcapGeometryDevSoA>> {
+    template <typename TQueue>
+    static auto copyAsync(TQueue& queue, PortableHostCollection<lst::EndcapGeometryDevSoA> const& srcData) {
+      using TDevice = typename alpaka::trait::DevType<TQueue>::type;
+      PortableCollection<lst::EndcapGeometryDevSoA, TDevice> dstData(srcData->metadata().size(), queue);
+      alpaka::memcpy(queue, dstData.buffer(), srcData.buffer());
+      return dstData;
+    }
+  };
+
   template <>
   struct CopyToDevice<lst::LSTESData<alpaka_common::DevHost>> {
     template <typename TQueue>
@@ -52,16 +65,15 @@ namespace cms::alpakatools {
       auto deviceModulesBuffers =
           lst::ModulesBuffer<alpaka::Dev<TQueue>>(alpaka::getDev(queue), srcData.nModules, srcData.nPixels);
       deviceModulesBuffers.copyFromSrc(queue, srcData.modulesBuffers);
-      auto deviceEndcapGeometryBuffers =
-          lst::EndcapGeometryBuffer<alpaka::Dev<TQueue>>(alpaka::getDev(queue), srcData.nEndCapMap);
-      deviceEndcapGeometryBuffers.copyFromSrc(queue, srcData.endcapGeometryBuffers);
+      auto deviceEndcapGeometry = std::make_unique<PortableCollection<lst::EndcapGeometryDevSoA, alpaka::Dev<TQueue>>>(
+          CopyToDevice<PortableHostCollection<lst::EndcapGeometryDevSoA>>::copyAsync(queue, *srcData.endcapGeometry));
 
       return lst::LSTESData<alpaka::Dev<TQueue>>(srcData.nModules,
                                                  srcData.nLowerModules,
                                                  srcData.nPixels,
                                                  srcData.nEndCapMap,
                                                  std::move(deviceModulesBuffers),
-                                                 std::move(deviceEndcapGeometryBuffers),
+                                                 std::move(deviceEndcapGeometry),
                                                  srcData.pixelMapping);
     }
   };

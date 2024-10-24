@@ -111,6 +111,7 @@ namespace lst {
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
 
+  using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
 
 }  //namespace lst
