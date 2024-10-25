@@ -44,6 +44,9 @@ _HLTInitialStepSequenceLST = cms.Sequence(
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 trackingLST.toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST)
 
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+(singleIterPatatrack & trackingLST).toReplaceWith(HLTInitialStepSequence, HLTInitialStepSequence.copyAndExclude([HLTHighPtTripletStepSeedingSequence,hltHighPtTripletStepSeedTracksLST]))
+
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
 (seedingLST & trackingLST).toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST.copyAndExclude([hltInitialStepTrackspLSTCLST,hltInitialStepTrackCutClassifierpLSTCLST,hltInitialStepTrackSelectionHighPuritypLSTCLST]))
 
