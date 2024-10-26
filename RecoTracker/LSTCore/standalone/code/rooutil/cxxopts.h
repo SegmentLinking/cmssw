@@ -238,7 +238,7 @@ namespace cxxopts {
   class Option_syntax_exception : public OptionParseException {
   public:
     Option_syntax_exception(const std::string& text)
-        : OptionParseException(u8"Argument " + LQUOTE + text + RQUOTE + u8" starts with a - but has incorrect syntax") {}
+        : OptionParseException("Argument " + LQUOTE + text + RQUOTE + " starts with a - but has incorrect syntax") {}
   };
 
   class Option_not_exists_exception : public OptionParseException {
