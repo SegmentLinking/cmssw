@@ -25,6 +25,20 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
     writeOnlyTrkQuals = cms.bool(False)
 )
 
+_hltGeneralTracksSingleIterPatatrack = hltGeneralTracks.clone(
+    TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPurity"),
+    hasSelector = cms.vint32(0),
+    indivShareFrac = cms.vdouble(1.0),
+    selectedTrackQuals = cms.VInputTag(cms.InputTag("hltInitialStepTrackSelectionHighPurity")),
+    setsToMerge = cms.VPSet(cms.PSet(
+        pQual = cms.bool(True),
+        tLists = cms.vint32(0)
+    ))
+)
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+singleIterPatatrack.toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
+
 _hltGeneralTracksLST = hltGeneralTracks.clone(
     TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTrackSelectionHighPuritypLSTCLST", "hltInitialStepTracksT5TCLST", "hltHighPtTripletStepTrackSelectionHighPurity"),
     hasSelector = cms.vint32(0,0,0,0),
@@ -38,6 +52,19 @@ _hltGeneralTracksLST = hltGeneralTracks.clone(
 
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 trackingLST.toReplaceWith(hltGeneralTracks, _hltGeneralTracksLST)
+
+_hltGeneralTracksLSTSingleIterPatatrack = hltGeneralTracks.clone(
+    TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTrackSelectionHighPuritypLSTCLST", "hltInitialStepTracksT5TCLST"),
+    hasSelector = cms.vint32(0,0,0),
+    indivShareFrac = cms.vdouble(0.1,0.1,0.1),
+    selectedTrackQuals = cms.VInputTag(cms.InputTag("hltInitialStepTrackSelectionHighPuritypTTCLST"), cms.InputTag("hltInitialStepTrackSelectionHighPuritypLSTCLST"), cms.InputTag("hltInitialStepTracksT5TCLST")),
+    setsToMerge = cms.VPSet(cms.PSet(
+        pQual = cms.bool(True),
+        tLists = cms.vint32(0,1,2)
+    ))
+)
+
+(singleIterPatatrack & trackingLST).toReplaceWith(hltGeneralTracks, _hltGeneralTracksLSTSingleIterPatatrack)
 
 _hltGeneralTracksLSTSeeding = hltGeneralTracks.clone(
             TrackProducers = cms.VInputTag("hltInitialStepTrackSelectionHighPuritypTTCLST", "hltInitialStepTracksT5TCLST", "hltHighPtTripletStepTrackSelectionHighPuritypLSTCLST"),
