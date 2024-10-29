@@ -68,6 +68,9 @@ trackingIters01.toModify(_iterations_trackingPhase2PU140_VS, names = ["InitialSt
 # apply all procModifiers before this
 _iterations_trackingPhase2PU140 = _iterations_trackingPhase2PU140_VS.names.value()
 
+from Configuration.ProcessModifiers.jetCoreInPhase2_cff import jetCoreInPhase2
+jetCoreInPhase2.toModify(_iterations_trackingPhase2PU140, func=lambda x: x.append('JetCoreRegionalStep'))
+
 _iterations_muonSeeded = [
     "MuonSeededStepInOut",
     "MuonSeededStepOutIn",
