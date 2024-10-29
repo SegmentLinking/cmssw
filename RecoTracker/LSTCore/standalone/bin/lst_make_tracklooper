@@ -19,7 +19,6 @@ usage()
   echo
   echo "Options:"
   echo "  -h    Help                      (Display this message)"
-  echo "  -c    cache                     (Make library with cache enabled)"
   echo "  -s    show log                  (Full compilation script to stdout)"
   echo "  -m    make clean binaries       (Make clean binaries before remake. e.g. when header files changed in LST/*.h)"
   echo "  -d    cut value ntuple          (With extra variables in a debug ntuple file)"
@@ -96,7 +95,6 @@ echo "Line Segment Tracking Compilation Script             "  | tee -a ${LOG}
 echo "====================================================="  | tee -a ${LOG}
 echo "Compilation options set to..."                          | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
-echo "  MAKECACHE         : ${MAKECACHE}"                     | tee -a ${LOG}
 echo "  SHOWLOG           : ${SHOWLOG}"                       | tee -a ${LOG}
 echo "  MAKECLEANBINARIES : ${MAKECLEANBINARIES}"             | tee -a ${LOG}
 echo "  MAKECUTVALUES     : ${MAKECUTVALUES}"                 | tee -a ${LOG}
@@ -116,10 +114,8 @@ TRACKLOOPERTARGET=
 # If make explicit is true then make library with explicit memory on GPU
 MAKETARGET=explicit;
 
-# If make cache is true then make library with cache enabled
-if $MAKECACHE; then MAKETARGET=${MAKETARGET}_cache; fi
-
-# If make cache is true then make library with cache enabled
+# Show deprecation warning for cache flag
+if $MAKECACHE; then echo "Warning: the -c flag is deprecated"; fi
 
 # If make clean binaries are called then first make clean before making
 if $MAKECLEANBINARIES; then

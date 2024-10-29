@@ -144,9 +144,6 @@ rm -f timing_temp.txt
 if [ -z "${SPECIFICGPUVERSION}" ] || [[ "${SPECIFICGPUVERSION}" == "explicit" ]]; then
     $run_func explicit "${SAMPLE}" "${NEVENTS}"
 fi
-if [ -z "${SPECIFICGPUVERSION}" ] || [[ "${SPECIFICGPUVERSION}" == "explicit_cache" ]]; then
-    $run_func explicit_cache "${SAMPLE}" "${NEVENTS}" -c
-fi
 
 echo "Total Timing Summary"
 grep -h "Time for map " timing_temp.txt | cut -d " " -f 6 | awk '{ SUM += $1} END { print "Average time for map loading =",SUM/5,"ms" }' # 5 is the number of stream values run
