@@ -220,7 +220,7 @@ namespace lst {
 
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;
-            if (quintupletsInGPU.partOfPT5[ix] || (quintupletsInGPU.isDup[ix] & 1))
+            if (quintupletsInGPU.isDup[ix] & 1)
               continue;
 
             for (unsigned int jx1 = 0; jx1 < nQuintuplets_lowmod2; jx1++) {
@@ -228,7 +228,7 @@ namespace lst {
               if (ix == jx)
                 continue;
 
-              if (quintupletsInGPU.partOfPT5[jx] || (quintupletsInGPU.isDup[jx] & 1))
+              if (quintupletsInGPU.isDup[jx] & 1)
                 continue;
 
               float eta1 = __H2F(quintupletsInGPU.eta[ix]);
