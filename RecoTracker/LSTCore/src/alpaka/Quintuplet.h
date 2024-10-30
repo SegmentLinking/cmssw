@@ -196,17 +196,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float f,
                                                          bool& TightCutFlag) {
     //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
-    const float& rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
-    const float& rt2 = mds.anchorRt()[secondMDIndex] / 100;
-    const float& rt3 = mds.anchorRt()[thirdMDIndex] / 100;
-    const float& rt4 = mds.anchorRt()[fourthMDIndex] / 100;
-    const float& rt5 = mds.anchorRt()[fifthMDIndex] / 100;
+    const float rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
+    const float rt2 = mds.anchorRt()[secondMDIndex] / 100;
+    const float rt3 = mds.anchorRt()[thirdMDIndex] / 100;
+    const float rt4 = mds.anchorRt()[fourthMDIndex] / 100;
+    const float rt5 = mds.anchorRt()[fifthMDIndex] / 100;
 
-    const float& z1 = mds.anchorZ()[firstMDIndex] / 100;
-    const float& z2 = mds.anchorZ()[secondMDIndex] / 100;
-    const float& z3 = mds.anchorZ()[thirdMDIndex] / 100;
-    const float& z4 = mds.anchorZ()[fourthMDIndex] / 100;
-    const float& z5 = mds.anchorZ()[fifthMDIndex] / 100;
+    const float z1 = mds.anchorZ()[firstMDIndex] / 100;
+    const float z2 = mds.anchorZ()[secondMDIndex] / 100;
+    const float z3 = mds.anchorZ()[thirdMDIndex] / 100;
+    const float z4 = mds.anchorZ()[fourthMDIndex] / 100;
+    const float z5 = mds.anchorZ()[fifthMDIndex] / 100;
 
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modules.lstLayers()[lowerModuleIndex1];
@@ -222,14 +222,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
     const int moduleType5 = modules.moduleType()[lowerModuleIndex5];
 
-    const float& x1 = mds.anchorX()[firstMDIndex] / 100;
-    const float& x2 = mds.anchorX()[secondMDIndex] / 100;
-    const float& x3 = mds.anchorX()[thirdMDIndex] / 100;
-    const float& x4 = mds.anchorX()[fourthMDIndex] / 100;
-    const float& y1 = mds.anchorY()[firstMDIndex] / 100;
-    const float& y2 = mds.anchorY()[secondMDIndex] / 100;
-    const float& y3 = mds.anchorY()[thirdMDIndex] / 100;
-    const float& y4 = mds.anchorY()[fourthMDIndex] / 100;
+    const float x1 = mds.anchorX()[firstMDIndex] / 100;
+    const float x2 = mds.anchorX()[secondMDIndex] / 100;
+    const float x3 = mds.anchorX()[thirdMDIndex] / 100;
+    const float x4 = mds.anchorX()[fourthMDIndex] / 100;
+    const float y1 = mds.anchorY()[firstMDIndex] / 100;
+    const float y2 = mds.anchorY()[secondMDIndex] / 100;
+    const float y3 = mds.anchorY()[thirdMDIndex] / 100;
+    const float y4 = mds.anchorY()[fourthMDIndex] / 100;
 
     float residual = 0;
     float error2 = 0;
