@@ -86,6 +86,7 @@ void Event::addHitToEvent(std::vector<float> const& x,
                           std::vector<float> const& z,
                           std::vector<unsigned int> const& detId,
                           std::vector<unsigned int> const& idxInNtuple) {
+  auto devAcc = alpaka::getDev(queue_);
   // Use the actual number of hits instead of a max.
   unsigned int nHits = x.size();
 
@@ -95,11 +96,11 @@ void Event::addHitToEvent(std::vector<float> const& x,
     hitsDC_.emplace(hits_sizes, queue_);
 
     auto hitsRanges = hitsDC_->view<HitsRangesSoA>();
-    auto hitRanges_view = alpaka::createView(devAcc_, hitsRanges.hitRanges(), hitsRanges.metadata().size());
-    auto hitRangesLower_view = alpaka::createView(devAcc_, hitsRanges.hitRangesLower(), hitsRanges.metadata().size());
-    auto hitRangesUpper_view = alpaka::createView(devAcc_, hitsRanges.hitRangesUpper(), hitsRanges.metadata().size());
-    auto hitRangesnLower_view = alpaka::createView(devAcc_, hitsRanges.hitRangesnLower(), hitsRanges.metadata().size());
-    auto hitRangesnUpper_view = alpaka::createView(devAcc_, hitsRanges.hitRangesnUpper(), hitsRanges.metadata().size());
+    auto hitRanges_view = alpaka::createView(devAcc, hitsRanges.hitRanges(), hitsRanges.metadata().size());
+    auto hitRangesLower_view = alpaka::createView(devAcc, hitsRanges.hitRangesLower(), hitsRanges.metadata().size());
+    auto hitRangesUpper_view = alpaka::createView(devAcc, hitsRanges.hitRangesUpper(), hitsRanges.metadata().size());
+    auto hitRangesnLower_view = alpaka::createView(devAcc, hitsRanges.hitRangesnLower(), hitsRanges.metadata().size());
+    auto hitRangesnUpper_view = alpaka::createView(devAcc, hitsRanges.hitRangesnUpper(), hitsRanges.metadata().size());
     alpaka::memset(queue_, hitRanges_view, 0xff);
     alpaka::memset(queue_, hitRangesLower_view, 0xff);
     alpaka::memset(queue_, hitRangesUpper_view, 0xff);
@@ -115,11 +116,11 @@ void Event::addHitToEvent(std::vector<float> const& x,
 
   // Copy the host arrays to the GPU.
   auto hits = hitsDC_->view<HitsSoA>();
-  auto xs_d = alpaka::createView(devAcc_, hits.xs(), (Idx)hits.metadata().size());
-  auto ys_d = alpaka::createView(devAcc_, hits.ys(), (Idx)hits.metadata().size());
-  auto zs_d = alpaka::createView(devAcc_, hits.zs(), (Idx)hits.metadata().size());
-  auto detId_d = alpaka::createView(devAcc_, hits.detid(), (Idx)hits.metadata().size());
-  auto idxs_d = alpaka::createView(devAcc_, hits.idxs(), (Idx)hits.metadata().size());
+  auto xs_d = alpaka::createView(devAcc, hits.xs(), (Idx)hits.metadata().size());
+  auto ys_d = alpaka::createView(devAcc, hits.ys(), (Idx)hits.metadata().size());
+  auto zs_d = alpaka::createView(devAcc, hits.zs(), (Idx)hits.metadata().size());
+  auto detId_d = alpaka::createView(devAcc, hits.detid(), (Idx)hits.metadata().size());
+  auto idxs_d = alpaka::createView(devAcc, hits.idxs(), (Idx)hits.metadata().size());
   alpaka::memcpy(queue_, xs_d, x, (Idx)nHits);
   alpaka::memcpy(queue_, ys_d, y, (Idx)nHits);
   alpaka::memcpy(queue_, zs_d, z, (Idx)nHits);
@@ -174,6 +175,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
                                    std::vector<int> const& superbin,
                                    std::vector<PixelType> const& pixelType,
                                    std::vector<char> const& isQuad) {
+  auto devAcc = alpaka::getDev(queue_);
   unsigned int size = ptIn.size();
 
   if (size > n_max_pixel_segments_per_module) {
@@ -192,7 +194,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
     // Create a view for the element nLowerModules_ inside rangesOccupancy->miniDoubletModuleOccupancy
     auto rangesOccupancy = rangesDC_->view();
     auto miniDoubletModuleOccupancy_view = alpaka::createView(
-        devAcc_, rangesOccupancy.miniDoubletModuleOccupancy(), (Idx)rangesOccupancy.metadata().size());
+        devAcc, rangesOccupancy.miniDoubletModuleOccupancy(), (Idx)rangesOccupancy.metadata().size());
     auto dst_view_miniDoubletModuleOccupancy =
         alpaka::createSubView(miniDoubletModuleOccupancy_view, (Idx)1u, (Idx)nLowerModules_);
 
@@ -211,7 +213,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
                         rangesDC_->view());
 
     auto nTotalMDs_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, (Idx)1u);
-    auto nTotalMDs_buf_d = alpaka::createView(devAcc_, &rangesOccupancy.nTotalMDs(), (Idx)1u);
+    auto nTotalMDs_buf_d = alpaka::createView(devAcc, &rangesOccupancy.nTotalMDs(), (Idx)1u);
     alpaka::memcpy(queue_, nTotalMDs_buf_h, nTotalMDs_buf_d);
     alpaka::wait(queue_);  // wait to get the data before manipulation
 
@@ -222,9 +224,9 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
     miniDoubletsDC_.emplace(mds_sizes, queue_);
 
     auto mdsOccupancy = miniDoubletsDC_->view<MiniDoubletsOccupancySoA>();
-    auto nMDs_view = alpaka::createView(devAcc_, mdsOccupancy.nMDs(), mdsOccupancy.metadata().size());
+    auto nMDs_view = alpaka::createView(devAcc, mdsOccupancy.nMDs(), mdsOccupancy.metadata().size());
     auto totOccupancyMDs_view =
-        alpaka::createView(devAcc_, mdsOccupancy.totOccupancyMDs(), mdsOccupancy.metadata().size());
+        alpaka::createView(devAcc, mdsOccupancy.totOccupancyMDs(), mdsOccupancy.metadata().size());
     alpaka::memset(queue_, nMDs_view, 0u);
     alpaka::memset(queue_, totOccupancyMDs_view, 0u);
   }
@@ -243,7 +245,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
 
     auto rangesOccupancy = rangesDC_->view();
     auto nTotalSegments_view_h = alpaka::createView(cms::alpakatools::host(), &nTotalSegments_, (Idx)1u);
-    auto nTotalSegments_view_d = alpaka::createView(devAcc_, &rangesOccupancy.nTotalSegs(), (Idx)1u);
+    auto nTotalSegments_view_d = alpaka::createView(devAcc, &rangesOccupancy.nTotalSegs(), (Idx)1u);
     alpaka::memcpy(queue_, nTotalSegments_view_h, nTotalSegments_view_d);
     alpaka::wait(queue_);  // wait to get the value before manipulation
 
@@ -256,9 +258,9 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
 
     auto segmentsOccupancy = segmentsDC_->view<SegmentsOccupancySoA>();
     auto nSegments_view =
-        alpaka::createView(devAcc_, segmentsOccupancy.nSegments(), segmentsOccupancy.metadata().size());
+        alpaka::createView(devAcc, segmentsOccupancy.nSegments(), segmentsOccupancy.metadata().size());
     auto totOccupancySegments_view =
-        alpaka::createView(devAcc_, segmentsOccupancy.totOccupancySegments(), segmentsOccupancy.metadata().size());
+        alpaka::createView(devAcc, segmentsOccupancy.totOccupancySegments(), segmentsOccupancy.metadata().size());
     alpaka::memset(queue_, nSegments_view, 0u);
     alpaka::memset(queue_, totOccupancySegments_view, 0u);
   }
@@ -276,19 +278,19 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
   alpaka::memcpy(queue_, dPhiChange_dev, dPhiChange, size);
 
   SegmentsPixel segmentsPixel = segmentsDC_->view<SegmentsPixelSoA>();
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.ptIn(), size), ptIn, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.ptErr(), size), ptErr, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.px(), size), px, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.py(), size), py, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.pz(), size), pz, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.etaErr(), size), etaErr, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.isQuad(), size), isQuad, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.eta(), size), eta, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.phi(), size), phi, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.charge(), size), charge, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.seedIdx(), size), seedIdx, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.superbin(), size), superbin, size);
-  alpaka::memcpy(queue_, alpaka::createView(devAcc_, segmentsPixel.pixelType(), size), pixelType, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.ptIn(), size), ptIn, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.ptErr(), size), ptErr, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.px(), size), px, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.py(), size), py, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.pz(), size), pz, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.etaErr(), size), etaErr, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.isQuad(), size), isQuad, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.eta(), size), eta, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.phi(), size), phi, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.charge(), size), charge, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.seedIdx(), size), seedIdx, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.superbin(), size), superbin, size);
+  alpaka::memcpy(queue_, alpaka::createView(devAcc, segmentsPixel.pixelType(), size), pixelType, size);
 
   // Create source views for size and mdSize
   auto src_view_size = alpaka::createView(cms::alpakatools::host(), &size, (Idx)1u);
@@ -296,22 +298,22 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
 
   auto segmentsOccupancy = segmentsDC_->view<SegmentsOccupancySoA>();
   auto nSegments_view =
-      alpaka::createView(devAcc_, segmentsOccupancy.nSegments(), (Idx)segmentsOccupancy.metadata().size());
+      alpaka::createView(devAcc, segmentsOccupancy.nSegments(), (Idx)segmentsOccupancy.metadata().size());
   auto dst_view_segments = alpaka::createSubView(nSegments_view, (Idx)1u, (Idx)pixelModuleIndex);
   alpaka::memcpy(queue_, dst_view_segments, src_view_size);
 
   auto totOccupancySegments_view =
-      alpaka::createView(devAcc_, segmentsOccupancy.totOccupancySegments(), (Idx)segmentsOccupancy.metadata().size());
+      alpaka::createView(devAcc, segmentsOccupancy.totOccupancySegments(), (Idx)segmentsOccupancy.metadata().size());
   auto dst_view_totOccupancySegments = alpaka::createSubView(totOccupancySegments_view, (Idx)1u, (Idx)pixelModuleIndex);
   alpaka::memcpy(queue_, dst_view_totOccupancySegments, src_view_size);
 
   auto mdsOccupancy = miniDoubletsDC_->view<MiniDoubletsOccupancySoA>();
-  auto nMDs_view = alpaka::createView(devAcc_, mdsOccupancy.nMDs(), (Idx)mdsOccupancy.metadata().size());
+  auto nMDs_view = alpaka::createView(devAcc, mdsOccupancy.nMDs(), (Idx)mdsOccupancy.metadata().size());
   auto dst_view_nMDs = alpaka::createSubView(nMDs_view, (Idx)1u, (Idx)pixelModuleIndex);
   alpaka::memcpy(queue_, dst_view_nMDs, src_view_mdSize);
 
   auto totOccupancyMDs_view =
-      alpaka::createView(devAcc_, mdsOccupancy.totOccupancyMDs(), (Idx)mdsOccupancy.metadata().size());
+      alpaka::createView(devAcc, mdsOccupancy.totOccupancyMDs(), (Idx)mdsOccupancy.metadata().size());
   auto dst_view_totOccupancyMDs = alpaka::createSubView(totOccupancyMDs_view, (Idx)1u, (Idx)pixelModuleIndex);
   alpaka::memcpy(queue_, dst_view_totOccupancyMDs, src_view_mdSize);
 
@@ -340,10 +342,11 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
 }
 
 void Event::createMiniDoublets() {
+  auto devAcc = alpaka::getDev(queue_);
   // Create a view for the element nLowerModules_ inside rangesOccupancy->miniDoubletModuleOccupancy
   auto rangesOccupancy = rangesDC_->view();
   auto miniDoubletModuleOccupancy_view =
-      alpaka::createView(devAcc_, rangesOccupancy.miniDoubletModuleOccupancy(), (Idx)rangesOccupancy.metadata().size());
+      alpaka::createView(devAcc, rangesOccupancy.miniDoubletModuleOccupancy(), (Idx)rangesOccupancy.metadata().size());
   auto dst_view_miniDoubletModuleOccupancy =
       alpaka::createSubView(miniDoubletModuleOccupancy_view, (Idx)1u, (Idx)nLowerModules_);
 
@@ -362,7 +365,7 @@ void Event::createMiniDoublets() {
                       rangesDC_->view());
 
   auto nTotalMDs_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, (Idx)1u);
-  auto nTotalMDs_buf_d = alpaka::createView(devAcc_, &rangesOccupancy.nTotalMDs(), (Idx)1u);
+  auto nTotalMDs_buf_d = alpaka::createView(devAcc, &rangesOccupancy.nTotalMDs(), (Idx)1u);
   alpaka::memcpy(queue_, nTotalMDs_buf_h, nTotalMDs_buf_d);
   alpaka::wait(queue_);  // wait to get the data before manipulation
 
@@ -374,9 +377,9 @@ void Event::createMiniDoublets() {
     miniDoubletsDC_.emplace(mds_sizes, queue_);
 
     auto mdsOccupancy = miniDoubletsDC_->view<MiniDoubletsOccupancySoA>();
-    auto nMDs_view = alpaka::createView(devAcc_, mdsOccupancy.nMDs(), mdsOccupancy.metadata().size());
+    auto nMDs_view = alpaka::createView(devAcc, mdsOccupancy.nMDs(), mdsOccupancy.metadata().size());
     auto totOccupancyMDs_view =
-        alpaka::createView(devAcc_, mdsOccupancy.totOccupancyMDs(), mdsOccupancy.metadata().size());
+        alpaka::createView(devAcc, mdsOccupancy.totOccupancyMDs(), mdsOccupancy.metadata().size());
     alpaka::memset(queue_, nMDs_view, 0u);
     alpaka::memset(queue_, totOccupancyMDs_view, 0u);
   }
@@ -412,6 +415,7 @@ void Event::createMiniDoublets() {
 }
 
 void Event::createSegmentsWithModuleMap() {
+  auto devAcc = alpaka::getDev(queue_);
   if (!segmentsDC_) {
     std::array<int, 3> const segments_sizes{{static_cast<int>(nTotalSegments_),
                                              static_cast<int>(nLowerModules_ + 1),
@@ -420,9 +424,9 @@ void Event::createSegmentsWithModuleMap() {
 
     auto segmentsOccupancy = segmentsDC_->view<SegmentsOccupancySoA>();
     auto nSegments_view =
-        alpaka::createView(devAcc_, segmentsOccupancy.nSegments(), segmentsOccupancy.metadata().size());
+        alpaka::createView(devAcc, segmentsOccupancy.nSegments(), segmentsOccupancy.metadata().size());
     auto totOccupancySegments_view =
-        alpaka::createView(devAcc_, segmentsOccupancy.totOccupancySegments(), segmentsOccupancy.metadata().size());
+        alpaka::createView(devAcc, segmentsOccupancy.totOccupancySegments(), segmentsOccupancy.metadata().size());
     alpaka::memset(queue_, nSegments_view, 0u);
     alpaka::memset(queue_, totOccupancySegments_view, 0u);
   }
@@ -457,6 +461,7 @@ void Event::createSegmentsWithModuleMap() {
 }
 
 void Event::createTriplets() {
+  auto devAcc = alpaka::getDev(queue_);
   if (!tripletsDC_) {
     WorkDiv1D const createTripletArrayRanges_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});
 
@@ -470,7 +475,7 @@ void Event::createTriplets() {
     // TODO: Why are we pulling this back down only to put it back on the device in a new struct?
     auto rangesOccupancy = rangesDC_->view();
     auto maxTriplets_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, (Idx)1u);
-    auto maxTriplets_buf_d = alpaka::createView(devAcc_, &rangesOccupancy.nTotalTrips(), (Idx)1u);
+    auto maxTriplets_buf_d = alpaka::createView(devAcc, &rangesOccupancy.nTotalTrips(), (Idx)1u);
     alpaka::memcpy(queue_, maxTriplets_buf_h, maxTriplets_buf_d);
     alpaka::wait(queue_);  // wait to get the value before using it
 
@@ -480,17 +485,17 @@ void Event::createTriplets() {
 
     auto tripletsOccupancy = tripletsDC_->view<TripletsOccupancySoA>();
     auto nTriplets_view =
-        alpaka::createView(devAcc_, tripletsOccupancy.nTriplets(), tripletsOccupancy.metadata().size());
+        alpaka::createView(devAcc, tripletsOccupancy.nTriplets(), tripletsOccupancy.metadata().size());
     alpaka::memset(queue_, nTriplets_view, 0u);
     auto totOccupancyTriplets_view =
-        alpaka::createView(devAcc_, tripletsOccupancy.totOccupancyTriplets(), tripletsOccupancy.metadata().size());
+        alpaka::createView(devAcc, tripletsOccupancy.totOccupancyTriplets(), tripletsOccupancy.metadata().size());
     alpaka::memset(queue_, totOccupancyTriplets_view, 0u);
     auto triplets = tripletsDC_->view<TripletsSoA>();
-    auto partOfPT5_view = alpaka::createView(devAcc_, triplets.partOfPT5(), triplets.metadata().size());
+    auto partOfPT5_view = alpaka::createView(devAcc, triplets.partOfPT5(), triplets.metadata().size());
     alpaka::memset(queue_, partOfPT5_view, 0u);
-    auto partOfT5_view = alpaka::createView(devAcc_, triplets.partOfT5(), triplets.metadata().size());
+    auto partOfT5_view = alpaka::createView(devAcc, triplets.partOfT5(), triplets.metadata().size());
     alpaka::memset(queue_, partOfT5_view, 0u);
-    auto partOfPT3_view = alpaka::createView(devAcc_, triplets.partOfPT3(), triplets.metadata().size());
+    auto partOfPT3_view = alpaka::createView(devAcc, triplets.partOfPT3(), triplets.metadata().size());
     alpaka::memset(queue_, partOfPT3_view, 0u);
   }
 
@@ -500,7 +505,7 @@ void Event::createTriplets() {
   // Allocate and copy nSegments from device to host (only nLowerModules in OT, not the +1 with pLSs)
   auto nSegments_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto nSegments_buf_d =
-      alpaka::createView(devAcc_, segmentsDC_->const_view<SegmentsOccupancySoA>().nSegments(), nLowerModules_);
+      alpaka::createView(devAcc, segmentsDC_->const_view<SegmentsOccupancySoA>().nSegments(), nLowerModules_);
   alpaka::memcpy(queue_, nSegments_buf_h, nSegments_buf_d, nLowerModules_);
 
   // ... same for module_nConnectedModules
@@ -508,7 +513,7 @@ void Event::createTriplets() {
   auto modules = modules_.const_view<ModulesSoA>();
   auto module_nConnectedModules_buf_h = cms::alpakatools::make_host_buffer<uint16_t[]>(queue_, nLowerModules_);
   auto module_nConnectedModules_buf_d =
-      alpaka::createView(devAcc_, modules.nConnectedModules(), nLowerModules_);  // only lower modules
+      alpaka::createView(devAcc, modules.nConnectedModules(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_nConnectedModules_buf_h, module_nConnectedModules_buf_d, nLowerModules_);
 
   alpaka::wait(queue_);  // wait for nSegments and module_nConnectedModules before using
@@ -567,6 +572,7 @@ void Event::createTriplets() {
 }
 
 void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
+  auto devAcc = alpaka::getDev(queue_);
   if (!trackCandidatesDC_) {
     trackCandidatesDC_.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, queue_);
     auto buf = trackCandidatesDC_->buffer();
@@ -601,7 +607,7 @@ void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   // Pull nEligibleT5Modules from the device.
   auto rangesOccupancy = rangesDC_->view();
   auto nEligibleModules_buf_h = cms::alpakatools::make_host_buffer<uint16_t[]>(queue_, 1u);
-  auto nEligibleModules_buf_d = alpaka::createView(devAcc_, &rangesOccupancy.nEligibleT5Modules(), (Idx)1u);
+  auto nEligibleModules_buf_d = alpaka::createView(devAcc, &rangesOccupancy.nEligibleT5Modules(), (Idx)1u);
   alpaka::memcpy(queue_, nEligibleModules_buf_h, nEligibleModules_buf_d);
   alpaka::wait(queue_);  // wait to get the value before using
   auto const nEligibleModules = *nEligibleModules_buf_h.data();
@@ -701,13 +707,13 @@ void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   auto nTrackCanpLSHost_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
   auto nTrackCanT5Host_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
   alpaka::memcpy(
-      queue_, nTrackCanpT5Host_buf, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespT5(), 1u), 1u);
+      queue_, nTrackCanpT5Host_buf, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespT5(), 1u), 1u);
   alpaka::memcpy(
-      queue_, nTrackCanpT3Host_buf, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespT3(), 1u), 1u);
+      queue_, nTrackCanpT3Host_buf, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespT3(), 1u), 1u);
   alpaka::memcpy(
-      queue_, nTrackCanpLSHost_buf, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespLS(), 1u), 1u);
+      queue_, nTrackCanpLSHost_buf, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespLS(), 1u), 1u);
   alpaka::memcpy(
-      queue_, nTrackCanT5Host_buf, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u), 1u);
+      queue_, nTrackCanT5Host_buf, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u), 1u);
   alpaka::wait(queue_);  // wait to get the values before using them
 
   auto nTrackCandidatespT5 = *nTrackCanpT5Host_buf.data();
@@ -726,12 +732,13 @@ void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
 }
 
 void Event::createPixelTriplets() {
+  auto devAcc = alpaka::getDev(queue_);
   if (!pixelTripletsDC_) {
     pixelTripletsDC_.emplace(n_max_pixel_triplets, queue_);
-    auto nPixelTriplets_view = alpaka::createView(devAcc_, &(*pixelTripletsDC_)->nPixelTriplets(), 1u);
+    auto nPixelTriplets_view = alpaka::createView(devAcc, &(*pixelTripletsDC_)->nPixelTriplets(), 1u);
     alpaka::memset(queue_, nPixelTriplets_view, 0u);
     auto totOccupancyPixelTriplets_view =
-        alpaka::createView(devAcc_, &(*pixelTripletsDC_)->totOccupancyPixelTriplets(), 1u);
+        alpaka::createView(devAcc, &(*pixelTripletsDC_)->totOccupancyPixelTriplets(), 1u);
     alpaka::memset(queue_, totOccupancyPixelTriplets_view, 0u);
   }
   SegmentsOccupancy segmentsOccupancy = segmentsDC_->view<SegmentsOccupancySoA>();
@@ -741,9 +748,9 @@ void Event::createPixelTriplets() {
   auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, n_max_pixel_segments_per_module);
 
   alpaka::memcpy(
-      queue_, superbins_buf, alpaka::createView(devAcc_, segmentsPixel.superbin(), n_max_pixel_segments_per_module));
+      queue_, superbins_buf, alpaka::createView(devAcc, segmentsPixel.superbin(), n_max_pixel_segments_per_module));
   alpaka::memcpy(
-      queue_, pixelTypes_buf, alpaka::createView(devAcc_, segmentsPixel.pixelType(), n_max_pixel_segments_per_module));
+      queue_, pixelTypes_buf, alpaka::createView(devAcc, segmentsPixel.pixelType(), n_max_pixel_segments_per_module));
   auto const* superbins = superbins_buf.data();
   auto const* pixelTypes = pixelTypes_buf.data();
 
@@ -752,7 +759,7 @@ void Event::createPixelTriplets() {
 
   // Create a sub-view for the device buffer
   unsigned int totalModules = nLowerModules_ + 1;
-  auto dev_view_nSegments_buf = alpaka::createView(devAcc_, segmentsOccupancy.nSegments(), totalModules);
+  auto dev_view_nSegments_buf = alpaka::createView(devAcc, segmentsOccupancy.nSegments(), totalModules);
   auto dev_view_nSegments = alpaka::createSubView(dev_view_nSegments_buf, (Idx)1u, (Idx)nLowerModules_);
 
   alpaka::memcpy(queue_, nInnerSegments_src_view, dev_view_nSegments);
@@ -835,7 +842,7 @@ void Event::createPixelTriplets() {
 #ifdef WARNINGS
   auto nPixelTriplets_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
-  alpaka::memcpy(queue_, nPixelTriplets_buf, alpaka::createView(devAcc_, &(*pixelTripletsDC_)->nPixelTriplets(), 1u));
+  alpaka::memcpy(queue_, nPixelTriplets_buf, alpaka::createView(devAcc, &(*pixelTripletsDC_)->nPixelTriplets(), 1u));
   alpaka::wait(queue_);  // wait to get the value before using it
 
   std::cout << "number of pixel triplets = " << *nPixelTriplets_buf.data() << std::endl;
@@ -853,6 +860,7 @@ void Event::createPixelTriplets() {
 }
 
 void Event::createQuintuplets() {
+  auto devAcc = alpaka::getDev(queue_);
   WorkDiv1D const createEligibleModulesListForQuintuplets_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});
 
   alpaka::exec<Acc1D>(queue_,
@@ -865,8 +873,8 @@ void Event::createQuintuplets() {
   auto nEligibleT5Modules_buf = cms::alpakatools::make_host_buffer<uint16_t[]>(queue_, 1u);
   auto nTotalQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
   auto rangesOccupancy = rangesDC_->view();
-  auto nEligibleT5Modules_view_d = alpaka::createView(devAcc_, &rangesOccupancy.nEligibleT5Modules(), (Idx)1u);
-  auto nTotalQuintuplets_view_d = alpaka::createView(devAcc_, &rangesOccupancy.nTotalQuints(), (Idx)1u);
+  auto nEligibleT5Modules_view_d = alpaka::createView(devAcc, &rangesOccupancy.nEligibleT5Modules(), (Idx)1u);
+  auto nTotalQuintuplets_view_d = alpaka::createView(devAcc, &rangesOccupancy.nTotalQuints(), (Idx)1u);
   alpaka::memcpy(queue_, nEligibleT5Modules_buf, nEligibleT5Modules_view_d);
   alpaka::memcpy(queue_, nTotalQuintuplets_buf, nTotalQuintuplets_view_d);
   alpaka::wait(queue_);  // wait for the values before using them
@@ -879,17 +887,17 @@ void Event::createQuintuplets() {
     quintupletsDC_.emplace(quintuplets_sizes, queue_);
     auto quintupletsOccupancy = quintupletsDC_->view<QuintupletsOccupancySoA>();
     auto nQuintuplets_view =
-        alpaka::createView(devAcc_, quintupletsOccupancy.nQuintuplets(), quintupletsOccupancy.metadata().size());
+        alpaka::createView(devAcc, quintupletsOccupancy.nQuintuplets(), quintupletsOccupancy.metadata().size());
     alpaka::memset(queue_, nQuintuplets_view, 0u);
     auto totOccupancyQuintuplets_view = alpaka::createView(
-        devAcc_, quintupletsOccupancy.totOccupancyQuintuplets(), quintupletsOccupancy.metadata().size());
+        devAcc, quintupletsOccupancy.totOccupancyQuintuplets(), quintupletsOccupancy.metadata().size());
     alpaka::memset(queue_, totOccupancyQuintuplets_view, 0u);
     auto quintuplets = quintupletsDC_->view<QuintupletsSoA>();
-    auto isDup_view = alpaka::createView(devAcc_, quintuplets.isDup(), quintuplets.metadata().size());
+    auto isDup_view = alpaka::createView(devAcc, quintuplets.isDup(), quintuplets.metadata().size());
     alpaka::memset(queue_, isDup_view, 0u);
-    auto tightCutFlag_view = alpaka::createView(devAcc_, quintuplets.tightCutFlag(), quintuplets.metadata().size());
+    auto tightCutFlag_view = alpaka::createView(devAcc, quintuplets.tightCutFlag(), quintuplets.metadata().size());
     alpaka::memset(queue_, tightCutFlag_view, 0u);
-    auto partOfPT5_view = alpaka::createView(devAcc_, quintuplets.partOfPT5(), quintuplets.metadata().size());
+    auto partOfPT5_view = alpaka::createView(devAcc, quintuplets.partOfPT5(), quintuplets.metadata().size());
     alpaka::memset(queue_, partOfPT5_view, 0u);
   }
 
@@ -956,12 +964,13 @@ void Event::pixelLineSegmentCleaning(bool no_pls_dupclean) {
 }
 
 void Event::createPixelQuintuplets() {
+  auto devAcc = alpaka::getDev(queue_);
   if (!pixelQuintupletsDC_) {
     pixelQuintupletsDC_.emplace(n_max_pixel_quintuplets, queue_);
-    auto nPixelQuintuplets_view = alpaka::createView(devAcc_, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u);
+    auto nPixelQuintuplets_view = alpaka::createView(devAcc, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u);
     alpaka::memset(queue_, nPixelQuintuplets_view, 0u);
     auto totOccupancyPixelQuintuplets_view =
-        alpaka::createView(devAcc_, &(*pixelQuintupletsDC_)->totOccupancyPixelQuintuplets(), 1u);
+        alpaka::createView(devAcc, &(*pixelQuintupletsDC_)->totOccupancyPixelQuintuplets(), 1u);
     alpaka::memset(queue_, totOccupancyPixelQuintuplets_view, 0u);
   }
   if (!trackCandidatesDC_) {
@@ -976,9 +985,9 @@ void Event::createPixelQuintuplets() {
   auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, n_max_pixel_segments_per_module);
 
   alpaka::memcpy(
-      queue_, superbins_buf, alpaka::createView(devAcc_, segmentsPixel.superbin(), n_max_pixel_segments_per_module));
+      queue_, superbins_buf, alpaka::createView(devAcc, segmentsPixel.superbin(), n_max_pixel_segments_per_module));
   alpaka::memcpy(
-      queue_, pixelTypes_buf, alpaka::createView(devAcc_, segmentsPixel.pixelType(), n_max_pixel_segments_per_module));
+      queue_, pixelTypes_buf, alpaka::createView(devAcc, segmentsPixel.pixelType(), n_max_pixel_segments_per_module));
   auto const* superbins = superbins_buf.data();
   auto const* pixelTypes = pixelTypes_buf.data();
 
@@ -987,7 +996,7 @@ void Event::createPixelQuintuplets() {
 
   // Create a sub-view for the device buffer
   unsigned int totalModules = nLowerModules_ + 1;
-  auto dev_view_nSegments_buf = alpaka::createView(devAcc_, segmentsOccupancy.nSegments(), totalModules);
+  auto dev_view_nSegments_buf = alpaka::createView(devAcc, segmentsOccupancy.nSegments(), totalModules);
   auto dev_view_nSegments = alpaka::createSubView(dev_view_nSegments_buf, (Idx)1u, (Idx)nLowerModules_);
 
   alpaka::memcpy(queue_, nInnerSegments_src_view, dev_view_nSegments);
@@ -1093,7 +1102,7 @@ void Event::createPixelQuintuplets() {
   auto nPixelQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
   alpaka::memcpy(
-      queue_, nPixelQuintuplets_buf, alpaka::createView(devAcc_, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u));
+      queue_, nPixelQuintuplets_buf, alpaka::createView(devAcc, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u));
   alpaka::wait(queue_);  // wait to get the value before using it
 
   std::cout << "number of pixel quintuplets = " << *nPixelQuintuplets_buf.data() << std::endl;
@@ -1101,25 +1110,26 @@ void Event::createPixelQuintuplets() {
 }
 
 void Event::addMiniDoubletsToEventExplicit() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nMDsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto mdsOccupancy = miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>();
-  auto nMDs_view = alpaka::createView(devAcc_, mdsOccupancy.nMDs(), nLowerModules_);  // exclude pixel part
+  auto nMDs_view = alpaka::createView(devAcc, mdsOccupancy.nMDs(), nLowerModules_);  // exclude pixel part
   alpaka::memcpy(queue_, nMDsCPU_buf, nMDs_view, nLowerModules_);
 
   auto modules = modules_.const_view<ModulesSoA>();
 
   // FIXME: replace by ES host data
   auto module_subdets_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_subdets_view = alpaka::createView(devAcc_, modules.subdets(), nLowerModules_);  // only lower modules
+  auto module_subdets_view = alpaka::createView(devAcc, modules.subdets(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_subdets_buf, module_subdets_view, nLowerModules_);
 
   auto module_layers_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_layers_view = alpaka::createView(devAcc_, modules.layers(), nLowerModules_);  // only lower modules
+  auto module_layers_view = alpaka::createView(devAcc, modules.layers(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_layers_buf, module_layers_view, nLowerModules_);
 
   auto module_hitRanges_buf = cms::alpakatools::make_host_buffer<ArrayIx2[]>(queue_, nLowerModules_);
   auto hits = hitsDC_->view<HitsRangesSoA>();
-  auto hitRanges_view = alpaka::createView(devAcc_, hits.hitRanges(), nLowerModules_);  // only lower modules
+  auto hitRanges_view = alpaka::createView(devAcc, hits.hitRanges(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_hitRanges_buf, hitRanges_view, nLowerModules_);
 
   alpaka::wait(queue_);  // wait for inputs before using them
@@ -1141,20 +1151,21 @@ void Event::addMiniDoubletsToEventExplicit() {
 }
 
 void Event::addSegmentsToEventExplicit() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nSegmentsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto nSegments_buf =
-      alpaka::createView(devAcc_, segmentsDC_->const_view<SegmentsOccupancySoA>().nSegments(), nLowerModules_);
+      alpaka::createView(devAcc, segmentsDC_->const_view<SegmentsOccupancySoA>().nSegments(), nLowerModules_);
   alpaka::memcpy(queue_, nSegmentsCPU_buf, nSegments_buf, nLowerModules_);
 
   auto modules = modules_.const_view<ModulesSoA>();
 
   // FIXME: replace by ES host data
   auto module_subdets_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_subdets_view = alpaka::createView(devAcc_, modules.subdets(), nLowerModules_);  // only lower modules
+  auto module_subdets_view = alpaka::createView(devAcc, modules.subdets(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_subdets_buf, module_subdets_view, nLowerModules_);
 
   auto module_layers_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_layers_view = alpaka::createView(devAcc_, modules.layers(), nLowerModules_);  // only lower modules
+  auto module_layers_view = alpaka::createView(devAcc, modules.layers(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_layers_buf, module_layers_view, nLowerModules_);
 
   alpaka::wait(queue_);  // wait for inputs before using them
@@ -1175,8 +1186,9 @@ void Event::addSegmentsToEventExplicit() {
 }
 
 void Event::addQuintupletsToEventExplicit() {
+  auto devAcc = alpaka::getDev(queue_);
   auto quintupletsOccupancy = quintupletsDC_->const_view<QuintupletsOccupancySoA>();
-  auto nQuintuplets_view = alpaka::createView(devAcc_, quintupletsOccupancy.nQuintuplets(), nLowerModules_);
+  auto nQuintuplets_view = alpaka::createView(devAcc, quintupletsOccupancy.nQuintuplets(), nLowerModules_);
   auto nQuintupletsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   alpaka::memcpy(queue_, nQuintupletsCPU_buf, nQuintuplets_view);
 
@@ -1184,17 +1196,17 @@ void Event::addQuintupletsToEventExplicit() {
 
   // FIXME: replace by ES host data
   auto module_subdets_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_subdets_view = alpaka::createView(devAcc_, modules.subdets(), modules.metadata().size());
+  auto module_subdets_view = alpaka::createView(devAcc, modules.subdets(), modules.metadata().size());
   alpaka::memcpy(queue_, module_subdets_buf, module_subdets_view, nModules_);
 
   auto module_layers_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_layers_view = alpaka::createView(devAcc_, modules.layers(), nLowerModules_);  // only lower modules
+  auto module_layers_view = alpaka::createView(devAcc, modules.layers(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_layers_buf, module_layers_view, nLowerModules_);
 
   auto module_quintupletModuleIndices_buf = cms::alpakatools::make_host_buffer<int[]>(queue_, nLowerModules_);
   auto rangesOccupancy = rangesDC_->view();
   auto quintupletModuleIndices_view_d =
-      alpaka::createView(devAcc_, rangesOccupancy.quintupletModuleIndices(), nLowerModules_);
+      alpaka::createView(devAcc, rangesOccupancy.quintupletModuleIndices(), nLowerModules_);
   alpaka::memcpy(queue_, module_quintupletModuleIndices_buf, quintupletModuleIndices_view_d);
 
   alpaka::wait(queue_);  // wait for inputs before using them
@@ -1216,8 +1228,9 @@ void Event::addQuintupletsToEventExplicit() {
 }
 
 void Event::addTripletsToEventExplicit() {
+  auto devAcc = alpaka::getDev(queue_);
   auto tripletsOccupancy = tripletsDC_->const_view<TripletsOccupancySoA>();
-  auto nTriplets_view = alpaka::createView(devAcc_, tripletsOccupancy.nTriplets(), nLowerModules_);
+  auto nTriplets_view = alpaka::createView(devAcc, tripletsOccupancy.nTriplets(), nLowerModules_);
   auto nTripletsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   alpaka::memcpy(queue_, nTripletsCPU_buf, nTriplets_view);
 
@@ -1225,11 +1238,11 @@ void Event::addTripletsToEventExplicit() {
 
   // FIXME: replace by ES host data
   auto module_subdets_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_subdets_view = alpaka::createView(devAcc_, modules.subdets(), nLowerModules_);  // only lower modules
+  auto module_subdets_view = alpaka::createView(devAcc, modules.subdets(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_subdets_buf, module_subdets_view, nLowerModules_);
 
   auto module_layers_buf = cms::alpakatools::make_host_buffer<short[]>(queue_, nLowerModules_);
-  auto module_layers_view = alpaka::createView(devAcc_, modules.layers(), nLowerModules_);  // only lower modules
+  auto module_layers_view = alpaka::createView(devAcc, modules.layers(), nLowerModules_);  // only lower modules
   alpaka::memcpy(queue_, module_layers_buf, module_layers_view, nLowerModules_);
 
   alpaka::wait(queue_);  // wait for inputs before using them
@@ -1346,19 +1359,21 @@ unsigned int Event::getNumberOfTripletsByLayerBarrel(unsigned int layer) { retur
 unsigned int Event::getNumberOfTripletsByLayerEndcap(unsigned int layer) { return n_triplets_by_layer_endcap_[layer]; }
 
 int Event::getNumberOfPixelTriplets() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nPixelTriplets_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
-  alpaka::memcpy(queue_, nPixelTriplets_buf_h, alpaka::createView(devAcc_, &(*pixelTripletsDC_)->nPixelTriplets(), 1u));
+  alpaka::memcpy(queue_, nPixelTriplets_buf_h, alpaka::createView(devAcc, &(*pixelTripletsDC_)->nPixelTriplets(), 1u));
   alpaka::wait(queue_);
 
   return *nPixelTriplets_buf_h.data();
 }
 
 int Event::getNumberOfPixelQuintuplets() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nPixelQuintuplets_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
   alpaka::memcpy(
-      queue_, nPixelQuintuplets_buf_h, alpaka::createView(devAcc_, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u));
+      queue_, nPixelQuintuplets_buf_h, alpaka::createView(devAcc, &(*pixelQuintupletsDC_)->nPixelQuintuplets(), 1u));
   alpaka::wait(queue_);
 
   return *nPixelQuintuplets_buf_h.data();
@@ -1392,66 +1407,69 @@ unsigned int Event::getNumberOfQuintupletsByLayerEndcap(unsigned int layer) {
 }
 
 int Event::getNumberOfTrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidates_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
   alpaka::memcpy(
-      queue_, nTrackCandidates_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
+      queue_, nTrackCandidates_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
   alpaka::wait(queue_);
 
   return *nTrackCandidates_buf_h.data();
 }
 
 int Event::getNumberOfPT5TrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidatesPT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
-  alpaka::memcpy(queue_,
-                 nTrackCandidatesPT5_buf_h,
-                 alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespT5(), 1u));
+  alpaka::memcpy(
+      queue_, nTrackCandidatesPT5_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespT5(), 1u));
   alpaka::wait(queue_);
 
   return *nTrackCandidatesPT5_buf_h.data();
 }
 
 int Event::getNumberOfPT3TrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidatesPT3_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
-  alpaka::memcpy(queue_,
-                 nTrackCandidatesPT3_buf_h,
-                 alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespT3(), 1u));
+  alpaka::memcpy(
+      queue_, nTrackCandidatesPT3_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespT3(), 1u));
   alpaka::wait(queue_);
 
   return *nTrackCandidatesPT3_buf_h.data();
 }
 
 int Event::getNumberOfPLSTrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidatesPLS_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
-  alpaka::memcpy(queue_,
-                 nTrackCandidatesPLS_buf_h,
-                 alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatespLS(), 1u));
+  alpaka::memcpy(
+      queue_, nTrackCandidatesPLS_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatespLS(), 1u));
   alpaka::wait(queue_);
 
   return *nTrackCandidatesPLS_buf_h.data();
 }
 
 int Event::getNumberOfPixelTrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidates_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
   auto nTrackCandidatesT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
   alpaka::memcpy(
-      queue_, nTrackCandidates_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
+      queue_, nTrackCandidates_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
   alpaka::memcpy(
-      queue_, nTrackCandidatesT5_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u));
+      queue_, nTrackCandidatesT5_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u));
   alpaka::wait(queue_);
 
   return (*nTrackCandidates_buf_h.data()) - (*nTrackCandidatesT5_buf_h.data());
 }
 
 int Event::getNumberOfT5TrackCandidates() {
+  auto devAcc = alpaka::getDev(queue_);
   auto nTrackCandidatesT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
 
   alpaka::memcpy(
-      queue_, nTrackCandidatesT5_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u));
+      queue_, nTrackCandidatesT5_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidatesT5(), 1u));
   alpaka::wait(queue_);
 
   return *nTrackCandidatesT5_buf_h.data();
@@ -1481,13 +1499,14 @@ typename TSoA::ConstView Event::getHitsInCMSSW(bool sync) {
     return hitsDC_->const_view<TSoA>();
   } else {
     if (!hitsHC_) {
+      auto devAcc = alpaka::getDev(queue_);
       auto hits_d = hitsDC_->view<HitsSoA>();
       auto nHits = hits_d.metadata().size();
       std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
       hitsHC_.emplace(hits_sizes, queue_);
       auto hits_h = hitsHC_->view<HitsSoA>();
       auto idxs_h = alpaka::createView(cms::alpakatools::host(), hits_h.idxs(), nHits);
-      auto idxs_d = alpaka::createView(devAcc_, hits_d.idxs(), nHits);
+      auto idxs_d = alpaka::createView(devAcc, hits_d.idxs(), nHits);
       alpaka::memcpy(queue_, idxs_h, idxs_d);
       if (sync)
         alpaka::wait(queue_);  // host consumers expect filled data
@@ -1628,10 +1647,11 @@ template PixelQuintupletsConst Event::getPixelQuintuplets<>(bool);
 
 const TrackCandidatesConst& Event::getTrackCandidatesWithSelection(bool inCMSSW, bool sync) {
   if (!trackCandidatesHC_) {
+    auto devAcc = alpaka::getDev(queue_);
     // Get nTrackCanHost parameter to initialize host based instance
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
     alpaka::memcpy(
-        queue_, nTrackCanHost_buf_h, alpaka::createView(devAcc_, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
+        queue_, nTrackCanHost_buf_h, alpaka::createView(devAcc, &(*trackCandidatesDC_)->nTrackCandidates(), 1u));
     alpaka::wait(queue_);  // wait here before we get nTrackCanHost and trackCandidatesInCPU becomes usable
 
     auto const nTrackCanHost = *nTrackCanHost_buf_h.data();
@@ -1642,30 +1662,30 @@ const TrackCandidatesConst& Event::getTrackCandidatesWithSelection(bool inCMSSW,
         queue_,
         alpaka::createView(
             cms::alpakatools::host(), (*trackCandidatesHC_)->hitIndices()->data(), Params_pT5::kHits * nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->hitIndices()->data(), Params_pT5::kHits * nTrackCanHost));
+        alpaka::createView(devAcc, (*trackCandidatesDC_)->hitIndices()->data(), Params_pT5::kHits * nTrackCanHost));
     alpaka::memcpy(queue_,
                    alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->pixelSeedIndex(), nTrackCanHost),
-                   alpaka::createView(devAcc_, (*trackCandidatesDC_)->pixelSeedIndex(), nTrackCanHost));
+                   alpaka::createView(devAcc, (*trackCandidatesDC_)->pixelSeedIndex(), nTrackCanHost));
     if (not inCMSSW) {
       alpaka::memcpy(queue_,
                      alpaka::createView(cms::alpakatools::host(),
                                         (*trackCandidatesHC_)->logicalLayers()->data(),
                                         Params_pT5::kLayers * nTrackCanHost),
                      alpaka::createView(
-                         devAcc_, (*trackCandidatesDC_)->logicalLayers()->data(), Params_pT5::kLayers * nTrackCanHost));
+                         devAcc, (*trackCandidatesDC_)->logicalLayers()->data(), Params_pT5::kLayers * nTrackCanHost));
       alpaka::memcpy(
           queue_,
           alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->directObjectIndices(), nTrackCanHost),
-          alpaka::createView(devAcc_, (*trackCandidatesDC_)->directObjectIndices(), nTrackCanHost));
+          alpaka::createView(devAcc, (*trackCandidatesDC_)->directObjectIndices(), nTrackCanHost));
       alpaka::memcpy(queue_,
                      alpaka::createView(
                          cms::alpakatools::host(), (*trackCandidatesHC_)->objectIndices()->data(), 2 * nTrackCanHost),
-                     alpaka::createView(devAcc_, (*trackCandidatesDC_)->objectIndices()->data(), 2 * nTrackCanHost));
+                     alpaka::createView(devAcc, (*trackCandidatesDC_)->objectIndices()->data(), 2 * nTrackCanHost));
     }
     alpaka::memcpy(
         queue_,
         alpaka::createView(cms::alpakatools::host(), (*trackCandidatesHC_)->trackCandidateType(), nTrackCanHost),
-        alpaka::createView(devAcc_, (*trackCandidatesDC_)->trackCandidateType(), nTrackCanHost));
+        alpaka::createView(devAcc, (*trackCandidatesDC_)->trackCandidateType(), nTrackCanHost));
     if (sync)
       alpaka::wait(queue_);  // host consumers expect filled data
   }

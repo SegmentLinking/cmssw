@@ -36,7 +36,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   class Event {
   private:
     Queue& queue_;
-    Device devAcc_;
     bool addObjects_;
 
     std::array<unsigned int, 6> n_hits_by_layer_barrel_;
@@ -90,7 +89,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Constructor used for CMSSW integration. Uses an external queue.
     Event(bool verbose, Queue& q, const LSTESData<Device>* deviceESData)
         : queue_(q),
-          devAcc_(alpaka::getDev(q)),
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),
