@@ -374,8 +374,8 @@ namespace lst {
     pixelMapping.pixelModuleIndex = mmd.detIdToIndex.at(1);
 
     auto modulesPixel_view = modulesHC->view<ModulesPixelSoA>();
-    auto connectedPixels = alpaka::createView(
-        cms::alpakatools::host(), modulesPixel_view.connectedPixels(), modulesPixel_view.metadata().size());
+    auto connectedPixels =
+        cms::alpakatools::make_host_view(modulesPixel_view.connectedPixels(), modulesPixel_view.metadata().size());
     for (unsigned int icondet = 0; icondet < totalSizes; icondet++) {
       connectedPixels[icondet] = mmd.detIdToIndex.at(connectedModuleDetIds[icondet]);
     }
