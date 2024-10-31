@@ -21,8 +21,8 @@ namespace lst {
     unsigned int nEndCapMap;
     std::unique_ptr<const PortableMultiCollection<TDev, ModulesSoA, ModulesPixelSoA>> modules;
     std::unique_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometry;
-    std::shared_ptr<const PixelMap>
-        pixelMapping;  // Host-side object that is shared between the LSTESData<TDev> objects for different devices
+    // Host-side object that is shared between the LSTESData<TDev> objects for different devices
+    std::shared_ptr<const PixelMap> pixelMapping;
 
     LSTESData(uint16_t const& nModulesIn,
               uint16_t const& nLowerModulesIn,

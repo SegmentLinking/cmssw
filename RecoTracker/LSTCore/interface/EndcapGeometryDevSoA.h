@@ -4,8 +4,6 @@
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "DataFormats/Portable/interface/PortableCollection.h"
 
-#include "RecoTracker/LSTCore/interface/Common.h"
-
 namespace lst {
 
   GENERATE_SOA_LAYOUT(EndcapGeometryDevSoALayout, SOA_COLUMN(unsigned int, geoMapDetId), SOA_COLUMN(float, geoMapPhi))
