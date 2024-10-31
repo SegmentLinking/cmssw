@@ -162,9 +162,9 @@ namespace lst {
     quadrupletsInGPU.hitIndices[Params_T4::kHits * quadrupletIndex + 5] =
         tripletsInGPU.hitIndices[Params_T3::kHits * innerTripletIndex + 5];
     quadrupletsInGPU.hitIndices[Params_T4::kHits * quadrupletIndex + 6] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 2];
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 4];
     quadrupletsInGPU.hitIndices[Params_T4::kHits * quadrupletIndex + 7] =
-        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 3];
+        tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 5];
   };
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
@@ -1904,7 +1904,7 @@ namespace lst {
                                                                unsigned int outerTripletIndex) {
     // unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
-    unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex];
+    unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex]; //second and third segments are the same here
     // unsigned int fourthSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex + 1];
 
     unsigned int innerOuterInnerMiniDoubletIndex =
@@ -1943,7 +1943,7 @@ namespace lst {
 
     //   for (int iter = globalThreadIdx[0]; iter < nEligibleT5Modules; iter += gridThreadExtent[0]) {
     // all modules (non-zero) are eligible now since not doing duplicate removal yet
-    for (int iter = globalThreadIdx[0]; iter < nEligibleT4Modules; iter += gridThreadExtent[0]) {
+      for (int iter = globalThreadIdx[0]; iter < nEligibleT4Modules; iter += gridThreadExtent[0]) {
         uint16_t lowerModule1 = rangesInGPU.indicesOfEligibleT4Modules[iter];
         // short layer2_adjustment;
         int layer = modulesInGPU.layers[lowerModule1];
