@@ -4,7 +4,7 @@
 #include <map>
 #include <iostream>
 
-#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TiltedGeometry.h"

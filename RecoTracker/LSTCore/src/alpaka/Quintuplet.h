@@ -8,7 +8,7 @@
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/QuintupletsSoA.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"

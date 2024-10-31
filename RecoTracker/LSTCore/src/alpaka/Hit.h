@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_Hit_h
 #define RecoTracker_LSTCore_src_alpaka_Hit_h
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/HitsDeviceCollection.h"
 

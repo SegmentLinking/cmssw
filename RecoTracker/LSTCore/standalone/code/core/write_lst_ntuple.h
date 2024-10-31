@@ -5,13 +5,13 @@
 #include <tuple>
 
 #include "lst_math.h"
-#include "Event.h"
+#include "LSTEvent.h"
 
 #include "AnalysisConfig.h"
 #include "trkCore.h"
 #include "AccessHelper.h"
 
-using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
 // Common
 void createOutputBranches();

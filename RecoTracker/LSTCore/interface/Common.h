@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_Constants_h
-#define RecoTracker_LSTCore_interface_Constants_h
+#ifndef RecoTracker_LSTCore_interface_Common_h
+#define RecoTracker_LSTCore_interface_Common_h
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "DataFormats/Common/interface/StdArray.h"

@@ -3,7 +3,7 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"

@@ -1,7 +1,7 @@
 #ifndef trkCore_h
 #define trkCore_h
 
-#include "Event.h"
+#include "LSTEvent.h"
 
 #include "Trktree.h"
 #include "TCanvas.h"
@@ -12,7 +12,7 @@
 #include <numeric>
 #include <filesystem>
 
-using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using ::lst::PixelType;
 
 // --------------------- ======================== ---------------------

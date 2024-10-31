@@ -1,7 +1,7 @@
 #ifndef lst_h
 #define lst_h
 
-#include "Event.h"
+#include "LSTEvent.h"
 #include "LST.h"
 
 #include <vector>

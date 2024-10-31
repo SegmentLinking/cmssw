@@ -1,6 +1,6 @@
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
-#include "Event.h"
+#include "LSTEvent.h"
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
@@ -230,7 +230,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
   }
 }
 
-void LST::getOutput(Event& event) {
+void LST::getOutput(LSTEvent& event) {
   out_tc_hitIdxs_.clear();
   out_tc_len_.clear();
   out_tc_seedIdx_.clear();
@@ -276,7 +276,7 @@ void LST::run(Queue& queue,
               std::vector<float> const& ph2_z,
               bool no_pls_dupclean,
               bool tc_pls_triplets) {
-  auto event = Event(verbose, queue, deviceESData);
+  auto event = LSTEvent(verbose, queue, deviceESData);
   prepareInput(see_px,
                see_py,
                see_pz,

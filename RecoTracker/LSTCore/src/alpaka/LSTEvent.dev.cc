@@ -1,6 +1,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
-#include "Event.h"
+#include "LSTEvent.h"
 
 #include "MiniDoublet.h"
 #include "PixelQuintuplet.h"
@@ -17,7 +17,7 @@ using Acc3D = ALPAKA_ACCELERATOR_NAMESPACE::Acc3D;
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
-void Event::initSync(bool verbose) {
+void LSTEvent::initSync(bool verbose) {
   alpaka::wait(queue_);  // other calls can be asynchronous
   addObjects_ = verbose;
 
@@ -40,7 +40,7 @@ void Event::initSync(bool verbose) {
   }
 }
 
-void Event::resetEventSync() {
+void LSTEvent::resetEventSync() {
   alpaka::wait(queue_);  // synchronize to reset consistently
   //reset the arrays
   for (int i = 0; i < 6; i++) {
@@ -81,11 +81,11 @@ void Event::resetEventSync() {
   modulesHC_.reset();
 }
 
-void Event::addHitToEvent(std::vector<float> const& x,
-                          std::vector<float> const& y,
-                          std::vector<float> const& z,
-                          std::vector<unsigned int> const& detId,
-                          std::vector<unsigned int> const& idxInNtuple) {
+void LSTEvent::addHitToEvent(std::vector<float> const& x,
+                             std::vector<float> const& y,
+                             std::vector<float> const& z,
+                             std::vector<unsigned int> const& detId,
+                             std::vector<unsigned int> const& idxInNtuple) {
   // Use the actual number of hits instead of a max.
   unsigned int nHits = x.size();
 
@@ -161,24 +161,24 @@ void Event::addHitToEvent(std::vector<float> const& x,
                       nLowerModules_);
 }
 
-void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
-                                   std::vector<unsigned int> const& hitIndices1,
-                                   std::vector<unsigned int> const& hitIndices2,
-                                   std::vector<unsigned int> const& hitIndices3,
-                                   std::vector<float> const& dPhiChange,
-                                   std::vector<float> const& ptIn,
-                                   std::vector<float> const& ptErr,
-                                   std::vector<float> const& px,
-                                   std::vector<float> const& py,
-                                   std::vector<float> const& pz,
-                                   std::vector<float> const& eta,
-                                   std::vector<float> const& etaErr,
-                                   std::vector<float> const& phi,
-                                   std::vector<int> const& charge,
-                                   std::vector<unsigned int> const& seedIdx,
-                                   std::vector<int> const& superbin,
-                                   std::vector<PixelType> const& pixelType,
-                                   std::vector<char> const& isQuad) {
+void LSTEvent::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
+                                      std::vector<unsigned int> const& hitIndices1,
+                                      std::vector<unsigned int> const& hitIndices2,
+                                      std::vector<unsigned int> const& hitIndices3,
+                                      std::vector<float> const& dPhiChange,
+                                      std::vector<float> const& ptIn,
+                                      std::vector<float> const& ptErr,
+                                      std::vector<float> const& px,
+                                      std::vector<float> const& py,
+                                      std::vector<float> const& pz,
+                                      std::vector<float> const& eta,
+                                      std::vector<float> const& etaErr,
+                                      std::vector<float> const& phi,
+                                      std::vector<int> const& charge,
+                                      std::vector<unsigned int> const& seedIdx,
+                                      std::vector<int> const& superbin,
+                                      std::vector<PixelType> const& pixelType,
+                                      std::vector<char> const& isQuad) {
   unsigned int size = ptIn.size();
 
   if (size > n_max_pixel_segments_per_module) {
@@ -337,7 +337,7 @@ void Event::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndices0,
                       size);
 }
 
-void Event::createMiniDoublets() {
+void LSTEvent::createMiniDoublets() {
   // Create a view for the element nLowerModules_ inside rangesOccupancy->miniDoubletModuleOccupancy
   auto rangesOccupancy = rangesDC_->view();
   auto dst_view_miniDoubletModuleOccupancy =
@@ -407,7 +407,7 @@ void Event::createMiniDoublets() {
   }
 }
 
-void Event::createSegmentsWithModuleMap() {
+void LSTEvent::createSegmentsWithModuleMap() {
   if (!segmentsDC_) {
     std::array<int, 3> const segments_sizes{{static_cast<int>(nTotalSegments_),
                                              static_cast<int>(nLowerModules_ + 1),
@@ -452,7 +452,7 @@ void Event::createSegmentsWithModuleMap() {
   }
 }
 
-void Event::createTriplets() {
+void LSTEvent::createTriplets() {
   if (!tripletsDC_) {
     WorkDiv1D const createTripletArrayRanges_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});
 
@@ -562,7 +562,7 @@ void Event::createTriplets() {
   }
 }
 
-void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
+void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   if (!trackCandidatesDC_) {
     trackCandidatesDC_.emplace(n_max_nonpixel_track_candidates + n_max_pixel_track_candidates, queue_);
     auto buf = trackCandidatesDC_->buffer();
@@ -725,7 +725,7 @@ void Event::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   }
 }
 
-void Event::createPixelTriplets() {
+void LSTEvent::createPixelTriplets() {
   if (!pixelTripletsDC_) {
     pixelTripletsDC_.emplace(n_max_pixel_triplets, queue_);
     auto nPixelTriplets_view = cms::alpakatools::make_device_view(queue_, (*pixelTripletsDC_)->nPixelTriplets());
@@ -854,7 +854,7 @@ void Event::createPixelTriplets() {
       queue_, removeDupPixelTripletsFromMap_workDiv, RemoveDupPixelTripletsFromMap{}, pixelTripletsDC_->view());
 }
 
-void Event::createQuintuplets() {
+void LSTEvent::createQuintuplets() {
   WorkDiv1D const createEligibleModulesListForQuintuplets_workDiv = createWorkDiv<Vec1D>({1}, {1024}, {1});
 
   alpaka::exec<Acc1D>(queue_,
@@ -942,7 +942,7 @@ void Event::createQuintuplets() {
   }
 }
 
-void Event::pixelLineSegmentCleaning(bool no_pls_dupclean) {
+void LSTEvent::pixelLineSegmentCleaning(bool no_pls_dupclean) {
   if (!no_pls_dupclean) {
     Vec3D const threadsPerBlockCheckHitspLS{1, 16, 16};
     Vec3D const blocksPerGridCheckHitspLS{1, max_blocks * 4, max_blocks / 4};
@@ -959,7 +959,7 @@ void Event::pixelLineSegmentCleaning(bool no_pls_dupclean) {
   }
 }
 
-void Event::createPixelQuintuplets() {
+void LSTEvent::createPixelQuintuplets() {
   if (!pixelQuintupletsDC_) {
     pixelQuintupletsDC_.emplace(n_max_pixel_quintuplets, queue_);
     auto nPixelQuintuplets_view =
@@ -1109,7 +1109,7 @@ void Event::createPixelQuintuplets() {
 #endif
 }
 
-void Event::addMiniDoubletsToEventExplicit() {
+void LSTEvent::addMiniDoubletsToEventExplicit() {
   auto nMDsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto mdsOccupancy = miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>();
   auto nMDs_view =
@@ -1153,7 +1153,7 @@ void Event::addMiniDoubletsToEventExplicit() {
   }
 }
 
-void Event::addSegmentsToEventExplicit() {
+void LSTEvent::addSegmentsToEventExplicit() {
   auto nSegmentsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto nSegments_buf = cms::alpakatools::make_device_view(
       queue_, segmentsDC_->const_view<SegmentsOccupancySoA>().nSegments(), nLowerModules_);
@@ -1189,7 +1189,7 @@ void Event::addSegmentsToEventExplicit() {
   }
 }
 
-void Event::addQuintupletsToEventExplicit() {
+void LSTEvent::addQuintupletsToEventExplicit() {
   auto quintupletsOccupancy = quintupletsDC_->const_view<QuintupletsOccupancySoA>();
   auto nQuintuplets_view =
       cms::alpakatools::make_device_view(queue_, quintupletsOccupancy.nQuintuplets(), nLowerModules_);
@@ -1232,7 +1232,7 @@ void Event::addQuintupletsToEventExplicit() {
   }
 }
 
-void Event::addTripletsToEventExplicit() {
+void LSTEvent::addTripletsToEventExplicit() {
   auto tripletsOccupancy = tripletsDC_->const_view<TripletsOccupancySoA>();
   auto nTriplets_view = cms::alpakatools::make_device_view(queue_, tripletsOccupancy.nTriplets(), nLowerModules_);
   auto nTripletsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
@@ -1268,7 +1268,7 @@ void Event::addTripletsToEventExplicit() {
   }
 }
 
-unsigned int Event::getNumberOfHits() {
+unsigned int LSTEvent::getNumberOfHits() {
   unsigned int hits = 0;
   for (auto& it : n_hits_by_layer_barrel_) {
     hits += it;
@@ -1280,18 +1280,18 @@ unsigned int Event::getNumberOfHits() {
   return hits;
 }
 
-unsigned int Event::getNumberOfHitsByLayer(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfHitsByLayer(unsigned int layer) {
   if (layer == 6)
     return n_hits_by_layer_barrel_[layer];
   else
     return n_hits_by_layer_barrel_[layer] + n_hits_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfHitsByLayerBarrel(unsigned int layer) { return n_hits_by_layer_barrel_[layer]; }
+unsigned int LSTEvent::getNumberOfHitsByLayerBarrel(unsigned int layer) { return n_hits_by_layer_barrel_[layer]; }
 
-unsigned int Event::getNumberOfHitsByLayerEndcap(unsigned int layer) { return n_hits_by_layer_endcap_[layer]; }
+unsigned int LSTEvent::getNumberOfHitsByLayerEndcap(unsigned int layer) { return n_hits_by_layer_endcap_[layer]; }
 
-unsigned int Event::getNumberOfMiniDoublets() {
+unsigned int LSTEvent::getNumberOfMiniDoublets() {
   unsigned int miniDoublets = 0;
   for (auto& it : n_minidoublets_by_layer_barrel_) {
     miniDoublets += it;
@@ -1303,22 +1303,22 @@ unsigned int Event::getNumberOfMiniDoublets() {
   return miniDoublets;
 }
 
-unsigned int Event::getNumberOfMiniDoubletsByLayer(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfMiniDoubletsByLayer(unsigned int layer) {
   if (layer == 6)
     return n_minidoublets_by_layer_barrel_[layer];
   else
     return n_minidoublets_by_layer_barrel_[layer] + n_minidoublets_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfMiniDoubletsByLayerBarrel(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfMiniDoubletsByLayerBarrel(unsigned int layer) {
   return n_minidoublets_by_layer_barrel_[layer];
 }
 
-unsigned int Event::getNumberOfMiniDoubletsByLayerEndcap(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfMiniDoubletsByLayerEndcap(unsigned int layer) {
   return n_minidoublets_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfSegments() {
+unsigned int LSTEvent::getNumberOfSegments() {
   unsigned int segments = 0;
   for (auto& it : n_segments_by_layer_barrel_) {
     segments += it;
@@ -1330,18 +1330,22 @@ unsigned int Event::getNumberOfSegments() {
   return segments;
 }
 
-unsigned int Event::getNumberOfSegmentsByLayer(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfSegmentsByLayer(unsigned int layer) {
   if (layer == 6)
     return n_segments_by_layer_barrel_[layer];
   else
     return n_segments_by_layer_barrel_[layer] + n_segments_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfSegmentsByLayerBarrel(unsigned int layer) { return n_segments_by_layer_barrel_[layer]; }
+unsigned int LSTEvent::getNumberOfSegmentsByLayerBarrel(unsigned int layer) {
+  return n_segments_by_layer_barrel_[layer];
+}
 
-unsigned int Event::getNumberOfSegmentsByLayerEndcap(unsigned int layer) { return n_segments_by_layer_endcap_[layer]; }
+unsigned int LSTEvent::getNumberOfSegmentsByLayerEndcap(unsigned int layer) {
+  return n_segments_by_layer_endcap_[layer];
+}
 
-unsigned int Event::getNumberOfTriplets() {
+unsigned int LSTEvent::getNumberOfTriplets() {
   unsigned int triplets = 0;
   for (auto& it : n_triplets_by_layer_barrel_) {
     triplets += it;
@@ -1353,18 +1357,22 @@ unsigned int Event::getNumberOfTriplets() {
   return triplets;
 }
 
-unsigned int Event::getNumberOfTripletsByLayer(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfTripletsByLayer(unsigned int layer) {
   if (layer == 6)
     return n_triplets_by_layer_barrel_[layer];
   else
     return n_triplets_by_layer_barrel_[layer] + n_triplets_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfTripletsByLayerBarrel(unsigned int layer) { return n_triplets_by_layer_barrel_[layer]; }
+unsigned int LSTEvent::getNumberOfTripletsByLayerBarrel(unsigned int layer) {
+  return n_triplets_by_layer_barrel_[layer];
+}
 
-unsigned int Event::getNumberOfTripletsByLayerEndcap(unsigned int layer) { return n_triplets_by_layer_endcap_[layer]; }
+unsigned int LSTEvent::getNumberOfTripletsByLayerEndcap(unsigned int layer) {
+  return n_triplets_by_layer_endcap_[layer];
+}
 
-int Event::getNumberOfPixelTriplets() {
+int LSTEvent::getNumberOfPixelTriplets() {
   auto nPixelTriplets_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(
@@ -1374,7 +1382,7 @@ int Event::getNumberOfPixelTriplets() {
   return *nPixelTriplets_buf_h.data();
 }
 
-int Event::getNumberOfPixelQuintuplets() {
+int LSTEvent::getNumberOfPixelQuintuplets() {
   auto nPixelQuintuplets_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1385,7 +1393,7 @@ int Event::getNumberOfPixelQuintuplets() {
   return *nPixelQuintuplets_buf_h.data();
 }
 
-unsigned int Event::getNumberOfQuintuplets() {
+unsigned int LSTEvent::getNumberOfQuintuplets() {
   unsigned int quintuplets = 0;
   for (auto& it : n_quintuplets_by_layer_barrel_) {
     quintuplets += it;
@@ -1397,22 +1405,22 @@ unsigned int Event::getNumberOfQuintuplets() {
   return quintuplets;
 }
 
-unsigned int Event::getNumberOfQuintupletsByLayer(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfQuintupletsByLayer(unsigned int layer) {
   if (layer == 6)
     return n_quintuplets_by_layer_barrel_[layer];
   else
     return n_quintuplets_by_layer_barrel_[layer] + n_quintuplets_by_layer_endcap_[layer];
 }
 
-unsigned int Event::getNumberOfQuintupletsByLayerBarrel(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfQuintupletsByLayerBarrel(unsigned int layer) {
   return n_quintuplets_by_layer_barrel_[layer];
 }
 
-unsigned int Event::getNumberOfQuintupletsByLayerEndcap(unsigned int layer) {
+unsigned int LSTEvent::getNumberOfQuintupletsByLayerEndcap(unsigned int layer) {
   return n_quintuplets_by_layer_endcap_[layer];
 }
 
-int Event::getNumberOfTrackCandidates() {
+int LSTEvent::getNumberOfTrackCandidates() {
   auto nTrackCandidates_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1423,7 +1431,7 @@ int Event::getNumberOfTrackCandidates() {
   return *nTrackCandidates_buf_h.data();
 }
 
-int Event::getNumberOfPT5TrackCandidates() {
+int LSTEvent::getNumberOfPT5TrackCandidates() {
   auto nTrackCandidatesPT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1434,7 +1442,7 @@ int Event::getNumberOfPT5TrackCandidates() {
   return *nTrackCandidatesPT5_buf_h.data();
 }
 
-int Event::getNumberOfPT3TrackCandidates() {
+int LSTEvent::getNumberOfPT3TrackCandidates() {
   auto nTrackCandidatesPT3_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1445,7 +1453,7 @@ int Event::getNumberOfPT3TrackCandidates() {
   return *nTrackCandidatesPT3_buf_h.data();
 }
 
-int Event::getNumberOfPLSTrackCandidates() {
+int LSTEvent::getNumberOfPLSTrackCandidates() {
   auto nTrackCandidatesPLS_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1456,7 +1464,7 @@ int Event::getNumberOfPLSTrackCandidates() {
   return *nTrackCandidatesPLS_buf_h.data();
 }
 
-int Event::getNumberOfPixelTrackCandidates() {
+int LSTEvent::getNumberOfPixelTrackCandidates() {
   auto nTrackCandidates_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTrackCandidatesT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
@@ -1471,7 +1479,7 @@ int Event::getNumberOfPixelTrackCandidates() {
   return (*nTrackCandidates_buf_h.data()) - (*nTrackCandidatesT5_buf_h.data());
 }
 
-int Event::getNumberOfT5TrackCandidates() {
+int LSTEvent::getNumberOfT5TrackCandidates() {
   auto nTrackCandidatesT5_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
   alpaka::memcpy(queue_,
@@ -1483,7 +1491,7 @@ int Event::getNumberOfT5TrackCandidates() {
 }
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getHits(bool sync)  //std::shared_ptr should take care of garbage collection
+typename TSoA::ConstView LSTEvent::getHits(bool sync)  //std::shared_ptr should take care of garbage collection
 {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return hitsDC_->const_view<TSoA>();
@@ -1497,11 +1505,11 @@ typename TSoA::ConstView Event::getHits(bool sync)  //std::shared_ptr should tak
     return hitsHC_->const_view<TSoA>();
   }
 }
-template HitsConst Event::getHits<HitsSoA>(bool);
-template HitsRangesConst Event::getHits<HitsRangesSoA>(bool);
+template HitsConst LSTEvent::getHits<HitsSoA>(bool);
+template HitsRangesConst LSTEvent::getHits<HitsRangesSoA>(bool);
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getHitsInCMSSW(bool sync) {
+typename TSoA::ConstView LSTEvent::getHitsInCMSSW(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return hitsDC_->const_view<TSoA>();
   } else {
@@ -1520,11 +1528,11 @@ typename TSoA::ConstView Event::getHitsInCMSSW(bool sync) {
     return hitsHC_->const_view<TSoA>();
   }
 }
-template HitsConst Event::getHitsInCMSSW<HitsSoA>(bool);
-template HitsRangesConst Event::getHitsInCMSSW<HitsRangesSoA>(bool);
+template HitsConst LSTEvent::getHitsInCMSSW<HitsSoA>(bool);
+template HitsRangesConst LSTEvent::getHitsInCMSSW<HitsRangesSoA>(bool);
 
 template <typename TDev>
-ObjectRangesConst Event::getRanges(bool sync) {
+ObjectRangesConst LSTEvent::getRanges(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return rangesDC_->const_view();
   } else {
@@ -1537,10 +1545,10 @@ ObjectRangesConst Event::getRanges(bool sync) {
     return rangesHC_->const_view();
   }
 }
-template ObjectRangesConst Event::getRanges<>(bool);
+template ObjectRangesConst LSTEvent::getRanges<>(bool);
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getMiniDoublets(bool sync) {
+typename TSoA::ConstView LSTEvent::getMiniDoublets(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return miniDoubletsDC_->const_view<TSoA>();
   } else {
@@ -1555,11 +1563,11 @@ typename TSoA::ConstView Event::getMiniDoublets(bool sync) {
     return miniDoubletsHC_->const_view<TSoA>();
   }
 }
-template MiniDoubletsConst Event::getMiniDoublets<MiniDoubletsSoA>(bool);
-template MiniDoubletsOccupancyConst Event::getMiniDoublets<MiniDoubletsOccupancySoA>(bool);
+template MiniDoubletsConst LSTEvent::getMiniDoublets<MiniDoubletsSoA>(bool);
+template MiniDoubletsOccupancyConst LSTEvent::getMiniDoublets<MiniDoubletsOccupancySoA>(bool);
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getSegments(bool sync) {
+typename TSoA::ConstView LSTEvent::getSegments(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return segmentsDC_->const_view<TSoA>();
   } else {
@@ -1574,12 +1582,12 @@ typename TSoA::ConstView Event::getSegments(bool sync) {
     return segmentsHC_->const_view<TSoA>();
   }
 }
-template SegmentsConst Event::getSegments<SegmentsSoA>(bool);
-template SegmentsOccupancyConst Event::getSegments<SegmentsOccupancySoA>(bool);
-template SegmentsPixelConst Event::getSegments<SegmentsPixelSoA>(bool);
+template SegmentsConst LSTEvent::getSegments<SegmentsSoA>(bool);
+template SegmentsOccupancyConst LSTEvent::getSegments<SegmentsOccupancySoA>(bool);
+template SegmentsPixelConst LSTEvent::getSegments<SegmentsPixelSoA>(bool);
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getTriplets(bool sync) {
+typename TSoA::ConstView LSTEvent::getTriplets(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return tripletsDC_->const_view<TSoA>();
   } else {
@@ -1594,11 +1602,11 @@ typename TSoA::ConstView Event::getTriplets(bool sync) {
   }
   return tripletsHC_->const_view<TSoA>();
 }
-template TripletsConst Event::getTriplets<TripletsSoA>(bool);
-template TripletsOccupancyConst Event::getTriplets<TripletsOccupancySoA>(bool);
+template TripletsConst LSTEvent::getTriplets<TripletsSoA>(bool);
+template TripletsOccupancyConst LSTEvent::getTriplets<TripletsOccupancySoA>(bool);
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getQuintuplets(bool sync) {
+typename TSoA::ConstView LSTEvent::getQuintuplets(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return quintupletsDC_->const_view<TSoA>();
   } else {
@@ -1613,11 +1621,11 @@ typename TSoA::ConstView Event::getQuintuplets(bool sync) {
   }
   return quintupletsHC_->const_view<TSoA>();
 }
-template QuintupletsConst Event::getQuintuplets<QuintupletsSoA>(bool);
-template QuintupletsOccupancyConst Event::getQuintuplets<QuintupletsOccupancySoA>(bool);
+template QuintupletsConst LSTEvent::getQuintuplets<QuintupletsSoA>(bool);
+template QuintupletsOccupancyConst LSTEvent::getQuintuplets<QuintupletsOccupancySoA>(bool);
 
 template <typename TDev>
-PixelTripletsConst Event::getPixelTriplets(bool sync) {
+PixelTripletsConst LSTEvent::getPixelTriplets(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return pixelTripletsDC_->const_view();
   } else {
@@ -1631,10 +1639,10 @@ PixelTripletsConst Event::getPixelTriplets(bool sync) {
   }
   return pixelTripletsHC_->const_view();
 }
-template PixelTripletsConst Event::getPixelTriplets<>(bool);
+template PixelTripletsConst LSTEvent::getPixelTriplets<>(bool);
 
 template <typename TDev>
-PixelQuintupletsConst Event::getPixelQuintuplets(bool sync) {
+PixelQuintupletsConst LSTEvent::getPixelQuintuplets(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return pixelQuintupletsDC_->const_view();
   } else {
@@ -1649,9 +1657,9 @@ PixelQuintupletsConst Event::getPixelQuintuplets(bool sync) {
   }
   return pixelQuintupletsHC_->const_view();
 }
-template PixelQuintupletsConst Event::getPixelQuintuplets<>(bool);
+template PixelQuintupletsConst LSTEvent::getPixelQuintuplets<>(bool);
 
-const TrackCandidatesConst& Event::getTrackCandidatesWithSelection(bool inCMSSW, bool sync) {
+const TrackCandidatesConst& LSTEvent::getTrackCandidatesWithSelection(bool inCMSSW, bool sync) {
   if (!trackCandidatesHC_) {
     // Get nTrackCanHost parameter to initialize host based instance
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
@@ -1699,7 +1707,7 @@ const TrackCandidatesConst& Event::getTrackCandidatesWithSelection(bool inCMSSW,
 }
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView Event::getModules(bool sync) {
+typename TSoA::ConstView LSTEvent::getModules(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return modules_.const_view<TSoA>();
   } else {
@@ -1713,5 +1721,5 @@ typename TSoA::ConstView Event::getModules(bool sync) {
     return modulesHC_->const_view<TSoA>();
   }
 }
-template ModulesConst Event::getModules<ModulesSoA>(bool);
-template ModulesPixelConst Event::getModules<ModulesPixelSoA>(bool);
+template ModulesConst LSTEvent::getModules<ModulesSoA>(bool);
+template ModulesPixelConst LSTEvent::getModules<ModulesPixelSoA>(bool);
