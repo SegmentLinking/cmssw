@@ -14,7 +14,7 @@ elif [[ $ARCH == "aarch64" || $ARCH == "arm64" ]]; then
 else
   export SCRAM_ARCH=el8_amd64_gcc12
 fi
-export CMSSW_VERSION=CMSSW_14_2_0_pre1
+export CMSSW_VERSION=CMSSW_14_2_0_pre3
 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 cd /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/cmssw/$CMSSW_VERSION/src

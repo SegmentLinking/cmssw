@@ -255,8 +255,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //computing circle parameters
     /*
-        The two anchor hits are r3PCA and r3LH. p3PCA pt, eta, phi is hitIndex1 x, y, z
-        */
+    The two anchor hits are r3PCA and r3LH. p3PCA pt, eta, phi is hitIndex1 x, y, z
+    */
     float circleRadius = mds.outerX()[innerMDIndex] / (2 * k2Rinv1GeVf);
     float circlePhi = mds.outerZ()[innerMDIndex];
     float candidateCenterXs[] = {mds.anchorX()[innerMDIndex] + circleRadius * alpaka::math::sin(acc, circlePhi),
@@ -418,7 +418,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     float dz = zOut - zIn;
-    // Alpaka: Needs to be moved over
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
     float drtDzScale = sdSlope / alpaka::math::tan(acc, sdSlope);
 
@@ -653,9 +652,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Create variables outside of the for loop.
-      int occupancy, category_number, eta_number;
-
       for (uint16_t i = globalThreadIdx[0]; i < modules.nLowerModules(); i += gridThreadExtent[0]) {
         if (modules.nConnectedModules()[i] == 0) {
           ranges.segmentModuleIndices()[i] = nTotalSegments;
@@ -668,6 +664,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         short module_subdets = modules.subdets()[i];
         float module_eta = alpaka::math::abs(acc, modules.eta()[i]);
 
+        int category_number;
         if (module_layers <= 3 && module_subdets == 5)
           category_number = 0;
         else if (module_layers >= 4 && module_subdets == 5)
@@ -683,6 +680,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           category_number = -1;
 
+        int eta_number;
         if (module_eta < 0.75f)
           eta_number = 0;
         else if (module_eta < 1.5f)
@@ -694,6 +692,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           eta_number = -1;
 
+        int occupancy;
         if (category_number == 0 && eta_number == 0)
           occupancy = 572;
         else if (category_number == 0 && eta_number == 1)

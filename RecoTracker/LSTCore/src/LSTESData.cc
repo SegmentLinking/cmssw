@@ -7,7 +7,7 @@
 #include "ModuleMethods.h"
 
 namespace {
-  std::string trackLooperDir() {
+  std::string geometryDataDir() {
     const char* path_lst_base = std::getenv("LST_BASE");
     const char* path_tracklooperdir = std::getenv("TRACKLOOPERDIR");
     std::string path_str;
@@ -31,7 +31,7 @@ namespace {
   }
 
   std::string get_absolute_path_after_check_file_exists(std::string const& name) {
-    std::filesystem::path fullpath = std::filesystem::absolute(name.c_str());
+    std::filesystem::path fullpath = std::filesystem::absolute(name);
     if (not std::filesystem::exists(fullpath)) {
       throw std::runtime_error("Could not find the file = " + fullpath.string());
     }
@@ -44,18 +44,18 @@ namespace {
                     lst::ModuleConnectionMap& moduleConnectionMap) {
     // Module orientation information (DrDz or phi angles)
     auto endcap_geom =
-        get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
+        get_absolute_path_after_check_file_exists(geometryDataDir() + "/data/OT800_IT615_pt0.8/endcap_orientation.bin");
     auto tilted_geom = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/tilted_barrel_orientation.bin");
+        geometryDataDir() + "/data/OT800_IT615_pt0.8/tilted_barrel_orientation.bin");
     // Module connection map (for line segment building)
     auto mappath = get_absolute_path_after_check_file_exists(
-        trackLooperDir() + "/data/OT800_IT615_pt0.8/module_connection_tracing_merged.bin");
+        geometryDataDir() + "/data/OT800_IT615_pt0.8/module_connection_tracing_merged.bin");
 
     endcapGeometry.load(endcap_geom);
     tiltedGeometry.load(tilted_geom);
     moduleConnectionMap.load(mappath);
 
-    auto pLSMapDir = trackLooperDir() + "/data/OT800_IT615_pt0.8/pixelmap/pLS_map";
+    auto pLSMapDir = geometryDataDir() + "/data/OT800_IT615_pt0.8/pixelmap/pLS_map";
     const std::array<std::string, 4> connects{
         {"_layer1_subdet5", "_layer2_subdet5", "_layer1_subdet4", "_layer2_subdet4"}};
     std::string path;
@@ -97,7 +97,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
               endcapGeometry.nEndCapMap * sizeof(float));
 
   auto path =
-      get_absolute_path_after_check_file_exists(trackLooperDir() + "/data/OT800_IT615_pt0.8/sensor_centroids.bin");
+      get_absolute_path_after_check_file_exists(geometryDataDir() + "/data/OT800_IT615_pt0.8/sensor_centroids.bin");
   auto modulesBuffers = lst::loadModulesFromFile(pLStoLayer,
                                                  path.c_str(),
                                                  nModules,

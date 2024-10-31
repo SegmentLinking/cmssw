@@ -75,49 +75,55 @@ void LST::prepareInput(std::vector<float> const& see_px,
                        std::vector<float> const& ph2_x,
                        std::vector<float> const& ph2_y,
                        std::vector<float> const& ph2_z) {
+  in_trkX_.clear();
+  in_trkY_.clear();
+  in_trkZ_.clear();
+  in_hitId_.clear();
+  in_hitIdxs_.clear();
+  in_hitIndices_vec0_.clear();
+  in_hitIndices_vec1_.clear();
+  in_hitIndices_vec2_.clear();
+  in_hitIndices_vec3_.clear();
+  in_deltaPhi_vec_.clear();
+  in_ptIn_vec_.clear();
+  in_ptErr_vec_.clear();
+  in_px_vec_.clear();
+  in_py_vec_.clear();
+  in_pz_vec_.clear();
+  in_eta_vec_.clear();
+  in_etaErr_vec_.clear();
+  in_phi_vec_.clear();
+  in_charge_vec_.clear();
+  in_seedIdx_vec_.clear();
+  in_superbin_vec_.clear();
+  in_pixelType_vec_.clear();
+  in_isQuad_vec_.clear();
+
   unsigned int count = 0;
   auto n_see = see_stateTrajGlbPx.size();
-  std::vector<float> px_vec;
-  px_vec.reserve(n_see);
-  std::vector<float> py_vec;
-  py_vec.reserve(n_see);
-  std::vector<float> pz_vec;
-  pz_vec.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec0;
-  hitIndices_vec0.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec1;
-  hitIndices_vec1.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec2;
-  hitIndices_vec2.reserve(n_see);
-  std::vector<unsigned int> hitIndices_vec3;
-  hitIndices_vec3.reserve(n_see);
-  std::vector<float> ptIn_vec;
-  ptIn_vec.reserve(n_see);
-  std::vector<float> ptErr_vec;
-  ptErr_vec.reserve(n_see);
-  std::vector<float> etaErr_vec;
-  etaErr_vec.reserve(n_see);
-  std::vector<float> eta_vec;
-  eta_vec.reserve(n_see);
-  std::vector<float> phi_vec;
-  phi_vec.reserve(n_see);
-  std::vector<int> charge_vec;
-  charge_vec.reserve(n_see);
-  std::vector<unsigned int> seedIdx_vec;
-  seedIdx_vec.reserve(n_see);
-  std::vector<float> deltaPhi_vec;
-  deltaPhi_vec.reserve(n_see);
-  std::vector<float> trkX = ph2_x;
-  std::vector<float> trkY = ph2_y;
-  std::vector<float> trkZ = ph2_z;
-  std::vector<unsigned int> hitId = ph2_detId;
-  std::vector<unsigned int> hitIdxs(ph2_detId.size());
+  in_px_vec_.reserve(n_see);
+  in_py_vec_.reserve(n_see);
+  in_pz_vec_.reserve(n_see);
+  in_hitIndices_vec0_.reserve(n_see);
+  in_hitIndices_vec1_.reserve(n_see);
+  in_hitIndices_vec2_.reserve(n_see);
+  in_hitIndices_vec3_.reserve(n_see);
+  in_ptIn_vec_.reserve(n_see);
+  in_ptErr_vec_.reserve(n_see);
+  in_etaErr_vec_.reserve(n_see);
+  in_eta_vec_.reserve(n_see);
+  in_phi_vec_.reserve(n_see);
+  in_charge_vec_.reserve(n_see);
+  in_seedIdx_vec_.reserve(n_see);
+  in_deltaPhi_vec_.reserve(n_see);
+  in_trkX_ = ph2_x;
+  in_trkY_ = ph2_y;
+  in_trkZ_ = ph2_z;
+  in_hitId_ = ph2_detId;
+  in_hitIdxs_.resize(ph2_detId.size());
 
-  std::vector<int> superbin_vec;
-  std::vector<PixelType> pixelType_vec;
-  std::vector<char> isQuad_vec;
-  std::iota(hitIdxs.begin(), hitIdxs.end(), 0);
-  const int hit_size = trkX.size();
+  std::iota(in_hitIdxs_.begin(), in_hitIdxs_.end(), 0);
+  const int hit_size = in_trkX_.size();
 
   for (size_t iSeed = 0; iSeed < n_see; iSeed++) {
     XYZVector p3LH(see_stateTrajGlbPx[iSeed], see_stateTrajGlbPy[iSeed], see_stateTrajGlbPz[iSeed]);
@@ -164,51 +170,51 @@ void LST::prepareInput(std::vector<float> const& see_px,
         count++;
       }
 
-      trkX.push_back(r3PCA.x());
-      trkY.push_back(r3PCA.y());
-      trkZ.push_back(r3PCA.z());
-      trkX.push_back(p3PCA.rho());
+      in_trkX_.push_back(r3PCA.x());
+      in_trkY_.push_back(r3PCA.y());
+      in_trkZ_.push_back(r3PCA.z());
+      in_trkX_.push_back(p3PCA.rho());
       float p3PCA_Eta = p3PCA.eta();
-      trkY.push_back(p3PCA_Eta);
+      in_trkY_.push_back(p3PCA_Eta);
       float p3PCA_Phi = p3PCA.phi();
-      trkZ.push_back(p3PCA_Phi);
-      trkX.push_back(r3LH.x());
-      trkY.push_back(r3LH.y());
-      trkZ.push_back(r3LH.z());
-      hitId.push_back(1);
-      hitId.push_back(1);
-      hitId.push_back(1);
+      in_trkZ_.push_back(p3PCA_Phi);
+      in_trkX_.push_back(r3LH.x());
+      in_trkY_.push_back(r3LH.y());
+      in_trkZ_.push_back(r3LH.z());
+      in_hitId_.push_back(1);
+      in_hitId_.push_back(1);
+      in_hitId_.push_back(1);
       if (see_hitIdx[iSeed].size() > 3) {
-        trkX.push_back(r3LH.x());
-        trkY.push_back(see_dxy[iSeed]);
-        trkZ.push_back(see_dz[iSeed]);
-        hitId.push_back(1);
+        in_trkX_.push_back(r3LH.x());
+        in_trkY_.push_back(see_dxy[iSeed]);
+        in_trkZ_.push_back(see_dz[iSeed]);
+        in_hitId_.push_back(1);
       }
-      px_vec.push_back(px);
-      py_vec.push_back(py);
-      pz_vec.push_back(pz);
+      in_px_vec_.push_back(px);
+      in_py_vec_.push_back(py);
+      in_pz_vec_.push_back(pz);
 
-      hitIndices_vec0.push_back(hitIdx0);
-      hitIndices_vec1.push_back(hitIdx1);
-      hitIndices_vec2.push_back(hitIdx2);
-      hitIndices_vec3.push_back(hitIdx3);
-      ptIn_vec.push_back(ptIn);
-      ptErr_vec.push_back(ptErr);
-      etaErr_vec.push_back(etaErr);
-      eta_vec.push_back(eta);
+      in_hitIndices_vec0_.push_back(hitIdx0);
+      in_hitIndices_vec1_.push_back(hitIdx1);
+      in_hitIndices_vec2_.push_back(hitIdx2);
+      in_hitIndices_vec3_.push_back(hitIdx3);
+      in_ptIn_vec_.push_back(ptIn);
+      in_ptErr_vec_.push_back(ptErr);
+      in_etaErr_vec_.push_back(etaErr);
+      in_eta_vec_.push_back(eta);
       float phi = p3LH.phi();
-      phi_vec.push_back(phi);
-      charge_vec.push_back(charge);
-      seedIdx_vec.push_back(iSeed);
-      deltaPhi_vec.push_back(pixelSegmentDeltaPhiChange);
+      in_phi_vec_.push_back(phi);
+      in_charge_vec_.push_back(charge);
+      in_seedIdx_vec_.push_back(iSeed);
+      in_deltaPhi_vec_.push_back(pixelSegmentDeltaPhiChange);
 
-      hitIdxs.push_back(see_hitIdx[iSeed][0]);
-      hitIdxs.push_back(see_hitIdx[iSeed][1]);
-      hitIdxs.push_back(see_hitIdx[iSeed][2]);
+      in_hitIdxs_.push_back(see_hitIdx[iSeed][0]);
+      in_hitIdxs_.push_back(see_hitIdx[iSeed][1]);
+      in_hitIdxs_.push_back(see_hitIdx[iSeed][2]);
       char isQuad = false;
       if (see_hitIdx[iSeed].size() > 3) {
         isQuad = true;
-        hitIdxs.push_back(see_hitIdx[iSeed][3]);
+        in_hitIdxs_.push_back(see_hitIdx[iSeed][3]);
       }
       float neta = 25.;
       float nphi = 72.;
@@ -217,42 +223,18 @@ void LST::prepareInput(std::vector<float> const& see_px,
       int phibin = (p3PCA_Phi + 3.14159265358979323846) / ((2. * 3.14159265358979323846) / nphi);
       int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
       int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
-      superbin_vec.push_back(isuperbin);
-      pixelType_vec.push_back(pixtype);
-      isQuad_vec.push_back(isQuad);
+      in_superbin_vec_.push_back(isuperbin);
+      in_pixelType_vec_.push_back(pixtype);
+      in_isQuad_vec_.push_back(isQuad);
     }
   }
-
-  in_trkX_ = trkX;
-  in_trkY_ = trkY;
-  in_trkZ_ = trkZ;
-  in_hitId_ = hitId;
-  in_hitIdxs_ = hitIdxs;
-  in_hitIndices_vec0_ = hitIndices_vec0;
-  in_hitIndices_vec1_ = hitIndices_vec1;
-  in_hitIndices_vec2_ = hitIndices_vec2;
-  in_hitIndices_vec3_ = hitIndices_vec3;
-  in_deltaPhi_vec_ = deltaPhi_vec;
-  in_ptIn_vec_ = ptIn_vec;
-  in_ptErr_vec_ = ptErr_vec;
-  in_px_vec_ = px_vec;
-  in_py_vec_ = py_vec;
-  in_pz_vec_ = pz_vec;
-  in_eta_vec_ = eta_vec;
-  in_etaErr_vec_ = etaErr_vec;
-  in_phi_vec_ = phi_vec;
-  in_charge_vec_ = charge_vec;
-  in_seedIdx_vec_ = seedIdx_vec;
-  in_superbin_vec_ = superbin_vec;
-  in_pixelType_vec_ = pixelType_vec;
-  in_isQuad_vec_ = isQuad_vec;
 }
 
 void LST::getOutput(Event& event) {
-  std::vector<std::vector<unsigned int>> tc_hitIdxs;
-  std::vector<unsigned int> tc_len;
-  std::vector<int> tc_seedIdx;
-  std::vector<short> tc_trackCandidateType;
+  out_tc_hitIdxs_.clear();
+  out_tc_len_.clear();
+  out_tc_seedIdx_.clear();
+  out_tc_trackCandidateType_.clear();
 
   auto const hits = event.getHitsInCMSSW<HitsSoA>(false);  // sync on next line
   auto const& trackCandidates = event.getTrackCandidatesInCMSSW();
@@ -263,16 +245,11 @@ void LST::getOutput(Event& event) {
     short trackCandidateType = trackCandidates.trackCandidateType()[idx];
     std::vector<unsigned int> hit_idx = getHitIdxs(trackCandidateType, trackCandidates.hitIndices()[idx], hits.idxs());
 
-    tc_hitIdxs.push_back(hit_idx);
-    tc_len.push_back(hit_idx.size());
-    tc_seedIdx.push_back(trackCandidates.pixelSeedIndex()[idx]);
-    tc_trackCandidateType.push_back(trackCandidateType);
+    out_tc_hitIdxs_.push_back(hit_idx);
+    out_tc_len_.push_back(hit_idx.size());
+    out_tc_seedIdx_.push_back(trackCandidates.pixelSeedIndex()[idx]);
+    out_tc_trackCandidateType_.push_back(trackCandidateType);
   }
-
-  out_tc_hitIdxs_ = tc_hitIdxs;
-  out_tc_len_ = tc_len;
-  out_tc_seedIdx_ = tc_seedIdx;
-  out_tc_trackCandidateType_ = tc_trackCandidateType;
 }
 
 void LST::run(Queue& queue,

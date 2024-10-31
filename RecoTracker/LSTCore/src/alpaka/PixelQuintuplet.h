@@ -267,22 +267,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float f,
                                                             float radius) {
     /*
-        Given values of (g, f, radius) and a set of points (and its uncertainties) compute chi squared
-        */
+    Given values of (g, f, radius) and a set of points (and its uncertainties) compute chi squared
+    */
     float c = g * g + f * f - radius * radius;
     float chiSquared = 0.f;
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope =
-          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : 0.5f * float(M_PI));
+          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
       if (xs[i] > 0 and ys[i] > 0) {
-        angleM = 0.5f * float(M_PI) - absArctanSlope;
+        angleM = float(M_PI_2) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + 0.5f * float(M_PI);
+        angleM = absArctanSlope + float(M_PI_2);
       } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + 0.5f * float(M_PI));
+        angleM = -(absArctanSlope + float(M_PI_2));
       } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(0.5f * float(M_PI) - absArctanSlope);
+        angleM = -(float(M_PI_2) - absArctanSlope);
       } else {
         angleM = 0;
       }
@@ -311,13 +311,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                      unsigned int nPoints = 5,
                                                                      bool anchorHits = true) {
     /*
-        bool anchorHits required to deal with a weird edge case wherein
-        the hits ultimately used in the regression are anchor hits, but the
-        lower modules need not all be Pixel Modules (in case of PS). Similarly,
-        when we compute the chi squared for the non-anchor hits, the "partner module"
-        need not always be a PS strip module, but all non-anchor hits sit on strip
-        modules.
-        */
+    bool anchorHits required to deal with a weird edge case wherein
+    the hits ultimately used in the regression are anchor hits, but the
+    lower modules need not all be Pixel Modules (in case of PS). Similarly,
+    when we compute the chi squared for the non-anchor hits, the "partner module"
+    need not always be a PS strip module, but all non-anchor hits sit on strip
+    modules.
+    */
     ModuleType moduleType;
     short moduleSubdet, moduleSide;
     float inv1 = kWidthPS / kWidth2S;
@@ -359,10 +359,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         delta1[i] = inv1;
         isFlat[i] = false;
         /*
-                despite the type of the module layer of the lower module index,
-                all anchor hits are on the pixel side and all non-anchor hits are
-                on the strip side!
-                */
+        despite the type of the module layer of the lower module index,
+        all anchor hits are on the pixel side and all non-anchor hits are
+        on the strip side!
+        */
         if (anchorHits) {
           delta2[i] = inv2;
         } else {
@@ -396,8 +396,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 float* xs,
                                                                 float* ys) {
     /*
-        Compute circle parameters from 3 pixel hits, and then use them to compute the chi squared for the outer hits
-        */
+    Compute circle parameters from 3 pixel hits, and then use them to compute the chi squared for the outer hits
+    */
 
     float delta1[5], delta2[5], slopes[5];
     bool isFlat[5];
@@ -412,8 +412,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT5RPhiChiSquaredInwards(
       float g, float f, float r, float* xPix, float* yPix) {
     /*
-        Using the computed regression center and radius, compute the chi squared for the pixels
-        */
+    Using the computed regression center and radius, compute the chi squared for the pixels
+    */
 
     float chiSquared = 0;
     for (size_t i = 0; i < 2; i++) {

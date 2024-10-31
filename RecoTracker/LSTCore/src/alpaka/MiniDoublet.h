@@ -308,7 +308,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     angleA = alpaka::math::abs(acc, alpaka::math::atan(acc, rtp / zp));
     angleB =
         ((isEndcap)
-             ? float(M_PI) / 2.f
+             ? float(M_PI_2)
              : alpaka::math::atan(
                    acc,
                    drdz_));  // The tilt module on the positive z-axis has negative drdz slope in r-z plane and vice versa
@@ -323,7 +323,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     drprime = (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);
 
     // Compute arctan of the slope and take care of the slope = infinity case
-    absArctanSlope = ((slope != lst_INF) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI) / 2.f);
+    absArctanSlope = ((slope != lst_INF) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI_2));
 
     // Depending on which quadrant the pixel hit lies, we define the angleM by shifting them slightly differently
     if (xp > 0 and yp > 0) {
@@ -807,15 +807,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Create variables outside of the for loop.
-      int occupancy, category_number, eta_number;
-
       for (uint16_t i = globalThreadIdx[0]; i < modules.nLowerModules(); i += gridThreadExtent[0]) {
         short module_rings = modules.rings()[i];
         short module_layers = modules.layers()[i];
         short module_subdets = modules.subdets()[i];
         float module_eta = alpaka::math::abs(acc, modules.eta()[i]);
 
+        int category_number;
         if (module_layers <= 3 && module_subdets == 5)
           category_number = 0;
         else if (module_layers >= 4 && module_subdets == 5)
@@ -831,6 +829,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           category_number = -1;
 
+        int eta_number;
         if (module_eta < 0.75f)
           eta_number = 0;
         else if (module_eta < 1.5f)
@@ -842,6 +841,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           eta_number = -1;
 
+        int occupancy;
         if (category_number == 0 && eta_number == 0)
           occupancy = 49;
         else if (category_number == 0 && eta_number == 1)
