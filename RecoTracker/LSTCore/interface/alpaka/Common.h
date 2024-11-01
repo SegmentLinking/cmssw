@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_interface_alpaka_Common_h
 #define RecoTracker_LSTCore_interface_alpaka_Common_h
 
+#include <numbers>
+
 #include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
