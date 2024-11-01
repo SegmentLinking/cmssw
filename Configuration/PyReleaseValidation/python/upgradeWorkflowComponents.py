@@ -529,7 +529,7 @@ upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01Track
 )
 upgradeWFs['lstOnGPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
     '--procModifiers': 'trackingIters01,trackingLST',
-    '--accelerators' : 'gpu-nvidia'
+    '--accelerators' : 'gpu-*'
 }
 
 #DeepCore seeding for JetCore iteration workflow

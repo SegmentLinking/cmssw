@@ -17,6 +17,9 @@ namespace lst {
   // Named constants for pixelTypes
   enum PixelType : int8_t { kInvalid = -1, kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };
 
+  // Named types for LST objects
+  enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
+
 // If a compile time flag does not define PT_CUT, default to 0.8 (GeV)
 #ifndef PT_CUT
   constexpr float PT_CUT = 0.8f;

@@ -2,7 +2,7 @@
 <use name="boost_header"/>
 <use name="root"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
-<flags CXXFLAGS="-DT4FromT3 -DUSE_RZCHI2 -DUSE_T5_DNN -DPT_CUT=0.8 -DDUP_pLS -DDUP_T5 -DDUP_pT5 -DDUP_pT3 -DCrossclean_T5 -DCrossclean_pT3"/>
+<flags CXXFLAGS="-DUSE_RZCHI2 -DUSE_T5_DNN -DPT_CUT=0.8"/>
 <use name="RecoTracker/LSTCore" for="alpaka"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>

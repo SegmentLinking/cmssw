@@ -19,7 +19,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    unsigned int trackCandidateIndex,
                                                                    uint4 hitIndices,
                                                                    int pixelSeedIndex) {
-    cands.trackCandidateType()[trackCandidateIndex] = 8;  // type for pLS
+    cands.trackCandidateType()[trackCandidateIndex] = lst::LSTObjType::pLS;
     cands.directObjectIndices()[trackCandidateIndex] = trackletIndex;
     cands.pixelSeedIndex()[trackCandidateIndex] = pixelSeedIndex;
 
@@ -53,9 +53,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.objectIndices()[trackCandidateIndex][0] = innerTrackletIndex;
     cands.objectIndices()[trackCandidateIndex][1] = outerTrackletIndex;
 
-    size_t limits = trackCandidateType == 7
+    size_t limits = trackCandidateType == lst::LSTObjType::pT5
                         ? Params_pT5::kLayers
-                        : Params_pT3::kLayers;  // 7 means pT5, Params_pT3::kLayers = Params_T5::kLayers = 5
+                        : Params_pT3::kLayers;
 
     //send the starting pointer to the logicalLayer and hitIndices
     for (size_t i = 0; i < limits; i++) {
@@ -175,7 +175,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // Don't add duplicate T5s or T5s that are accounted in pT5s
           if (quintuplets.isDup()[quintupletIndex] or quintuplets.partOfPT5()[quintupletIndex])
             continue;
-#ifdef Crossclean_T5
           unsigned int loop_bound = pixelQuintuplets.nPixelQuintuplets() + pixelTriplets.nPixelTriplets();
           // Cross cleaning step
           float eta1 = __H2F(quintuplets.eta()[quintupletIndex]);
@@ -198,7 +197,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 1e-3f)
               quintuplets.isDup()[quintupletIndex] = true;
           }
-#endif
         }
       }
     }
@@ -236,7 +234,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              trackCandidateIndex += gridThreadExtent[1]) {
           short type = cands.trackCandidateType()[trackCandidateIndex];
           unsigned int innerTrackletIdx = cands.objectIndices()[trackCandidateIndex][0];
-          if (type == 4)  // T5
+          if (type == lst::LSTObjType::T5)
           {
             unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
             float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
@@ -248,7 +246,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 1e-3f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == 5)  // pT3
+          if (type == lst::LSTObjType::pT3)
           {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
@@ -265,7 +263,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 0.000001f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == 7)  // pT5
+          if (type == lst::LSTObjType::pT5)
           {
             unsigned int pLSIndex = innerTrackletIdx;
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
@@ -326,7 +324,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  __H2F(pixelTriplets.tripletRadius()[pixelTripletIndex]));
           unsigned int pT3PixelIndex = pixelTriplets.pixelSegmentIndices()[pixelTripletIndex];
           addTrackCandidateToMemory(cands,
-                                    5 /*track candidate type pT3=5*/,
+                                    lst::LSTObjType::pT3,
                                     pixelTripletIndex,
                                     pixelTripletIndex,
                                     pixelTriplets.logicalLayers()[pixelTripletIndex].data(),
@@ -379,7 +377,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           } else {
             alpaka::atomicAdd(acc, &cands.nTrackCandidatesT5(), 1u, alpaka::hierarchy::Threads{});
             addTrackCandidateToMemory(cands,
-                                      4 /*track candidate type T5=4*/,
+                                      lst::LSTObjType::T5,
                                       quintupletIndex,
                                       quintupletIndex,
                                       quintuplets.logicalLayers()[quintupletIndex].data(),
@@ -477,7 +475,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  __H2F(pixelQuintuplets.quintupletRadius()[pixelQuintupletIndex]));
           unsigned int pT5PixelIndex = pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex];
           addTrackCandidateToMemory(cands,
-                                    7 /*track candidate type pT5=7*/,
+                                    lst::LSTObjType::pT5,
                                     pT5PixelIndex,
                                     pixelQuintuplets.quintupletIndices()[pixelQuintupletIndex],
                                     pixelQuintuplets.logicalLayers()[pixelQuintupletIndex].data(),

@@ -26,26 +26,26 @@ namespace {
     std::vector<unsigned int> hits;
 
     unsigned int maxNHits = 0;
-    if (trackCandidateType == 7)
-      maxNHits = Params_pT5::kHits;  // pT5
-    else if (trackCandidateType == 5)
-      maxNHits = Params_pT3::kHits;  // pT3
-    else if (trackCandidateType == 4)
-      maxNHits = Params_T5::kHits;  // T5
-    else if (trackCandidateType == 8)
-      maxNHits = Params_pLS::kHits;  // pLS
+    if (trackCandidateType == lst::LSTObjType::pT5)
+      maxNHits = Params_pT5::kHits;
+    else if (trackCandidateType == lst::LSTObjType::pT3)
+      maxNHits = Params_pT3::kHits;
+    else if (trackCandidateType == lst::LSTObjType::T5)
+      maxNHits = Params_T5::kHits;
+    else if (trackCandidateType == lst::LSTObjType::pLS)
+      maxNHits = Params_pLS::kHits;
 
     for (unsigned int i = 0; i < maxNHits; i++) {
       unsigned int hitIdxDev = tcHitIndices[i];
       unsigned int hitIdx =
-          (trackCandidateType == 8)
+          (trackCandidateType == lst::LSTObjType::pLS)
               ? hitIdxDev
               : hitIndices[hitIdxDev];  // Hit indices are stored differently in the standalone for pLS.
 
       // For p objects, the 3rd and 4th hit maybe the same,
       // due to the way pLS hits are stored in the standalone.
       // This is because pixel seeds can be either triplets or quadruplets.
-      if (trackCandidateType != 4 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
+      if (trackCandidateType != lst::LSTObjType::T5 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
         continue;
 
       hits.push_back(hitIdx);

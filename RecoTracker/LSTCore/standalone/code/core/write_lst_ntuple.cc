@@ -713,22 +713,20 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
   auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[idx];
 
-  enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
-
   // Compute pt eta phi and hit indices that will be used to figure out whether the TC matched
   float pt, eta, phi;
   std::vector<unsigned int> hit_idx, hit_type;
   switch (type) {
-    case pT5:
+    case lst::LSTObjType::pT5:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT5(event, idx);
       break;
-    case pT3:
+    case lst::LSTObjType::pT3:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT3(event, idx);
       break;
-    case T5:
+    case lst::LSTObjType::T5:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parseT5(event, idx);
       break;
-    case pLS:
+    case lst::LSTObjType::pLS:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepLS(event, idx);
       break;
   }

@@ -416,16 +416,16 @@ std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int iTC) {
   short type = trackCandidates.trackCandidateType()[iTC];
   unsigned int objidx = trackCandidates.directObjectIndices()[iTC];
   switch (type) {
-    case kpT5:
+    case lst::LSTObjType::pT5:
       return getLSsFrompT5(event, objidx);
       break;
-    case kpT3:
+    case lst::LSTObjType::pT3:
       return getLSsFrompT3(event, objidx);
       break;
-    case kT5:
+    case lst::LSTObjType::T5:
       return getLSsFromT5(event, objidx);
       break;
-    case kpLS:
+    case lst::LSTObjType::pLS:
       return std::vector<unsigned int>();
       break;
   }
@@ -439,16 +439,16 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
   short type = trackCandidates.trackCandidateType()[iTC];
   unsigned int objidx = trackCandidates.directObjectIndices()[iTC];
   switch (type) {
-    case kpT5:
+    case lst::LSTObjType::pT5:
       return getHitIdxsAndHitTypesFrompT5(event, objidx);
       break;
-    case kpT3:
+    case lst::LSTObjType::pT3:
       return getHitIdxsAndHitTypesFrompT3(event, objidx);
       break;
-    case kT5:
+    case lst::LSTObjType::T5:
       return getHitIdxsAndHitTypesFromT5(event, objidx);
       break;
-    case kpLS:
+    case lst::LSTObjType::pLS:
       return getHitIdxsAndHitTypesFrompLS(event, objidx);
       break;
   }
