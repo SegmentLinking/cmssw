@@ -259,9 +259,9 @@ namespace lst {
               int nMatched = checkHitsT5(ix, jx, quintupletsInGPU);
               const int minNHitsForDup_T5 = 5;
               if (dR2 < 0.001f || nMatched >= minNHitsForDup_T5) {
-                if (score_rphisum1 > score_rphisum2) {
+                if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintupletsInGPU, ix, true);
-                } else if (score_rphisum1 < score_rphisum2) {
+                } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
                   rmQuintupletFromMemory(quintupletsInGPU, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintupletsInGPU, (ix < jx ? ix : jx), true);
