@@ -1491,45 +1491,34 @@ int LSTEvent::getNumberOfT5TrackCandidates() {
 }
 
 template <typename TSoA, typename TDev>
-typename TSoA::ConstView LSTEvent::getHits(bool sync)  //std::shared_ptr should take care of garbage collection
+typename TSoA::ConstView LSTEvent::getHits(bool inCMSSW, bool sync)
 {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return hitsDC_->const_view<TSoA>();
   } else {
     if (!hitsHC_) {
+      if (inCMSSW) {
+        auto hits_d = hitsDC_->view<HitsSoA>();
+        auto nHits = hits_d.metadata().size();
+        std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
+        hitsHC_.emplace(hits_sizes, queue_);
+        auto hits_h = hitsHC_->view<HitsSoA>();
+        auto idxs_h = cms::alpakatools::make_host_view(hits_h.idxs(), nHits);
+        auto idxs_d = cms::alpakatools::make_device_view(queue_, hits_d.idxs(), nHits);
+        alpaka::memcpy(queue_, idxs_h, idxs_d);
+      }
+      else {
       hitsHC_.emplace(cms::alpakatools::CopyToHost<PortableMultiCollection<TDev, HitsSoA, HitsRangesSoA>>::copyAsync(
           queue_, *hitsDC_));
+      }
       if (sync)
         alpaka::wait(queue_);  // host consumers expect filled data
     }
     return hitsHC_->const_view<TSoA>();
   }
 }
-template HitsConst LSTEvent::getHits<HitsSoA>(bool);
-template HitsRangesConst LSTEvent::getHits<HitsRangesSoA>(bool);
-
-template <typename TSoA, typename TDev>
-typename TSoA::ConstView LSTEvent::getHitsInCMSSW(bool sync) {
-  if constexpr (std::is_same_v<TDev, DevHost>) {
-    return hitsDC_->const_view<TSoA>();
-  } else {
-    if (!hitsHC_) {
-      auto hits_d = hitsDC_->view<HitsSoA>();
-      auto nHits = hits_d.metadata().size();
-      std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
-      hitsHC_.emplace(hits_sizes, queue_);
-      auto hits_h = hitsHC_->view<HitsSoA>();
-      auto idxs_h = cms::alpakatools::make_host_view(hits_h.idxs(), nHits);
-      auto idxs_d = cms::alpakatools::make_device_view(queue_, hits_d.idxs(), nHits);
-      alpaka::memcpy(queue_, idxs_h, idxs_d);
-      if (sync)
-        alpaka::wait(queue_);  // host consumers expect filled data
-    }
-    return hitsHC_->const_view<TSoA>();
-  }
-}
-template HitsConst LSTEvent::getHitsInCMSSW<HitsSoA>(bool);
-template HitsRangesConst LSTEvent::getHitsInCMSSW<HitsRangesSoA>(bool);
+template HitsConst LSTEvent::getHits<HitsSoA>(bool, bool);
+template HitsRangesConst LSTEvent::getHits<HitsRangesSoA>(bool, bool);
 
 template <typename TDev>
 ObjectRangesConst LSTEvent::getRanges(bool sync) {
@@ -1659,7 +1648,7 @@ PixelQuintupletsConst LSTEvent::getPixelQuintuplets(bool sync) {
 }
 template PixelQuintupletsConst LSTEvent::getPixelQuintuplets<>(bool);
 
-const TrackCandidatesConst& LSTEvent::getTrackCandidatesWithSelection(bool inCMSSW, bool sync) {
+const TrackCandidatesConst& LSTEvent::getTrackCandidates(bool inCMSSW, bool sync) {
   if (!trackCandidatesHC_) {
     // Get nTrackCanHost parameter to initialize host based instance
     auto nTrackCanHost_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);

@@ -182,9 +182,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // set to false may allow faster operation with concurrent calls of get*
     // HANDLE WITH CARE
     template <typename TSoA, typename TDev = Device>
-    typename TSoA::ConstView getHits(bool sync = true);
-    template <typename TSoA, typename TDev = Device>
-    typename TSoA::ConstView getHitsInCMSSW(bool sync = true);
+    typename TSoA::ConstView getHits(bool inCMSSW = false, bool sync = true);
     template <typename TDev = Device>
     ObjectRangesConst getRanges(bool sync = true);
     template <typename TSoA, typename TDev = Device>
@@ -199,13 +197,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     PixelTripletsConst getPixelTriplets(bool sync = true);
     template <typename TDev = Device>
     PixelQuintupletsConst getPixelQuintuplets(bool sync = true);
-    const TrackCandidatesConst& getTrackCandidatesWithSelection(bool inCMSSW, bool sync);
-    const TrackCandidatesConst& getTrackCandidates(bool sync = true) {
-      return getTrackCandidatesWithSelection(false, sync);
-    }
-    const TrackCandidatesConst& getTrackCandidatesInCMSSW(bool sync = true) {
-      return getTrackCandidatesWithSelection(true, sync);
-    }
+    const TrackCandidatesConst& getTrackCandidates(bool inCMSSW = false, bool sync = true);
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getModules(bool sync = true);
   };

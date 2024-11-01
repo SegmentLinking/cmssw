@@ -236,8 +236,8 @@ void LST::getOutput(LSTEvent& event) {
   out_tc_seedIdx_.clear();
   out_tc_trackCandidateType_.clear();
 
-  auto const hits = event.getHitsInCMSSW<HitsSoA>(false);  // sync on next line
-  auto const& trackCandidates = event.getTrackCandidatesInCMSSW();
+  auto const hits = event.getHits<HitsSoA>(/*inCMSSW*/true, /*sync*/false);  // sync on next line
+  auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/true, /*sync*/true);
 
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
 
