@@ -308,7 +308,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     angleA = alpaka::math::abs(acc, alpaka::math::atan(acc, rtp / zp));
     angleB =
         ((isEndcap)
-             ? kPi/2.f
+             ? kPi / 2.f
              : alpaka::math::atan(
                    acc,
                    drdz_));  // The tilt module on the positive z-axis has negative drdz slope in r-z plane and vice versa
@@ -323,7 +323,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     drprime = (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);
 
     // Compute arctan of the slope and take care of the slope = infinity case
-    absArctanSlope = ((slope != kVerticalModuleSlope) ? fabs(alpaka::math::atan(acc, slope)) : kPi/2.f);
+    absArctanSlope = ((slope != kVerticalModuleSlope) ? fabs(alpaka::math::atan(acc, slope)) : kPi / 2.f);
 
     // Depending on which quadrant the pixel hit lies, we define the angleM by shifting them slightly differently
     if (xp > 0 and yp > 0) {

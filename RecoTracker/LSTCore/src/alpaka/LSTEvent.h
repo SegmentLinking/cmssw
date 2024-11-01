@@ -96,7 +96,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           endcapGeometry_(*deviceESData->endcapGeometry),
           addObjects_(verbose) {}
     void initSync(bool verbose);  // synchronizes, for standalone usage
-    void resetEventSync();  // synchronizes, for standalone usage
+    void resetEventSync();        // synchronizes, for standalone usage
     void wait() const { alpaka::wait(queue_); }
 
     // Calls the appropriate hit function, then increments the counter

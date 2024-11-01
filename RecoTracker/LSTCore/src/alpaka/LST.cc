@@ -45,7 +45,8 @@ namespace {
       // For p objects, the 3rd and 4th hit maybe the same,
       // due to the way pLS hits are stored in the standalone.
       // This is because pixel seeds can be either triplets or quadruplets.
-      if (trackCandidateType != LSTObjType::T5 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
+      if (trackCandidateType != LSTObjType::T5 && hits.size() == 3 &&
+          hits.back() == hitIdx)  // Remove duplicate 4th hits.
         continue;
 
       hits.push_back(hitIdx);
@@ -236,8 +237,8 @@ void LST::getOutput(LSTEvent& event) {
   out_tc_seedIdx_.clear();
   out_tc_trackCandidateType_.clear();
 
-  auto const hits = event.getHits<HitsSoA>(/*inCMSSW*/true, /*sync*/false);  // sync on next line
-  auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/true, /*sync*/true);
+  auto const hits = event.getHits<HitsSoA>(/*inCMSSW*/ true, /*sync*/ false);  // sync on next line
+  auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/ true, /*sync*/ true);
 
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
 

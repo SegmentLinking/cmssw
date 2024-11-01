@@ -237,16 +237,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float chiSquared = 0.f;
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
-      absArctanSlope =
-          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : kPi/2.f);
+      absArctanSlope = ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
+                                                            : kPi / 2.f);
       if (xs[i] > 0 and ys[i] > 0) {
-        angleM = kPi/2.f - absArctanSlope;
+        angleM = kPi / 2.f - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + kPi/2.f;
+        angleM = absArctanSlope + kPi / 2.f;
       } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + kPi/2.f);
+        angleM = -(absArctanSlope + kPi / 2.f);
       } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(kPi/2.f - absArctanSlope);
+        angleM = -(kPi / 2.f - absArctanSlope);
       } else {
         angleM = 0;
       }
@@ -1101,7 +1101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float rt_InOut = rt_InUp;
 
-    if (alpaka::math::abs(acc, deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > kPi/2.f)
+    if (alpaka::math::abs(acc, deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > kPi / 2.f)
       return false;
 
     unsigned int pixelSegmentArrayIndex = innerSegmentIndex - ranges.segmentModuleIndices()[pixelModuleIndex];

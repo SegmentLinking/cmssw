@@ -53,9 +53,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.objectIndices()[trackCandidateIndex][0] = innerTrackletIndex;
     cands.objectIndices()[trackCandidateIndex][1] = outerTrackletIndex;
 
-    size_t limits = trackCandidateType == LSTObjType::pT5
-                        ? Params_pT5::kLayers
-                        : Params_pT3::kLayers;
+    size_t limits = trackCandidateType == LSTObjType::pT5 ? Params_pT5::kLayers : Params_pT3::kLayers;
 
     //send the starting pointer to the logicalLayer and hitIndices
     for (size_t i = 0; i < limits; i++) {
@@ -234,8 +232,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              trackCandidateIndex += gridThreadExtent[1]) {
           short type = cands.trackCandidateType()[trackCandidateIndex];
           unsigned int innerTrackletIdx = cands.objectIndices()[trackCandidateIndex][0];
-          if (type == LSTObjType::T5)
-          {
+          if (type == LSTObjType::T5) {
             unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
             float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
             float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
@@ -246,8 +243,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 1e-3f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == LSTObjType::pT3)
-          {
+          if (type == LSTObjType::pT3) {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
             if (npMatched > 0)
@@ -263,8 +259,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 0.000001f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == LSTObjType::pT5)
-          {
+          if (type == LSTObjType::pT5) {
             unsigned int pLSIndex = innerTrackletIdx;
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
             if (npMatched > 0) {
