@@ -36,20 +36,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   class LSTEvent {
   private:
     Queue& queue_;
-    bool addObjects_;
 
-    std::array<unsigned int, 6> n_hits_by_layer_barrel_;
-    std::array<unsigned int, 5> n_hits_by_layer_endcap_;
-    std::array<unsigned int, 6> n_minidoublets_by_layer_barrel_;
-    std::array<unsigned int, 5> n_minidoublets_by_layer_endcap_;
-    std::array<unsigned int, 6> n_segments_by_layer_barrel_;
-    std::array<unsigned int, 5> n_segments_by_layer_endcap_;
-    std::array<unsigned int, 6> n_triplets_by_layer_barrel_;
-    std::array<unsigned int, 5> n_triplets_by_layer_endcap_;
-    std::array<unsigned int, 6> n_trackCandidates_by_layer_barrel_;
-    std::array<unsigned int, 5> n_trackCandidates_by_layer_endcap_;
-    std::array<unsigned int, 6> n_quintuplets_by_layer_barrel_;
-    std::array<unsigned int, 5> n_quintuplets_by_layer_endcap_;
+    std::array<unsigned int, 6> n_hits_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_hits_by_layer_endcap_{};
+    std::array<unsigned int, 6> n_minidoublets_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_minidoublets_by_layer_endcap_{};
+    std::array<unsigned int, 6> n_segments_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_segments_by_layer_endcap_{};
+    std::array<unsigned int, 6> n_triplets_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_triplets_by_layer_endcap_{};
+    std::array<unsigned int, 6> n_trackCandidates_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_trackCandidates_by_layer_endcap_{};
+    std::array<unsigned int, 6> n_quintuplets_by_layer_barrel_{};
+    std::array<unsigned int, 5> n_quintuplets_by_layer_endcap_{};
     unsigned int nTotalSegments_;
 
     //Device stuff
@@ -75,8 +74,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<PixelTripletsHostCollection> pixelTripletsHC_;
     std::optional<PixelQuintupletsHostCollection> pixelQuintupletsHC_;
 
-    void initSync(bool verbose);
-
     const uint16_t nModules_;
     const uint16_t nLowerModules_;
     const unsigned int nPixels_;
@@ -84,6 +81,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ModulesDeviceCollection const& modules_;
     PixelMap const& pixelMapping_;
     EndcapGeometryDevDeviceCollection const& endcapGeometry_;
+    bool addObjects_;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
@@ -95,10 +93,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           nEndCapMap_(deviceESData->nEndCapMap),
           modules_(*deviceESData->modules),
           pixelMapping_(*deviceESData->pixelMapping),
-          endcapGeometry_(*deviceESData->endcapGeometry) {
-      initSync(verbose);
-    }
-    void resetEventSync();  // synchronizes
+          endcapGeometry_(*deviceESData->endcapGeometry),
+          addObjects_(verbose) {}
+    void initSync(bool verbose);  // synchronizes, for standalone usage
+    void resetEventSync();  // synchronizes, for standalone usage
     void wait() const { alpaka::wait(queue_); }
 
     // Calls the appropriate hit function, then increments the counter

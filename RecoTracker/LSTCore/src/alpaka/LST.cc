@@ -410,6 +410,4 @@ void LST::run(Queue& queue,
   }
 
   getOutput(event);
-
-  event.resetEventSync();
 }

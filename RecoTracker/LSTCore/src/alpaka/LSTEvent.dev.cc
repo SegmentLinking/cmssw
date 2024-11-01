@@ -19,7 +19,6 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
 void LSTEvent::initSync(bool verbose) {
   alpaka::wait(queue_);  // other calls can be asynchronous
-  addObjects_ = verbose;
 
   //reset the arrays
   for (int i = 0; i < 6; i++) {
