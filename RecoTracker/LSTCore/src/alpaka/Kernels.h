@@ -223,12 +223,19 @@ namespace lst {
             if (quintupletsInGPU.isDup[ix] & 1)
               continue;
 
+            bool isPT5_ix = quintupletsInGPU.partOfPT5[ix];
+
             for (unsigned int jx1 = 0; jx1 < nQuintuplets_lowmod2; jx1++) {
               unsigned int jx = quintupletModuleIndices_lowmod2 + jx1;
               if (ix == jx)
                 continue;
 
               if (quintupletsInGPU.isDup[jx] & 1)
+                continue;
+
+              bool isPT5_jx = quintupletsInGPU.partOfPT5[jx];
+
+              if (isPT5_ix && isPT5_jx)
                 continue;
 
               float eta1 = __H2F(quintupletsInGPU.eta[ix]);
