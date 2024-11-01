@@ -62,12 +62,12 @@ void lst::ModuleConnectionMap::add(std::string const& filename) {
     unsigned int detid;
     int number_of_connections;
     std::vector<unsigned int> connected_detids;
-    connected_detids.reserve(number_of_connections);
     unsigned int connected_detid;
 
     std::stringstream ss(line);
 
     ss >> detid >> number_of_connections;
+    connected_detids.reserve(number_of_connections);
 
     for (int ii = 0; ii < number_of_connections; ++ii) {
       ss >> connected_detid;

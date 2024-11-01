@@ -17,7 +17,7 @@ using Acc3D = ALPAKA_ACCELERATOR_NAMESPACE::Acc3D;
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
-void LSTEvent::initSync(bool verbose) {
+void LSTEvent::initSync() {
   alpaka::wait(queue_);  // other calls can be asynchronous
 
   //reset the arrays
