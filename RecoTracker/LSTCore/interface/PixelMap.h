@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace lst {
   struct PixelMap {

@@ -3,7 +3,7 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
@@ -621,7 +621,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
     unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
 
-    if (not(passRZConstraint(acc,
+    if (not passRZConstraint(acc,
                              modules,
                              mds,
                              innerInnerLowerModuleIndex,
@@ -629,9 +629,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                              outerOuterLowerModuleIndex,
                              firstMDIndex,
                              secondMDIndex,
-                             thirdMDIndex)))
+                             thirdMDIndex))
       return false;
-    if (not(passPointingConstraint(acc,
+    if (not passPointingConstraint(acc,
                                    modules,
                                    mds,
                                    segments,
@@ -647,7 +647,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    innerSegmentIndex,
                                    outerSegmentIndex,
                                    betaIn,
-                                   betaInCut)))
+                                   betaInCut))
       return false;
 
     float x1 = mds.anchorX()[firstMDIndex];
@@ -784,9 +784,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Create variables outside of the for loop.
-      int occupancy, category_number, eta_number;
-
       for (uint16_t i = globalThreadIdx[0]; i < modules.nLowerModules(); i += gridThreadExtent[0]) {
         if (segmentsOccupancy.nSegments()[i] == 0) {
           ranges.tripletModuleIndices()[i] = nTotalTriplets;
@@ -799,6 +796,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         short module_subdets = modules.subdets()[i];
         float module_eta = alpaka::math::abs(acc, modules.eta()[i]);
 
+        int category_number;
         if (module_layers <= 3 && module_subdets == 5)
           category_number = 0;
         else if (module_layers >= 4 && module_subdets == 5)
@@ -814,6 +812,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           category_number = -1;
 
+        int eta_number;
         if (module_eta < 0.75f)
           eta_number = 0;
         else if (module_eta < 1.5f)
@@ -825,6 +824,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         else
           eta_number = -1;
 
+        int occupancy;
         if (category_number == 0 && eta_number == 0)
           occupancy = 543;
         else if (category_number == 0 && eta_number == 1)

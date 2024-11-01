@@ -2,7 +2,7 @@
 
 #include <typeinfo>
 
-using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using namespace ::lst;
 
 //___________________________________________________________________________________________________________________________________________________________________________________________

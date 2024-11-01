@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_Constants_h
-#define RecoTracker_LSTCore_interface_Constants_h
+#ifndef RecoTracker_LSTCore_interface_Common_h
+#define RecoTracker_LSTCore_interface_Common_h
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "DataFormats/Common/interface/StdArray.h"
@@ -12,34 +12,7 @@
 #endif
 #endif
 
-#ifdef CACHE_ALLOC
-#include "HeterogeneousCore/AlpakaInterface/interface/CachedBufAlloc.h"
-#endif
-
 namespace lst {
-
-  // Buffer type for allocations where auto type can't be used.
-  template <typename TDev, typename TData>
-  using Buf = alpaka::Buf<TDev, TData, alpaka_common::Dim1D, alpaka_common::Idx>;
-
-  // Allocation wrapper function to make integration of the caching allocator easier and reduce code boilerplate.
-  template <typename T, typename TDev, typename TSize, typename TQueue>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<TDev, T> allocBufWrapper(TDev const& dev, TSize nElements, TQueue queue) {
-#ifdef CACHE_ALLOC
-    return cms::alpakatools::allocCachedBuf<T, alpaka_common::Idx>(
-        dev, queue, alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
-#else
-    return alpaka::allocBuf<T, alpaka_common::Idx>(dev,
-                                                   alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
-#endif
-  }
-
-  // Second allocation wrapper function when queue is not given. Reduces code boilerplate.
-  template <typename T, typename TDev, typename TSize>
-  ALPAKA_FN_HOST ALPAKA_FN_INLINE Buf<TDev, T> allocBufWrapper(TDev const& dev, TSize nElements) {
-    return alpaka::allocBuf<T, alpaka_common::Idx>(dev,
-                                                   alpaka_common::Vec1D(static_cast<alpaka_common::Idx>(nElements)));
-  }
 
   // Named constants for pixelTypes
   enum PixelType : int8_t { kInvalid = -1, kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };

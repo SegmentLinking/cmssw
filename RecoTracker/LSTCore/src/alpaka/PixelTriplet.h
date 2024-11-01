@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_PixelTriplet_h
 #define RecoTracker_LSTCore_src_alpaka_PixelTriplet_h
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
@@ -108,7 +108,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelTriplets.rPhiChiSquared()[pixelTripletIndex] = rPhiChiSquared;
     pixelTriplets.rPhiChiSquaredInwards()[pixelTripletIndex] = rPhiChiSquaredInwards;
     pixelTriplets.rzChiSquared()[pixelTripletIndex] = rzChiSquared;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTrackletDefaultAlgopT3(TAcc const& acc,
@@ -166,7 +166,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        fourthMDIndex);
     }
     return false;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT3RZChiSquaredCuts(ModulesConst modules,
                                                               uint16_t lowerModuleIndex1,
@@ -191,12 +191,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return rzChiSquared < 3.9263f;
     }
     /*
-        else if(layer1 == 7 and layer2 == 8 and layer3 == 14)
-        {   
-            // PS+PS+2S in endcap layers 1+2+3, which is not really feasible in the current geometry,
-            // without skipping barrel layers 1 and 2 (not allowed by algorithm logic).
-        }
-        */
+    else if(layer1 == 7 and layer2 == 8 and layer3 == 14)
+    {   
+        // PS+PS+2S in endcap layers 1+2+3, which is not really feasible in the current geometry,
+        // without skipping barrel layers 1 and 2 (not allowed by algorithm logic).
+    }
+    */
     else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       return rzChiSquared < 9.4377f;
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
@@ -217,7 +217,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //default - category not found!
     return true;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeChiSquaredpT3(TAcc const& acc,
@@ -238,15 +238,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope =
-          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : 0.5f * float(M_PI));
+          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
       if (xs[i] > 0 and ys[i] > 0) {
-        angleM = 0.5f * float(M_PI) - absArctanSlope;
+        angleM = float(M_PI_2) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + 0.5f * float(M_PI);
+        angleM = absArctanSlope + float(M_PI_2);
       } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + 0.5f * float(M_PI));
+        angleM = -(absArctanSlope + float(M_PI_2));
       } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(0.5f * float(M_PI) - absArctanSlope);
+        angleM = -(float(M_PI_2) - absArctanSlope);
       } else {
         angleM = 0;
       }
@@ -263,7 +263,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / sigma2;
     }
     return chiSquared;
-  };
+  }
 
   //TODO: merge this one and the pT5 function later into a single function
   template <typename TAcc>
@@ -275,7 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 float radius,
                                                                 float* xs,
                                                                 float* ys) {
-    float delta1[3]{}, delta2[3]{}, slopes[3];
+    float delta1[3]{}, delta2[3]{}, slopes[3]{};
     bool isFlat[3]{};
     float chiSquared = 0;
     float inv1 = kWidthPS / kWidth2S;
@@ -312,9 +312,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         isFlat[i] = false;
 
         /*
-                despite the type of the module layer of the lower module index, all anchor
-                hits are on the pixel side and all non-anchor hits are on the strip side!
-                */
+        despite the type of the module layer of the lower module index, all anchor
+        hits are on the pixel side and all non-anchor hits are on the strip side!
+        */
         delta2[i] = inv2;
       }
       //category 5 - endcap 2S
@@ -335,7 +335,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     chiSquared = computeChiSquaredpT3(acc, 3, xs, ys, delta1, delta2, slopes, isFlat, g, f, radius);
 
     return chiSquared;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT3RPhiChiSquaredInwards(
       float g, float f, float r, float* xPix, float* yPix) {
@@ -346,7 +346,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     chiSquared *= 0.5f;
     return chiSquared;
-  };
+  }
 
   //90pc threshold
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT3RPhiChiSquaredCuts(ModulesConst modules,
@@ -391,7 +391,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     return true;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT3RPhiChiSquaredInwardsCuts(ModulesConst modules,
                                                                        uint16_t lowerModuleIndex1,
@@ -447,14 +447,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     return true;
-  };
+  }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool checkIntervalOverlappT3(float firstMin,
                                                               float firstMax,
                                                               float secondMin,
                                                               float secondMax) {
     return ((firstMin <= secondMin) && (secondMin < firstMax)) || ((secondMin < firstMin) && (firstMin < secondMax));
-  };
+  }
 
   /*bounds for high Pt taken from : http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_efficiency/efficiencies/new_efficiencies/efficiencies_20210513_T5_recovering_high_Pt_efficiencies/highE_radius_matching/highE_bounds.txt */
   template <typename TAcc>
@@ -479,7 +479,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         alpaka::math::min(acc, (1 - pixelInvRadiusErrorBound) / pixelRadius, 1.f / (pixelRadius + pixelRadiusError));
 
     return checkIntervalOverlappT3(tripletRadiusInvMin, tripletRadiusInvMax, pixelRadiusInvMin, pixelRadiusInvMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRadiusCriterionBBE(TAcc const& acc,
@@ -503,7 +503,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         alpaka::math::min(acc, (1 - pixelInvRadiusErrorBound) / pixelRadius, 1.f / (pixelRadius + pixelRadiusError));
 
     return checkIntervalOverlappT3(tripletRadiusInvMin, tripletRadiusInvMax, pixelRadiusInvMin, pixelRadiusInvMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRadiusCriterionBEE(TAcc const& acc,
@@ -529,7 +529,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelRadiusInvMin = alpaka::math::max(acc, pixelRadiusInvMin, 0.0f);
 
     return checkIntervalOverlappT3(tripletRadiusInvMin, tripletRadiusInvMax, pixelRadiusInvMin, pixelRadiusInvMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRadiusCriterionEEE(TAcc const& acc,
@@ -555,7 +555,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelRadiusInvMin = alpaka::math::max(acc, 0.0f, pixelRadiusInvMin);
 
     return checkIntervalOverlappT3(tripletRadiusInvMin, tripletRadiusInvMax, pixelRadiusInvMin, pixelRadiusInvMax);
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passRadiusCriterion(TAcc const& acc,
@@ -575,7 +575,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     } else {
       return passRadiusCriterionBBB(acc, pixelRadius, pixelRadiusError, tripletRadius);
     }
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT3RZChiSquared(TAcc const& acc,
@@ -664,7 +664,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     RMSE = alpaka::math::sqrt(acc, 0.2f * RMSE);  // Divided by the degree of freedom 5.
 
     return RMSE;
-  };
+  }
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTripletDefaultAlgo(TAcc const& acc,
@@ -819,7 +819,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     centerX = 0;
     centerY = 0;
     return true;
-  };
+  }
 
   struct CreatePixelTripletsFromMap {
     template <typename TAcc>
@@ -1101,7 +1101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float rt_InOut = rt_InUp;
 
-    if (alpaka::math::abs(acc, deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > 0.5f * float(M_PI))
+    if (alpaka::math::abs(acc, deltaPhi(acc, x_InUp, y_InUp, x_OutLo, y_OutLo)) > float(M_PI_2))
       return false;
 
     unsigned int pixelSegmentArrayIndex = innerSegmentIndex - ranges.segmentModuleIndices()[pixelModuleIndex];

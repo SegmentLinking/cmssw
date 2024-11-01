@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_interface_alpaka_LST_h
 #define RecoTracker_LSTCore_interface_alpaka_LST_h
 
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTESData.h"
 
 #include <cstdlib>
@@ -9,7 +9,7 @@
 #include <alpaka/alpaka.hpp>
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
-  class Event;
+  class LSTEvent;
 
   class LST {
   public:
@@ -65,7 +65,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                       std::vector<float> const& ph2_y,
                       std::vector<float> const& ph2_z);
 
-    void getOutput(Event& event);
+    void getOutput(LSTEvent& event);
 
     // Input and output vectors
     std::vector<float> in_trkX_;

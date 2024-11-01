@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_src_alpaka_Event_h
-#define RecoTracker_LSTCore_src_alpaka_Event_h
+#ifndef RecoTracker_LSTCore_src_alpaka_LSTEvent_h
+#define RecoTracker_LSTCore_src_alpaka_LSTEvent_h
 
 #include <optional>
 
@@ -13,7 +13,7 @@
 #include "RecoTracker/LSTCore/interface/TripletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
-#include "RecoTracker/LSTCore/interface/alpaka/Constants.h"
+#include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 #include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelQuintupletsDeviceCollection.h"
@@ -33,10 +33,9 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
-  class Event {
+  class LSTEvent {
   private:
     Queue& queue_;
-    Device devAcc_;
     bool addObjects_;
 
     std::array<unsigned int, 6> n_hits_by_layer_barrel_;
@@ -88,9 +87,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
-    Event(bool verbose, Queue& q, const LSTESData<Device>* deviceESData)
+    LSTEvent(bool verbose, Queue& q, const LSTESData<Device>* deviceESData)
         : queue_(q),
-          devAcc_(alpaka::getDev(q)),
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),

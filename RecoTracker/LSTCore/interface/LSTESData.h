@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_interface_LSTESData_h
 #define RecoTracker_LSTCore_interface_LSTESData_h
 
-#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometryDevHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
@@ -21,6 +21,7 @@ namespace lst {
     unsigned int nEndCapMap;
     std::unique_ptr<const PortableMultiCollection<TDev, ModulesSoA, ModulesPixelSoA>> modules;
     std::unique_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometry;
+    // Host-side object that is shared between the LSTESData<TDev> objects for different devices
     std::shared_ptr<const PixelMap> pixelMapping;
 
     LSTESData(uint16_t const& nModulesIn,

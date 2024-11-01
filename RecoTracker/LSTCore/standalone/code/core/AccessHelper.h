@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <tuple>
-#include "Event.h"
+#include "LSTEvent.h"
 
-using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::Event;
+using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
 enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8 };
 

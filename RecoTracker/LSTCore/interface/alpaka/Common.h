@@ -1,7 +1,7 @@
-#ifndef RecoTracker_LSTCore_interface_alpaka_Constants_h
-#define RecoTracker_LSTCore_interface_alpaka_Constants_h
+#ifndef RecoTracker_LSTCore_interface_alpaka_Common_h
+#define RecoTracker_LSTCore_interface_alpaka_Common_h
 
-#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 

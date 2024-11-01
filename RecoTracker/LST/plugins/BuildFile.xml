@@ -35,7 +35,6 @@
   <use name="RecoTracker/LST"/>
   <use name="RecoTracker/LSTCore"/>
   <use name="RecoTracker/Record"/>
-  <flags CXXFLAGS="-DLST_IS_CMSSW_PACKAGE"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
 </library>

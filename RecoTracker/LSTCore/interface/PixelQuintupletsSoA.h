@@ -5,7 +5,7 @@
 #include "DataFormats/Common/interface/StdArray.h"
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 
-#include "RecoTracker/LSTCore/interface/Constants.h"
+#include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace lst {
   GENERATE_SOA_LAYOUT(PixelQuintupletsSoALayout,
