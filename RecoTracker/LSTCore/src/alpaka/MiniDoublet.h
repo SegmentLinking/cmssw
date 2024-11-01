@@ -323,7 +323,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     drprime = (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);
 
     // Compute arctan of the slope and take care of the slope = infinity case
-    absArctanSlope = ((slope != lst_INF) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI_2));
+    absArctanSlope = ((slope != kVerticalModuleSlope) ? fabs(alpaka::math::atan(acc, slope)) : float(M_PI_2));
 
     // Depending on which quadrant the pixel hit lies, we define the angleM by shifting them slightly differently
     if (xp > 0 and yp > 0) {
@@ -347,7 +347,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Compute the new strip hit position (if the slope value is in special condition take care of the exceptions)
     if (slope ==
-        lst_INF)  // Designated for tilted module when the slope is exactly infinity (module lying along y-axis)
+        kVerticalModuleSlope)  // Designated for tilted module when the slope is infinity (module lying along y-axis)
     {
       xn = xa;  // New x point is simply where the anchor is
       yn = yo;  // No shift in y

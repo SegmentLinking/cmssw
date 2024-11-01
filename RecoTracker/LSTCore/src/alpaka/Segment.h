@@ -265,7 +265,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  mds.anchorY()[innerMDIndex] + circleRadius * alpaka::math::cos(acc, circlePhi)};
 
     //check which of the circles can accommodate r3LH better (we won't get perfect agreement)
-    float bestChiSquared = lst_INF;
+    float bestChiSquared = kVerticalModuleSlope;
     float chiSquared;
     size_t bestIndex;
     for (size_t i = 0; i < 2; i++) {

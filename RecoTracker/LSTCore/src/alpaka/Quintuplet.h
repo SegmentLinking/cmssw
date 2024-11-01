@@ -635,7 +635,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //brute force
     float candidateRadius;
     float g, f;
-    minimumRadius = lst_INF;
+    minimumRadius = kVerticalModuleSlope;
     maximumRadius = 0.f;
     for (size_t i = 0; i < 3; i++) {
       float x1 = x1Vec[i];
@@ -988,7 +988,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if the module is tilted or endcap, we need to use the slopes properly!
 
       absArctanSlope =
-          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
+          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
 
       if (xs[i] > 0 and ys[i] > 0) {
         angleM = float(M_PI_2) - absArctanSlope;
@@ -1071,7 +1071,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope =
-          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
+          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
       if (xs[i] > 0 and ys[i] > 0) {
         angleM = float(M_PI_2) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
@@ -2171,7 +2171,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     g = triplets.centerX()[innerTripletIndex];
     f = triplets.centerY()[innerTripletIndex];
 
-#ifdef USE_RZCHI2
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
 
     if (not passT5RZConstraint(acc,
@@ -2194,9 +2193,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                f,
                                tightCutFlag))
       return false;
-#else
-    rzChiSquared = -1;
-#endif
+
     if (innerRadius < 0.95f * ptCut / (2.f * k2Rinv1GeVf))
       return false;
 
@@ -2278,7 +2275,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     sigmas2,
                                                     chiSquared);
 
-#ifdef USE_T5_DNN
     unsigned int mdIndices[] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
     float inference = t5dnn::runInference(acc,
                                           modules,
@@ -2297,21 +2293,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     tightCutFlag = tightCutFlag and (inference > t5dnn::kLSTWp2);  // T5-in-TC cut
     if (inference <= t5dnn::kLSTWp2)                               // T5-building cut
       return false;
-#endif
-
-#ifdef USE_RPHICHI2
-    // extra chi squared cuts!
-    if (regressionRadius < 5.0f / (2.f * k2Rinv1GeVf)) {
-      if (not passChiSquaredConstraint(modules,
-                                       lowerModuleIndex1,
-                                       lowerModuleIndex2,
-                                       lowerModuleIndex3,
-                                       lowerModuleIndex4,
-                                       lowerModuleIndex5,
-                                       chiSquared))
-        return false;
-    }
-#endif
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!

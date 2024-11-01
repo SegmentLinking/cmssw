@@ -19,7 +19,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    unsigned int trackCandidateIndex,
                                                                    uint4 hitIndices,
                                                                    int pixelSeedIndex) {
-    cands.trackCandidateType()[trackCandidateIndex] = lst::LSTObjType::pLS;
+    cands.trackCandidateType()[trackCandidateIndex] = LSTObjType::pLS;
     cands.directObjectIndices()[trackCandidateIndex] = trackletIndex;
     cands.pixelSeedIndex()[trackCandidateIndex] = pixelSeedIndex;
 
@@ -53,7 +53,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.objectIndices()[trackCandidateIndex][0] = innerTrackletIndex;
     cands.objectIndices()[trackCandidateIndex][1] = outerTrackletIndex;
 
-    size_t limits = trackCandidateType == lst::LSTObjType::pT5
+    size_t limits = trackCandidateType == LSTObjType::pT5
                         ? Params_pT5::kLayers
                         : Params_pT3::kLayers;
 
@@ -234,7 +234,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              trackCandidateIndex += gridThreadExtent[1]) {
           short type = cands.trackCandidateType()[trackCandidateIndex];
           unsigned int innerTrackletIdx = cands.objectIndices()[trackCandidateIndex][0];
-          if (type == lst::LSTObjType::T5)
+          if (type == LSTObjType::T5)
           {
             unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
             float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
@@ -246,7 +246,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 1e-3f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == lst::LSTObjType::pT3)
+          if (type == LSTObjType::pT3)
           {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
@@ -263,7 +263,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 0.000001f)
               segmentsPixel.isDup()[pixelArrayIndex] = true;
           }
-          if (type == lst::LSTObjType::pT5)
+          if (type == LSTObjType::pT5)
           {
             unsigned int pLSIndex = innerTrackletIdx;
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hits);
@@ -324,7 +324,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  __H2F(pixelTriplets.tripletRadius()[pixelTripletIndex]));
           unsigned int pT3PixelIndex = pixelTriplets.pixelSegmentIndices()[pixelTripletIndex];
           addTrackCandidateToMemory(cands,
-                                    lst::LSTObjType::pT3,
+                                    LSTObjType::pT3,
                                     pixelTripletIndex,
                                     pixelTripletIndex,
                                     pixelTriplets.logicalLayers()[pixelTripletIndex].data(),
@@ -377,7 +377,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           } else {
             alpaka::atomicAdd(acc, &cands.nTrackCandidatesT5(), 1u, alpaka::hierarchy::Threads{});
             addTrackCandidateToMemory(cands,
-                                      lst::LSTObjType::T5,
+                                      LSTObjType::T5,
                                       quintupletIndex,
                                       quintupletIndex,
                                       quintuplets.logicalLayers()[quintupletIndex].data(),
@@ -475,7 +475,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  __H2F(pixelQuintuplets.quintupletRadius()[pixelQuintupletIndex]));
           unsigned int pT5PixelIndex = pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex];
           addTrackCandidateToMemory(cands,
-                                    lst::LSTObjType::pT5,
+                                    LSTObjType::pT5,
                                     pT5PixelIndex,
                                     pixelQuintuplets.quintupletIndices()[pixelQuintupletIndex],
                                     pixelQuintuplets.logicalLayers()[pixelQuintupletIndex].data(),

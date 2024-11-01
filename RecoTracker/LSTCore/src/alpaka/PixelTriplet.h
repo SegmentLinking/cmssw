@@ -238,7 +238,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope =
-          ((slopes[i] != lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
+          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
       if (xs[i] > 0 and ys[i] > 0) {
         angleM = float(M_PI_2) - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
