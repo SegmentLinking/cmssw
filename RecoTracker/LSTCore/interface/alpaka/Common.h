@@ -34,6 +34,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // expecting a reference (T const&) in the arguments. Hence,
   // ALPAKA_STATIC_ACC_MEM_GLOBAL needs to be used in addition to constexpr.
 
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPi = std::numbers::pi_v<float>;
   // 15 MeV constant from the approximate Bethe-Bloch formula
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMulsInGeV = 0.015;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniMulsPtScaleBarrel[6] = {

@@ -988,16 +988,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if the module is tilted or endcap, we need to use the slopes properly!
 
       absArctanSlope =
-          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
+          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : kPi/2.f);
 
       if (xs[i] > 0 and ys[i] > 0) {
-        angleM = float(M_PI_2) - absArctanSlope;
+        angleM = kPi/2.f - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + float(M_PI_2);
+        angleM = absArctanSlope + kPi/2.f;
       } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + float(M_PI_2));
+        angleM = -(absArctanSlope + kPi/2.f);
       } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(float(M_PI_2) - absArctanSlope);
+        angleM = -(kPi/2.f - absArctanSlope);
       } else {
         angleM = 0;
       }
@@ -1071,15 +1071,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float absArctanSlope, angleM, xPrime, yPrime, sigma2;
     for (size_t i = 0; i < nPoints; i++) {
       absArctanSlope =
-          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : float(M_PI_2));
+          ((slopes[i] != kVerticalModuleSlope) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i])) : kPi/2.f);
       if (xs[i] > 0 and ys[i] > 0) {
-        angleM = float(M_PI_2) - absArctanSlope;
+        angleM = kPi/2.f - absArctanSlope;
       } else if (xs[i] < 0 and ys[i] > 0) {
-        angleM = absArctanSlope + float(M_PI_2);
+        angleM = absArctanSlope + kPi/2.f;
       } else if (xs[i] < 0 and ys[i] < 0) {
-        angleM = -(absArctanSlope + float(M_PI_2));
+        angleM = -(absArctanSlope + kPi/2.f);
       } else if (xs[i] > 0 and ys[i] < 0) {
-        angleM = -(float(M_PI_2) - absArctanSlope);
+        angleM = -(kPi/2.f - absArctanSlope);
       } else {
         angleM = 0;
       }

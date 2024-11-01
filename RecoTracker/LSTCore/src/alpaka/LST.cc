@@ -220,7 +220,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
       float nphi = 72.;
       float nz = 25.;
       int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
-      int phibin = (p3PCA_Phi + 3.14159265358979323846) / ((2. * 3.14159265358979323846) / nphi);
+      int phibin = (p3PCA_Phi + kPi) / ((2. * kPi) / nphi);
       int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
       int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
       in_superbin_vec_.push_back(isuperbin);
