@@ -161,7 +161,7 @@ fi
 
 PTCUTOPT="PTCUTFLAG=-DPT_CUT=${PTCUTVALUE}"
 
-if [ -z "${MAXMAKETHREADS}" ];
+if [ -z "${MAXMAKETHREADS}" ]; then
     MAXMAKETHREADS=32
 fi
 
