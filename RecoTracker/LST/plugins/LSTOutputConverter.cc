@@ -3,7 +3,7 @@
 #include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
 #include "DataFormats/TrackReco/interface/SeedStopInfo.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
-#include "FWCore/Framework/interface/global/EDProducer.h"
+#include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -25,7 +25,7 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
-class LSTOutputConverter : public edm::global::EDProducer<> {
+class LSTOutputConverter : public edm::stream::EDProducer<> {
 public:
   explicit LSTOutputConverter(edm::ParameterSet const& iConfig);
   ~LSTOutputConverter() override = default;
@@ -33,7 +33,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
-  void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
+  void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
 
   const edm::EDGetTokenT<LSTOutput> lstOutputToken_;
   const edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
@@ -110,7 +110,7 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
   descriptions.addWithDefaultLabel(desc);
 }
 
-void LSTOutputConverter::produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const {
+void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Setup
   auto const& lstOutput = iEvent.get(lstOutputToken_);
   auto const& phase2OTRecHits = iEvent.get(lstPhase2OTHitsInputToken_);

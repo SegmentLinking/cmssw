@@ -26,26 +26,27 @@ namespace {
     std::vector<unsigned int> hits;
 
     unsigned int maxNHits = 0;
-    if (trackCandidateType == 7)
-      maxNHits = Params_pT5::kHits;  // pT5
-    else if (trackCandidateType == 5)
-      maxNHits = Params_pT3::kHits;  // pT3
-    else if (trackCandidateType == 4)
-      maxNHits = Params_T5::kHits;  // T5
-    else if (trackCandidateType == 8)
-      maxNHits = Params_pLS::kHits;  // pLS
+    if (trackCandidateType == LSTObjType::pT5)
+      maxNHits = Params_pT5::kHits;
+    else if (trackCandidateType == LSTObjType::pT3)
+      maxNHits = Params_pT3::kHits;
+    else if (trackCandidateType == LSTObjType::T5)
+      maxNHits = Params_T5::kHits;
+    else if (trackCandidateType == LSTObjType::pLS)
+      maxNHits = Params_pLS::kHits;
 
     for (unsigned int i = 0; i < maxNHits; i++) {
       unsigned int hitIdxDev = tcHitIndices[i];
       unsigned int hitIdx =
-          (trackCandidateType == 8)
+          (trackCandidateType == LSTObjType::pLS)
               ? hitIdxDev
               : hitIndices[hitIdxDev];  // Hit indices are stored differently in the standalone for pLS.
 
       // For p objects, the 3rd and 4th hit maybe the same,
       // due to the way pLS hits are stored in the standalone.
       // This is because pixel seeds can be either triplets or quadruplets.
-      if (trackCandidateType != 4 && hits.size() == 3 && hits.back() == hitIdx)  // Remove duplicate 4th hits.
+      if (trackCandidateType != LSTObjType::T5 && hits.size() == 3 &&
+          hits.back() == hitIdx)  // Remove duplicate 4th hits.
         continue;
 
       hits.push_back(hitIdx);
@@ -220,7 +221,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
       float nphi = 72.;
       float nz = 25.;
       int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
-      int phibin = (p3PCA_Phi + 3.14159265358979323846) / ((2. * 3.14159265358979323846) / nphi);
+      int phibin = (p3PCA_Phi + kPi) / ((2. * kPi) / nphi);
       int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
       int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
       in_superbin_vec_.push_back(isuperbin);
@@ -236,8 +237,8 @@ void LST::getOutput(LSTEvent& event) {
   out_tc_seedIdx_.clear();
   out_tc_trackCandidateType_.clear();
 
-  auto const hits = event.getHitsInCMSSW<HitsSoA>(false);  // sync on next line
-  auto const& trackCandidates = event.getTrackCandidatesInCMSSW();
+  auto const hits = event.getHits<HitsSoA>(/*inCMSSW*/ true, /*sync*/ false);  // sync on next line
+  auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/ true, /*sync*/ true);
 
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
 
@@ -410,6 +411,4 @@ void LST::run(Queue& queue,
   }
 
   getOutput(event);
-
-  event.resetEventSync();
 }

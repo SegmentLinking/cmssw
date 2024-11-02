@@ -17,17 +17,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float phi_mpi_pi(TAcc const& acc, float x) {
-    if (alpaka::math::abs(acc, x) <= float(M_PI))
+    if (alpaka::math::abs(acc, x) <= kPi)
       return x;
 
-    constexpr float o2pi = 1.f / (2.f * float(M_PI));
+    constexpr float o2pi = 1.f / (2.f * kPi);
     float n = alpaka::math::round(acc, x * o2pi);
-    return x - n * float(2.f * float(M_PI));
+    return x - n * float(2.f * kPi);
   }
 
   template <typename TAcc>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float phi(TAcc const& acc, float x, float y) {
-    return phi_mpi_pi(acc, float(M_PI) + alpaka::math::atan2(acc, -y, -x));
+    return phi_mpi_pi(acc, kPi + alpaka::math::atan2(acc, -y, -x));
   }
 
   template <typename TAcc>
@@ -47,10 +47,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dPhi = phi1 - phi2;
 
     // Normalize dPhi to be between -pi and pi
-    if (dPhi > float(M_PI)) {
-      dPhi -= 2 * float(M_PI);
-    } else if (dPhi < -float(M_PI)) {
-      dPhi += 2 * float(M_PI);
+    if (dPhi > kPi) {
+      dPhi -= 2 * kPi;
+    } else if (dPhi < -kPi) {
+      dPhi += 2 * kPi;
     }
 
     return dPhi;

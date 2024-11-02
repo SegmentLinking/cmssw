@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_interface_alpaka_Common_h
 #define RecoTracker_LSTCore_interface_alpaka_Common_h
 
+#include <numbers>
+
 #include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -34,6 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // expecting a reference (T const&) in the arguments. Hence,
   // ALPAKA_STATIC_ACC_MEM_GLOBAL needs to be used in addition to constexpr.
 
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPi = std::numbers::pi_v<float>;
   // 15 MeV constant from the approximate Bethe-Bloch formula
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMulsInGeV = 0.015;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniMulsPtScaleBarrel[6] = {
@@ -54,8 +57,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWidth2S = 0.009;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWidthPS = 0.01;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPt_betaMax = 7.0;
-  // Since C++ can't represent infinity, lst_INF = 123456789 was used to represent infinity in the data table
-  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float lst_INF = 123456789.0;
+  // To be updated with std::numeric_limits<float>::infinity() in the code and data files
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kVerticalModuleSlope = 123456789.0;
 
   namespace t5dnn {
 

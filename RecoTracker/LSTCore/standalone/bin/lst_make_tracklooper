@@ -42,7 +42,6 @@ while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
     m) MAKECLEANBINARIES=true;;
     d) MAKECUTVALUES=true;;
     p) PRIMITIVE=true;;
-    N) DONTUSENN=true;;
     G) CUDABACKEND=true;;
     C) CPUBACKEND=true;;
     R) ROCMBACKEND=true;;
@@ -60,7 +59,6 @@ if [ -z ${SHOWLOG} ]; then SHOWLOG=false; fi
 if [ -z ${MAKECLEANBINARIES} ]; then MAKECLEANBINARIES=false; fi
 if [ -z ${MAKECUTVALUES} ]; then MAKECUTVALUES=false; fi
 if [ -z ${PRIMITIVE} ]; then PRIMITIVE=false; fi
-if [ -z ${DONTUSENN} ]; then DONTUSENN=false; fi
 if [ -z ${CPUBACKEND} ]; then CPUBACKEND=false; fi
 if [ -z ${CUDABACKEND} ]; then CUDABACKEND=false; fi
 if [ -z ${ROCMBACKEND} ]; then ROCMBACKEND=false; fi
@@ -99,7 +97,6 @@ echo "  SHOWLOG           : ${SHOWLOG}"                       | tee -a ${LOG}
 echo "  MAKECLEANBINARIES : ${MAKECLEANBINARIES}"             | tee -a ${LOG}
 echo "  MAKECUTVALUES     : ${MAKECUTVALUES}"                 | tee -a ${LOG}
 echo "  PRIMITIVE         : ${PRIMITIVE}"                     | tee -a ${LOG}
-echo "  DONTUSENN         : ${DONTUSENN}"                     | tee -a ${LOG}
 echo "  CPUBACKEND        : ${CPUBACKEND}"                    | tee -a ${LOG}
 echo "  CUDABACKEND       : ${CUDABACKEND}"                   | tee -a ${LOG}
 echo "  ROCMBACKEND       : ${ROCMBACKEND}"                   | tee -a ${LOG}
@@ -137,13 +134,6 @@ if $PRIMITIVE; then
     echo "debug : MAKETARGET=${MAKETARGET}"
 fi
 
-T5CUTOPT=
-if $DONTUSENN; then
-    T5CUTOPT="T5RZCHI2FLAG=-DUSE_RZCHI2 T5RPHICHI2FLAG=-DUSE_RPHICHI2"
-else
-    T5CUTOPT="T5RZCHI2FLAG=-DUSE_RZCHI2 T5DNNFLAG=-DUSE_T5_DNN"
-fi
-
 BACKENDOPT="BACKEND="
 EXES=
 if [ "${ALLBACKENDS}" == true ]; then
@@ -171,6 +161,10 @@ fi
 
 PTCUTOPT="PTCUTFLAG=-DPT_CUT=${PTCUTVALUE}"
 
+if [ -z "${MAXMAKETHREADS}" ]; then
+    MAXMAKETHREADS=32
+fi
+
 ###
 ###
 ### Making Line Segment Tracking Library
@@ -183,9 +177,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${T5CUTOPT} ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then
@@ -220,9 +214,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j 2>&1 | tee -a ${LOG}
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j ${MAXMAKETHREADS} 2>&1 | tee -a ${LOG}
 else
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j >> ${LOG} 2>&1
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j ${MAXMAKETHREADS} >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/lst_cpu ]; then
