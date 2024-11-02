@@ -161,6 +161,10 @@ fi
 
 PTCUTOPT="PTCUTFLAG=-DPT_CUT=${PTCUTVALUE}"
 
+if [ -z "${MAXMAKETHREADS}" ];
+    MAXMAKETHREADS=32
+fi
+
 ###
 ###
 ### Making Line Segment Tracking Library
@@ -173,9 +177,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j 32 ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${PTCUTOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then
@@ -210,9 +214,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j 2>&1 | tee -a ${LOG}
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j ${MAXMAKETHREADS} 2>&1 | tee -a ${LOG}
 else
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j >> ${LOG} 2>&1
+    make EXES="${EXES}" ${TRACKLOOPERTARGET} ${PTCUTOPT} -j ${MAXMAKETHREADS} >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/lst_cpu ]; then
