@@ -220,15 +220,22 @@ namespace lst {
 
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;
-            if (quintupletsInGPU.partOfPT5[ix] || (quintupletsInGPU.isDup[ix] & 1))
+            if (quintupletsInGPU.isDup[ix] & 1)
               continue;
+
+            bool isPT5_ix = quintupletsInGPU.partOfPT5[ix];
 
             for (unsigned int jx1 = 0; jx1 < nQuintuplets_lowmod2; jx1++) {
               unsigned int jx = quintupletModuleIndices_lowmod2 + jx1;
               if (ix == jx)
                 continue;
 
-              if (quintupletsInGPU.partOfPT5[jx] || (quintupletsInGPU.isDup[jx] & 1))
+              if (quintupletsInGPU.isDup[jx] & 1)
+                continue;
+
+              bool isPT5_jx = quintupletsInGPU.partOfPT5[jx];
+
+              if (isPT5_ix && isPT5_jx)
                 continue;
 
               float eta1 = __H2F(quintupletsInGPU.eta[ix]);
@@ -252,9 +259,9 @@ namespace lst {
               int nMatched = checkHitsT5(ix, jx, quintupletsInGPU);
               const int minNHitsForDup_T5 = 5;
               if (dR2 < 0.001f || nMatched >= minNHitsForDup_T5) {
-                if (score_rphisum1 > score_rphisum2) {
+                if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintupletsInGPU, ix, true);
-                } else if (score_rphisum1 < score_rphisum2) {
+                } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
                   rmQuintupletFromMemory(quintupletsInGPU, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintupletsInGPU, (ix < jx ? ix : jx), true);
