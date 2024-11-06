@@ -58,6 +58,8 @@ numWFIB.extend([prefixDet+234.9921]) #prodlike premix stage1+stage2
 numWFIB.extend([prefixDet+234.114])  #PU, with 10% OT inefficiency
 #
 numWFIB.extend([24834.911]) #D98 XML, to monitor instability of DD4hep
-numWFIB.extend([24834.703,24834.704]) #2026D98 LST tracking (initialStep+HighPtTripletStep only): CPU, GPU
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]
+
+workflows[24834.703] = _upgrade_workflows[24834.703]
+workflows[24834.704] = _upgrade_workflows[24834.704]
