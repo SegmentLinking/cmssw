@@ -4,6 +4,8 @@
 #include <memory>
 #include <vector>
 
+#include "RecoTracker/LSTCore/interface/Common.h"
+
 class LSTOutput {
 public:
   LSTOutput() = default;
@@ -16,8 +18,6 @@ public:
         seedIdx_(std::move(seedIdx)),
         trackCandidateType_(std::move(trackCandidateType)) {}
 
-  enum LSTTCType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
-
   // Hit indices of each of the LST track candidates.
   std::vector<std::vector<unsigned int>> const& hitIdx() const { return hitIdx_; }
   // Number of hits of each of the LST track candidates.
@@ -25,7 +25,7 @@ public:
   // Index of the pixel track associated to each of the LST track candidates.
   // If not associated to a pixel track, which is the case for T5s, it defaults to -1.
   std::vector<int> const& seedIdx() const { return seedIdx_; }
-  // LSTTCType as per the enum above.
+  // LSTObjType from RecoTracker/LSTCore/interface/Common.h
   std::vector<short> const& trackCandidateType() const { return trackCandidateType_; }
 
 private:
