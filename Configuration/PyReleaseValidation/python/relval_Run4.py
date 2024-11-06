@@ -60,6 +60,3 @@ numWFIB.extend([prefixDet+234.114])  #PU, with 10% OT inefficiency
 numWFIB.extend([24834.911]) #D98 XML, to monitor instability of DD4hep
 for numWF in numWFIB:
     workflows[numWF] = _upgrade_workflows[numWF]
-
-workflows[24834.703] = _upgrade_workflows[24834.703]
-workflows[24834.704] = _upgrade_workflows[24834.704]
