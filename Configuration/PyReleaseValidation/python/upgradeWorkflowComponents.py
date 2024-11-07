@@ -497,7 +497,7 @@ class UpgradeWorkflow_lstOnCPUIters01TrackingOnly(UpgradeWorkflowTracking):
         elif 'HARVEST' in step: stepDict[stepName][k] = merge([{'-s': 'HARVESTING:@trackingOnlyValidation+@trackingOnlyDQM'}, stepDict[step][k]])
         elif 'ALCA' in step: stepDict[stepName][k] = None
     def condition_(self, fragment, stepList, key, hasHarvest):
-        return ('2026' in key)
+        return ('Run4' in key)
 upgradeWFs['lstOnCPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnCPUIters01TrackingOnly(
     steps = [
         'RecoGlobal',
@@ -522,7 +522,7 @@ class UpgradeWorkflow_lstOnGPUIters01TrackingOnly(UpgradeWorkflowTracking):
         elif 'HARVEST' in step: stepDict[stepName][k] = merge([{'-s': 'HARVESTING:@trackingOnlyValidation+@trackingOnlyDQM'}, stepDict[step][k]])
         elif 'ALCA' in step: stepDict[stepName][k] = None
     def condition_(self, fragment, stepList, key, hasHarvest):
-        return ('2026' in key)
+        return ('Run4' in key)
 upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01TrackingOnly(
     steps = [
         'RecoGlobal',
