@@ -37,16 +37,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   private:
     Queue& queue_;
 
-    std::array<unsigned int, 6> n_hits_by_layer_barrel_{};
-    std::array<unsigned int, 5> n_hits_by_layer_endcap_{};
     std::array<unsigned int, 6> n_minidoublets_by_layer_barrel_{};
     std::array<unsigned int, 5> n_minidoublets_by_layer_endcap_{};
     std::array<unsigned int, 6> n_segments_by_layer_barrel_{};
     std::array<unsigned int, 5> n_segments_by_layer_endcap_{};
     std::array<unsigned int, 6> n_triplets_by_layer_barrel_{};
     std::array<unsigned int, 5> n_triplets_by_layer_endcap_{};
-    std::array<unsigned int, 6> n_trackCandidates_by_layer_barrel_{};
-    std::array<unsigned int, 5> n_trackCandidates_by_layer_endcap_{};
     std::array<unsigned int, 6> n_quintuplets_by_layer_barrel_{};
     std::array<unsigned int, 5> n_quintuplets_by_layer_endcap_{};
     unsigned int nTotalSegments_;
@@ -139,11 +135,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void addQuintupletsToEventExplicit();
     void addTripletsToEventExplicit();
     void resetObjectsInModule();
-
-    unsigned int getNumberOfHits();
-    unsigned int getNumberOfHitsByLayer(unsigned int layer);
-    unsigned int getNumberOfHitsByLayerBarrel(unsigned int layer);
-    unsigned int getNumberOfHitsByLayerEndcap(unsigned int layer);
 
     unsigned int getNumberOfMiniDoublets();
     unsigned int getNumberOfMiniDoubletsByLayer(unsigned int layer);
