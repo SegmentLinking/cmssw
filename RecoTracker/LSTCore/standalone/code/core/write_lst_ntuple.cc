@@ -905,7 +905,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   unsigned int Hit_8 = hits[8];
 
   // T5 radius is average of the inner and outer radius
-  const float pt = quintuplets.innerRadius()[T5] * k2Rinv1GeVf * 2;
+  const float pt = __H2F(quintuplets.innerRadius()[T5]) * k2Rinv1GeVf * 2;
 
   // T5 eta and phi are computed using outer and innermost hits
   lst_math::Hit hitA(trk.ph2_x()[Hit_0], trk.ph2_y()[Hit_0], trk.ph2_z()[Hit_0]);

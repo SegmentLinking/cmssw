@@ -44,7 +44,7 @@ namespace lst {
 #if defined(FP16_Base)
 #define __F2H __float2half
 #define __H2F __half2float
-  typedef __half float FPX;
+  typedef __half FPX;
 #else
 #define __F2H
 #define __H2F
