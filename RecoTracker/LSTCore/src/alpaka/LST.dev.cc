@@ -418,17 +418,7 @@ void lst::LST<Acc3D>::run(Queue& queue,
   event.createPixelTriplets();
   if (verbose)
     printf("# of Pixel T3s produced: %d\n", event.getNumberOfPixelTriplets());
-
-  event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
-  if (verbose) {
-    printf("# of TrackCandidates produced: %d\n", event.getNumberOfTrackCandidates());
-    printf("        # of Pixel TrackCandidates produced: %d\n", event.getNumberOfPixelTrackCandidates());
-    printf("        # of pT5 TrackCandidates produced: %d\n", event.getNumberOfPT5TrackCandidates());
-    printf("        # of pT3 TrackCandidates produced: %d\n", event.getNumberOfPT3TrackCandidates());
-    printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
-    printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
-  }
-
+  
   event.createQuadruplets();
   if (verbose) {
     printf("# of Quadruplets produced: %d\n", event.getNumberOfQuadruplets());
@@ -443,6 +433,17 @@ void lst::LST<Acc3D>::run(Queue& queue,
     printf("# of Quadruplets produced endcap layer 3: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(2));
     printf("# of Quadruplets produced endcap layer 4: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(3));
     printf("# of Quadruplets produced endcap layer 5: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(4));
+  }
+
+  event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
+  if (verbose) {
+    printf("# of TrackCandidates produced: %d\n", event.getNumberOfTrackCandidates());
+    printf("        # of Pixel TrackCandidates produced: %d\n", event.getNumberOfPixelTrackCandidates());
+    printf("        # of pT5 TrackCandidates produced: %d\n", event.getNumberOfPT5TrackCandidates());
+    printf("        # of pT3 TrackCandidates produced: %d\n", event.getNumberOfPT3TrackCandidates());
+    printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
+    printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
+    printf("        # of T4 TrackCandidates produced: %d\n", event.getNumberOfT4TrackCandidates());
   }
 
   getOutput(event);

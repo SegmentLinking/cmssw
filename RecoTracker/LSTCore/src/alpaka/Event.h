@@ -193,6 +193,7 @@ namespace lst {
     int getNumberOfPT3TrackCandidates();
     int getNumberOfT5TrackCandidates();
     int getNumberOfPLSTrackCandidates();
+    int getNumberOfT4TrackCandidates();
 
     unsigned int getNumberOfQuintuplets();
     unsigned int getNumberOfQuintupletsByLayer(unsigned int layer);

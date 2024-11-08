@@ -801,42 +801,44 @@ void lst::Event<Acc3D>::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_
 
   // alpaka::enqueue(queue, crossCleanT4Task);
 
-  // Vec3D const threadsPerBlock_addT4asTrackCandidateInGPU{1, 1, 384};
-  // Vec3D const blocksPerGrid_addT4asTrackCandidateInGPU{1, 1, max_blocks};
-  // WorkDiv3D const addT4asTrackCandidateInGPU_workDiv = createWorkDiv(
-  //     blocksPerGrid_addT4asTrackCandidateInGPU, threadsPerBlock_addT4asTrackCandidateInGPU, elementsPerThread);
+  Vec3D const threadsPerBlock_addT4asTrackCandidateInGPU{1, 1, 16}; //test fewer threads and blocks
+  Vec3D const blocksPerGrid_addT4asTrackCandidateInGPU{1, 1, 1};
+  WorkDiv3D const addT4asTrackCandidateInGPU_workDiv = createWorkDiv(
+      blocksPerGrid_addT4asTrackCandidateInGPU, threadsPerBlock_addT4asTrackCandidateInGPU, elementsPerThread);
 
-  // lst::addT4asTrackCandidateInGPU addT4asTrackCandidateInGPU_kernel;
-  // auto const addT4asTrackCandidateInGPUTask(alpaka::createTaskKernel<Acc3D>(addT4asTrackCandidateInGPU_workDiv,
-  //                                                                            addT4asTrackCandidateInGPU_kernel,
-  //                                                                            nLowerModules_,
-  //                                                                            *quadrupletsInGPU,
-  //                                                                            *tripletsInGPU,
-  //                                                                            *trackCandidatesInGPU,
-  //                                                                            *rangesInGPU));
+  lst::addT4asTrackCandidateInGPU addT4asTrackCandidateInGPU_kernel;
 
-  // alpaka::enqueue(queue, addT4asTrackCandidateInGPUTask);
+  auto const addT4asTrackCandidateInGPUTask(alpaka::createTaskKernel<Acc3D>(addT4asTrackCandidateInGPU_workDiv,
+                                                                             addT4asTrackCandidateInGPU_kernel,
+                                                                             nLowerModules_,
+                                                                             *quadrupletsInGPU,
+                                                                             *tripletsInGPU,
+                                                                             *trackCandidatesInGPU,
+                                                                             *rangesInGPU));
+
+  alpaka::enqueue(queue, addT4asTrackCandidateInGPUTask);
+  // alpaka::wait(queue); //test
 
   // Check if either n_max_pixel_track_candidates or n_max_nonpixel_track_candidates was reached
   auto nTrackCanpT5Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanpT3Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanpLSHost_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanT5Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
-  // auto nTrackCanT4Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+  auto nTrackCanT4Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   alpaka::memcpy(queue, nTrackCanpT5Host_buf, trackCandidatesBuffers->nTrackCandidatespT5_buf);
   alpaka::memcpy(queue, nTrackCanpT3Host_buf, trackCandidatesBuffers->nTrackCandidatespT3_buf);
   alpaka::memcpy(queue, nTrackCanpLSHost_buf, trackCandidatesBuffers->nTrackCandidatespLS_buf);
   alpaka::memcpy(queue, nTrackCanT5Host_buf, trackCandidatesBuffers->nTrackCandidatesT5_buf);
-  // alpaka::memcpy(queue, nTrackCanT4Host_buf, trackCandidatesBuffers->nTrackCandidatesT4_buf);
+  alpaka::memcpy(queue, nTrackCanT4Host_buf, trackCandidatesBuffers->nTrackCandidatesT4_buf);
   alpaka::wait(queue);
 
   int nTrackCandidatespT5 = *alpaka::getPtrNative(nTrackCanpT5Host_buf);
   int nTrackCandidatespT3 = *alpaka::getPtrNative(nTrackCanpT3Host_buf);
   int nTrackCandidatespLS = *alpaka::getPtrNative(nTrackCanpLSHost_buf);
   int nTrackCandidatesT5 = *alpaka::getPtrNative(nTrackCanT5Host_buf);
-  // int nTrackCandidatesT4 = *alpaka::getPtrNative(nTrackCanT4Host_buf);
+  int nTrackCandidatesT4 = *alpaka::getPtrNative(nTrackCanT4Host_buf);
   if ((nTrackCandidatespT5 + nTrackCandidatespT3 + nTrackCandidatespLS == n_max_pixel_track_candidates) ||
-      (nTrackCandidatesT5 == n_max_nonpixel_track_candidates)) {
+      (nTrackCandidatesT5 + nTrackCandidatesT4 == n_max_nonpixel_track_candidates)) {
     printf(
         "****************************************************************************************************\n"
         "* Warning: Track candidates were possibly truncated.                                               *\n"
@@ -1270,20 +1272,20 @@ void lst::Event<Acc3D>::createQuadruplets() {
 
   alpaka::enqueue(queue, createQuadrupletsInGPUv2Task);
 
-  Vec3D const threadsPerBlockDupQuad{1, 16, 16};
-  Vec3D const blocksPerGridDupQuad{max_blocks, 1, 1};
-  WorkDiv3D const removeDupQuadrupletsInGPUAfterBuild_workDiv =
-      createWorkDiv(blocksPerGridDupQuad, threadsPerBlockDupQuad, elementsPerThread);
+  // Vec3D const threadsPerBlockDupQuad{1, 16, 16};
+  // Vec3D const blocksPerGridDupQuad{max_blocks, 1, 1};
+  // WorkDiv3D const removeDupQuadrupletsInGPUAfterBuild_workDiv =
+  //     createWorkDiv(blocksPerGridDupQuad, threadsPerBlockDupQuad, elementsPerThread);
 
-  lst::removeDupQuadrupletsInGPUAfterBuild removeDupQuadrupletsInGPUAfterBuild_kernel;
-  auto const removeDupQuadrupletsInGPUAfterBuildTask(
-      alpaka::createTaskKernel<Acc3D>(removeDupQuadrupletsInGPUAfterBuild_workDiv,
-                                      removeDupQuadrupletsInGPUAfterBuild_kernel,
-                                      *modulesBuffers_->data(),
-                                      *quadrupletsInGPU,
-                                      *rangesInGPU));
+  // lst::removeDupQuadrupletsInGPUAfterBuild removeDupQuadrupletsInGPUAfterBuild_kernel;
+  // auto const removeDupQuadrupletsInGPUAfterBuildTask(
+  //     alpaka::createTaskKernel<Acc3D>(removeDupQuadrupletsInGPUAfterBuild_workDiv,
+  //                                     removeDupQuadrupletsInGPUAfterBuild_kernel,
+  //                                     *modulesBuffers_->data(),
+  //                                     *quadrupletsInGPU,
+  //                                     *rangesInGPU));
 
-  alpaka::enqueue(queue, removeDupQuadrupletsInGPUAfterBuildTask);
+  // alpaka::enqueue(queue, removeDupQuadrupletsInGPUAfterBuildTask);
 
   Vec3D const threadsPerBlockAddQuad{1, 1, 1024};
   Vec3D const blocksPerGridAddQuad{1, 1, 1};
@@ -1678,16 +1680,16 @@ int lst::Event<Acc3D>::getNumberOfT5TrackCandidates() {
   return nTrackCandidatesT5;
 }
 
-// int lst::Event<Acc3D>::getNumberOfT4TrackCandidates() {
-//   auto nTrackCandidatesT4_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+int lst::Event<Acc3D>::getNumberOfT4TrackCandidates() {
+  auto nTrackCandidatesT4_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
 
-//   alpaka::memcpy(queue, nTrackCandidatesT4_buf, trackCandidatesBuffers->nTrackCandidatesT4_buf);
-//   alpaka::wait(queue);
+  alpaka::memcpy(queue, nTrackCandidatesT4_buf, trackCandidatesBuffers->nTrackCandidatesT4_buf);
+  alpaka::wait(queue);
 
-//   int nTrackCandidatesT4 = *alpaka::getPtrNative(nTrackCandidatesT4_buf);
+  int nTrackCandidatesT4 = *alpaka::getPtrNative(nTrackCandidatesT4_buf);
 
-//   return nTrackCandidatesT4;
-// }
+  return nTrackCandidatesT4;
+}
 
 unsigned int lst::Event<Acc3D>::getNumberOfQuadruplets() {
   unsigned int quadruplets = 0;
@@ -1705,7 +1707,7 @@ unsigned int lst::Event<Acc3D>::getNumberOfQuadrupletsByLayer(unsigned int layer
   if (layer == 6)
     return n_quadruplets_by_layer_barrel_[layer];
   else
-    return n_quadruplets_by_layer_barrel_[layer] + n_quintuplets_by_layer_endcap_[layer];
+    return n_quadruplets_by_layer_barrel_[layer] + n_quadruplets_by_layer_endcap_[layer];
 }
 
 unsigned int lst::Event<Acc3D>::getNumberOfQuadrupletsByLayerBarrel(unsigned int layer) {
@@ -1865,6 +1867,7 @@ lst::TripletsBuffer<DevHost>* lst::Event<Acc3D>::getTriplets() {
     alpaka::memcpy(queue, tripletsInCPU->circleRadius_buf, tripletsBuffers->circleRadius_buf, nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->nTriplets_buf, tripletsBuffers->nTriplets_buf);
     alpaka::memcpy(queue, tripletsInCPU->totOccupancyTriplets_buf, tripletsBuffers->totOccupancyTriplets_buf);
+    alpaka::memcpy(queue, tripletsInCPU->charge_buf, tripletsBuffers->charge_buf, nMemHost);
     alpaka::wait(queue);
   }
   return tripletsInCPU;

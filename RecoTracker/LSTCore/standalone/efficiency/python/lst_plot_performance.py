@@ -10,7 +10,7 @@ from math import sqrt
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate"]
 variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy"]
-objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower", "T4"]
+objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "T4", "pT5_lower", "pT3_lower", "T5_lower", "T4_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
 r.gROOT.SetBatch(True)
@@ -118,7 +118,7 @@ def plot(args):
     numer = []
     numer.append(params["input_file"].Get(params["numer"]).Clone())
 
-    breakdown_hist_types = ["pT5", "pT3", "T5", "pLS"]
+    breakdown_hist_types = ["pT5", "pT3", "T5", "pLS", "T4"]
     print("breakdown = ", params["breakdown"])
     if params["breakdown"]:
         for breakdown_hist_type in breakdown_hist_types:
@@ -136,7 +136,7 @@ def plot(args):
 
 
     if params["breakdown"]:
-        params["legend_labels"] = ["TC" ,"pT5" ,"pT3" ,"T5" ,"pLS"]
+        params["legend_labels"] = ["TC" ,"pT5" ,"pT3" ,"T5" ,"pLS", "T4"]
     else:
         params["legend_labels"] = [args.objecttype]
 
@@ -538,8 +538,8 @@ def draw_plot(effs, nums, dens, params):
     effs[0].SetTitle(parse_plot_name(output_name))
 
     # Draw the efficiency graphs
-    colors = [1, 2, 3, 4, 6]
-    markerstyles = [20, 26, 28, 24, 27]
+    colors = [1, 2, 3, 4, 6, 7]
+    markerstyles = [20, 26, 28, 24, 27, 25]
     markersize = 1.2
     linewidth = 2
     for i, eff in enumerate(effs):
@@ -673,10 +673,11 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4":[False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
-                "T4":[False],
+                "T4_lower":[False],
                 },
             "fakerate":{
                 "TC": [True, False],
@@ -684,10 +685,11 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4":[False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
-                "T4":[False],
+                "T4_lower":[False],
                 },
             "duplrate":{
                 "TC": [True, False],
@@ -695,10 +697,11 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4":[False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
-                "T4":[False]
+                "T4_lower":[False]
             },
     }
     pdgids = {
@@ -747,16 +750,16 @@ def plot_standard_performance_plots(args):
 
     if args.individual:
         # Only eff / TC matters here
-        breakdowns = {"eff":{"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]},
-                "fakerate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]},
-                "duplrate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]}}
+        breakdowns = {"eff":{"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]},
+                "fakerate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]},
+                "duplrate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]}}
 
 
     else:
         # Only eff / TC matters here
-        breakdowns = {"eff":{"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]},
-                "fakerate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]},
-                "duplrate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4":[False]}}
+        breakdowns = {"eff":{"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]},
+                "fakerate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]},
+                "duplrate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "T4_lower":[False]}}
     if args.yzoom:
         args.yzooms = [args.yzoom]
 

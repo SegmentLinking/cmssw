@@ -158,9 +158,10 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t4_region");
   ana.tx->createBranch<std::vector<float>>("t4_innerRadius");
   ana.tx->createBranch<std::vector<float>>("t4_outerRadius");
-   ana.tx->createBranch<std::vector<float>>("t4_pt");
+  ana.tx->createBranch<std::vector<float>>("t4_pt");
   ana.tx->createBranch<std::vector<float>>("t4_eta");
   ana.tx->createBranch<std::vector<float>>("t4_phi");
+  ana.tx->createBranch<std::vector<int>>("t4_isDup");
 
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -754,6 +755,9 @@ void setPixelTripletOutputBranches(LSTEvent* event) {
 //________________________________________________________________________________________________________________________________
 void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
   lst::Quadruplets const* quadruplets = event->getQuadruplets()->data();
+  lst::Triplets const* triplets = event->getTriplets()->data();
+  lst::Segments const* segments = event->getSegments()->data();
+  lst::MiniDoublets const* mds = event->getMiniDoublets()->data();
   lst::ObjectRanges const* ranges = event->getRanges()->data();
   lst::Modules const* modules = event->getModules()->data();
   int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
@@ -787,11 +791,14 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
         moduleType_binary |= (modules->moduleType[module_idx[i]] << i);
         layers.push_back(modules->layers[module_idx[i]] + 6 * (modules->subdets[module_idx[i]] == 4) + 5 * (modules->subdets[module_idx[i]] == 4 && modules->moduleType[module_idx[i]] == 1)); 
       }
+      int innerTripletIndex = quadruplets->tripletIndices[2*quadrupletIndex];
+      int outerTripletIndex = quadruplets->tripletIndices[2*quadrupletIndex+1];
+      
 
-      // std::vector<float> matchedfracs;
-      // std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type, ana.verbose, .75 , true, matchedfracs);
+
       std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
-
+      int isDup = quadruplets->isDup[quadrupletIndex];
+      ana.tx->pushbackToBranch<int>("t4_isDup", isDup); 
       // int isPerfect = 0;
       // for (auto& frac : matchedfracs) {
       //   if (frac > 0.99) {
@@ -801,6 +808,8 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       // }
 
       ana.tx->pushbackToBranch<int>("t4_isFake", static_cast<int>(simidx.size() == 0));
+
+      
       // ana.tx->pushbackToBranch<int>("t4_isPerfect", isPerfect);
       ana.tx->pushbackToBranch<float>("t4_pt", pt);
       ana.tx->pushbackToBranch<float>("t4_eta", eta);
@@ -880,18 +889,18 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
 
   std::vector<int> t4_isDuplicate(t4_matched_simIdx.size());
   for (unsigned int i = 0; i < t4_matched_simIdx.size(); i++) {
-    t4_isDuplicate[i] = false;
-    // bool isDuplicate = false;
-    // for (unsigned int isim = 0; isim < t5_matched_simIdx[i].size(); isim++) {
-    //   int simidx = t5_matched_simIdx[i][isim];
-    //   if (simidx < n_accepted_simtrk) {
-    //     if (sim_t5_matched[simidx] > 1) {
-    //       isDuplicate = true;
-    //     }
-    //   }
-    // }
-    // t5_isDuplicate[i] = isDuplicate;
+    bool isDuplicate = false;
+    for (unsigned int isim = 0; isim < t4_matched_simIdx[i].size(); isim++) {
+      int simidx = t4_matched_simIdx[i][isim];
+      if (simidx < n_accepted_simtrk) {
+        if (sim_t4_matched[simidx] > 1) {
+          isDuplicate = true;
+        }
+      }
+    }
+    t4_isDuplicate[i] = isDuplicate;
   }
+  
   ana.tx->setBranch<std::vector<int>>("sim_T4_matched", sim_t4_matched);
   ana.tx->setBranch<std::vector<int>>("t4_isDuplicate", t4_isDuplicate);
   // ana.tx->setBranch<std::vector<std::vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
@@ -1475,6 +1484,9 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
     case LSTObjType::pLS:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepLS(event, idx);
       break;
+    case T4:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parseT4(event, idx);
+      break;
   }
 
   // Perform matching
@@ -1767,6 +1779,42 @@ void setpLSOutputBranches(LSTEvent* event) {
   ana.tx->setBranch<std::vector<int>>("sim_pLS_matched", sim_pLS_matched);
   ana.tx->setBranch<std::vector<std::vector<int>>>("pLS_matched_simIdx", pLS_matched_simIdx);
   ana.tx->setBranch<std::vector<int>>("pLS_isDuplicate", pLS_isDuplicate);
+}
+
+//________________________________________________________________________________________________________________________________
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT4(lst::Event<Acc3D>* event,
+                                                                                              unsigned int idx) {
+  lst::TrackCandidates const* trackCandidates = event->getTrackCandidates()->data();
+  lst::Quadruplets const* quadruplets = event->getQuadruplets()->data();
+  unsigned int T4 = trackCandidates->directObjectIndices[idx];
+  std::vector<unsigned int> hits = getHitsFromT4(event, T4);
+
+  //
+  // pictorial representation of a T4
+  //
+  // inner tracker        outer tracker
+  // -------------  --------------------------
+  //                01    23    45    67    (anchor hit of a minidoublet is always the first of the pair)
+  //  (none)        oo -- oo -- oo -- oo    T4
+  unsigned int Hit_0 = hits[0];
+  unsigned int Hit_2 = hits[2];
+  unsigned int Hit_6 = hits[6];
+
+  // T4 radius is average of the inner and outer radius
+  const float pt = quadruplets->innerRadius[T4] + quadruplets->outerRadius[T4] * lst::k2Rinv1GeVf;
+
+  // T4 eta and phi are computed using outer and innermost hits
+  lst_math::Hit hitA(trk.ph2_x()[Hit_0], trk.ph2_y()[Hit_0], trk.ph2_z()[Hit_0]);
+  lst_math::Hit hitB(trk.ph2_x()[Hit_6], trk.ph2_y()[Hit_6], trk.ph2_z()[Hit_6]);
+  const float phi = hitA.phi();
+  const float eta = hitB.eta();
+  // const float eta = quadruplets->eta[T4];
+  // const float phi = quadruplets->phi[T4];
+
+  std::vector<unsigned int> hit_idx = getHitIdxsFromT4(event, T4);
+  std::vector<unsigned int> hit_type = getHitTypesFromT4(event, T4);
+
+  return {pt, eta, phi, hit_idx, hit_type};
 }
 
 //________________________________________________________________________________________________________________________________

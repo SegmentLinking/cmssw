@@ -15,6 +15,7 @@
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
+#include "Quadruplet.h"
 
 #include "NeuralNetwork.h"
 
@@ -72,6 +73,39 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.centerY()[trackCandidateIndex] = __F2H(centerY);
     cands.radius()[trackCandidateIndex] = __F2H(radius);
   }
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addT4TrackCandidateToMemory(lst::TrackCandidates& trackCandidatesInGPU,
+                                                                short trackCandidateType,
+                                                                unsigned int innerTrackletIndex,
+                                                                unsigned int outerTrackletIndex,
+                                                                uint8_t* logicalLayerIndices,
+                                                                uint16_t* lowerModuleIndices,
+                                                                unsigned int* hitIndices,
+                                                                int pixelSeedIndex,
+                                                                float centerX,
+                                                                float centerY,
+                                                                float radius,
+                                                                unsigned int trackCandidateIndex,
+                                                                unsigned int directObjectIndex) {
+    trackCandidatesInGPU.trackCandidateType[trackCandidateIndex] = 9; //type for T4
+    trackCandidatesInGPU.directObjectIndices[trackCandidateIndex] = directObjectIndex;
+    trackCandidatesInGPU.pixelSeedIndex[trackCandidateIndex] = pixelSeedIndex;
+
+    trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex] = innerTrackletIndex;
+    trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex + 1] = outerTrackletIndex;
+
+    //send the starting pointer to the logicalLayer and hitIndices
+    for (size_t i = 0; i < Params_T4::kLayers; i++) {
+      trackCandidatesInGPU.logicalLayers[Params_pT5::kLayers * trackCandidateIndex + i] = logicalLayerIndices[i];
+      trackCandidatesInGPU.lowerModuleIndices[Params_pT5::kLayers * trackCandidateIndex + i] = lowerModuleIndices[i];
+    }
+    for (size_t i = 0; i < 2 * Params_T4::kLayers; i++) {
+      trackCandidatesInGPU.hitIndices[Params_pT5::kHits * trackCandidateIndex + i] = hitIndices[i];
+    }
+    trackCandidatesInGPU.centerX[trackCandidateIndex] = __F2H(centerX);
+    trackCandidatesInGPU.centerY[trackCandidateIndex] = __F2H(centerY);
+    trackCandidatesInGPU.radius[trackCandidateIndex] = __F2H(radius);
+  };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkPixelHits(
       unsigned int ix, unsigned int jx, MiniDoubletsConst mds, SegmentsConst segments, HitsBaseConst hitsBase) {
@@ -309,6 +343,188 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // struct crossCleanT4 {
+  //   template <typename TAcc>
+  //   ALPAKA_FN_ACC void operator()(TAcc const& acc,
+  //                                 lst::Modules modulesInGPU,
+  //                                 lst::ObjectRanges rangesInGPU,
+  //                                 lst::PixelTriplets pixelTripletsInGPU,
+  //                                 lst::PixelQuintuplets pixelQuintupletsInGPU,
+  //                                 lst::TrackCandidates trackCandidatesInGPU,
+  //                                 lst::Segments segmentsInGPU,
+  //                                 lst::MiniDoublets mdsInGPU,
+  //                                 lst::Hits hitsInGPU,
+  //                                 lst::Quintuplets quintupletsInGPU,
+  //                                 lst::Quadruplets quadrupletsInGPU) const {
+  //     auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+  //     auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+  //     for (int innerInnerInnerLowerModuleArrayIndex = globalThreadIdx[0];
+  //          innerInnerInnerLowerModuleArrayIndex < *(modulesInGPU.nLowerModules);
+  //          innerInnerInnerLowerModuleArrayIndex += gridThreadExtent[0]) {
+  //       if (rangesInGPU.quadrupletModuleIndices[innerInnerInnerLowerModuleArrayIndex] == -1)
+  //         continue;
+
+  //       unsigned int nQuads = quadrupletsInGPU.nQuadruplets[innerInnerInnerLowerModuleArrayIndex];
+  //       for (unsigned int innerObjectArrayIndex = globalThreadIdx[1]; innerObjectArrayIndex < nQuads;
+  //            innerObjectArrayIndex += gridThreadExtent[1]) {
+  //         unsigned int quadrupletIndex =
+  //             rangesInGPU.quadrupletModuleIndices[innerInnerInnerLowerModuleArrayIndex] + innerObjectArrayIndex;
+  //         if (quadrupletsInGPU.isDup[quadrupletIndex])
+  //           continue;
+  //         float eta1 = segmentsInGPU.eta[quadrupletIndex];
+  //         float phi1 = segmentsInGPU.phi[quadrupletIndex];
+
+  //         unsigned int nTrackCandidates = *(trackCandidatesInGPU.nTrackCandidates);
+  //         for (unsigned int trackCandidateIndex = globalThreadIdx[1]; trackCandidateIndex < nTrackCandidates;
+  //             trackCandidateIndex += gridThreadExtent[1]) {
+  //           short type = trackCandidatesInGPU.trackCandidateType[trackCandidateIndex];
+  //           unsigned int innerTrackletIdx = trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex];
+  //           if (type == 4)  // T5
+  //           {
+  //             unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
+  //             float eta2 = __H2F(quintupletsInGPU.eta[quintupletIndex]);
+  //             float phi2 = __H2F(quintupletsInGPU.phi[quintupletIndex]);
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 1e-3f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 5)  // pT3
+  //           {
+  //             int pT3Index = innerTrackletIdx;
+  //             float eta2 = __H2F(pixelTripletsInGPU.eta_pix[pT3Index]);
+  //             float phi2 = __H2F(pixelTripletsInGPU.phi_pix[pT3Index]);
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 7)  // pT5
+  //           {
+  //             int pT5Index = innerTrackletIdx; 
+  //             float eta2 = pixelQuintupletsInGPU.eta[pT5Index];
+  //             float phi2 = pixelQuintupletsInGPU.phi[pT5Index];
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 8)
+  //           {
+  //             unsigned int pLSIndex = innerTrackletIdx;
+  //             float eta2 = segmentsInGPU.eta[pLSIndex];
+  //             float phi2 = segmentsInGPU.phi[pLSIndex];
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true; 
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // };
+
+  // struct crossCleanT4 {
+  //   template <typename TAcc>
+  //   ALPAKA_FN_ACC void operator()(TAcc const& acc,
+  //                                 lst::Modules modulesInGPU,
+  //                                 lst::ObjectRanges rangesInGPU,
+  //                                 lst::PixelTriplets pixelTripletsInGPU,
+  //                                 lst::PixelQuintuplets pixelQuintupletsInGPU,
+  //                                 lst::TrackCandidates trackCandidatesInGPU,
+  //                                 lst::Segments segmentsInGPU,
+  //                                 lst::MiniDoublets mdsInGPU,
+  //                                 lst::Hits hitsInGPU,
+  //                                 lst::Quintuplets quintupletsInGPU,
+  //                                 lst::Quadruplets quadrupletsInGPU) const {
+  //     auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+  //     auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+  //     for (int innerInnerInnerLowerModuleArrayIndex = globalThreadIdx[0];
+  //          innerInnerInnerLowerModuleArrayIndex < *(modulesInGPU.nLowerModules);
+  //          innerInnerInnerLowerModuleArrayIndex += gridThreadExtent[0]) {
+  //       if (rangesInGPU.quadrupletModuleIndices[innerInnerInnerLowerModuleArrayIndex] == -1)
+  //         continue;
+
+  //       unsigned int nQuads = quadrupletsInGPU.nQuadruplets[innerInnerInnerLowerModuleArrayIndex];
+  //       for (unsigned int innerObjectArrayIndex = globalThreadIdx[1]; innerObjectArrayIndex < nQuads;
+  //            innerObjectArrayIndex += gridThreadExtent[1]) {
+  //         unsigned int quadrupletIndex =
+  //             rangesInGPU.quadrupletModuleIndices[innerInnerInnerLowerModuleArrayIndex] + innerObjectArrayIndex;
+  //         if (quadrupletsInGPU.isDup[quadrupletIndex])
+  //           continue;
+  //         float eta1 = segmentsInGPU.eta[quadrupletIndex];
+  //         float phi1 = segmentsInGPU.phi[quadrupletIndex];
+
+  //         unsigned int nTrackCandidates = *(trackCandidatesInGPU.nTrackCandidates);
+  //         for (unsigned int trackCandidateIndex = globalThreadIdx[1]; trackCandidateIndex < nTrackCandidates;
+  //             trackCandidateIndex += gridThreadExtent[1]) {
+  //           short type = trackCandidatesInGPU.trackCandidateType[trackCandidateIndex];
+  //           unsigned int innerTrackletIdx = trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex];
+  //           if (type == 4)  // T5
+  //           {
+  //             unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
+  //             float eta2 = __H2F(quintupletsInGPU.eta[quintupletIndex]);
+  //             float phi2 = __H2F(quintupletsInGPU.phi[quintupletIndex]);
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 1e-3f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 5)  // pT3
+  //           {
+  //             int pT3Index = innerTrackletIdx;
+  //             float eta2 = __H2F(pixelTripletsInGPU.eta_pix[pT3Index]);
+  //             float phi2 = __H2F(pixelTripletsInGPU.phi_pix[pT3Index]);
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 7)  // pT5
+  //           {
+  //             int pT5Index = innerTrackletIdx; 
+  //             float eta2 = pixelQuintupletsInGPU.eta[pT5Index];
+  //             float phi2 = pixelQuintupletsInGPU.phi[pT5Index];
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true;
+  //           }
+  //           if (type == 8)
+  //           {
+  //             unsigned int pLSIndex = innerTrackletIdx;
+  //             float eta2 = segmentsInGPU.eta[pLSIndex];
+  //             float phi2 = segmentsInGPU.phi[pLSIndex];
+  //             float dEta = alpaka::math::abs(acc, eta1 - eta2);
+  //             float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+  //             float dR2 = dEta * dEta + dPhi * dPhi;
+  //             if (dR2 < 0.000001f)
+  //               quadrupletsInGPU.isDup[quadrupletIndex] = true; 
+  //           }
+  //         }
+  //       }
+  //     }
+  //   }
+  // };
+
   struct AddpT3asTrackCandidates {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   uint16_t nLowerModules,
@@ -490,6 +706,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     radius,
                                     trackCandidateIdx,
                                     pixelQuintupletIndex);
+        }
+      }
+    }
+  };
+
+  struct addT4asTrackCandidateInGPU {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  uint16_t nLowerModules,
+                                  lst::Quadruplets quadrupletsInGPU,
+                                  lst::Triplets tripletsInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      for (int idx = globalThreadIdx[1]; idx < nLowerModules; idx += gridThreadExtent[1]) {
+        if (rangesInGPU.quadrupletModuleIndices[idx] == -1)
+          continue;
+
+        unsigned int nQuads = quadrupletsInGPU.nQuadruplets[idx];
+        for (unsigned int jdx = globalThreadIdx[2]; jdx < nQuads; jdx += gridThreadExtent[2]) {
+          unsigned int quadrupletIndex = rangesInGPU.quadrupletModuleIndices[idx] + jdx;
+          if (quadrupletsInGPU.isDup[quadrupletIndex])
+            continue;
+
+          unsigned int trackCandidateIdx =
+              alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
+          if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatespT5 -
+                  *trackCandidatesInGPU.nTrackCandidatespT3 -  *trackCandidatesInGPU.nTrackCandidatesT5- *trackCandidatesInGPU.nTrackCandidatespLS >=
+              n_max_nonpixel_track_candidates)  // pT5, pT3, T5, pLS TCs have all been added
+          {
+#ifdef WARNINGS
+            printf("Track Candidate excess alert! Type = T4");
+#endif
+            alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
+            break;
+          } else {
+            alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidatesT5, 1u);
+            unsigned int innerTripletIndex = quadrupletsInGPU.tripletIndices[2*quadrupletIndex];
+            addT4TrackCandidateToMemory(trackCandidatesInGPU,
+                                      9 /*track candidate type T4=9*/,
+                                      quadrupletIndex,
+                                      quadrupletIndex,
+                                      &quadrupletsInGPU.logicalLayers[Params_T4::kLayers * quadrupletIndex],
+                                      &quadrupletsInGPU.lowerModuleIndices[Params_T4::kLayers * quadrupletIndex],
+                                      &quadrupletsInGPU.hitIndices[Params_T4::kHits * quadrupletIndex],
+                                      -1 /*no pixel seed index for T4s*/,
+                                      tripletsInGPU.circleCenterX[innerTripletIndex],
+                                      tripletsInGPU.circleCenterY[innerTripletIndex],
+                                      quadrupletsInGPU.innerRadius[quadrupletIndex],
+                                      trackCandidateIdx,
+                                      quadrupletIndex);
+          }
         }
       }
     }
