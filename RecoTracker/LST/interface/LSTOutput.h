@@ -18,6 +18,8 @@ public:
         seedIdx_(std::move(seedIdx)),
         trackCandidateType_(std::move(trackCandidateType)) {}
 
+  using LSTTCType = lst::LSTObjType;
+
   // Hit indices of each of the LST track candidates.
   std::vector<std::vector<unsigned int>> const& hitIdx() const { return hitIdx_; }
   // Number of hits of each of the LST track candidates.
@@ -25,7 +27,7 @@ public:
   // Index of the pixel track associated to each of the LST track candidates.
   // If not associated to a pixel track, which is the case for T5s, it defaults to -1.
   std::vector<int> const& seedIdx() const { return seedIdx_; }
-  // LSTObjType from RecoTracker/LSTCore/interface/Common.h
+  // LSTTCType from RecoTracker/LSTCore/interface/Common.h
   std::vector<short> const& trackCandidateType() const { return trackCandidateType_; }
 
 private:
