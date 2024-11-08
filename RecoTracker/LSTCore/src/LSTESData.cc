@@ -88,7 +88,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost()
   ::loadMapsHost(pLStoLayer, endcapGeometry, tiltedGeometry, moduleConnectionMap);
 
   auto endcapGeometryDev =
-      std::make_unique<EndcapGeometryDevHostCollection>(endcapGeometry.nEndCapMap, cms::alpakatools::host());
+      std::make_shared<EndcapGeometryDevHostCollection>(endcapGeometry.nEndCapMap, cms::alpakatools::host());
   std::memcpy(endcapGeometryDev->view().geoMapDetId(),
               endcapGeometry.geoMapDetId_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(unsigned int));

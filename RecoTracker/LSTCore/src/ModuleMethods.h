@@ -218,7 +218,7 @@ namespace lst {
     nModules = counter;
   }
 
-  inline std::unique_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
+  inline std::shared_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
                                                                     const char* moduleMetaDataFilePath,
                                                                     uint16_t& nModules,
                                                                     uint16_t& nLowerModules,
@@ -241,7 +241,7 @@ namespace lst {
 
     std::array<int, 2> const modules_sizes{{static_cast<int>(nModules), static_cast<int>(nPixels)}};
 
-    auto modulesHC = std::make_unique<ModulesHostCollection>(modules_sizes, cms::alpakatools::host());
+    auto modulesHC = std::make_shared<ModulesHostCollection>(modules_sizes, cms::alpakatools::host());
 
     auto modules_view = modulesHC->view<ModulesSoA>();
 
