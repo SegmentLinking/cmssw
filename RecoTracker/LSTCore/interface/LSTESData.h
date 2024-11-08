@@ -8,7 +8,6 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 
-#include <filesystem>
 #include <memory>
 
 namespace lst {

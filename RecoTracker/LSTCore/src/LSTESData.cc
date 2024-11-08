@@ -6,6 +6,8 @@
 
 #include "ModuleMethods.h"
 
+#include <filesystem>
+
 namespace {
   std::string geometryDataDir() {
     const char* path_lst_base = std::getenv("LST_BASE");

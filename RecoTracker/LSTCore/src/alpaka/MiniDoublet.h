@@ -85,7 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     mds.outerLowEdgeY()[idx] = hits.lowEdgeYs()[outerHitIndex];
   }
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float isTighterTiltedModules(ModulesConst modules, uint16_t moduleIndex) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool isTighterTiltedModules(ModulesConst modules, uint16_t moduleIndex) {
     // The "tighter" tilted modules are the subset of tilted modules that have smaller spacing
     // This is the same as what was previously considered as"isNormalTiltedModules"
     // See Figure 9.1 of https://cds.cern.ch/record/2272264/files/CMS-TDR-014.pdf
