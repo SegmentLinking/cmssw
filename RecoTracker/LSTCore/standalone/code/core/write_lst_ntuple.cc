@@ -115,6 +115,8 @@ void createOptionalOutputBranches() {
   // T5 branches
   ana.tx->createBranch<std::vector<int>>("sim_T5_matched");
   ana.tx->createBranch<std::vector<int>>("t5_isFake");
+  ana.tx->createBranch<std::vector<float>>("t5_sim_vxy");
+  ana.tx->createBranch<std::vector<float>>("t5_sim_vz");
   ana.tx->createBranch<std::vector<int>>("t5_isDuplicate");
   ana.tx->createBranch<std::vector<int>>("t5_foundDuplicate");
   ana.tx->createBranch<std::vector<float>>("t5_pt");
@@ -533,6 +535,21 @@ void setQuintupletOutputBranches(lst::Event<Acc3D>* event) {
           sim_t5_matched.at(simtrk) += 1;
         }
       }
+
+      // Avoid fakes when calculating the vertex distance, set default to 0.0.
+      if (simidx.size() == 0) {
+        ana.tx->pushbackToBranch<float>("t5_sim_vxy", 0.0);
+        ana.tx->pushbackToBranch<float>("t5_sim_vz", 0.0);
+        continue;
+      }
+
+      int vtxidx = trk.sim_parentVtxIdx()[simidx[0]];
+      float vtx_x = trk.simvtx_x()[vtxidx];
+      float vtx_y = trk.simvtx_y()[vtxidx];
+      float vtx_z = trk.simvtx_z()[vtxidx];
+
+      ana.tx->pushbackToBranch<float>("t5_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
+      ana.tx->pushbackToBranch<float>("t5_sim_vz", vtx_z);
     }
   }
 
