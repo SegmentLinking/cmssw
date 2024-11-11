@@ -102,8 +102,8 @@ namespace lst {
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kPtBins][kEtaBins] = {
-        {0.7635, 0.7988, 0.8334, 0.8537, 0.7776, 0.8036, 0.8587, 0.88, 0.9183, 0.918},
-        {0.7101, 0.6735, 0.7734, 0.82, 0.7947, 0.7453, 0.7456, 0.6974, 0.7997, 0.6888}};
+        {0.7363, 0.796, 0.8286, 0.8452, 0.7786, 0.7949, 0.8885, 0.9179, 0.9526, 0.9459},
+        {0.752, 0.7302, 0.8294, 0.8541, 0.7637, 0.7758, 0.8405, 0.7806, 0.8929, 0.8505}};
   }  // namespace t5dnn
 
 }  //namespace lst
