@@ -1712,24 +1712,6 @@ namespace lst {
                                            ptCut))
       return false;
 
-    if (not runQuintupletdBetaAlgoSelector(acc,
-                                           modulesInGPU,
-                                           mdsInGPU,
-                                           segmentsInGPU,
-                                           lowerModuleIndex1,
-                                           lowerModuleIndex2,
-                                           lowerModuleIndex4,
-                                           lowerModuleIndex5,
-                                           firstSegmentIndex,
-                                           fourthSegmentIndex,
-                                           firstMDIndex,
-                                           secondMDIndex,
-                                           fourthMDIndex,
-                                           fifthMDIndex,
-                                           dBeta2,
-                                           ptCut))
-      return false;
-
     g = tripletsInGPU.circleCenterX[innerTripletIndex];
     f = tripletsInGPU.circleCenterY[innerTripletIndex];
 
