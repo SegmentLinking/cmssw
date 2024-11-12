@@ -22,18 +22,14 @@ void LSTEvent::initSync() {
 
   //reset the arrays
   for (int i = 0; i < 6; i++) {
-    n_hits_by_layer_barrel_[i] = 0;
     n_minidoublets_by_layer_barrel_[i] = 0;
     n_segments_by_layer_barrel_[i] = 0;
     n_triplets_by_layer_barrel_[i] = 0;
-    n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
     if (i < 5) {
-      n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
       n_segments_by_layer_endcap_[i] = 0;
       n_triplets_by_layer_endcap_[i] = 0;
-      n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
     }
   }
@@ -43,18 +39,14 @@ void LSTEvent::resetEventSync() {
   alpaka::wait(queue_);  // synchronize to reset consistently
   //reset the arrays
   for (int i = 0; i < 6; i++) {
-    n_hits_by_layer_barrel_[i] = 0;
     n_minidoublets_by_layer_barrel_[i] = 0;
     n_segments_by_layer_barrel_[i] = 0;
     n_triplets_by_layer_barrel_[i] = 0;
-    n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
     if (i < 5) {
-      n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
       n_segments_by_layer_endcap_[i] = 0;
       n_triplets_by_layer_endcap_[i] = 0;
-      n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
     }
   }
@@ -1266,29 +1258,6 @@ void LSTEvent::addTripletsToEventExplicit() {
     }
   }
 }
-
-unsigned int LSTEvent::getNumberOfHits() {
-  unsigned int hits = 0;
-  for (auto& it : n_hits_by_layer_barrel_) {
-    hits += it;
-  }
-  for (auto& it : n_hits_by_layer_endcap_) {
-    hits += it;
-  }
-
-  return hits;
-}
-
-unsigned int LSTEvent::getNumberOfHitsByLayer(unsigned int layer) {
-  if (layer == 6)
-    return n_hits_by_layer_barrel_[layer];
-  else
-    return n_hits_by_layer_barrel_[layer] + n_hits_by_layer_endcap_[layer];
-}
-
-unsigned int LSTEvent::getNumberOfHitsByLayerBarrel(unsigned int layer) { return n_hits_by_layer_barrel_[layer]; }
-
-unsigned int LSTEvent::getNumberOfHitsByLayerEndcap(unsigned int layer) { return n_hits_by_layer_endcap_[layer]; }
 
 unsigned int LSTEvent::getNumberOfMiniDoublets() {
   unsigned int miniDoublets = 0;
