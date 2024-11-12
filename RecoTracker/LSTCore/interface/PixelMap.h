@@ -17,8 +17,6 @@ namespace lst {
     std::vector<unsigned int> connectedPixelsIndexNeg;
     std::vector<unsigned int> connectedPixelsSizesNeg;
 
-    const int* pixelType;
-
     PixelMap(unsigned int sizef = size_superbins)
         : pixelModuleIndex(0),
           connectedPixelsIndex(sizef),
