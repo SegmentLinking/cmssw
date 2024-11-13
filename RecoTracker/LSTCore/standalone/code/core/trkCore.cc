@@ -249,34 +249,6 @@ float runPixelQuintuplet(LSTEvent* event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets) {
-  TStopwatch my_timer;
-  if (ana.verbose >= 2)
-    std::cout << "Reco TrackCandidate start" << std::endl;
-  my_timer.Start();
-  event->createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
-  event->wait();  // device side event calls are asynchronous: wait to measure time or print
-  float tc_elapsed = my_timer.RealTime();
-  if (ana.verbose >= 2)
-    std::cout << "Reco TrackCandidate processing time: " << tc_elapsed << " secs" << std::endl;
-
-  if (ana.verbose >= 2)
-    std::cout << "# of TrackCandidates produced: " << event->getNumberOfTrackCandidates() << std::endl;
-  if (ana.verbose >= 2)
-    std::cout << "# of Pixel TrackCandidates produced: " << event->getNumberOfPixelTrackCandidates() << std::endl;
-  if (ana.verbose >= 2)
-    std::cout << "    # of pT5 TrackCandidates produced: " << event->getNumberOfPT5TrackCandidates() << std::endl;
-  if (ana.verbose >= 2)
-    std::cout << "    # of pT3 TrackCandidates produced: " << event->getNumberOfPT3TrackCandidates() << std::endl;
-  if (ana.verbose >= 2)
-    std::cout << "    # of pLS TrackCandidates produced: " << event->getNumberOfPLSTrackCandidates() << std::endl;
-  if (ana.verbose >= 2)
-    std::cout << "# of T5 TrackCandidates produced: " << event->getNumberOfT5TrackCandidates() << std::endl;
-
-  return tc_elapsed;
-}
-
-//___________________________________________________________________________________________________________________________________________________________________________________________
 float runQuadruplet(lst::Event<Acc3D> *event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
@@ -320,6 +292,38 @@ float runQuadruplet(lst::Event<Acc3D> *event) {
 
   return t4_elapsed;
 }
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
+float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets) {
+  TStopwatch my_timer;
+  if (ana.verbose >= 2)
+    std::cout << "Reco TrackCandidate start" << std::endl;
+  my_timer.Start();
+  event->createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
+  event->wait();  // device side event calls are asynchronous: wait to measure time or print
+  float tc_elapsed = my_timer.RealTime();
+  if (ana.verbose >= 2)
+    std::cout << "Reco TrackCandidate processing time: " << tc_elapsed << " secs" << std::endl;
+
+  if (ana.verbose >= 2)
+    std::cout << "# of TrackCandidates produced: " << event->getNumberOfTrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "# of Pixel TrackCandidates produced: " << event->getNumberOfPixelTrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "    # of pT5 TrackCandidates produced: " << event->getNumberOfPT5TrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "    # of pT3 TrackCandidates produced: " << event->getNumberOfPT3TrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "    # of pLS TrackCandidates produced: " << event->getNumberOfPLSTrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "# of T5 TrackCandidates produced: " << event->getNumberOfT5TrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "# of T4 TrackCandidates produced: " << event->getNumberOfT4TrackCandidates() << std::endl;
+
+  return tc_elapsed;
+}
+
+
 
 //  ---------------------------------- =========================================== ----------------------------------------------
 //  ---------------------------------- =========================================== ----------------------------------------------

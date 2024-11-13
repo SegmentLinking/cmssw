@@ -125,7 +125,8 @@ namespace lst {
                                                             float phi,
                                                             // float scores,
                                                             uint8_t layer,
-                                                            unsigned int quadrupletIndex) {
+                                                            unsigned int quadrupletIndex,
+                                                            float rzChiSquared) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1] = outerTripletIndex;
 
@@ -165,9 +166,10 @@ namespace lst {
         tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 4];
     quadrupletsInGPU.hitIndices[Params_T4::kHits * quadrupletIndex + 7] =
         tripletsInGPU.hitIndices[Params_T3::kHits * outerTripletIndex + 5];
+    
+    quadrupletsInGPU.rzChiSquared[quadrupletIndex] = rzChiSquared;
   };
 
-  //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passT4RZConstraint(TAcc const& acc,
                                                          lst::Modules const& modulesInGPU,
@@ -176,43 +178,38 @@ namespace lst {
                                                          unsigned int secondMDIndex,
                                                          unsigned int thirdMDIndex,
                                                          unsigned int fourthMDIndex,
-                                                         unsigned int fifthMDIndex,
                                                          uint16_t lowerModuleIndex1,
                                                          uint16_t lowerModuleIndex2,
                                                          uint16_t lowerModuleIndex3,
                                                          uint16_t lowerModuleIndex4,
-                                                         uint16_t lowerModuleIndex5,
                                                          float& rzChiSquared,
                                                          float inner_pt,
                                                          float innerRadius,
                                                          float g,
-                                                         float f) {
+                                                         float f,
+                                                         int charge) {
     //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
     const float& rt1 = mdsInGPU.anchorRt[firstMDIndex] / 100;  //in the unit of m instead of cm
     const float& rt2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
     const float& rt3 = mdsInGPU.anchorRt[thirdMDIndex] / 100;
     const float& rt4 = mdsInGPU.anchorRt[fourthMDIndex] / 100;
-    const float& rt5 = mdsInGPU.anchorRt[fifthMDIndex] / 100;
 
     const float& z1 = mdsInGPU.anchorZ[firstMDIndex] / 100;
     const float& z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
     const float& z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
     const float& z4 = mdsInGPU.anchorZ[fourthMDIndex] / 100;
-    const float& z5 = mdsInGPU.anchorZ[fifthMDIndex] / 100;
 
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.lstLayers[lowerModuleIndex1];
     const int layer2 = modulesInGPU.lstLayers[lowerModuleIndex2];
     const int layer3 = modulesInGPU.lstLayers[lowerModuleIndex3];
     const int layer4 = modulesInGPU.lstLayers[lowerModuleIndex4];
-    const int layer5 = modulesInGPU.lstLayers[lowerModuleIndex5];
 
     //slope computed using the internal T3s
     const int moduleType1 = modulesInGPU.moduleType[lowerModuleIndex1];  //0 is ps, 1 is 2s
     const int moduleType2 = modulesInGPU.moduleType[lowerModuleIndex2];
     const int moduleType3 = modulesInGPU.moduleType[lowerModuleIndex3];
     const int moduleType4 = modulesInGPU.moduleType[lowerModuleIndex4];
-    const int moduleType5 = modulesInGPU.moduleType[lowerModuleIndex5];
 
     const float& x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
     const float& x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
@@ -239,41 +236,7 @@ namespace lst {
       rt_init = mdsInGPU.anchorRt[secondMDIndex] / 100;
     }
 
-    // start from a circle of inner T3.
-    // to determine the charge
-    int charge = 0;
-    float slope3c = (y3 - y_center) / (x3 - x_center);
-    float slope1c = (y1 - y_center) / (x1 - x_center);
-    // these 4 "if"s basically separate the x-y plane into 4 quarters. It determines geometrically how a circle and line slope goes and their positions, and we can get the charges correspondingly.
-    if ((y3 - y_center) > 0 && (y1 - y_center) > 0) {
-      if (slope1c > 0 && slope3c < 0)
-        charge = -1;  // on x axis of a quarter, 3 hits go anti-clockwise
-      else if (slope1c < 0 && slope3c > 0)
-        charge = 1;  // on x axis of a quarter, 3 hits go clockwise
-      else if (slope3c > slope1c)
-        charge = -1;
-      else if (slope3c < slope1c)
-        charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) < 0) {
-      if (slope1c < 0 && slope3c > 0)
-        charge = 1;
-      else if (slope1c > 0 && slope3c < 0)
-        charge = -1;
-      else if (slope3c > slope1c)
-        charge = -1;
-      else if (slope3c < slope1c)
-        charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) > 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
-        charge = 1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
-        charge = -1;
-    } else if ((y3 - y_center) > 0 && (y1 - y_center) < 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
-        charge = -1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
-        charge = 1;
-    }
+    //charge is determined in T3 and requiring both T3s to have the same charge
 
     float pseudo_phi = alpaka::math::atan(
         acc, (y_init - y_center) / (x_init - x_center));  //actually represent pi/2-phi, wrt helix axis z
@@ -311,7 +274,7 @@ namespace lst {
       }
     }
 
-    // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
+    // But if the initial T4 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
     if (moduleType3 == 0) {  // 0 is ps
       if (x4 < x3 && x3 < x2)
         Px = -alpaka::math::abs(acc, Px);
@@ -349,7 +312,7 @@ namespace lst {
     float zsi, rtsi;
     int layeri, moduleTypei;
     rzChiSquared = 0;
-    for (size_t i = 2; i < 6; i++) {
+    for (size_t i = 2; i < 5; i++) {
       if (i == 2) {
         zsi = z2;
         rtsi = rt2;
@@ -365,12 +328,7 @@ namespace lst {
         rtsi = rt4;
         layeri = layer4;
         moduleTypei = moduleType4;
-      } else if (i == 5) {
-        zsi = z5;
-        rtsi = rt5;
-        layeri = layer5;
-        moduleTypei = moduleType5;
-      }
+      } 
 
       if (moduleType3 == 0) {  //0: ps
         if (i == 3)
@@ -453,7 +411,7 @@ namespace lst {
       rzChiSquared += 12 * (residual * residual) / error2;
     }
     // for set rzchi2 cut
-    // if the 5 points are linear, helix calculation gives nan
+    // if the 4 points are linear, helix calculation gives nan
     // Alpaka : Needs to be moved over
     if (inner_pt > 100 || alpaka::math::isnan(acc, rzChiSquared)) {
       float slope;
@@ -464,97 +422,131 @@ namespace lst {
         slope = (z3 - z1) / (rt3 - rt1);
       }
       float residual4_linear = (layer4 <= 6) ? ((z4 - z1) - slope * (rt4 - rt1)) : ((rt4 - rt1) - (z4 - z1) / slope);
-      float residual5_linear = (layer4 <= 6) ? ((z5 - z1) - slope * (rt5 - rt1)) : ((rt5 - rt1) - (z5 - z1) / slope);
 
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
       residual4_linear = (moduleType4 == 0) ? residual4_linear / kPixelPSZpitch : residual4_linear / kStrip2SZpitch;
-      residual5_linear = (moduleType5 == 0) ? residual5_linear / kPixelPSZpitch : residual5_linear / kStrip2SZpitch;
       residual4_linear = residual4_linear * 100;
-      residual5_linear = residual5_linear * 100;
 
-      rzChiSquared = 12 * (residual4_linear * residual4_linear + residual5_linear * residual5_linear);
-      return rzChiSquared < 4.677f;
+      rzChiSquared = 12 * (residual4_linear * residual4_linear);
+      // return rzChiSquared < 4.677f;
     }
 
     // The category numbers are related to module regions and layers, decoding of the region numbers can be found here in slide 2 table. https://github.com/SegmentLinking/TrackLooper/files/11420927/part.2.pdf
     // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T5 built with Endcap 1,2,3,4,5 ps modules
-    if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10 and layer5 == 11)  //0
+    if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10)  //0
+    {
+      return rzChiSquared < 52.06f;
+    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15)  //1
     {
       return true;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10 and layer5 == 16)  //1
+    } else if (layer1 == 7 and layer2 == 8 and layer3 == 14 and layer4 == 15)  //2
     {
-      return rzChiSquared < 37.956f;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15 and layer5 == 16)  //2
-    {
-      return rzChiSquared < 11.622f;
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8 and layer4 == 9) {
-      if (layer5 == 10)  //3
+      return rzChiSquared < 20.281f;
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
+      if (layer4 == 11)  //3
       {
-        return true;
+        return rzChiSquared < 31.943f;
       }
-      if (layer5 == 15)  //4
+      if (layer4 == 16)  //4
       {
-        return rzChiSquared < 37.941f;
+        return rzChiSquared < 21.174f;
+      }
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
+    { 
+        return rzChiSquared < 4.439f; 
+    }
+    else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
+      if (layer4 == 4)  //6
+      {
+        return rzChiSquared < 81.34f;
+      }
+      else if (layer4 == 7)  //7
+      {
+        return rzChiSquared < 101.77f;
+      } else if (layer4 == 12)  //8
+      {
+        return rzChiSquared < 63.544f;
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 9)  //5
+      if (layer4 == 8)  //9
+      {
+        return rzChiSquared < 150.822f;
+      } else if (layer4 == 13)  //10
+      {
+        return rzChiSquared < 16.378f;
+      } 
+    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
+      if (layer4 == 9) //1
+      {
+        return rzChiSquared < 44.633f;
+      } else if (layer4 == 14)  //12
       {
         return true;
+      } 
+    } else if (layer1 == 2 and layer2 ==3) {
+      if (layer3 == 4) {
+        if (layer4 == 5)  //13
+        {
+          return rzChiSquared < 17.009f;
+        }
+        else if (layer4 == 12) //14
+        { 
+          return rzChiSquared < 5.423f;
+        }
       }
-      if (layer4 == 8 and layer5 == 14)  //6
-      {
-        return rzChiSquared < 52.561f;
-      } else if (layer4 == 13 and layer5 == 14)  //7
-      {
-        return rzChiSquared < 13.76f;
+      else if (layer3 == 7) {
+        if (layer4 == 8) // 15
+        { 
+          return true;
+        }
+        else if (layer4 == 13) //16
+        { 
+          return rzChiSquared < 96.629f;
+        }
       }
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 7 and layer5 == 8)  //8
-      {
-        return rzChiSquared < 44.247f;
-      } else if (layer4 == 7 and layer5 == 13)  //9
-      {
-        return rzChiSquared < 33.752f;
-      } else if (layer4 == 12 and layer5 == 13)  //10
-      {
-        return rzChiSquared < 21.213f;
-      } else if (layer4 == 4 and layer5 == 5)  //11
-      {
-        return rzChiSquared < 29.035f;
-      } else if (layer4 == 4 and layer5 == 12)  //12
-      {
-        return rzChiSquared < 23.037f;
+      else if (layer3 == 12 and layer4 == 13) //17
+      { 
+        return rzChiSquared < 6.167f;
       }
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9 and layer5 == 15)  //14
-      {
-        return rzChiSquared < 41.036f;
-      } else if (layer4 == 14 and layer5 == 15)  //15
-      {
-        return rzChiSquared < 14.092f;
+    } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
+    { 
+      return true;
+    } else if (layer1 == 2 and layer2 == 7)
+    {
+      if (layer3 == 8 and layer4 == 14) //19
+      { 
+        return rzChiSquared < 78.513f;
       }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 14)  //16
-      {
-        return rzChiSquared < 23.748f;
+      else if (layer3 == 13 and layer4 == 14) //20
+      { 
+        return rzChiSquared < 5.148f;
       }
-      if (layer4 == 13 and layer5 == 14)  //17
-      {
-        return rzChiSquared < 17.945f;
+    } else if (layer1 == 3)
+    {
+      if (layer2 == 4){
+        if (layer3 == 5 and layer4 == 6 ) //21
+        { 
+          return rzChiSquared < 104.004f;
+        }
+        else if (layer3 == 12 and layer4 == 13) //24
+        {
+          return rzChiSquared < 23.359f;
+        }
+        else if (layer3 == 5 and layer4 == 12) //25
+        {
+          return rzChiSquared < 44.752f;
+        }
       }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 5 and layer5 == 6)  //18
-      {
-        return rzChiSquared < 8.803f;
-      } else if (layer4 == 5 and layer5 == 12)  //19
-      {
-        return rzChiSquared < 7.930f;
-      }
-
-      else if (layer4 == 12 and layer5 == 13)  //20
-      {
-        return rzChiSquared < 7.626f;
+      else if (layer2 == 7) {
+        if (layer3 == 8 and layer4 == 14) //22
+        {
+          return true;
+        }
+        else if (layer3 == 13 and layer4 == 14) //23
+        {
+          return rzChiSquared < 11.313f;
+          }
       }
     }
     return true;
@@ -1105,7 +1097,7 @@ namespace lst {
     float zHiPointed = z_InLo + dzMean * (z_InLo < 0.f ? 1.f : dzDrtScale) + zWindow;
 
     // Cut #2: Pointed Z (Inner segment two MD points to outer segment outer MD)
-    printf("z_outLo %f zLoPointed %f zHiPointed %f\n", z_OutLo, zLoPointed, zHiPointed);
+    // printf("z_outLo %f zLoPointed %f zHiPointed %f\n", z_OutLo, zLoPointed, zHiPointed);
     if ((z_OutLo < zLoPointed) || (z_OutLo > zHiPointed))
       return false;
 
@@ -1900,7 +1892,8 @@ namespace lst {
                                                                uint16_t lowerModuleIndex4,
                                                                unsigned int innerTripletIndex,
                                                                unsigned int outerTripletIndex,
-                                                               const float ptCut) {
+                                                               const float ptCut,
+                                                               float& rzChiSquared) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex]; //second and third segments are the same here
@@ -1951,6 +1944,31 @@ namespace lst {
                                       fourthMDIndex,
                                       ptCut))
       return false;
+
+    float inner_circleCenterX = tripletsInGPU.circleCenterX[innerTripletIndex];
+    float inner_circleCenterY = tripletsInGPU.circleCenterY[innerTripletIndex];
+    float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
+    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
+
+    if (not passT4RZConstraint(acc,
+                               modulesInGPU,
+                               mdsInGPU,
+                               firstMDIndex, 
+                               secondMDIndex, 
+                               thirdMDIndex, 
+                               fourthMDIndex, 
+                               lowerModuleIndex1, 
+                               lowerModuleIndex2, 
+                               lowerModuleIndex3, 
+                               lowerModuleIndex4, 
+                               rzChiSquared, 
+                               inner_pt, 
+                               innerRadius, 
+                               inner_circleCenterX, 
+                               inner_circleCenterY, 
+                               innerT3charge))
+      return false;
+
     return true;
   };
 
@@ -2007,10 +2025,11 @@ namespace lst {
             uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
             float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
-            float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];   
+            float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];  
+            float rzChiSquared; 
             // float innerRadius, outerRadius, rzChiSquared;  //required for making distributions
 
-            //selections: shared LS, same charge, pointing constraints
+            //selections: shared LS, same charge, pointing constraints, rzChiSquared (with no cut)
             bool success = runQuadrupletDefaultAlgo(acc,
                                                     modulesInGPU,
                                                     mdsInGPU,
@@ -2022,7 +2041,8 @@ namespace lst {
                                                     lowerModule4,
                                                     innerTripletIndex,
                                                     outerTripletIndex,
-                                                    ptCut);
+                                                    ptCut,
+                                                    rzChiSquared);
             // bool success = true;
 
             if (success) {
@@ -2068,13 +2088,13 @@ namespace lst {
                                         lowerModule4,
                                         innerRadius,
                                         outerRadius,
-                                        // rzChiSquared,
                                         pt,
                                         eta,
                                         phi,
                                         // scores,
                                         layer,
-                                        quadrupletIndex);
+                                        quadrupletIndex,
+                                        rzChiSquared);
 
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
