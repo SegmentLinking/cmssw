@@ -12,6 +12,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
   trackCandidatesInGPU = nullptr;
   pixelTripletsInGPU = nullptr;
   pixelQuintupletsInGPU = nullptr;
+  PT2sInGPU = nullptr;
   rangesInGPU = nullptr;
 
   hitsInCPU = nullptr;
@@ -24,6 +25,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
   quintupletsInCPU = nullptr;
   pixelTripletsInCPU = nullptr;
   pixelQuintupletsInCPU = nullptr;
+  PT2sInCPU = nullptr;
 
   //reset the arrays
   for (int i = 0; i < 6; i++) {
@@ -33,6 +35,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
+    n_PT2s_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -40,6 +43,7 @@ void lst::Event<Acc3D>::init(bool verbose) {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
+      n_PT2s_by_layer_endcap_[i] = 0;
     }
   }
 }
@@ -53,6 +57,7 @@ void lst::Event<Acc3D>::resetEvent() {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
+    n_PT2s_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -60,6 +65,7 @@ void lst::Event<Acc3D>::resetEvent() {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
+      n_PT2s_by_layer_endcap_[i] = 0;
     }
   }
   if (hitsInGPU) {
@@ -107,6 +113,11 @@ void lst::Event<Acc3D>::resetEvent() {
     delete pixelQuintupletsBuffers;
     pixelQuintupletsInGPU = nullptr;
   }
+  if (PT2sInGPU) {
+    delete PT2sInGPU;
+    delete PT2sBuffers;
+    PT2sInGPU = nullptr;
+  }
 
   if (hitsInCPU != nullptr) {
     delete hitsInCPU;
@@ -139,6 +150,10 @@ void lst::Event<Acc3D>::resetEvent() {
   if (pixelQuintupletsInCPU != nullptr) {
     delete pixelQuintupletsInCPU;
     pixelQuintupletsInCPU = nullptr;
+  }
+  if (PT2sInCPU != nullptr) {
+    delete PT2sInCPU;
+    PT2sInCPU = nullptr;
   }
   if (trackCandidatesInCPU != nullptr) {
     delete trackCandidatesInCPU;
@@ -730,6 +745,39 @@ void lst::Event<Acc3D>::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_
 
     alpaka::enqueue(queue, checkHitspLSTask);
   }
+/*
+  Vec3D const threadsPerBlock_crossCleanPT2{1, 16, 64};
+  Vec3D const blocksPerGrid_crossCleanPT2{1, 4, 20};
+  WorkDiv3D const crossClean2_workDiv =
+      createWorkDiv(blocksPerGrid_crossCleanPT2, threadsPerBlock_crossCleanPT2, elementsPerThread);
+
+  lst::crossCleanPT2 crossCleanPT2_kernel;
+  auto const crossCleanPT2Task(alpaka::createTaskKernel<Acc3D>(crossCleanPT2_workDiv,
+                                                               crossCleanPT2_kernel,
+                                                               *modulesBuffers_->data(),
+                                                               *rangesInGPU,
+                                                               *PT2sInGPU,
+                                                               *segmentsInGPU,
+                                                               *pixelTripletsInGPU,
+                                                               *pixelQuintupletsInGPU));
+
+  alpaka::enqueue(queue, crossCleanPT2Task);
+*/
+  Vec3D const threadsPerBlock_addPT2asTrackCandidatesInGPU{1, 1, 512};
+  Vec3D const blocksPerGrid_addPT2asTrackCandidatesInGPU{1, 1, 1};
+  WorkDiv3D const addPT2asTrackCandidatesInGPU_workDiv = createWorkDiv(
+      blocksPerGrid_addPT2asTrackCandidatesInGPU, threadsPerBlock_addPT2asTrackCandidatesInGPU, elementsPerThread);
+
+  lst::addPT2asTrackCandidatesInGPU addPT2asTrackCandidatesInGPU_kernel;
+  auto const addPT2asTrackCandidatesInGPUTask(alpaka::createTaskKernel<Acc3D>(addPT2asTrackCandidatesInGPU_workDiv,
+                                                                              addPT2asTrackCandidatesInGPU_kernel,
+                                                                              nLowerModules_,
+                                                                              *PT2sInGPU,
+                                                                              *trackCandidatesInGPU,
+                                                                              *segmentsInGPU,
+                                                                              *rangesInGPU));
+
+  alpaka::enqueue(queue, addPT2asTrackCandidatesInGPUTask);
 
   Vec3D const threadsPerBlock_crossCleanpLS{1, 16, 32};
   Vec3D const blocksPerGrid_crossCleanpLS{1, 4, 20};
@@ -768,19 +816,22 @@ void lst::Event<Acc3D>::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_
   // Check if either n_max_pixel_track_candidates or n_max_nonpixel_track_candidates was reached
   auto nTrackCanpT5Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanpT3Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+  auto nTrackCanPT2Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanpLSHost_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   auto nTrackCanT5Host_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
   alpaka::memcpy(queue, nTrackCanpT5Host_buf, trackCandidatesBuffers->nTrackCandidatespT5_buf);
   alpaka::memcpy(queue, nTrackCanpT3Host_buf, trackCandidatesBuffers->nTrackCandidatespT3_buf);
+  alpaka::memcpy(queue, nTrackCanPT2Host_buf, trackCandidatesBuffers->nTrackCandidatesPT2_buf);
   alpaka::memcpy(queue, nTrackCanpLSHost_buf, trackCandidatesBuffers->nTrackCandidatespLS_buf);
   alpaka::memcpy(queue, nTrackCanT5Host_buf, trackCandidatesBuffers->nTrackCandidatesT5_buf);
   alpaka::wait(queue);
 
   int nTrackCandidatespT5 = *alpaka::getPtrNative(nTrackCanpT5Host_buf);
   int nTrackCandidatespT3 = *alpaka::getPtrNative(nTrackCanpT3Host_buf);
+  int nTrackCandidatesPT2 = *alpaka::getPtrNative(nTrackCanPT2Host_buf);
   int nTrackCandidatespLS = *alpaka::getPtrNative(nTrackCanpLSHost_buf);
   int nTrackCandidatesT5 = *alpaka::getPtrNative(nTrackCanT5Host_buf);
-  if ((nTrackCandidatespT5 + nTrackCandidatespT3 + nTrackCandidatespLS == n_max_pixel_track_candidates) ||
+  if ((nTrackCandidatespT5 + nTrackCandidatespT3 + nTrackCandidatespLS + nTrackCandidatesPT2 == n_max_pixel_track_candidates) ||
       (nTrackCandidatesT5 == n_max_nonpixel_track_candidates)) {
     printf(
         "****************************************************************************************************\n"
@@ -908,6 +959,126 @@ void lst::Event<Acc3D>::createPixelTriplets() {
       removeDupPixelTripletsInGPUFromMap_workDiv, removeDupPixelTripletsInGPUFromMap_kernel, *pixelTripletsInGPU));
 
   alpaka::enqueue(queue, removeDupPixelTripletsInGPUFromMapTask);
+  alpaka::wait(queue);
+}
+
+void lst::Event<Acc3D>::createPT2s() {
+  if (PT2sInGPU == nullptr) {
+    PT2sInGPU = new lst::PT2s();
+    PT2sBuffers = new lst::PixelTripletsBuffer<Device>(n_max_pixel_triplets, devAcc, queue);
+    PT2sInGPU->setData(*pixelTripletsBuffers);
+  }
+
+  unsigned int nInnerSegments;
+  auto nInnerSegments_src_view = alpaka::createView(devHost, &nInnerSegments, (size_t)1u);
+
+  auto dev_view_nSegments = alpaka::createSubView(segmentsBuffers->nSegments_buf, (Idx)1u, (Idx)nLowerModules_);
+
+  alpaka::memcpy(queue, nInnerSegments_src_view, dev_view_nSegments);
+  alpaka::wait(queue);
+
+  auto superbins_buf = allocBufWrapper<int>(devHost, n_max_pixel_segments_per_module, queue);
+  auto pixelTypes_buf = allocBufWrapper<int8_t>(devHost, n_max_pixel_segments_per_module, queue);
+
+  alpaka::memcpy(queue, superbins_buf, segmentsBuffers->superbin_buf);
+  alpaka::memcpy(queue, pixelTypes_buf, segmentsBuffers->pixelType_buf);
+  alpaka::wait(queue);
+
+  auto connectedPixelSize_host_buf = allocBufWrapper<unsigned int>(devHost, nInnerSegments, queue);
+  auto connectedPixelIndex_host_buf = allocBufWrapper<unsigned int>(devHost, nInnerSegments, queue);
+  auto connectedPixelSize_dev_buf = allocBufWrapper<unsigned int>(devAcc, nInnerSegments, queue);
+  auto connectedPixelIndex_dev_buf = allocBufWrapper<unsigned int>(devAcc, nInnerSegments, queue);
+
+  int* superbins = alpaka::getPtrNative(superbins_buf);
+  int8_t* pixelTypes = alpaka::getPtrNative(pixelTypes_buf);
+  unsigned int* connectedPixelSize_host = alpaka::getPtrNative(connectedPixelSize_host_buf);
+  unsigned int* connectedPixelIndex_host = alpaka::getPtrNative(connectedPixelIndex_host_buf);
+  alpaka::wait(queue);
+
+  int pixelIndexOffsetPos =
+      pixelMapping_->connectedPixelsIndex[size_superbins - 1] + pixelMapping_->connectedPixelsSizes[size_superbins - 1];
+  int pixelIndexOffsetNeg = pixelMapping_->connectedPixelsIndexPos[size_superbins - 1] +
+                            pixelMapping_->connectedPixelsSizesPos[size_superbins - 1] + pixelIndexOffsetPos;
+
+  // TODO: check if a map/reduction to just eligible pLSs would speed up the kernel
+  // the current selection still leaves a significant fraction of unmatchable pLSs
+  for (unsigned int i = 0; i < nInnerSegments; i++) {  // loop over # pLS
+    int8_t pixelType = pixelTypes[i];                  // Get pixel type for this pLS
+    int superbin = superbins[i];                       // Get superbin for this pixel
+    if ((superbin < 0) or (superbin >= (int)size_superbins) or (pixelType > 2) or (pixelType < 0)) {
+      connectedPixelSize_host[i] = 0;
+      connectedPixelIndex_host[i] = 0;
+      continue;
+    }
+
+    // Used pixel type to select correct size-index arrays
+    if (pixelType == 0) {
+      connectedPixelSize_host[i] =
+          pixelMapping_->connectedPixelsSizes[superbin];  // number of connected modules to this pixel
+      auto connectedIdxBase = pixelMapping_->connectedPixelsIndex[superbin];
+      connectedPixelIndex_host[i] =
+          connectedIdxBase;  // index to get start of connected modules for this superbin in map
+    } else if (pixelType == 1) {
+      connectedPixelSize_host[i] =
+          pixelMapping_->connectedPixelsSizesPos[superbin];  // number of pixel connected modules
+      auto connectedIdxBase = pixelMapping_->connectedPixelsIndexPos[superbin] + pixelIndexOffsetPos;
+      connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
+    } else if (pixelType == 2) {
+      connectedPixelSize_host[i] =
+          pixelMapping_->connectedPixelsSizesNeg[superbin];  // number of pixel connected modules
+      auto connectedIdxBase = pixelMapping_->connectedPixelsIndexNeg[superbin] + pixelIndexOffsetNeg;
+      connectedPixelIndex_host[i] = connectedIdxBase;  // index to get start of connected pixel modules
+    }
+  }
+
+  alpaka::memcpy(queue, connectedPixelSize_dev_buf, connectedPixelSize_host_buf, nInnerSegments);
+  alpaka::memcpy(queue, connectedPixelIndex_dev_buf, connectedPixelIndex_host_buf, nInnerSegments);
+  alpaka::wait(queue);
+
+  Vec3D const threadsPerBlock{1, 4, 32};
+  Vec3D const blocksPerGrid{16 /* above median of connected modules*/, 4096, 1};
+  WorkDiv3D const createPixelTripletsInGPUFromMapv2_workDiv =
+      createWorkDiv(blocksPerGrid, threadsPerBlock, elementsPerThread);
+
+  lst::createPT2sInGPUFromMapv2 createPixelTripletsInGPUFromMapv2_kernel;
+  auto const createPT2sInGPUFromMapv2Task(
+      alpaka::createTaskKernel<Acc3D>(createPT2sInGPUFromMapv2_workDiv,
+                                      createPT2sInGPUFromMapv2_kernel,
+                                      *modulesBuffers_->data(),
+                                      *rangesInGPU,
+                                      *mdsInGPU,
+                                      *segmentsInGPU,
+                                      *tripletsInGPU,
+                                      *pixelTripletsInGPU,
+                                      alpaka::getPtrNative(connectedPixelSize_dev_buf),
+                                      alpaka::getPtrNative(connectedPixelIndex_dev_buf),
+                                      nInnerSegments,
+                                      ptCut));
+
+  alpaka::enqueue(queue, createPT2sInGPUFromMapv2Task);
+  alpaka::wait(queue);
+
+#ifdef WARNINGS
+  auto nPT2s_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+
+  alpaka::memcpy(queue, nPT2s_buf, pT2sBuffers->nPT2s_buf);
+  alpaka::wait(queue);
+
+  std::cout << "number of pixel triplets = " << *alpaka::getPtrNative(nPT2s_buf) << std::endl;
+#endif
+
+  //pT3s can be cleaned here because they're not used in making pT5s!
+  Vec3D const threadsPerBlockDupPixTrip{1, 16, 16};
+  //seems like more blocks lead to conflicting writes
+  Vec3D const blocksPerGridDupPixTrip{1, 40, 1};
+  WorkDiv3D const removeDupPT2sInGPUFromMap_workDiv =
+      createWorkDiv(blocksPerGridDupPixTrip, threadsPerBlockDupPixTrip, elementsPerThread);
+
+  lst::removeDupPT2sInGPUFromMap removeDupPT2sInGPUFromMap_kernel;
+  auto const removeDupPT2sInGPUFromMapTask(alpaka::createTaskKernel<Acc3D>(
+      removeDupPT2sInGPUFromMap_workDiv, removeDupPT2sInGPUFromMap_kernel, *PT2sInGPU));
+
+  alpaka::enqueue(queue, removeDupPT2sInGPUFromMapTask);
   alpaka::wait(queue);
 }
 
@@ -1382,6 +1553,17 @@ unsigned int lst::Event<Acc3D>::getNumberOfTripletsByLayerEndcap(unsigned int la
   return n_triplets_by_layer_endcap_[layer];
 }
 
+int lst::Event<Acc3D>::getNumberOfPT2s() {
+  auto nPT2s_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+
+  alpaka::memcpy(queue, nPT2s_buf, PT2sBuffers->nPT2s_buf);
+  alpaka::wait(queue);
+
+  int nPT2s = *alpaka::getPtrNative(nPT2s_buf);
+
+  return nPT2s;
+}
+
 int lst::Event<Acc3D>::getNumberOfPixelTriplets() {
   auto nPixelTriplets_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
 
@@ -1462,6 +1644,17 @@ int lst::Event<Acc3D>::getNumberOfPT3TrackCandidates() {
   int nTrackCandidatesPT3 = *alpaka::getPtrNative(nTrackCandidatesPT3_buf);
 
   return nTrackCandidatesPT3;
+}
+
+int lst::Event<Acc3D>::getNumberOfPT2TrackCandidates() {
+  auto nTrackCandidatesPT2_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+
+  alpaka::memcpy(queue, nTrackCandidatesPT2_buf, trackCandidatesBuffers->nTrackCandidatesPT2_buf);
+  alpaka::wait(queue);
+
+  int nTrackCandidatesPT2 = *alpaka::getPtrNative(nTrackCandidatesPT2_buf);
+
+  return nTrackCandidatesPT2;
 }
 
 int lst::Event<Acc3D>::getNumberOfPLSTrackCandidates() {
@@ -1572,6 +1765,10 @@ lst::MiniDoubletsBuffer<DevHost>* lst::Event<Acc3D>::getMiniDoublets() {
     alpaka::memcpy(queue, mdsInCPU->dphichanges_buf, miniDoubletsBuffers->dphichanges_buf, nMemHost);
     alpaka::memcpy(queue, mdsInCPU->nMDs_buf, miniDoubletsBuffers->nMDs_buf);
     alpaka::memcpy(queue, mdsInCPU->totOccupancyMDs_buf, miniDoubletsBuffers->totOccupancyMDs_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorX_buf, miniDoubletsBuffers->anchorX_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorY_buf, miniDoubletsBuffers->anchorY_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorZ_buf, miniDoubletsBuffers->anchorZ_buf);
+    alpaka::memcpy(queue, mdsInCPU->anchorRt_buf, miniDoubletsBuffers->anchorRt_buf);
     alpaka::wait(queue);
   }
   return mdsInCPU;
@@ -1644,6 +1841,7 @@ lst::TripletsBuffer<DevHost>* lst::Event<Acc3D>::getTriplets() {
     alpaka::memcpy(queue, tripletsInCPU->circleRadius_buf, tripletsBuffers->circleRadius_buf, nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->nTriplets_buf, tripletsBuffers->nTriplets_buf);
     alpaka::memcpy(queue, tripletsInCPU->totOccupancyTriplets_buf, tripletsBuffers->totOccupancyTriplets_buf);
+    alpaka::memcpy(queue, tripletsInCPU->charge_buf, tripletsBuffers->charge_buf, nMemHost);
     alpaka::wait(queue);
   }
   return tripletsInCPU;
@@ -1685,6 +1883,43 @@ lst::QuintupletsBuffer<DevHost>* lst::Event<Acc3D>::getQuintuplets() {
     alpaka::wait(queue);
   }
   return quintupletsInCPU;
+}
+
+lst::PT2sBuffer<DevHost>* lst::Event<Acc3D>::getPT2s() {
+  if (PT2sInCPU == nullptr) {
+    // Get nPT2s parameter to initialize host based PT2sInCPU
+    auto nPT2s_buf = allocBufWrapper<unsigned int>(devHost, 1, queue);
+    alpaka::memcpy(queue, nPT2s_buf, PT2sBuffers->nPT2s_buf);
+    alpaka::wait(queue);
+
+    unsigned int nPT2s = *alpaka::getPtrNative(nPT2s_buf);
+    PT2sInCPU = new lst::PixelTripletsBuffer<DevHost>(nPT2s, devHost, queue);
+    PT2sInCPU->setData(*PT2sInCPU);
+
+    *alpaka::getPtrNative(PT2sInCPU->nPT2s_buf) = nPT2s;
+    alpaka::memcpy(
+        queue, PT2sInCPU->totOccupancyPT2s_buf, PT2sBuffers->totOccupancyPT2s_buf);
+    alpaka::memcpy(queue, PT2sInCPU->rzChiSquared_buf, PT2sBuffers->rzChiSquared_buf, nPT2s);
+    alpaka::memcpy(
+        queue, PT2sInCPU->rPhiChiSquared_buf, PT2sBuffers->rPhiChiSquared_buf, nPT2s);
+    alpaka::memcpy(queue,
+                   PT2sInCPU->rPhiChiSquaredInwards_buf,
+                   PT2sBuffers->rPhiChiSquaredInwards_buf,
+                   nPT2s);
+    alpaka::memcpy(
+        queue, PT2sInCPU->segmentIndices_buf, PT2sBuffers->segmentIndices_buf, nPT2s);
+    alpaka::memcpy(queue,
+                   PT2sInCPU->pixelSegmentIndices_buf,
+                   PT2sBuffers->pixelSegmentIndices_buf,
+                   nPT2s);
+    alpaka::memcpy(queue, PT2sInCPU->pixelRadius_buf, PT2sBuffers->pixelRadius_buf, nPT2s);
+    alpaka::memcpy(queue, PT2sInCPU->isDup_buf, PT2sBuffers->isDup_buf, nPT2s);
+    alpaka::memcpy(queue, PT2sInCPU->eta_buf, PT2sBuffers->eta_buf, nPT2s);
+    alpaka::memcpy(queue, PT2sInCPU->phi_buf, PT2sBuffers->phi_buf, nPT2s);
+    alpaka::memcpy(queue, PT2sInCPU->score_buf, PT2sBuffers->score_buf, nPT2s);
+    alpaka::wait(queue);
+  }
+  return PT2sInCPU;
 }
 
 lst::PixelTripletsBuffer<DevHost>* lst::Event<Acc3D>::getPixelTriplets() {

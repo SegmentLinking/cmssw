@@ -13,6 +13,7 @@
 #include "MiniDoublet.h"
 #include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
+#include "PT2.h"
 #include "TrackCandidate.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
@@ -62,6 +63,8 @@ namespace lst {
     QuintupletsBuffer<Device>* quintupletsBuffers;
     TrackCandidates* trackCandidatesInGPU;
     TrackCandidatesBuffer<Device>* trackCandidatesBuffers;
+    PT2s* PT2sInGPU;
+    PT2sBuffer<Device>* PT2sBuffers;
     PixelTriplets* pixelTripletsInGPU;
     PixelTripletsBuffer<Device>* pixelTripletsBuffers;
     PixelQuintuplets* pixelQuintupletsInGPU;
@@ -76,6 +79,7 @@ namespace lst {
     TrackCandidatesBuffer<DevHost>* trackCandidatesInCPU;
     ModulesBuffer<DevHost>* modulesInCPU;
     QuintupletsBuffer<DevHost>* quintupletsInCPU;
+    PT2sBuffer<DevHost>* PT2sInCPU;
     PixelTripletsBuffer<DevHost>* pixelTripletsInCPU;
     PixelQuintupletsBuffer<DevHost>* pixelQuintupletsInCPU;
 
@@ -155,6 +159,7 @@ namespace lst {
     void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets);
     void createExtendedTracks();
     void createQuintuplets();
+    void createPT2s();
     void createPixelTriplets();
     void createPixelQuintuplets();
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
@@ -183,6 +188,7 @@ namespace lst {
     int getNumberOfPixelTrackCandidates();
     int getNumberOfPT5TrackCandidates();
     int getNumberOfPT3TrackCandidates();
+    int getNumberOfPT2TrackCandidates();
     int getNumberOfT5TrackCandidates();
     int getNumberOfPLSTrackCandidates();
 
@@ -191,6 +197,7 @@ namespace lst {
     unsigned int getNumberOfQuintupletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfQuintupletsByLayerEndcap(unsigned int layer);
 
+    int getNumberOfPT2s();
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
@@ -203,6 +210,7 @@ namespace lst {
     QuintupletsBuffer<DevHost>* getQuintuplets();
     TrackCandidatesBuffer<DevHost>* getTrackCandidates();
     TrackCandidatesBuffer<DevHost>* getTrackCandidatesInCMSSW();
+    PT2sBuffer<DevHost>* getPT2s();
     PixelTripletsBuffer<DevHost>* getPixelTriplets();
     PixelQuintupletsBuffer<DevHost>* getPixelQuintuplets();
     ModulesBuffer<DevHost>* getModules(bool isFull = false);
