@@ -45,7 +45,7 @@ namespace lst {
   constexpr unsigned int n_max_pixel_quintuplets = 15000;
 
   constexpr unsigned int n_max_pixel_track_candidates = 30000;
-  constexpr unsigned int n_max_nonpixel_track_candidates = 1000;
+  constexpr unsigned int n_max_nonpixel_track_candidates = 11000;
 
   constexpr unsigned int size_superbins = 45000;
 
