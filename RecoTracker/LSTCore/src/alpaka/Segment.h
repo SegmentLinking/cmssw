@@ -116,7 +116,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                       uint16_t innerLowerModuleIndex,
                                                       uint16_t outerLowerModuleIndex,
                                                       unsigned int innerMDIndex,
-                                                      unsigned int outerMDIndex) {
+                                                      unsigned int outerMDIndex,
+                                                      const float ptCut) {
     float sdMuls = (modules.subdets()[innerLowerModuleIndex] == Barrel)
                        ? kMiniMulsPtScaleBarrel[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : kMiniMulsPtScaleEndcap[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -299,7 +300,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& dPhiMax,
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
-                                                                  float& dPhiChangeMax) {
+                                                                  float& dPhiChangeMax,
+                                                                  const float ptCut) {
     float sdMuls = (modules.subdets()[innerLowerModuleIndex] == Barrel)
                        ? kMiniMulsPtScaleBarrel[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : kMiniMulsPtScaleEndcap[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -357,7 +359,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -389,7 +392,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& dPhiMax,
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
-                                                                  float& dPhiChangeMax) {
+                                                                  float& dPhiChangeMax,
+                                                                  const float ptCut) {
     float xIn, yIn, zIn, rtIn, xOut, yOut, zOut, rtOut;
 
     xIn = mds.anchorX()[innerMDIndex];
@@ -470,7 +474,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     innerLowerModuleIndex,
                     outerLowerModuleIndex,
                     innerMDIndex,
-                    outerMDIndex);
+                    outerMDIndex,
+                    ptCut);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -502,7 +507,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float& dPhiMax,
                                                             float& dPhiChange,
                                                             float& dPhiChangeMin,
-                                                            float& dPhiChangeMax) {
+                                                            float& dPhiChangeMax,
+                                                            const float ptCut) {
     if (modules.subdets()[innerLowerModuleIndex] == Barrel and modules.subdets()[outerLowerModuleIndex] == Barrel) {
       return runSegmentDefaultAlgoBarrel(acc,
                                          modules,
@@ -516,7 +522,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          dPhiMax,
                                          dPhiChange,
                                          dPhiChangeMin,
-                                         dPhiChangeMax);
+                                         dPhiChangeMax,
+                                         ptCut);
     } else {
       return runSegmentDefaultAlgoEndcap(acc,
                                          modules,
@@ -530,7 +537,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          dPhiMax,
                                          dPhiChange,
                                          dPhiChangeMin,
-                                         dPhiChangeMax);
+                                         dPhiChangeMax,
+                                         ptCut);
     }
   }
 
@@ -542,7 +550,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoubletsOccupancyConst mdsOccupancy,
                                   Segments segments,
                                   SegmentsOccupancy segmentsOccupancy,
-                                  ObjectRangesConst ranges) const {
+                                  ObjectRangesConst ranges,
+                                  const float ptCut) const {
       auto const globalBlockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
       auto const blockThreadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
       auto const gridBlockExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc);
@@ -595,7 +604,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                       dPhiMax,
                                       dPhiChange,
                                       dPhiChangeMin,
-                                      dPhiChangeMax)) {
+                                      dPhiChangeMax,
+                                      ptCut)) {
               unsigned int totOccupancySegments =
                   alpaka::atomicAdd(acc,
                                     &segmentsOccupancy.totOccupancySegments()[innerLowerModuleIndex],
