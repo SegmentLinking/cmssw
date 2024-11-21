@@ -62,7 +62,7 @@ namespace lst::t5dnn {
                                                    const float bridgeRadius) {
     // Constants
     constexpr unsigned int kinputFeatures = 23;
-    constexpr unsigned int khiddenFeatures = 32;
+    constexpr unsigned int khiddenFeatures = 64;
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
     float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
@@ -122,19 +122,29 @@ namespace lst::t5dnn {
 
     float x_1[khiddenFeatures];  // Layer 1 output
     float x_2[khiddenFeatures];  // Layer 2 output
-    float x_3[1];                // Layer 3 linear output
+    float x_3[khiddenFeatures];  // Layer 3 output
+    float x_4[khiddenFeatures];  // Layer 4 output
+    float x_5[1];                // Layer 5 (output layer) linear output
 
-    // Layer 1: Linear + Relu
+    // Layer 1: Linear + ReLU
     linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_layer1, bias_layer1);
     relu_activation<khiddenFeatures>(x_1);
 
-    // Layer 2: Linear + Relu
+    // Layer 2: Linear + ReLU
     linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_layer2, bias_layer2);
     relu_activation<khiddenFeatures>(x_2);
 
-    // Layer 3: Linear + Sigmoid
-    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-    float x_5 = sigmoid_activation(acc, x_3[0]);
+    // Layer 3: Linear + ReLU
+    linear_layer<khiddenFeatures, khiddenFeatures>(x_2, x_3, wgtT_layer3, bias_layer3);
+    relu_activation<khiddenFeatures>(x_3);
+
+    // Layer 4: Linear + ReLU
+    linear_layer<khiddenFeatures, khiddenFeatures>(x_3, x_4, wgtT_layer4, bias_layer4);
+    relu_activation<khiddenFeatures>(x_4);
+
+    // Layer 5: Linear + Sigmoid
+    linear_layer<khiddenFeatures, 1>(x_4, x_5, wgtT_output_layer, bias_output_layer);
+    float output = sigmoid_activation(acc, x_5[0]);
 
     // Get the bin index based on abs(eta) of first hit and t5_pt
     float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
@@ -142,8 +152,9 @@ namespace lst::t5dnn {
     uint8_t pt_index = (t5_pt > 5);
     uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
 
-    // Compare x_5 to the cut value for the relevant bin
-    return x_5 > kWp[pt_index][bin_index];
+    // Compare output to the cut value for the relevant bin
+    return output > kWp[pt_index][bin_index];
+
   }
 
 }  //namespace lst::t5dnn
