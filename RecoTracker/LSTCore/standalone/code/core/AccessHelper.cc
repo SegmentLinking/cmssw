@@ -440,6 +440,9 @@ std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int iTC) {
     case lst::LSTObjType::pLS:
       return std::vector<unsigned int>();
       break;
+    case kT4:
+      return getLSsFromT4(event, objidx);
+      break;
   }
 }
 
@@ -462,6 +465,9 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
       break;
     case lst::LSTObjType::pLS:
       return getHitIdxsAndHitTypesFrompLS(event, objidx);
+      break;
+    case kT4:
+      return getHitIdxsAndHitTypesFromT4(event, objidx);
       break;
   }
 }
