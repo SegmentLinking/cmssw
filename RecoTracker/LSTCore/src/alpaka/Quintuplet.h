@@ -2302,8 +2302,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                           innerRadius,
                                           outerRadius,
                                           bridgeRadius);
-    tightCutFlag = tightCutFlag and (inference > t5dnn::kLSTWp2);  // T5-in-TC cut
-    if (inference <= t5dnn::kLSTWp2)                               // T5-building cut
+    tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
+    if (!inference)                             // T5-building cut
       return false;
 
     //compute the other chisquared
