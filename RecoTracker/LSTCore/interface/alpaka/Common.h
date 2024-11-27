@@ -77,8 +77,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kPtBins][kEtaBins] = {
-        {0.2747, 0.2954, 0.3673, 0.4729, 0.419, 0.464, 0.4843, 0.5571, 0.6796, 0.6885},
-        {0.1696, 0.255, 0.2716, 0.3713, 0.1902, 0.1597, 0.1446, 0.095, 0.1797, 0.1104}};
+        {0.268, 0.3172, 0.3907, 0.4653, 0.4364, 0.4696, 0.6018, 0.6487, 0.7401, 0.7146},
+        {0.1654, 0.2385, 0.2935, 0.3534, 0.2455, 0.1748, 0.1565, 0.1811, 0.3435, 0.1784}};
   }  // namespace t5dnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
