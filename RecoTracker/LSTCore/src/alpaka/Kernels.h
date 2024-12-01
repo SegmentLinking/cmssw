@@ -174,18 +174,18 @@ namespace lst {
       }
     }
 
-    int hits1[Params_T2::kHits];
-    int hits2[Params_T2::kHits];
+    int hits1[Params_LS::kHits];
+    int hits2[Params_LS::kHits];
 
-    for (int i = 0; i < Params_T2::kHits; i++) {
+    for (int i = 0; i < Params_LS::kHits; i++) {
       hits1[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * ix + i + 4];  // Omitting the pLS hits
       hits2[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * jx + i + 4];  // Omitting the pLS hits
     }
 
     int nMatched = 0;
-    for (int i = 0; i < Params_T2::kHits; i++) {
+    for (int i = 0; i < Params_LS::kHits; i++) {
       bool tmatched = false;
-      for (int j = 0; j < Params_T2::kHits; j++) {
+      for (int j = 0; j < Params_LS::kHits; j++) {
         if (hits1[i] == hits2[j]) {
           tmatched = true;
           break;
@@ -344,22 +344,20 @@ namespace lst {
             continue;
 
           int nMatched[2];
-          checkHitsPT2(ix, jx, PT2sInGPU, nMatched);
+          checkHitspT2(ix, jx, PT2sInGPU, nMatched);
           const int minNHitsForDup_PT2 = 6;
           if ((nMatched[0] + nMatched[1]) >= minNHitsForDup_PT2) {
             // Check the layers
-            if (PT2sInGPU.logicalLayers[Params_PT2::kLayers * jx + 2] <
-                PT2sInGPU.logicalLayers[Params_PT2::kLayers * ix + 2]) {
+            if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2] <
+                PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2]) {
               rmPT2FromMemory(PT2sInGPU, ix);
               break;
-            } else if (PT2sInGPU.logicalLayers[Params_PT2::kLayers * ix + 2] ==
-                           PT2sInGPU.logicalLayers[Params_PT2::kLayers * jx + 2] &&
-                       __H2F(PT2sInGPU.score[ix]) > __H2F(PT2sInGPU.score[jx])) {
+            } else if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2] ==
+                           PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2]) {
               rmPT2FromMemory(PT2sInGPU, ix);
               break;
-            } else if (PT2sInGPU.logicalLayers[Params_PT2::kLayers * ix + 2] ==
-                           PT2sInGPU.logicalLayers[Params_PT2::kLayers * jx + 2] &&
-                       (__H2F(PT2sInGPU.score[ix]) == __H2F(PT2sInGPU.score[jx])) && (ix < jx)) {
+            } else if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2] ==
+                           PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2]  && (ix < jx)) {
               rmPT2FromMemory(PT2sInGPU, ix);
               break;
             }

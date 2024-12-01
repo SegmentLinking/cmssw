@@ -41,6 +41,7 @@ namespace lst {
 
   constexpr unsigned int n_max_pixel_md_per_modules = 2 * n_max_pixel_segments_per_module;
 
+  constexpr unsigned int n_max_pixel_segments = 15000;
   constexpr unsigned int n_max_pixel_triplets = 5000;
   constexpr unsigned int n_max_pixel_quintuplets = 15000;
 

@@ -7,7 +7,7 @@
 
 using LSTEvent = lst::Event<ALPAKA_ACCELERATOR_NAMESPACE::Acc3D>;
 
-enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8 };
+enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8, kpT2 = 10 };
 
 // ----* Hit *----
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHitIdxsAndHitTypes(
@@ -81,7 +81,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 // ----* pT2 *----
 unsigned int getPixelLSFrompT2(LSTEvent* event, unsigned int pT2);
 unsigned int getT2FrompT2(LSTEvent* event, unsigned int pT2);
-std::vector<unsigned int> getLSsFrompT2(LSTEvent* event, unsigned int pT2);
+unsigned int getLSsFrompT2(LSTEvent* event, unsigned int pT2);
 std::vector<unsigned int> getMDsFrompT2(LSTEvent* event, unsigned int pT2);
 std::vector<unsigned int> getPixelHitsFrompT2(LSTEvent* event, unsigned int pT2);
 std::vector<unsigned int> getHitsFrompT2(LSTEvent* event, unsigned int pT2);

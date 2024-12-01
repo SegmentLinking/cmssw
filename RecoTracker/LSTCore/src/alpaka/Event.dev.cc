@@ -35,7 +35,6 @@ void lst::Event<Acc3D>::init(bool verbose) {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
-    n_PT2s_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -43,7 +42,6 @@ void lst::Event<Acc3D>::init(bool verbose) {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
-      n_PT2s_by_layer_endcap_[i] = 0;
     }
   }
 }
@@ -57,7 +55,6 @@ void lst::Event<Acc3D>::resetEvent() {
     n_triplets_by_layer_barrel_[i] = 0;
     n_trackCandidates_by_layer_barrel_[i] = 0;
     n_quintuplets_by_layer_barrel_[i] = 0;
-    n_PT2s_by_layer_barrel_[i] = 0;
     if (i < 5) {
       n_hits_by_layer_endcap_[i] = 0;
       n_minidoublets_by_layer_endcap_[i] = 0;
@@ -65,7 +62,6 @@ void lst::Event<Acc3D>::resetEvent() {
       n_triplets_by_layer_endcap_[i] = 0;
       n_trackCandidates_by_layer_endcap_[i] = 0;
       n_quintuplets_by_layer_endcap_[i] = 0;
-      n_PT2s_by_layer_endcap_[i] = 0;
     }
   }
   if (hitsInGPU) {
@@ -965,8 +961,8 @@ void lst::Event<Acc3D>::createPixelTriplets() {
 void lst::Event<Acc3D>::createPT2s() {
   if (PT2sInGPU == nullptr) {
     PT2sInGPU = new lst::PT2s();
-    PT2sBuffers = new lst::PixelTripletsBuffer<Device>(n_max_pixel_triplets, devAcc, queue);
-    PT2sInGPU->setData(*pixelTripletsBuffers);
+    PT2sBuffers = new lst::PT2sBuffer<Device>(n_max_pixel_segments, devAcc, queue);
+    PT2sInGPU->setData(*PT2sBuffers);
   }
 
   unsigned int nInnerSegments;
@@ -1037,10 +1033,10 @@ void lst::Event<Acc3D>::createPT2s() {
 
   Vec3D const threadsPerBlock{1, 4, 32};
   Vec3D const blocksPerGrid{16 /* above median of connected modules*/, 4096, 1};
-  WorkDiv3D const createPixelTripletsInGPUFromMapv2_workDiv =
+  WorkDiv3D const createPT2sInGPUFromMapv2_workDiv =
       createWorkDiv(blocksPerGrid, threadsPerBlock, elementsPerThread);
 
-  lst::createPT2sInGPUFromMapv2 createPixelTripletsInGPUFromMapv2_kernel;
+  lst::createPT2sInGPUFromMapv2 createPT2sInGPUFromMapv2_kernel;
   auto const createPT2sInGPUFromMapv2Task(
       alpaka::createTaskKernel<Acc3D>(createPT2sInGPUFromMapv2_workDiv,
                                       createPT2sInGPUFromMapv2_kernel,
@@ -1048,8 +1044,7 @@ void lst::Event<Acc3D>::createPT2s() {
                                       *rangesInGPU,
                                       *mdsInGPU,
                                       *segmentsInGPU,
-                                      *tripletsInGPU,
-                                      *pixelTripletsInGPU,
+                                      *PT2sInGPU,
                                       alpaka::getPtrNative(connectedPixelSize_dev_buf),
                                       alpaka::getPtrNative(connectedPixelIndex_dev_buf),
                                       nInnerSegments,
@@ -1841,7 +1836,6 @@ lst::TripletsBuffer<DevHost>* lst::Event<Acc3D>::getTriplets() {
     alpaka::memcpy(queue, tripletsInCPU->circleRadius_buf, tripletsBuffers->circleRadius_buf, nMemHost);
     alpaka::memcpy(queue, tripletsInCPU->nTriplets_buf, tripletsBuffers->nTriplets_buf);
     alpaka::memcpy(queue, tripletsInCPU->totOccupancyTriplets_buf, tripletsBuffers->totOccupancyTriplets_buf);
-    alpaka::memcpy(queue, tripletsInCPU->charge_buf, tripletsBuffers->charge_buf, nMemHost);
     alpaka::wait(queue);
   }
   return tripletsInCPU;
@@ -1893,19 +1887,13 @@ lst::PT2sBuffer<DevHost>* lst::Event<Acc3D>::getPT2s() {
     alpaka::wait(queue);
 
     unsigned int nPT2s = *alpaka::getPtrNative(nPT2s_buf);
-    PT2sInCPU = new lst::PixelTripletsBuffer<DevHost>(nPT2s, devHost, queue);
+    PT2sInCPU = new lst::PT2sBuffer<DevHost>(nPT2s, devHost, queue);
     PT2sInCPU->setData(*PT2sInCPU);
 
     *alpaka::getPtrNative(PT2sInCPU->nPT2s_buf) = nPT2s;
     alpaka::memcpy(
         queue, PT2sInCPU->totOccupancyPT2s_buf, PT2sBuffers->totOccupancyPT2s_buf);
     alpaka::memcpy(queue, PT2sInCPU->rzChiSquared_buf, PT2sBuffers->rzChiSquared_buf, nPT2s);
-    alpaka::memcpy(
-        queue, PT2sInCPU->rPhiChiSquared_buf, PT2sBuffers->rPhiChiSquared_buf, nPT2s);
-    alpaka::memcpy(queue,
-                   PT2sInCPU->rPhiChiSquaredInwards_buf,
-                   PT2sBuffers->rPhiChiSquaredInwards_buf,
-                   nPT2s);
     alpaka::memcpy(
         queue, PT2sInCPU->segmentIndices_buf, PT2sBuffers->segmentIndices_buf, nPT2s);
     alpaka::memcpy(queue,
@@ -1916,7 +1904,6 @@ lst::PT2sBuffer<DevHost>* lst::Event<Acc3D>::getPT2s() {
     alpaka::memcpy(queue, PT2sInCPU->isDup_buf, PT2sBuffers->isDup_buf, nPT2s);
     alpaka::memcpy(queue, PT2sInCPU->eta_buf, PT2sBuffers->eta_buf, nPT2s);
     alpaka::memcpy(queue, PT2sInCPU->phi_buf, PT2sBuffers->phi_buf, nPT2s);
-    alpaka::memcpy(queue, PT2sInCPU->score_buf, PT2sBuffers->score_buf, nPT2s);
     alpaka::wait(queue);
   }
   return PT2sInCPU;

@@ -414,7 +414,7 @@ void run_lst() {
     float timing_pLS;
     float timing_pT5;
     float timing_pT3;
-    float timing_pT2;
+    float timing_PT2;
     float timing_TC;
 
 #pragma omp for  // nowait// private(event)
@@ -455,7 +455,7 @@ void run_lst() {
       timing_pLS = runPixelLineSegment(events.at(omp_get_thread_num()), ana.no_pls_dupclean);
       timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
-      timing_pT2 = runpT2(events.at(omp_get_thread_num()));
+      timing_PT2 = runPT2(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);
 
       if (ana.verbose == 4) {
@@ -499,7 +499,7 @@ void run_lst() {
                                     timing_pLS,
                                     timing_pT5,
                                     timing_pT3,
-                                    timing_pT2,
+                                    timing_PT2,
                                     timing_TC,
                                     timing_resetEvent});
     }

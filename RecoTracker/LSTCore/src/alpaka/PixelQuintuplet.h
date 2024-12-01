@@ -872,6 +872,7 @@ namespace lst {
                 tripletsInGPU.partOfPT5[quintupletsInGPU.tripletIndices[2 * quintupletIndex + 1]] = true;
                 segmentsInGPU.partOfPT5[i_pLS] = true;
                 quintupletsInGPU.partOfPT5[quintupletIndex] = true;
+                segmentsInGPU.partOfPT5[i_pLS] = true;
               }  // tot occupancy
             }  // end success
           }  // end T5

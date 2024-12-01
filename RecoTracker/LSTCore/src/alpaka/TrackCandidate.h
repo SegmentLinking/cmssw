@@ -9,15 +9,17 @@
 #include "MiniDoublet.h"
 #include "PixelTriplet.h"
 #include "Quintuplet.h"
+#include "PT2.h"
 #include "Hit.h"
 #include "ObjectRanges.h"
 
 namespace lst {
   struct TrackCandidates {
-    short* trackCandidateType;          // 4-T5 5-pT3 7-pT5 8-pLS
+    short* trackCandidateType;          // 4-T5 5-pT3 7-pT5 8-pLS 9-T4 10-PT2
     unsigned int* directObjectIndices;  // Will hold direct indices to each type containers
     unsigned int* objectIndices;        // Will hold tracklet and  triplet indices - check the type!!
     unsigned int* nTrackCandidates;
+    unsigned int* nTrackCandidatesPT2;
     unsigned int* nTrackCandidatespT3;
     unsigned int* nTrackCandidatespT5;
     unsigned int* nTrackCandidatespLS;
@@ -38,6 +40,7 @@ namespace lst {
       directObjectIndices = alpaka::getPtrNative(buf.directObjectIndices_buf);
       objectIndices = alpaka::getPtrNative(buf.objectIndices_buf);
       nTrackCandidates = alpaka::getPtrNative(buf.nTrackCandidates_buf);
+      nTrackCandidatesPT2 = alpaka::getPtrNative(buf.nTrackCandidatesPT2_buf);
       nTrackCandidatespT3 = alpaka::getPtrNative(buf.nTrackCandidatespT3_buf);
       nTrackCandidatespT5 = alpaka::getPtrNative(buf.nTrackCandidatespT5_buf);
       nTrackCandidatespLS = alpaka::getPtrNative(buf.nTrackCandidatespLS_buf);
@@ -60,6 +63,7 @@ namespace lst {
     Buf<TDev, unsigned int> directObjectIndices_buf;
     Buf<TDev, unsigned int> objectIndices_buf;
     Buf<TDev, unsigned int> nTrackCandidates_buf;
+    Buf<TDev, unsigned int> nTrackCandidatesPT2_buf;
     Buf<TDev, unsigned int> nTrackCandidatespT3_buf;
     Buf<TDev, unsigned int> nTrackCandidatespT5_buf;
     Buf<TDev, unsigned int> nTrackCandidatespLS_buf;
@@ -82,6 +86,7 @@ namespace lst {
           directObjectIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxTrackCandidates, queue)),
           objectIndices_buf(allocBufWrapper<unsigned int>(devAccIn, 2 * maxTrackCandidates, queue)),
           nTrackCandidates_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
+          nTrackCandidatesPT2_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           nTrackCandidatespT3_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           nTrackCandidatespT5_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           nTrackCandidatespLS_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
@@ -95,6 +100,7 @@ namespace lst {
           radius_buf(allocBufWrapper<FPX>(devAccIn, maxTrackCandidates, queue)) {
       alpaka::memset(queue, nTrackCandidates_buf, 0u);
       alpaka::memset(queue, nTrackCandidatesT5_buf, 0u);
+      alpaka::memset(queue, nTrackCandidatesPT2_buf, 0u);
       alpaka::memset(queue, nTrackCandidatespT3_buf, 0u);
       alpaka::memset(queue, nTrackCandidatespT5_buf, 0u);
       alpaka::memset(queue, nTrackCandidatespLS_buf, 0u);
@@ -148,9 +154,10 @@ namespace lst {
     trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex] = innerTrackletIndex;
     trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex + 1] = outerTrackletIndex;
 
-    size_t limits = trackCandidateType == 7
-                        ? Params_pT5::kLayers
-                        : Params_pT3::kLayers;  // 7 means pT5, Params_pT3::kLayers = Params_T5::kLayers = 5
+    size_t limits = trackCandidateType == 7 ? Params_pT5::kLayers : (trackCandidateType == 10 ? Params_pT2::kLayers : Params_pT3::kLayers);   
+//    size_t limits = trackCandidateType == 7
+//                        ? Params_pT5::kLayers
+//                        : Params_pT3::kLayers;  // 7 means pT5, Params_pT3::kLayers = Params_T5::kLayers = 5
 
     //send the starting pointer to the logicalLayer and hitIndices
     for (size_t i = 0; i < limits; i++) {
@@ -434,6 +441,57 @@ namespace lst {
     }
   };
 
+
+  struct addPT2asTrackCandidatesInGPU {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  uint16_t nLowerModules,
+                                  lst::PT2s PT2sInGPU,
+                                  lst::TrackCandidates trackCandidatesInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      unsigned int nPT2s = *PT2sInGPU.nPT2s;
+      unsigned int pLS_offset = rangesInGPU.segmentModuleIndices[nLowerModules];
+      for (unsigned int PT2Index = globalThreadIdx[2]; PT2Index < nPT2s;
+           PT2Index += gridThreadExtent[2]) {
+        if ((PT2sInGPU.isDup[PT2Index]))
+          continue;
+
+        unsigned int trackCandidateIdx =
+            alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
+//        if (trackCandidateIdx >= n_max_pixel_track_candidates)  // This is done before any non-pixel TCs are added
+//        {
+//#ifdef WARNINGS
+//          printf("Track Candidate excess alert! Type = PT2");
+//#endif
+//          alpaka::atomicOp<alpaka::AtomicSub>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
+//          break;
+
+//        } else {
+          alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidatesPT2, 1u);
+
+          float radius = __H2F(PT2sInGPU.pixelRadius[PT2Index]);
+          unsigned int PT2PixelIndex = PT2sInGPU.pixelSegmentIndices[PT2Index];
+          addTrackCandidateToMemory(trackCandidatesInGPU,
+                                    10 /*track candidate type PT2=10*/,
+                                    PT2Index,
+                                    PT2Index,
+                                    &PT2sInGPU.logicalLayers[Params_pT2::kLayers * PT2Index],
+                                    &PT2sInGPU.lowerModuleIndices[Params_pT2::kLayers * PT2Index],
+                                    &PT2sInGPU.hitIndices[Params_pT2::kHits * PT2Index],
+                                    segmentsInGPU.seedIdx[PT2PixelIndex - pLS_offset],
+                                    __H2F(PT2sInGPU.centerX[PT2Index]),
+                                    __H2F(PT2sInGPU.centerY[PT2Index]),
+                                    radius,
+                                    trackCandidateIdx,
+                                    PT2Index);
+//        }
+      }
+    }
+  };
   struct addT5asTrackCandidateInGPU {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,

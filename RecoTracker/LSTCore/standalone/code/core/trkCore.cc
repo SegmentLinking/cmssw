@@ -243,6 +243,22 @@ float runPixelQuintuplet(lst::Event<Acc3D> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
+float runPT2(lst::Event<Acc3D> *event) {
+  TStopwatch my_timer;
+  if (ana.verbose >= 2)
+    std::cout << "Reco PT2 start" << std::endl;
+  my_timer.Start();
+  event->createPT2s();
+  float PT2_elapsed = my_timer.RealTime();
+  if (ana.verbose >= 2)
+    std::cout << "Reco PT2 processing time: " << PT2_elapsed << " secs" << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "# of PT2s produced: " << event->getNumberOfPT2s() << std::endl;
+
+  return PT2_elapsed;
+}
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
 float runTrackCandidate(lst::Event<Acc3D> *event, bool no_pls_dupclean, bool tc_pls_triplets) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
@@ -261,6 +277,8 @@ float runTrackCandidate(lst::Event<Acc3D> *event, bool no_pls_dupclean, bool tc_
     std::cout << "    # of pT5 TrackCandidates produced: " << event->getNumberOfPT5TrackCandidates() << std::endl;
   if (ana.verbose >= 2)
     std::cout << "    # of pT3 TrackCandidates produced: " << event->getNumberOfPT3TrackCandidates() << std::endl;
+  if (ana.verbose >= 2)
+    std::cout << "    # of pT2 TrackCandidates produced: " << event->getNumberOfPT2TrackCandidates() << std::endl;
   if (ana.verbose >= 2)
     std::cout << "    # of pLS TrackCandidates produced: " << event->getNumberOfPLSTrackCandidates() << std::endl;
   if (ana.verbose >= 2)
@@ -956,8 +974,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
     timing_total_short += timing[4] * 1000;  // T5
     timing_total_short += timing[6] * 1000;  // pT5
     timing_total_short += timing[7] * 1000;  // pT3
-    timing_total_short += timing[8] * 1000;  // TC
-    timing_total_short += timing[9] * 1000;  // Reset
+    timing_total_short += timing[8] * 1000;  // pT2
+    timing_total_short += timing[9] * 1000;  // TC
+    timing_total_short += timing[10] * 1000;  // Reset
     std::cout << std::setw(6) << ievt;
     std::cout << "   " << std::setw(6) << timing[0] * 1000;    // Hits
     std::cout << "   " << std::setw(6) << timing[1] * 1000;    // MD
@@ -967,8 +986,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
     std::cout << "   " << std::setw(6) << timing[5] * 1000;    // pLS
     std::cout << "   " << std::setw(6) << timing[6] * 1000;    // pT5
     std::cout << "   " << std::setw(6) << timing[7] * 1000;    // pT3
-    std::cout << "   " << std::setw(6) << timing[8] * 1000;    // TC
-    std::cout << "   " << std::setw(6) << timing[9] * 1000;    // Reset
+    std::cout << "   " << std::setw(6) << timing[8] * 1000;    // pT2
+    std::cout << "   " << std::setw(6) << timing[9] * 1000;    // TC
+    std::cout << "   " << std::setw(6) << timing[10] * 1000;    // Reset
     std::cout << "   " << std::setw(7) << timing_total;        // Total time
     std::cout << "   " << std::setw(7) << timing_total_short;  // Total time
     std::cout << std::endl;
@@ -980,8 +1000,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
     timing_sum_information[5] += timing[5] * 1000;   // pLS
     timing_sum_information[6] += timing[6] * 1000;   // pT5
     timing_sum_information[7] += timing[7] * 1000;   // pT3
-    timing_sum_information[8] += timing[8] * 1000;   // TC
-    timing_sum_information[9] += timing[9] * 1000;   // Reset
+    timing_sum_information[8] += timing[8] * 1000;   // pT2
+    timing_sum_information[9] += timing[9] * 1000;   // TC
+    timing_sum_information[10] += timing[10] * 1000;   // Reset
     timing_shortlist.push_back(timing_total_short);  // short total
     timing_list.push_back(timing_total);             // short total
   }
@@ -993,8 +1014,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   timing_sum_information[5] /= timing_information.size();  // pLS
   timing_sum_information[6] /= timing_information.size();  // pT5
   timing_sum_information[7] /= timing_information.size();  // pT3
-  timing_sum_information[8] /= timing_information.size();  // TC
-  timing_sum_information[9] /= timing_information.size();  // Reset
+  timing_sum_information[8] /= timing_information.size();  // pT2
+  timing_sum_information[9] /= timing_information.size();  // TC
+  timing_sum_information[10] /= timing_information.size();  // Reset
 
   float timing_total_avg = 0.0;
   timing_total_avg += timing_sum_information[0];  // Hits
@@ -1005,8 +1027,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   timing_total_avg += timing_sum_information[5];  // pLS
   timing_total_avg += timing_sum_information[6];  // pT5
   timing_total_avg += timing_sum_information[7];  // pT3
-  timing_total_avg += timing_sum_information[8];  // TC
-  timing_total_avg += timing_sum_information[9];  // Reset
+  timing_total_avg += timing_sum_information[8];  // pT2
+  timing_total_avg += timing_sum_information[9];  // TC
+  timing_total_avg += timing_sum_information[10];  // Reset
   float timing_totalshort_avg = 0.0;
   timing_totalshort_avg += timing_sum_information[1];  // MD
   timing_totalshort_avg += timing_sum_information[2];  // LS
@@ -1014,8 +1037,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   timing_totalshort_avg += timing_sum_information[4];  // T5
   timing_totalshort_avg += timing_sum_information[6];  // pT5
   timing_totalshort_avg += timing_sum_information[7];  // pT3
-  timing_totalshort_avg += timing_sum_information[8];  // TC
-  timing_totalshort_avg += timing_sum_information[9];  // Reset
+  timing_totalshort_avg += timing_sum_information[8];  // pT2
+  timing_totalshort_avg += timing_sum_information[9];  // TC
+  timing_totalshort_avg += timing_sum_information[10];  // Reset
 
   float standardDeviation = 0.0;
   for (auto shorttime : timing_shortlist) {
@@ -1033,6 +1057,7 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   std::cout << "   " << std::setw(6) << "pLS";
   std::cout << "   " << std::setw(6) << "pT5";
   std::cout << "   " << std::setw(6) << "pT3";
+  std::cout << "   " << std::setw(6) << "pT2";
   std::cout << "   " << std::setw(6) << "TC";
   std::cout << "   " << std::setw(6) << "Reset";
   std::cout << "   " << std::setw(7) << "Total";
@@ -1047,8 +1072,9 @@ void printTimingInformation(std::vector<std::vector<float>> &timing_information,
   std::cout << "   " << std::setw(6) << timing_sum_information[5];  // pLS
   std::cout << "   " << std::setw(6) << timing_sum_information[6];  // pT5
   std::cout << "   " << std::setw(6) << timing_sum_information[7];  // pT3
-  std::cout << "   " << std::setw(6) << timing_sum_information[8];  // TC
-  std::cout << "   " << std::setw(6) << timing_sum_information[9];  // Reset
+  std::cout << "   " << std::setw(6) << timing_sum_information[8];  // pT2
+  std::cout << "   " << std::setw(6) << timing_sum_information[9];  // TC
+  std::cout << "   " << std::setw(6) << timing_sum_information[10];  // Reset
   std::cout << "   " << std::setw(7) << timing_total_avg;           // Average total time
   std::cout << "   " << std::setw(7) << timing_totalshort_avg;      // Average total time
   std::cout << "+/- " << std::setw(4) << stdDev;

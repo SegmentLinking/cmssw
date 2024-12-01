@@ -24,8 +24,11 @@ namespace lst {
     unsigned int* seedIdx;
     unsigned int* mdIndices;
     unsigned int* nMemoryLocations;
+    uint8_t* logicalLayers;
     unsigned int* innerMiniDoubletAnchorHitIndices;
     unsigned int* outerMiniDoubletAnchorHitIndices;
+    unsigned int* innerMiniDoubletOuterHitIndices;
+    unsigned int* outerMiniDoubletOuterHitIndices;
     int* charge;
     int* superbin;
     unsigned int* nSegments;             //number of segments per inner lower module
@@ -35,6 +38,7 @@ namespace lst {
     char* isQuad;
     char* isDup;
     bool* partOfPT5;
+    bool* partOfPT3;
     float* ptIn;
     float* ptErr;
     float* px;
@@ -61,8 +65,11 @@ namespace lst {
       seedIdx = alpaka::getPtrNative(buf.seedIdx_buf);
       mdIndices = alpaka::getPtrNative(buf.mdIndices_buf);
       nMemoryLocations = alpaka::getPtrNative(buf.nMemoryLocations_buf);
+      logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
       innerMiniDoubletAnchorHitIndices = alpaka::getPtrNative(buf.innerMiniDoubletAnchorHitIndices_buf);
       outerMiniDoubletAnchorHitIndices = alpaka::getPtrNative(buf.outerMiniDoubletAnchorHitIndices_buf);
+      innerMiniDoubletOuterHitIndices = alpaka::getPtrNative(buf.innerMiniDoubletOuterHitIndices_buf);
+      outerMiniDoubletOuterHitIndices = alpaka::getPtrNative(buf.outerMiniDoubletOuterHitIndices_buf);
       charge = alpaka::getPtrNative(buf.charge_buf);
       superbin = alpaka::getPtrNative(buf.superbin_buf);
       nSegments = alpaka::getPtrNative(buf.nSegments_buf);
@@ -72,6 +79,7 @@ namespace lst {
       isQuad = alpaka::getPtrNative(buf.isQuad_buf);
       isDup = alpaka::getPtrNative(buf.isDup_buf);
       partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
+      partOfPT3 = alpaka::getPtrNative(buf.partOfPT3_buf);
       ptIn = alpaka::getPtrNative(buf.ptIn_buf);
       ptErr = alpaka::getPtrNative(buf.ptErr_buf);
       px = alpaka::getPtrNative(buf.px_buf);
@@ -100,8 +108,11 @@ namespace lst {
     Buf<TDev, unsigned int> seedIdx_buf;
     Buf<TDev, unsigned int> mdIndices_buf;
     Buf<TDev, unsigned int> nMemoryLocations_buf;
+    Buf<TDev, uint8_t> logicalLayers_buf;
     Buf<TDev, unsigned int> innerMiniDoubletAnchorHitIndices_buf;
     Buf<TDev, unsigned int> outerMiniDoubletAnchorHitIndices_buf;
+    Buf<TDev, unsigned int> innerMiniDoubletOuterHitIndices_buf;
+    Buf<TDev, unsigned int> outerMiniDoubletOuterHitIndices_buf;
     Buf<TDev, int> charge_buf;
     Buf<TDev, int> superbin_buf;
     Buf<TDev, unsigned int> nSegments_buf;
@@ -111,6 +122,7 @@ namespace lst {
     Buf<TDev, char> isQuad_buf;
     Buf<TDev, char> isDup_buf;
     Buf<TDev, bool> partOfPT5_buf;
+    Buf<TDev, bool> partOfPT3_buf;
     Buf<TDev, float> ptIn_buf;
     Buf<TDev, float> ptErr_buf;
     Buf<TDev, float> px_buf;
@@ -143,8 +155,11 @@ namespace lst {
           seedIdx_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelSegments, queue)),
           mdIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLocationsIn * 2, queue)),
           nMemoryLocations_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
+          logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, nMemoryLocationsIn * Params_LS::kLayers, queue)),
           innerMiniDoubletAnchorHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLocationsIn, queue)),
           outerMiniDoubletAnchorHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLocationsIn, queue)),
+          innerMiniDoubletOuterHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLocationsIn, queue)),
+          outerMiniDoubletOuterHitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, nMemoryLocationsIn, queue)),
           charge_buf(allocBufWrapper<int>(devAccIn, maxPixelSegments, queue)),
           superbin_buf(allocBufWrapper<int>(devAccIn, maxPixelSegments, queue)),
           nSegments_buf(allocBufWrapper<unsigned int>(devAccIn, nLowerModules + 1, queue)),
@@ -154,6 +169,7 @@ namespace lst {
           isQuad_buf(allocBufWrapper<char>(devAccIn, maxPixelSegments, queue)),
           isDup_buf(allocBufWrapper<char>(devAccIn, maxPixelSegments, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
+          partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
           ptIn_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           ptErr_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           px_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
@@ -169,6 +185,7 @@ namespace lst {
       alpaka::memset(queue, nSegments_buf, 0u);
       alpaka::memset(queue, totOccupancySegments_buf, 0u);
       alpaka::memset(queue, partOfPT5_buf, false);
+      alpaka::memset(queue, partOfPT3_buf, false);
       alpaka::memset(queue, pLSHitsIdxs_buf, 0u);
       alpaka::wait(queue);
     }
@@ -340,12 +357,15 @@ namespace lst {
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addSegmentToMemory(lst::Segments& segmentsInGPU,
+                                                         lst::Modules const& modulesInGPU,
                                                          unsigned int lowerMDIndex,
                                                          unsigned int upperMDIndex,
                                                          uint16_t innerLowerModuleIndex,
                                                          uint16_t outerLowerModuleIndex,
                                                          unsigned int innerMDAnchorHitIndex,
                                                          unsigned int outerMDAnchorHitIndex,
+                                                         unsigned int innerMDOuterHitIndex,
+                                                         unsigned int outerMDOuterHitIndex,
                                                          float dPhi,
                                                          float dPhiMin,
                                                          float dPhiMax,
@@ -359,6 +379,13 @@ namespace lst {
     segmentsInGPU.outerLowerModuleIndices[idx] = outerLowerModuleIndex;
     segmentsInGPU.innerMiniDoubletAnchorHitIndices[idx] = innerMDAnchorHitIndex;
     segmentsInGPU.outerMiniDoubletAnchorHitIndices[idx] = outerMDAnchorHitIndex;
+    segmentsInGPU.innerMiniDoubletOuterHitIndices[idx] = innerMDOuterHitIndex;
+    segmentsInGPU.outerMiniDoubletOuterHitIndices[idx] = outerMDOuterHitIndex;
+
+    segmentsInGPU.logicalLayers[idx* Params_LS::kLayers] =
+        modulesInGPU.layers[innerLowerModuleIndex] + (modulesInGPU.subdets[innerLowerModuleIndex] == 4) * 6;
+    segmentsInGPU.logicalLayers[idx * Params_LS::kLayers + 1] =
+        modulesInGPU.layers[innerLowerModuleIndex] + (modulesInGPU.subdets[innerLowerModuleIndex] == 4) * 6;
 
     segmentsInGPU.dPhis[idx] = __F2H(dPhi);
     segmentsInGPU.dPhiMins[idx] = __F2H(dPhiMin);
@@ -735,6 +762,8 @@ namespace lst {
 
             unsigned int innerMiniDoubletAnchorHitIndex = mdsInGPU.anchorHitIndices[innerMDIndex];
             unsigned int outerMiniDoubletAnchorHitIndex = mdsInGPU.anchorHitIndices[outerMDIndex];
+            unsigned int innerMiniDoubletOuterHitIndex = mdsInGPU.outerHitIndices[innerMDIndex];
+            unsigned int outerMiniDoubletOuterHitIndex = mdsInGPU.outerHitIndices[outerMDIndex];
             dPhiMin = 0;
             dPhiMax = 0;
             dPhiChangeMin = 0;
@@ -767,12 +796,15 @@ namespace lst {
                 unsigned int segmentIdx = rangesInGPU.segmentModuleIndices[innerLowerModuleIndex] + segmentModuleIdx;
 
                 addSegmentToMemory(segmentsInGPU,
+                                   modulesInGPU,
                                    innerMDIndex,
                                    outerMDIndex,
                                    innerLowerModuleIndex,
                                    outerLowerModuleIndex,
                                    innerMiniDoubletAnchorHitIndex,
                                    outerMiniDoubletAnchorHitIndex,
+                                   innerMiniDoubletOuterHitIndex,
+                                   outerMiniDoubletOuterHitIndex,
                                    dPhi,
                                    dPhiMin,
                                    dPhiMax,

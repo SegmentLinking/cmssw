@@ -220,6 +220,89 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 }
 
 // ===============
+// ----* pT2 *----
+// ===============
+
+//____________________________________________________________________________________________
+unsigned int getPixelLSFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  lst::PT2s const* PT2s = event->getPT2s()->data();
+  lst::ObjectRanges const* rangesEvt = event->getRanges()->data();
+  lst::Modules const* modulesEvt = event->getModules()->data();
+  const unsigned int pLS_offset = rangesEvt->segmentModuleIndices[*(modulesEvt->nLowerModules)];
+  return PT2s->pixelSegmentIndices[PT2] - pLS_offset;
+}
+
+//____________________________________________________________________________________________
+unsigned int getLSsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  lst::PT2s const* PT2s = event->getPT2s()->data();
+  return PT2s->segmentIndices[PT2];
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getMDsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  unsigned int LS = getLSsFrompT2(event, PT2);
+  return getMDsFromLS(event, LS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getOuterTrackerHitsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  unsigned int LS = getLSsFrompT2(event, PT2);
+  return getHitsFromLS(event, LS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getPixelHitsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, PT2);
+  return getPixelHitsFrompLS(event, pLS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, PT2);
+  unsigned int LS = getLSsFrompT2(event, PT2);
+  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
+  std::vector<unsigned int> outerTrackerHits = getHitsFromLS(event, LS);
+  pixelHits.insert(pixelHits.end(), outerTrackerHits.begin(), outerTrackerHits.end());
+  return pixelHits;
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitIdxsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  lst::Hits const* hitsEvt = event->getHits()->data();
+  std::vector<unsigned int> hits = getHitsFrompT2(event, PT2);
+  std::vector<unsigned int> hitidxs;
+  for (auto& hit : hits)
+    hitidxs.push_back(hitsEvt->idxs[hit]);
+  return hitidxs;
+}
+//____________________________________________________________________________________________
+std::vector<unsigned int> getModuleIdxsFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  std::vector<unsigned int> hits = getOuterTrackerHitsFrompT2(event, PT2);
+  std::vector<unsigned int> module_idxs;
+  lst::Hits const* hitsEvt = event->getHits()->data();
+  for (auto& hitIdx : hits) {
+    module_idxs.push_back(hitsEvt->moduleIndices[hitIdx]);
+  }
+  return module_idxs;
+}
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitTypesFrompT2(lst::Event<Acc3D>* event, unsigned int PT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, PT2);
+  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
+  // pixel Hits list will be either 3 or 4 and depending on it return accordingly
+  if (pixelHits.size() == 3)
+    return {0, 0, 0, 4, 4, 4, 4};
+  else
+    return {0, 0, 0, 0, 4, 4, 4, 4};
+}
+
+//____________________________________________________________________________________________
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT2(lst::Event<Acc3D>* event,
+                                                                                              unsigned PT2) {
+  return convertHitsToHitIdxsAndHitTypes(event, getHitsFrompT2(event, PT2));
+}
+
+// ===============
 // ----* pT3 *----
 // ===============
 
@@ -422,6 +505,12 @@ std::vector<unsigned int> getLSsFromTC(lst::Event<Acc3D>* event, unsigned int TC
     case kpT3:
       return getLSsFrompT3(event, objidx);
       break;
+    case kpT2:
+      {
+      std::vector<unsigned int> PT2SegmentIndexVector = {getLSsFrompT2(event, objidx)};
+      return PT2SegmentIndexVector;
+      break;
+      }
     case kT5:
       return getLSsFromT5(event, objidx);
       break;
@@ -444,6 +533,9 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
       break;
     case kpT3:
       return getHitIdxsAndHitTypesFrompT3(event, objidx);
+      break;
+    case kpT2:
+      return getHitIdxsAndHitTypesFrompT2(event, objidx);
       break;
     case kT5:
       return getHitIdxsAndHitTypesFromT5(event, objidx);
