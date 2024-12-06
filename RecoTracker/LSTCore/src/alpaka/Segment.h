@@ -385,7 +385,7 @@ namespace lst {
     segmentsInGPU.logicalLayers[idx* Params_LS::kLayers] =
         modulesInGPU.layers[innerLowerModuleIndex] + (modulesInGPU.subdets[innerLowerModuleIndex] == 4) * 6;
     segmentsInGPU.logicalLayers[idx * Params_LS::kLayers + 1] =
-        modulesInGPU.layers[innerLowerModuleIndex] + (modulesInGPU.subdets[innerLowerModuleIndex] == 4) * 6;
+        modulesInGPU.layers[outerLowerModuleIndex] + (modulesInGPU.subdets[outerLowerModuleIndex] == 4) * 6;
 
     segmentsInGPU.dPhis[idx] = __F2H(dPhi);
     segmentsInGPU.dPhiMins[idx] = __F2H(dPhiMin);
