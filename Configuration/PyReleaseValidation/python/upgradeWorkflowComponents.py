@@ -506,7 +506,10 @@ upgradeWFs['lstOnCPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnCPUIters01Track
         'ALCA',
         'ALCAPhase2'
     ],
-    PU = [],
+    PU = [
+        'RecoGlobal',
+        'HARVESTGlobal',
+    ],
     suffix = '_lstOnCPUIters01TrackingOnly',
     offset = 0.703,
 )
@@ -515,7 +518,7 @@ upgradeWFs['lstOnCPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].ste
     '--accelerators' : 'cpu'
 }
 
-# LST on GPU, initialStep+highPtTripletStep-only tracking-only
+# LST on GPU (if available), initialStep+highPtTripletStep-only tracking-only
 class UpgradeWorkflow_lstOnGPUIters01TrackingOnly(UpgradeWorkflowTracking):
     def setup__(self, step, stepName, stepDict, k, properties):
         if 'Reco' in step: stepDict[stepName][k] = merge([self.step3, stepDict[step][k]])
@@ -531,13 +534,15 @@ upgradeWFs['lstOnGPUIters01TrackingOnly'] = UpgradeWorkflow_lstOnGPUIters01Track
         'ALCA',
         'ALCAPhase2'
     ],
-    PU = [],
+    PU = [
+        'RecoGlobal',
+        'HARVESTGlobal',
+    ],
     suffix = '_lstOnGPUIters01TrackingOnly',
     offset = 0.704,
 )
 upgradeWFs['lstOnGPUIters01TrackingOnly'].step3 = upgradeWFs['trackingOnly'].step3 | {
     '--procModifiers': 'trackingIters01,trackingLST',
-    '--accelerators' : 'gpu-*'
 }
 
 #DeepCore seeding for JetCore iteration workflow
