@@ -156,9 +156,9 @@ namespace lst {
     PT2sInGPU.lowerModuleIndices[Params_pT2::kLayers * PT2Index + 1] =
         segmentsInGPU.outerLowerModuleIndices[pixelSegmentIndex];
     PT2sInGPU.lowerModuleIndices[Params_pT2::kLayers * PT2Index + 2] =
-        segmentsInGPU.innerLowerModuleIndices[Params_LS::kLayers * segmentIndex];
+        segmentsInGPU.innerLowerModuleIndices[segmentIndex];
     PT2sInGPU.lowerModuleIndices[Params_pT2::kLayers * PT2Index + 3] =
-        segmentsInGPU.outerLowerModuleIndices[Params_LS::kLayers * segmentIndex + 1];
+        segmentsInGPU.outerLowerModuleIndices[segmentIndex];
 
 
     unsigned int pixelInnerMD = segmentsInGPU.mdIndices[2 * pixelSegmentIndex];
