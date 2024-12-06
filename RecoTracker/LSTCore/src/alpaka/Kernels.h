@@ -12,6 +12,7 @@
 #include "Quintuplet.h"
 #include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
+#include "PT2.h"
 
 namespace lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(lst::Quintuplets& quintupletsInGPU,
@@ -23,6 +24,11 @@ namespace lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelTripletFromMemory(lst::PixelTriplets& pixelTripletsInGPU,
                                                                unsigned int pixelTripletIndex) {
     pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPT2FromMemory(lst::PT2s& PT2sInGPU,
+                                                               unsigned int PT2Index) {
+    PT2sInGPU.isDup[PT2Index] = true;
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelQuintupletFromMemory(lst::PixelQuintuplets& pixelQuintupletsInGPU,
@@ -128,6 +134,58 @@ namespace lst {
     for (int i = 0; i < Params_T3::kHits; i++) {
       bool tmatched = false;
       for (int j = 0; j < Params_T3::kHits; j++) {
+        if (hits1[i] == hits2[j]) {
+          tmatched = true;
+          break;
+        }
+      }
+      if (tmatched) {
+        nMatched++;
+      }
+    }
+
+    matched[0] = npMatched;
+    matched[1] = nMatched;
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void checkHitspT2(unsigned int ix,
+                                                   unsigned int jx,
+                                                   lst::PT2s const& PT2sInGPU,
+                                                   int* matched) {
+    int phits1[Params_pLS::kHits];
+    int phits2[Params_pLS::kHits];
+
+    for (int i = 0; i < Params_pLS::kHits; i++) {
+      phits1[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * ix + i];
+      phits2[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * jx + i];
+    }
+
+    int npMatched = 0;
+    for (int i = 0; i < Params_pLS::kHits; i++) {
+      bool pmatched = false;
+      for (int j = 0; j < Params_pLS::kHits; j++) {
+        if (phits1[i] == phits2[j]) {
+          pmatched = true;
+          break;
+        }
+      }
+      if (pmatched) {
+        npMatched++;
+      }
+    }
+
+    int hits1[Params_LS::kHits];
+    int hits2[Params_LS::kHits];
+
+    for (int i = 0; i < Params_LS::kHits; i++) {
+      hits1[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * ix + i + 4];  // Omitting the pLS hits
+      hits2[i] = PT2sInGPU.hitIndices[Params_pT2::kHits * jx + i + 4];  // Omitting the pLS hits
+    }
+
+    int nMatched = 0;
+    for (int i = 0; i < Params_LS::kHits; i++) {
+      bool tmatched = false;
+      for (int j = 0; j < Params_LS::kHits; j++) {
         if (hits1[i] == hits2[j]) {
           tmatched = true;
           break;
@@ -267,6 +325,41 @@ namespace lst {
                   rmQuintupletFromMemory(quintupletsInGPU, (ix < jx ? ix : jx), true);
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  struct removeDupPT2sInGPUFromMap {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc, lst::PT2s PT2sInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      for (unsigned int ix = globalThreadIdx[1]; ix < *PT2sInGPU.nPT2s; ix += gridThreadExtent[1]) {
+        for (unsigned int jx = globalThreadIdx[2]; jx < *PT2sInGPU.nPT2s; jx += gridThreadExtent[2]) {
+          if (ix == jx)
+            continue;
+
+          int nMatched[2];
+          checkHitspT2(ix, jx, PT2sInGPU, nMatched);
+          const int minNHitsForDup_PT2 = 6;
+          if ((nMatched[0] + nMatched[1]) >= minNHitsForDup_PT2) {
+            // Check the layers
+            if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2] <
+                PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2]) {
+              rmPT2FromMemory(PT2sInGPU, ix);
+              break;
+            } else if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2] ==
+                           PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2]) {
+              rmPT2FromMemory(PT2sInGPU, ix);
+              break;
+            } else if (PT2sInGPU.logicalLayers[Params_pT2::kLayers * ix + 2] ==
+                           PT2sInGPU.logicalLayers[Params_pT2::kLayers * jx + 2]  && (ix < jx)) {
+              rmPT2FromMemory(PT2sInGPU, ix);
+              break;
             }
           }
         }

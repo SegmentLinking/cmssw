@@ -1017,6 +1017,7 @@ namespace lst {
                                         phi_pix,
                                         score);
                 tripletsInGPU.partOfPT3[outerTripletIndex] = true;
+                segmentsInGPU.partOfPT3[i_pLS] = true;
               }
             }
           }  // for outerTripletArrayIndex
