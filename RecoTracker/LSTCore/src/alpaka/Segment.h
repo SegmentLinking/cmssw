@@ -175,12 +175,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addSegmentToMemory(Segments segments,
+                                                         ModulesConst modules,
                                                          unsigned int lowerMDIndex,
                                                          unsigned int upperMDIndex,
                                                          uint16_t innerLowerModuleIndex,
                                                          uint16_t outerLowerModuleIndex,
                                                          unsigned int innerMDAnchorHitIndex,
                                                          unsigned int outerMDAnchorHitIndex,
+                                                         unsigned int innerMDOuterHitIndex,
+                                                         unsigned int outerMDOuterHitIndex,
                                                          float dPhi,
                                                          float dPhiMin,
                                                          float dPhiMax,
@@ -194,6 +197,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     segments.outerLowerModuleIndices()[idx] = outerLowerModuleIndex;
     segments.innerMiniDoubletAnchorHitIndices()[idx] = innerMDAnchorHitIndex;
     segments.outerMiniDoubletAnchorHitIndices()[idx] = outerMDAnchorHitIndex;
+    segments.innerMiniDoubletOuterHitIndices()[idx] = innerMDOuterHitIndex;
+    segments.outerMiniDoubletOuterHitIndices()[idx] = outerMDOuterHitIndex;
+
+    segments.logicalLayers()[idx][0] =
+        modules.layers()[innerLowerModuleIndex] + (modules.subdets()[innerLowerModuleIndex] == Endcap) * 6;
+    segments.logicalLayers()[idx][1] =
+        modules.layers()[outerLowerModuleIndex] + (modules.subdets()[outerLowerModuleIndex] == Endcap) * 6;
 
     segments.dPhis()[idx] = __F2H(dPhi);
     segments.dPhiMins()[idx] = __F2H(dPhiMin);
@@ -228,6 +238,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     segmentsPixel.isDup()[pixelSegmentArrayIndex] = false;
     segmentsPixel.partOfPT5()[pixelSegmentArrayIndex] = false;
+    segmentsPixel.partOfPT3()[pixelSegmentArrayIndex] = false;
     segmentsPixel.score()[pixelSegmentArrayIndex] = score;
     segmentsPixel.pLSHitsIdxs()[pixelSegmentArrayIndex].x = hitIdxs[0];
     segmentsPixel.pLSHitsIdxs()[pixelSegmentArrayIndex].y = hitIdxs[1];
@@ -568,6 +579,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             unsigned int innerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[innerMDIndex];
             unsigned int outerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[outerMDIndex];
+            unsigned int innerMiniDoubletOuterHitIndex = mds.outerHitIndices()[innerMDIndex];
+            unsigned int outerMiniDoubletOuterHitIndex = mds.outerHitIndices()[outerMDIndex];
             dPhiMin = 0;
             dPhiMax = 0;
             dPhiChangeMin = 0;
@@ -603,12 +616,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 unsigned int segmentIdx = ranges.segmentModuleIndices()[innerLowerModuleIndex] + segmentModuleIdx;
 
                 addSegmentToMemory(segments,
+                                   modules,
                                    innerMDIndex,
                                    outerMDIndex,
                                    innerLowerModuleIndex,
                                    outerLowerModuleIndex,
                                    innerMiniDoubletAnchorHitIndex,
                                    outerMiniDoubletAnchorHitIndex,
+                                   innerMiniDoubletOuterHitIndex,
+                                   outerMiniDoubletOuterHitIndex,
                                    dPhi,
                                    dPhiMin,
                                    dPhiMax,

@@ -402,6 +402,12 @@ void LST::run(Queue& queue,
     printf("# of Pixel T3s produced: %d\n", event.getNumberOfPixelTriplets());
   }
 
+  event.createPT2s();
+  if (verbose) {
+    alpaka::wait(queue);  // event calls are asynchronous: wait before printing
+    printf("# of PT2s produced: %d\n", event.getNumberOfPT2s());
+  }
+
   event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
@@ -411,6 +417,7 @@ void LST::run(Queue& queue,
     printf("        # of pT3 TrackCandidates produced: %d\n", event.getNumberOfPT3TrackCandidates());
     printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
+    printf("        # of pT2 TrackCandidates produced: %d\n", event.getNumberOfPT2TrackCandidates());
   }
 
   getOutput(event);

@@ -18,7 +18,7 @@ namespace lst {
   enum PixelType : int8_t { kInvalid = -1, kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };
 
   // Named types for LST objects
-  enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
+  enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8, pT2 = 10 };
 
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
@@ -27,6 +27,7 @@ namespace lst {
 
   constexpr unsigned int n_max_pixel_md_per_modules = 2 * n_max_pixel_segments_per_module;
 
+  constexpr unsigned int n_max_pt2s = 15000;
   constexpr unsigned int n_max_pixel_triplets = 5000;
   constexpr unsigned int n_max_pixel_quintuplets = 15000;
 
@@ -67,7 +68,14 @@ namespace lst {
   };
   struct Params_LS {
     static constexpr int kLayers = 2, kHits = 4;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayUxLayers = edm::StdArray<unsigned int, kLayers>;
+  };
+  struct Params_pT2 {
+    static constexpr int kLayers = 4, kHits = 8;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_T3 {
     static constexpr int kLayers = 3, kHits = 6;

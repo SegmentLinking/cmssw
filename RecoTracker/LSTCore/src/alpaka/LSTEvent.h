@@ -7,6 +7,7 @@
 #include "RecoTracker/LSTCore/interface/MiniDoubletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelQuintupletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelTripletsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/PT2sHostCollection.h"
 #include "RecoTracker/LSTCore/interface/QuintupletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/SegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
@@ -18,6 +19,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelQuintupletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelTripletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/PT2sDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/QuintupletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
@@ -58,6 +60,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<TrackCandidatesDeviceCollection> trackCandidatesDC_;
     std::optional<PixelTripletsDeviceCollection> pixelTripletsDC_;
     std::optional<PixelQuintupletsDeviceCollection> pixelQuintupletsDC_;
+    std::optional<PT2sDeviceCollection> pT2sDC_;
 
     //CPU interface stuff
     std::optional<ObjectRangesHostCollection> rangesHC_;
@@ -70,6 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<QuintupletsHostCollection> quintupletsHC_;
     std::optional<PixelTripletsHostCollection> pixelTripletsHC_;
     std::optional<PixelQuintupletsHostCollection> pixelQuintupletsHC_;
+    std::optional<PT2sHostCollection> pT2sHC_;
 
     const uint16_t nModules_;
     const uint16_t nLowerModules_;
@@ -133,6 +137,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets);
     void createPixelTriplets();
     void createQuintuplets();
+    void createPT2s();
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
     void createPixelQuintuplets();
 
@@ -155,6 +160,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int getNumberOfTripletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfTripletsByLayerEndcap(unsigned int layer);
 
+    int getNumberOfPT2s();
     int getNumberOfPixelTriplets();
     int getNumberOfPixelQuintuplets();
 
@@ -165,6 +171,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     int getNumberOfTrackCandidates();
     int getNumberOfPT5TrackCandidates();
     int getNumberOfPT3TrackCandidates();
+    int getNumberOfPT2TrackCandidates();
     int getNumberOfPLSTrackCandidates();
     int getNumberOfPixelTrackCandidates();
     int getNumberOfT5TrackCandidates();
@@ -185,6 +192,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     typename TSoA::ConstView getTriplets(bool sync = true);
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getQuintuplets(bool sync = true);
+    template <typename TDev = Device>
+    PT2sConst getPT2s(bool sync = true);
     template <typename TDev = Device>
     PixelTripletsConst getPixelTriplets(bool sync = true);
     template <typename TDev = Device>

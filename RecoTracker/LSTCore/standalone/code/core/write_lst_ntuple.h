@@ -27,6 +27,7 @@ void setOccupancyBranches(LSTEvent* event);
 void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
 void setPixelTripletOutputBranches(LSTEvent* event);
+void setPT2OutputBranches(LSTEvent* event);
 void setGnnNtupleBranches(LSTEvent* event);
 void setGnnNtupleMiniDoublet(LSTEvent* event, unsigned int MD);
 void fillT5DNNBranches(LSTEvent* event, unsigned int T3);
@@ -41,6 +42,8 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
                                                                                               unsigned int);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(LSTEvent* event,
                                                                                                unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT2(LSTEvent* event,
+                                                                                               unsigned int);
 
 // Print multiplicities
 void printMiniDoubletMultiplicities(LSTEvent* event);
@@ -54,6 +57,7 @@ void printLSs(LSTEvent* event);
 void printpLSs(LSTEvent* event);
 void printT3s(LSTEvent* event);
 void printT4s(LSTEvent* event);
+void printPT2s(LSTEvent* event);
 void printTCs(LSTEvent* event);
 
 #endif

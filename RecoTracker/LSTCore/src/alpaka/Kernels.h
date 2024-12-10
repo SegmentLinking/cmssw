@@ -7,6 +7,7 @@
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
 #include "RecoTracker/LSTCore/interface/PixelQuintupletsSoA.h"
 #include "RecoTracker/LSTCore/interface/PixelTripletsSoA.h"
+#include "RecoTracker/LSTCore/interface/PT2sSoA.h"
 #include "RecoTracker/LSTCore/interface/QuintupletsSoA.h"
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
@@ -16,6 +17,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              unsigned int quintupletIndex,
                                                              bool secondpass = false) {
     quintuplets.isDup()[quintupletIndex] |= 1 + secondpass;
+  }
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPT2FromMemory(PT2s pT2s, unsigned int pT2Index) {
+    pT2s.isDup()[pT2Index] = true;
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelTripletFromMemory(PixelTriplets pixelTriplets,
@@ -137,6 +142,55 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     matched[0] = npMatched;
     matched[1] = nMatched;
   }
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void checkHitspT2(unsigned int ix, unsigned int jx, PT2sConst pT2s, int* matched) {
+    int phits1[Params_pLS::kHits];
+    int phits2[Params_pLS::kHits];
+
+    for (int i = 0; i < Params_pLS::kHits; i++) {
+      phits1[i] = pT2s.hitIndices()[ix][i];
+      phits2[i] = pT2s.hitIndices()[jx][i];
+    }
+
+    int npMatched = 0;
+    for (int i = 0; i < Params_pLS::kHits; i++) {
+      bool pmatched = false;
+      for (int j = 0; j < Params_pLS::kHits; j++) {
+        if (phits1[i] == phits2[j]) {
+          pmatched = true;
+          break;
+        }
+      }
+      if (pmatched) {
+        npMatched++;
+      }
+    }
+
+    int hits1[Params_LS::kHits];
+    int hits2[Params_LS::kHits];
+
+    for (int i = 0; i < Params_LS::kHits; i++) {
+      hits1[i] = pT2s.hitIndices()[ix][i + 4];  // Omitting the pLS hits
+      hits2[i] = pT2s.hitIndices()[jx][i + 4];  // Omitting the pLS hits
+    }
+
+    int nMatched = 0;
+    for (int i = 0; i < Params_LS::kHits; i++) {
+      bool tmatched = false;
+      for (int j = 0; j < Params_LS::kHits; j++) {
+        if (hits1[i] == hits2[j]) {
+          tmatched = true;
+          break;
+        }
+      }
+      if (tmatched) {
+        nMatched++;
+      }
+    }
+
+    matched[0] = npMatched;
+    matched[1] = nMatched;
+  };
 
   struct RemoveDupQuintupletsAfterBuild {
     template <typename TAcc>
@@ -264,6 +318,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   rmQuintupletFromMemory(quintuplets, (ix < jx ? ix : jx), true);
                 }
               }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  struct RemoveDupPT2sFromMap {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc, PT2s pT2s) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      for (unsigned int ix = globalThreadIdx[1]; ix < pT2s.nPT2s(); ix += gridThreadExtent[1]) {
+        for (unsigned int jx = globalThreadIdx[2]; jx < pT2s.nPT2s(); jx += gridThreadExtent[2]) {
+          if (ix == jx)
+            continue;
+
+          int nMatched[2];
+          checkHitspT2(ix, jx, pT2s, nMatched);
+          const int minNHitsForDup_PT2 = 6;
+          if ((nMatched[0] + nMatched[1]) >= minNHitsForDup_PT2) {
+            // Check the layers
+            if (pT2s.logicalLayers()[jx][2] < pT2s.logicalLayers()[ix][2]) {
+              rmPT2FromMemory(pT2s, ix);
+              break;
+            } else if (pT2s.logicalLayers()[ix][2] == pT2s.logicalLayers()[jx][2] && (ix < jx)) {
+              rmPT2FromMemory(pT2s, ix);
+              break;
             }
           }
         }

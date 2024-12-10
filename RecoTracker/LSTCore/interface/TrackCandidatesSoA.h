@@ -9,7 +9,7 @@
 
 namespace lst {
   GENERATE_SOA_LAYOUT(TrackCandidatesSoALayout,
-                      SOA_COLUMN(short, trackCandidateType),                  // 4-T5 5-pT3 7-pT5 8-pLS
+                      SOA_COLUMN(short, trackCandidateType),                  // 4-T5 5-pT3 7-pT5 8-pLS 10-pT2
                       SOA_COLUMN(unsigned int, directObjectIndices),          // direct indices to each type containers
                       SOA_COLUMN(ArrayUx2, objectIndices),                    // tracklet and  triplet indices
                       SOA_COLUMN(Params_pT5::ArrayU8xLayers, logicalLayers),  //
@@ -20,6 +20,7 @@ namespace lst {
                       SOA_COLUMN(FPX, centerY),                                     //
                       SOA_COLUMN(FPX, radius),                                      //
                       SOA_SCALAR(unsigned int, nTrackCandidates),                   //
+                      SOA_SCALAR(unsigned int, nTrackCandidatespT2),                //
                       SOA_SCALAR(unsigned int, nTrackCandidatespT3),                //
                       SOA_SCALAR(unsigned int, nTrackCandidatespT5),                //
                       SOA_SCALAR(unsigned int, nTrackCandidatespLS),                //

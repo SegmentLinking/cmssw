@@ -220,6 +220,89 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 }
 
 // ===============
+// ----* pT2 *----
+// ===============
+
+//____________________________________________________________________________________________
+unsigned int getPixelLSFrompT2(LSTEvent* event, unsigned int pT2) {
+  auto pT2s = event->getPT2s();
+  auto ranges = event->getRanges();
+  auto modulesEvt = event->getModules<ModulesSoA>();
+  const unsigned int pLS_offset = ranges.segmentModuleIndices()[modulesEvt.nLowerModules()];
+  return pT2s.pixelSegmentIndices()[pT2] - pLS_offset;
+}
+
+//____________________________________________________________________________________________
+unsigned int getLSsFrompT2(LSTEvent* event, unsigned int pT2) {
+  auto const pT2s = event->getPT2s();
+  return pT2s.segmentIndices()[pT2];
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getMDsFrompT2(LSTEvent* event, unsigned int pT2) {
+  unsigned int LS = getLSsFrompT2(event, pT2);
+  return getMDsFromLS(event, LS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getOuterTrackerHitsFrompT2(LSTEvent* event, unsigned int pT2) {
+  unsigned int LS = getLSsFrompT2(event, pT2);
+  return getHitsFromLS(event, LS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getPixelHitsFrompT2(LSTEvent* event, unsigned int pT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, pT2);
+  return getPixelHitsFrompLS(event, pLS);
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitsFrompT2(LSTEvent* event, unsigned int pT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, pT2);
+  unsigned int LS = getLSsFrompT2(event, pT2);
+  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
+  std::vector<unsigned int> outerTrackerHits = getHitsFromLS(event, LS);
+  pixelHits.insert(pixelHits.end(), outerTrackerHits.begin(), outerTrackerHits.end());
+  return pixelHits;
+}
+
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitIdxsFrompT2(LSTEvent* event, unsigned int pT2) {
+  auto hitsEvt = event->getHits<HitsSoA>();
+  std::vector<unsigned int> hits = getHitsFrompT2(event, pT2);
+  std::vector<unsigned int> hitidxs;
+  for (auto& hit : hits)
+    hitidxs.push_back(hitsEvt.idxs()[hit]);
+  return hitidxs;
+}
+//____________________________________________________________________________________________
+std::vector<unsigned int> getModuleIdxsFrompT2(LSTEvent* event, unsigned int pT2) {
+  std::vector<unsigned int> hits = getOuterTrackerHitsFrompT2(event, pT2);
+  std::vector<unsigned int> module_idxs;
+  auto hitsEvt = event->getHits<HitsSoA>();
+  for (auto& hitIdx : hits) {
+    module_idxs.push_back(hitsEvt.moduleIndices()[hitIdx]);
+  }
+  return module_idxs;
+}
+//____________________________________________________________________________________________
+std::vector<unsigned int> getHitTypesFrompT2(LSTEvent* event, unsigned int pT2) {
+  unsigned int pLS = getPixelLSFrompT2(event, pT2);
+  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
+  // pixel Hits list will be either 3 or 4 and depending on it return accordingly
+  if (pixelHits.size() == 3)
+    return {0, 0, 0, 4, 4, 4, 4};
+  else
+    return {0, 0, 0, 0, 4, 4, 4, 4};
+}
+
+//____________________________________________________________________________________________
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT2(LSTEvent* event,
+                                                                                              unsigned pT2) {
+  return convertHitsToHitIdxsAndHitTypes(event, getHitsFrompT2(event, pT2));
+}
+
+// ===============
 // ----* pT3 *----
 // ===============
 
@@ -422,6 +505,9 @@ std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int iTC) {
     case lst::LSTObjType::pT3:
       return getLSsFrompT3(event, objidx);
       break;
+    case lst::LSTObjType::pT2:
+      return {getLSsFrompT2(event, objidx)};
+      break;
     case lst::LSTObjType::T5:
       return getLSsFromT5(event, objidx);
       break;
@@ -444,6 +530,9 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
       break;
     case lst::LSTObjType::pT3:
       return getHitIdxsAndHitTypesFrompT3(event, objidx);
+      break;
+    case lst::LSTObjType::pT2:
+      return getHitIdxsAndHitTypesFrompT2(event, objidx);
       break;
     case lst::LSTObjType::T5:
       return getHitIdxsAndHitTypesFromT5(event, objidx);

@@ -18,8 +18,11 @@ namespace lst {
                       SOA_COLUMN(uint16_t, innerLowerModuleIndices),
                       SOA_COLUMN(uint16_t, outerLowerModuleIndices),
                       SOA_COLUMN(Params_LS::ArrayUxLayers, mdIndices),
+                      SOA_COLUMN(Params_LS::ArrayU8xLayers, logicalLayers),
                       SOA_COLUMN(unsigned int, innerMiniDoubletAnchorHitIndices),
-                      SOA_COLUMN(unsigned int, outerMiniDoubletAnchorHitIndices))
+                      SOA_COLUMN(unsigned int, outerMiniDoubletAnchorHitIndices),
+                      SOA_COLUMN(unsigned int, innerMiniDoubletOuterHitIndices),
+                      SOA_COLUMN(unsigned int, outerMiniDoubletOuterHitIndices))
 
   GENERATE_SOA_LAYOUT(SegmentsOccupancySoALayout,
                       SOA_COLUMN(unsigned int, nSegments),  //number of segments per inner lower module
@@ -34,6 +37,7 @@ namespace lst {
                       SOA_COLUMN(char, isQuad),
                       SOA_COLUMN(char, isDup),
                       SOA_COLUMN(bool, partOfPT5),
+                      SOA_COLUMN(bool, partOfPT3),
                       SOA_COLUMN(float, ptIn),
                       SOA_COLUMN(float, ptErr),
                       SOA_COLUMN(float, px),

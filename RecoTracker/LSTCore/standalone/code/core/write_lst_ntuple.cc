@@ -108,6 +108,24 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("pT3_layer_binary");
   ana.tx->createBranch<std::vector<int>>("pT3_moduleType_binary");
 
+  // PT2 branches
+  ana.tx->createBranch<std::vector<int>>("sim_pT2_matched");
+  ana.tx->createBranch<std::vector<int>>("pT2_isFake");
+  ana.tx->createBranch<std::vector<int>>("pT2_isDup_reco_test");
+  ana.tx->createBranch<std::vector<int>>("pT2_isDuplicate");
+  ana.tx->createBranch<std::vector<float>>("pT2_pt");
+  ana.tx->createBranch<std::vector<float>>("pT2_eta");
+  ana.tx->createBranch<std::vector<float>>("pT2_phi");
+  ana.tx->createBranch<std::vector<int>>("pT2_layer_binary");
+  ana.tx->createBranch<std::vector<int>>("pT2_moduleType_binary");
+
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT2_matched_simIdx");
+  //  ana.tx->createBranch<std::vector<std::vector<int>>>("pT2_hitIdxs");
+  //  ana.tx->createBranch<std::vector<float>>("pT2_pixelRadius");
+  //  ana.tx->createBranch<std::vector<float>>("pT2_pixelRadiusError");
+  //  ana.tx->createBranch<std::vector<std::vector<float>>>("pT2_matched_pt");
+  //  ana.tx->createBranch<std::vector<float>>("pT2_rzChiSquared");
+
   // pLS branches
   ana.tx->createBranch<std::vector<int>>("sim_pLS_matched");
   ana.tx->createBranch<std::vector<std::vector<int>>>("sim_pLS_types");
@@ -156,6 +174,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t3_occupancies");
   ana.tx->createBranch<int>("tc_occupancies");
   ana.tx->createBranch<std::vector<int>>("t5_occupancies");
+  ana.tx->createBranch<int>("pT2_occupancies");
   ana.tx->createBranch<int>("pT3_occupancies");
   ana.tx->createBranch<int>("pT5_occupancies");
 
@@ -339,6 +358,7 @@ void setOptionalOutputBranches(LSTEvent* event) {
   setPixelQuintupletOutputBranches(event);
   setQuintupletOutputBranches(event);
   setPixelTripletOutputBranches(event);
+  setPT2OutputBranches(event);
   setOccupancyBranches(event);
   setT5DNNBranches(event);
 
@@ -354,6 +374,7 @@ void setOccupancyBranches(LSTEvent* event) {
   auto quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
   auto pixelQuintuplets = event->getPixelQuintuplets();
   auto pixelTriplets = event->getPixelTriplets();
+  auto pT2s = event->getPT2s();
   auto trackCandidates = event->getTrackCandidates();
 
   std::vector<int> moduleLayer;
@@ -402,6 +423,7 @@ void setOccupancyBranches(LSTEvent* event) {
   ana.tx->setBranch<std::vector<int>>("sg_occupancies", segmentOccupancy);
   ana.tx->setBranch<std::vector<int>>("t3_occupancies", tripletOccupancy);
   ana.tx->setBranch<int>("tc_occupancies", trackCandidates.nTrackCandidates());
+  ana.tx->setBranch<int>("pT2_occupancies", pT2s.totOccupancyPT2s());
   ana.tx->setBranch<int>("pT3_occupancies", pixelTriplets.totOccupancyPixelTriplets());
   ana.tx->setBranch<std::vector<int>>("t5_occupancies", quintupletOccupancy);
   ana.tx->setBranch<int>("pT5_occupancies", pixelQuintuplets.totOccupancyPixelQuintuplets());
@@ -636,6 +658,69 @@ void setPixelTripletOutputBranches(LSTEvent* event) {
   ana.tx->setBranch<std::vector<int>>("sim_pT3_matched", sim_pT3_matched);
   ana.tx->setBranch<std::vector<std::vector<int>>>("pT3_matched_simIdx", pT3_matched_simIdx);
   ana.tx->setBranch<std::vector<int>>("pT3_isDuplicate", pT3_isDuplicate);
+}
+
+//________________________________________________________________________________________________________________________________
+void setPT2OutputBranches(LSTEvent* event) {
+  auto pT2s = event->getPT2s();
+  auto modules = event->getModules<ModulesSoA>();
+  auto segmentsPixel = event->getSegments<SegmentsPixelSoA>();
+  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
+
+  unsigned int nPT2s = pT2s.nPT2s();
+  std::vector<int> sim_pT2_matched(n_accepted_simtrk);
+  std::vector<std::vector<int>> pT2_matched_simIdx;
+
+  for (unsigned int pT2 = 0; pT2 < nPT2s; pT2++) {
+    //unsigned int LSIndex = getLSsFrompT2(event, pT2);
+    unsigned int pLSIndex = getPixelLSFrompT2(event, pT2);
+    const float pt = segmentsPixel.ptIn()[pLSIndex];
+
+    float eta = segmentsPixel.eta()[pLSIndex];
+    float phi = segmentsPixel.phi()[pLSIndex];
+    std::vector<unsigned int> hit_idx = getHitIdxsFrompT2(event, pT2);
+    std::vector<unsigned int> hit_type = getHitTypesFrompT2(event, pT2);
+
+    std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type);
+    std::vector<unsigned int> module_idx = getModuleIdxsFrompT2(event, pT2);
+    int layer_binary = 1;
+    int moduleType_binary = 0;
+    for (size_t i = 0; i < module_idx.size(); i += 2) {
+      layer_binary |= (1 << (modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4)));
+      moduleType_binary |= (modules.moduleType()[module_idx[i]] << i);
+    }
+    ana.tx->pushbackToBranch<int>("pT2_isFake", static_cast<int>(simidx.size() == 0));
+    ana.tx->pushbackToBranch<float>("pT2_pt", pt);
+    ana.tx->pushbackToBranch<float>("pT2_eta", eta);
+    ana.tx->pushbackToBranch<float>("pT2_phi", phi);
+    ana.tx->pushbackToBranch<int>("pT2_layer_binary", layer_binary);
+    ana.tx->pushbackToBranch<int>("pT2_moduleType_binary", moduleType_binary);
+
+    pT2_matched_simIdx.push_back(simidx);
+
+    for (auto& idx : simidx) {
+      if (idx < n_accepted_simtrk) {
+        sim_pT2_matched.at(idx) += 1;
+      }
+    }
+  }
+
+  std::vector<int> pT2_isDuplicate(pT2_matched_simIdx.size());
+  for (unsigned int i = 0; i < pT2_matched_simIdx.size(); i++) {
+    bool isDuplicate = true;
+    for (unsigned int isim = 0; isim < pT2_matched_simIdx[i].size(); isim++) {
+      int simidx = pT2_matched_simIdx[i][isim];
+      if (simidx < n_accepted_simtrk) {
+        if (sim_pT2_matched[simidx] > 1) {
+          isDuplicate = true;
+        }
+      }
+    }
+    pT2_isDuplicate[i] = isDuplicate;
+  }
+  ana.tx->setBranch<std::vector<int>>("sim_pT2_matched", sim_pT2_matched);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("pT2_matched_simIdx", pT2_matched_simIdx);
+  ana.tx->setBranch<std::vector<int>>("pT2_isDuplicate", pT2_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -966,6 +1051,9 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
     case LSTObjType::pT3:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT3(event, idx);
       break;
+    case LSTObjType::pT2:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT2(event, idx);
+      break;
     case LSTObjType::T5:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parseT5(event, idx);
       break;
@@ -1124,6 +1212,38 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   // Form the hit idx/type std::vector
   std::vector<unsigned int> hit_idx = getHitIdxsFrompT3(event, pT3);
   std::vector<unsigned int> hit_type = getHitTypesFrompT3(event, pT3);
+
+  return {pt, eta_pLS, phi_pLS, hit_idx, hit_type};
+}
+
+//________________________________________________________________________________________________________________________________
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT2(LSTEvent* event,
+                                                                                               unsigned int idx) {
+  // Get relevant information
+  auto const trackCandidates = event->getTrackCandidates();
+  auto const segmentsPixel = event->getSegments<SegmentsPixelSoA>();
+
+  //
+  // pictorial representation of a pT3
+  //
+  // inner tracker        outer tracker
+  // -------------  --------------------------
+  // pLS            01    23    45               (anchor hit of a minidoublet is always the first of the pair)
+  // ****           oo -- oo -- oo               pT3
+  unsigned int pT2 = trackCandidates.directObjectIndices()[idx];
+  unsigned int pLS = getPixelLSFrompT2(event, pT2);
+  //unsigned int LS = getLSFromPT2(event, pT2);
+
+  // pixel pt
+  const float pt_pLS = segmentsPixel.ptIn()[pLS];
+  const float eta_pLS = segmentsPixel.eta()[pLS];
+  const float phi_pLS = segmentsPixel.phi()[pLS];
+  // average pt
+  const float pt = pt_pLS;
+
+  // Form the hit idx/type std::vector
+  std::vector<unsigned int> hit_idx = getHitIdxsFrompT2(event, pT2);
+  std::vector<unsigned int> hit_type = getHitTypesFrompT2(event, pT2);
 
   return {pt, eta_pLS, phi_pLS, hit_idx, hit_type};
 }

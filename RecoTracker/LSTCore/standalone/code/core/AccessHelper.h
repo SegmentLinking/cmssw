@@ -76,6 +76,19 @@ std::vector<unsigned int> getModuleIdxsFrompT5(LSTEvent* event, unsigned int pT5
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT5(LSTEvent* event,
                                                                                               unsigned pT5);
 
+// ----* pT2 *----
+unsigned int getPixelLSFrompT2(LSTEvent* event, unsigned int pT2);
+unsigned int getT2FrompT2(LSTEvent* event, unsigned int pT2);
+unsigned int getLSsFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getMDsFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getPixelHitsFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getHitsFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getHitIdxsFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getHitTypesFrompT2(LSTEvent* event, unsigned int pT2);
+std::vector<unsigned int> getModuleIdxsFrompT2(LSTEvent* event, unsigned int pT2);
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT2(LSTEvent* event,
+                                                                                              unsigned pT2);
+
 // ----* TC *----
 std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int TC);
 std::vector<unsigned int> getHitsFromTC(LSTEvent* event, unsigned int TC);

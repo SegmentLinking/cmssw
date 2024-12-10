@@ -793,7 +793,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ObjectRangesConst ranges,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
-                                  SegmentsPixelConst segmentsPixel,
+                                  SegmentsPixel segmentsPixel,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOccupancy,
                                   PixelTriplets pixelTriplets,
@@ -920,6 +920,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         phi_pix,
                                         score);
                 triplets.partOfPT3()[outerTripletIndex] = true;
+                segmentsPixel.partOfPT3()[i_pLS] = true;
               }
             }
           }  // for outerTripletArrayIndex

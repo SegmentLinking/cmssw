@@ -29,6 +29,7 @@ float runQuintuplet(LSTEvent *event);
 float runPixelQuintuplet(LSTEvent *event);
 float runPixelLineSegment(LSTEvent *event, bool no_pls_dupclean);
 float runpT3(LSTEvent *event);
+float runpT2(LSTEvent *event);
 
 // --------------------- ======================== ---------------------
 

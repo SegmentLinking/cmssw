@@ -6,6 +6,7 @@
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
 #include "RecoTracker/LSTCore/interface/PixelQuintupletsSoA.h"
 #include "RecoTracker/LSTCore/interface/PixelTripletsSoA.h"
+#include "RecoTracker/LSTCore/interface/PT2sSoA.h"
 #include "RecoTracker/LSTCore/interface/QuintupletsSoA.h"
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
@@ -53,7 +54,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.objectIndices()[trackCandidateIndex][0] = innerTrackletIndex;
     cands.objectIndices()[trackCandidateIndex][1] = outerTrackletIndex;
 
-    size_t limits = trackCandidateType == LSTObjType::pT5 ? Params_pT5::kLayers : Params_pT3::kLayers;
+    size_t limits = trackCandidateType == LSTObjType::pT5
+                        ? Params_pT5::kLayers
+                        : (trackCandidateType == pT2 ? Params_pT2::kLayers : Params_pT3::kLayers);
 
     //send the starting pointer to the logicalLayer and hitIndices
     for (size_t i = 0; i < limits; i++) {
@@ -332,6 +335,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     trackCandidateIdx,
                                     pixelTripletIndex);
         }
+      }
+    }
+  };
+
+  struct AddPT2asTrackCandidates {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  uint16_t nLowerModules,
+                                  PT2sConst pT2s,
+                                  TrackCandidates cands,
+                                  SegmentsPixelConst segmentsPixel,
+                                  ObjectRangesConst ranges) const {
+      // implementation is 1D with a single block
+      static_assert(std::is_same_v<TAcc, ALPAKA_ACCELERATOR_NAMESPACE::Acc1D>, "Should be Acc1D");
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
+
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      unsigned int nPT2s = pT2s.nPT2s();
+      unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
+      for (unsigned int pT2Index = globalThreadIdx[0]; pT2Index < nPT2s; pT2Index += gridThreadExtent[0]) {
+        if ((pT2s.isDup()[pT2Index]))
+          continue;
+
+        unsigned int trackCandidateIdx =
+            alpaka::atomicAdd(acc, &cands.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
+        //        if (trackCandidateIdx >= n_max_pixel_track_candidates)  // This is done before any non-pixel TCs are added
+        //        {
+        //#ifdef WARNINGS
+        //          printf("Track Candidate excess alert! Type = PT2");
+        //#endif
+        //          alpaka::atomicSub(acc, &trackCandidates.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
+        //          break;
+
+        //        } else {
+        alpaka::atomicAdd(acc, &cands.nTrackCandidatespT2(), 1u, alpaka::hierarchy::Threads{});
+
+        float radius = __H2F(pT2s.pixelRadius()[pT2Index]);
+        unsigned int pT2PixelIndex = pT2s.pixelSegmentIndices()[pT2Index];
+        addTrackCandidateToMemory(cands,
+                                  LSTObjType::pT2,
+                                  pT2Index,
+                                  pT2Index,
+                                  pT2s.logicalLayers()[pT2Index].data(),
+                                  pT2s.lowerModuleIndices()[pT2Index].data(),
+                                  pT2s.hitIndices()[pT2Index].data(),
+                                  segmentsPixel.seedIdx()[pT2PixelIndex - pLS_offset],
+                                  __H2F(pT2s.centerX()[pT2Index]),
+                                  __H2F(pT2s.centerY()[pT2Index]),
+                                  radius,
+                                  trackCandidateIdx,
+                                  pT2Index);
+        //        }
       }
     }
   };
