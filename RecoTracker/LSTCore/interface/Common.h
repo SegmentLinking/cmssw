@@ -20,23 +20,18 @@ namespace lst {
   // Named types for LST objects
   enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
 
-// If a compile time flag does not define PT_CUT, default to 0.8 (GeV)
-#ifndef PT_CUT
-  constexpr float PT_CUT = 0.8f;
-#endif
-
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
 
-  constexpr unsigned int n_max_pixel_segments_per_module = 50000;
+  constexpr unsigned int n_max_pixel_segments_per_module = 500000;
 
   constexpr unsigned int n_max_pixel_md_per_modules = 2 * n_max_pixel_segments_per_module;
 
   constexpr unsigned int n_max_pixel_triplets = 5000;
   constexpr unsigned int n_max_pixel_quintuplets = 15000;
 
-  constexpr unsigned int n_max_pixel_track_candidates = 30000;
-  constexpr unsigned int n_max_nonpixel_track_candidates = 1000;
+  constexpr unsigned int n_max_pixel_track_candidates = 300000;
+  constexpr unsigned int n_max_nonpixel_track_candidates = 10000;
 
   constexpr unsigned int size_superbins = 45000;
 

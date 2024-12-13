@@ -36,6 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   class LSTEvent {
   private:
     Queue& queue_;
+    const float ptCut_;
 
     std::array<unsigned int, 6> n_minidoublets_by_layer_barrel_{};
     std::array<unsigned int, 5> n_minidoublets_by_layer_endcap_{};
@@ -81,8 +82,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
-    LSTEvent(bool verbose, Queue& q, const LSTESData<Device>* deviceESData)
+    LSTEvent(bool verbose, const float pt_cut, Queue& q, const LSTESData<Device>* deviceESData)
         : queue_(q),
+          ptCut_(pt_cut),
           nModules_(deviceESData->nModules),
           nLowerModules_(deviceESData->nLowerModules),
           nPixels_(deviceESData->nPixels),
@@ -90,7 +92,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           modules_(*deviceESData->modules),
           pixelMapping_(*deviceESData->pixelMapping),
           endcapGeometry_(*deviceESData->endcapGeometry),
-          addObjects_(verbose) {}
+          addObjects_(verbose) {
+      if (pt_cut < 0.6f) {
+        throw std::invalid_argument("Minimum pT cut must be at least 0.6 GeV. Provided value: " +
+                                    std::to_string(pt_cut));
+      }
+    }
     void initSync();        // synchronizes, for standalone usage
     void resetEventSync();  // synchronizes, for standalone usage
     void wait() const { alpaka::wait(queue_); }
@@ -137,17 +144,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void resetObjectsInModule();
 
     unsigned int getNumberOfMiniDoublets();
-    unsigned int getNumberOfMiniDoubletsByLayer(unsigned int layer);
     unsigned int getNumberOfMiniDoubletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfMiniDoubletsByLayerEndcap(unsigned int layer);
 
     unsigned int getNumberOfSegments();
-    unsigned int getNumberOfSegmentsByLayer(unsigned int layer);
     unsigned int getNumberOfSegmentsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfSegmentsByLayerEndcap(unsigned int layer);
 
     unsigned int getNumberOfTriplets();
-    unsigned int getNumberOfTripletsByLayer(unsigned int layer);
     unsigned int getNumberOfTripletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfTripletsByLayerEndcap(unsigned int layer);
 
@@ -155,7 +159,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     int getNumberOfPixelQuintuplets();
 
     unsigned int getNumberOfQuintuplets();
-    unsigned int getNumberOfQuintupletsByLayer(unsigned int layer);
     unsigned int getNumberOfQuintupletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfQuintupletsByLayerEndcap(unsigned int layer);
 
