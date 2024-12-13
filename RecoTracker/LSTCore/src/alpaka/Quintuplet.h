@@ -1682,7 +1682,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             uint16_t lowerModule5 = triplets.lowerModuleIndices()[outerTripletIndex][2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
-                rzChiSquared, chiSquared, nonAnchorChiSquared;  //required for making distributions
+                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
 
             bool tightCutFlag = false;
             bool success = runQuintupletDefaultAlgo(acc,
