@@ -662,8 +662,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     centerY = segmentsPixel.circleCenterY()[pixelSegmentArrayIndex];
     pixelRadius = segmentsPixel.circleRadius()[pixelSegmentArrayIndex];
 
-    float T5CenterX = quintuplets.regressionG()[quintupletIndex];
-    float T5CenterY = quintuplets.regressionF()[quintupletIndex];
+    float T5CenterX = quintuplets.regressionCenterX()[quintupletIndex];
+    float T5CenterY = quintuplets.regressionCenterY()[quintupletIndex];
     quintupletRadius = quintuplets.regressionRadius()[quintupletIndex];
 
     rPhiChiSquared = computePT5RPhiChiSquared(acc, modules, lowerModuleIndices, centerX, centerY, pixelRadius, xs, ys);
