@@ -6,6 +6,8 @@
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
 
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
+#include "DataFormats/Portable/interface/PortableObject.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 
 #include <memory>
@@ -23,21 +25,25 @@ namespace lst {
     std::shared_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometry;
     // Host-side object that is shared between the LSTESData<TDev> objects for different devices
     std::shared_ptr<const PixelMap> pixelMapping;
-
+    // ==== New DNN weights pointer ====
+    std::shared_ptr<const PortableObject<lst::DnnWeightsDevData, TDev>> dnnWeights;
     LSTESData(uint16_t const& nModulesIn,
               uint16_t const& nLowerModulesIn,
               unsigned int const& nPixelsIn,
               unsigned int const& nEndCapMapIn,
               std::shared_ptr<const PortableMultiCollection<TDev, ModulesSoA, ModulesPixelSoA>> modulesIn,
               std::shared_ptr<const PortableCollection<EndcapGeometryDevSoA, TDev>> endcapGeometryIn,
-              std::shared_ptr<const PixelMap> const& pixelMappingIn)
+              std::shared_ptr<const PixelMap> const& pixelMappingIn,
+              // New constructor argument for DNN
+              std::shared_ptr<const PortableObject<lst::DnnWeightsDevData, TDev>> dnnWeightsIn)
         : nModules(nModulesIn),
           nLowerModules(nLowerModulesIn),
           nPixels(nPixelsIn),
           nEndCapMap(nEndCapMapIn),
           modules(std::move(modulesIn)),
           endcapGeometry(std::move(endcapGeometryIn)),
-          pixelMapping(pixelMappingIn) {}
+          pixelMapping(pixelMappingIn),
+          dnnWeights(std::move(dnnWeightsIn)) {}
   };
 
   std::unique_ptr<LSTESData<alpaka_common::DevHost>> loadAndFillESHost(std::string& ptCutLabel);
@@ -54,16 +60,22 @@ namespace cms::alpakatools {
       using TDev = alpaka::Dev<TQueue>;
       std::shared_ptr<const PortableMultiCollection<TDev, lst::ModulesSoA, lst::ModulesPixelSoA>> deviceModules;
       std::shared_ptr<const PortableCollection<lst::EndcapGeometryDevSoA, TDev>> deviceEndcapGeometry;
+      // === New pointer for the copied DNN weights ===
+      std::shared_ptr<const PortableObject<lst::DnnWeightsDevData, TDev>> deviceDnnWeights;
 
       if constexpr (std::is_same_v<TDev, alpaka_common::DevHost>) {
         deviceModules = srcData.modules;
         deviceEndcapGeometry = srcData.endcapGeometry;
+        deviceDnnWeights = srcData.dnnWeights;
       } else {
         deviceModules = std::make_shared<PortableMultiCollection<TDev, lst::ModulesSoA, lst::ModulesPixelSoA>>(
             CopyToDevice<PortableHostMultiCollection<lst::ModulesSoA, lst::ModulesPixelSoA>>::copyAsync(
                 queue, *srcData.modules));
         deviceEndcapGeometry = std::make_shared<PortableCollection<lst::EndcapGeometryDevSoA, TDev>>(
             CopyToDevice<PortableHostCollection<lst::EndcapGeometryDevSoA>>::copyAsync(queue, *srcData.endcapGeometry));
+        // Copy the DNN weights to device
+        deviceDnnWeights = std::make_shared<PortableObject<lst::DnnWeightsDevData, TDev>>(
+            CopyToDevice<PortableHostObject<lst::DnnWeightsDevData>>::copyAsync(queue, *srcData.dnnWeights));
       }
 
       return lst::LSTESData<alpaka::Dev<TQueue>>(srcData.nModules,
@@ -72,7 +84,8 @@ namespace cms::alpakatools {
                                                  srcData.nEndCapMap,
                                                  std::move(deviceModules),
                                                  std::move(deviceEndcapGeometry),
-                                                 srcData.pixelMapping);
+                                                 srcData.pixelMapping,
+                                                 std::move(deviceDnnWeights));
     }
   };
 }  // namespace cms::alpakatools

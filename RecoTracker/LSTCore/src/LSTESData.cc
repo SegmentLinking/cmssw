@@ -3,7 +3,9 @@
 #include "RecoTracker/LSTCore/interface/ModuleConnectionMap.h"
 #include "RecoTracker/LSTCore/interface/TiltedGeometry.h"
 #include "RecoTracker/LSTCore/interface/PixelMap.h"
-
+#include "RecoTracker/LSTCore/interface/Dnn.h"
+#include "RecoTracker/LSTCore/interface/DenseLayer.h"
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
 #include "ModuleMethods.h"
 
 #include <filesystem>
@@ -111,11 +113,30 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(s
                                                  tiltedGeometry,
                                                  moduleConnectionMap);
   auto pixelMappingPtr = std::make_shared<PixelMap>(std::move(pixelMapping));
+
+  // === Load from the DNN instance ===
+  auto model =
+      Dnn<DenseLayer<23, 32>, DenseLayer<32, 32>, DenseLayer<32, 1>>("../standalone/analysis/DNN/network_weights.bin");
+
+  // Copy the loaded model into a host DnnWeightsDevData struct
+  lst::DnnWeightsDevData hostDnn;
+  {
+    auto const& layers = model.getLayers();
+    hostDnn.layer1 = std::get<0>(layers);
+    hostDnn.layer2 = std::get<1>(layers);
+    hostDnn.layer3 = std::get<2>(layers);
+  }
+
+  // Wrap it in a PortableHostObject so it can be copied to device
+  auto hostDnnWeights = std::make_shared<PortableHostObject<lst::DnnWeightsDevData>>(cms::alpakatools::host());
+  hostDnnWeights->value() = hostDnn;
+
   return std::make_unique<LSTESData<alpaka_common::DevHost>>(nModules,
                                                              nLowerModules,
                                                              nPixels,
                                                              endcapGeometry.nEndCapMap,
                                                              std::move(modulesBuffers),
                                                              std::move(endcapGeometryDev),
-                                                             pixelMappingPtr);
+                                                             pixelMappingPtr,
+                                                             hostDnnWeights);
 }

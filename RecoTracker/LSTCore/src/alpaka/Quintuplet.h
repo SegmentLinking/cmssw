@@ -13,6 +13,7 @@
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
 
 #include "NeuralNetwork.h"
 #include "Hit.h"
@@ -1465,6 +1466,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& dBeta1,
                                                                float& dBeta2,
                                                                bool& tightCutFlag,
+                                                               lst::DnnWeightsDevData const* dnnPtr,
                                                                const float ptCut) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
@@ -1504,6 +1506,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     innerRadius = triplets.radius()[innerTripletIndex];
 
     bool inference = lst::t5dnn::runInference(acc,
+                                              dnnPtr,
                                               mds,
                                               firstMDIndex,
                                               secondMDIndex,
@@ -1651,6 +1654,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuintupletsOccupancy quintupletsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint16_t nEligibleT5Modules,
+                                  lst::DnnWeightsDevData const* dnnPtr,
                                   const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
@@ -1709,6 +1713,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     dBeta1,
                                                     dBeta2,
                                                     tightCutFlag,
+                                                    dnnPtr,
                                                     ptCut);
 
             if (success) {
