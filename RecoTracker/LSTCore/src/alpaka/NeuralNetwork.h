@@ -7,6 +7,7 @@
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
 
 #include "NeuralNetworkWeights.h"
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::t5dnn {
 
@@ -24,10 +25,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::t5dnn {
   }
 
   template <int IN_FEATURES, int OUT_FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
-                                                   float (&output)[OUT_FEATURES],
-                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
-                                                   const float (&biases)[OUT_FEATURES]) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(
+      const float (&input)[IN_FEATURES],
+      float (&output)[OUT_FEATURES],
+      const std::array<std::array<float, OUT_FEATURES>, IN_FEATURES>& weights,
+      const std::array<float, OUT_FEATURES>& biases) {
     CMS_UNROLL_LOOP
     for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
       output[i] = biases[i];
@@ -52,6 +54,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::t5dnn {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
+                                                   lst::DnnWeightsDevData const* dnnPtr,
                                                    MiniDoubletsConst mds,
                                                    const unsigned int mdIndex1,
                                                    const unsigned int mdIndex2,
@@ -126,15 +129,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::t5dnn {
     float x_3[1];                // Layer 3 linear output
 
     // Layer 1: Linear + Relu
-    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_layer1, bias_layer1);
+    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, dnnPtr->layer1.weights, dnnPtr->layer1.biases);
     relu_activation<khiddenFeatures>(x_1);
 
     // Layer 2: Linear + Relu
-    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_layer2, bias_layer2);
+    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, dnnPtr->layer2.weights, dnnPtr->layer2.biases);
     relu_activation<khiddenFeatures>(x_2);
 
     // Layer 3: Linear + Sigmoid
-    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
+    linear_layer<khiddenFeatures, 1>(x_2, x_3, dnnPtr->layer3.weights, dnnPtr->layer3.biases);
     float x_5 = sigmoid_activation(acc, x_3[0]);
 
     // Get the bin index based on abs(eta) of first hit and t5_pt

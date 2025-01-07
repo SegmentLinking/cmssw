@@ -115,9 +115,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(s
   auto pixelMappingPtr = std::make_shared<PixelMap>(std::move(pixelMapping));
 
   // === Load from the DNN instance ===
-  auto model = Dnn<DenseLayer<23, 32>, DenseLayer<32, 32>, DenseLayer<32, 1>>(
-      "/mnt/data1/gsn27/cmssw-fresh/CMSSW_14_2_0_pre4/src/RecoTracker/LSTCore/standalone/analysis/DNN/"
-      "network_weights.bin");
+  auto model = Dnn<DenseLayer<23, 32>, DenseLayer<32, 32>, DenseLayer<32, 1>>("../standalone/analysis/DNN/network_weights.bin");
 
   // Copy the loaded model into a host DnnWeightsDevData struct
   lst::DnnWeightsDevData hostDnn;
