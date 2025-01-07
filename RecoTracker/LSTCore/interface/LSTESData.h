@@ -79,13 +79,13 @@ namespace cms::alpakatools {
       }
 
       return lst::LSTESData<alpaka::Dev<TQueue>>(srcData.nModules,
-                                                srcData.nLowerModules,
-                                                srcData.nPixels,
-                                                srcData.nEndCapMap,
-                                                std::move(deviceModules),
-                                                std::move(deviceEndcapGeometry),
-                                                srcData.pixelMapping,
-                                                std::move(deviceDnnWeights));
+                                                 srcData.nLowerModules,
+                                                 srcData.nPixels,
+                                                 srcData.nEndCapMap,
+                                                 std::move(deviceModules),
+                                                 std::move(deviceEndcapGeometry),
+                                                 srcData.pixelMapping,
+                                                 std::move(deviceDnnWeights));
     }
   };
 }  // namespace cms::alpakatools
