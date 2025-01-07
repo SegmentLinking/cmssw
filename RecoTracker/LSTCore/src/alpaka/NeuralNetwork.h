@@ -6,7 +6,6 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
 
-#include "NeuralNetworkWeights.h"
 #include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::t5dnn {
