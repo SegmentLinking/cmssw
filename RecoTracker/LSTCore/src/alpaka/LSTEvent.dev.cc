@@ -914,6 +914,7 @@ void LSTEvent::createQuintuplets() {
                       quintupletsDC_->view<QuintupletsOccupancySoA>(),
                       rangesDC_->const_view(),
                       nEligibleT5Modules,
+                      dnnWeights_.data(),
                       ptCut_);
 
   Vec3D const threadsPerBlockDupQuint{1, 16, 16};

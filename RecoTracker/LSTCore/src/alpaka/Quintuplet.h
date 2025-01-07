@@ -13,6 +13,7 @@
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesSoA.h"
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
 
 #include "NeuralNetwork.h"
 #include "Hit.h"
@@ -1651,6 +1652,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuintupletsOccupancy quintupletsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint16_t nEligibleT5Modules,
+                                  lst::DnnWeightsDevData const* dnnPtr,
                                   const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);

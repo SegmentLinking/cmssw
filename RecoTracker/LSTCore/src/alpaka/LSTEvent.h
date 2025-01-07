@@ -25,6 +25,8 @@
 #include "RecoTracker/LSTCore/interface/alpaka/ModulesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ObjectRangesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/EndcapGeometryDevDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/DnnWeightsDevSoA.h"
+#include "DataFormats/Portable/interface/PortableObject.h"
 
 #include "Hit.h"
 #include "Kernels.h"
@@ -78,6 +80,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ModulesDeviceCollection const& modules_;
     PixelMap const& pixelMapping_;
     EndcapGeometryDevDeviceCollection const& endcapGeometry_;
+    PortableObject<lst::DnnWeightsDevData, Device> const& dnnWeights_;
     bool addObjects_;
 
   public:
@@ -92,6 +95,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           modules_(*deviceESData->modules),
           pixelMapping_(*deviceESData->pixelMapping),
           endcapGeometry_(*deviceESData->endcapGeometry),
+          dnnWeights_(*deviceESData->dnnWeights),
           addObjects_(verbose) {
       if (pt_cut < 0.6f) {
         throw std::invalid_argument("Minimum pT cut must be at least 0.6 GeV. Provided value: " +
