@@ -470,7 +470,7 @@ namespace lst::t4dnn {
                                                    const float innerRadius,
                                                    const float outerRadius) {
     // Constants
-    constexpr unsigned int kinputFeatures = 14;
+    constexpr unsigned int kinputFeatures = 15; //change to 15 from 14, add rad ratio
     constexpr unsigned int khiddenFeatures = 32;
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
@@ -507,7 +507,8 @@ namespace lst::t4dnn {
         (r4 - r3) / kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
 
         alpaka::math::log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
-        alpaka::math::log10(acc, outerRadius)    // T5 outer radius (t5_outerRadius)
+        alpaka::math::log10(acc, outerRadius),    // T5 outer radius (t5_outerRadius)
+        alpaka::math::log10(acc, innerRadius/outerRadius)    // radius ratio
     };
 
     float x_1[khiddenFeatures];  // Layer 1 output
@@ -530,8 +531,8 @@ namespace lst::t4dnn {
     float t4_pt = innerRadius * lst::k2Rinv1GeVf * 2;
 
     uint8_t pt_index = (t4_pt > 5);
-    // uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
-    uint8_t bin_index = (eta1 > 1.0f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.1f);
+    uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
+    // uint8_t bin_index = (eta1 > 1.0f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.1f);
 
     // Compare x_5 to the cut value for the relevant bin
     return x_5 > kWp[pt_index][bin_index];

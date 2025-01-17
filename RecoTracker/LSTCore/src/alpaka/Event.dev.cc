@@ -2090,6 +2090,7 @@ lst::QuadrupletsBuffer<DevHost>* lst::Event<Acc3D>::getQuadruplets() {
     alpaka::memcpy(queue, quadrupletsInCPU->rzChiSquared_buf, quadrupletsBuffers->rzChiSquared_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->dBeta_buf, quadrupletsBuffers->dBeta_buf, nMemHost);
     alpaka::memcpy(queue, quadrupletsInCPU->lowerModuleIndices_buf, quadrupletsBuffers->lowerModuleIndices_buf, nMemHost);
+    alpaka::memcpy(queue, quadrupletsInCPU->pt_buf, quadrupletsBuffers->pt_buf, nMemHost);
     alpaka::wait(queue);
   }
   return quadrupletsInCPU;
