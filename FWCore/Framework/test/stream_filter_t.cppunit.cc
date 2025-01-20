@@ -18,10 +18,12 @@
 #include "FWCore/Framework/interface/stream/EDFilter.h"
 #include "FWCore/Framework/interface/stream/EDProducerAdaptor.h"
 #include "FWCore/Framework/interface/OccurrenceTraits.h"
+#include "FWCore/Framework/interface/ProductResolversFactory.h"
 #include "DataFormats/Provenance/interface/ProductRegistry.h"
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
 #include "FWCore/Framework/interface/HistoryAppender.h"
+#include "FWCore/ServiceRegistry/interface/GlobalContext.h"
 #include "FWCore/ServiceRegistry/interface/ParentContext.h"
 #include "FWCore/ServiceRegistry/interface/StreamContext.h"
 #include "FWCore/Concurrency/interface/FinalWaitingTask.h"
@@ -445,10 +447,12 @@ testStreamFilter::testStreamFilter()
 
   std::string uuid = edm::createGlobalIdentifier();
   edm::Timestamp now(1234567UL);
-  m_rp.reset(new edm::RunPrincipal(m_prodReg, m_procConfig, &historyAppender_, 0));
+  m_rp.reset(
+      new edm::RunPrincipal(m_prodReg, edm::productResolversFactory::makePrimary, m_procConfig, &historyAppender_, 0));
   m_rp->setAux(edm::RunAuxiliary(eventID.run(), now, now));
   auto lumiAux = std::make_shared<edm::LuminosityBlockAuxiliary>(m_rp->run(), 1, now, now);
-  m_lbp.reset(new edm::LuminosityBlockPrincipal(m_prodReg, m_procConfig, &historyAppender_, 0));
+  m_lbp.reset(new edm::LuminosityBlockPrincipal(
+      m_prodReg, edm::productResolversFactory::makePrimary, m_procConfig, &historyAppender_, 0));
   m_lbp->setAux(*lumiAux);
   m_lbp->setRunPrincipal(m_rp);
   edm::EventAuxiliary eventAux(eventID, uuid, now, true);
@@ -459,13 +463,22 @@ testStreamFilter::testStreamFilter()
   edm::StreamID* pID = reinterpret_cast<edm::StreamID*>(&shadowID);
   assert(pID->value() == 0);
 
-  m_ep.reset(new edm::EventPrincipal(m_prodReg, m_idHelper, m_associationsHelper, m_procConfig, nullptr, *pID));
+  m_ep.reset(new edm::EventPrincipal(m_prodReg,
+                                     edm::productResolversFactory::makePrimary,
+                                     m_idHelper,
+                                     m_associationsHelper,
+                                     m_procConfig,
+                                     nullptr,
+                                     *pID));
   m_ep->fillEventPrincipal(eventAux, nullptr);
   m_ep->setLuminosityBlockPrincipal(m_lbp.get());
   m_actReg.reset(new edm::ActivityRegistry);
 
   //For each transition, bind a lambda which will call the proper method of the Worker
-  m_transToFunc[Trans::kBeginJob] = [](edm::Worker* iBase) { iBase->beginJob(); };
+  m_transToFunc[Trans::kBeginJob] = [](edm::Worker* iBase) {
+    edm::GlobalContext globalContext(edm::GlobalContext::Transition::kBeginJob, nullptr);
+    iBase->beginJob(globalContext);
+  };
   m_transToFunc[Trans::kBeginStream] = [](edm::Worker* iBase) {
     edm::StreamContext streamContext(s_streamID0, nullptr);
     iBase->beginStream(s_streamID0, streamContext);
@@ -552,7 +565,10 @@ testStreamFilter::testStreamFilter()
     edm::StreamContext streamContext(s_streamID0, nullptr);
     iBase->endStream(s_streamID0, streamContext);
   };
-  m_transToFunc[Trans::kEndJob] = [](edm::Worker* iBase) { iBase->endJob(); };
+  m_transToFunc[Trans::kEndJob] = [](edm::Worker* iBase) {
+    edm::GlobalContext globalContext(edm::GlobalContext::Transition::kEndJob, nullptr);
+    iBase->endJob(globalContext);
+  };
 }
 
 namespace {
@@ -587,14 +603,17 @@ template <typename T, typename U>
 void testStreamFilter::testTransitions(std::shared_ptr<U> iMod, Expectations const& iExpect) {
   oneapi::tbb::global_control control(oneapi::tbb::global_control::max_allowed_parallelism, 1);
 
-  edm::WorkerT<edm::stream::EDFilterAdaptorBase> wOther{iMod, m_desc, nullptr};
+  edm::WorkerT<edm::stream::EDFilterAdaptorBase> wBeginJobEndJob{iMod, m_desc, nullptr};
+  edm::WorkerT<edm::stream::EDFilterAdaptorBase> wBeginStreamEndStream{iMod, m_desc, nullptr};
   edm::WorkerT<edm::stream::EDFilterAdaptorBase> wGlobalLumi{iMod, m_desc, nullptr};
   edm::WorkerT<edm::stream::EDFilterAdaptorBase> wStreamLumi{iMod, m_desc, nullptr};
   edm::WorkerT<edm::stream::EDFilterAdaptorBase> wGlobalRun{iMod, m_desc, nullptr};
   edm::WorkerT<edm::stream::EDFilterAdaptorBase> wStreamRun{iMod, m_desc, nullptr};
   for (auto& keyVal : m_transToFunc) {
-    edm::Worker* worker = &wOther;
-    if (keyVal.first == Trans::kStreamBeginLuminosityBlock || keyVal.first == Trans::kStreamEndLuminosityBlock) {
+    edm::Worker* worker = &wBeginJobEndJob;
+    if (keyVal.first == Trans::kBeginStream || keyVal.first == Trans::kEndStream) {
+      worker = &wBeginStreamEndStream;
+    } else if (keyVal.first == Trans::kStreamBeginLuminosityBlock || keyVal.first == Trans::kStreamEndLuminosityBlock) {
       worker = &wStreamLumi;
     } else if (keyVal.first == Trans::kGlobalBeginLuminosityBlock || keyVal.first == Trans::kGlobalEndLuminosityBlock) {
       worker = &wGlobalLumi;

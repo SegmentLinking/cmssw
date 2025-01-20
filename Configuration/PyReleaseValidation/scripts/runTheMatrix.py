@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 import sys, os
 
 from Configuration.PyReleaseValidation.MatrixReader import MatrixReader
@@ -85,18 +84,20 @@ if __name__ == '__main__':
                     12846.0,    # RelValZEE_13                  2024
                     13034.0,    # RelValTTbar_14TeV             2024 PU = Run3_Flat55To75_PoissonOOTPU
                     12834.7,    # RelValTTbar_14TeV             2024 mkFit
+                    16834.0,    # RelValTTbar_14TeV             2025
                     14034.0,    # RelValTTbar_14TeV             Run3_2023_FastSim 
                     14234.0,    # RelValTTbar_14TeV             Run3_2023_FastSim   PU = Run3_Flat55To75_PoissonOOTPU
-                    2500.4,     # RelValTTbar_14TeV             NanoAOD from existing MINI
+                    2500.201,   # RelValTTbar_14TeV             NanoAOD from existing MINI
 
                     # Phase2
-                    24834.0,    # RelValTTbar_14TeV                     phase2_realistic_T25        Extended2026D98         (Phase-2 baseline)   
-                    24834.911,  # TTbar_14TeV_TuneCP5                   phase2_realistic_T25        DD4hepExtended2026D98   DD4Hep (HLLHC14TeV BeamSpot) 
-                    25034.999,  # RelValTTbar_14TeV (PREMIX)            phase2_realistic_T25        Extended2026D98         AVE_50_BX_25ns_m3p3     
-                    24896.0,    # RelValCloseByPGun_CE_E_Front_120um    phase2_realistic_T25        Extended2026D98
-                    24900.0,    # RelValCloseByPGun_CE_H_Coarse_Scint   phase2_realistic_T25        Extended2026D98  
-                    23234.0,    # TTbar_14TeV_TuneCP5                   phase2_realistic_T21        Extended2026D94         (exercise with HFNose) 
-                    
+                    29634.0,    # RelValTTbar_14TeV                     phase2_realistic_T33        ExtendedRun4D110         (Phase-2 baseline)
+                    24834.911,  # Previous DD4hep baseline for monitoring the stability of DD4hep workflow
+                    29634.911,  # TTbar_14TeV_TuneCP5                   phase2_realistic_T33        DD4hepExtendedRun4D110   DD4Hep (HLLHC14TeV BeamSpot) 
+                    29834.999,  # RelValTTbar_14TeV (PREMIX)            phase2_realistic_T33        ExtendedRun4D110         AVE_50_BX_25ns_m3p3     
+                    29696.0,    # RelValCloseByPGun_CE_E_Front_120um    phase2_realistic_T33        ExtendedRun4D110
+                    29700.0,    # RelValCloseByPGun_CE_H_Coarse_Scint   phase2_realistic_T33        ExtendedRun4D110  
+                    #23234.0,   # Need new workflow with HFNose
+                    29634.75,   # RelValTTbar_14TeV                     phase2_realistic_T33        ExtendedRun4D110         (Phase-2 baseline -  but using timing menu, and only up to step 2)
 
                     ###### pp Data
                     ## Run1
@@ -106,9 +107,6 @@ if __name__ == '__main__':
                     1001,       # Run2011A  MinimumBias                 Data+Express
                     ## Run2
                     136.731,    # Run2016B SinglePhoton  
-                    136.7611,   # Run2016E JetHT (reMINIAOD)            Run2_2016_HIPM + run2_miniAOD_80XLegacy
-                    136.8311,   # Run2017F JetHT (reMINIAOD)            run2_miniAOD_94XFall17
-                    136.88811,  # Run2018D JetHT (reMINIAOD)            run2_miniAOD_UL_preSummer20 (UL MINI)
                     136.793,    # Run2017C DoubleEG                      
                     136.874,    # Run2018C EGamma
                      
@@ -117,21 +115,26 @@ if __name__ == '__main__':
                     139.001,    # Run2021  MinimumBias                  Commissioning2021   
                     
                     # 2022
-                    140.023,    # Run2022B ZeroBias 
-                    140.043,    # Run2022C ZeroBias 
-                    140.063,    # Run2022D ZeroBias 
+                    140.045,    # Run2022C JetHT
 
                     # 2023
-                    141.044,    # Run2023D JetMET0
                     141.042,    # Run2023D ZeroBias
-                    141.046,    # Run2023D EGamma0
 
+                    # 2024
+                    145.014,      # Run2024B ZeroBias
+                    145.104,      # Run2024C JetMet0 
+                    145.202,      # Run2024D EGamma0
+                    145.301,      # Run2024E DisplacedJet
+                    145.408,      # Run2024F ParkingDoubleMuonLowMass0
+                    145.500,      # Run2024G BTagMu
+                    145.604,      # Run2024H JetMET0
+                    145.713,      # Run2024I Tau
+                    
                     ###### Heavy Ions
                     ## Data
                     # Run2   
                     140.56,    # HIRun2018A HIHardProbes                    Run2_2018_pp_on_AA 
                     ## MC
-                    158.01,    # RelValHydjetQ_B12_5020GeV_2018_ppReco      (reMINIAOD) (HI MC with pp-like reco)
                     312.0,     # Pyquen_ZeemumuJets_pt10_2760GeV            PU : HiMixGEN 
 
                      ],
@@ -429,28 +432,7 @@ if __name__ == '__main__':
             opt.testList = ','.join(rerunthese)
 
     if opt.IBEos:
-      from subprocess import getstatusoutput as run_cmd
-
-      ibeos_cache = os.path.join(os.getenv("LOCALRT"), "ibeos_cache.txt")
-      if not os.path.exists(ibeos_cache):
-        err, out = run_cmd("curl -L -s -o %s https://raw.githubusercontent.com/cms-sw/cms-sw.github.io/master/das_queries/ibeos.txt" % ibeos_cache)
-        if err:
-          run_cmd("rm -f %s" % ibeos_cache)
-          print("Error: Unable to download ibeos cache information")
-          print(out)
-          sys.exit(err)
-
-      for cmssw_env in [ "CMSSW_BASE", "CMSSW_RELEASE_BASE" ]:
-        cmssw_base = os.getenv(cmssw_env,None)
-        if not cmssw_base: continue
-        cmssw_base = os.path.join(cmssw_base,"src/Utilities/General/ibeos")
-        if os.path.exists(cmssw_base):
-          os.environ["PATH"]=cmssw_base+":"+os.getenv("PATH")
-          os.environ["CMS_PATH"]="/cvmfs/cms-ib.cern.ch"
-          os.environ["SITECONFIG_PATH"]="/cvmfs/cms-ib.cern.ch/SITECONF/local"
-          os.environ["CMSSW_USE_IBEOS"]="true"
-          print(">> WARNING: You are using SITECONF from /cvmfs/cms-ib.cern.ch")
-          break
+      os.environ["CMSSW_USE_IBEOS"]="true"
     if opt.restricted:
         print('Deprecated, please use -l limited')
         if opt.testList:            opt.testList+=',limited'

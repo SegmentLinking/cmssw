@@ -1,4 +1,3 @@
-from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 
 ##############################################################################
@@ -95,6 +94,11 @@ def customisePostEra_Run3_2023(process):
     customisePostEra_Run3(process)
     return process
 
+def customisePostEra_Run3_2024(process):
+    #start with a repeat of 2023
+    customisePostEra_Run3(process)
+    return process
+
 def customisePostEra_Run3_express_trackingOnly(process):
     #start with a repeat of 2018
     customisePostEra_Run2_2018_express_trackingOnly(process)
@@ -119,6 +123,22 @@ def customisePostEra_Run3_pp_on_PbPb_approxSiStripClusters(process):
 
 def customisePostEra_Run3_pp_on_PbPb_approxSiStripClusters_2023(process):
     customisePostEra_Run3_pp_on_PbPb_2023(process)
+    return process
+
+def customisePostEra_Run3_pp_on_PbPb_2024(process):
+    customisePostEra_Run3_2024(process)
+    return process
+
+def customisePostEra_Run3_pp_on_PbPb_approxSiStripClusters_2024(process):
+    customisePostEra_Run3_pp_on_PbPb_2024(process)
+    return process
+
+def customisePostEra_Run3_2024_UPC(process):
+    customisePostEra_Run3_2024(process)
+    return process
+
+def customisePostEra_Run3_2024_ppRef(process):
+    customisePostEra_Run3_2024(process)
     return process
 
 ##############################################################################

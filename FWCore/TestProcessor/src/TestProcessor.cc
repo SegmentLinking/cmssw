@@ -34,12 +34,12 @@
 #include "FWCore/Framework/interface/DelayedReader.h"
 #include "FWCore/Framework/interface/ensureAvailableAccelerators.h"
 #include "FWCore/Framework/interface/makeModuleTypeResolverMaker.h"
+#include "FWCore/Framework/interface/FileBlock.h"
+#include "FWCore/Framework/interface/MergeableRunProductMetadata.h"
+#include "FWCore/Framework/interface/ProductResolversFactory.h"
 
 #include "FWCore/ServiceRegistry/interface/ServiceRegistry.h"
 #include "FWCore/ServiceRegistry/interface/SystemBounds.h"
-
-#include "FWCore/PluginManager/interface/PluginManager.h"
-#include "FWCore/PluginManager/interface/standard.h"
 
 #include "FWCore/ParameterSetReader/interface/ProcessDescImpl.h"
 #include "FWCore/ParameterSet/interface/ProcessDesc.h"
@@ -47,37 +47,17 @@
 
 #include "FWCore/Utilities/interface/ExceptionCollector.h"
 
-#include "FWCore/Concurrency/interface/ThreadsController.h"
 #include "FWCore/Concurrency/interface/FinalWaitingTask.h"
 
-#include "DataFormats/Provenance/interface/ParentageRegistry.h"
+#include "oneTimeInitialization.h"
+
+#include <mutex>
 
 #define xstr(s) str(s)
 #define str(s) #s
 
 namespace edm {
   namespace test {
-
-    namespace {
-
-      bool oneTimeInitializationImpl() {
-        edmplugin::PluginManager::configure(edmplugin::standard::config());
-
-        static std::unique_ptr<edm::ThreadsController> tsiPtr = std::make_unique<edm::ThreadsController>(1);
-
-        // register the empty parentage vector , once and for all
-        ParentageRegistry::instance()->insertMapped(Parentage());
-
-        // register the empty parameter set, once and for all.
-        ParameterSet().registerIt();
-        return true;
-      }
-
-      bool oneTimeInitialization() {
-        static const bool s_init{oneTimeInitializationImpl()};
-        return s_init;
-      }
-    }  // namespace
 
     //
     // constructors and destructor
@@ -88,7 +68,7 @@ namespace edm {
           historyAppender_(std::make_unique<HistoryAppender>()),
           moduleRegistry_(std::make_shared<ModuleRegistry>()) {
       //Setup various singletons
-      (void)oneTimeInitialization();
+      (void)testprocessor::oneTimeInitialization();
 
       ProcessDescImpl desc(iConfig.pythonConfiguration(), false);
 
@@ -139,10 +119,9 @@ namespace edm {
       emptyPSet.registerIt();
       auto psetid = emptyPSet.id();
 
-      ProcessHistory oldHistory;
       for (auto const& p : iConfig.extraProcesses()) {
-        oldHistory.emplace_back(p, psetid, xstr(PROJECT_VERSION), "0");
-        processHistoryRegistry_.registerProcessHistory(oldHistory);
+        processHistory_.emplace_back(p, psetid, xstr(PROJECT_VERSION), "0");
+        processHistoryRegistry_.registerProcessHistory(processHistory_);
       }
 
       //setup the products we will be adding to the event
@@ -182,9 +161,12 @@ namespace edm {
       principalCache_.setNumberOfConcurrentPrincipals(preallocations_);
 
       preg_->setFrozen();
+      mergeableRunProductProcesses_.setProcessesWithMergeableRunProducts(*preg_);
+
       for (unsigned int index = 0; index < preallocations_.numberOfStreams(); ++index) {
         // Reusable event principal
         auto ep = std::make_shared<EventPrincipal>(preg_,
+                                                   edm::productResolversFactory::makePrimary,
                                                    branchIDListHelper_,
                                                    thinnedAssociationsHelper_,
                                                    *processConfiguration_,
@@ -193,16 +175,22 @@ namespace edm {
         principalCache_.insert(std::move(ep));
       }
       for (unsigned int index = 0; index < preallocations_.numberOfRuns(); ++index) {
-        auto rp = std::make_unique<RunPrincipal>(preg_, *processConfiguration_, historyAppender_.get(), index);
+        auto rp = std::make_unique<RunPrincipal>(preg_,
+                                                 edm::productResolversFactory::makePrimary,
+                                                 *processConfiguration_,
+                                                 historyAppender_.get(),
+                                                 index,
+                                                 &mergeableRunProductProcesses_);
         principalCache_.insert(std::move(rp));
       }
       for (unsigned int index = 0; index < preallocations_.numberOfLuminosityBlocks(); ++index) {
-        auto lp =
-            std::make_unique<LuminosityBlockPrincipal>(preg_, *processConfiguration_, historyAppender_.get(), index);
+        auto lp = std::make_unique<LuminosityBlockPrincipal>(
+            preg_, edm::productResolversFactory::makePrimary, *processConfiguration_, historyAppender_.get(), index);
         principalCache_.insert(std::move(lp));
       }
       {
-        auto pb = std::make_unique<ProcessBlockPrincipal>(preg_, *processConfiguration_);
+        auto pb = std::make_unique<ProcessBlockPrincipal>(
+            preg_, edm::productResolversFactory::makePrimary, *processConfiguration_);
         principalCache_.insert(std::move(pb));
       }
     }
@@ -231,7 +219,7 @@ namespace edm {
       schedule_->clearCounters();
       if (esHelper_) {
         //We want each test to have its own ES data products
-        esHelper_->resetAllProxies();
+        esHelper_->resetAllResolvers();
       }
       return edm::test::Event(
           principalCache_.eventPrincipal(0), labelOfTestModule_, processConfiguration_->processName(), result);
@@ -242,9 +230,16 @@ namespace edm {
         if (not beginJobCalled_) {
           beginJob();
         }
+        if (not respondToOpenInputFileCalled_) {
+          respondToOpenInputFile();
+        }
         if (not beginProcessBlockCalled_) {
           beginProcessBlock();
         }
+        if (not openOutputFilesCalled_) {
+          openOutputFiles();
+        }
+
         if (not beginRunCalled_) {
           beginRun();
         }
@@ -258,9 +253,8 @@ namespace edm {
 
       if (esHelper_) {
         //We want each test to have its own ES data products
-        esHelper_->resetAllProxies();
+        esHelper_->resetAllResolvers();
       }
-
       return edm::test::LuminosityBlock(lumiPrincipal_, labelOfTestModule_, processConfiguration_->processName());
     }
 
@@ -272,8 +266,14 @@ namespace edm {
         if (not beginJobCalled_) {
           beginJob();
         }
+        if (not respondToOpenInputFileCalled_) {
+          respondToOpenInputFile();
+        }
         if (not beginProcessBlockCalled_) {
           beginProcessBlock();
+        }
+        if (not openOutputFilesCalled_) {
+          openOutputFiles();
         }
         if (not beginRunCalled_) {
           beginRun();
@@ -285,7 +285,7 @@ namespace edm {
       });
       if (esHelper_) {
         //We want each test to have its own ES data products
-        esHelper_->resetAllProxies();
+        esHelper_->resetAllResolvers();
       }
 
       return edm::test::LuminosityBlock(std::move(lumi), labelOfTestModule_, processConfiguration_->processName());
@@ -296,8 +296,14 @@ namespace edm {
         if (not beginJobCalled_) {
           beginJob();
         }
+        if (not respondToOpenInputFileCalled_) {
+          respondToOpenInputFile();
+        }
         if (not beginProcessBlockCalled_) {
           beginProcessBlock();
+        }
+        if (not openOutputFilesCalled_) {
+          openOutputFiles();
         }
         if (beginRunCalled_) {
           assert(runNumber_ != iNum);
@@ -308,9 +314,8 @@ namespace edm {
       });
       if (esHelper_) {
         //We want each test to have its own ES data products
-        esHelper_->resetAllProxies();
+        esHelper_->resetAllResolvers();
       }
-
       return edm::test::Run(runPrincipal_, labelOfTestModule_, processConfiguration_->processName());
     }
     edm::test::Run TestProcessor::testEndRunImpl() {
@@ -321,8 +326,14 @@ namespace edm {
         if (not beginJobCalled_) {
           beginJob();
         }
+        if (not respondToOpenInputFileCalled_) {
+          respondToOpenInputFile();
+        }
         if (not beginProcessBlockCalled_) {
           beginProcessBlock();
+        }
+        if (not openOutputFilesCalled_) {
+          openOutputFiles();
         }
         if (not beginRunCalled_) {
           beginRun();
@@ -331,7 +342,7 @@ namespace edm {
       });
       if (esHelper_) {
         //We want each test to have its own ES data products
-        esHelper_->resetAllProxies();
+        esHelper_->resetAllResolvers();
       }
 
       return edm::test::Run(rp, labelOfTestModule_, processConfiguration_->processName());
@@ -364,8 +375,14 @@ namespace edm {
       if (not beginJobCalled_) {
         beginJob();
       }
+      if (not respondToOpenInputFileCalled_) {
+        respondToOpenInputFile();
+      }
       if (not beginProcessBlockCalled_) {
         beginProcessBlock();
+      }
+      if (not openOutputFilesCalled_) {
+        openOutputFiles();
       }
       if (not beginRunCalled_) {
         beginRun();
@@ -385,9 +402,16 @@ namespace edm {
           endRun();
           beginRunCalled_ = false;
         }
+        if (respondToOpenInputFileCalled_) {
+          respondToCloseInputFile();
+        }
         if (beginProcessBlockCalled_) {
           endProcessBlock();
           beginProcessBlockCalled_ = false;
+        }
+        if (openOutputFilesCalled_) {
+          closeOutputFiles();
+          openOutputFilesCalled_ = false;
         }
         if (beginJobCalled_) {
           endJob();
@@ -417,10 +441,9 @@ namespace edm {
       actReg_->eventSetupConfigurationSignal_(esp_->recordsToResolverIndices(), processContext_);
       //NOTE: this may throw
       //checkForModuleDependencyCorrectness(pathsAndConsumesOfModules, false);
-      actReg_->preBeginJobSignal_(pathsAndConsumesOfModules, processContext_);
 
-      schedule_->beginJob(*preg_, esp_->recordsToResolverIndices(), *processBlockHelper_);
-      actReg_->postBeginJobSignal_();
+      schedule_->beginJob(
+          *preg_, esp_->recordsToResolverIndices(), *processBlockHelper_, pathsAndConsumesOfModules, processContext_);
 
       for (unsigned int i = 0; i < preallocations_.numberOfStreams(); ++i) {
         schedule_->beginStream(i);
@@ -444,11 +467,53 @@ namespace edm {
       beginProcessBlockCalled_ = true;
     }
 
+    void TestProcessor::openOutputFiles() {
+      //make the services available
+      ServiceRegistry::Operate operate(serviceToken_);
+
+      edm::FileBlock fb;
+      schedule_->openOutputFiles(fb);
+      openOutputFilesCalled_ = true;
+    }
+
+    void TestProcessor::closeOutputFiles() {
+      if (openOutputFilesCalled_) {
+        //make the services available
+        ServiceRegistry::Operate operate(serviceToken_);
+        schedule_->closeOutputFiles();
+
+        openOutputFilesCalled_ = false;
+      }
+    }
+
+    void TestProcessor::respondToOpenInputFile() {
+      respondToOpenInputFileCalled_ = true;
+      edm::FileBlock fb;
+      //make the services available
+      ServiceRegistry::Operate operate(serviceToken_);
+      schedule_->respondToOpenInputFile(fb);
+    }
+
+    void TestProcessor::respondToCloseInputFile() {
+      if (respondToOpenInputFileCalled_) {
+        edm::FileBlock fb;
+        //make the services available
+        ServiceRegistry::Operate operate(serviceToken_);
+
+        schedule_->respondToCloseInputFile(fb);
+        respondToOpenInputFileCalled_ = false;
+      }
+    }
+
     void TestProcessor::beginRun() {
       runPrincipal_ = principalCache_.getAvailableRunPrincipalPtr();
       runPrincipal_->clearPrincipal();
       assert(runPrincipal_);
-      runPrincipal_->setAux(edm::RunAuxiliary(runNumber_, Timestamp(), Timestamp()));
+      edm::RunAuxiliary aux(runNumber_, Timestamp(), Timestamp());
+      aux.setProcessHistoryID(processHistory_.id());
+      runPrincipal_->setAux(aux);
+
+      runPrincipal_->fillRunPrincipal(processHistoryRegistry_);
 
       IOVSyncValue ts(EventID(runPrincipal_->run(), 0, 0), runPrincipal_->beginTime());
       eventsetup::synchronousEventSetupForInstance(ts, taskGroup_, *espController_);
@@ -483,12 +548,14 @@ namespace edm {
 
     void TestProcessor::beginLuminosityBlock() {
       LuminosityBlockAuxiliary aux(runNumber_, lumiNumber_, Timestamp(), Timestamp());
+      aux.setProcessHistoryID(processHistory_.id());
       lumiPrincipal_ = principalCache_.getAvailableLumiPrincipalPtr();
       lumiPrincipal_->clearPrincipal();
       assert(lumiPrincipal_);
       lumiPrincipal_->setAux(aux);
 
       lumiPrincipal_->setRunPrincipal(runPrincipal_);
+      lumiPrincipal_->fillLuminosityBlockPrincipal(&processHistory_);
 
       IOVSyncValue ts(EventID(runNumber_, lumiNumber_, eventNumber_), lumiPrincipal_->beginTime());
       eventsetup::synchronousEventSetupForInstance(ts, taskGroup_, *espController_);
@@ -528,10 +595,9 @@ namespace edm {
 
       //this resets the EventPrincipal (if it had been used before)
       pep->clearEventPrincipal();
-      pep->fillEventPrincipal(
-          edm::EventAuxiliary(EventID(runNumber_, lumiNumber_, eventNumber_), "", Timestamp(), false),
-          nullptr,
-          nullptr);
+      edm::EventAuxiliary aux(EventID(runNumber_, lumiNumber_, eventNumber_), "", Timestamp(), false);
+      aux.setProcessHistoryID(processHistory_.id());
+      pep->fillEventPrincipal(aux, nullptr, nullptr);
       assert(lumiPrincipal_.get() != nullptr);
       pep->setLuminosityBlockPrincipal(lumiPrincipal_.get());
 
@@ -560,6 +626,9 @@ namespace edm {
     std::shared_ptr<LuminosityBlockPrincipal> TestProcessor::endLuminosityBlock() {
       auto lumiPrincipal = lumiPrincipal_;
       if (beginLumiCalled_) {
+        //make the services available
+        ServiceRegistry::Operate operate(serviceToken_);
+
         beginLumiCalled_ = false;
         lumiPrincipal_.reset();
 
@@ -600,6 +669,12 @@ namespace edm {
                                            false);
           globalWaitTask.wait();
         }
+        {
+          FinalWaitingTask globalWaitTask{taskGroup_};
+          schedule_->writeLumiAsync(
+              WaitingTaskHolder(taskGroup_, &globalWaitTask), *lumiPrincipal, &processContext_, actReg_.get());
+          globalWaitTask.wait();
+        }
       }
       lumiPrincipal->setRunPrincipal(std::shared_ptr<RunPrincipal>());
       return lumiPrincipal;
@@ -610,6 +685,9 @@ namespace edm {
       runPrincipal_.reset();
       if (beginRunCalled_) {
         beginRunCalled_ = false;
+
+        //make the services available
+        ServiceRegistry::Operate operate(serviceToken_);
 
         IOVSyncValue ts(
             EventID(runPrincipal->run(), LuminosityBlockID::maxLuminosityBlockNumber(), EventID::maxEventNumber()),
@@ -650,6 +728,15 @@ namespace edm {
                                            false);
           globalWaitTask.wait();
         }
+        {
+          FinalWaitingTask globalWaitTask{taskGroup_};
+          schedule_->writeRunAsync(WaitingTaskHolder(taskGroup_, &globalWaitTask),
+                                   *runPrincipal,
+                                   &processContext_,
+                                   actReg_.get(),
+                                   runPrincipal->mergeableRunProductMetadata());
+          globalWaitTask.wait();
+        }
       }
       return runPrincipal;
     }
@@ -686,13 +773,14 @@ namespace edm {
       // Collects exceptions, so we don't throw before all operations are performed.
       ExceptionCollector c(
           "Multiple exceptions were thrown while executing endJob. An exception message follows for each.\n");
+      std::mutex collectorMutex;
 
       //make the services available
       ServiceRegistry::Operate operate(serviceToken_);
 
       //NOTE: this really should go elsewhere in the future
       for (unsigned int i = 0; i < preallocations_.numberOfStreams(); ++i) {
-        c.call([this, i]() { this->schedule_->endStream(i); });
+        schedule_->endStream(i, c, collectorMutex);
       }
       auto actReg = actReg_.get();
       c.call([actReg]() { actReg->preEndJobSignal_(); });

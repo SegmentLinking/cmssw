@@ -233,8 +233,6 @@ std::unique_ptr<L2TauNNProducerAlpakaCacheData> L2TauNNProducerAlpaka::initializ
   cacheData->graphDef = tensorflow::loadGraphDef(graphPath);
   cacheData->session = tensorflow::createSession(cacheData->graphDef);
 
-  tensorflow::setLogging("2");
-
   boost::property_tree::ptree loadPtreeRoot;
   auto const normalizationDict = edm::FileInPath(cfg.getParameter<std::string>("normalizationDict")).fullPath();
   boost::property_tree::read_json(normalizationDict, loadPtreeRoot);
@@ -595,7 +593,7 @@ void L2TauNNProducerAlpaka::selectGoodTracksAndVertices(const ZVertexHost& patav
     if (nHits == 0) {
       break;
     }
-    int vtx_ass_to_track = patavtx_soa.view()[trk_idx].idv();
+    int vtx_ass_to_track = patavtx_soa.view<reco::ZVertexTracksSoA>()[trk_idx].idv();
     if (vtx_ass_to_track >= 0 && vtx_ass_to_track < nv) {
       auto patatrackPt = patatracks_tsoa.view()[trk_idx].pt();
       ++nTrkAssociated[vtx_ass_to_track];
@@ -692,7 +690,7 @@ void L2TauNNProducerAlpaka::fillPatatracks(tensorflow::Tensor& cellGridMatrix,
         continue;
       const int patatrackNdof = 2 * std::min(6, nHits) - 5;
 
-      const int vtx_idx_assTrk = patavtx_soa.view()[it].idv();
+      const int vtx_idx_assTrk = patavtx_soa.view<reco::ZVertexTracksSoA>()[it].idv();
       if (reco::deltaR2(patatrackEta, patatrackPhi, tauEta, tauPhi) < dR2_max) {
         std::tie(deta, dphi, eta_idx, phi_idx) =
             getEtaPhiIndices(patatrackEta, patatrackPhi, allTaus[tau_idx]->polarP4());
@@ -731,15 +729,19 @@ void L2TauNNProducerAlpaka::fillPatatracks(tensorflow::Tensor& cellGridMatrix,
 }
 
 std::vector<float> L2TauNNProducerAlpaka::getTauScore(const tensorflow::Tensor& cellGridMatrix) {
-  std::vector<tensorflow::Tensor> pred_tensor;
-  tensorflow::run(L2cacheData_->session, {{inputTensorName_, cellGridMatrix}}, {outputTensorName_}, &pred_tensor);
   const int nTau = cellGridMatrix.shape().dim_size(0);
-  std::vector<float> pred_vector(nTau);
-  for (int tau_idx = 0; tau_idx < nTau; ++tau_idx) {
-    pred_vector[tau_idx] = pred_tensor[0].matrix<float>()(tau_idx, 0);
-  }
+  if (nTau == 0) {
+    return std::vector<float>();
+  } else {
+    std::vector<tensorflow::Tensor> pred_tensor;
+    tensorflow::run(L2cacheData_->session, {{inputTensorName_, cellGridMatrix}}, {outputTensorName_}, &pred_tensor);
+    std::vector<float> pred_vector(nTau);
+    for (int tau_idx = 0; tau_idx < nTau; ++tau_idx) {
+      pred_vector[tau_idx] = pred_tensor[0].matrix<float>()(tau_idx, 0);
+    }
 
-  return pred_vector;
+    return pred_vector;
+  }
 }
 
 void L2TauNNProducerAlpaka::produce(edm::Event& event, const edm::EventSetup& eventsetup) {

@@ -52,14 +52,20 @@ _collapse_hcalLocalRecoTask.add(hbhecollapse)
 from Configuration.ProcessModifiers.run2_HECollapse_2018_cff import run2_HECollapse_2018
 run2_HECollapse_2018.toReplaceWith(hcalLocalRecoTask, _collapse_hcalLocalRecoTask)
 
+#--- Legacy HCAL Only Task
+hbheprerecoLegacy = hbheprereco.cpu.clone()
+hcalOnlyLegacyLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco,hbheprereco])
+hcalOnlyLegacyLocalRecoTask.add(hbheprerecoLegacy)
+
 #--- for Run 3 and later
 _run3_hcalLocalRecoTask = _phase1_hcalLocalRecoTask.copy()
 _run3_hcalLocalRecoTask.remove(hbheprereco)
-from Configuration.Eras.Modifier_run3_HB_cff import run3_HB
-run3_HB.toReplaceWith(hcalLocalRecoTask, _run3_hcalLocalRecoTask)
 
-#--- Legacy HCAL Only Task
-hcalOnlyLegacyLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco])
+from RecoLocalCalo.HcalRecProducers.zdcrecoRun3_cfi import zdcrecoRun3
+_run3_hcalLocalRecoTask.remove(zdcreco)
+_run3_hcalLocalRecoTask.add(zdcrecoRun3)
+from Configuration.Eras.Modifier_run3_common_cff import run3_common
+run3_common.toReplaceWith(hcalLocalRecoTask, _run3_hcalLocalRecoTask)
 
 #--- for Run 3 on GPU
 from Configuration.ProcessModifiers.gpu_cff import gpu
@@ -69,18 +75,31 @@ _run3_hcalLocalRecoGPUTask = hcalLocalRecoTask.copy()
 _run3_hcalLocalRecoGPUTask.add(hbheRecHitProducerGPUTask)
 gpu.toReplaceWith(hcalLocalRecoTask, _run3_hcalLocalRecoGPUTask)
 
+#--- for alpaka
+from Configuration.ProcessModifiers.alpaka_cff import alpaka
+from RecoLocalCalo.HcalRecProducers.hbheRecHitProducerPortableTask_cff import *
+_run3_hcalLocalRecoPortableTask = hcalLocalRecoTask.copy()
+_run3_hcalLocalRecoPortableTask.add(hbheRecHitProducerPortableTask)
+alpaka.toReplaceWith(hcalLocalRecoTask, _run3_hcalLocalRecoPortableTask)
+
 #--- HCAL-only workflow
-hcalOnlyLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco])
+hcalOnlyLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco,zdcrecoRun3])
 
 #--- HCAL-only workflow for Run 2 on GPU
+from Configuration.Eras.Modifier_run3_HB_cff import run3_HB
 from RecoLocalCalo.HcalRecProducers.hcalCPURecHitsProducer_cfi import hcalCPURecHitsProducer as _hbheprerecoFromCUDA
 (gpu & ~run3_HB).toModify(hbheprereco,
     cuda = _hbheprerecoFromCUDA.clone(
         produceSoA = False
     )
 )
+#--- HCAL-only workflow for Run 2 on GPU
+from RecoLocalCalo.HcalRecProducers.hcalRecHitSoAToLegacy_cfi import  hcalRecHitSoAToLegacy 
+(alpaka & ~run3_HB).toModify(hbheprereco,
+    cpu = hcalRecHitSoAToLegacy.clone()
+)
 
 #--- for FastSim
-_fastSim_hcalLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco])
+_fastSim_hcalLocalRecoTask = hcalLocalRecoTask.copyAndExclude([zdcreco,zdcrecoRun3])
 from Configuration.Eras.Modifier_fastSim_cff import fastSim
 fastSim.toReplaceWith( hcalLocalRecoTask, _fastSim_hcalLocalRecoTask )

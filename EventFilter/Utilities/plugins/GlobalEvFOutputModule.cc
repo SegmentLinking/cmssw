@@ -31,9 +31,10 @@
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 
-#include <sys/stat.h>
-#include <filesystem>
 #include <boost/algorithm/string.hpp>
+#include <filesystem>
+#include <memory>
+#include <sys/stat.h>
 
 typedef edm::detail::TriggerResultsBasedEventSelector::handle_t Trig;
 
@@ -76,10 +77,11 @@ namespace evf {
       return (discarded_ || edm::Service<evf::EvFDaqDirector>()->lumisectionDiscarded(ls_));
     }
 
-    void doOutputEvent(EventMsgBuilder const& msg) {
+    void doOutputEvent(EventMsgBuilder const& msg, bool inc) {
       EventMsgView eview(msg.startAddress());
       stream_writer_events_->write(eview);
-      incAccepted();
+      if (inc)
+        incAccepted();
     }
 
     void doOutputEventAsync(std::unique_ptr<EventMsgBuilder> msg, edm::WaitingTaskHolder iHolder) {
@@ -97,9 +99,9 @@ namespace evf {
           if (meta_) {
             auto m = std::move(meta_);
             assert(m->builder_);
-            doOutputEvent(*m->builder_);
+            doOutputEvent(*m->builder_, false);
           }
-          doOutputEvent(*msg);  //msg is written and discarded at this point
+          doOutputEvent(*msg, true);  //msg is written and discarded at this point
         } catch (...) {
           auto tmp = holder;
           tmp.doneWaiting(std::current_exception());
@@ -309,7 +311,7 @@ namespace evf {
     mergeType_.setName("MergeType");
     hltErrorEvents_.setName("HLTErrorEvents");
 
-    jsonMonitor_.reset(new jsoncollector::FastMonitor(&outJsonDef, true));
+    jsonMonitor_ = std::make_shared<jsoncollector::FastMonitor>(&outJsonDef, true);
     jsonMonitor_->setDefPath(outJsonDefName);
     jsonMonitor_->registerGlobalMonitorable(&processed_, false);
     jsonMonitor_->registerGlobalMonitorable(&accepted_, false);
@@ -357,10 +359,14 @@ namespace evf {
     if (!edm::Service<evf::EvFDaqDirector>().isAvailable())
       throw cms::Exception("GlobalEvFOutputModule") << "EvFDaqDirector is not available";
 
+    auto const& baseRunDir = edm::Service<evf::EvFDaqDirector>()->baseRunDir();
+    if (edm::Service<evf::EvFDaqDirector>()->fileListMode() && !std::filesystem::is_directory(baseRunDir))
+      std::filesystem::create_directory(baseRunDir);
+
     const std::string iniFileName = edm::Service<evf::EvFDaqDirector>()->getInitTempFilePath(streamLabel_);
     std::ofstream file(iniFileName);
     if (!file)
-      throw cms::Exception("GlobalEvFOutputModule") << "can not create " << iniFileName << "error: " << strerror(errno);
+      throw cms::Exception("GlobalEvFOutputModule") << "can not create " << iniFileName << "\n" << strerror(errno);
     file.close();
 
     edm::LogInfo("GlobalEvFOutputModule") << "Constructor created initemp file -: " << iniFileName;
@@ -493,7 +499,6 @@ namespace evf {
                                       edm::WaitingTaskWithArenaHolder iHolder) const {
     edm::Handle<edm::TriggerResults> const& triggerResults = getTriggerResults(trToken_, e);
 
-    std::cout << " writing Event " << moduleDescription().moduleLabel() << std::endl;
     auto buffer = streamCache(id);
     std::unique_ptr<EventMsgBuilder> msg =
         msgBuilders_->serializeEvent(*buffer, e, triggerResults, selectorConfig(), metaDataCache_->checksum_);

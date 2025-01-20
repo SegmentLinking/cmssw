@@ -33,21 +33,21 @@
  <class name="MEtoEDM<int>"/>
  <class name="MEtoEDM<long long>"/>
  <class name="MEtoEDM<TString>"/>
- <class name="MEtoEDM<TH1F>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH1S>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH1D>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH1I>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH2F>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH2S>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH2D>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH2I>::MEtoEDMObject"/>
- <class name="MEtoEDM<TH3F>::MEtoEDMObject"/>
- <class name="MEtoEDM<TProfile>::MEtoEDMObject"/>
- <class name="MEtoEDM<TProfile2D>::MEtoEDMObject"/>
- <class name="MEtoEDM<double>::MEtoEDMObject"/>
- <class name="MEtoEDM<int>::MEtoEDMObject"/>
- <class name="MEtoEDM<long long>::MEtoEDMObject"/>
- <class name="MEtoEDM<TString>::MEtoEDMObject"/>
+ <class name="MEtoEDM<TH1F>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH1S>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH1D>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH1I>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH2F>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH2S>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH2D>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH2I>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TH3F>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TProfile>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TProfile2D>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<double>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<int>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<long long>::MEtoEDMObject" rntupleStreamerMode="true"/>
+ <class name="MEtoEDM<TString>::MEtoEDMObject" rntupleStreamerMode="true"/>
  <class name="std::vector<MEtoEDM<TH1F>::MEtoEDMObject>"/>
  <class name="std::vector<MEtoEDM<TH1S>::MEtoEDMObject>"/>
  <class name="std::vector<MEtoEDM<TH1D>::MEtoEDMObject>"/>

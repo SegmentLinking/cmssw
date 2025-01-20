@@ -22,10 +22,11 @@ process.load("DQM.Integration.config.environment_cfi")
 process.dqmEnv.subSystemFolder = "GEM"
 process.dqmSaver.tag = "GEM"
 process.dqmSaver.runNumber = options.runNumber
-process.dqmSaverPB.tag = "GEM"
-process.dqmSaverPB.runNumber = options.runNumber
+# process.dqmSaverPB.tag = "GEM"
+# process.dqmSaverPB.runNumber = options.runNumber
 
 process.load("DQMServices.Components.DQMProvInfo_cfi")
+
 
 process.load("Configuration.StandardSequences.RawToDigi_Data_cff")
 process.load("Configuration.StandardSequences.Reconstruction_cff")
@@ -46,6 +47,7 @@ process.gemRecHits.ge21Off = cms.bool(False)
 process.GEMDigiSource.runType = "online"
 process.GEMRecHitSource.runType = "online"
 process.GEMDAQStatusSource.runType = "online"
+process.GEMPadDigiClusterSource.runType = "online"
 
 # from csc_dqm_sourceclient-live_cfg.py
 process.CSCGeometryESModule.useGangedStripsInME1a = False
@@ -69,8 +71,8 @@ process.path = cms.Path(
 
 process.end_path = cms.EndPath(
     process.dqmEnv +
-    process.dqmSaver +
-    process.dqmSaverPB
+    process.dqmSaver #+
+    # process.dqmSaverPB
 )
 
 process.schedule = cms.Schedule(

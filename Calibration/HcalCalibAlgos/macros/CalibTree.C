@@ -54,14 +54,17 @@
 //                              The digit *r* is used to treat depth values:
 //                              (0) treat each depth independently; (1) all
 //                              depths of ieta 15, 16 of HB as depth 1; (2)
-//                              all depths in HB and HE as depth 1; (3) all
-//                              depths in HE with values > 1 as depth 2; (4)
-//                              all depths in HB with values > 1 as depth 2;
+//                              all depths in HB and HE as depth 1; (3) ignore
+//                              depth index in HE (depth index set to 1); (4)
+//                              ignore depth index in HB (depth index set 1);
 //                              (5) all depths in HB and HE with values > 1
 //                              as depth 2; (6) for depth = 1 and 2, depth =
-//                              1, else depth = 2.
-//                              The digit *d* is used if zside is to be
-//                              ignored (1) or not (0)
+//                              1, else depth = 2; (7) in case of HB, depths
+//                              1 and 2 are set to 1, else depth = 2; for HE
+//                              ignore depth index; (8) Assign all depths > 4
+//                              as depth = 5; (9) Assign all depth = 1 as
+//                              depth = 2. The digit *d* is used if zside is
+//                              to be ignored (1) or not (0)
 //                              (Default 0)
 //  maxIter         (int)     = number of iterations (30)
 //  drForm          (int)     = type of threshold/dupFileName/rcorFileName (hdr)
@@ -69,14 +72,17 @@
 //                              (1) for depth dependent corrections; (2) for
 //                              RespCorr corrections; (3) use machine learning
 //                              method for pileup correction; (4) use results
-//                              from phi-symmetry.
+//                              from phi-symmetry; (5) use reults from several
+//                              phi-symmetry studies drive by run numeber.
 //                              For dupFileName d: (0) contains list of
 //                              duplicate entries; (1) depth dependent weights;
 //                              (2) list of  (ieta, iphi) of channels to be
-//                              selected.
+//                              selected; (3) list of run ranges and for each
+//                              range, ieta, depth where gain has changed.
 //                              For threshold h: the format for threshold
 //                              application, 0: no threshold; 1: 2022 prompt
-//                              data; 2: 2022 reco data; 3: 2023 prompt data.
+//                              data; 2: 2022 reco data; 3: 2023 prompt data;
+//                              4: 2025 Begin of Year.
 //                              (Default 0)
 //  useGen          (bool)    = use generator level momentum information (false)
 //  runlo           (int)     = lower value of run number to be included (+ve)
@@ -782,7 +788,7 @@ Double_t CalibTree::Loop(int loop,
       else if ((oddEven > 0) && (jentry % 2 != 0))
         continue;
     }
-    bool select = ((cDuplicate_ != nullptr) && (duplicate_ == 0)) ? (cDuplicate_->isDuplicate(jentry)) : true;
+    bool select = ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(0))) ? (cDuplicate_->isDuplicate(jentry)) : true;
     if (!select)
       continue;
     bool selRun = (includeRun_ ? ((t_Run >= runlo_) && (t_Run <= runhi_)) : ((t_Run < runlo_) || (t_Run > runhi_)));
@@ -799,7 +805,7 @@ Double_t CalibTree::Loop(int loop,
           continue;
       }
     }
-    if (cDuplicate_ != nullptr) {
+    if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(2))) {
       if (cDuplicate_->select(t_ieta, t_iphi))
         continue;
     }
@@ -853,8 +859,13 @@ Double_t CalibTree::Loop(int loop,
                 hitEn = (*t_HitEnergies)[idet];
               if ((rcorForm_ != 3) && (rcorForm_ >= 0) && (cFactor_))
                 hitEn *= cFactor_->getCorr(t_Run, id);
-              if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr()))
+              if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(1)))
                 hitEn *= cDuplicate_->getWeight(id);
+              if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(3))) {
+                int subdet, zside, ieta, iphi, depth;
+                unpackDetId((*t_DetIds)[idet], subdet, zside, ieta, iphi, depth);
+                hitEn *= cDuplicate_->getCorr(t_Run, ieta, depth);
+              }
               double Wi = evWt * hitEn / en.Etot;
               double Fac = (inverse) ? (en.ehcal / (pmom - t_eMipDR)) : ((pmom - t_eMipDR) / en.ehcal);
               double Fac2 = Wi * Fac * Fac;
@@ -1083,7 +1094,7 @@ void CalibTree::getDetId(double fraction, int ietaTrack, bool debug, Long64_t nm
         else if ((oddEven > 0) && (jentry % 2 != 0))
           continue;
       }
-      bool select = ((cDuplicate_ != nullptr) && (duplicate_ == 0)) ? (cDuplicate_->isDuplicate(jentry)) : true;
+      bool select = ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(0))) ? (cDuplicate_->isDuplicate(jentry)) : true;
       if (!select)
         continue;
       // Find DetIds contributing to the track
@@ -1098,7 +1109,7 @@ void CalibTree::getDetId(double fraction, int ietaTrack, bool debug, Long64_t nm
           else
             isItRBX = !(temp);
         }
-        if ((cDuplicate_ != nullptr) && (!isItRBX))
+        if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(2)) && (!isItRBX))
           isItRBX = (cDuplicate_->select(t_ieta, t_iphi));
         ++kprint;
         if (!(isItRBX)) {
@@ -1337,10 +1348,10 @@ void CalibTree::makeplots(
       else if ((oddEven > 0) && (jentry % 2 != 0))
         continue;
     }
-    bool select = ((cDuplicate_ != nullptr) && (duplicate_ == 0)) ? (cDuplicate_->isDuplicate(jentry)) : true;
+    bool select = ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(0))) ? (cDuplicate_->isDuplicate(jentry)) : true;
     if (!select)
       continue;
-    if (cDuplicate_ != nullptr) {
+    if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(2))) {
       select = !(cDuplicate_->select(t_ieta, t_iphi));
       if (!select)
         continue;
@@ -1475,8 +1486,13 @@ CalibTree::energyCalor CalibTree::energyHcal(double pmom, const Long64_t &entry,
           hitEn = (*t_HitEnergies)[idet];
         if ((rcorForm_ != 3) && (rcorForm_ >= 0) && (cFactor_))
           hitEn *= cFactor_->getCorr(t_Run, id);
-        if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr()))
+        if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(1)))
           hitEn *= cDuplicate_->getWeight(id);
+        if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(3))) {
+          int subdet, zside, ieta, iphi, depth;
+          unpackDetId((*t_DetIds)[idet], subdet, zside, ieta, iphi, depth);
+          hitEn *= cDuplicate_->getCorr(t_Run, ieta, depth);
+        }
         etot += hitEn;
         etot2 += ((*t_HitEnergies)[idet]);
       }
@@ -1497,8 +1513,13 @@ CalibTree::energyCalor CalibTree::energyHcal(double pmom, const Long64_t &entry,
             hitEn = (*t_HitEnergies1)[idet];
           if ((rcorForm_ != 3) && (rcorForm_ >= 0) && (cFactor_))
             hitEn *= cFactor_->getCorr(t_Run, id);
-          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr()))
+          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(1)))
             hitEn *= cDuplicate_->getWeight(id);
+          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(3))) {
+            int subdet, zside, ieta, iphi, depth;
+            unpackDetId((*t_DetIds1)[idet], subdet, zside, ieta, iphi, depth);
+            hitEn *= cDuplicate_->getCorr(t_Run, ieta, depth);
+          }
           etot1 += hitEn;
         }
       }
@@ -1515,8 +1536,13 @@ CalibTree::energyCalor CalibTree::energyHcal(double pmom, const Long64_t &entry,
             hitEn = (*t_HitEnergies3)[idet];
           if ((rcorForm_ != 3) && (rcorForm_ >= 0) && (cFactor_))
             hitEn *= cFactor_->getCorr(t_Run, id);
-          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr()))
+          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(1)))
             hitEn *= cDuplicate_->getWeight(id);
+          if ((cDuplicate_ != nullptr) && (cDuplicate_->doCorr(3))) {
+            int subdet, zside, ieta, iphi, depth;
+            unpackDetId((*t_DetIds3)[idet], subdet, zside, ieta, iphi, depth);
+            hitEn *= cDuplicate_->getCorr(t_Run, ieta, depth);
+          }
           etot3 += hitEn;
         }
       }

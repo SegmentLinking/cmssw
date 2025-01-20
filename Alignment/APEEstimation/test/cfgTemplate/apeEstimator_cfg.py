@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 
 import FWCore.ParameterSet.Config as cms
@@ -204,12 +203,6 @@ if isParticleGun:
 
 
 ##
-## Trigger Selection
-##
-process.load("Alignment.APEEstimation.TriggerSelection_cff")
-
-
-##
 ## ApeEstimator
 ##
 from Alignment.APEEstimation.ApeEstimator_cff import *
@@ -255,7 +248,6 @@ process.TFileService = cms.Service("TFileService",
 
 if not options.cosmics:
     process.p = cms.Path(
-        #process.TriggerSelectionSequence* # You want to use this if you want to select for triggers
         process.RefitterHighPuritySequence*
         process.ApeEstimatorSequence
     )

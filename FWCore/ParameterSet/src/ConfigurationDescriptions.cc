@@ -152,7 +152,8 @@ namespace edm {
     }
     CfiOptions ops = wroteClassFile ? CfiOptions{cfi::Untyped{paths}} : CfiOptions{cfi::Typed{}};
     for (auto& d : descriptions_) {
-      writeCfiForLabel(d, baseType_, pluginName_, 1 == descriptions_.size(), ops, usedCfiFileNames);
+      writeCfiForLabel(
+          d, baseType_, pluginName_, (not defaultDescDefined_) and (1 == descriptions_.size()), ops, usedCfiFileNames);
     }
   }
 
@@ -190,7 +191,7 @@ namespace edm {
     }
     outFile << "import FWCore.ParameterSet.Config as cms\n\n";
     outFile << "def " << pluginName
-            << "(**kwargs):\n"
+            << "(*args, **kwargs):\n"
                "  mod = cms."
             << baseType_ << "('" << pluginName_ << "'";
 
@@ -200,8 +201,9 @@ namespace edm {
     iDesc.writeCfi(outFile, startWithComma, indentation, ops);
 
     outFile << ")\n"
-               "  for k,v in kwargs.items():\n"
-               "    setattr(mod, k, v)\n"
+               "  for a in args:\n"
+               "    mod.update_(a)\n"
+               "  mod.update_(kwargs)\n"
                "  return mod\n";
 
     outFile.close();

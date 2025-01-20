@@ -9,6 +9,7 @@
 #include <alpaka/alpaka.hpp>
 
 #include "DataFormats/SiPixelClusterSoA/interface/ClusteringConstants.h"
+#include "FWCore/Utilities/interface/HostDeviceConstant.h"
 #include "Geometry/CommonTopologies/interface/SimplePixelTopology.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/SimpleVector.h"
@@ -20,7 +21,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
 
 #ifdef GPU_DEBUG
   template <typename TAcc, typename = std::enable_if_t<alpaka::isAccelerator<TAcc>>>
-  ALPAKA_STATIC_ACC_MEM_GLOBAL uint32_t gMaxHit = 0;
+  HOST_DEVICE_CONSTANT uint32_t gMaxHit = 0;
 #endif
 
   namespace pixelStatus {
@@ -182,8 +183,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
                                                       TrackerTraits::maxPixInModule,
                                                       TrackerTraits::clusterBits,
                                                       uint16_t>;
+#if defined(__HIP_DEVICE_COMPILE__)
+        constexpr auto warpSize = __AMDGCN_WAVEFRONT_SIZE;
+#else
+        constexpr auto warpSize = 32;
+#endif
         auto& hist = alpaka::declareSharedVar<Hist, __COUNTER__>(acc);
-        auto& ws = alpaka::declareSharedVar<typename Hist::Counter[32], __COUNTER__>(acc);
+        auto& ws = alpaka::declareSharedVar<typename Hist::Counter[warpSize], __COUNTER__>(acc);
         for (uint32_t j : cms::alpakatools::independent_group_elements(acc, Hist::totbins())) {
           hist.off[j] = 0;
         }
@@ -254,7 +260,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
           }
         }
         alpaka::syncBlockThreads(acc);  // FIXME this can be removed
-        for (uint32_t i : cms::alpakatools::independent_group_elements(acc, 32u)) {
+        for (uint32_t i : cms::alpakatools::independent_group_elements(acc, warpSize)) {
           ws[i] = 0;  // used by prefix scan...
         }
         alpaka::syncBlockThreads(acc);
@@ -380,7 +386,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::pixelClustering {
             }  // neighbours loop
             ++k;
           }  // pixel loop
-             /*
+          /*
               // use the outer loop to force a synchronisation
             } else {
               // odd iterations of the outer loop

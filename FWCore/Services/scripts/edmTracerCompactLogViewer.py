@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from __future__ import print_function
 from builtins import range
 from itertools import groupby
 from operator import attrgetter,itemgetter
@@ -1289,8 +1288,7 @@ if __name__=="__main__":
             if args.json:
                 print(j)
             if args.web:
-                j ='export const data = ' + j
-                f=open('data.js', 'w')
+                f=open('data.json', 'w')
                 f.write(j)
                 f.close()
         else:

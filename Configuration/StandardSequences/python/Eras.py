@@ -1,4 +1,3 @@
-from __future__ import print_function
 import FWCore.ParameterSet.Config as cms
 from  FWCore.ParameterSet.Config import ModifierChain,Modifier
 
@@ -20,6 +19,7 @@ class Eras (object):
                  'Run2_2016_HIPM',
                  'Run2_2016_trackingLowPU',
                  'Run2_2016_pA',
+                 'Run2_2016_UPC',
                  'Run2_2017',
                  'Run2_2017_noMkFit',
                  'Run2_2017_FastSim', #new modifier for Phase1 FastSim, skips the muon GEM sequence
@@ -35,11 +35,15 @@ class Eras (object):
                  'Run2_2018_noMkFit',
                  'Run3',
                  'Run3_2023',
+                 'Run3_2024',
+                 'Run3_2025',
                  'Run3_noMkFit',
                  'Run3_pp_on_PbPb',
                  'Run3_pp_on_PbPb_approxSiStripClusters',
                  'Run3_pp_on_PbPb_2023',
                  'Run3_pp_on_PbPb_approxSiStripClusters_2023',
+                 'Run3_pp_on_PbPb_2024',
+                 'Run3_pp_on_PbPb_approxSiStripClusters_2024',
                  'Run3_dd4hep',
                  'Run3_DDD',
                  'Run3_FastSim',
@@ -47,7 +51,9 @@ class Eras (object):
                  'Run3_2023_ZDC',
                  'Run3_2023_UPC',
                  'Run3_2024_ppRef',
-                 'Run3_UPC',
+                 'Run3_2024_UPC',
+                 'Run3_2025_UPC',
+                 'Run3_2025_OXY',
                  'Phase2',
                  'Phase2C9',
                  'Phase2C10',
@@ -84,14 +90,12 @@ class Eras (object):
                            'phase2_squarePixels', 'phase2_3DPixels',
                            'trackingLowPU', 'trackingPhase1',
                            'ctpps', 'ctpps_2016', 'ctpps_2017', 'ctpps_2018', 'ctpps_2022',
-                           'trackingPhase2PU140','highBetaStar_2018',
+                           'trackingPhase2PU140','highBetaStar',
                            'tracker_apv_vfp30_2016', 'pf_badHcalMitigationOff',
-                           'run2_miniAOD_80XLegacy','run2_miniAOD_94XFall17',
-                           'run3_miniAOD_12X',
                            'run2_nanoAOD_106Xv2',
-                           'run3_nanoAOD_122', 'run3_nanoAOD_124',
+                           'run3_nanoAOD_pre142X',
                            'run3_ecal_devel',
-                           'run3_upc',
+                           'run3_upc', 'run3_oxygen',
                            'hcalHardcodeConditions', 'hcalSkipPacker',
                            'run2_HLTconditions_2016','run2_HLTconditions_2017','run2_HLTconditions_2018',
                            'bParking']

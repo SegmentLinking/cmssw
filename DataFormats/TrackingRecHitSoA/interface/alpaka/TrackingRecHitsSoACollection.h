@@ -34,6 +34,16 @@ namespace cms::alpakatools {
     template <typename TQueue>
     static auto copyAsync(TQueue& queue, TrackingRecHitDevice<TrackerTraits, TDevice> const& deviceData) {
       TrackingRecHitHost<TrackerTraits> hostData(queue, deviceData.view().metadata().size());
+
+      // Don't bother if zero hits
+      if (deviceData.view().metadata().size() == 0) {
+        std::memset(hostData.buffer().data(),
+                    0,
+                    alpaka::getExtentProduct(hostData.buffer()) *
+                        sizeof(alpaka::Elem<typename TrackingRecHitHost<TrackerTraits>::Buffer>));
+        return hostData;
+      }
+
       alpaka::memcpy(queue, hostData.buffer(), deviceData.buffer());
 #ifdef GPU_DEBUG
       printf("TrackingRecHitsSoACollection: I'm copying to host.\n");
@@ -42,6 +52,21 @@ namespace cms::alpakatools {
       assert(deviceData.offsetBPIX2() == hostData.offsetBPIX2());
 #endif
       return hostData;
+    }
+
+    // Update the contents address of the phiBinner histo container after the copy from device happened
+    static void postCopy(TrackingRecHitHost<TrackerTraits>& hostData) {
+      // Don't bother if zero hits
+      if (hostData.view().metadata().size() == 0) {
+        return;
+      }
+      typename TrackingRecHitSoA<TrackerTraits>::PhiBinnerView pbv;
+      pbv.assoc = &(hostData.view().phiBinner());
+      pbv.offSize = -1;
+      pbv.offStorage = nullptr;
+      pbv.contentSize = hostData.nHits();
+      pbv.contentStorage = hostData.view().phiBinnerStorage();
+      hostData.view().phiBinner().initStorage(pbv);
     }
   };
 }  // namespace cms::alpakatools

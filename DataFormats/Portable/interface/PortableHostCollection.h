@@ -6,10 +6,11 @@
 
 #include <alpaka/alpaka.hpp>
 
+#include "DataFormats/Common/interface/Uninitialized.h"
+#include "DataFormats/Portable/interface/PortableCollectionCommon.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
-#include "DataFormats/Portable/interface/PortableCollectionCommon.h"
 
 // generic SoA-based product in host memory
 template <typename T>
@@ -21,7 +22,9 @@ public:
   using Buffer = cms::alpakatools::host_buffer<std::byte[]>;
   using ConstBuffer = cms::alpakatools::const_host_buffer<std::byte[]>;
 
-  PortableHostCollection() = default;
+  PortableHostCollection() = delete;
+
+  explicit PortableHostCollection(edm::Uninitialized) noexcept {};
 
   PortableHostCollection(int32_t elements, alpaka_common::DevHost const& host)
       // allocate pageable host memory
@@ -68,6 +71,16 @@ public:
   Buffer buffer() { return *buffer_; }
   ConstBuffer buffer() const { return *buffer_; }
   ConstBuffer const_buffer() const { return *buffer_; }
+
+  // erases the data in the Buffer by writing zeros (bytes containing '\0') to it
+  void zeroInitialise() {
+    std::memset(std::data(*buffer_), 0x00, alpaka::getExtentProduct(*buffer_) * sizeof(std::byte));
+  }
+
+  template <typename TQueue, typename = std::enable_if_t<alpaka::isQueue<TQueue>>>
+  void zeroInitialise(TQueue&& queue) {
+    alpaka::memset(std::forward<TQueue>(queue), *buffer_, 0x00);
+  }
 
   // part of the ROOT read streamer
   static void ROOTReadStreamer(PortableHostCollection* newObj, Layout& layout) {
@@ -144,7 +157,9 @@ private:
   }
 
 public:
-  PortableHostMultiCollection() = default;
+  PortableHostMultiCollection() = delete;
+
+  explicit PortableHostMultiCollection(edm::Uninitialized) noexcept {};
 
   PortableHostMultiCollection(int32_t elements, alpaka_common::DevHost const& host)
       // allocate pageable host memory
@@ -278,12 +293,23 @@ public:
   ConstBuffer buffer() const { return *buffer_; }
   ConstBuffer const_buffer() const { return *buffer_; }
 
-  // Extract the sizes array
+  // erases the data in the Buffer by writing zeros (bytes containing '\0') to it
+  void zeroInitialise() {
+    std::memset(std::data(*buffer_), 0x00, alpaka::getExtentProduct(*buffer_) * sizeof(std::byte));
+  }
+
+  template <typename TQueue, typename = std::enable_if_t<alpaka::isQueue<TQueue>>>
+  void zeroInitialise(TQueue&& queue) {
+    alpaka::memset(std::forward<TQueue>(queue), *buffer_, 0x00);
+  }
+
+  // extract the sizes array
   SizesArray sizes() const {
     SizesArray ret;
     portablecollection::constexpr_for<0, members_>([&](auto i) { ret[i] = get<i>().layout_.metadata().size(); });
     return ret;
   }
+
   // part of the ROOT read streamer
   static void ROOTReadStreamer(PortableHostMultiCollection* newObj, Implementation& onfileImpl) {
     newObj->~PortableHostMultiCollection();

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import sys, os
 
 from Configuration.PyReleaseValidation.WorkFlow import WorkFlow
@@ -51,11 +50,12 @@ class MatrixReader(object):
                              'relval_cleanedupgrade':'clnupg-',
                              'relval_gpu':'gpu-',
                              'relval_2017':'2017-',
-                             'relval_2026':'2026-',
+                             'relval_Run4':'Run4-',
                              'relval_identity':'id-',
                              'relval_machine': 'mach-',
                              'relval_premix': 'premix-',
-                             'relval_nano':'nano-'
+                             'relval_nano':'nano-',
+                             'relval_data_highstats':'data-'
                              }
 
         self.files = ['relval_standard' ,
@@ -69,11 +69,12 @@ class MatrixReader(object):
                       'relval_cleanedupgrade',
                       'relval_gpu',
                       'relval_2017',
-                      'relval_2026',
+                      'relval_Run4',
                       'relval_identity',
                       'relval_machine',
                       'relval_premix',
-                      'relval_nano'
+                      'relval_nano',
+                      'relval_data_highstats'
                       ]
         self.filesDefault = {'relval_standard':True ,
                              'relval_highstats':True ,
@@ -86,11 +87,12 @@ class MatrixReader(object):
                              'relval_cleanedupgrade':False,
                              'relval_gpu':False,
                              'relval_2017':True,
-                             'relval_2026':True,
+                             'relval_Run4':True,
                              'relval_identity':False,
                              'relval_machine':True,
                              'relval_premix':True,
-                             'relval_nano':True
+                             'relval_nano':True,
+                             'relval_data_highstats':False
                              }
 
         self.relvalModule = None

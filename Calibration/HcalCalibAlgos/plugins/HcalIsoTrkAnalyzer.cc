@@ -145,7 +145,7 @@ private:
   const int prescaleLow_, prescaleHigh_;
   const int useRaw_, dataType_, mode_;
   const bool ignoreTrigger_, useL1Trigger_;
-  const bool unCorrect_, getCharge_, collapseDepth_;
+  const bool unCorrect_, getCharge_, collapseDepth_, fillInRange_;
   const double hitEthrEB_, hitEthrEE0_, hitEthrEE1_;
   const double hitEthrEE2_, hitEthrEE3_;
   const double hitEthrEELo_, hitEthrEEHi_;
@@ -218,6 +218,7 @@ private:
   std::vector<int>*t_ietaAll, *t_ietaGood, *t_trackType;
 
   bool debug_;
+  unsigned int count_;
 };
 
 HcalIsoTrkAnalyzer::HcalIsoTrkAnalyzer(const edm::ParameterSet& iConfig)
@@ -250,8 +251,9 @@ HcalIsoTrkAnalyzer::HcalIsoTrkAnalyzer(const edm::ParameterSet& iConfig)
       ignoreTrigger_(iConfig.getUntrackedParameter<bool>("ignoreTriggers", false)),
       useL1Trigger_(iConfig.getUntrackedParameter<bool>("useL1Trigger", false)),
       unCorrect_(iConfig.getUntrackedParameter<bool>("unCorrect", false)),
-      getCharge_(iConfig.getUntrackedParameter<bool>("getCharge")),
+      getCharge_(iConfig.getUntrackedParameter<bool>("getCharge", false)),
       collapseDepth_(iConfig.getUntrackedParameter<bool>("collapseDepth", false)),
+      fillInRange_(iConfig.getUntrackedParameter<bool>("fillInRange", false)),
       hitEthrEB_(iConfig.getParameter<double>("EBHitEnergyThreshold")),
       hitEthrEE0_(iConfig.getParameter<double>("EEHitEnergyThreshold0")),
       hitEthrEE1_(iConfig.getParameter<double>("EEHitEnergyThreshold1")),
@@ -311,7 +313,8 @@ HcalIsoTrkAnalyzer::HcalIsoTrkAnalyzer(const edm::ParameterSet& iConfig)
       nHigh_(0),
       theHBHETopology_(nullptr),
       respCorrs_(nullptr),
-      hdc_(nullptr) {
+      hdc_(nullptr),
+      count_(0) {
   usesResource(TFileService::kSharedResource);
 
   //now do whatever initialization is needed
@@ -378,10 +381,10 @@ HcalIsoTrkAnalyzer::HcalIsoTrkAnalyzer(const edm::ParameterSet& iConfig)
       << "\t momentumHigh_ " << pTrackHigh_ << "\t prescaleHigh_ " << prescaleHigh_ << "\n\t useRaw_ " << useRaw_
       << "\t ignoreTrigger_ " << ignoreTrigger_ << "\n\t useL1Trigegr_ " << useL1Trigger_ << "\t dataType_      "
       << dataType_ << "\t mode_          " << mode_ << "\t unCorrect_     " << unCorrect_ << "\t collapseDepth_ "
-      << collapseDepth_ << "\t GetCharge " << getCharge_ << "\t L1TrigName_    " << l1TrigName_
-      << "\nThreshold flag used " << usePFThresh_ << " value for EB " << hitEthrEB_ << " EE " << hitEthrEE0_ << ":"
-      << hitEthrEE1_ << ":" << hitEthrEE2_ << ":" << hitEthrEE3_ << ":" << hitEthrEELo_ << ":" << hitEthrEEHi_
-      << " and " << debEvents_.size() << " events to be debugged";
+      << collapseDepth_ << "\t GetCharge " << getCharge_ << "\t FillInRange " << fillInRange_ << "\t L1TrigName_    "
+      << l1TrigName_ << "\nThreshold flag used " << usePFThresh_ << " value for EB " << hitEthrEB_ << " EE "
+      << hitEthrEE0_ << ":" << hitEthrEE1_ << ":" << hitEthrEE2_ << ":" << hitEthrEE3_ << ":" << hitEthrEELo_ << ":"
+      << hitEthrEEHi_ << " and " << debEvents_.size() << " events to be debugged";
   edm::LogVerbatim("HcalIsoTrack") << "Process " << processName_ << " L1Filter:" << l1Filter_
                                    << " L2Filter:" << l2Filter_ << " L3Filter:" << l3Filter_;
   for (unsigned int k = 0; k < trigNames_.size(); ++k) {
@@ -539,7 +542,7 @@ void HcalIsoTrkAnalyzer::analyze(edm::Event const& iEvent, edm::EventSetup const
   if (!ignoreTrigger_) {
     //L1
     l1GtUtils_->retrieveL1(iEvent, iSetup, tok_alg_);
-    const std::vector<std::pair<std::string, bool>>& finalDecisions = l1GtUtils_->decisionsFinal();
+    const auto& finalDecisions = l1GtUtils_->decisionsFinal();
     for (const auto& decision : finalDecisions) {
       if (decision.first.find(l1TrigName_) != std::string::npos) {
         t_L1Bit = decision.second;
@@ -945,6 +948,7 @@ void HcalIsoTrkAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.addUntracked<bool>("unCorrect", false);
   desc.addUntracked<bool>("getCharge", false);
   desc.addUntracked<bool>("collapseDepth", false);
+  desc.addUntracked<bool>("fillInRange", false);
   desc.addUntracked<std::string>("l1TrigName", "L1_SingleJet60");
   desc.addUntracked<int>("outMode", 11);
   std::vector<int> dummy;
@@ -1304,7 +1308,12 @@ std::array<int, 3> HcalIsoTrkAnalyzer::fillTree(std::vector<math::XYZTLorentzVec
             accept = true;
           }
         }
+        if (fillInRange_) {
+          if ((t_p < pTrackLow_) || (t_p > pTrackHigh_))
+            accept = false;
+        }
         if (accept) {
+          ++count_;
           tree->Fill();
           edm::LogVerbatim("HcalIsoTrackX")
               << "Run " << t_RunNo << " Event " << t_EventNo << " Track " << nTracks << " p " << t_p;
@@ -1433,6 +1442,8 @@ void HcalIsoTrkAnalyzer::storeEnergy(int indx,
   if (unCorrect_) {
     for (unsigned int k = 0; k < ids.size(); ++k) {
       double corr = (respCorrs_->getValues(ids[k]))->getValue();
+      if (count_ <= 1)
+        edm::LogVerbatim("HcalIsoTrack") << "Correction Factor for " << HcalDetId(ids[k]) << " " << corr;
       if (corr != 0)
         edet[k] /= corr;
       ehcal += edet[k];

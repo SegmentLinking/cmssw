@@ -20,13 +20,18 @@ namespace gen {
     pythiaHepMCVerbosity = ps.getUntrackedParameter<bool>("pythiaHepMCVerbosity", false);
     pythiaHepMCVerbosityParticles = ps.getUntrackedParameter<bool>("pythiaHepMCVerbosityParticles", false);
     maxEventsToPrint = ps.getUntrackedParameter<int>("maxEventsToPrint", 0);
+    p8RndmEngine_ = std::make_shared<P8RndmEngine>();
 
     //if (pythiaHepMCVerbosityParticles)
     //  ascii_io = new HepMC::IO_AsciiParticles("cout", std::ios::out);
 
     if (ps.exists("useEvtGenPlugin")) {
       useEvtGen = true;
-      string evtgenpath(std::getenv("EVTGENDATA"));
+      auto env = std::getenv("EVTGENDATA");
+      if (not env) {
+        throw cms::Exception("EvtGenMissingEnv") << "The environment variable EVTGENDATA must be defined";
+      }
+      string evtgenpath(env);
       evtgenDecFile = evtgenpath + string("/DECAY_2010.DEC");
       evtgenPdlFile = evtgenpath + string("/evt.pdl");
 

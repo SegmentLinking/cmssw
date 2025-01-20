@@ -72,7 +72,7 @@ namespace pat {
   class PATTriggerProducer : public edm::stream::EDProducer<> {
   public:
     explicit PATTriggerProducer(const edm::ParameterSet& iConfig);
-    ~PATTriggerProducer() override{};
+    ~PATTriggerProducer() override {}
 
   private:
     void beginRun(const edm::Run& iRun, const edm::EventSetup& iSetup) override;
@@ -748,7 +748,7 @@ void PATTriggerProducer::produce(Event& iEvent, const EventSetup& iSetup) {
         const trigger::Vids& types = handleTriggerEvent->filterIds(iF);  // not cached
         TriggerFilter triggerFilter(nameFilter);
         // set filter type
-        const std::string typeFilter(hltConfig.moduleType(nameFilter));
+        const std::string& typeFilter(hltConfig.moduleType(nameFilter));
         triggerFilter.setType(typeFilter);
         triggerFilter.setSaveTags(hltConfig.saveTags(nameFilter));
         // set keys and trigger object types of used objects
