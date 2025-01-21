@@ -45,6 +45,7 @@ jobs:
             RecoTracker/FinalTrackSelectors
             RecoTracker/IterativeTracking
             HeterogeneousCore/AlpakaInterface
+            HeterogeneousCore/AlpakaMath
             DataFormats/Portable
       - name: Get commit SHA
         run: |
