@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_src_alpaka_NeuralNetworkWeights_h
-#define RecoTracker_LSTCore_src_alpaka_NeuralNetworkWeights_h
+#ifndef RecoTracker_LSTCore_src_alpaka_T5NeuralNetworkWeights_h
+#define RecoTracker_LSTCore_src_alpaka_T5NeuralNetworkWeights_h
 
 #include <alpaka/alpaka.hpp>
 
