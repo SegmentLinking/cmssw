@@ -805,7 +805,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   struct CreateMDArrayRangesGPU {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(TAcc const& acc, ModulesConst modules, ObjectRanges ranges, const float ptCut) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  ModulesConst modules,
+                                  HitsRangesConst hitsRanges,
+                                  ObjectRanges ranges,
+                                  const float ptCut) const {
       // implementation is 1D with a single block
       static_assert(std::is_same_v<TAcc, ALPAKA_ACCELERATOR_NAMESPACE::Acc1D>, "Should be Acc1D");
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
@@ -840,20 +844,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (uint16_t i = globalThreadIdx[0]; i < modules.nLowerModules(); i += gridThreadExtent[0]) {
-        short module_rings = modules.rings()[i];
+        // Dynamic allocation
+        const int nLower = hitsRanges.hitRangesnLower()[i];
+        const int nUpper = hitsRanges.hitRangesnUpper()[i];
+        const int dynamicMDs = nLower * nUpper;
+
+        // Matrix-based cap
         short module_layers = modules.layers()[i];
         short module_subdets = modules.subdets()[i];
+        short module_rings = modules.rings()[i];
         float module_eta = alpaka::math::abs(acc, modules.eta()[i]);
 
         int category_number = getCategoryNumber(module_layers, module_subdets, module_rings);
         int eta_number = getEtaBin(module_eta);
 
-        int occupancy = 0;
-        if (category_number != -1 && eta_number != -1) {
-          occupancy = occupancy_matrix[category_number][eta_number];
-        }
+        int occupancy = (category_number != -1 && eta_number != -1)
+                            ? std::min(dynamicMDs, occupancy_matrix[category_number][eta_number])
+                            : dynamicMDs;
+
 #ifdef WARNINGS
-        else {
+        if (category_number == -1 || eta_number == -1) {
           printf("Unhandled case in createMDArrayRangesGPU! Module index = %i\n", i);
         }
 #endif

@@ -202,6 +202,7 @@ void LSTEvent::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndice
                         createMDArrayRangesGPU_workDiv,
                         CreateMDArrayRangesGPU{},
                         modules_.const_view<ModulesSoA>(),
+                        hitsDC_->const_view<HitsRangesSoA>(),
                         rangesDC_->view(),
                         ptCut_);
 
@@ -348,6 +349,7 @@ void LSTEvent::createMiniDoublets() {
                       createMDArrayRangesGPU_workDiv,
                       CreateMDArrayRangesGPU{},
                       modules_.const_view<ModulesSoA>(),
+                      hitsDC_->const_view<HitsRangesSoA>(),
                       rangesDC_->view(),
                       ptCut_);
 
