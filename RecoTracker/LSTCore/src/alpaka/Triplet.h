@@ -861,20 +861,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      // Occupancy matrix for 0.8 GeV pT Cut
+      // Occupancy matrix for 0.8 GeV pT Cut, 99.9%
       constexpr int p08_occupancy_matrix[4][4] = {
-          {543, 235, 88, 46},  // category 0
-          {755, 347, 0, 0},    // category 1
-          {0, 0, 0, 0},        // category 2
-          {0, 38, 46, 39}      // category 3
+          {668, 271, 105, 59},  // category 0
+          {738, 310, 0, 0},     // category 1
+          {0, 13, 5, 0},        // category 2
+          {0, 92, 98, 42}       // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.9%
       constexpr int p06_occupancy_matrix[4][4] = {
-          {1146, 544, 216, 83},  // category 0
-          {1032, 275, 0, 0},     // category 1
-          {0, 0, 0, 0},          // category 2
-          {0, 115, 110, 76}      // category 3
+          {1820, 798, 187, 87},  // category 0
+          {3981, 957, 0, 0},     // category 1
+          {0, 26, 17, 0},        // category 2
+          {0, 178, 212, 74}      // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut
