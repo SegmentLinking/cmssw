@@ -895,15 +895,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         int category_number = getCategoryNumber(module_layers, module_subdets, module_rings);
         int eta_number = getEtaBin(module_eta);
 
-        int occupancy = 0;
-        if (category_number != -1 && eta_number != -1) {
-          occupancy = occupancy_matrix[category_number][eta_number];
+        // Calculate dynamic triplet count using moduleMap
+        int dynamic_count = 0;
+        uint16_t nConnected = modules.nConnectedModules()[i];
+        for (uint16_t k = 0; k < nConnected; ++k) {
+          uint16_t j = modules.moduleMap()[i][k];
+          dynamic_count += segmentsOccupancy.nSegments()[i] * segmentsOccupancy.nSegments()[j];
         }
 #ifdef WARNINGS
-        else {
+        if (category_number == -1 || eta_number == -1) {
           printf("Unhandled case in createTripletArrayRanges! Module index = %i\n", i);
         }
 #endif
+        // Get matrix-based cap
+        int matrix_cap =
+            (category_number != -1 && eta_number != -1) ? occupancy_matrix[category_number][eta_number] : dynamic_count;
+
+        // Cap occupancy at minimum of dynamic count and matrix value
+        int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
 
         ranges.tripletModuleOccupancy()[i] = occupancy;
         unsigned int nTotT = alpaka::atomicAdd(acc, &nTotalTriplets, occupancy, alpaka::hierarchy::Threads{});
