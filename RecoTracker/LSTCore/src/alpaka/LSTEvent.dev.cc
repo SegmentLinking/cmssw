@@ -202,6 +202,7 @@ void LSTEvent::addPixelSegmentToEvent(std::vector<unsigned int> const& hitIndice
                         createMDArrayRangesGPU_workDiv,
                         CreateMDArrayRangesGPU{},
                         modules_.const_view<ModulesSoA>(),
+                        hitsDC_->const_view<HitsRangesSoA>(),
                         rangesDC_->view(),
                         ptCut_);
 
@@ -348,6 +349,7 @@ void LSTEvent::createMiniDoublets() {
                       createMDArrayRangesGPU_workDiv,
                       CreateMDArrayRangesGPU{},
                       modules_.const_view<ModulesSoA>(),
+                      hitsDC_->const_view<HitsRangesSoA>(),
                       rangesDC_->view(),
                       ptCut_);
 
@@ -457,6 +459,7 @@ void LSTEvent::createTriplets() {
                         CreateTripletArrayRanges{},
                         modules_.const_view<ModulesSoA>(),
                         rangesDC_->view(),
+                        segmentsDC_->const_view<SegmentsSoA>(),
                         segmentsDC_->const_view<SegmentsOccupancySoA>(),
                         ptCut_);
 
@@ -862,6 +865,7 @@ void LSTEvent::createQuintuplets() {
                       modules_.const_view<ModulesSoA>(),
                       tripletsDC_->const_view<TripletsOccupancySoA>(),
                       rangesDC_->view(),
+                      tripletsDC_->view<TripletsSoA>(),
                       ptCut_);
 
   auto nEligibleT5Modules_buf = cms::alpakatools::make_host_buffer<uint16_t>(queue_);
