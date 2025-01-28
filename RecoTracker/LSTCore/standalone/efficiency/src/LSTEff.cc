@@ -3,53 +3,11 @@ LSTEff lstEff;
 
 void LSTEff::Init(TTree *tree) {
   tree->SetMakeClass(1);
-  pT5_occupancies_branch = 0;
-  if (tree->GetBranch("pT5_occupancies") != 0) {
-    pT5_occupancies_branch = tree->GetBranch("pT5_occupancies");
-    if (pT5_occupancies_branch) {
-      pT5_occupancies_branch->SetAddress(&pT5_occupancies_);
-    }
-  }
-  t3_phi_branch = 0;
-  if (tree->GetBranch("t3_phi") != 0) {
-    t3_phi_branch = tree->GetBranch("t3_phi");
-    if (t3_phi_branch) {
-      t3_phi_branch->SetAddress(&t3_phi_);
-    }
-  }
-  t5_score_rphisum_branch = 0;
-  if (tree->GetBranch("t5_score_rphisum") != 0) {
-    t5_score_rphisum_branch = tree->GetBranch("t5_score_rphisum");
-    if (t5_score_rphisum_branch) {
-      t5_score_rphisum_branch->SetAddress(&t5_score_rphisum_);
-    }
-  }
-  pT4_isFake_branch = 0;
-  if (tree->GetBranch("pT4_isFake") != 0) {
-    pT4_isFake_branch = tree->GetBranch("pT4_isFake");
-    if (pT4_isFake_branch) {
-      pT4_isFake_branch->SetAddress(&pT4_isFake_);
-    }
-  }
-  t3_isDuplicate_branch = 0;
-  if (tree->GetBranch("t3_isDuplicate") != 0) {
-    t3_isDuplicate_branch = tree->GetBranch("t3_isDuplicate");
-    if (t3_isDuplicate_branch) {
-      t3_isDuplicate_branch->SetAddress(&t3_isDuplicate_);
-    }
-  }
-  sim_event_branch = 0;
-  if (tree->GetBranch("sim_event") != 0) {
-    sim_event_branch = tree->GetBranch("sim_event");
-    if (sim_event_branch) {
-      sim_event_branch->SetAddress(&sim_event_);
-    }
-  }
-  sim_q_branch = 0;
-  if (tree->GetBranch("sim_q") != 0) {
-    sim_q_branch = tree->GetBranch("sim_q");
-    if (sim_q_branch) {
-      sim_q_branch->SetAddress(&sim_q_);
+  sim_pt_branch = 0;
+  if (tree->GetBranch("sim_pt") != 0) {
+    sim_pt_branch = tree->GetBranch("sim_pt");
+    if (sim_pt_branch) {
+      sim_pt_branch->SetAddress(&sim_pt_);
     }
   }
   sim_eta_branch = 0;
@@ -59,389 +17,11 @@ void LSTEff::Init(TTree *tree) {
       sim_eta_branch->SetAddress(&sim_eta_);
     }
   }
-  pT3_foundDuplicate_branch = 0;
-  if (tree->GetBranch("pT3_foundDuplicate") != 0) {
-    pT3_foundDuplicate_branch = tree->GetBranch("pT3_foundDuplicate");
-    if (pT3_foundDuplicate_branch) {
-      pT3_foundDuplicate_branch->SetAddress(&pT3_foundDuplicate_);
-    }
-  }
-  sim_len_branch = 0;
-  if (tree->GetBranch("sim_len") != 0) {
-    sim_len_branch = tree->GetBranch("sim_len");
-    if (sim_len_branch) {
-      sim_len_branch->SetAddress(&sim_len_);
-    }
-  }
-  pureTCE_isDuplicate_branch = 0;
-  if (tree->GetBranch("pureTCE_isDuplicate") != 0) {
-    pureTCE_isDuplicate_branch = tree->GetBranch("pureTCE_isDuplicate");
-    if (pureTCE_isDuplicate_branch) {
-      pureTCE_isDuplicate_branch->SetAddress(&pureTCE_isDuplicate_);
-    }
-  }
-  pT3_score_branch = 0;
-  if (tree->GetBranch("pT3_score") != 0) {
-    pT3_score_branch = tree->GetBranch("pT3_score");
-    if (pT3_score_branch) {
-      pT3_score_branch->SetAddress(&pT3_score_);
-    }
-  }
-  t5_eta_branch = 0;
-  if (tree->GetBranch("t5_eta") != 0) {
-    t5_eta_branch = tree->GetBranch("t5_eta");
-    if (t5_eta_branch) {
-      t5_eta_branch->SetAddress(&t5_eta_);
-    }
-  }
-  sim_denom_branch = 0;
-  if (tree->GetBranch("sim_denom") != 0) {
-    sim_denom_branch = tree->GetBranch("sim_denom");
-    if (sim_denom_branch) {
-      sim_denom_branch->SetAddress(&sim_denom_);
-    }
-  }
-  pT5_isDuplicate_branch = 0;
-  if (tree->GetBranch("pT5_isDuplicate") != 0) {
-    pT5_isDuplicate_branch = tree->GetBranch("pT5_isDuplicate");
-    if (pT5_isDuplicate_branch) {
-      pT5_isDuplicate_branch->SetAddress(&pT5_isDuplicate_);
-    }
-  }
-  sim_tce_matched_branch = 0;
-  if (tree->GetBranch("sim_tce_matched") != 0) {
-    sim_tce_matched_branch = tree->GetBranch("sim_tce_matched");
-    if (sim_tce_matched_branch) {
-      sim_tce_matched_branch->SetAddress(&sim_tce_matched_);
-    }
-  }
-  pT3_isDuplicate_branch = 0;
-  if (tree->GetBranch("pT3_isDuplicate") != 0) {
-    pT3_isDuplicate_branch = tree->GetBranch("pT3_isDuplicate");
-    if (pT3_isDuplicate_branch) {
-      pT3_isDuplicate_branch->SetAddress(&pT3_isDuplicate_);
-    }
-  }
-  tc_isDuplicate_branch = 0;
-  if (tree->GetBranch("tc_isDuplicate") != 0) {
-    tc_isDuplicate_branch = tree->GetBranch("tc_isDuplicate");
-    if (tc_isDuplicate_branch) {
-      tc_isDuplicate_branch->SetAddress(&tc_isDuplicate_);
-    }
-  }
-  pT3_eta_2_branch = 0;
-  if (tree->GetBranch("pT3_eta_2") != 0) {
-    pT3_eta_2_branch = tree->GetBranch("pT3_eta_2");
-    if (pT3_eta_2_branch) {
-      pT3_eta_2_branch->SetAddress(&pT3_eta_2_);
-    }
-  }
-  sim_pT3_matched_branch = 0;
-  if (tree->GetBranch("sim_pT3_matched") != 0) {
-    sim_pT3_matched_branch = tree->GetBranch("sim_pT3_matched");
-    if (sim_pT3_matched_branch) {
-      sim_pT3_matched_branch->SetAddress(&sim_pT3_matched_);
-    }
-  }
-  pureTCE_rzChiSquared_branch = 0;
-  if (tree->GetBranch("pureTCE_rzChiSquared") != 0) {
-    pureTCE_rzChiSquared_branch = tree->GetBranch("pureTCE_rzChiSquared");
-    if (pureTCE_rzChiSquared_branch) {
-      pureTCE_rzChiSquared_branch->SetAddress(&pureTCE_rzChiSquared_);
-    }
-  }
-  t4_isDuplicate_branch = 0;
-  if (tree->GetBranch("t4_isDuplicate") != 0) {
-    t4_isDuplicate_branch = tree->GetBranch("t4_isDuplicate");
-    if (t4_isDuplicate_branch) {
-      t4_isDuplicate_branch->SetAddress(&t4_isDuplicate_);
-    }
-  }
-  pureTCE_eta_branch = 0;
-  if (tree->GetBranch("pureTCE_eta") != 0) {
-    pureTCE_eta_branch = tree->GetBranch("pureTCE_eta");
-    if (pureTCE_eta_branch) {
-      pureTCE_eta_branch->SetAddress(&pureTCE_eta_);
-    }
-  }
-  tce_rPhiChiSquared_branch = 0;
-  if (tree->GetBranch("tce_rPhiChiSquared") != 0) {
-    tce_rPhiChiSquared_branch = tree->GetBranch("tce_rPhiChiSquared");
-    if (tce_rPhiChiSquared_branch) {
-      tce_rPhiChiSquared_branch->SetAddress(&tce_rPhiChiSquared_);
-    }
-  }
-  pureTCE_anchorType_branch = 0;
-  if (tree->GetBranch("pureTCE_anchorType") != 0) {
-    pureTCE_anchorType_branch = tree->GetBranch("pureTCE_anchorType");
-    if (pureTCE_anchorType_branch) {
-      pureTCE_anchorType_branch->SetAddress(&pureTCE_anchorType_);
-    }
-  }
-  pureTCE_pt_branch = 0;
-  if (tree->GetBranch("pureTCE_pt") != 0) {
-    pureTCE_pt_branch = tree->GetBranch("pureTCE_pt");
-    if (pureTCE_pt_branch) {
-      pureTCE_pt_branch->SetAddress(&pureTCE_pt_);
-    }
-  }
-  sim_pt_branch = 0;
-  if (tree->GetBranch("sim_pt") != 0) {
-    sim_pt_branch = tree->GetBranch("sim_pt");
-    if (sim_pt_branch) {
-      sim_pt_branch->SetAddress(&sim_pt_);
-    }
-  }
-  t5_eta_2_branch = 0;
-  if (tree->GetBranch("t5_eta_2") != 0) {
-    t5_eta_2_branch = tree->GetBranch("t5_eta_2");
-    if (t5_eta_2_branch) {
-      t5_eta_2_branch->SetAddress(&t5_eta_2_);
-    }
-  }
-  pLS_eta_branch = 0;
-  if (tree->GetBranch("pLS_eta") != 0) {
-    pLS_eta_branch = tree->GetBranch("pLS_eta");
-    if (pLS_eta_branch) {
-      pLS_eta_branch->SetAddress(&pLS_eta_);
-    }
-  }
-  sim_pdgId_branch = 0;
-  if (tree->GetBranch("sim_pdgId") != 0) {
-    sim_pdgId_branch = tree->GetBranch("sim_pdgId");
-    if (sim_pdgId_branch) {
-      sim_pdgId_branch->SetAddress(&sim_pdgId_);
-    }
-  }
-  t3_eta_branch = 0;
-  if (tree->GetBranch("t3_eta") != 0) {
-    t3_eta_branch = tree->GetBranch("t3_eta");
-    if (t3_eta_branch) {
-      t3_eta_branch->SetAddress(&t3_eta_);
-    }
-  }
-  tce_layer_binary_branch = 0;
-  if (tree->GetBranch("tce_layer_binary") != 0) {
-    tce_layer_binary_branch = tree->GetBranch("tce_layer_binary");
-    if (tce_layer_binary_branch) {
-      tce_layer_binary_branch->SetAddress(&tce_layer_binary_);
-    }
-  }
-  sim_TC_matched_nonextended_branch = 0;
-  if (tree->GetBranch("sim_TC_matched_nonextended") != 0) {
-    sim_TC_matched_nonextended_branch = tree->GetBranch("sim_TC_matched_nonextended");
-    if (sim_TC_matched_nonextended_branch) {
-      sim_TC_matched_nonextended_branch->SetAddress(&sim_TC_matched_nonextended_);
-    }
-  }
-  t4_occupancies_branch = 0;
-  if (tree->GetBranch("t4_occupancies") != 0) {
-    t4_occupancies_branch = tree->GetBranch("t4_occupancies");
-    if (t4_occupancies_branch) {
-      t4_occupancies_branch->SetAddress(&t4_occupancies_);
-    }
-  }
-  tce_eta_branch = 0;
-  if (tree->GetBranch("tce_eta") != 0) {
-    tce_eta_branch = tree->GetBranch("tce_eta");
-    if (tce_eta_branch) {
-      tce_eta_branch->SetAddress(&tce_eta_);
-    }
-  }
-  tce_isDuplicate_branch = 0;
-  if (tree->GetBranch("tce_isDuplicate") != 0) {
-    tce_isDuplicate_branch = tree->GetBranch("tce_isDuplicate");
-    if (tce_isDuplicate_branch) {
-      tce_isDuplicate_branch->SetAddress(&tce_isDuplicate_);
-    }
-  }
-  pT5_matched_simIdx_branch = 0;
-  if (tree->GetBranch("pT5_matched_simIdx") != 0) {
-    pT5_matched_simIdx_branch = tree->GetBranch("pT5_matched_simIdx");
-    if (pT5_matched_simIdx_branch) {
-      pT5_matched_simIdx_branch->SetAddress(&pT5_matched_simIdx_);
-    }
-  }
-  sim_tcIdx_branch = 0;
-  if (tree->GetBranch("sim_tcIdx") != 0) {
-    sim_tcIdx_branch = tree->GetBranch("sim_tcIdx");
-    if (sim_tcIdx_branch) {
-      sim_tcIdx_branch->SetAddress(&sim_tcIdx_);
-    }
-  }
-  t5_phi_2_branch = 0;
-  if (tree->GetBranch("t5_phi_2") != 0) {
-    t5_phi_2_branch = tree->GetBranch("t5_phi_2");
-    if (t5_phi_2_branch) {
-      t5_phi_2_branch->SetAddress(&t5_phi_2_);
-    }
-  }
-  pureTCE_maxHitMatchedCounts_branch = 0;
-  if (tree->GetBranch("pureTCE_maxHitMatchedCounts") != 0) {
-    pureTCE_maxHitMatchedCounts_branch = tree->GetBranch("pureTCE_maxHitMatchedCounts");
-    if (pureTCE_maxHitMatchedCounts_branch) {
-      pureTCE_maxHitMatchedCounts_branch->SetAddress(&pureTCE_maxHitMatchedCounts_);
-    }
-  }
-  t5_matched_simIdx_branch = 0;
-  if (tree->GetBranch("t5_matched_simIdx") != 0) {
-    t5_matched_simIdx_branch = tree->GetBranch("t5_matched_simIdx");
-    if (t5_matched_simIdx_branch) {
-      t5_matched_simIdx_branch->SetAddress(&t5_matched_simIdx_);
-    }
-  }
-  module_subdets_branch = 0;
-  if (tree->GetBranch("module_subdets") != 0) {
-    module_subdets_branch = tree->GetBranch("module_subdets");
-    if (module_subdets_branch) {
-      module_subdets_branch->SetAddress(&module_subdets_);
-    }
-  }
-  tce_anchorType_branch = 0;
-  if (tree->GetBranch("tce_anchorType") != 0) {
-    tce_anchorType_branch = tree->GetBranch("tce_anchorType");
-    if (tce_anchorType_branch) {
-      tce_anchorType_branch->SetAddress(&tce_anchorType_);
-    }
-  }
-  tce_nHitOverlaps_branch = 0;
-  if (tree->GetBranch("tce_nHitOverlaps") != 0) {
-    tce_nHitOverlaps_branch = tree->GetBranch("tce_nHitOverlaps");
-    if (tce_nHitOverlaps_branch) {
-      tce_nHitOverlaps_branch->SetAddress(&tce_nHitOverlaps_);
-    }
-  }
-  t3_isFake_branch = 0;
-  if (tree->GetBranch("t3_isFake") != 0) {
-    t3_isFake_branch = tree->GetBranch("t3_isFake");
-    if (t3_isFake_branch) {
-      t3_isFake_branch->SetAddress(&t3_isFake_);
-    }
-  }
-  tce_phi_branch = 0;
-  if (tree->GetBranch("tce_phi") != 0) {
-    tce_phi_branch = tree->GetBranch("tce_phi");
-    if (tce_phi_branch) {
-      tce_phi_branch->SetAddress(&tce_phi_);
-    }
-  }
-  t5_isFake_branch = 0;
-  if (tree->GetBranch("t5_isFake") != 0) {
-    t5_isFake_branch = tree->GetBranch("t5_isFake");
-    if (t5_isFake_branch) {
-      t5_isFake_branch->SetAddress(&t5_isFake_);
-    }
-  }
-  md_occupancies_branch = 0;
-  if (tree->GetBranch("md_occupancies") != 0) {
-    md_occupancies_branch = tree->GetBranch("md_occupancies");
-    if (md_occupancies_branch) {
-      md_occupancies_branch->SetAddress(&md_occupancies_);
-    }
-  }
-  t5_hitIdxs_branch = 0;
-  if (tree->GetBranch("t5_hitIdxs") != 0) {
-    t5_hitIdxs_branch = tree->GetBranch("t5_hitIdxs");
-    if (t5_hitIdxs_branch) {
-      t5_hitIdxs_branch->SetAddress(&t5_hitIdxs_);
-    }
-  }
-  sim_pT3_types_branch = 0;
-  if (tree->GetBranch("sim_pT3_types") != 0) {
-    sim_pT3_types_branch = tree->GetBranch("sim_pT3_types");
-    if (sim_pT3_types_branch) {
-      sim_pT3_types_branch->SetAddress(&sim_pT3_types_);
-    }
-  }
-  sim_pureTCE_types_branch = 0;
-  if (tree->GetBranch("sim_pureTCE_types") != 0) {
-    sim_pureTCE_types_branch = tree->GetBranch("sim_pureTCE_types");
-    if (sim_pureTCE_types_branch) {
-      sim_pureTCE_types_branch->SetAddress(&sim_pureTCE_types_);
-    }
-  }
-  t4_phi_branch = 0;
-  if (tree->GetBranch("t4_phi") != 0) {
-    t4_phi_branch = tree->GetBranch("t4_phi");
-    if (t4_phi_branch) {
-      t4_phi_branch->SetAddress(&t4_phi_);
-    }
-  }
-  t5_phi_branch = 0;
-  if (tree->GetBranch("t5_phi") != 0) {
-    t5_phi_branch = tree->GetBranch("t5_phi");
-    if (t5_phi_branch) {
-      t5_phi_branch->SetAddress(&t5_phi_);
-    }
-  }
-  pT5_hitIdxs_branch = 0;
-  if (tree->GetBranch("pT5_hitIdxs") != 0) {
-    pT5_hitIdxs_branch = tree->GetBranch("pT5_hitIdxs");
-    if (pT5_hitIdxs_branch) {
-      pT5_hitIdxs_branch->SetAddress(&pT5_hitIdxs_);
-    }
-  }
-  t5_pt_branch = 0;
-  if (tree->GetBranch("t5_pt") != 0) {
-    t5_pt_branch = tree->GetBranch("t5_pt");
-    if (t5_pt_branch) {
-      t5_pt_branch->SetAddress(&t5_pt_);
-    }
-  }
-  pT5_phi_branch = 0;
-  if (tree->GetBranch("pT5_phi") != 0) {
-    pT5_phi_branch = tree->GetBranch("pT5_phi");
-    if (pT5_phi_branch) {
-      pT5_phi_branch->SetAddress(&pT5_phi_);
-    }
-  }
-  pureTCE_isFake_branch = 0;
-  if (tree->GetBranch("pureTCE_isFake") != 0) {
-    pureTCE_isFake_branch = tree->GetBranch("pureTCE_isFake");
-    if (pureTCE_isFake_branch) {
-      pureTCE_isFake_branch->SetAddress(&pureTCE_isFake_);
-    }
-  }
-  tce_pt_branch = 0;
-  if (tree->GetBranch("tce_pt") != 0) {
-    tce_pt_branch = tree->GetBranch("tce_pt");
-    if (tce_pt_branch) {
-      tce_pt_branch->SetAddress(&tce_pt_);
-    }
-  }
-  tc_isFake_branch = 0;
-  if (tree->GetBranch("tc_isFake") != 0) {
-    tc_isFake_branch = tree->GetBranch("tc_isFake");
-    if (tc_isFake_branch) {
-      tc_isFake_branch->SetAddress(&tc_isFake_);
-    }
-  }
-  pT3_isFake_branch = 0;
-  if (tree->GetBranch("pT3_isFake") != 0) {
-    pT3_isFake_branch = tree->GetBranch("pT3_isFake");
-    if (pT3_isFake_branch) {
-      pT3_isFake_branch->SetAddress(&pT3_isFake_);
-    }
-  }
-  tce_nLayerOverlaps_branch = 0;
-  if (tree->GetBranch("tce_nLayerOverlaps") != 0) {
-    tce_nLayerOverlaps_branch = tree->GetBranch("tce_nLayerOverlaps");
-    if (tce_nLayerOverlaps_branch) {
-      tce_nLayerOverlaps_branch->SetAddress(&tce_nLayerOverlaps_);
-    }
-  }
-  tc_sim_branch = 0;
-  if (tree->GetBranch("tc_sim") != 0) {
-    tc_sim_branch = tree->GetBranch("tc_sim");
-    if (tc_sim_branch) {
-      tc_sim_branch->SetAddress(&tc_sim_);
-    }
-  }
-  sim_pLS_types_branch = 0;
-  if (tree->GetBranch("sim_pLS_types") != 0) {
-    sim_pLS_types_branch = tree->GetBranch("sim_pLS_types");
-    if (sim_pLS_types_branch) {
-      sim_pLS_types_branch->SetAddress(&sim_pLS_types_);
+  sim_phi_branch = 0;
+  if (tree->GetBranch("sim_phi") != 0) {
+    sim_phi_branch = tree->GetBranch("sim_phi");
+    if (sim_phi_branch) {
+      sim_phi_branch->SetAddress(&sim_phi_);
     }
   }
   sim_pca_dxy_branch = 0;
@@ -451,167 +31,6 @@ void LSTEff::Init(TTree *tree) {
       sim_pca_dxy_branch->SetAddress(&sim_pca_dxy_);
     }
   }
-  pT4_phi_branch = 0;
-  if (tree->GetBranch("pT4_phi") != 0) {
-    pT4_phi_branch = tree->GetBranch("pT4_phi");
-    if (pT4_phi_branch) {
-      pT4_phi_branch->SetAddress(&pT4_phi_);
-    }
-  }
-  sim_hits_branch = 0;
-  if (tree->GetBranch("sim_hits") != 0) {
-    sim_hits_branch = tree->GetBranch("sim_hits");
-    if (sim_hits_branch) {
-      sim_hits_branch->SetAddress(&sim_hits_);
-    }
-  }
-  pLS_phi_branch = 0;
-  if (tree->GetBranch("pLS_phi") != 0) {
-    pLS_phi_branch = tree->GetBranch("pLS_phi");
-    if (pLS_phi_branch) {
-      pLS_phi_branch->SetAddress(&pLS_phi_);
-    }
-  }
-  sim_pureTCE_matched_branch = 0;
-  if (tree->GetBranch("sim_pureTCE_matched") != 0) {
-    sim_pureTCE_matched_branch = tree->GetBranch("sim_pureTCE_matched");
-    if (sim_pureTCE_matched_branch) {
-      sim_pureTCE_matched_branch->SetAddress(&sim_pureTCE_matched_);
-    }
-  }
-  t3_occupancies_branch = 0;
-  if (tree->GetBranch("t3_occupancies") != 0) {
-    t3_occupancies_branch = tree->GetBranch("t3_occupancies");
-    if (t3_occupancies_branch) {
-      t3_occupancies_branch->SetAddress(&t3_occupancies_);
-    }
-  }
-  t5_foundDuplicate_branch = 0;
-  if (tree->GetBranch("t5_foundDuplicate") != 0) {
-    t5_foundDuplicate_branch = tree->GetBranch("t5_foundDuplicate");
-    if (t5_foundDuplicate_branch) {
-      t5_foundDuplicate_branch->SetAddress(&t5_foundDuplicate_);
-    }
-  }
-  sim_pT4_types_branch = 0;
-  if (tree->GetBranch("sim_pT4_types") != 0) {
-    sim_pT4_types_branch = tree->GetBranch("sim_pT4_types");
-    if (sim_pT4_types_branch) {
-      sim_pT4_types_branch->SetAddress(&sim_pT4_types_);
-    }
-  }
-  t4_isFake_branch = 0;
-  if (tree->GetBranch("t4_isFake") != 0) {
-    t4_isFake_branch = tree->GetBranch("t4_isFake");
-    if (t4_isFake_branch) {
-      t4_isFake_branch->SetAddress(&t4_isFake_);
-    }
-  }
-  simvtx_x_branch = 0;
-  if (tree->GetBranch("simvtx_x") != 0) {
-    simvtx_x_branch = tree->GetBranch("simvtx_x");
-    if (simvtx_x_branch) {
-      simvtx_x_branch->SetAddress(&simvtx_x_);
-    }
-  }
-  simvtx_y_branch = 0;
-  if (tree->GetBranch("simvtx_y") != 0) {
-    simvtx_y_branch = tree->GetBranch("simvtx_y");
-    if (simvtx_y_branch) {
-      simvtx_y_branch->SetAddress(&simvtx_y_);
-    }
-  }
-  simvtx_z_branch = 0;
-  if (tree->GetBranch("simvtx_z") != 0) {
-    simvtx_z_branch = tree->GetBranch("simvtx_z");
-    if (simvtx_z_branch) {
-      simvtx_z_branch->SetAddress(&simvtx_z_);
-    }
-  }
-  sim_T4_matched_branch = 0;
-  if (tree->GetBranch("sim_T4_matched") != 0) {
-    sim_T4_matched_branch = tree->GetBranch("sim_T4_matched");
-    if (sim_T4_matched_branch) {
-      sim_T4_matched_branch->SetAddress(&sim_T4_matched_);
-    }
-  }
-  sim_isGood_branch = 0;
-  if (tree->GetBranch("sim_isGood") != 0) {
-    sim_isGood_branch = tree->GetBranch("sim_isGood");
-    if (sim_isGood_branch) {
-      sim_isGood_branch->SetAddress(&sim_isGood_);
-    }
-  }
-  pT3_pt_branch = 0;
-  if (tree->GetBranch("pT3_pt") != 0) {
-    pT3_pt_branch = tree->GetBranch("pT3_pt");
-    if (pT3_pt_branch) {
-      pT3_pt_branch->SetAddress(&pT3_pt_);
-    }
-  }
-  tc_pt_branch = 0;
-  if (tree->GetBranch("tc_pt") != 0) {
-    tc_pt_branch = tree->GetBranch("tc_pt");
-    if (tc_pt_branch) {
-      tc_pt_branch->SetAddress(&tc_pt_);
-    }
-  }
-  pT3_phi_2_branch = 0;
-  if (tree->GetBranch("pT3_phi_2") != 0) {
-    pT3_phi_2_branch = tree->GetBranch("pT3_phi_2");
-    if (pT3_phi_2_branch) {
-      pT3_phi_2_branch->SetAddress(&pT3_phi_2_);
-    }
-  }
-  pT5_pt_branch = 0;
-  if (tree->GetBranch("pT5_pt") != 0) {
-    pT5_pt_branch = tree->GetBranch("pT5_pt");
-    if (pT5_pt_branch) {
-      pT5_pt_branch->SetAddress(&pT5_pt_);
-    }
-  }
-  pureTCE_rPhiChiSquared_branch = 0;
-  if (tree->GetBranch("pureTCE_rPhiChiSquared") != 0) {
-    pureTCE_rPhiChiSquared_branch = tree->GetBranch("pureTCE_rPhiChiSquared");
-    if (pureTCE_rPhiChiSquared_branch) {
-      pureTCE_rPhiChiSquared_branch->SetAddress(&pureTCE_rPhiChiSquared_);
-    }
-  }
-  pT5_score_branch = 0;
-  if (tree->GetBranch("pT5_score") != 0) {
-    pT5_score_branch = tree->GetBranch("pT5_score");
-    if (pT5_score_branch) {
-      pT5_score_branch->SetAddress(&pT5_score_);
-    }
-  }
-  sim_phi_branch = 0;
-  if (tree->GetBranch("sim_phi") != 0) {
-    sim_phi_branch = tree->GetBranch("sim_phi");
-    if (sim_phi_branch) {
-      sim_phi_branch->SetAddress(&sim_phi_);
-    }
-  }
-  pT5_isFake_branch = 0;
-  if (tree->GetBranch("pT5_isFake") != 0) {
-    pT5_isFake_branch = tree->GetBranch("pT5_isFake");
-    if (pT5_isFake_branch) {
-      pT5_isFake_branch->SetAddress(&pT5_isFake_);
-    }
-  }
-  tc_maxHitMatchedCounts_branch = 0;
-  if (tree->GetBranch("tc_maxHitMatchedCounts") != 0) {
-    tc_maxHitMatchedCounts_branch = tree->GetBranch("tc_maxHitMatchedCounts");
-    if (tc_maxHitMatchedCounts_branch) {
-      tc_maxHitMatchedCounts_branch->SetAddress(&tc_maxHitMatchedCounts_);
-    }
-  }
-  pureTCE_nLayerOverlaps_branch = 0;
-  if (tree->GetBranch("pureTCE_nLayerOverlaps") != 0) {
-    pureTCE_nLayerOverlaps_branch = tree->GetBranch("pureTCE_nLayerOverlaps");
-    if (pureTCE_nLayerOverlaps_branch) {
-      pureTCE_nLayerOverlaps_branch->SetAddress(&pureTCE_nLayerOverlaps_);
-    }
-  }
   sim_pca_dz_branch = 0;
   if (tree->GetBranch("sim_pca_dz") != 0) {
     sim_pca_dz_branch = tree->GetBranch("sim_pca_dz");
@@ -619,312 +38,18 @@ void LSTEff::Init(TTree *tree) {
       sim_pca_dz_branch->SetAddress(&sim_pca_dz_);
     }
   }
-  pureTCE_hitIdxs_branch = 0;
-  if (tree->GetBranch("pureTCE_hitIdxs") != 0) {
-    pureTCE_hitIdxs_branch = tree->GetBranch("pureTCE_hitIdxs");
-    if (pureTCE_hitIdxs_branch) {
-      pureTCE_hitIdxs_branch->SetAddress(&pureTCE_hitIdxs_);
+  sim_q_branch = 0;
+  if (tree->GetBranch("sim_q") != 0) {
+    sim_q_branch = tree->GetBranch("sim_q");
+    if (sim_q_branch) {
+      sim_q_branch->SetAddress(&sim_q_);
     }
   }
-  pureTCE_nHitOverlaps_branch = 0;
-  if (tree->GetBranch("pureTCE_nHitOverlaps") != 0) {
-    pureTCE_nHitOverlaps_branch = tree->GetBranch("pureTCE_nHitOverlaps");
-    if (pureTCE_nHitOverlaps_branch) {
-      pureTCE_nHitOverlaps_branch->SetAddress(&pureTCE_nHitOverlaps_);
-    }
-  }
-  sim_pLS_matched_branch = 0;
-  if (tree->GetBranch("sim_pLS_matched") != 0) {
-    sim_pLS_matched_branch = tree->GetBranch("sim_pLS_matched");
-    if (sim_pLS_matched_branch) {
-      sim_pLS_matched_branch->SetAddress(&sim_pLS_matched_);
-    }
-  }
-  tc_matched_simIdx_branch = 0;
-  if (tree->GetBranch("tc_matched_simIdx") != 0) {
-    tc_matched_simIdx_branch = tree->GetBranch("tc_matched_simIdx");
-    if (tc_matched_simIdx_branch) {
-      tc_matched_simIdx_branch->SetAddress(&tc_matched_simIdx_);
-    }
-  }
-  sim_T3_matched_branch = 0;
-  if (tree->GetBranch("sim_T3_matched") != 0) {
-    sim_T3_matched_branch = tree->GetBranch("sim_T3_matched");
-    if (sim_T3_matched_branch) {
-      sim_T3_matched_branch->SetAddress(&sim_T3_matched_);
-    }
-  }
-  pLS_score_branch = 0;
-  if (tree->GetBranch("pLS_score") != 0) {
-    pLS_score_branch = tree->GetBranch("pLS_score");
-    if (pLS_score_branch) {
-      pLS_score_branch->SetAddress(&pLS_score_);
-    }
-  }
-  pT3_phi_branch = 0;
-  if (tree->GetBranch("pT3_phi") != 0) {
-    pT3_phi_branch = tree->GetBranch("pT3_phi");
-    if (pT3_phi_branch) {
-      pT3_phi_branch->SetAddress(&pT3_phi_);
-    }
-  }
-  pT5_eta_branch = 0;
-  if (tree->GetBranch("pT5_eta") != 0) {
-    pT5_eta_branch = tree->GetBranch("pT5_eta");
-    if (pT5_eta_branch) {
-      pT5_eta_branch->SetAddress(&pT5_eta_);
-    }
-  }
-  tc_phi_branch = 0;
-  if (tree->GetBranch("tc_phi") != 0) {
-    tc_phi_branch = tree->GetBranch("tc_phi");
-    if (tc_phi_branch) {
-      tc_phi_branch->SetAddress(&tc_phi_);
-    }
-  }
-  t4_eta_branch = 0;
-  if (tree->GetBranch("t4_eta") != 0) {
-    t4_eta_branch = tree->GetBranch("t4_eta");
-    if (t4_eta_branch) {
-      t4_eta_branch->SetAddress(&t4_eta_);
-    }
-  }
-  pLS_isFake_branch = 0;
-  if (tree->GetBranch("pLS_isFake") != 0) {
-    pLS_isFake_branch = tree->GetBranch("pLS_isFake");
-    if (pLS_isFake_branch) {
-      pLS_isFake_branch->SetAddress(&pLS_isFake_);
-    }
-  }
-  pureTCE_matched_simIdx_branch = 0;
-  if (tree->GetBranch("pureTCE_matched_simIdx") != 0) {
-    pureTCE_matched_simIdx_branch = tree->GetBranch("pureTCE_matched_simIdx");
-    if (pureTCE_matched_simIdx_branch) {
-      pureTCE_matched_simIdx_branch->SetAddress(&pureTCE_matched_simIdx_);
-    }
-  }
-  sim_bunchCrossing_branch = 0;
-  if (tree->GetBranch("sim_bunchCrossing") != 0) {
-    sim_bunchCrossing_branch = tree->GetBranch("sim_bunchCrossing");
-    if (sim_bunchCrossing_branch) {
-      sim_bunchCrossing_branch->SetAddress(&sim_bunchCrossing_);
-    }
-  }
-  tc_partOfExtension_branch = 0;
-  if (tree->GetBranch("tc_partOfExtension") != 0) {
-    tc_partOfExtension_branch = tree->GetBranch("tc_partOfExtension");
-    if (tc_partOfExtension_branch) {
-      tc_partOfExtension_branch->SetAddress(&tc_partOfExtension_);
-    }
-  }
-  pT3_eta_branch = 0;
-  if (tree->GetBranch("pT3_eta") != 0) {
-    pT3_eta_branch = tree->GetBranch("pT3_eta");
-    if (pT3_eta_branch) {
-      pT3_eta_branch->SetAddress(&pT3_eta_);
-    }
-  }
-  sim_parentVtxIdx_branch = 0;
-  if (tree->GetBranch("sim_parentVtxIdx") != 0) {
-    sim_parentVtxIdx_branch = tree->GetBranch("sim_parentVtxIdx");
-    if (sim_parentVtxIdx_branch) {
-      sim_parentVtxIdx_branch->SetAddress(&sim_parentVtxIdx_);
-    }
-  }
-  pureTCE_layer_binary_branch = 0;
-  if (tree->GetBranch("pureTCE_layer_binary") != 0) {
-    pureTCE_layer_binary_branch = tree->GetBranch("pureTCE_layer_binary");
-    if (pureTCE_layer_binary_branch) {
-      pureTCE_layer_binary_branch->SetAddress(&pureTCE_layer_binary_);
-    }
-  }
-  sim_pT4_matched_branch = 0;
-  if (tree->GetBranch("sim_pT4_matched") != 0) {
-    sim_pT4_matched_branch = tree->GetBranch("sim_pT4_matched");
-    if (sim_pT4_matched_branch) {
-      sim_pT4_matched_branch->SetAddress(&sim_pT4_matched_);
-    }
-  }
-  tc_eta_branch = 0;
-  if (tree->GetBranch("tc_eta") != 0) {
-    tc_eta_branch = tree->GetBranch("tc_eta");
-    if (tc_eta_branch) {
-      tc_eta_branch->SetAddress(&tc_eta_);
-    }
-  }
-  sim_lengap_branch = 0;
-  if (tree->GetBranch("sim_lengap") != 0) {
-    sim_lengap_branch = tree->GetBranch("sim_lengap");
-    if (sim_lengap_branch) {
-      sim_lengap_branch->SetAddress(&sim_lengap_);
-    }
-  }
-  sim_T5_matched_branch = 0;
-  if (tree->GetBranch("sim_T5_matched") != 0) {
-    sim_T5_matched_branch = tree->GetBranch("sim_T5_matched");
-    if (sim_T5_matched_branch) {
-      sim_T5_matched_branch->SetAddress(&sim_T5_matched_);
-    }
-  }
-  sim_T5_types_branch = 0;
-  if (tree->GetBranch("sim_T5_types") != 0) {
-    sim_T5_types_branch = tree->GetBranch("sim_T5_types");
-    if (sim_T5_types_branch) {
-      sim_T5_types_branch->SetAddress(&sim_T5_types_);
-    }
-  }
-  tce_matched_simIdx_branch = 0;
-  if (tree->GetBranch("tce_matched_simIdx") != 0) {
-    tce_matched_simIdx_branch = tree->GetBranch("tce_matched_simIdx");
-    if (tce_matched_simIdx_branch) {
-      tce_matched_simIdx_branch->SetAddress(&tce_matched_simIdx_);
-    }
-  }
-  t5_isDuplicate_branch = 0;
-  if (tree->GetBranch("t5_isDuplicate") != 0) {
-    t5_isDuplicate_branch = tree->GetBranch("t5_isDuplicate");
-    if (t5_isDuplicate_branch) {
-      t5_isDuplicate_branch->SetAddress(&t5_isDuplicate_);
-    }
-  }
-  pT3_hitIdxs_branch = 0;
-  if (tree->GetBranch("pT3_hitIdxs") != 0) {
-    pT3_hitIdxs_branch = tree->GetBranch("pT3_hitIdxs");
-    if (pT3_hitIdxs_branch) {
-      pT3_hitIdxs_branch->SetAddress(&pT3_hitIdxs_);
-    }
-  }
-  tc_hitIdxs_branch = 0;
-  if (tree->GetBranch("tc_hitIdxs") != 0) {
-    tc_hitIdxs_branch = tree->GetBranch("tc_hitIdxs");
-    if (tc_hitIdxs_branch) {
-      tc_hitIdxs_branch->SetAddress(&tc_hitIdxs_);
-    }
-  }
-  pT3_occupancies_branch = 0;
-  if (tree->GetBranch("pT3_occupancies") != 0) {
-    pT3_occupancies_branch = tree->GetBranch("pT3_occupancies");
-    if (pT3_occupancies_branch) {
-      pT3_occupancies_branch->SetAddress(&pT3_occupancies_);
-    }
-  }
-  tc_occupancies_branch = 0;
-  if (tree->GetBranch("tc_occupancies") != 0) {
-    tc_occupancies_branch = tree->GetBranch("tc_occupancies");
-    if (tc_occupancies_branch) {
-      tc_occupancies_branch->SetAddress(&tc_occupancies_);
-    }
-  }
-  sim_TC_matched_branch = 0;
-  if (tree->GetBranch("sim_TC_matched") != 0) {
-    sim_TC_matched_branch = tree->GetBranch("sim_TC_matched");
-    if (sim_TC_matched_branch) {
-      sim_TC_matched_branch->SetAddress(&sim_TC_matched_);
-    }
-  }
-  sim_TC_matched_mask_branch = 0;
-  if (tree->GetBranch("sim_TC_matched_mask") != 0) {
-    sim_TC_matched_mask_branch = tree->GetBranch("sim_TC_matched_mask");
-    if (sim_TC_matched_mask_branch) {
-      sim_TC_matched_mask_branch->SetAddress(&sim_TC_matched_mask_);
-    }
-  }
-  pLS_isDuplicate_branch = 0;
-  if (tree->GetBranch("pLS_isDuplicate") != 0) {
-    pLS_isDuplicate_branch = tree->GetBranch("pLS_isDuplicate");
-    if (pLS_isDuplicate_branch) {
-      pLS_isDuplicate_branch->SetAddress(&pLS_isDuplicate_);
-    }
-  }
-  tce_anchorIndex_branch = 0;
-  if (tree->GetBranch("tce_anchorIndex") != 0) {
-    tce_anchorIndex_branch = tree->GetBranch("tce_anchorIndex");
-    if (tce_anchorIndex_branch) {
-      tce_anchorIndex_branch->SetAddress(&tce_anchorIndex_);
-    }
-  }
-  t5_occupancies_branch = 0;
-  if (tree->GetBranch("t5_occupancies") != 0) {
-    t5_occupancies_branch = tree->GetBranch("t5_occupancies");
-    if (t5_occupancies_branch) {
-      t5_occupancies_branch->SetAddress(&t5_occupancies_);
-    }
-  }
-  tc_type_branch = 0;
-  if (tree->GetBranch("tc_type") != 0) {
-    tc_type_branch = tree->GetBranch("tc_type");
-    if (tc_type_branch) {
-      tc_type_branch->SetAddress(&tc_type_);
-    }
-  }
-  tce_isFake_branch = 0;
-  if (tree->GetBranch("tce_isFake") != 0) {
-    tce_isFake_branch = tree->GetBranch("tce_isFake");
-    if (tce_isFake_branch) {
-      tce_isFake_branch->SetAddress(&tce_isFake_);
-    }
-  }
-  pLS_pt_branch = 0;
-  if (tree->GetBranch("pLS_pt") != 0) {
-    pLS_pt_branch = tree->GetBranch("pLS_pt");
-    if (pLS_pt_branch) {
-      pLS_pt_branch->SetAddress(&pLS_pt_);
-    }
-  }
-  pureTCE_anchorIndex_branch = 0;
-  if (tree->GetBranch("pureTCE_anchorIndex") != 0) {
-    pureTCE_anchorIndex_branch = tree->GetBranch("pureTCE_anchorIndex");
-    if (pureTCE_anchorIndex_branch) {
-      pureTCE_anchorIndex_branch->SetAddress(&pureTCE_anchorIndex_);
-    }
-  }
-  sim_T4_types_branch = 0;
-  if (tree->GetBranch("sim_T4_types") != 0) {
-    sim_T4_types_branch = tree->GetBranch("sim_T4_types");
-    if (sim_T4_types_branch) {
-      sim_T4_types_branch->SetAddress(&sim_T4_types_);
-    }
-  }
-  pT4_isDuplicate_branch = 0;
-  if (tree->GetBranch("pT4_isDuplicate") != 0) {
-    pT4_isDuplicate_branch = tree->GetBranch("pT4_isDuplicate");
-    if (pT4_isDuplicate_branch) {
-      pT4_isDuplicate_branch->SetAddress(&pT4_isDuplicate_);
-    }
-  }
-  t4_pt_branch = 0;
-  if (tree->GetBranch("t4_pt") != 0) {
-    t4_pt_branch = tree->GetBranch("t4_pt");
-    if (t4_pt_branch) {
-      t4_pt_branch->SetAddress(&t4_pt_);
-    }
-  }
-  sim_TC_types_branch = 0;
-  if (tree->GetBranch("sim_TC_types") != 0) {
-    sim_TC_types_branch = tree->GetBranch("sim_TC_types");
-    if (sim_TC_types_branch) {
-      sim_TC_types_branch->SetAddress(&sim_TC_types_);
-    }
-  }
-  sg_occupancies_branch = 0;
-  if (tree->GetBranch("sg_occupancies") != 0) {
-    sg_occupancies_branch = tree->GetBranch("sg_occupancies");
-    if (sg_occupancies_branch) {
-      sg_occupancies_branch->SetAddress(&sg_occupancies_);
-    }
-  }
-  pT4_pt_branch = 0;
-  if (tree->GetBranch("pT4_pt") != 0) {
-    pT4_pt_branch = tree->GetBranch("pT4_pt");
-    if (pT4_pt_branch) {
-      pT4_pt_branch->SetAddress(&pT4_pt_);
-    }
-  }
-  pureTCE_phi_branch = 0;
-  if (tree->GetBranch("pureTCE_phi") != 0) {
-    pureTCE_phi_branch = tree->GetBranch("pureTCE_phi");
-    if (pureTCE_phi_branch) {
-      pureTCE_phi_branch->SetAddress(&pureTCE_phi_);
+  sim_pdgId_branch = 0;
+  if (tree->GetBranch("sim_pdgId") != 0) {
+    sim_pdgId_branch = tree->GetBranch("sim_pdgId");
+    if (sim_pdgId_branch) {
+      sim_pdgId_branch->SetAddress(&sim_pdgId_);
     }
   }
   sim_vx_branch = 0;
@@ -948,11 +73,480 @@ void LSTEff::Init(TTree *tree) {
       sim_vz_branch->SetAddress(&sim_vz_);
     }
   }
-  tce_maxHitMatchedCounts_branch = 0;
-  if (tree->GetBranch("tce_maxHitMatchedCounts") != 0) {
-    tce_maxHitMatchedCounts_branch = tree->GetBranch("tce_maxHitMatchedCounts");
-    if (tce_maxHitMatchedCounts_branch) {
-      tce_maxHitMatchedCounts_branch->SetAddress(&tce_maxHitMatchedCounts_);
+  sim_vtxperp_branch = 0;
+  if (tree->GetBranch("sim_vtxperp") != 0) {
+    sim_vtxperp_branch = tree->GetBranch("sim_vtxperp");
+    if (sim_vtxperp_branch) {
+      sim_vtxperp_branch->SetAddress(&sim_vtxperp_);
+    }
+  }
+  sim_trkNtupIdx_branch = 0;
+  if (tree->GetBranch("sim_trkNtupIdx") != 0) {
+    sim_trkNtupIdx_branch = tree->GetBranch("sim_trkNtupIdx");
+    if (sim_trkNtupIdx_branch) {
+      sim_trkNtupIdx_branch->SetAddress(&sim_trkNtupIdx_);
+    }
+  }
+  sim_tcIdx_branch = 0;
+  if (tree->GetBranch("sim_tcIdx") != 0) {
+    sim_tcIdx_branch = tree->GetBranch("sim_tcIdx");
+    if (sim_tcIdx_branch) {
+      sim_tcIdx_branch->SetAddress(&sim_tcIdx_);
+    }
+  }
+  sim_tcIdxAll_branch = 0;
+  if (tree->GetBranch("sim_tcIdxAll") != 0) {
+    sim_tcIdxAll_branch = tree->GetBranch("sim_tcIdxAll");
+    if (sim_tcIdxAll_branch) {
+      sim_tcIdxAll_branch->SetAddress(&sim_tcIdxAll_);
+    }
+  }
+  sim_tcIdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_tcIdxAllFrac") != 0) {
+    sim_tcIdxAllFrac_branch = tree->GetBranch("sim_tcIdxAllFrac");
+    if (sim_tcIdxAllFrac_branch) {
+      sim_tcIdxAllFrac_branch->SetAddress(&sim_tcIdxAllFrac_);
+    }
+  }
+  sim_mdIdxAll_branch = 0;
+  if (tree->GetBranch("sim_mdIdxAll") != 0) {
+    sim_mdIdxAll_branch = tree->GetBranch("sim_mdIdxAll");
+    if (sim_mdIdxAll_branch) {
+      sim_mdIdxAll_branch->SetAddress(&sim_mdIdxAll_);
+    }
+  }
+  sim_mdIdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_mdIdxAllFrac") != 0) {
+    sim_mdIdxAllFrac_branch = tree->GetBranch("sim_mdIdxAllFrac");
+    if (sim_mdIdxAllFrac_branch) {
+      sim_mdIdxAllFrac_branch->SetAddress(&sim_mdIdxAllFrac_);
+    }
+  }
+  sim_lsIdxAll_branch = 0;
+  if (tree->GetBranch("sim_lsIdxAll") != 0) {
+    sim_lsIdxAll_branch = tree->GetBranch("sim_lsIdxAll");
+    if (sim_lsIdxAll_branch) {
+      sim_lsIdxAll_branch->SetAddress(&sim_lsIdxAll_);
+    }
+  }
+  sim_lsIdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_lsIdxAllFrac") != 0) {
+    sim_lsIdxAllFrac_branch = tree->GetBranch("sim_lsIdxAllFrac");
+    if (sim_lsIdxAllFrac_branch) {
+      sim_lsIdxAllFrac_branch->SetAddress(&sim_lsIdxAllFrac_);
+    }
+  }
+  sim_t3IdxAll_branch = 0;
+  if (tree->GetBranch("sim_t3IdxAll") != 0) {
+    sim_t3IdxAll_branch = tree->GetBranch("sim_t3IdxAll");
+    if (sim_t3IdxAll_branch) {
+      sim_t3IdxAll_branch->SetAddress(&sim_t3IdxAll_);
+    }
+  }
+  sim_t3IdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_t3IdxAllFrac") != 0) {
+    sim_t3IdxAllFrac_branch = tree->GetBranch("sim_t3IdxAllFrac");
+    if (sim_t3IdxAllFrac_branch) {
+      sim_t3IdxAllFrac_branch->SetAddress(&sim_t3IdxAllFrac_);
+    }
+  }
+  sim_t5IdxAll_branch = 0;
+  if (tree->GetBranch("sim_t5IdxAll") != 0) {
+    sim_t5IdxAll_branch = tree->GetBranch("sim_t5IdxAll");
+    if (sim_t5IdxAll_branch) {
+      sim_t5IdxAll_branch->SetAddress(&sim_t5IdxAll_);
+    }
+  }
+  sim_t5IdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_t5IdxAllFrac") != 0) {
+    sim_t5IdxAllFrac_branch = tree->GetBranch("sim_t5IdxAllFrac");
+    if (sim_t5IdxAllFrac_branch) {
+      sim_t5IdxAllFrac_branch->SetAddress(&sim_t5IdxAllFrac_);
+    }
+  }
+  sim_plsIdxAll_branch = 0;
+  if (tree->GetBranch("sim_plsIdxAll") != 0) {
+    sim_plsIdxAll_branch = tree->GetBranch("sim_plsIdxAll");
+    if (sim_plsIdxAll_branch) {
+      sim_plsIdxAll_branch->SetAddress(&sim_plsIdxAll_);
+    }
+  }
+  sim_plsIdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_plsIdxAllFrac") != 0) {
+    sim_plsIdxAllFrac_branch = tree->GetBranch("sim_plsIdxAllFrac");
+    if (sim_plsIdxAllFrac_branch) {
+      sim_plsIdxAllFrac_branch->SetAddress(&sim_plsIdxAllFrac_);
+    }
+  }
+  sim_pt3IdxAll_branch = 0;
+  if (tree->GetBranch("sim_pt3IdxAll") != 0) {
+    sim_pt3IdxAll_branch = tree->GetBranch("sim_pt3IdxAll");
+    if (sim_pt3IdxAll_branch) {
+      sim_pt3IdxAll_branch->SetAddress(&sim_pt3IdxAll_);
+    }
+  }
+  sim_pt3IdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_pt3IdxAllFrac") != 0) {
+    sim_pt3IdxAllFrac_branch = tree->GetBranch("sim_pt3IdxAllFrac");
+    if (sim_pt3IdxAllFrac_branch) {
+      sim_pt3IdxAllFrac_branch->SetAddress(&sim_pt3IdxAllFrac_);
+    }
+  }
+  sim_pt5IdxAll_branch = 0;
+  if (tree->GetBranch("sim_pt5IdxAll") != 0) {
+    sim_pt5IdxAll_branch = tree->GetBranch("sim_pt5IdxAll");
+    if (sim_pt5IdxAll_branch) {
+      sim_pt5IdxAll_branch->SetAddress(&sim_pt5IdxAll_);
+    }
+  }
+  sim_pt5IdxAllFrac_branch = 0;
+  if (tree->GetBranch("sim_pt5IdxAllFrac") != 0) {
+    sim_pt5IdxAllFrac_branch = tree->GetBranch("sim_pt5IdxAllFrac");
+    if (sim_pt5IdxAllFrac_branch) {
+      sim_pt5IdxAllFrac_branch->SetAddress(&sim_pt5IdxAllFrac_);
+    }
+  }
+  sim_simHitX_branch = 0;
+  if (tree->GetBranch("sim_simHitX") != 0) {
+    sim_simHitX_branch = tree->GetBranch("sim_simHitX");
+    if (sim_simHitX_branch) {
+      sim_simHitX_branch->SetAddress(&sim_simHitX_);
+    }
+  }
+  sim_simHitY_branch = 0;
+  if (tree->GetBranch("sim_simHitY") != 0) {
+    sim_simHitY_branch = tree->GetBranch("sim_simHitY");
+    if (sim_simHitY_branch) {
+      sim_simHitY_branch->SetAddress(&sim_simHitY_);
+    }
+  }
+  sim_simHitZ_branch = 0;
+  if (tree->GetBranch("sim_simHitZ") != 0) {
+    sim_simHitZ_branch = tree->GetBranch("sim_simHitZ");
+    if (sim_simHitZ_branch) {
+      sim_simHitZ_branch->SetAddress(&sim_simHitZ_);
+    }
+  }
+  sim_simHitDetId_branch = 0;
+  if (tree->GetBranch("sim_simHitDetId") != 0) {
+    sim_simHitDetId_branch = tree->GetBranch("sim_simHitDetId");
+    if (sim_simHitDetId_branch) {
+      sim_simHitDetId_branch->SetAddress(&sim_simHitDetId_);
+    }
+  }
+  sim_simHitLayer_branch = 0;
+  if (tree->GetBranch("sim_simHitLayer") != 0) {
+    sim_simHitLayer_branch = tree->GetBranch("sim_simHitLayer");
+    if (sim_simHitLayer_branch) {
+      sim_simHitLayer_branch->SetAddress(&sim_simHitLayer_);
+    }
+  }
+  sim_simHitDistxyHelix_branch = 0;
+  if (tree->GetBranch("sim_simHitDistxyHelix") != 0) {
+    sim_simHitDistxyHelix_branch = tree->GetBranch("sim_simHitDistxyHelix");
+    if (sim_simHitDistxyHelix_branch) {
+      sim_simHitDistxyHelix_branch->SetAddress(&sim_simHitDistxyHelix_);
+    }
+  }
+  sim_simHitLayerMinDistxyHelix_branch = 0;
+  if (tree->GetBranch("sim_simHitLayerMinDistxyHelix") != 0) {
+    sim_simHitLayerMinDistxyHelix_branch = tree->GetBranch("sim_simHitLayerMinDistxyHelix");
+    if (sim_simHitLayerMinDistxyHelix_branch) {
+      sim_simHitLayerMinDistxyHelix_branch->SetAddress(&sim_simHitLayerMinDistxyHelix_);
+    }
+  }
+  sim_recoHitX_branch = 0;
+  if (tree->GetBranch("sim_recoHitX") != 0) {
+    sim_recoHitX_branch = tree->GetBranch("sim_recoHitX");
+    if (sim_recoHitX_branch) {
+      sim_recoHitX_branch->SetAddress(&sim_recoHitX_);
+    }
+  }
+  sim_recoHitY_branch = 0;
+  if (tree->GetBranch("sim_recoHitY") != 0) {
+    sim_recoHitY_branch = tree->GetBranch("sim_recoHitY");
+    if (sim_recoHitY_branch) {
+      sim_recoHitY_branch->SetAddress(&sim_recoHitY_);
+    }
+  }
+  sim_recoHitZ_branch = 0;
+  if (tree->GetBranch("sim_recoHitZ") != 0) {
+    sim_recoHitZ_branch = tree->GetBranch("sim_recoHitZ");
+    if (sim_recoHitZ_branch) {
+      sim_recoHitZ_branch->SetAddress(&sim_recoHitZ_);
+    }
+  }
+  sim_recoHitDetId_branch = 0;
+  if (tree->GetBranch("sim_recoHitDetId") != 0) {
+    sim_recoHitDetId_branch = tree->GetBranch("sim_recoHitDetId");
+    if (sim_recoHitDetId_branch) {
+      sim_recoHitDetId_branch->SetAddress(&sim_recoHitDetId_);
+    }
+  }
+  tc_pt_branch = 0;
+  if (tree->GetBranch("tc_pt") != 0) {
+    tc_pt_branch = tree->GetBranch("tc_pt");
+    if (tc_pt_branch) {
+      tc_pt_branch->SetAddress(&tc_pt_);
+    }
+  }
+  tc_eta_branch = 0;
+  if (tree->GetBranch("tc_eta") != 0) {
+    tc_eta_branch = tree->GetBranch("tc_eta");
+    if (tc_eta_branch) {
+      tc_eta_branch->SetAddress(&tc_eta_);
+    }
+  }
+  tc_phi_branch = 0;
+  if (tree->GetBranch("tc_phi") != 0) {
+    tc_phi_branch = tree->GetBranch("tc_phi");
+    if (tc_phi_branch) {
+      tc_phi_branch->SetAddress(&tc_phi_);
+    }
+  }
+  tc_type_branch = 0;
+  if (tree->GetBranch("tc_type") != 0) {
+    tc_type_branch = tree->GetBranch("tc_type");
+    if (tc_type_branch) {
+      tc_type_branch->SetAddress(&tc_type_);
+    }
+  }
+  tc_pt5Idx_branch = 0;
+  if (tree->GetBranch("tc_pt5Idx") != 0) {
+    tc_pt5Idx_branch = tree->GetBranch("tc_pt5Idx");
+    if (tc_pt5Idx_branch) {
+      tc_pt5Idx_branch->SetAddress(&tc_pt5Idx_);
+    }
+  }
+  tc_pt3Idx_branch = 0;
+  if (tree->GetBranch("tc_pt3Idx") != 0) {
+    tc_pt3Idx_branch = tree->GetBranch("tc_pt3Idx");
+    if (tc_pt3Idx_branch) {
+      tc_pt3Idx_branch->SetAddress(&tc_pt3Idx_);
+    }
+  }
+  tc_t5Idx_branch = 0;
+  if (tree->GetBranch("tc_t5Idx") != 0) {
+    tc_t5Idx_branch = tree->GetBranch("tc_t5Idx");
+    if (tc_t5Idx_branch) {
+      tc_t5Idx_branch->SetAddress(&tc_t5Idx_);
+    }
+  }
+  tc_plsIdx_branch = 0;
+  if (tree->GetBranch("tc_plsIdx") != 0) {
+    tc_plsIdx_branch = tree->GetBranch("tc_plsIdx");
+    if (tc_plsIdx_branch) {
+      tc_plsIdx_branch->SetAddress(&tc_plsIdx_);
+    }
+  }
+  tc_isFake_branch = 0;
+  if (tree->GetBranch("tc_isFake") != 0) {
+    tc_isFake_branch = tree->GetBranch("tc_isFake");
+    if (tc_isFake_branch) {
+      tc_isFake_branch->SetAddress(&tc_isFake_);
+    }
+  }
+  tc_isDuplicate_branch = 0;
+  if (tree->GetBranch("tc_isDuplicate") != 0) {
+    tc_isDuplicate_branch = tree->GetBranch("tc_isDuplicate");
+    if (tc_isDuplicate_branch) {
+      tc_isDuplicate_branch->SetAddress(&tc_isDuplicate_);
+    }
+  }
+  tc_simIdx_branch = 0;
+  if (tree->GetBranch("tc_simIdx") != 0) {
+    tc_simIdx_branch = tree->GetBranch("tc_simIdx");
+    if (tc_simIdx_branch) {
+      tc_simIdx_branch->SetAddress(&tc_simIdx_);
+    }
+  }
+  tc_simIdxAll_branch = 0;
+  if (tree->GetBranch("tc_simIdxAll") != 0) {
+    tc_simIdxAll_branch = tree->GetBranch("tc_simIdxAll");
+    if (tc_simIdxAll_branch) {
+      tc_simIdxAll_branch->SetAddress(&tc_simIdxAll_);
+    }
+  }
+  tc_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("tc_simIdxAllFrac") != 0) {
+    tc_simIdxAllFrac_branch = tree->GetBranch("tc_simIdxAllFrac");
+    if (tc_simIdxAllFrac_branch) {
+      tc_simIdxAllFrac_branch->SetAddress(&tc_simIdxAllFrac_);
+    }
+  }
+  md_pt_branch = 0;
+  if (tree->GetBranch("md_pt") != 0) {
+    md_pt_branch = tree->GetBranch("md_pt");
+    if (md_pt_branch) {
+      md_pt_branch->SetAddress(&md_pt_);
+    }
+  }
+  md_eta_branch = 0;
+  if (tree->GetBranch("md_eta") != 0) {
+    md_eta_branch = tree->GetBranch("md_eta");
+    if (md_eta_branch) {
+      md_eta_branch->SetAddress(&md_eta_);
+    }
+  }
+  md_phi_branch = 0;
+  if (tree->GetBranch("md_phi") != 0) {
+    md_phi_branch = tree->GetBranch("md_phi");
+    if (md_phi_branch) {
+      md_phi_branch->SetAddress(&md_phi_);
+    }
+  }
+  md_anchor_x_branch = 0;
+  if (tree->GetBranch("md_anchor_x") != 0) {
+    md_anchor_x_branch = tree->GetBranch("md_anchor_x");
+    if (md_anchor_x_branch) {
+      md_anchor_x_branch->SetAddress(&md_anchor_x_);
+    }
+  }
+  md_anchor_y_branch = 0;
+  if (tree->GetBranch("md_anchor_y") != 0) {
+    md_anchor_y_branch = tree->GetBranch("md_anchor_y");
+    if (md_anchor_y_branch) {
+      md_anchor_y_branch->SetAddress(&md_anchor_y_);
+    }
+  }
+  md_anchor_z_branch = 0;
+  if (tree->GetBranch("md_anchor_z") != 0) {
+    md_anchor_z_branch = tree->GetBranch("md_anchor_z");
+    if (md_anchor_z_branch) {
+      md_anchor_z_branch->SetAddress(&md_anchor_z_);
+    }
+  }
+  md_other_x_branch = 0;
+  if (tree->GetBranch("md_other_x") != 0) {
+    md_other_x_branch = tree->GetBranch("md_other_x");
+    if (md_other_x_branch) {
+      md_other_x_branch->SetAddress(&md_other_x_);
+    }
+  }
+  md_other_y_branch = 0;
+  if (tree->GetBranch("md_other_y") != 0) {
+    md_other_y_branch = tree->GetBranch("md_other_y");
+    if (md_other_y_branch) {
+      md_other_y_branch->SetAddress(&md_other_y_);
+    }
+  }
+  md_other_z_branch = 0;
+  if (tree->GetBranch("md_other_z") != 0) {
+    md_other_z_branch = tree->GetBranch("md_other_z");
+    if (md_other_z_branch) {
+      md_other_z_branch->SetAddress(&md_other_z_);
+    }
+  }
+  md_type_branch = 0;
+  if (tree->GetBranch("md_type") != 0) {
+    md_type_branch = tree->GetBranch("md_type");
+    if (md_type_branch) {
+      md_type_branch->SetAddress(&md_type_);
+    }
+  }
+  md_layer_branch = 0;
+  if (tree->GetBranch("md_layer") != 0) {
+    md_layer_branch = tree->GetBranch("md_layer");
+    if (md_layer_branch) {
+      md_layer_branch->SetAddress(&md_layer_);
+    }
+  }
+  md_detId_branch = 0;
+  if (tree->GetBranch("md_detId") != 0) {
+    md_detId_branch = tree->GetBranch("md_detId");
+    if (md_detId_branch) {
+      md_detId_branch->SetAddress(&md_detId_);
+    }
+  }
+  md_isFake_branch = 0;
+  if (tree->GetBranch("md_isFake") != 0) {
+    md_isFake_branch = tree->GetBranch("md_isFake");
+    if (md_isFake_branch) {
+      md_isFake_branch->SetAddress(&md_isFake_);
+    }
+  }
+  md_simIdx_branch = 0;
+  if (tree->GetBranch("md_simIdx") != 0) {
+    md_simIdx_branch = tree->GetBranch("md_simIdx");
+    if (md_simIdx_branch) {
+      md_simIdx_branch->SetAddress(&md_simIdx_);
+    }
+  }
+  md_simIdxAll_branch = 0;
+  if (tree->GetBranch("md_simIdxAll") != 0) {
+    md_simIdxAll_branch = tree->GetBranch("md_simIdxAll");
+    if (md_simIdxAll_branch) {
+      md_simIdxAll_branch->SetAddress(&md_simIdxAll_);
+    }
+  }
+  md_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("md_simIdxAllFrac") != 0) {
+    md_simIdxAllFrac_branch = tree->GetBranch("md_simIdxAllFrac");
+    if (md_simIdxAllFrac_branch) {
+      md_simIdxAllFrac_branch->SetAddress(&md_simIdxAllFrac_);
+    }
+  }
+  ls_pt_branch = 0;
+  if (tree->GetBranch("ls_pt") != 0) {
+    ls_pt_branch = tree->GetBranch("ls_pt");
+    if (ls_pt_branch) {
+      ls_pt_branch->SetAddress(&ls_pt_);
+    }
+  }
+  ls_eta_branch = 0;
+  if (tree->GetBranch("ls_eta") != 0) {
+    ls_eta_branch = tree->GetBranch("ls_eta");
+    if (ls_eta_branch) {
+      ls_eta_branch->SetAddress(&ls_eta_);
+    }
+  }
+  ls_phi_branch = 0;
+  if (tree->GetBranch("ls_phi") != 0) {
+    ls_phi_branch = tree->GetBranch("ls_phi");
+    if (ls_phi_branch) {
+      ls_phi_branch->SetAddress(&ls_phi_);
+    }
+  }
+  ls_mdIdx0_branch = 0;
+  if (tree->GetBranch("ls_mdIdx0") != 0) {
+    ls_mdIdx0_branch = tree->GetBranch("ls_mdIdx0");
+    if (ls_mdIdx0_branch) {
+      ls_mdIdx0_branch->SetAddress(&ls_mdIdx0_);
+    }
+  }
+  ls_mdIdx1_branch = 0;
+  if (tree->GetBranch("ls_mdIdx1") != 0) {
+    ls_mdIdx1_branch = tree->GetBranch("ls_mdIdx1");
+    if (ls_mdIdx1_branch) {
+      ls_mdIdx1_branch->SetAddress(&ls_mdIdx1_);
+    }
+  }
+  ls_isFake_branch = 0;
+  if (tree->GetBranch("ls_isFake") != 0) {
+    ls_isFake_branch = tree->GetBranch("ls_isFake");
+    if (ls_isFake_branch) {
+      ls_isFake_branch->SetAddress(&ls_isFake_);
+    }
+  }
+  ls_simIdx_branch = 0;
+  if (tree->GetBranch("ls_simIdx") != 0) {
+    ls_simIdx_branch = tree->GetBranch("ls_simIdx");
+    if (ls_simIdx_branch) {
+      ls_simIdx_branch->SetAddress(&ls_simIdx_);
+    }
+  }
+  ls_simIdxAll_branch = 0;
+  if (tree->GetBranch("ls_simIdxAll") != 0) {
+    ls_simIdxAll_branch = tree->GetBranch("ls_simIdxAll");
+    if (ls_simIdxAll_branch) {
+      ls_simIdxAll_branch->SetAddress(&ls_simIdxAll_);
+    }
+  }
+  ls_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("ls_simIdxAllFrac") != 0) {
+    ls_simIdxAllFrac_branch = tree->GetBranch("ls_simIdxAllFrac");
+    if (ls_simIdxAllFrac_branch) {
+      ls_simIdxAllFrac_branch->SetAddress(&ls_simIdxAllFrac_);
     }
   }
   t3_pt_branch = 0;
@@ -962,825 +556,849 @@ void LSTEff::Init(TTree *tree) {
       t3_pt_branch->SetAddress(&t3_pt_);
     }
   }
-  module_rings_branch = 0;
-  if (tree->GetBranch("module_rings") != 0) {
-    module_rings_branch = tree->GetBranch("module_rings");
-    if (module_rings_branch) {
-      module_rings_branch->SetAddress(&module_rings_);
+  t3_eta_branch = 0;
+  if (tree->GetBranch("t3_eta") != 0) {
+    t3_eta_branch = tree->GetBranch("t3_eta");
+    if (t3_eta_branch) {
+      t3_eta_branch->SetAddress(&t3_eta_);
     }
   }
-  sim_T3_types_branch = 0;
-  if (tree->GetBranch("sim_T3_types") != 0) {
-    sim_T3_types_branch = tree->GetBranch("sim_T3_types");
-    if (sim_T3_types_branch) {
-      sim_T3_types_branch->SetAddress(&sim_T3_types_);
+  t3_phi_branch = 0;
+  if (tree->GetBranch("t3_phi") != 0) {
+    t3_phi_branch = tree->GetBranch("t3_phi");
+    if (t3_phi_branch) {
+      t3_phi_branch->SetAddress(&t3_phi_);
     }
   }
-  sim_pT5_types_branch = 0;
-  if (tree->GetBranch("sim_pT5_types") != 0) {
-    sim_pT5_types_branch = tree->GetBranch("sim_pT5_types");
-    if (sim_pT5_types_branch) {
-      sim_pT5_types_branch->SetAddress(&sim_pT5_types_);
+  t3_lsIdx0_branch = 0;
+  if (tree->GetBranch("t3_lsIdx0") != 0) {
+    t3_lsIdx0_branch = tree->GetBranch("t3_lsIdx0");
+    if (t3_lsIdx0_branch) {
+      t3_lsIdx0_branch->SetAddress(&t3_lsIdx0_);
     }
   }
-  sim_pT5_matched_branch = 0;
-  if (tree->GetBranch("sim_pT5_matched") != 0) {
-    sim_pT5_matched_branch = tree->GetBranch("sim_pT5_matched");
-    if (sim_pT5_matched_branch) {
-      sim_pT5_matched_branch->SetAddress(&sim_pT5_matched_);
+  t3_lsIdx1_branch = 0;
+  if (tree->GetBranch("t3_lsIdx1") != 0) {
+    t3_lsIdx1_branch = tree->GetBranch("t3_lsIdx1");
+    if (t3_lsIdx1_branch) {
+      t3_lsIdx1_branch->SetAddress(&t3_lsIdx1_);
     }
   }
-  module_layers_branch = 0;
-  if (tree->GetBranch("module_layers") != 0) {
-    module_layers_branch = tree->GetBranch("module_layers");
-    if (module_layers_branch) {
-      module_layers_branch->SetAddress(&module_layers_);
+  t3_isFake_branch = 0;
+  if (tree->GetBranch("t3_isFake") != 0) {
+    t3_isFake_branch = tree->GetBranch("t3_isFake");
+    if (t3_isFake_branch) {
+      t3_isFake_branch->SetAddress(&t3_isFake_);
     }
   }
-  pT4_eta_branch = 0;
-  if (tree->GetBranch("pT4_eta") != 0) {
-    pT4_eta_branch = tree->GetBranch("pT4_eta");
-    if (pT4_eta_branch) {
-      pT4_eta_branch->SetAddress(&pT4_eta_);
+  t3_isDuplicate_branch = 0;
+  if (tree->GetBranch("t3_isDuplicate") != 0) {
+    t3_isDuplicate_branch = tree->GetBranch("t3_isDuplicate");
+    if (t3_isDuplicate_branch) {
+      t3_isDuplicate_branch->SetAddress(&t3_isDuplicate_);
     }
   }
-  sim_tce_types_branch = 0;
-  if (tree->GetBranch("sim_tce_types") != 0) {
-    sim_tce_types_branch = tree->GetBranch("sim_tce_types");
-    if (sim_tce_types_branch) {
-      sim_tce_types_branch->SetAddress(&sim_tce_types_);
+  t3_simIdx_branch = 0;
+  if (tree->GetBranch("t3_simIdx") != 0) {
+    t3_simIdx_branch = tree->GetBranch("t3_simIdx");
+    if (t3_simIdx_branch) {
+      t3_simIdx_branch->SetAddress(&t3_simIdx_);
     }
   }
-  tce_rzChiSquared_branch = 0;
-  if (tree->GetBranch("tce_rzChiSquared") != 0) {
-    tce_rzChiSquared_branch = tree->GetBranch("tce_rzChiSquared");
-    if (tce_rzChiSquared_branch) {
-      tce_rzChiSquared_branch->SetAddress(&tce_rzChiSquared_);
+  t3_simIdxAll_branch = 0;
+  if (tree->GetBranch("t3_simIdxAll") != 0) {
+    t3_simIdxAll_branch = tree->GetBranch("t3_simIdxAll");
+    if (t3_simIdxAll_branch) {
+      t3_simIdxAll_branch->SetAddress(&t3_simIdxAll_);
     }
   }
-  pT3_matched_simIdx_branch = 0;
-  if (tree->GetBranch("pT3_matched_simIdx") != 0) {
-    pT3_matched_simIdx_branch = tree->GetBranch("pT3_matched_simIdx");
-    if (pT3_matched_simIdx_branch) {
-      pT3_matched_simIdx_branch->SetAddress(&pT3_matched_simIdx_);
+  t3_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("t3_simIdxAllFrac") != 0) {
+    t3_simIdxAllFrac_branch = tree->GetBranch("t3_simIdxAllFrac");
+    if (t3_simIdxAllFrac_branch) {
+      t3_simIdxAllFrac_branch->SetAddress(&t3_simIdxAllFrac_);
+    }
+  }
+  t5_pt_branch = 0;
+  if (tree->GetBranch("t5_pt") != 0) {
+    t5_pt_branch = tree->GetBranch("t5_pt");
+    if (t5_pt_branch) {
+      t5_pt_branch->SetAddress(&t5_pt_);
+    }
+  }
+  t5_eta_branch = 0;
+  if (tree->GetBranch("t5_eta") != 0) {
+    t5_eta_branch = tree->GetBranch("t5_eta");
+    if (t5_eta_branch) {
+      t5_eta_branch->SetAddress(&t5_eta_);
+    }
+  }
+  t5_phi_branch = 0;
+  if (tree->GetBranch("t5_phi") != 0) {
+    t5_phi_branch = tree->GetBranch("t5_phi");
+    if (t5_phi_branch) {
+      t5_phi_branch->SetAddress(&t5_phi_);
+    }
+  }
+  t5_t3Idx0_branch = 0;
+  if (tree->GetBranch("t5_t3Idx0") != 0) {
+    t5_t3Idx0_branch = tree->GetBranch("t5_t3Idx0");
+    if (t5_t3Idx0_branch) {
+      t5_t3Idx0_branch->SetAddress(&t5_t3Idx0_);
+    }
+  }
+  t5_t3Idx1_branch = 0;
+  if (tree->GetBranch("t5_t3Idx1") != 0) {
+    t5_t3Idx1_branch = tree->GetBranch("t5_t3Idx1");
+    if (t5_t3Idx1_branch) {
+      t5_t3Idx1_branch->SetAddress(&t5_t3Idx1_);
+    }
+  }
+  t5_isFake_branch = 0;
+  if (tree->GetBranch("t5_isFake") != 0) {
+    t5_isFake_branch = tree->GetBranch("t5_isFake");
+    if (t5_isFake_branch) {
+      t5_isFake_branch->SetAddress(&t5_isFake_);
+    }
+  }
+  t5_isDuplicate_branch = 0;
+  if (tree->GetBranch("t5_isDuplicate") != 0) {
+    t5_isDuplicate_branch = tree->GetBranch("t5_isDuplicate");
+    if (t5_isDuplicate_branch) {
+      t5_isDuplicate_branch->SetAddress(&t5_isDuplicate_);
+    }
+  }
+  t5_simIdx_branch = 0;
+  if (tree->GetBranch("t5_simIdx") != 0) {
+    t5_simIdx_branch = tree->GetBranch("t5_simIdx");
+    if (t5_simIdx_branch) {
+      t5_simIdx_branch->SetAddress(&t5_simIdx_);
+    }
+  }
+  t5_simIdxAll_branch = 0;
+  if (tree->GetBranch("t5_simIdxAll") != 0) {
+    t5_simIdxAll_branch = tree->GetBranch("t5_simIdxAll");
+    if (t5_simIdxAll_branch) {
+      t5_simIdxAll_branch->SetAddress(&t5_simIdxAll_);
+    }
+  }
+  t5_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("t5_simIdxAllFrac") != 0) {
+    t5_simIdxAllFrac_branch = tree->GetBranch("t5_simIdxAllFrac");
+    if (t5_simIdxAllFrac_branch) {
+      t5_simIdxAllFrac_branch->SetAddress(&t5_simIdxAllFrac_);
+    }
+  }
+  pls_pt_branch = 0;
+  if (tree->GetBranch("pls_pt") != 0) {
+    pls_pt_branch = tree->GetBranch("pls_pt");
+    if (pls_pt_branch) {
+      pls_pt_branch->SetAddress(&pls_pt_);
+    }
+  }
+  pls_eta_branch = 0;
+  if (tree->GetBranch("pls_eta") != 0) {
+    pls_eta_branch = tree->GetBranch("pls_eta");
+    if (pls_eta_branch) {
+      pls_eta_branch->SetAddress(&pls_eta_);
+    }
+  }
+  pls_phi_branch = 0;
+  if (tree->GetBranch("pls_phi") != 0) {
+    pls_phi_branch = tree->GetBranch("pls_phi");
+    if (pls_phi_branch) {
+      pls_phi_branch->SetAddress(&pls_phi_);
+    }
+  }
+  pls_nhit_branch = 0;
+  if (tree->GetBranch("pls_nhit") != 0) {
+    pls_nhit_branch = tree->GetBranch("pls_nhit");
+    if (pls_nhit_branch) {
+      pls_nhit_branch->SetAddress(&pls_nhit_);
+    }
+  }
+  pls_hit0_x_branch = 0;
+  if (tree->GetBranch("pls_hit0_x") != 0) {
+    pls_hit0_x_branch = tree->GetBranch("pls_hit0_x");
+    if (pls_hit0_x_branch) {
+      pls_hit0_x_branch->SetAddress(&pls_hit0_x_);
+    }
+  }
+  pls_hit0_y_branch = 0;
+  if (tree->GetBranch("pls_hit0_y") != 0) {
+    pls_hit0_y_branch = tree->GetBranch("pls_hit0_y");
+    if (pls_hit0_y_branch) {
+      pls_hit0_y_branch->SetAddress(&pls_hit0_y_);
+    }
+  }
+  pls_hit0_z_branch = 0;
+  if (tree->GetBranch("pls_hit0_z") != 0) {
+    pls_hit0_z_branch = tree->GetBranch("pls_hit0_z");
+    if (pls_hit0_z_branch) {
+      pls_hit0_z_branch->SetAddress(&pls_hit0_z_);
+    }
+  }
+  pls_hit1_x_branch = 0;
+  if (tree->GetBranch("pls_hit1_x") != 0) {
+    pls_hit1_x_branch = tree->GetBranch("pls_hit1_x");
+    if (pls_hit1_x_branch) {
+      pls_hit1_x_branch->SetAddress(&pls_hit1_x_);
+    }
+  }
+  pls_hit1_y_branch = 0;
+  if (tree->GetBranch("pls_hit1_y") != 0) {
+    pls_hit1_y_branch = tree->GetBranch("pls_hit1_y");
+    if (pls_hit1_y_branch) {
+      pls_hit1_y_branch->SetAddress(&pls_hit1_y_);
+    }
+  }
+  pls_hit1_z_branch = 0;
+  if (tree->GetBranch("pls_hit1_z") != 0) {
+    pls_hit1_z_branch = tree->GetBranch("pls_hit1_z");
+    if (pls_hit1_z_branch) {
+      pls_hit1_z_branch->SetAddress(&pls_hit1_z_);
+    }
+  }
+  pls_hit2_x_branch = 0;
+  if (tree->GetBranch("pls_hit2_x") != 0) {
+    pls_hit2_x_branch = tree->GetBranch("pls_hit2_x");
+    if (pls_hit2_x_branch) {
+      pls_hit2_x_branch->SetAddress(&pls_hit2_x_);
+    }
+  }
+  pls_hit2_y_branch = 0;
+  if (tree->GetBranch("pls_hit2_y") != 0) {
+    pls_hit2_y_branch = tree->GetBranch("pls_hit2_y");
+    if (pls_hit2_y_branch) {
+      pls_hit2_y_branch->SetAddress(&pls_hit2_y_);
+    }
+  }
+  pls_hit2_z_branch = 0;
+  if (tree->GetBranch("pls_hit2_z") != 0) {
+    pls_hit2_z_branch = tree->GetBranch("pls_hit2_z");
+    if (pls_hit2_z_branch) {
+      pls_hit2_z_branch->SetAddress(&pls_hit2_z_);
+    }
+  }
+  pls_hit3_x_branch = 0;
+  if (tree->GetBranch("pls_hit3_x") != 0) {
+    pls_hit3_x_branch = tree->GetBranch("pls_hit3_x");
+    if (pls_hit3_x_branch) {
+      pls_hit3_x_branch->SetAddress(&pls_hit3_x_);
+    }
+  }
+  pls_hit3_y_branch = 0;
+  if (tree->GetBranch("pls_hit3_y") != 0) {
+    pls_hit3_y_branch = tree->GetBranch("pls_hit3_y");
+    if (pls_hit3_y_branch) {
+      pls_hit3_y_branch->SetAddress(&pls_hit3_y_);
+    }
+  }
+  pls_hit3_z_branch = 0;
+  if (tree->GetBranch("pls_hit3_z") != 0) {
+    pls_hit3_z_branch = tree->GetBranch("pls_hit3_z");
+    if (pls_hit3_z_branch) {
+      pls_hit3_z_branch->SetAddress(&pls_hit3_z_);
+    }
+  }
+  pls_isFake_branch = 0;
+  if (tree->GetBranch("pls_isFake") != 0) {
+    pls_isFake_branch = tree->GetBranch("pls_isFake");
+    if (pls_isFake_branch) {
+      pls_isFake_branch->SetAddress(&pls_isFake_);
+    }
+  }
+  pls_isDuplicate_branch = 0;
+  if (tree->GetBranch("pls_isDuplicate") != 0) {
+    pls_isDuplicate_branch = tree->GetBranch("pls_isDuplicate");
+    if (pls_isDuplicate_branch) {
+      pls_isDuplicate_branch->SetAddress(&pls_isDuplicate_);
+    }
+  }
+  pls_simIdx_branch = 0;
+  if (tree->GetBranch("pls_simIdx") != 0) {
+    pls_simIdx_branch = tree->GetBranch("pls_simIdx");
+    if (pls_simIdx_branch) {
+      pls_simIdx_branch->SetAddress(&pls_simIdx_);
+    }
+  }
+  pls_simIdxAll_branch = 0;
+  if (tree->GetBranch("pls_simIdxAll") != 0) {
+    pls_simIdxAll_branch = tree->GetBranch("pls_simIdxAll");
+    if (pls_simIdxAll_branch) {
+      pls_simIdxAll_branch->SetAddress(&pls_simIdxAll_);
+    }
+  }
+  pls_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("pls_simIdxAllFrac") != 0) {
+    pls_simIdxAllFrac_branch = tree->GetBranch("pls_simIdxAllFrac");
+    if (pls_simIdxAllFrac_branch) {
+      pls_simIdxAllFrac_branch->SetAddress(&pls_simIdxAllFrac_);
+    }
+  }
+  pt3_pt_branch = 0;
+  if (tree->GetBranch("pt3_pt") != 0) {
+    pt3_pt_branch = tree->GetBranch("pt3_pt");
+    if (pt3_pt_branch) {
+      pt3_pt_branch->SetAddress(&pt3_pt_);
+    }
+  }
+  pt3_eta_branch = 0;
+  if (tree->GetBranch("pt3_eta") != 0) {
+    pt3_eta_branch = tree->GetBranch("pt3_eta");
+    if (pt3_eta_branch) {
+      pt3_eta_branch->SetAddress(&pt3_eta_);
+    }
+  }
+  pt3_phi_branch = 0;
+  if (tree->GetBranch("pt3_phi") != 0) {
+    pt3_phi_branch = tree->GetBranch("pt3_phi");
+    if (pt3_phi_branch) {
+      pt3_phi_branch->SetAddress(&pt3_phi_);
+    }
+  }
+  pt3_plsIdx_branch = 0;
+  if (tree->GetBranch("pt3_plsIdx") != 0) {
+    pt3_plsIdx_branch = tree->GetBranch("pt3_plsIdx");
+    if (pt3_plsIdx_branch) {
+      pt3_plsIdx_branch->SetAddress(&pt3_plsIdx_);
+    }
+  }
+  pt3_t3Idx_branch = 0;
+  if (tree->GetBranch("pt3_t3Idx") != 0) {
+    pt3_t3Idx_branch = tree->GetBranch("pt3_t3Idx");
+    if (pt3_t3Idx_branch) {
+      pt3_t3Idx_branch->SetAddress(&pt3_t3Idx_);
+    }
+  }
+  pt3_isFake_branch = 0;
+  if (tree->GetBranch("pt3_isFake") != 0) {
+    pt3_isFake_branch = tree->GetBranch("pt3_isFake");
+    if (pt3_isFake_branch) {
+      pt3_isFake_branch->SetAddress(&pt3_isFake_);
+    }
+  }
+  pt3_isDuplicate_branch = 0;
+  if (tree->GetBranch("pt3_isDuplicate") != 0) {
+    pt3_isDuplicate_branch = tree->GetBranch("pt3_isDuplicate");
+    if (pt3_isDuplicate_branch) {
+      pt3_isDuplicate_branch->SetAddress(&pt3_isDuplicate_);
+    }
+  }
+  pt3_simIdx_branch = 0;
+  if (tree->GetBranch("pt3_simIdx") != 0) {
+    pt3_simIdx_branch = tree->GetBranch("pt3_simIdx");
+    if (pt3_simIdx_branch) {
+      pt3_simIdx_branch->SetAddress(&pt3_simIdx_);
+    }
+  }
+  pt3_simIdxAll_branch = 0;
+  if (tree->GetBranch("pt3_simIdxAll") != 0) {
+    pt3_simIdxAll_branch = tree->GetBranch("pt3_simIdxAll");
+    if (pt3_simIdxAll_branch) {
+      pt3_simIdxAll_branch->SetAddress(&pt3_simIdxAll_);
+    }
+  }
+  pt3_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("pt3_simIdxAllFrac") != 0) {
+    pt3_simIdxAllFrac_branch = tree->GetBranch("pt3_simIdxAllFrac");
+    if (pt3_simIdxAllFrac_branch) {
+      pt3_simIdxAllFrac_branch->SetAddress(&pt3_simIdxAllFrac_);
+    }
+  }
+  pt5_pt_branch = 0;
+  if (tree->GetBranch("pt5_pt") != 0) {
+    pt5_pt_branch = tree->GetBranch("pt5_pt");
+    if (pt5_pt_branch) {
+      pt5_pt_branch->SetAddress(&pt5_pt_);
+    }
+  }
+  pt5_eta_branch = 0;
+  if (tree->GetBranch("pt5_eta") != 0) {
+    pt5_eta_branch = tree->GetBranch("pt5_eta");
+    if (pt5_eta_branch) {
+      pt5_eta_branch->SetAddress(&pt5_eta_);
+    }
+  }
+  pt5_phi_branch = 0;
+  if (tree->GetBranch("pt5_phi") != 0) {
+    pt5_phi_branch = tree->GetBranch("pt5_phi");
+    if (pt5_phi_branch) {
+      pt5_phi_branch->SetAddress(&pt5_phi_);
+    }
+  }
+  pt5_plsIdx_branch = 0;
+  if (tree->GetBranch("pt5_plsIdx") != 0) {
+    pt5_plsIdx_branch = tree->GetBranch("pt5_plsIdx");
+    if (pt5_plsIdx_branch) {
+      pt5_plsIdx_branch->SetAddress(&pt5_plsIdx_);
+    }
+  }
+  pt5_t5Idx_branch = 0;
+  if (tree->GetBranch("pt5_t5Idx") != 0) {
+    pt5_t5Idx_branch = tree->GetBranch("pt5_t5Idx");
+    if (pt5_t5Idx_branch) {
+      pt5_t5Idx_branch->SetAddress(&pt5_t5Idx_);
+    }
+  }
+  pt5_isFake_branch = 0;
+  if (tree->GetBranch("pt5_isFake") != 0) {
+    pt5_isFake_branch = tree->GetBranch("pt5_isFake");
+    if (pt5_isFake_branch) {
+      pt5_isFake_branch->SetAddress(&pt5_isFake_);
+    }
+  }
+  pt5_isDuplicate_branch = 0;
+  if (tree->GetBranch("pt5_isDuplicate") != 0) {
+    pt5_isDuplicate_branch = tree->GetBranch("pt5_isDuplicate");
+    if (pt5_isDuplicate_branch) {
+      pt5_isDuplicate_branch->SetAddress(&pt5_isDuplicate_);
+    }
+  }
+  pt5_simIdx_branch = 0;
+  if (tree->GetBranch("pt5_simIdx") != 0) {
+    pt5_simIdx_branch = tree->GetBranch("pt5_simIdx");
+    if (pt5_simIdx_branch) {
+      pt5_simIdx_branch->SetAddress(&pt5_simIdx_);
+    }
+  }
+  pt5_simIdxAll_branch = 0;
+  if (tree->GetBranch("pt5_simIdxAll") != 0) {
+    pt5_simIdxAll_branch = tree->GetBranch("pt5_simIdxAll");
+    if (pt5_simIdxAll_branch) {
+      pt5_simIdxAll_branch->SetAddress(&pt5_simIdxAll_);
+    }
+  }
+  pt5_simIdxAllFrac_branch = 0;
+  if (tree->GetBranch("pt5_simIdxAllFrac") != 0) {
+    pt5_simIdxAllFrac_branch = tree->GetBranch("pt5_simIdxAllFrac");
+    if (pt5_simIdxAllFrac_branch) {
+      pt5_simIdxAllFrac_branch->SetAddress(&pt5_simIdxAllFrac_);
     }
   }
   tree->SetMakeClass(0);
 }
 void LSTEff::GetEntry(unsigned int idx) {
   index = idx;
-  pT5_occupancies_isLoaded = false;
-  t3_phi_isLoaded = false;
-  t5_score_rphisum_isLoaded = false;
-  pT4_isFake_isLoaded = false;
-  t3_isDuplicate_isLoaded = false;
-  sim_event_isLoaded = false;
-  sim_q_isLoaded = false;
-  sim_eta_isLoaded = false;
-  pT3_foundDuplicate_isLoaded = false;
-  sim_len_isLoaded = false;
-  pureTCE_isDuplicate_isLoaded = false;
-  pT3_score_isLoaded = false;
-  t5_eta_isLoaded = false;
-  sim_denom_isLoaded = false;
-  pT5_isDuplicate_isLoaded = false;
-  sim_tce_matched_isLoaded = false;
-  pT3_isDuplicate_isLoaded = false;
-  tc_isDuplicate_isLoaded = false;
-  pT3_eta_2_isLoaded = false;
-  sim_pT3_matched_isLoaded = false;
-  pureTCE_rzChiSquared_isLoaded = false;
-  t4_isDuplicate_isLoaded = false;
-  pureTCE_eta_isLoaded = false;
-  tce_rPhiChiSquared_isLoaded = false;
-  pureTCE_anchorType_isLoaded = false;
-  pureTCE_pt_isLoaded = false;
   sim_pt_isLoaded = false;
-  t5_eta_2_isLoaded = false;
-  pLS_eta_isLoaded = false;
-  sim_pdgId_isLoaded = false;
-  t3_eta_isLoaded = false;
-  tce_layer_binary_isLoaded = false;
-  sim_TC_matched_nonextended_isLoaded = false;
-  t4_occupancies_isLoaded = false;
-  tce_eta_isLoaded = false;
-  tce_isDuplicate_isLoaded = false;
-  pT5_matched_simIdx_isLoaded = false;
-  sim_tcIdx_isLoaded = false;
-  t5_phi_2_isLoaded = false;
-  pureTCE_maxHitMatchedCounts_isLoaded = false;
-  t5_matched_simIdx_isLoaded = false;
-  module_subdets_isLoaded = false;
-  tce_anchorType_isLoaded = false;
-  tce_nHitOverlaps_isLoaded = false;
-  t3_isFake_isLoaded = false;
-  tce_phi_isLoaded = false;
-  t5_isFake_isLoaded = false;
-  md_occupancies_isLoaded = false;
-  t5_hitIdxs_isLoaded = false;
-  sim_pT3_types_isLoaded = false;
-  sim_pureTCE_types_isLoaded = false;
-  t4_phi_isLoaded = false;
-  t5_phi_isLoaded = false;
-  pT5_hitIdxs_isLoaded = false;
-  t5_pt_isLoaded = false;
-  pT5_phi_isLoaded = false;
-  pureTCE_isFake_isLoaded = false;
-  tce_pt_isLoaded = false;
-  tc_isFake_isLoaded = false;
-  pT3_isFake_isLoaded = false;
-  tce_nLayerOverlaps_isLoaded = false;
-  tc_sim_isLoaded = false;
-  sim_pLS_types_isLoaded = false;
-  sim_pca_dxy_isLoaded = false;
-  pT4_phi_isLoaded = false;
-  sim_hits_isLoaded = false;
-  pLS_phi_isLoaded = false;
-  sim_pureTCE_matched_isLoaded = false;
-  t3_occupancies_isLoaded = false;
-  t5_foundDuplicate_isLoaded = false;
-  sim_pT4_types_isLoaded = false;
-  t4_isFake_isLoaded = false;
-  simvtx_x_isLoaded = false;
-  simvtx_y_isLoaded = false;
-  simvtx_z_isLoaded = false;
-  sim_T4_matched_isLoaded = false;
-  sim_isGood_isLoaded = false;
-  pT3_pt_isLoaded = false;
-  tc_pt_isLoaded = false;
-  pT3_phi_2_isLoaded = false;
-  pT5_pt_isLoaded = false;
-  pureTCE_rPhiChiSquared_isLoaded = false;
-  pT5_score_isLoaded = false;
+  sim_eta_isLoaded = false;
   sim_phi_isLoaded = false;
-  pT5_isFake_isLoaded = false;
-  tc_maxHitMatchedCounts_isLoaded = false;
-  pureTCE_nLayerOverlaps_isLoaded = false;
+  sim_pca_dxy_isLoaded = false;
   sim_pca_dz_isLoaded = false;
-  pureTCE_hitIdxs_isLoaded = false;
-  pureTCE_nHitOverlaps_isLoaded = false;
-  sim_pLS_matched_isLoaded = false;
-  tc_matched_simIdx_isLoaded = false;
-  sim_T3_matched_isLoaded = false;
-  pLS_score_isLoaded = false;
-  pT3_phi_isLoaded = false;
-  pT5_eta_isLoaded = false;
-  tc_phi_isLoaded = false;
-  t4_eta_isLoaded = false;
-  pLS_isFake_isLoaded = false;
-  pureTCE_matched_simIdx_isLoaded = false;
-  sim_bunchCrossing_isLoaded = false;
-  tc_partOfExtension_isLoaded = false;
-  pT3_eta_isLoaded = false;
-  sim_parentVtxIdx_isLoaded = false;
-  pureTCE_layer_binary_isLoaded = false;
-  sim_pT4_matched_isLoaded = false;
-  tc_eta_isLoaded = false;
-  sim_lengap_isLoaded = false;
-  sim_T5_matched_isLoaded = false;
-  sim_T5_types_isLoaded = false;
-  tce_matched_simIdx_isLoaded = false;
-  t5_isDuplicate_isLoaded = false;
-  pT3_hitIdxs_isLoaded = false;
-  tc_hitIdxs_isLoaded = false;
-  pT3_occupancies_isLoaded = false;
-  tc_occupancies_isLoaded = false;
-  sim_TC_matched_isLoaded = false;
-  sim_TC_matched_mask_isLoaded = false;
-  pLS_isDuplicate_isLoaded = false;
-  tce_anchorIndex_isLoaded = false;
-  t5_occupancies_isLoaded = false;
-  tc_type_isLoaded = false;
-  tce_isFake_isLoaded = false;
-  pLS_pt_isLoaded = false;
-  pureTCE_anchorIndex_isLoaded = false;
-  sim_T4_types_isLoaded = false;
-  pT4_isDuplicate_isLoaded = false;
-  t4_pt_isLoaded = false;
-  sim_TC_types_isLoaded = false;
-  sg_occupancies_isLoaded = false;
-  pT4_pt_isLoaded = false;
-  pureTCE_phi_isLoaded = false;
+  sim_q_isLoaded = false;
+  sim_pdgId_isLoaded = false;
   sim_vx_isLoaded = false;
   sim_vy_isLoaded = false;
   sim_vz_isLoaded = false;
-  tce_maxHitMatchedCounts_isLoaded = false;
+  sim_vtxperp_isLoaded = false;
+  sim_trkNtupIdx_isLoaded = false;
+  sim_tcIdx_isLoaded = false;
+  sim_tcIdxAll_isLoaded = false;
+  sim_tcIdxAllFrac_isLoaded = false;
+  sim_mdIdxAll_isLoaded = false;
+  sim_mdIdxAllFrac_isLoaded = false;
+  sim_lsIdxAll_isLoaded = false;
+  sim_lsIdxAllFrac_isLoaded = false;
+  sim_t3IdxAll_isLoaded = false;
+  sim_t3IdxAllFrac_isLoaded = false;
+  sim_t5IdxAll_isLoaded = false;
+  sim_t5IdxAllFrac_isLoaded = false;
+  sim_plsIdxAll_isLoaded = false;
+  sim_plsIdxAllFrac_isLoaded = false;
+  sim_pt3IdxAll_isLoaded = false;
+  sim_pt3IdxAllFrac_isLoaded = false;
+  sim_pt5IdxAll_isLoaded = false;
+  sim_pt5IdxAllFrac_isLoaded = false;
+  sim_simHitX_isLoaded = false;
+  sim_simHitY_isLoaded = false;
+  sim_simHitZ_isLoaded = false;
+  sim_simHitDetId_isLoaded = false;
+  sim_simHitLayer_isLoaded = false;
+  sim_simHitDistxyHelix_isLoaded = false;
+  sim_simHitLayerMinDistxyHelix_isLoaded = false;
+  sim_recoHitX_isLoaded = false;
+  sim_recoHitY_isLoaded = false;
+  sim_recoHitZ_isLoaded = false;
+  sim_recoHitDetId_isLoaded = false;
+  tc_pt_isLoaded = false;
+  tc_eta_isLoaded = false;
+  tc_phi_isLoaded = false;
+  tc_type_isLoaded = false;
+  tc_pt5Idx_isLoaded = false;
+  tc_pt3Idx_isLoaded = false;
+  tc_t5Idx_isLoaded = false;
+  tc_plsIdx_isLoaded = false;
+  tc_isFake_isLoaded = false;
+  tc_isDuplicate_isLoaded = false;
+  tc_simIdx_isLoaded = false;
+  tc_simIdxAll_isLoaded = false;
+  tc_simIdxAllFrac_isLoaded = false;
+  md_pt_isLoaded = false;
+  md_eta_isLoaded = false;
+  md_phi_isLoaded = false;
+  md_anchor_x_isLoaded = false;
+  md_anchor_y_isLoaded = false;
+  md_anchor_z_isLoaded = false;
+  md_other_x_isLoaded = false;
+  md_other_y_isLoaded = false;
+  md_other_z_isLoaded = false;
+  md_type_isLoaded = false;
+  md_layer_isLoaded = false;
+  md_detId_isLoaded = false;
+  md_isFake_isLoaded = false;
+  md_simIdx_isLoaded = false;
+  md_simIdxAll_isLoaded = false;
+  md_simIdxAllFrac_isLoaded = false;
+  ls_pt_isLoaded = false;
+  ls_eta_isLoaded = false;
+  ls_phi_isLoaded = false;
+  ls_mdIdx0_isLoaded = false;
+  ls_mdIdx1_isLoaded = false;
+  ls_isFake_isLoaded = false;
+  ls_simIdx_isLoaded = false;
+  ls_simIdxAll_isLoaded = false;
+  ls_simIdxAllFrac_isLoaded = false;
   t3_pt_isLoaded = false;
-  module_rings_isLoaded = false;
-  sim_T3_types_isLoaded = false;
-  sim_pT5_types_isLoaded = false;
-  sim_pT5_matched_isLoaded = false;
-  module_layers_isLoaded = false;
-  pT4_eta_isLoaded = false;
-  sim_tce_types_isLoaded = false;
-  tce_rzChiSquared_isLoaded = false;
-  pT3_matched_simIdx_isLoaded = false;
+  t3_eta_isLoaded = false;
+  t3_phi_isLoaded = false;
+  t3_lsIdx0_isLoaded = false;
+  t3_lsIdx1_isLoaded = false;
+  t3_isFake_isLoaded = false;
+  t3_isDuplicate_isLoaded = false;
+  t3_simIdx_isLoaded = false;
+  t3_simIdxAll_isLoaded = false;
+  t3_simIdxAllFrac_isLoaded = false;
+  t5_pt_isLoaded = false;
+  t5_eta_isLoaded = false;
+  t5_phi_isLoaded = false;
+  t5_t3Idx0_isLoaded = false;
+  t5_t3Idx1_isLoaded = false;
+  t5_isFake_isLoaded = false;
+  t5_isDuplicate_isLoaded = false;
+  t5_simIdx_isLoaded = false;
+  t5_simIdxAll_isLoaded = false;
+  t5_simIdxAllFrac_isLoaded = false;
+  pls_pt_isLoaded = false;
+  pls_eta_isLoaded = false;
+  pls_phi_isLoaded = false;
+  pls_nhit_isLoaded = false;
+  pls_hit0_x_isLoaded = false;
+  pls_hit0_y_isLoaded = false;
+  pls_hit0_z_isLoaded = false;
+  pls_hit1_x_isLoaded = false;
+  pls_hit1_y_isLoaded = false;
+  pls_hit1_z_isLoaded = false;
+  pls_hit2_x_isLoaded = false;
+  pls_hit2_y_isLoaded = false;
+  pls_hit2_z_isLoaded = false;
+  pls_hit3_x_isLoaded = false;
+  pls_hit3_y_isLoaded = false;
+  pls_hit3_z_isLoaded = false;
+  pls_isFake_isLoaded = false;
+  pls_isDuplicate_isLoaded = false;
+  pls_simIdx_isLoaded = false;
+  pls_simIdxAll_isLoaded = false;
+  pls_simIdxAllFrac_isLoaded = false;
+  pt3_pt_isLoaded = false;
+  pt3_eta_isLoaded = false;
+  pt3_phi_isLoaded = false;
+  pt3_plsIdx_isLoaded = false;
+  pt3_t3Idx_isLoaded = false;
+  pt3_isFake_isLoaded = false;
+  pt3_isDuplicate_isLoaded = false;
+  pt3_simIdx_isLoaded = false;
+  pt3_simIdxAll_isLoaded = false;
+  pt3_simIdxAllFrac_isLoaded = false;
+  pt5_pt_isLoaded = false;
+  pt5_eta_isLoaded = false;
+  pt5_phi_isLoaded = false;
+  pt5_plsIdx_isLoaded = false;
+  pt5_t5Idx_isLoaded = false;
+  pt5_isFake_isLoaded = false;
+  pt5_isDuplicate_isLoaded = false;
+  pt5_simIdx_isLoaded = false;
+  pt5_simIdxAll_isLoaded = false;
+  pt5_simIdxAllFrac_isLoaded = false;
 }
 void LSTEff::LoadAllBranches() {
-  if (pT5_occupancies_branch != 0)
-    pT5_occupancies();
-  if (t3_phi_branch != 0)
-    t3_phi();
-  if (t5_score_rphisum_branch != 0)
-    t5_score_rphisum();
-  if (pT4_isFake_branch != 0)
-    pT4_isFake();
-  if (t3_isDuplicate_branch != 0)
-    t3_isDuplicate();
-  if (sim_event_branch != 0)
-    sim_event();
-  if (sim_q_branch != 0)
-    sim_q();
-  if (sim_eta_branch != 0)
-    sim_eta();
-  if (pT3_foundDuplicate_branch != 0)
-    pT3_foundDuplicate();
-  if (sim_len_branch != 0)
-    sim_len();
-  if (pureTCE_isDuplicate_branch != 0)
-    pureTCE_isDuplicate();
-  if (pT3_score_branch != 0)
-    pT3_score();
-  if (t5_eta_branch != 0)
-    t5_eta();
-  if (sim_denom_branch != 0)
-    sim_denom();
-  if (pT5_isDuplicate_branch != 0)
-    pT5_isDuplicate();
-  if (sim_tce_matched_branch != 0)
-    sim_tce_matched();
-  if (pT3_isDuplicate_branch != 0)
-    pT3_isDuplicate();
-  if (tc_isDuplicate_branch != 0)
-    tc_isDuplicate();
-  if (pT3_eta_2_branch != 0)
-    pT3_eta_2();
-  if (sim_pT3_matched_branch != 0)
-    sim_pT3_matched();
-  if (pureTCE_rzChiSquared_branch != 0)
-    pureTCE_rzChiSquared();
-  if (t4_isDuplicate_branch != 0)
-    t4_isDuplicate();
-  if (pureTCE_eta_branch != 0)
-    pureTCE_eta();
-  if (tce_rPhiChiSquared_branch != 0)
-    tce_rPhiChiSquared();
-  if (pureTCE_anchorType_branch != 0)
-    pureTCE_anchorType();
-  if (pureTCE_pt_branch != 0)
-    pureTCE_pt();
   if (sim_pt_branch != 0)
     sim_pt();
-  if (t5_eta_2_branch != 0)
-    t5_eta_2();
-  if (pLS_eta_branch != 0)
-    pLS_eta();
-  if (sim_pdgId_branch != 0)
-    sim_pdgId();
-  if (t3_eta_branch != 0)
-    t3_eta();
-  if (tce_layer_binary_branch != 0)
-    tce_layer_binary();
-  if (sim_TC_matched_nonextended_branch != 0)
-    sim_TC_matched_nonextended();
-  if (t4_occupancies_branch != 0)
-    t4_occupancies();
-  if (tce_eta_branch != 0)
-    tce_eta();
-  if (tce_isDuplicate_branch != 0)
-    tce_isDuplicate();
-  if (pT5_matched_simIdx_branch != 0)
-    pT5_matched_simIdx();
-  if (sim_tcIdx_branch != 0)
-    sim_tcIdx();
-  if (t5_phi_2_branch != 0)
-    t5_phi_2();
-  if (pureTCE_maxHitMatchedCounts_branch != 0)
-    pureTCE_maxHitMatchedCounts();
-  if (t5_matched_simIdx_branch != 0)
-    t5_matched_simIdx();
-  if (module_subdets_branch != 0)
-    module_subdets();
-  if (tce_anchorType_branch != 0)
-    tce_anchorType();
-  if (tce_nHitOverlaps_branch != 0)
-    tce_nHitOverlaps();
-  if (t3_isFake_branch != 0)
-    t3_isFake();
-  if (tce_phi_branch != 0)
-    tce_phi();
-  if (t5_isFake_branch != 0)
-    t5_isFake();
-  if (md_occupancies_branch != 0)
-    md_occupancies();
-  if (t5_hitIdxs_branch != 0)
-    t5_hitIdxs();
-  if (sim_pT3_types_branch != 0)
-    sim_pT3_types();
-  if (sim_pureTCE_types_branch != 0)
-    sim_pureTCE_types();
-  if (t4_phi_branch != 0)
-    t4_phi();
-  if (t5_phi_branch != 0)
-    t5_phi();
-  if (pT5_hitIdxs_branch != 0)
-    pT5_hitIdxs();
-  if (t5_pt_branch != 0)
-    t5_pt();
-  if (pT5_phi_branch != 0)
-    pT5_phi();
-  if (pureTCE_isFake_branch != 0)
-    pureTCE_isFake();
-  if (tce_pt_branch != 0)
-    tce_pt();
-  if (tc_isFake_branch != 0)
-    tc_isFake();
-  if (pT3_isFake_branch != 0)
-    pT3_isFake();
-  if (tce_nLayerOverlaps_branch != 0)
-    tce_nLayerOverlaps();
-  if (tc_sim_branch != 0)
-    tc_sim();
-  if (sim_pLS_types_branch != 0)
-    sim_pLS_types();
-  if (sim_pca_dxy_branch != 0)
-    sim_pca_dxy();
-  if (pT4_phi_branch != 0)
-    pT4_phi();
-  if (sim_hits_branch != 0)
-    sim_hits();
-  if (pLS_phi_branch != 0)
-    pLS_phi();
-  if (sim_pureTCE_matched_branch != 0)
-    sim_pureTCE_matched();
-  if (t3_occupancies_branch != 0)
-    t3_occupancies();
-  if (t5_foundDuplicate_branch != 0)
-    t5_foundDuplicate();
-  if (sim_pT4_types_branch != 0)
-    sim_pT4_types();
-  if (t4_isFake_branch != 0)
-    t4_isFake();
-  if (simvtx_x_branch != 0)
-    simvtx_x();
-  if (simvtx_y_branch != 0)
-    simvtx_y();
-  if (simvtx_z_branch != 0)
-    simvtx_z();
-  if (sim_T4_matched_branch != 0)
-    sim_T4_matched();
-  if (sim_isGood_branch != 0)
-    sim_isGood();
-  if (pT3_pt_branch != 0)
-    pT3_pt();
-  if (tc_pt_branch != 0)
-    tc_pt();
-  if (pT3_phi_2_branch != 0)
-    pT3_phi_2();
-  if (pT5_pt_branch != 0)
-    pT5_pt();
-  if (pureTCE_rPhiChiSquared_branch != 0)
-    pureTCE_rPhiChiSquared();
-  if (pT5_score_branch != 0)
-    pT5_score();
+  if (sim_eta_branch != 0)
+    sim_eta();
   if (sim_phi_branch != 0)
     sim_phi();
-  if (pT5_isFake_branch != 0)
-    pT5_isFake();
-  if (tc_maxHitMatchedCounts_branch != 0)
-    tc_maxHitMatchedCounts();
-  if (pureTCE_nLayerOverlaps_branch != 0)
-    pureTCE_nLayerOverlaps();
+  if (sim_pca_dxy_branch != 0)
+    sim_pca_dxy();
   if (sim_pca_dz_branch != 0)
     sim_pca_dz();
-  if (pureTCE_hitIdxs_branch != 0)
-    pureTCE_hitIdxs();
-  if (pureTCE_nHitOverlaps_branch != 0)
-    pureTCE_nHitOverlaps();
-  if (sim_pLS_matched_branch != 0)
-    sim_pLS_matched();
-  if (tc_matched_simIdx_branch != 0)
-    tc_matched_simIdx();
-  if (sim_T3_matched_branch != 0)
-    sim_T3_matched();
-  if (pLS_score_branch != 0)
-    pLS_score();
-  if (pT3_phi_branch != 0)
-    pT3_phi();
-  if (pT5_eta_branch != 0)
-    pT5_eta();
-  if (tc_phi_branch != 0)
-    tc_phi();
-  if (t4_eta_branch != 0)
-    t4_eta();
-  if (pLS_isFake_branch != 0)
-    pLS_isFake();
-  if (pureTCE_matched_simIdx_branch != 0)
-    pureTCE_matched_simIdx();
-  if (sim_bunchCrossing_branch != 0)
-    sim_bunchCrossing();
-  if (tc_partOfExtension_branch != 0)
-    tc_partOfExtension();
-  if (pT3_eta_branch != 0)
-    pT3_eta();
-  if (sim_parentVtxIdx_branch != 0)
-    sim_parentVtxIdx();
-  if (pureTCE_layer_binary_branch != 0)
-    pureTCE_layer_binary();
-  if (sim_pT4_matched_branch != 0)
-    sim_pT4_matched();
-  if (tc_eta_branch != 0)
-    tc_eta();
-  if (sim_lengap_branch != 0)
-    sim_lengap();
-  if (sim_T5_matched_branch != 0)
-    sim_T5_matched();
-  if (sim_T5_types_branch != 0)
-    sim_T5_types();
-  if (tce_matched_simIdx_branch != 0)
-    tce_matched_simIdx();
-  if (t5_isDuplicate_branch != 0)
-    t5_isDuplicate();
-  if (pT3_hitIdxs_branch != 0)
-    pT3_hitIdxs();
-  if (tc_hitIdxs_branch != 0)
-    tc_hitIdxs();
-  if (pT3_occupancies_branch != 0)
-    pT3_occupancies();
-  if (tc_occupancies_branch != 0)
-    tc_occupancies();
-  if (sim_TC_matched_branch != 0)
-    sim_TC_matched();
-  if (sim_TC_matched_mask_branch != 0)
-    sim_TC_matched_mask();
-  if (pLS_isDuplicate_branch != 0)
-    pLS_isDuplicate();
-  if (tce_anchorIndex_branch != 0)
-    tce_anchorIndex();
-  if (t5_occupancies_branch != 0)
-    t5_occupancies();
-  if (tc_type_branch != 0)
-    tc_type();
-  if (tce_isFake_branch != 0)
-    tce_isFake();
-  if (pLS_pt_branch != 0)
-    pLS_pt();
-  if (pureTCE_anchorIndex_branch != 0)
-    pureTCE_anchorIndex();
-  if (sim_T4_types_branch != 0)
-    sim_T4_types();
-  if (pT4_isDuplicate_branch != 0)
-    pT4_isDuplicate();
-  if (t4_pt_branch != 0)
-    t4_pt();
-  if (sim_TC_types_branch != 0)
-    sim_TC_types();
-  if (sg_occupancies_branch != 0)
-    sg_occupancies();
-  if (pT4_pt_branch != 0)
-    pT4_pt();
-  if (pureTCE_phi_branch != 0)
-    pureTCE_phi();
+  if (sim_q_branch != 0)
+    sim_q();
+  if (sim_pdgId_branch != 0)
+    sim_pdgId();
   if (sim_vx_branch != 0)
     sim_vx();
   if (sim_vy_branch != 0)
     sim_vy();
   if (sim_vz_branch != 0)
     sim_vz();
-  if (tce_maxHitMatchedCounts_branch != 0)
-    tce_maxHitMatchedCounts();
+  if (sim_vtxperp_branch != 0)
+    sim_vtxperp();
+  if (sim_trkNtupIdx_branch != 0)
+    sim_trkNtupIdx();
+  if (sim_tcIdx_branch != 0)
+    sim_tcIdx();
+  if (sim_tcIdxAll_branch != 0)
+    sim_tcIdxAll();
+  if (sim_tcIdxAllFrac_branch != 0)
+    sim_tcIdxAllFrac();
+  if (sim_mdIdxAll_branch != 0)
+    sim_mdIdxAll();
+  if (sim_mdIdxAllFrac_branch != 0)
+    sim_mdIdxAllFrac();
+  if (sim_lsIdxAll_branch != 0)
+    sim_lsIdxAll();
+  if (sim_lsIdxAllFrac_branch != 0)
+    sim_lsIdxAllFrac();
+  if (sim_t3IdxAll_branch != 0)
+    sim_t3IdxAll();
+  if (sim_t3IdxAllFrac_branch != 0)
+    sim_t3IdxAllFrac();
+  if (sim_t5IdxAll_branch != 0)
+    sim_t5IdxAll();
+  if (sim_t5IdxAllFrac_branch != 0)
+    sim_t5IdxAllFrac();
+  if (sim_plsIdxAll_branch != 0)
+    sim_plsIdxAll();
+  if (sim_plsIdxAllFrac_branch != 0)
+    sim_plsIdxAllFrac();
+  if (sim_pt3IdxAll_branch != 0)
+    sim_pt3IdxAll();
+  if (sim_pt3IdxAllFrac_branch != 0)
+    sim_pt3IdxAllFrac();
+  if (sim_pt5IdxAll_branch != 0)
+    sim_pt5IdxAll();
+  if (sim_pt5IdxAllFrac_branch != 0)
+    sim_pt5IdxAllFrac();
+  if (sim_simHitX_branch != 0)
+    sim_simHitX();
+  if (sim_simHitY_branch != 0)
+    sim_simHitY();
+  if (sim_simHitZ_branch != 0)
+    sim_simHitZ();
+  if (sim_simHitDetId_branch != 0)
+    sim_simHitDetId();
+  if (sim_simHitLayer_branch != 0)
+    sim_simHitLayer();
+  if (sim_simHitDistxyHelix_branch != 0)
+    sim_simHitDistxyHelix();
+  if (sim_simHitLayerMinDistxyHelix_branch != 0)
+    sim_simHitLayerMinDistxyHelix();
+  if (sim_recoHitX_branch != 0)
+    sim_recoHitX();
+  if (sim_recoHitY_branch != 0)
+    sim_recoHitY();
+  if (sim_recoHitZ_branch != 0)
+    sim_recoHitZ();
+  if (sim_recoHitDetId_branch != 0)
+    sim_recoHitDetId();
+  if (tc_pt_branch != 0)
+    tc_pt();
+  if (tc_eta_branch != 0)
+    tc_eta();
+  if (tc_phi_branch != 0)
+    tc_phi();
+  if (tc_type_branch != 0)
+    tc_type();
+  if (tc_pt5Idx_branch != 0)
+    tc_pt5Idx();
+  if (tc_pt3Idx_branch != 0)
+    tc_pt3Idx();
+  if (tc_t5Idx_branch != 0)
+    tc_t5Idx();
+  if (tc_plsIdx_branch != 0)
+    tc_plsIdx();
+  if (tc_isFake_branch != 0)
+    tc_isFake();
+  if (tc_isDuplicate_branch != 0)
+    tc_isDuplicate();
+  if (tc_simIdx_branch != 0)
+    tc_simIdx();
+  if (tc_simIdxAll_branch != 0)
+    tc_simIdxAll();
+  if (tc_simIdxAllFrac_branch != 0)
+    tc_simIdxAllFrac();
+  if (md_pt_branch != 0)
+    md_pt();
+  if (md_eta_branch != 0)
+    md_eta();
+  if (md_phi_branch != 0)
+    md_phi();
+  if (md_anchor_x_branch != 0)
+    md_anchor_x();
+  if (md_anchor_y_branch != 0)
+    md_anchor_y();
+  if (md_anchor_z_branch != 0)
+    md_anchor_z();
+  if (md_other_x_branch != 0)
+    md_other_x();
+  if (md_other_y_branch != 0)
+    md_other_y();
+  if (md_other_z_branch != 0)
+    md_other_z();
+  if (md_type_branch != 0)
+    md_type();
+  if (md_layer_branch != 0)
+    md_layer();
+  if (md_detId_branch != 0)
+    md_detId();
+  if (md_isFake_branch != 0)
+    md_isFake();
+  if (md_simIdx_branch != 0)
+    md_simIdx();
+  if (md_simIdxAll_branch != 0)
+    md_simIdxAll();
+  if (md_simIdxAllFrac_branch != 0)
+    md_simIdxAllFrac();
+  if (ls_pt_branch != 0)
+    ls_pt();
+  if (ls_eta_branch != 0)
+    ls_eta();
+  if (ls_phi_branch != 0)
+    ls_phi();
+  if (ls_mdIdx0_branch != 0)
+    ls_mdIdx0();
+  if (ls_mdIdx1_branch != 0)
+    ls_mdIdx1();
+  if (ls_isFake_branch != 0)
+    ls_isFake();
+  if (ls_simIdx_branch != 0)
+    ls_simIdx();
+  if (ls_simIdxAll_branch != 0)
+    ls_simIdxAll();
+  if (ls_simIdxAllFrac_branch != 0)
+    ls_simIdxAllFrac();
   if (t3_pt_branch != 0)
     t3_pt();
-  if (module_rings_branch != 0)
-    module_rings();
-  if (sim_T3_types_branch != 0)
-    sim_T3_types();
-  if (sim_pT5_types_branch != 0)
-    sim_pT5_types();
-  if (sim_pT5_matched_branch != 0)
-    sim_pT5_matched();
-  if (module_layers_branch != 0)
-    module_layers();
-  if (pT4_eta_branch != 0)
-    pT4_eta();
-  if (sim_tce_types_branch != 0)
-    sim_tce_types();
-  if (tce_rzChiSquared_branch != 0)
-    tce_rzChiSquared();
-  if (pT3_matched_simIdx_branch != 0)
-    pT3_matched_simIdx();
-}
-const int &LSTEff::pT5_occupancies() {
-  if (not pT5_occupancies_isLoaded) {
-    if (pT5_occupancies_branch != 0) {
-      pT5_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_occupancies_isLoaded = true;
-  }
-  return pT5_occupancies_;
-}
-const std::vector<float> &LSTEff::t3_phi() {
-  if (not t3_phi_isLoaded) {
-    if (t3_phi_branch != 0) {
-      t3_phi_branch->GetEntry(index);
-    } else {
-      printf("branch t3_phi_branch does not exist!\n");
-      exit(1);
-    }
-    t3_phi_isLoaded = true;
-  }
-  return *t3_phi_;
-}
-const std::vector<float> &LSTEff::t5_score_rphisum() {
-  if (not t5_score_rphisum_isLoaded) {
-    if (t5_score_rphisum_branch != 0) {
-      t5_score_rphisum_branch->GetEntry(index);
-    } else {
-      printf("branch t5_score_rphisum_branch does not exist!\n");
-      exit(1);
-    }
-    t5_score_rphisum_isLoaded = true;
-  }
-  return *t5_score_rphisum_;
-}
-const std::vector<int> &LSTEff::pT4_isFake() {
-  if (not pT4_isFake_isLoaded) {
-    if (pT4_isFake_branch != 0) {
-      pT4_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch pT4_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    pT4_isFake_isLoaded = true;
-  }
-  return *pT4_isFake_;
-}
-const std::vector<int> &LSTEff::t3_isDuplicate() {
-  if (not t3_isDuplicate_isLoaded) {
-    if (t3_isDuplicate_branch != 0) {
-      t3_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch t3_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    t3_isDuplicate_isLoaded = true;
-  }
-  return *t3_isDuplicate_;
-}
-const std::vector<int> &LSTEff::sim_event() {
-  if (not sim_event_isLoaded) {
-    if (sim_event_branch != 0) {
-      sim_event_branch->GetEntry(index);
-    } else {
-      printf("branch sim_event_branch does not exist!\n");
-      exit(1);
-    }
-    sim_event_isLoaded = true;
-  }
-  return *sim_event_;
-}
-const std::vector<int> &LSTEff::sim_q() {
-  if (not sim_q_isLoaded) {
-    if (sim_q_branch != 0) {
-      sim_q_branch->GetEntry(index);
-    } else {
-      printf("branch sim_q_branch does not exist!\n");
-      exit(1);
-    }
-    sim_q_isLoaded = true;
-  }
-  return *sim_q_;
-}
-const std::vector<float> &LSTEff::sim_eta() {
-  if (not sim_eta_isLoaded) {
-    if (sim_eta_branch != 0) {
-      sim_eta_branch->GetEntry(index);
-    } else {
-      printf("branch sim_eta_branch does not exist!\n");
-      exit(1);
-    }
-    sim_eta_isLoaded = true;
-  }
-  return *sim_eta_;
-}
-const std::vector<int> &LSTEff::pT3_foundDuplicate() {
-  if (not pT3_foundDuplicate_isLoaded) {
-    if (pT3_foundDuplicate_branch != 0) {
-      pT3_foundDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_foundDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_foundDuplicate_isLoaded = true;
-  }
-  return *pT3_foundDuplicate_;
-}
-const std::vector<float> &LSTEff::sim_len() {
-  if (not sim_len_isLoaded) {
-    if (sim_len_branch != 0) {
-      sim_len_branch->GetEntry(index);
-    } else {
-      printf("branch sim_len_branch does not exist!\n");
-      exit(1);
-    }
-    sim_len_isLoaded = true;
-  }
-  return *sim_len_;
-}
-const std::vector<int> &LSTEff::pureTCE_isDuplicate() {
-  if (not pureTCE_isDuplicate_isLoaded) {
-    if (pureTCE_isDuplicate_branch != 0) {
-      pureTCE_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_isDuplicate_isLoaded = true;
-  }
-  return *pureTCE_isDuplicate_;
-}
-const std::vector<float> &LSTEff::pT3_score() {
-  if (not pT3_score_isLoaded) {
-    if (pT3_score_branch != 0) {
-      pT3_score_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_score_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_score_isLoaded = true;
-  }
-  return *pT3_score_;
-}
-const std::vector<float> &LSTEff::t5_eta() {
-  if (not t5_eta_isLoaded) {
-    if (t5_eta_branch != 0) {
-      t5_eta_branch->GetEntry(index);
-    } else {
-      printf("branch t5_eta_branch does not exist!\n");
-      exit(1);
-    }
-    t5_eta_isLoaded = true;
-  }
-  return *t5_eta_;
-}
-const std::vector<int> &LSTEff::sim_denom() {
-  if (not sim_denom_isLoaded) {
-    if (sim_denom_branch != 0) {
-      sim_denom_branch->GetEntry(index);
-    } else {
-      printf("branch sim_denom_branch does not exist!\n");
-      exit(1);
-    }
-    sim_denom_isLoaded = true;
-  }
-  return *sim_denom_;
-}
-const std::vector<int> &LSTEff::pT5_isDuplicate() {
-  if (not pT5_isDuplicate_isLoaded) {
-    if (pT5_isDuplicate_branch != 0) {
-      pT5_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_isDuplicate_isLoaded = true;
-  }
-  return *pT5_isDuplicate_;
-}
-const std::vector<int> &LSTEff::sim_tce_matched() {
-  if (not sim_tce_matched_isLoaded) {
-    if (sim_tce_matched_branch != 0) {
-      sim_tce_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_tce_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_tce_matched_isLoaded = true;
-  }
-  return *sim_tce_matched_;
-}
-const std::vector<int> &LSTEff::pT3_isDuplicate() {
-  if (not pT3_isDuplicate_isLoaded) {
-    if (pT3_isDuplicate_branch != 0) {
-      pT3_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_isDuplicate_isLoaded = true;
-  }
-  return *pT3_isDuplicate_;
-}
-const std::vector<int> &LSTEff::tc_isDuplicate() {
-  if (not tc_isDuplicate_isLoaded) {
-    if (tc_isDuplicate_branch != 0) {
-      tc_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch tc_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    tc_isDuplicate_isLoaded = true;
-  }
-  return *tc_isDuplicate_;
-}
-const std::vector<float> &LSTEff::pT3_eta_2() {
-  if (not pT3_eta_2_isLoaded) {
-    if (pT3_eta_2_branch != 0) {
-      pT3_eta_2_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_eta_2_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_eta_2_isLoaded = true;
-  }
-  return *pT3_eta_2_;
-}
-const std::vector<int> &LSTEff::sim_pT3_matched() {
-  if (not sim_pT3_matched_isLoaded) {
-    if (sim_pT3_matched_branch != 0) {
-      sim_pT3_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pT3_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pT3_matched_isLoaded = true;
-  }
-  return *sim_pT3_matched_;
-}
-const std::vector<float> &LSTEff::pureTCE_rzChiSquared() {
-  if (not pureTCE_rzChiSquared_isLoaded) {
-    if (pureTCE_rzChiSquared_branch != 0) {
-      pureTCE_rzChiSquared_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_rzChiSquared_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_rzChiSquared_isLoaded = true;
-  }
-  return *pureTCE_rzChiSquared_;
-}
-const std::vector<int> &LSTEff::t4_isDuplicate() {
-  if (not t4_isDuplicate_isLoaded) {
-    if (t4_isDuplicate_branch != 0) {
-      t4_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch t4_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    t4_isDuplicate_isLoaded = true;
-  }
-  return *t4_isDuplicate_;
-}
-const std::vector<float> &LSTEff::pureTCE_eta() {
-  if (not pureTCE_eta_isLoaded) {
-    if (pureTCE_eta_branch != 0) {
-      pureTCE_eta_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_eta_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_eta_isLoaded = true;
-  }
-  return *pureTCE_eta_;
-}
-const std::vector<float> &LSTEff::tce_rPhiChiSquared() {
-  if (not tce_rPhiChiSquared_isLoaded) {
-    if (tce_rPhiChiSquared_branch != 0) {
-      tce_rPhiChiSquared_branch->GetEntry(index);
-    } else {
-      printf("branch tce_rPhiChiSquared_branch does not exist!\n");
-      exit(1);
-    }
-    tce_rPhiChiSquared_isLoaded = true;
-  }
-  return *tce_rPhiChiSquared_;
-}
-const std::vector<int> &LSTEff::pureTCE_anchorType() {
-  if (not pureTCE_anchorType_isLoaded) {
-    if (pureTCE_anchorType_branch != 0) {
-      pureTCE_anchorType_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_anchorType_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_anchorType_isLoaded = true;
-  }
-  return *pureTCE_anchorType_;
-}
-const std::vector<float> &LSTEff::pureTCE_pt() {
-  if (not pureTCE_pt_isLoaded) {
-    if (pureTCE_pt_branch != 0) {
-      pureTCE_pt_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_pt_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_pt_isLoaded = true;
-  }
-  return *pureTCE_pt_;
+  if (t3_eta_branch != 0)
+    t3_eta();
+  if (t3_phi_branch != 0)
+    t3_phi();
+  if (t3_lsIdx0_branch != 0)
+    t3_lsIdx0();
+  if (t3_lsIdx1_branch != 0)
+    t3_lsIdx1();
+  if (t3_isFake_branch != 0)
+    t3_isFake();
+  if (t3_isDuplicate_branch != 0)
+    t3_isDuplicate();
+  if (t3_simIdx_branch != 0)
+    t3_simIdx();
+  if (t3_simIdxAll_branch != 0)
+    t3_simIdxAll();
+  if (t3_simIdxAllFrac_branch != 0)
+    t3_simIdxAllFrac();
+  if (t5_pt_branch != 0)
+    t5_pt();
+  if (t5_eta_branch != 0)
+    t5_eta();
+  if (t5_phi_branch != 0)
+    t5_phi();
+  if (t5_t3Idx0_branch != 0)
+    t5_t3Idx0();
+  if (t5_t3Idx1_branch != 0)
+    t5_t3Idx1();
+  if (t5_isFake_branch != 0)
+    t5_isFake();
+  if (t5_isDuplicate_branch != 0)
+    t5_isDuplicate();
+  if (t5_simIdx_branch != 0)
+    t5_simIdx();
+  if (t5_simIdxAll_branch != 0)
+    t5_simIdxAll();
+  if (t5_simIdxAllFrac_branch != 0)
+    t5_simIdxAllFrac();
+  if (pls_pt_branch != 0)
+    pls_pt();
+  if (pls_eta_branch != 0)
+    pls_eta();
+  if (pls_phi_branch != 0)
+    pls_phi();
+  if (pls_nhit_branch != 0)
+    pls_nhit();
+  if (pls_hit0_x_branch != 0)
+    pls_hit0_x();
+  if (pls_hit0_y_branch != 0)
+    pls_hit0_y();
+  if (pls_hit0_z_branch != 0)
+    pls_hit0_z();
+  if (pls_hit1_x_branch != 0)
+    pls_hit1_x();
+  if (pls_hit1_y_branch != 0)
+    pls_hit1_y();
+  if (pls_hit1_z_branch != 0)
+    pls_hit1_z();
+  if (pls_hit2_x_branch != 0)
+    pls_hit2_x();
+  if (pls_hit2_y_branch != 0)
+    pls_hit2_y();
+  if (pls_hit2_z_branch != 0)
+    pls_hit2_z();
+  if (pls_hit3_x_branch != 0)
+    pls_hit3_x();
+  if (pls_hit3_y_branch != 0)
+    pls_hit3_y();
+  if (pls_hit3_z_branch != 0)
+    pls_hit3_z();
+  if (pls_isFake_branch != 0)
+    pls_isFake();
+  if (pls_isDuplicate_branch != 0)
+    pls_isDuplicate();
+  if (pls_simIdx_branch != 0)
+    pls_simIdx();
+  if (pls_simIdxAll_branch != 0)
+    pls_simIdxAll();
+  if (pls_simIdxAllFrac_branch != 0)
+    pls_simIdxAllFrac();
+  if (pt3_pt_branch != 0)
+    pt3_pt();
+  if (pt3_eta_branch != 0)
+    pt3_eta();
+  if (pt3_phi_branch != 0)
+    pt3_phi();
+  if (pt3_plsIdx_branch != 0)
+    pt3_plsIdx();
+  if (pt3_t3Idx_branch != 0)
+    pt3_t3Idx();
+  if (pt3_isFake_branch != 0)
+    pt3_isFake();
+  if (pt3_isDuplicate_branch != 0)
+    pt3_isDuplicate();
+  if (pt3_simIdx_branch != 0)
+    pt3_simIdx();
+  if (pt3_simIdxAll_branch != 0)
+    pt3_simIdxAll();
+  if (pt3_simIdxAllFrac_branch != 0)
+    pt3_simIdxAllFrac();
+  if (pt5_pt_branch != 0)
+    pt5_pt();
+  if (pt5_eta_branch != 0)
+    pt5_eta();
+  if (pt5_phi_branch != 0)
+    pt5_phi();
+  if (pt5_plsIdx_branch != 0)
+    pt5_plsIdx();
+  if (pt5_t5Idx_branch != 0)
+    pt5_t5Idx();
+  if (pt5_isFake_branch != 0)
+    pt5_isFake();
+  if (pt5_isDuplicate_branch != 0)
+    pt5_isDuplicate();
+  if (pt5_simIdx_branch != 0)
+    pt5_simIdx();
+  if (pt5_simIdxAll_branch != 0)
+    pt5_simIdxAll();
+  if (pt5_simIdxAllFrac_branch != 0)
+    pt5_simIdxAllFrac();
 }
 const std::vector<float> &LSTEff::sim_pt() {
   if (not sim_pt_isLoaded) {
@@ -1794,677 +1412,17 @@ const std::vector<float> &LSTEff::sim_pt() {
   }
   return *sim_pt_;
 }
-const std::vector<float> &LSTEff::t5_eta_2() {
-  if (not t5_eta_2_isLoaded) {
-    if (t5_eta_2_branch != 0) {
-      t5_eta_2_branch->GetEntry(index);
+const std::vector<float> &LSTEff::sim_eta() {
+  if (not sim_eta_isLoaded) {
+    if (sim_eta_branch != 0) {
+      sim_eta_branch->GetEntry(index);
     } else {
-      printf("branch t5_eta_2_branch does not exist!\n");
+      printf("branch sim_eta_branch does not exist!\n");
       exit(1);
     }
-    t5_eta_2_isLoaded = true;
+    sim_eta_isLoaded = true;
   }
-  return *t5_eta_2_;
-}
-const std::vector<float> &LSTEff::pLS_eta() {
-  if (not pLS_eta_isLoaded) {
-    if (pLS_eta_branch != 0) {
-      pLS_eta_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_eta_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_eta_isLoaded = true;
-  }
-  return *pLS_eta_;
-}
-const std::vector<int> &LSTEff::sim_pdgId() {
-  if (not sim_pdgId_isLoaded) {
-    if (sim_pdgId_branch != 0) {
-      sim_pdgId_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pdgId_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pdgId_isLoaded = true;
-  }
-  return *sim_pdgId_;
-}
-const std::vector<float> &LSTEff::t3_eta() {
-  if (not t3_eta_isLoaded) {
-    if (t3_eta_branch != 0) {
-      t3_eta_branch->GetEntry(index);
-    } else {
-      printf("branch t3_eta_branch does not exist!\n");
-      exit(1);
-    }
-    t3_eta_isLoaded = true;
-  }
-  return *t3_eta_;
-}
-const std::vector<int> &LSTEff::tce_layer_binary() {
-  if (not tce_layer_binary_isLoaded) {
-    if (tce_layer_binary_branch != 0) {
-      tce_layer_binary_branch->GetEntry(index);
-    } else {
-      printf("branch tce_layer_binary_branch does not exist!\n");
-      exit(1);
-    }
-    tce_layer_binary_isLoaded = true;
-  }
-  return *tce_layer_binary_;
-}
-const std::vector<int> &LSTEff::sim_TC_matched_nonextended() {
-  if (not sim_TC_matched_nonextended_isLoaded) {
-    if (sim_TC_matched_nonextended_branch != 0) {
-      sim_TC_matched_nonextended_branch->GetEntry(index);
-    } else {
-      printf("branch sim_TC_matched_nonextended_branch does not exist!\n");
-      exit(1);
-    }
-    sim_TC_matched_nonextended_isLoaded = true;
-  }
-  return *sim_TC_matched_nonextended_;
-}
-const std::vector<int> &LSTEff::t4_occupancies() {
-  if (not t4_occupancies_isLoaded) {
-    if (t4_occupancies_branch != 0) {
-      t4_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch t4_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    t4_occupancies_isLoaded = true;
-  }
-  return *t4_occupancies_;
-}
-const std::vector<float> &LSTEff::tce_eta() {
-  if (not tce_eta_isLoaded) {
-    if (tce_eta_branch != 0) {
-      tce_eta_branch->GetEntry(index);
-    } else {
-      printf("branch tce_eta_branch does not exist!\n");
-      exit(1);
-    }
-    tce_eta_isLoaded = true;
-  }
-  return *tce_eta_;
-}
-const std::vector<int> &LSTEff::tce_isDuplicate() {
-  if (not tce_isDuplicate_isLoaded) {
-    if (tce_isDuplicate_branch != 0) {
-      tce_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch tce_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    tce_isDuplicate_isLoaded = true;
-  }
-  return *tce_isDuplicate_;
-}
-const std::vector<std::vector<int> > &LSTEff::pT5_matched_simIdx() {
-  if (not pT5_matched_simIdx_isLoaded) {
-    if (pT5_matched_simIdx_branch != 0) {
-      pT5_matched_simIdx_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_matched_simIdx_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_matched_simIdx_isLoaded = true;
-  }
-  return *pT5_matched_simIdx_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_tcIdx() {
-  if (not sim_tcIdx_isLoaded) {
-    if (sim_tcIdx_branch != 0) {
-      sim_tcIdx_branch->GetEntry(index);
-    } else {
-      printf("branch sim_tcIdx_branch does not exist!\n");
-      exit(1);
-    }
-    sim_tcIdx_isLoaded = true;
-  }
-  return *sim_tcIdx_;
-}
-const std::vector<float> &LSTEff::t5_phi_2() {
-  if (not t5_phi_2_isLoaded) {
-    if (t5_phi_2_branch != 0) {
-      t5_phi_2_branch->GetEntry(index);
-    } else {
-      printf("branch t5_phi_2_branch does not exist!\n");
-      exit(1);
-    }
-    t5_phi_2_isLoaded = true;
-  }
-  return *t5_phi_2_;
-}
-const std::vector<int> &LSTEff::pureTCE_maxHitMatchedCounts() {
-  if (not pureTCE_maxHitMatchedCounts_isLoaded) {
-    if (pureTCE_maxHitMatchedCounts_branch != 0) {
-      pureTCE_maxHitMatchedCounts_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_maxHitMatchedCounts_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_maxHitMatchedCounts_isLoaded = true;
-  }
-  return *pureTCE_maxHitMatchedCounts_;
-}
-const std::vector<std::vector<int> > &LSTEff::t5_matched_simIdx() {
-  if (not t5_matched_simIdx_isLoaded) {
-    if (t5_matched_simIdx_branch != 0) {
-      t5_matched_simIdx_branch->GetEntry(index);
-    } else {
-      printf("branch t5_matched_simIdx_branch does not exist!\n");
-      exit(1);
-    }
-    t5_matched_simIdx_isLoaded = true;
-  }
-  return *t5_matched_simIdx_;
-}
-const std::vector<int> &LSTEff::module_subdets() {
-  if (not module_subdets_isLoaded) {
-    if (module_subdets_branch != 0) {
-      module_subdets_branch->GetEntry(index);
-    } else {
-      printf("branch module_subdets_branch does not exist!\n");
-      exit(1);
-    }
-    module_subdets_isLoaded = true;
-  }
-  return *module_subdets_;
-}
-const std::vector<int> &LSTEff::tce_anchorType() {
-  if (not tce_anchorType_isLoaded) {
-    if (tce_anchorType_branch != 0) {
-      tce_anchorType_branch->GetEntry(index);
-    } else {
-      printf("branch tce_anchorType_branch does not exist!\n");
-      exit(1);
-    }
-    tce_anchorType_isLoaded = true;
-  }
-  return *tce_anchorType_;
-}
-const std::vector<std::vector<int> > &LSTEff::tce_nHitOverlaps() {
-  if (not tce_nHitOverlaps_isLoaded) {
-    if (tce_nHitOverlaps_branch != 0) {
-      tce_nHitOverlaps_branch->GetEntry(index);
-    } else {
-      printf("branch tce_nHitOverlaps_branch does not exist!\n");
-      exit(1);
-    }
-    tce_nHitOverlaps_isLoaded = true;
-  }
-  return *tce_nHitOverlaps_;
-}
-const std::vector<int> &LSTEff::t3_isFake() {
-  if (not t3_isFake_isLoaded) {
-    if (t3_isFake_branch != 0) {
-      t3_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch t3_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    t3_isFake_isLoaded = true;
-  }
-  return *t3_isFake_;
-}
-const std::vector<float> &LSTEff::tce_phi() {
-  if (not tce_phi_isLoaded) {
-    if (tce_phi_branch != 0) {
-      tce_phi_branch->GetEntry(index);
-    } else {
-      printf("branch tce_phi_branch does not exist!\n");
-      exit(1);
-    }
-    tce_phi_isLoaded = true;
-  }
-  return *tce_phi_;
-}
-const std::vector<int> &LSTEff::t5_isFake() {
-  if (not t5_isFake_isLoaded) {
-    if (t5_isFake_branch != 0) {
-      t5_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch t5_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    t5_isFake_isLoaded = true;
-  }
-  return *t5_isFake_;
-}
-const std::vector<int> &LSTEff::md_occupancies() {
-  if (not md_occupancies_isLoaded) {
-    if (md_occupancies_branch != 0) {
-      md_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch md_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    md_occupancies_isLoaded = true;
-  }
-  return *md_occupancies_;
-}
-const std::vector<std::vector<int> > &LSTEff::t5_hitIdxs() {
-  if (not t5_hitIdxs_isLoaded) {
-    if (t5_hitIdxs_branch != 0) {
-      t5_hitIdxs_branch->GetEntry(index);
-    } else {
-      printf("branch t5_hitIdxs_branch does not exist!\n");
-      exit(1);
-    }
-    t5_hitIdxs_isLoaded = true;
-  }
-  return *t5_hitIdxs_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_pT3_types() {
-  if (not sim_pT3_types_isLoaded) {
-    if (sim_pT3_types_branch != 0) {
-      sim_pT3_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pT3_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pT3_types_isLoaded = true;
-  }
-  return *sim_pT3_types_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_pureTCE_types() {
-  if (not sim_pureTCE_types_isLoaded) {
-    if (sim_pureTCE_types_branch != 0) {
-      sim_pureTCE_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pureTCE_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pureTCE_types_isLoaded = true;
-  }
-  return *sim_pureTCE_types_;
-}
-const std::vector<float> &LSTEff::t4_phi() {
-  if (not t4_phi_isLoaded) {
-    if (t4_phi_branch != 0) {
-      t4_phi_branch->GetEntry(index);
-    } else {
-      printf("branch t4_phi_branch does not exist!\n");
-      exit(1);
-    }
-    t4_phi_isLoaded = true;
-  }
-  return *t4_phi_;
-}
-const std::vector<float> &LSTEff::t5_phi() {
-  if (not t5_phi_isLoaded) {
-    if (t5_phi_branch != 0) {
-      t5_phi_branch->GetEntry(index);
-    } else {
-      printf("branch t5_phi_branch does not exist!\n");
-      exit(1);
-    }
-    t5_phi_isLoaded = true;
-  }
-  return *t5_phi_;
-}
-const std::vector<std::vector<int> > &LSTEff::pT5_hitIdxs() {
-  if (not pT5_hitIdxs_isLoaded) {
-    if (pT5_hitIdxs_branch != 0) {
-      pT5_hitIdxs_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_hitIdxs_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_hitIdxs_isLoaded = true;
-  }
-  return *pT5_hitIdxs_;
-}
-const std::vector<float> &LSTEff::t5_pt() {
-  if (not t5_pt_isLoaded) {
-    if (t5_pt_branch != 0) {
-      t5_pt_branch->GetEntry(index);
-    } else {
-      printf("branch t5_pt_branch does not exist!\n");
-      exit(1);
-    }
-    t5_pt_isLoaded = true;
-  }
-  return *t5_pt_;
-}
-const std::vector<float> &LSTEff::pT5_phi() {
-  if (not pT5_phi_isLoaded) {
-    if (pT5_phi_branch != 0) {
-      pT5_phi_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_phi_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_phi_isLoaded = true;
-  }
-  return *pT5_phi_;
-}
-const std::vector<int> &LSTEff::pureTCE_isFake() {
-  if (not pureTCE_isFake_isLoaded) {
-    if (pureTCE_isFake_branch != 0) {
-      pureTCE_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_isFake_isLoaded = true;
-  }
-  return *pureTCE_isFake_;
-}
-const std::vector<float> &LSTEff::tce_pt() {
-  if (not tce_pt_isLoaded) {
-    if (tce_pt_branch != 0) {
-      tce_pt_branch->GetEntry(index);
-    } else {
-      printf("branch tce_pt_branch does not exist!\n");
-      exit(1);
-    }
-    tce_pt_isLoaded = true;
-  }
-  return *tce_pt_;
-}
-const std::vector<int> &LSTEff::tc_isFake() {
-  if (not tc_isFake_isLoaded) {
-    if (tc_isFake_branch != 0) {
-      tc_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch tc_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    tc_isFake_isLoaded = true;
-  }
-  return *tc_isFake_;
-}
-const std::vector<int> &LSTEff::pT3_isFake() {
-  if (not pT3_isFake_isLoaded) {
-    if (pT3_isFake_branch != 0) {
-      pT3_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_isFake_isLoaded = true;
-  }
-  return *pT3_isFake_;
-}
-const std::vector<std::vector<int> > &LSTEff::tce_nLayerOverlaps() {
-  if (not tce_nLayerOverlaps_isLoaded) {
-    if (tce_nLayerOverlaps_branch != 0) {
-      tce_nLayerOverlaps_branch->GetEntry(index);
-    } else {
-      printf("branch tce_nLayerOverlaps_branch does not exist!\n");
-      exit(1);
-    }
-    tce_nLayerOverlaps_isLoaded = true;
-  }
-  return *tce_nLayerOverlaps_;
-}
-const std::vector<int> &LSTEff::tc_sim() {
-  if (not tc_sim_isLoaded) {
-    if (tc_sim_branch != 0) {
-      tc_sim_branch->GetEntry(index);
-    } else {
-      printf("branch tc_sim_branch does not exist!\n");
-      exit(1);
-    }
-    tc_sim_isLoaded = true;
-  }
-  return *tc_sim_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_pLS_types() {
-  if (not sim_pLS_types_isLoaded) {
-    if (sim_pLS_types_branch != 0) {
-      sim_pLS_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pLS_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pLS_types_isLoaded = true;
-  }
-  return *sim_pLS_types_;
-}
-const std::vector<float> &LSTEff::sim_pca_dxy() {
-  if (not sim_pca_dxy_isLoaded) {
-    if (sim_pca_dxy_branch != 0) {
-      sim_pca_dxy_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pca_dxy_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pca_dxy_isLoaded = true;
-  }
-  return *sim_pca_dxy_;
-}
-const std::vector<float> &LSTEff::pT4_phi() {
-  if (not pT4_phi_isLoaded) {
-    if (pT4_phi_branch != 0) {
-      pT4_phi_branch->GetEntry(index);
-    } else {
-      printf("branch pT4_phi_branch does not exist!\n");
-      exit(1);
-    }
-    pT4_phi_isLoaded = true;
-  }
-  return *pT4_phi_;
-}
-const std::vector<float> &LSTEff::sim_hits() {
-  if (not sim_hits_isLoaded) {
-    if (sim_hits_branch != 0) {
-      sim_hits_branch->GetEntry(index);
-    } else {
-      printf("branch sim_hits_branch does not exist!\n");
-      exit(1);
-    }
-    sim_hits_isLoaded = true;
-  }
-  return *sim_hits_;
-}
-const std::vector<float> &LSTEff::pLS_phi() {
-  if (not pLS_phi_isLoaded) {
-    if (pLS_phi_branch != 0) {
-      pLS_phi_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_phi_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_phi_isLoaded = true;
-  }
-  return *pLS_phi_;
-}
-const std::vector<int> &LSTEff::sim_pureTCE_matched() {
-  if (not sim_pureTCE_matched_isLoaded) {
-    if (sim_pureTCE_matched_branch != 0) {
-      sim_pureTCE_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pureTCE_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pureTCE_matched_isLoaded = true;
-  }
-  return *sim_pureTCE_matched_;
-}
-const std::vector<int> &LSTEff::t3_occupancies() {
-  if (not t3_occupancies_isLoaded) {
-    if (t3_occupancies_branch != 0) {
-      t3_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch t3_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    t3_occupancies_isLoaded = true;
-  }
-  return *t3_occupancies_;
-}
-const std::vector<int> &LSTEff::t5_foundDuplicate() {
-  if (not t5_foundDuplicate_isLoaded) {
-    if (t5_foundDuplicate_branch != 0) {
-      t5_foundDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch t5_foundDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    t5_foundDuplicate_isLoaded = true;
-  }
-  return *t5_foundDuplicate_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_pT4_types() {
-  if (not sim_pT4_types_isLoaded) {
-    if (sim_pT4_types_branch != 0) {
-      sim_pT4_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pT4_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pT4_types_isLoaded = true;
-  }
-  return *sim_pT4_types_;
-}
-const std::vector<int> &LSTEff::t4_isFake() {
-  if (not t4_isFake_isLoaded) {
-    if (t4_isFake_branch != 0) {
-      t4_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch t4_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    t4_isFake_isLoaded = true;
-  }
-  return *t4_isFake_;
-}
-const std::vector<float> &LSTEff::simvtx_x() {
-  if (not simvtx_x_isLoaded) {
-    if (simvtx_x_branch != 0) {
-      simvtx_x_branch->GetEntry(index);
-    } else {
-      printf("branch simvtx_x_branch does not exist!\n");
-      exit(1);
-    }
-    simvtx_x_isLoaded = true;
-  }
-  return *simvtx_x_;
-}
-const std::vector<float> &LSTEff::simvtx_y() {
-  if (not simvtx_y_isLoaded) {
-    if (simvtx_y_branch != 0) {
-      simvtx_y_branch->GetEntry(index);
-    } else {
-      printf("branch simvtx_y_branch does not exist!\n");
-      exit(1);
-    }
-    simvtx_y_isLoaded = true;
-  }
-  return *simvtx_y_;
-}
-const std::vector<float> &LSTEff::simvtx_z() {
-  if (not simvtx_z_isLoaded) {
-    if (simvtx_z_branch != 0) {
-      simvtx_z_branch->GetEntry(index);
-    } else {
-      printf("branch simvtx_z_branch does not exist!\n");
-      exit(1);
-    }
-    simvtx_z_isLoaded = true;
-  }
-  return *simvtx_z_;
-}
-const std::vector<int> &LSTEff::sim_T4_matched() {
-  if (not sim_T4_matched_isLoaded) {
-    if (sim_T4_matched_branch != 0) {
-      sim_T4_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_T4_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_T4_matched_isLoaded = true;
-  }
-  return *sim_T4_matched_;
-}
-const std::vector<bool> &LSTEff::sim_isGood() {
-  if (not sim_isGood_isLoaded) {
-    if (sim_isGood_branch != 0) {
-      sim_isGood_branch->GetEntry(index);
-    } else {
-      printf("branch sim_isGood_branch does not exist!\n");
-      exit(1);
-    }
-    sim_isGood_isLoaded = true;
-  }
-  return *sim_isGood_;
-}
-const std::vector<float> &LSTEff::pT3_pt() {
-  if (not pT3_pt_isLoaded) {
-    if (pT3_pt_branch != 0) {
-      pT3_pt_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_pt_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_pt_isLoaded = true;
-  }
-  return *pT3_pt_;
-}
-const std::vector<float> &LSTEff::tc_pt() {
-  if (not tc_pt_isLoaded) {
-    if (tc_pt_branch != 0) {
-      tc_pt_branch->GetEntry(index);
-    } else {
-      printf("branch tc_pt_branch does not exist!\n");
-      exit(1);
-    }
-    tc_pt_isLoaded = true;
-  }
-  return *tc_pt_;
-}
-const std::vector<float> &LSTEff::pT3_phi_2() {
-  if (not pT3_phi_2_isLoaded) {
-    if (pT3_phi_2_branch != 0) {
-      pT3_phi_2_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_phi_2_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_phi_2_isLoaded = true;
-  }
-  return *pT3_phi_2_;
-}
-const std::vector<float> &LSTEff::pT5_pt() {
-  if (not pT5_pt_isLoaded) {
-    if (pT5_pt_branch != 0) {
-      pT5_pt_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_pt_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_pt_isLoaded = true;
-  }
-  return *pT5_pt_;
-}
-const std::vector<float> &LSTEff::pureTCE_rPhiChiSquared() {
-  if (not pureTCE_rPhiChiSquared_isLoaded) {
-    if (pureTCE_rPhiChiSquared_branch != 0) {
-      pureTCE_rPhiChiSquared_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_rPhiChiSquared_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_rPhiChiSquared_isLoaded = true;
-  }
-  return *pureTCE_rPhiChiSquared_;
-}
-const std::vector<int> &LSTEff::pT5_score() {
-  if (not pT5_score_isLoaded) {
-    if (pT5_score_branch != 0) {
-      pT5_score_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_score_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_score_isLoaded = true;
-  }
-  return *pT5_score_;
+  return *sim_eta_;
 }
 const std::vector<float> &LSTEff::sim_phi() {
   if (not sim_phi_isLoaded) {
@@ -2478,41 +1436,17 @@ const std::vector<float> &LSTEff::sim_phi() {
   }
   return *sim_phi_;
 }
-const std::vector<int> &LSTEff::pT5_isFake() {
-  if (not pT5_isFake_isLoaded) {
-    if (pT5_isFake_branch != 0) {
-      pT5_isFake_branch->GetEntry(index);
+const std::vector<float> &LSTEff::sim_pca_dxy() {
+  if (not sim_pca_dxy_isLoaded) {
+    if (sim_pca_dxy_branch != 0) {
+      sim_pca_dxy_branch->GetEntry(index);
     } else {
-      printf("branch pT5_isFake_branch does not exist!\n");
+      printf("branch sim_pca_dxy_branch does not exist!\n");
       exit(1);
     }
-    pT5_isFake_isLoaded = true;
+    sim_pca_dxy_isLoaded = true;
   }
-  return *pT5_isFake_;
-}
-const std::vector<int> &LSTEff::tc_maxHitMatchedCounts() {
-  if (not tc_maxHitMatchedCounts_isLoaded) {
-    if (tc_maxHitMatchedCounts_branch != 0) {
-      tc_maxHitMatchedCounts_branch->GetEntry(index);
-    } else {
-      printf("branch tc_maxHitMatchedCounts_branch does not exist!\n");
-      exit(1);
-    }
-    tc_maxHitMatchedCounts_isLoaded = true;
-  }
-  return *tc_maxHitMatchedCounts_;
-}
-const std::vector<std::vector<int> > &LSTEff::pureTCE_nLayerOverlaps() {
-  if (not pureTCE_nLayerOverlaps_isLoaded) {
-    if (pureTCE_nLayerOverlaps_branch != 0) {
-      pureTCE_nLayerOverlaps_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_nLayerOverlaps_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_nLayerOverlaps_isLoaded = true;
-  }
-  return *pureTCE_nLayerOverlaps_;
+  return *sim_pca_dxy_;
 }
 const std::vector<float> &LSTEff::sim_pca_dz() {
   if (not sim_pca_dz_isLoaded) {
@@ -2526,533 +1460,29 @@ const std::vector<float> &LSTEff::sim_pca_dz() {
   }
   return *sim_pca_dz_;
 }
-const std::vector<std::vector<int> > &LSTEff::pureTCE_hitIdxs() {
-  if (not pureTCE_hitIdxs_isLoaded) {
-    if (pureTCE_hitIdxs_branch != 0) {
-      pureTCE_hitIdxs_branch->GetEntry(index);
+const std::vector<int> &LSTEff::sim_q() {
+  if (not sim_q_isLoaded) {
+    if (sim_q_branch != 0) {
+      sim_q_branch->GetEntry(index);
     } else {
-      printf("branch pureTCE_hitIdxs_branch does not exist!\n");
+      printf("branch sim_q_branch does not exist!\n");
       exit(1);
     }
-    pureTCE_hitIdxs_isLoaded = true;
+    sim_q_isLoaded = true;
   }
-  return *pureTCE_hitIdxs_;
+  return *sim_q_;
 }
-const std::vector<std::vector<int> > &LSTEff::pureTCE_nHitOverlaps() {
-  if (not pureTCE_nHitOverlaps_isLoaded) {
-    if (pureTCE_nHitOverlaps_branch != 0) {
-      pureTCE_nHitOverlaps_branch->GetEntry(index);
+const std::vector<int> &LSTEff::sim_pdgId() {
+  if (not sim_pdgId_isLoaded) {
+    if (sim_pdgId_branch != 0) {
+      sim_pdgId_branch->GetEntry(index);
     } else {
-      printf("branch pureTCE_nHitOverlaps_branch does not exist!\n");
+      printf("branch sim_pdgId_branch does not exist!\n");
       exit(1);
     }
-    pureTCE_nHitOverlaps_isLoaded = true;
+    sim_pdgId_isLoaded = true;
   }
-  return *pureTCE_nHitOverlaps_;
-}
-const std::vector<int> &LSTEff::sim_pLS_matched() {
-  if (not sim_pLS_matched_isLoaded) {
-    if (sim_pLS_matched_branch != 0) {
-      sim_pLS_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pLS_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pLS_matched_isLoaded = true;
-  }
-  return *sim_pLS_matched_;
-}
-const std::vector<std::vector<int> > &LSTEff::tc_matched_simIdx() {
-  if (not tc_matched_simIdx_isLoaded) {
-    if (tc_matched_simIdx_branch != 0) {
-      tc_matched_simIdx_branch->GetEntry(index);
-    } else {
-      printf("branch tc_matched_simIdx_branch does not exist!\n");
-      exit(1);
-    }
-    tc_matched_simIdx_isLoaded = true;
-  }
-  return *tc_matched_simIdx_;
-}
-const std::vector<int> &LSTEff::sim_T3_matched() {
-  if (not sim_T3_matched_isLoaded) {
-    if (sim_T3_matched_branch != 0) {
-      sim_T3_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_T3_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_T3_matched_isLoaded = true;
-  }
-  return *sim_T3_matched_;
-}
-const std::vector<float> &LSTEff::pLS_score() {
-  if (not pLS_score_isLoaded) {
-    if (pLS_score_branch != 0) {
-      pLS_score_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_score_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_score_isLoaded = true;
-  }
-  return *pLS_score_;
-}
-const std::vector<float> &LSTEff::pT3_phi() {
-  if (not pT3_phi_isLoaded) {
-    if (pT3_phi_branch != 0) {
-      pT3_phi_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_phi_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_phi_isLoaded = true;
-  }
-  return *pT3_phi_;
-}
-const std::vector<float> &LSTEff::pT5_eta() {
-  if (not pT5_eta_isLoaded) {
-    if (pT5_eta_branch != 0) {
-      pT5_eta_branch->GetEntry(index);
-    } else {
-      printf("branch pT5_eta_branch does not exist!\n");
-      exit(1);
-    }
-    pT5_eta_isLoaded = true;
-  }
-  return *pT5_eta_;
-}
-const std::vector<float> &LSTEff::tc_phi() {
-  if (not tc_phi_isLoaded) {
-    if (tc_phi_branch != 0) {
-      tc_phi_branch->GetEntry(index);
-    } else {
-      printf("branch tc_phi_branch does not exist!\n");
-      exit(1);
-    }
-    tc_phi_isLoaded = true;
-  }
-  return *tc_phi_;
-}
-const std::vector<float> &LSTEff::t4_eta() {
-  if (not t4_eta_isLoaded) {
-    if (t4_eta_branch != 0) {
-      t4_eta_branch->GetEntry(index);
-    } else {
-      printf("branch t4_eta_branch does not exist!\n");
-      exit(1);
-    }
-    t4_eta_isLoaded = true;
-  }
-  return *t4_eta_;
-}
-const std::vector<int> &LSTEff::pLS_isFake() {
-  if (not pLS_isFake_isLoaded) {
-    if (pLS_isFake_branch != 0) {
-      pLS_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_isFake_isLoaded = true;
-  }
-  return *pLS_isFake_;
-}
-const std::vector<std::vector<int> > &LSTEff::pureTCE_matched_simIdx() {
-  if (not pureTCE_matched_simIdx_isLoaded) {
-    if (pureTCE_matched_simIdx_branch != 0) {
-      pureTCE_matched_simIdx_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_matched_simIdx_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_matched_simIdx_isLoaded = true;
-  }
-  return *pureTCE_matched_simIdx_;
-}
-const std::vector<int> &LSTEff::sim_bunchCrossing() {
-  if (not sim_bunchCrossing_isLoaded) {
-    if (sim_bunchCrossing_branch != 0) {
-      sim_bunchCrossing_branch->GetEntry(index);
-    } else {
-      printf("branch sim_bunchCrossing_branch does not exist!\n");
-      exit(1);
-    }
-    sim_bunchCrossing_isLoaded = true;
-  }
-  return *sim_bunchCrossing_;
-}
-const std::vector<int> &LSTEff::tc_partOfExtension() {
-  if (not tc_partOfExtension_isLoaded) {
-    if (tc_partOfExtension_branch != 0) {
-      tc_partOfExtension_branch->GetEntry(index);
-    } else {
-      printf("branch tc_partOfExtension_branch does not exist!\n");
-      exit(1);
-    }
-    tc_partOfExtension_isLoaded = true;
-  }
-  return *tc_partOfExtension_;
-}
-const std::vector<float> &LSTEff::pT3_eta() {
-  if (not pT3_eta_isLoaded) {
-    if (pT3_eta_branch != 0) {
-      pT3_eta_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_eta_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_eta_isLoaded = true;
-  }
-  return *pT3_eta_;
-}
-const std::vector<int> &LSTEff::sim_parentVtxIdx() {
-  if (not sim_parentVtxIdx_isLoaded) {
-    if (sim_parentVtxIdx_branch != 0) {
-      sim_parentVtxIdx_branch->GetEntry(index);
-    } else {
-      printf("branch sim_parentVtxIdx_branch does not exist!\n");
-      exit(1);
-    }
-    sim_parentVtxIdx_isLoaded = true;
-  }
-  return *sim_parentVtxIdx_;
-}
-const std::vector<int> &LSTEff::pureTCE_layer_binary() {
-  if (not pureTCE_layer_binary_isLoaded) {
-    if (pureTCE_layer_binary_branch != 0) {
-      pureTCE_layer_binary_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_layer_binary_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_layer_binary_isLoaded = true;
-  }
-  return *pureTCE_layer_binary_;
-}
-const std::vector<int> &LSTEff::sim_pT4_matched() {
-  if (not sim_pT4_matched_isLoaded) {
-    if (sim_pT4_matched_branch != 0) {
-      sim_pT4_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_pT4_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_pT4_matched_isLoaded = true;
-  }
-  return *sim_pT4_matched_;
-}
-const std::vector<float> &LSTEff::tc_eta() {
-  if (not tc_eta_isLoaded) {
-    if (tc_eta_branch != 0) {
-      tc_eta_branch->GetEntry(index);
-    } else {
-      printf("branch tc_eta_branch does not exist!\n");
-      exit(1);
-    }
-    tc_eta_isLoaded = true;
-  }
-  return *tc_eta_;
-}
-const std::vector<float> &LSTEff::sim_lengap() {
-  if (not sim_lengap_isLoaded) {
-    if (sim_lengap_branch != 0) {
-      sim_lengap_branch->GetEntry(index);
-    } else {
-      printf("branch sim_lengap_branch does not exist!\n");
-      exit(1);
-    }
-    sim_lengap_isLoaded = true;
-  }
-  return *sim_lengap_;
-}
-const std::vector<int> &LSTEff::sim_T5_matched() {
-  if (not sim_T5_matched_isLoaded) {
-    if (sim_T5_matched_branch != 0) {
-      sim_T5_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_T5_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_T5_matched_isLoaded = true;
-  }
-  return *sim_T5_matched_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_T5_types() {
-  if (not sim_T5_types_isLoaded) {
-    if (sim_T5_types_branch != 0) {
-      sim_T5_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_T5_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_T5_types_isLoaded = true;
-  }
-  return *sim_T5_types_;
-}
-const std::vector<std::vector<int> > &LSTEff::tce_matched_simIdx() {
-  if (not tce_matched_simIdx_isLoaded) {
-    if (tce_matched_simIdx_branch != 0) {
-      tce_matched_simIdx_branch->GetEntry(index);
-    } else {
-      printf("branch tce_matched_simIdx_branch does not exist!\n");
-      exit(1);
-    }
-    tce_matched_simIdx_isLoaded = true;
-  }
-  return *tce_matched_simIdx_;
-}
-const std::vector<int> &LSTEff::t5_isDuplicate() {
-  if (not t5_isDuplicate_isLoaded) {
-    if (t5_isDuplicate_branch != 0) {
-      t5_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch t5_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    t5_isDuplicate_isLoaded = true;
-  }
-  return *t5_isDuplicate_;
-}
-const std::vector<std::vector<int> > &LSTEff::pT3_hitIdxs() {
-  if (not pT3_hitIdxs_isLoaded) {
-    if (pT3_hitIdxs_branch != 0) {
-      pT3_hitIdxs_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_hitIdxs_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_hitIdxs_isLoaded = true;
-  }
-  return *pT3_hitIdxs_;
-}
-const std::vector<std::vector<int> > &LSTEff::tc_hitIdxs() {
-  if (not tc_hitIdxs_isLoaded) {
-    if (tc_hitIdxs_branch != 0) {
-      tc_hitIdxs_branch->GetEntry(index);
-    } else {
-      printf("branch tc_hitIdxs_branch does not exist!\n");
-      exit(1);
-    }
-    tc_hitIdxs_isLoaded = true;
-  }
-  return *tc_hitIdxs_;
-}
-const int &LSTEff::pT3_occupancies() {
-  if (not pT3_occupancies_isLoaded) {
-    if (pT3_occupancies_branch != 0) {
-      pT3_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch pT3_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    pT3_occupancies_isLoaded = true;
-  }
-  return pT3_occupancies_;
-}
-const int &LSTEff::tc_occupancies() {
-  if (not tc_occupancies_isLoaded) {
-    if (tc_occupancies_branch != 0) {
-      tc_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch tc_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    tc_occupancies_isLoaded = true;
-  }
-  return tc_occupancies_;
-}
-const std::vector<int> &LSTEff::sim_TC_matched() {
-  if (not sim_TC_matched_isLoaded) {
-    if (sim_TC_matched_branch != 0) {
-      sim_TC_matched_branch->GetEntry(index);
-    } else {
-      printf("branch sim_TC_matched_branch does not exist!\n");
-      exit(1);
-    }
-    sim_TC_matched_isLoaded = true;
-  }
-  return *sim_TC_matched_;
-}
-const std::vector<int> &LSTEff::sim_TC_matched_mask() {
-  if (not sim_TC_matched_mask_isLoaded) {
-    if (sim_TC_matched_mask_branch != 0) {
-      sim_TC_matched_mask_branch->GetEntry(index);
-    } else {
-      printf("branch sim_TC_matched_mask_branch does not exist!\n");
-      exit(1);
-    }
-    sim_TC_matched_mask_isLoaded = true;
-  }
-  return *sim_TC_matched_mask_;
-}
-const std::vector<int> &LSTEff::pLS_isDuplicate() {
-  if (not pLS_isDuplicate_isLoaded) {
-    if (pLS_isDuplicate_branch != 0) {
-      pLS_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_isDuplicate_isLoaded = true;
-  }
-  return *pLS_isDuplicate_;
-}
-const std::vector<int> &LSTEff::tce_anchorIndex() {
-  if (not tce_anchorIndex_isLoaded) {
-    if (tce_anchorIndex_branch != 0) {
-      tce_anchorIndex_branch->GetEntry(index);
-    } else {
-      printf("branch tce_anchorIndex_branch does not exist!\n");
-      exit(1);
-    }
-    tce_anchorIndex_isLoaded = true;
-  }
-  return *tce_anchorIndex_;
-}
-const std::vector<int> &LSTEff::t5_occupancies() {
-  if (not t5_occupancies_isLoaded) {
-    if (t5_occupancies_branch != 0) {
-      t5_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch t5_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    t5_occupancies_isLoaded = true;
-  }
-  return *t5_occupancies_;
-}
-const std::vector<int> &LSTEff::tc_type() {
-  if (not tc_type_isLoaded) {
-    if (tc_type_branch != 0) {
-      tc_type_branch->GetEntry(index);
-    } else {
-      printf("branch tc_type_branch does not exist!\n");
-      exit(1);
-    }
-    tc_type_isLoaded = true;
-  }
-  return *tc_type_;
-}
-const std::vector<int> &LSTEff::tce_isFake() {
-  if (not tce_isFake_isLoaded) {
-    if (tce_isFake_branch != 0) {
-      tce_isFake_branch->GetEntry(index);
-    } else {
-      printf("branch tce_isFake_branch does not exist!\n");
-      exit(1);
-    }
-    tce_isFake_isLoaded = true;
-  }
-  return *tce_isFake_;
-}
-const std::vector<float> &LSTEff::pLS_pt() {
-  if (not pLS_pt_isLoaded) {
-    if (pLS_pt_branch != 0) {
-      pLS_pt_branch->GetEntry(index);
-    } else {
-      printf("branch pLS_pt_branch does not exist!\n");
-      exit(1);
-    }
-    pLS_pt_isLoaded = true;
-  }
-  return *pLS_pt_;
-}
-const std::vector<int> &LSTEff::pureTCE_anchorIndex() {
-  if (not pureTCE_anchorIndex_isLoaded) {
-    if (pureTCE_anchorIndex_branch != 0) {
-      pureTCE_anchorIndex_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_anchorIndex_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_anchorIndex_isLoaded = true;
-  }
-  return *pureTCE_anchorIndex_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_T4_types() {
-  if (not sim_T4_types_isLoaded) {
-    if (sim_T4_types_branch != 0) {
-      sim_T4_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_T4_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_T4_types_isLoaded = true;
-  }
-  return *sim_T4_types_;
-}
-const std::vector<int> &LSTEff::pT4_isDuplicate() {
-  if (not pT4_isDuplicate_isLoaded) {
-    if (pT4_isDuplicate_branch != 0) {
-      pT4_isDuplicate_branch->GetEntry(index);
-    } else {
-      printf("branch pT4_isDuplicate_branch does not exist!\n");
-      exit(1);
-    }
-    pT4_isDuplicate_isLoaded = true;
-  }
-  return *pT4_isDuplicate_;
-}
-const std::vector<float> &LSTEff::t4_pt() {
-  if (not t4_pt_isLoaded) {
-    if (t4_pt_branch != 0) {
-      t4_pt_branch->GetEntry(index);
-    } else {
-      printf("branch t4_pt_branch does not exist!\n");
-      exit(1);
-    }
-    t4_pt_isLoaded = true;
-  }
-  return *t4_pt_;
-}
-const std::vector<std::vector<int> > &LSTEff::sim_TC_types() {
-  if (not sim_TC_types_isLoaded) {
-    if (sim_TC_types_branch != 0) {
-      sim_TC_types_branch->GetEntry(index);
-    } else {
-      printf("branch sim_TC_types_branch does not exist!\n");
-      exit(1);
-    }
-    sim_TC_types_isLoaded = true;
-  }
-  return *sim_TC_types_;
-}
-const std::vector<int> &LSTEff::sg_occupancies() {
-  if (not sg_occupancies_isLoaded) {
-    if (sg_occupancies_branch != 0) {
-      sg_occupancies_branch->GetEntry(index);
-    } else {
-      printf("branch sg_occupancies_branch does not exist!\n");
-      exit(1);
-    }
-    sg_occupancies_isLoaded = true;
-  }
-  return *sg_occupancies_;
-}
-const std::vector<float> &LSTEff::pT4_pt() {
-  if (not pT4_pt_isLoaded) {
-    if (pT4_pt_branch != 0) {
-      pT4_pt_branch->GetEntry(index);
-    } else {
-      printf("branch pT4_pt_branch does not exist!\n");
-      exit(1);
-    }
-    pT4_pt_isLoaded = true;
-  }
-  return *pT4_pt_;
-}
-const std::vector<float> &LSTEff::pureTCE_phi() {
-  if (not pureTCE_phi_isLoaded) {
-    if (pureTCE_phi_branch != 0) {
-      pureTCE_phi_branch->GetEntry(index);
-    } else {
-      printf("branch pureTCE_phi_branch does not exist!\n");
-      exit(1);
-    }
-    pureTCE_phi_isLoaded = true;
-  }
-  return *pureTCE_phi_;
+  return *sim_pdgId_;
 }
 const std::vector<float> &LSTEff::sim_vx() {
   if (not sim_vx_isLoaded) {
@@ -3090,17 +1520,821 @@ const std::vector<float> &LSTEff::sim_vz() {
   }
   return *sim_vz_;
 }
-const std::vector<int> &LSTEff::tce_maxHitMatchedCounts() {
-  if (not tce_maxHitMatchedCounts_isLoaded) {
-    if (tce_maxHitMatchedCounts_branch != 0) {
-      tce_maxHitMatchedCounts_branch->GetEntry(index);
+const std::vector<float> &LSTEff::sim_vtxperp() {
+  if (not sim_vtxperp_isLoaded) {
+    if (sim_vtxperp_branch != 0) {
+      sim_vtxperp_branch->GetEntry(index);
     } else {
-      printf("branch tce_maxHitMatchedCounts_branch does not exist!\n");
+      printf("branch sim_vtxperp_branch does not exist!\n");
       exit(1);
     }
-    tce_maxHitMatchedCounts_isLoaded = true;
+    sim_vtxperp_isLoaded = true;
   }
-  return *tce_maxHitMatchedCounts_;
+  return *sim_vtxperp_;
+}
+const std::vector<float> &LSTEff::sim_trkNtupIdx() {
+  if (not sim_trkNtupIdx_isLoaded) {
+    if (sim_trkNtupIdx_branch != 0) {
+      sim_trkNtupIdx_branch->GetEntry(index);
+    } else {
+      printf("branch sim_trkNtupIdx_branch does not exist!\n");
+      exit(1);
+    }
+    sim_trkNtupIdx_isLoaded = true;
+  }
+  return *sim_trkNtupIdx_;
+}
+const std::vector<int> &LSTEff::sim_tcIdx() {
+  if (not sim_tcIdx_isLoaded) {
+    if (sim_tcIdx_branch != 0) {
+      sim_tcIdx_branch->GetEntry(index);
+    } else {
+      printf("branch sim_tcIdx_branch does not exist!\n");
+      exit(1);
+    }
+    sim_tcIdx_isLoaded = true;
+  }
+  return *sim_tcIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_tcIdxAll() {
+  if (not sim_tcIdxAll_isLoaded) {
+    if (sim_tcIdxAll_branch != 0) {
+      sim_tcIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_tcIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_tcIdxAll_isLoaded = true;
+  }
+  return *sim_tcIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_tcIdxAllFrac() {
+  if (not sim_tcIdxAllFrac_isLoaded) {
+    if (sim_tcIdxAllFrac_branch != 0) {
+      sim_tcIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_tcIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_tcIdxAllFrac_isLoaded = true;
+  }
+  return *sim_tcIdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_mdIdxAll() {
+  if (not sim_mdIdxAll_isLoaded) {
+    if (sim_mdIdxAll_branch != 0) {
+      sim_mdIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_mdIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_mdIdxAll_isLoaded = true;
+  }
+  return *sim_mdIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_mdIdxAllFrac() {
+  if (not sim_mdIdxAllFrac_isLoaded) {
+    if (sim_mdIdxAllFrac_branch != 0) {
+      sim_mdIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_mdIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_mdIdxAllFrac_isLoaded = true;
+  }
+  return *sim_mdIdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_lsIdxAll() {
+  if (not sim_lsIdxAll_isLoaded) {
+    if (sim_lsIdxAll_branch != 0) {
+      sim_lsIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_lsIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_lsIdxAll_isLoaded = true;
+  }
+  return *sim_lsIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_lsIdxAllFrac() {
+  if (not sim_lsIdxAllFrac_isLoaded) {
+    if (sim_lsIdxAllFrac_branch != 0) {
+      sim_lsIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_lsIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_lsIdxAllFrac_isLoaded = true;
+  }
+  return *sim_lsIdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_t3IdxAll() {
+  if (not sim_t3IdxAll_isLoaded) {
+    if (sim_t3IdxAll_branch != 0) {
+      sim_t3IdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_t3IdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_t3IdxAll_isLoaded = true;
+  }
+  return *sim_t3IdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_t3IdxAllFrac() {
+  if (not sim_t3IdxAllFrac_isLoaded) {
+    if (sim_t3IdxAllFrac_branch != 0) {
+      sim_t3IdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_t3IdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_t3IdxAllFrac_isLoaded = true;
+  }
+  return *sim_t3IdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_t5IdxAll() {
+  if (not sim_t5IdxAll_isLoaded) {
+    if (sim_t5IdxAll_branch != 0) {
+      sim_t5IdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_t5IdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_t5IdxAll_isLoaded = true;
+  }
+  return *sim_t5IdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_t5IdxAllFrac() {
+  if (not sim_t5IdxAllFrac_isLoaded) {
+    if (sim_t5IdxAllFrac_branch != 0) {
+      sim_t5IdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_t5IdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_t5IdxAllFrac_isLoaded = true;
+  }
+  return *sim_t5IdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_plsIdxAll() {
+  if (not sim_plsIdxAll_isLoaded) {
+    if (sim_plsIdxAll_branch != 0) {
+      sim_plsIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_plsIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_plsIdxAll_isLoaded = true;
+  }
+  return *sim_plsIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_plsIdxAllFrac() {
+  if (not sim_plsIdxAllFrac_isLoaded) {
+    if (sim_plsIdxAllFrac_branch != 0) {
+      sim_plsIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_plsIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_plsIdxAllFrac_isLoaded = true;
+  }
+  return *sim_plsIdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_pt3IdxAll() {
+  if (not sim_pt3IdxAll_isLoaded) {
+    if (sim_pt3IdxAll_branch != 0) {
+      sim_pt3IdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_pt3IdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_pt3IdxAll_isLoaded = true;
+  }
+  return *sim_pt3IdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_pt3IdxAllFrac() {
+  if (not sim_pt3IdxAllFrac_isLoaded) {
+    if (sim_pt3IdxAllFrac_branch != 0) {
+      sim_pt3IdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_pt3IdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_pt3IdxAllFrac_isLoaded = true;
+  }
+  return *sim_pt3IdxAllFrac_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_pt5IdxAll() {
+  if (not sim_pt5IdxAll_isLoaded) {
+    if (sim_pt5IdxAll_branch != 0) {
+      sim_pt5IdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch sim_pt5IdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    sim_pt5IdxAll_isLoaded = true;
+  }
+  return *sim_pt5IdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_pt5IdxAllFrac() {
+  if (not sim_pt5IdxAllFrac_isLoaded) {
+    if (sim_pt5IdxAllFrac_branch != 0) {
+      sim_pt5IdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_pt5IdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_pt5IdxAllFrac_isLoaded = true;
+  }
+  return *sim_pt5IdxAllFrac_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_simHitX() {
+  if (not sim_simHitX_isLoaded) {
+    if (sim_simHitX_branch != 0) {
+      sim_simHitX_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitX_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitX_isLoaded = true;
+  }
+  return *sim_simHitX_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_simHitY() {
+  if (not sim_simHitY_isLoaded) {
+    if (sim_simHitY_branch != 0) {
+      sim_simHitY_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitY_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitY_isLoaded = true;
+  }
+  return *sim_simHitY_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_simHitZ() {
+  if (not sim_simHitZ_isLoaded) {
+    if (sim_simHitZ_branch != 0) {
+      sim_simHitZ_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitZ_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitZ_isLoaded = true;
+  }
+  return *sim_simHitZ_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_simHitDetId() {
+  if (not sim_simHitDetId_isLoaded) {
+    if (sim_simHitDetId_branch != 0) {
+      sim_simHitDetId_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitDetId_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitDetId_isLoaded = true;
+  }
+  return *sim_simHitDetId_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_simHitLayer() {
+  if (not sim_simHitLayer_isLoaded) {
+    if (sim_simHitLayer_branch != 0) {
+      sim_simHitLayer_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitLayer_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitLayer_isLoaded = true;
+  }
+  return *sim_simHitLayer_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_simHitDistxyHelix() {
+  if (not sim_simHitDistxyHelix_isLoaded) {
+    if (sim_simHitDistxyHelix_branch != 0) {
+      sim_simHitDistxyHelix_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitDistxyHelix_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitDistxyHelix_isLoaded = true;
+  }
+  return *sim_simHitDistxyHelix_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_simHitLayerMinDistxyHelix() {
+  if (not sim_simHitLayerMinDistxyHelix_isLoaded) {
+    if (sim_simHitLayerMinDistxyHelix_branch != 0) {
+      sim_simHitLayerMinDistxyHelix_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitLayerMinDistxyHelix_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitLayerMinDistxyHelix_isLoaded = true;
+  }
+  return *sim_simHitLayerMinDistxyHelix_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_recoHitX() {
+  if (not sim_recoHitX_isLoaded) {
+    if (sim_recoHitX_branch != 0) {
+      sim_recoHitX_branch->GetEntry(index);
+    } else {
+      printf("branch sim_recoHitX_branch does not exist!\n");
+      exit(1);
+    }
+    sim_recoHitX_isLoaded = true;
+  }
+  return *sim_recoHitX_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_recoHitY() {
+  if (not sim_recoHitY_isLoaded) {
+    if (sim_recoHitY_branch != 0) {
+      sim_recoHitY_branch->GetEntry(index);
+    } else {
+      printf("branch sim_recoHitY_branch does not exist!\n");
+      exit(1);
+    }
+    sim_recoHitY_isLoaded = true;
+  }
+  return *sim_recoHitY_;
+}
+const std::vector<std::vector<float> > &LSTEff::sim_recoHitZ() {
+  if (not sim_recoHitZ_isLoaded) {
+    if (sim_recoHitZ_branch != 0) {
+      sim_recoHitZ_branch->GetEntry(index);
+    } else {
+      printf("branch sim_recoHitZ_branch does not exist!\n");
+      exit(1);
+    }
+    sim_recoHitZ_isLoaded = true;
+  }
+  return *sim_recoHitZ_;
+}
+const std::vector<std::vector<int> > &LSTEff::sim_recoHitDetId() {
+  if (not sim_recoHitDetId_isLoaded) {
+    if (sim_recoHitDetId_branch != 0) {
+      sim_recoHitDetId_branch->GetEntry(index);
+    } else {
+      printf("branch sim_recoHitDetId_branch does not exist!\n");
+      exit(1);
+    }
+    sim_recoHitDetId_isLoaded = true;
+  }
+  return *sim_recoHitDetId_;
+}
+const std::vector<float> &LSTEff::tc_pt() {
+  if (not tc_pt_isLoaded) {
+    if (tc_pt_branch != 0) {
+      tc_pt_branch->GetEntry(index);
+    } else {
+      printf("branch tc_pt_branch does not exist!\n");
+      exit(1);
+    }
+    tc_pt_isLoaded = true;
+  }
+  return *tc_pt_;
+}
+const std::vector<float> &LSTEff::tc_eta() {
+  if (not tc_eta_isLoaded) {
+    if (tc_eta_branch != 0) {
+      tc_eta_branch->GetEntry(index);
+    } else {
+      printf("branch tc_eta_branch does not exist!\n");
+      exit(1);
+    }
+    tc_eta_isLoaded = true;
+  }
+  return *tc_eta_;
+}
+const std::vector<float> &LSTEff::tc_phi() {
+  if (not tc_phi_isLoaded) {
+    if (tc_phi_branch != 0) {
+      tc_phi_branch->GetEntry(index);
+    } else {
+      printf("branch tc_phi_branch does not exist!\n");
+      exit(1);
+    }
+    tc_phi_isLoaded = true;
+  }
+  return *tc_phi_;
+}
+const std::vector<int> &LSTEff::tc_type() {
+  if (not tc_type_isLoaded) {
+    if (tc_type_branch != 0) {
+      tc_type_branch->GetEntry(index);
+    } else {
+      printf("branch tc_type_branch does not exist!\n");
+      exit(1);
+    }
+    tc_type_isLoaded = true;
+  }
+  return *tc_type_;
+}
+const std::vector<int> &LSTEff::tc_pt5Idx() {
+  if (not tc_pt5Idx_isLoaded) {
+    if (tc_pt5Idx_branch != 0) {
+      tc_pt5Idx_branch->GetEntry(index);
+    } else {
+      printf("branch tc_pt5Idx_branch does not exist!\n");
+      exit(1);
+    }
+    tc_pt5Idx_isLoaded = true;
+  }
+  return *tc_pt5Idx_;
+}
+const std::vector<int> &LSTEff::tc_pt3Idx() {
+  if (not tc_pt3Idx_isLoaded) {
+    if (tc_pt3Idx_branch != 0) {
+      tc_pt3Idx_branch->GetEntry(index);
+    } else {
+      printf("branch tc_pt3Idx_branch does not exist!\n");
+      exit(1);
+    }
+    tc_pt3Idx_isLoaded = true;
+  }
+  return *tc_pt3Idx_;
+}
+const std::vector<int> &LSTEff::tc_t5Idx() {
+  if (not tc_t5Idx_isLoaded) {
+    if (tc_t5Idx_branch != 0) {
+      tc_t5Idx_branch->GetEntry(index);
+    } else {
+      printf("branch tc_t5Idx_branch does not exist!\n");
+      exit(1);
+    }
+    tc_t5Idx_isLoaded = true;
+  }
+  return *tc_t5Idx_;
+}
+const std::vector<int> &LSTEff::tc_plsIdx() {
+  if (not tc_plsIdx_isLoaded) {
+    if (tc_plsIdx_branch != 0) {
+      tc_plsIdx_branch->GetEntry(index);
+    } else {
+      printf("branch tc_plsIdx_branch does not exist!\n");
+      exit(1);
+    }
+    tc_plsIdx_isLoaded = true;
+  }
+  return *tc_plsIdx_;
+}
+const std::vector<int> &LSTEff::tc_isFake() {
+  if (not tc_isFake_isLoaded) {
+    if (tc_isFake_branch != 0) {
+      tc_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch tc_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    tc_isFake_isLoaded = true;
+  }
+  return *tc_isFake_;
+}
+const std::vector<int> &LSTEff::tc_isDuplicate() {
+  if (not tc_isDuplicate_isLoaded) {
+    if (tc_isDuplicate_branch != 0) {
+      tc_isDuplicate_branch->GetEntry(index);
+    } else {
+      printf("branch tc_isDuplicate_branch does not exist!\n");
+      exit(1);
+    }
+    tc_isDuplicate_isLoaded = true;
+  }
+  return *tc_isDuplicate_;
+}
+const std::vector<int> &LSTEff::tc_simIdx() {
+  if (not tc_simIdx_isLoaded) {
+    if (tc_simIdx_branch != 0) {
+      tc_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch tc_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    tc_simIdx_isLoaded = true;
+  }
+  return *tc_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::tc_simIdxAll() {
+  if (not tc_simIdxAll_isLoaded) {
+    if (tc_simIdxAll_branch != 0) {
+      tc_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch tc_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    tc_simIdxAll_isLoaded = true;
+  }
+  return *tc_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::tc_simIdxAllFrac() {
+  if (not tc_simIdxAllFrac_isLoaded) {
+    if (tc_simIdxAllFrac_branch != 0) {
+      tc_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch tc_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    tc_simIdxAllFrac_isLoaded = true;
+  }
+  return *tc_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::md_pt() {
+  if (not md_pt_isLoaded) {
+    if (md_pt_branch != 0) {
+      md_pt_branch->GetEntry(index);
+    } else {
+      printf("branch md_pt_branch does not exist!\n");
+      exit(1);
+    }
+    md_pt_isLoaded = true;
+  }
+  return *md_pt_;
+}
+const std::vector<float> &LSTEff::md_eta() {
+  if (not md_eta_isLoaded) {
+    if (md_eta_branch != 0) {
+      md_eta_branch->GetEntry(index);
+    } else {
+      printf("branch md_eta_branch does not exist!\n");
+      exit(1);
+    }
+    md_eta_isLoaded = true;
+  }
+  return *md_eta_;
+}
+const std::vector<float> &LSTEff::md_phi() {
+  if (not md_phi_isLoaded) {
+    if (md_phi_branch != 0) {
+      md_phi_branch->GetEntry(index);
+    } else {
+      printf("branch md_phi_branch does not exist!\n");
+      exit(1);
+    }
+    md_phi_isLoaded = true;
+  }
+  return *md_phi_;
+}
+const std::vector<float> &LSTEff::md_anchor_x() {
+  if (not md_anchor_x_isLoaded) {
+    if (md_anchor_x_branch != 0) {
+      md_anchor_x_branch->GetEntry(index);
+    } else {
+      printf("branch md_anchor_x_branch does not exist!\n");
+      exit(1);
+    }
+    md_anchor_x_isLoaded = true;
+  }
+  return *md_anchor_x_;
+}
+const std::vector<float> &LSTEff::md_anchor_y() {
+  if (not md_anchor_y_isLoaded) {
+    if (md_anchor_y_branch != 0) {
+      md_anchor_y_branch->GetEntry(index);
+    } else {
+      printf("branch md_anchor_y_branch does not exist!\n");
+      exit(1);
+    }
+    md_anchor_y_isLoaded = true;
+  }
+  return *md_anchor_y_;
+}
+const std::vector<float> &LSTEff::md_anchor_z() {
+  if (not md_anchor_z_isLoaded) {
+    if (md_anchor_z_branch != 0) {
+      md_anchor_z_branch->GetEntry(index);
+    } else {
+      printf("branch md_anchor_z_branch does not exist!\n");
+      exit(1);
+    }
+    md_anchor_z_isLoaded = true;
+  }
+  return *md_anchor_z_;
+}
+const std::vector<float> &LSTEff::md_other_x() {
+  if (not md_other_x_isLoaded) {
+    if (md_other_x_branch != 0) {
+      md_other_x_branch->GetEntry(index);
+    } else {
+      printf("branch md_other_x_branch does not exist!\n");
+      exit(1);
+    }
+    md_other_x_isLoaded = true;
+  }
+  return *md_other_x_;
+}
+const std::vector<float> &LSTEff::md_other_y() {
+  if (not md_other_y_isLoaded) {
+    if (md_other_y_branch != 0) {
+      md_other_y_branch->GetEntry(index);
+    } else {
+      printf("branch md_other_y_branch does not exist!\n");
+      exit(1);
+    }
+    md_other_y_isLoaded = true;
+  }
+  return *md_other_y_;
+}
+const std::vector<float> &LSTEff::md_other_z() {
+  if (not md_other_z_isLoaded) {
+    if (md_other_z_branch != 0) {
+      md_other_z_branch->GetEntry(index);
+    } else {
+      printf("branch md_other_z_branch does not exist!\n");
+      exit(1);
+    }
+    md_other_z_isLoaded = true;
+  }
+  return *md_other_z_;
+}
+const std::vector<int> &LSTEff::md_type() {
+  if (not md_type_isLoaded) {
+    if (md_type_branch != 0) {
+      md_type_branch->GetEntry(index);
+    } else {
+      printf("branch md_type_branch does not exist!\n");
+      exit(1);
+    }
+    md_type_isLoaded = true;
+  }
+  return *md_type_;
+}
+const std::vector<int> &LSTEff::md_layer() {
+  if (not md_layer_isLoaded) {
+    if (md_layer_branch != 0) {
+      md_layer_branch->GetEntry(index);
+    } else {
+      printf("branch md_layer_branch does not exist!\n");
+      exit(1);
+    }
+    md_layer_isLoaded = true;
+  }
+  return *md_layer_;
+}
+const std::vector<int> &LSTEff::md_detId() {
+  if (not md_detId_isLoaded) {
+    if (md_detId_branch != 0) {
+      md_detId_branch->GetEntry(index);
+    } else {
+      printf("branch md_detId_branch does not exist!\n");
+      exit(1);
+    }
+    md_detId_isLoaded = true;
+  }
+  return *md_detId_;
+}
+const std::vector<int> &LSTEff::md_isFake() {
+  if (not md_isFake_isLoaded) {
+    if (md_isFake_branch != 0) {
+      md_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch md_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    md_isFake_isLoaded = true;
+  }
+  return *md_isFake_;
+}
+const std::vector<int> &LSTEff::md_simIdx() {
+  if (not md_simIdx_isLoaded) {
+    if (md_simIdx_branch != 0) {
+      md_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch md_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    md_simIdx_isLoaded = true;
+  }
+  return *md_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::md_simIdxAll() {
+  if (not md_simIdxAll_isLoaded) {
+    if (md_simIdxAll_branch != 0) {
+      md_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch md_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    md_simIdxAll_isLoaded = true;
+  }
+  return *md_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::md_simIdxAllFrac() {
+  if (not md_simIdxAllFrac_isLoaded) {
+    if (md_simIdxAllFrac_branch != 0) {
+      md_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch md_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    md_simIdxAllFrac_isLoaded = true;
+  }
+  return *md_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::ls_pt() {
+  if (not ls_pt_isLoaded) {
+    if (ls_pt_branch != 0) {
+      ls_pt_branch->GetEntry(index);
+    } else {
+      printf("branch ls_pt_branch does not exist!\n");
+      exit(1);
+    }
+    ls_pt_isLoaded = true;
+  }
+  return *ls_pt_;
+}
+const std::vector<float> &LSTEff::ls_eta() {
+  if (not ls_eta_isLoaded) {
+    if (ls_eta_branch != 0) {
+      ls_eta_branch->GetEntry(index);
+    } else {
+      printf("branch ls_eta_branch does not exist!\n");
+      exit(1);
+    }
+    ls_eta_isLoaded = true;
+  }
+  return *ls_eta_;
+}
+const std::vector<float> &LSTEff::ls_phi() {
+  if (not ls_phi_isLoaded) {
+    if (ls_phi_branch != 0) {
+      ls_phi_branch->GetEntry(index);
+    } else {
+      printf("branch ls_phi_branch does not exist!\n");
+      exit(1);
+    }
+    ls_phi_isLoaded = true;
+  }
+  return *ls_phi_;
+}
+const std::vector<int> &LSTEff::ls_mdIdx0() {
+  if (not ls_mdIdx0_isLoaded) {
+    if (ls_mdIdx0_branch != 0) {
+      ls_mdIdx0_branch->GetEntry(index);
+    } else {
+      printf("branch ls_mdIdx0_branch does not exist!\n");
+      exit(1);
+    }
+    ls_mdIdx0_isLoaded = true;
+  }
+  return *ls_mdIdx0_;
+}
+const std::vector<int> &LSTEff::ls_mdIdx1() {
+  if (not ls_mdIdx1_isLoaded) {
+    if (ls_mdIdx1_branch != 0) {
+      ls_mdIdx1_branch->GetEntry(index);
+    } else {
+      printf("branch ls_mdIdx1_branch does not exist!\n");
+      exit(1);
+    }
+    ls_mdIdx1_isLoaded = true;
+  }
+  return *ls_mdIdx1_;
+}
+const std::vector<int> &LSTEff::ls_isFake() {
+  if (not ls_isFake_isLoaded) {
+    if (ls_isFake_branch != 0) {
+      ls_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch ls_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    ls_isFake_isLoaded = true;
+  }
+  return *ls_isFake_;
+}
+const std::vector<int> &LSTEff::ls_simIdx() {
+  if (not ls_simIdx_isLoaded) {
+    if (ls_simIdx_branch != 0) {
+      ls_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch ls_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    ls_simIdx_isLoaded = true;
+  }
+  return *ls_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::ls_simIdxAll() {
+  if (not ls_simIdxAll_isLoaded) {
+    if (ls_simIdxAll_branch != 0) {
+      ls_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch ls_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    ls_simIdxAll_isLoaded = true;
+  }
+  return *ls_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::ls_simIdxAllFrac() {
+  if (not ls_simIdxAllFrac_isLoaded) {
+    if (ls_simIdxAllFrac_branch != 0) {
+      ls_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch ls_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    ls_simIdxAllFrac_isLoaded = true;
+  }
+  return *ls_simIdxAllFrac_;
 }
 const std::vector<float> &LSTEff::t3_pt() {
   if (not t3_pt_isLoaded) {
@@ -3114,113 +2348,725 @@ const std::vector<float> &LSTEff::t3_pt() {
   }
   return *t3_pt_;
 }
-const std::vector<int> &LSTEff::module_rings() {
-  if (not module_rings_isLoaded) {
-    if (module_rings_branch != 0) {
-      module_rings_branch->GetEntry(index);
+const std::vector<float> &LSTEff::t3_eta() {
+  if (not t3_eta_isLoaded) {
+    if (t3_eta_branch != 0) {
+      t3_eta_branch->GetEntry(index);
     } else {
-      printf("branch module_rings_branch does not exist!\n");
+      printf("branch t3_eta_branch does not exist!\n");
       exit(1);
     }
-    module_rings_isLoaded = true;
+    t3_eta_isLoaded = true;
   }
-  return *module_rings_;
+  return *t3_eta_;
 }
-const std::vector<std::vector<int> > &LSTEff::sim_T3_types() {
-  if (not sim_T3_types_isLoaded) {
-    if (sim_T3_types_branch != 0) {
-      sim_T3_types_branch->GetEntry(index);
+const std::vector<float> &LSTEff::t3_phi() {
+  if (not t3_phi_isLoaded) {
+    if (t3_phi_branch != 0) {
+      t3_phi_branch->GetEntry(index);
     } else {
-      printf("branch sim_T3_types_branch does not exist!\n");
+      printf("branch t3_phi_branch does not exist!\n");
       exit(1);
     }
-    sim_T3_types_isLoaded = true;
+    t3_phi_isLoaded = true;
   }
-  return *sim_T3_types_;
+  return *t3_phi_;
 }
-const std::vector<std::vector<int> > &LSTEff::sim_pT5_types() {
-  if (not sim_pT5_types_isLoaded) {
-    if (sim_pT5_types_branch != 0) {
-      sim_pT5_types_branch->GetEntry(index);
+const std::vector<int> &LSTEff::t3_lsIdx0() {
+  if (not t3_lsIdx0_isLoaded) {
+    if (t3_lsIdx0_branch != 0) {
+      t3_lsIdx0_branch->GetEntry(index);
     } else {
-      printf("branch sim_pT5_types_branch does not exist!\n");
+      printf("branch t3_lsIdx0_branch does not exist!\n");
       exit(1);
     }
-    sim_pT5_types_isLoaded = true;
+    t3_lsIdx0_isLoaded = true;
   }
-  return *sim_pT5_types_;
+  return *t3_lsIdx0_;
 }
-const std::vector<int> &LSTEff::sim_pT5_matched() {
-  if (not sim_pT5_matched_isLoaded) {
-    if (sim_pT5_matched_branch != 0) {
-      sim_pT5_matched_branch->GetEntry(index);
+const std::vector<int> &LSTEff::t3_lsIdx1() {
+  if (not t3_lsIdx1_isLoaded) {
+    if (t3_lsIdx1_branch != 0) {
+      t3_lsIdx1_branch->GetEntry(index);
     } else {
-      printf("branch sim_pT5_matched_branch does not exist!\n");
+      printf("branch t3_lsIdx1_branch does not exist!\n");
       exit(1);
     }
-    sim_pT5_matched_isLoaded = true;
+    t3_lsIdx1_isLoaded = true;
   }
-  return *sim_pT5_matched_;
+  return *t3_lsIdx1_;
 }
-const std::vector<int> &LSTEff::module_layers() {
-  if (not module_layers_isLoaded) {
-    if (module_layers_branch != 0) {
-      module_layers_branch->GetEntry(index);
+const std::vector<int> &LSTEff::t3_isFake() {
+  if (not t3_isFake_isLoaded) {
+    if (t3_isFake_branch != 0) {
+      t3_isFake_branch->GetEntry(index);
     } else {
-      printf("branch module_layers_branch does not exist!\n");
+      printf("branch t3_isFake_branch does not exist!\n");
       exit(1);
     }
-    module_layers_isLoaded = true;
+    t3_isFake_isLoaded = true;
   }
-  return *module_layers_;
+  return *t3_isFake_;
 }
-const std::vector<float> &LSTEff::pT4_eta() {
-  if (not pT4_eta_isLoaded) {
-    if (pT4_eta_branch != 0) {
-      pT4_eta_branch->GetEntry(index);
+const std::vector<int> &LSTEff::t3_isDuplicate() {
+  if (not t3_isDuplicate_isLoaded) {
+    if (t3_isDuplicate_branch != 0) {
+      t3_isDuplicate_branch->GetEntry(index);
     } else {
-      printf("branch pT4_eta_branch does not exist!\n");
+      printf("branch t3_isDuplicate_branch does not exist!\n");
       exit(1);
     }
-    pT4_eta_isLoaded = true;
+    t3_isDuplicate_isLoaded = true;
   }
-  return *pT4_eta_;
+  return *t3_isDuplicate_;
 }
-const std::vector<std::vector<int> > &LSTEff::sim_tce_types() {
-  if (not sim_tce_types_isLoaded) {
-    if (sim_tce_types_branch != 0) {
-      sim_tce_types_branch->GetEntry(index);
+const std::vector<int> &LSTEff::t3_simIdx() {
+  if (not t3_simIdx_isLoaded) {
+    if (t3_simIdx_branch != 0) {
+      t3_simIdx_branch->GetEntry(index);
     } else {
-      printf("branch sim_tce_types_branch does not exist!\n");
+      printf("branch t3_simIdx_branch does not exist!\n");
       exit(1);
     }
-    sim_tce_types_isLoaded = true;
+    t3_simIdx_isLoaded = true;
   }
-  return *sim_tce_types_;
+  return *t3_simIdx_;
 }
-const std::vector<float> &LSTEff::tce_rzChiSquared() {
-  if (not tce_rzChiSquared_isLoaded) {
-    if (tce_rzChiSquared_branch != 0) {
-      tce_rzChiSquared_branch->GetEntry(index);
+const std::vector<std::vector<int> > &LSTEff::t3_simIdxAll() {
+  if (not t3_simIdxAll_isLoaded) {
+    if (t3_simIdxAll_branch != 0) {
+      t3_simIdxAll_branch->GetEntry(index);
     } else {
-      printf("branch tce_rzChiSquared_branch does not exist!\n");
+      printf("branch t3_simIdxAll_branch does not exist!\n");
       exit(1);
     }
-    tce_rzChiSquared_isLoaded = true;
+    t3_simIdxAll_isLoaded = true;
   }
-  return *tce_rzChiSquared_;
+  return *t3_simIdxAll_;
 }
-const std::vector<std::vector<int> > &LSTEff::pT3_matched_simIdx() {
-  if (not pT3_matched_simIdx_isLoaded) {
-    if (pT3_matched_simIdx_branch != 0) {
-      pT3_matched_simIdx_branch->GetEntry(index);
+const std::vector<std::vector<float> > &LSTEff::t3_simIdxAllFrac() {
+  if (not t3_simIdxAllFrac_isLoaded) {
+    if (t3_simIdxAllFrac_branch != 0) {
+      t3_simIdxAllFrac_branch->GetEntry(index);
     } else {
-      printf("branch pT3_matched_simIdx_branch does not exist!\n");
+      printf("branch t3_simIdxAllFrac_branch does not exist!\n");
       exit(1);
     }
-    pT3_matched_simIdx_isLoaded = true;
+    t3_simIdxAllFrac_isLoaded = true;
   }
-  return *pT3_matched_simIdx_;
+  return *t3_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::t5_pt() {
+  if (not t5_pt_isLoaded) {
+    if (t5_pt_branch != 0) {
+      t5_pt_branch->GetEntry(index);
+    } else {
+      printf("branch t5_pt_branch does not exist!\n");
+      exit(1);
+    }
+    t5_pt_isLoaded = true;
+  }
+  return *t5_pt_;
+}
+const std::vector<float> &LSTEff::t5_eta() {
+  if (not t5_eta_isLoaded) {
+    if (t5_eta_branch != 0) {
+      t5_eta_branch->GetEntry(index);
+    } else {
+      printf("branch t5_eta_branch does not exist!\n");
+      exit(1);
+    }
+    t5_eta_isLoaded = true;
+  }
+  return *t5_eta_;
+}
+const std::vector<float> &LSTEff::t5_phi() {
+  if (not t5_phi_isLoaded) {
+    if (t5_phi_branch != 0) {
+      t5_phi_branch->GetEntry(index);
+    } else {
+      printf("branch t5_phi_branch does not exist!\n");
+      exit(1);
+    }
+    t5_phi_isLoaded = true;
+  }
+  return *t5_phi_;
+}
+const std::vector<int> &LSTEff::t5_t3Idx0() {
+  if (not t5_t3Idx0_isLoaded) {
+    if (t5_t3Idx0_branch != 0) {
+      t5_t3Idx0_branch->GetEntry(index);
+    } else {
+      printf("branch t5_t3Idx0_branch does not exist!\n");
+      exit(1);
+    }
+    t5_t3Idx0_isLoaded = true;
+  }
+  return *t5_t3Idx0_;
+}
+const std::vector<int> &LSTEff::t5_t3Idx1() {
+  if (not t5_t3Idx1_isLoaded) {
+    if (t5_t3Idx1_branch != 0) {
+      t5_t3Idx1_branch->GetEntry(index);
+    } else {
+      printf("branch t5_t3Idx1_branch does not exist!\n");
+      exit(1);
+    }
+    t5_t3Idx1_isLoaded = true;
+  }
+  return *t5_t3Idx1_;
+}
+const std::vector<int> &LSTEff::t5_isFake() {
+  if (not t5_isFake_isLoaded) {
+    if (t5_isFake_branch != 0) {
+      t5_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch t5_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    t5_isFake_isLoaded = true;
+  }
+  return *t5_isFake_;
+}
+const std::vector<int> &LSTEff::t5_isDuplicate() {
+  if (not t5_isDuplicate_isLoaded) {
+    if (t5_isDuplicate_branch != 0) {
+      t5_isDuplicate_branch->GetEntry(index);
+    } else {
+      printf("branch t5_isDuplicate_branch does not exist!\n");
+      exit(1);
+    }
+    t5_isDuplicate_isLoaded = true;
+  }
+  return *t5_isDuplicate_;
+}
+const std::vector<int> &LSTEff::t5_simIdx() {
+  if (not t5_simIdx_isLoaded) {
+    if (t5_simIdx_branch != 0) {
+      t5_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch t5_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    t5_simIdx_isLoaded = true;
+  }
+  return *t5_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::t5_simIdxAll() {
+  if (not t5_simIdxAll_isLoaded) {
+    if (t5_simIdxAll_branch != 0) {
+      t5_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch t5_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    t5_simIdxAll_isLoaded = true;
+  }
+  return *t5_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::t5_simIdxAllFrac() {
+  if (not t5_simIdxAllFrac_isLoaded) {
+    if (t5_simIdxAllFrac_branch != 0) {
+      t5_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch t5_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    t5_simIdxAllFrac_isLoaded = true;
+  }
+  return *t5_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::pls_pt() {
+  if (not pls_pt_isLoaded) {
+    if (pls_pt_branch != 0) {
+      pls_pt_branch->GetEntry(index);
+    } else {
+      printf("branch pls_pt_branch does not exist!\n");
+      exit(1);
+    }
+    pls_pt_isLoaded = true;
+  }
+  return *pls_pt_;
+}
+const std::vector<float> &LSTEff::pls_eta() {
+  if (not pls_eta_isLoaded) {
+    if (pls_eta_branch != 0) {
+      pls_eta_branch->GetEntry(index);
+    } else {
+      printf("branch pls_eta_branch does not exist!\n");
+      exit(1);
+    }
+    pls_eta_isLoaded = true;
+  }
+  return *pls_eta_;
+}
+const std::vector<float> &LSTEff::pls_phi() {
+  if (not pls_phi_isLoaded) {
+    if (pls_phi_branch != 0) {
+      pls_phi_branch->GetEntry(index);
+    } else {
+      printf("branch pls_phi_branch does not exist!\n");
+      exit(1);
+    }
+    pls_phi_isLoaded = true;
+  }
+  return *pls_phi_;
+}
+const std::vector<int> &LSTEff::pls_nhit() {
+  if (not pls_nhit_isLoaded) {
+    if (pls_nhit_branch != 0) {
+      pls_nhit_branch->GetEntry(index);
+    } else {
+      printf("branch pls_nhit_branch does not exist!\n");
+      exit(1);
+    }
+    pls_nhit_isLoaded = true;
+  }
+  return *pls_nhit_;
+}
+const std::vector<float> &LSTEff::pls_hit0_x() {
+  if (not pls_hit0_x_isLoaded) {
+    if (pls_hit0_x_branch != 0) {
+      pls_hit0_x_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit0_x_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit0_x_isLoaded = true;
+  }
+  return *pls_hit0_x_;
+}
+const std::vector<float> &LSTEff::pls_hit0_y() {
+  if (not pls_hit0_y_isLoaded) {
+    if (pls_hit0_y_branch != 0) {
+      pls_hit0_y_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit0_y_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit0_y_isLoaded = true;
+  }
+  return *pls_hit0_y_;
+}
+const std::vector<float> &LSTEff::pls_hit0_z() {
+  if (not pls_hit0_z_isLoaded) {
+    if (pls_hit0_z_branch != 0) {
+      pls_hit0_z_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit0_z_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit0_z_isLoaded = true;
+  }
+  return *pls_hit0_z_;
+}
+const std::vector<float> &LSTEff::pls_hit1_x() {
+  if (not pls_hit1_x_isLoaded) {
+    if (pls_hit1_x_branch != 0) {
+      pls_hit1_x_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit1_x_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit1_x_isLoaded = true;
+  }
+  return *pls_hit1_x_;
+}
+const std::vector<float> &LSTEff::pls_hit1_y() {
+  if (not pls_hit1_y_isLoaded) {
+    if (pls_hit1_y_branch != 0) {
+      pls_hit1_y_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit1_y_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit1_y_isLoaded = true;
+  }
+  return *pls_hit1_y_;
+}
+const std::vector<float> &LSTEff::pls_hit1_z() {
+  if (not pls_hit1_z_isLoaded) {
+    if (pls_hit1_z_branch != 0) {
+      pls_hit1_z_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit1_z_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit1_z_isLoaded = true;
+  }
+  return *pls_hit1_z_;
+}
+const std::vector<float> &LSTEff::pls_hit2_x() {
+  if (not pls_hit2_x_isLoaded) {
+    if (pls_hit2_x_branch != 0) {
+      pls_hit2_x_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit2_x_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit2_x_isLoaded = true;
+  }
+  return *pls_hit2_x_;
+}
+const std::vector<float> &LSTEff::pls_hit2_y() {
+  if (not pls_hit2_y_isLoaded) {
+    if (pls_hit2_y_branch != 0) {
+      pls_hit2_y_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit2_y_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit2_y_isLoaded = true;
+  }
+  return *pls_hit2_y_;
+}
+const std::vector<float> &LSTEff::pls_hit2_z() {
+  if (not pls_hit2_z_isLoaded) {
+    if (pls_hit2_z_branch != 0) {
+      pls_hit2_z_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit2_z_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit2_z_isLoaded = true;
+  }
+  return *pls_hit2_z_;
+}
+const std::vector<float> &LSTEff::pls_hit3_x() {
+  if (not pls_hit3_x_isLoaded) {
+    if (pls_hit3_x_branch != 0) {
+      pls_hit3_x_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit3_x_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit3_x_isLoaded = true;
+  }
+  return *pls_hit3_x_;
+}
+const std::vector<float> &LSTEff::pls_hit3_y() {
+  if (not pls_hit3_y_isLoaded) {
+    if (pls_hit3_y_branch != 0) {
+      pls_hit3_y_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit3_y_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit3_y_isLoaded = true;
+  }
+  return *pls_hit3_y_;
+}
+const std::vector<float> &LSTEff::pls_hit3_z() {
+  if (not pls_hit3_z_isLoaded) {
+    if (pls_hit3_z_branch != 0) {
+      pls_hit3_z_branch->GetEntry(index);
+    } else {
+      printf("branch pls_hit3_z_branch does not exist!\n");
+      exit(1);
+    }
+    pls_hit3_z_isLoaded = true;
+  }
+  return *pls_hit3_z_;
+}
+const std::vector<int> &LSTEff::pls_isFake() {
+  if (not pls_isFake_isLoaded) {
+    if (pls_isFake_branch != 0) {
+      pls_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch pls_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    pls_isFake_isLoaded = true;
+  }
+  return *pls_isFake_;
+}
+const std::vector<int> &LSTEff::pls_isDuplicate() {
+  if (not pls_isDuplicate_isLoaded) {
+    if (pls_isDuplicate_branch != 0) {
+      pls_isDuplicate_branch->GetEntry(index);
+    } else {
+      printf("branch pls_isDuplicate_branch does not exist!\n");
+      exit(1);
+    }
+    pls_isDuplicate_isLoaded = true;
+  }
+  return *pls_isDuplicate_;
+}
+const std::vector<int> &LSTEff::pls_simIdx() {
+  if (not pls_simIdx_isLoaded) {
+    if (pls_simIdx_branch != 0) {
+      pls_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch pls_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    pls_simIdx_isLoaded = true;
+  }
+  return *pls_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::pls_simIdxAll() {
+  if (not pls_simIdxAll_isLoaded) {
+    if (pls_simIdxAll_branch != 0) {
+      pls_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch pls_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    pls_simIdxAll_isLoaded = true;
+  }
+  return *pls_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::pls_simIdxAllFrac() {
+  if (not pls_simIdxAllFrac_isLoaded) {
+    if (pls_simIdxAllFrac_branch != 0) {
+      pls_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch pls_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    pls_simIdxAllFrac_isLoaded = true;
+  }
+  return *pls_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::pt3_pt() {
+  if (not pt3_pt_isLoaded) {
+    if (pt3_pt_branch != 0) {
+      pt3_pt_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_pt_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_pt_isLoaded = true;
+  }
+  return *pt3_pt_;
+}
+const std::vector<float> &LSTEff::pt3_eta() {
+  if (not pt3_eta_isLoaded) {
+    if (pt3_eta_branch != 0) {
+      pt3_eta_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_eta_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_eta_isLoaded = true;
+  }
+  return *pt3_eta_;
+}
+const std::vector<float> &LSTEff::pt3_phi() {
+  if (not pt3_phi_isLoaded) {
+    if (pt3_phi_branch != 0) {
+      pt3_phi_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_phi_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_phi_isLoaded = true;
+  }
+  return *pt3_phi_;
+}
+const std::vector<int> &LSTEff::pt3_plsIdx() {
+  if (not pt3_plsIdx_isLoaded) {
+    if (pt3_plsIdx_branch != 0) {
+      pt3_plsIdx_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_plsIdx_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_plsIdx_isLoaded = true;
+  }
+  return *pt3_plsIdx_;
+}
+const std::vector<int> &LSTEff::pt3_t3Idx() {
+  if (not pt3_t3Idx_isLoaded) {
+    if (pt3_t3Idx_branch != 0) {
+      pt3_t3Idx_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_t3Idx_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_t3Idx_isLoaded = true;
+  }
+  return *pt3_t3Idx_;
+}
+const std::vector<int> &LSTEff::pt3_isFake() {
+  if (not pt3_isFake_isLoaded) {
+    if (pt3_isFake_branch != 0) {
+      pt3_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_isFake_isLoaded = true;
+  }
+  return *pt3_isFake_;
+}
+const std::vector<int> &LSTEff::pt3_isDuplicate() {
+  if (not pt3_isDuplicate_isLoaded) {
+    if (pt3_isDuplicate_branch != 0) {
+      pt3_isDuplicate_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_isDuplicate_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_isDuplicate_isLoaded = true;
+  }
+  return *pt3_isDuplicate_;
+}
+const std::vector<int> &LSTEff::pt3_simIdx() {
+  if (not pt3_simIdx_isLoaded) {
+    if (pt3_simIdx_branch != 0) {
+      pt3_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_simIdx_isLoaded = true;
+  }
+  return *pt3_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::pt3_simIdxAll() {
+  if (not pt3_simIdxAll_isLoaded) {
+    if (pt3_simIdxAll_branch != 0) {
+      pt3_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_simIdxAll_isLoaded = true;
+  }
+  return *pt3_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::pt3_simIdxAllFrac() {
+  if (not pt3_simIdxAllFrac_isLoaded) {
+    if (pt3_simIdxAllFrac_branch != 0) {
+      pt3_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch pt3_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    pt3_simIdxAllFrac_isLoaded = true;
+  }
+  return *pt3_simIdxAllFrac_;
+}
+const std::vector<float> &LSTEff::pt5_pt() {
+  if (not pt5_pt_isLoaded) {
+    if (pt5_pt_branch != 0) {
+      pt5_pt_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_pt_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_pt_isLoaded = true;
+  }
+  return *pt5_pt_;
+}
+const std::vector<float> &LSTEff::pt5_eta() {
+  if (not pt5_eta_isLoaded) {
+    if (pt5_eta_branch != 0) {
+      pt5_eta_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_eta_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_eta_isLoaded = true;
+  }
+  return *pt5_eta_;
+}
+const std::vector<float> &LSTEff::pt5_phi() {
+  if (not pt5_phi_isLoaded) {
+    if (pt5_phi_branch != 0) {
+      pt5_phi_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_phi_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_phi_isLoaded = true;
+  }
+  return *pt5_phi_;
+}
+const std::vector<int> &LSTEff::pt5_plsIdx() {
+  if (not pt5_plsIdx_isLoaded) {
+    if (pt5_plsIdx_branch != 0) {
+      pt5_plsIdx_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_plsIdx_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_plsIdx_isLoaded = true;
+  }
+  return *pt5_plsIdx_;
+}
+const std::vector<int> &LSTEff::pt5_t5Idx() {
+  if (not pt5_t5Idx_isLoaded) {
+    if (pt5_t5Idx_branch != 0) {
+      pt5_t5Idx_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_t5Idx_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_t5Idx_isLoaded = true;
+  }
+  return *pt5_t5Idx_;
+}
+const std::vector<int> &LSTEff::pt5_isFake() {
+  if (not pt5_isFake_isLoaded) {
+    if (pt5_isFake_branch != 0) {
+      pt5_isFake_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_isFake_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_isFake_isLoaded = true;
+  }
+  return *pt5_isFake_;
+}
+const std::vector<int> &LSTEff::pt5_isDuplicate() {
+  if (not pt5_isDuplicate_isLoaded) {
+    if (pt5_isDuplicate_branch != 0) {
+      pt5_isDuplicate_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_isDuplicate_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_isDuplicate_isLoaded = true;
+  }
+  return *pt5_isDuplicate_;
+}
+const std::vector<int> &LSTEff::pt5_simIdx() {
+  if (not pt5_simIdx_isLoaded) {
+    if (pt5_simIdx_branch != 0) {
+      pt5_simIdx_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_simIdx_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_simIdx_isLoaded = true;
+  }
+  return *pt5_simIdx_;
+}
+const std::vector<std::vector<int> > &LSTEff::pt5_simIdxAll() {
+  if (not pt5_simIdxAll_isLoaded) {
+    if (pt5_simIdxAll_branch != 0) {
+      pt5_simIdxAll_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_simIdxAll_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_simIdxAll_isLoaded = true;
+  }
+  return *pt5_simIdxAll_;
+}
+const std::vector<std::vector<float> > &LSTEff::pt5_simIdxAllFrac() {
+  if (not pt5_simIdxAllFrac_isLoaded) {
+    if (pt5_simIdxAllFrac_branch != 0) {
+      pt5_simIdxAllFrac_branch->GetEntry(index);
+    } else {
+      printf("branch pt5_simIdxAllFrac_branch does not exist!\n");
+      exit(1);
+    }
+    pt5_simIdxAllFrac_isLoaded = true;
+  }
+  return *pt5_simIdxAllFrac_;
 }
 void LSTEff::progress(int nEventsTotal, int nEventsChain) {
   int period = 1000;
@@ -3244,150 +3090,145 @@ void LSTEff::progress(int nEventsTotal, int nEventsChain) {
   }
 }
 namespace tas {
-  const int &pT5_occupancies() { return lstEff.pT5_occupancies(); }
-  const std::vector<float> &t3_phi() { return lstEff.t3_phi(); }
-  const std::vector<float> &t5_score_rphisum() { return lstEff.t5_score_rphisum(); }
-  const std::vector<int> &pT4_isFake() { return lstEff.pT4_isFake(); }
-  const std::vector<int> &t3_isDuplicate() { return lstEff.t3_isDuplicate(); }
-  const std::vector<int> &sim_event() { return lstEff.sim_event(); }
-  const std::vector<int> &sim_q() { return lstEff.sim_q(); }
-  const std::vector<float> &sim_eta() { return lstEff.sim_eta(); }
-  const std::vector<int> &pT3_foundDuplicate() { return lstEff.pT3_foundDuplicate(); }
-  const std::vector<float> &sim_len() { return lstEff.sim_len(); }
-  const std::vector<int> &pureTCE_isDuplicate() { return lstEff.pureTCE_isDuplicate(); }
-  const std::vector<float> &pT3_score() { return lstEff.pT3_score(); }
-  const std::vector<float> &t5_eta() { return lstEff.t5_eta(); }
-  const std::vector<int> &sim_denom() { return lstEff.sim_denom(); }
-  const std::vector<int> &pT5_isDuplicate() { return lstEff.pT5_isDuplicate(); }
-  const std::vector<int> &sim_tce_matched() { return lstEff.sim_tce_matched(); }
-  const std::vector<int> &pT3_isDuplicate() { return lstEff.pT3_isDuplicate(); }
-  const std::vector<int> &tc_isDuplicate() { return lstEff.tc_isDuplicate(); }
-  const std::vector<float> &pT3_eta_2() { return lstEff.pT3_eta_2(); }
-  const std::vector<int> &sim_pT3_matched() { return lstEff.sim_pT3_matched(); }
-  const std::vector<float> &pureTCE_rzChiSquared() { return lstEff.pureTCE_rzChiSquared(); }
-  const std::vector<int> &t4_isDuplicate() { return lstEff.t4_isDuplicate(); }
-  const std::vector<float> &pureTCE_eta() { return lstEff.pureTCE_eta(); }
-  const std::vector<float> &tce_rPhiChiSquared() { return lstEff.tce_rPhiChiSquared(); }
-  const std::vector<int> &pureTCE_anchorType() { return lstEff.pureTCE_anchorType(); }
-  const std::vector<float> &pureTCE_pt() { return lstEff.pureTCE_pt(); }
   const std::vector<float> &sim_pt() { return lstEff.sim_pt(); }
-  const std::vector<float> &t5_eta_2() { return lstEff.t5_eta_2(); }
-  const std::vector<float> &pLS_eta() { return lstEff.pLS_eta(); }
-  const std::vector<int> &sim_pdgId() { return lstEff.sim_pdgId(); }
-  const std::vector<float> &t3_eta() { return lstEff.t3_eta(); }
-  const std::vector<int> &tce_layer_binary() { return lstEff.tce_layer_binary(); }
-  const std::vector<int> &sim_TC_matched_nonextended() { return lstEff.sim_TC_matched_nonextended(); }
-  const std::vector<int> &t4_occupancies() { return lstEff.t4_occupancies(); }
-  const std::vector<float> &tce_eta() { return lstEff.tce_eta(); }
-  const std::vector<int> &tce_isDuplicate() { return lstEff.tce_isDuplicate(); }
-  const std::vector<std::vector<int> > &pT5_matched_simIdx() { return lstEff.pT5_matched_simIdx(); }
-  const std::vector<std::vector<int> > &sim_tcIdx() { return lstEff.sim_tcIdx(); }
-  const std::vector<float> &t5_phi_2() { return lstEff.t5_phi_2(); }
-  const std::vector<int> &pureTCE_maxHitMatchedCounts() { return lstEff.pureTCE_maxHitMatchedCounts(); }
-  const std::vector<std::vector<int> > &t5_matched_simIdx() { return lstEff.t5_matched_simIdx(); }
-  const std::vector<int> &module_subdets() { return lstEff.module_subdets(); }
-  const std::vector<int> &tce_anchorType() { return lstEff.tce_anchorType(); }
-  const std::vector<std::vector<int> > &tce_nHitOverlaps() { return lstEff.tce_nHitOverlaps(); }
-  const std::vector<int> &t3_isFake() { return lstEff.t3_isFake(); }
-  const std::vector<float> &tce_phi() { return lstEff.tce_phi(); }
-  const std::vector<int> &t5_isFake() { return lstEff.t5_isFake(); }
-  const std::vector<int> &md_occupancies() { return lstEff.md_occupancies(); }
-  const std::vector<std::vector<int> > &t5_hitIdxs() { return lstEff.t5_hitIdxs(); }
-  const std::vector<std::vector<int> > &sim_pT3_types() { return lstEff.sim_pT3_types(); }
-  const std::vector<std::vector<int> > &sim_pureTCE_types() { return lstEff.sim_pureTCE_types(); }
-  const std::vector<float> &t4_phi() { return lstEff.t4_phi(); }
-  const std::vector<float> &t5_phi() { return lstEff.t5_phi(); }
-  const std::vector<std::vector<int> > &pT5_hitIdxs() { return lstEff.pT5_hitIdxs(); }
-  const std::vector<float> &t5_pt() { return lstEff.t5_pt(); }
-  const std::vector<float> &pT5_phi() { return lstEff.pT5_phi(); }
-  const std::vector<int> &pureTCE_isFake() { return lstEff.pureTCE_isFake(); }
-  const std::vector<float> &tce_pt() { return lstEff.tce_pt(); }
-  const std::vector<int> &tc_isFake() { return lstEff.tc_isFake(); }
-  const std::vector<int> &pT3_isFake() { return lstEff.pT3_isFake(); }
-  const std::vector<std::vector<int> > &tce_nLayerOverlaps() { return lstEff.tce_nLayerOverlaps(); }
-  const std::vector<int> &tc_sim() { return lstEff.tc_sim(); }
-  const std::vector<std::vector<int> > &sim_pLS_types() { return lstEff.sim_pLS_types(); }
-  const std::vector<float> &sim_pca_dxy() { return lstEff.sim_pca_dxy(); }
-  const std::vector<float> &pT4_phi() { return lstEff.pT4_phi(); }
-  const std::vector<float> &sim_hits() { return lstEff.sim_hits(); }
-  const std::vector<float> &pLS_phi() { return lstEff.pLS_phi(); }
-  const std::vector<int> &sim_pureTCE_matched() { return lstEff.sim_pureTCE_matched(); }
-  const std::vector<int> &t3_occupancies() { return lstEff.t3_occupancies(); }
-  const std::vector<int> &t5_foundDuplicate() { return lstEff.t5_foundDuplicate(); }
-  const std::vector<std::vector<int> > &sim_pT4_types() { return lstEff.sim_pT4_types(); }
-  const std::vector<int> &t4_isFake() { return lstEff.t4_isFake(); }
-  const std::vector<float> &simvtx_x() { return lstEff.simvtx_x(); }
-  const std::vector<float> &simvtx_y() { return lstEff.simvtx_y(); }
-  const std::vector<float> &simvtx_z() { return lstEff.simvtx_z(); }
-  const std::vector<int> &sim_T4_matched() { return lstEff.sim_T4_matched(); }
-  const std::vector<bool> &sim_isGood() { return lstEff.sim_isGood(); }
-  const std::vector<float> &pT3_pt() { return lstEff.pT3_pt(); }
-  const std::vector<float> &tc_pt() { return lstEff.tc_pt(); }
-  const std::vector<float> &pT3_phi_2() { return lstEff.pT3_phi_2(); }
-  const std::vector<float> &pT5_pt() { return lstEff.pT5_pt(); }
-  const std::vector<float> &pureTCE_rPhiChiSquared() { return lstEff.pureTCE_rPhiChiSquared(); }
-  const std::vector<int> &pT5_score() { return lstEff.pT5_score(); }
+  const std::vector<float> &sim_eta() { return lstEff.sim_eta(); }
   const std::vector<float> &sim_phi() { return lstEff.sim_phi(); }
-  const std::vector<int> &pT5_isFake() { return lstEff.pT5_isFake(); }
-  const std::vector<int> &tc_maxHitMatchedCounts() { return lstEff.tc_maxHitMatchedCounts(); }
-  const std::vector<std::vector<int> > &pureTCE_nLayerOverlaps() { return lstEff.pureTCE_nLayerOverlaps(); }
+  const std::vector<float> &sim_pca_dxy() { return lstEff.sim_pca_dxy(); }
   const std::vector<float> &sim_pca_dz() { return lstEff.sim_pca_dz(); }
-  const std::vector<std::vector<int> > &pureTCE_hitIdxs() { return lstEff.pureTCE_hitIdxs(); }
-  const std::vector<std::vector<int> > &pureTCE_nHitOverlaps() { return lstEff.pureTCE_nHitOverlaps(); }
-  const std::vector<int> &sim_pLS_matched() { return lstEff.sim_pLS_matched(); }
-  const std::vector<std::vector<int> > &tc_matched_simIdx() { return lstEff.tc_matched_simIdx(); }
-  const std::vector<int> &sim_T3_matched() { return lstEff.sim_T3_matched(); }
-  const std::vector<float> &pLS_score() { return lstEff.pLS_score(); }
-  const std::vector<float> &pT3_phi() { return lstEff.pT3_phi(); }
-  const std::vector<float> &pT5_eta() { return lstEff.pT5_eta(); }
-  const std::vector<float> &tc_phi() { return lstEff.tc_phi(); }
-  const std::vector<float> &t4_eta() { return lstEff.t4_eta(); }
-  const std::vector<int> &pLS_isFake() { return lstEff.pLS_isFake(); }
-  const std::vector<std::vector<int> > &pureTCE_matched_simIdx() { return lstEff.pureTCE_matched_simIdx(); }
-  const std::vector<int> &sim_bunchCrossing() { return lstEff.sim_bunchCrossing(); }
-  const std::vector<int> &tc_partOfExtension() { return lstEff.tc_partOfExtension(); }
-  const std::vector<float> &pT3_eta() { return lstEff.pT3_eta(); }
-  const std::vector<int> &sim_parentVtxIdx() { return lstEff.sim_parentVtxIdx(); }
-  const std::vector<int> &pureTCE_layer_binary() { return lstEff.pureTCE_layer_binary(); }
-  const std::vector<int> &sim_pT4_matched() { return lstEff.sim_pT4_matched(); }
-  const std::vector<float> &tc_eta() { return lstEff.tc_eta(); }
-  const std::vector<float> &sim_lengap() { return lstEff.sim_lengap(); }
-  const std::vector<int> &sim_T5_matched() { return lstEff.sim_T5_matched(); }
-  const std::vector<std::vector<int> > &sim_T5_types() { return lstEff.sim_T5_types(); }
-  const std::vector<std::vector<int> > &tce_matched_simIdx() { return lstEff.tce_matched_simIdx(); }
-  const std::vector<int> &t5_isDuplicate() { return lstEff.t5_isDuplicate(); }
-  const std::vector<std::vector<int> > &pT3_hitIdxs() { return lstEff.pT3_hitIdxs(); }
-  const std::vector<std::vector<int> > &tc_hitIdxs() { return lstEff.tc_hitIdxs(); }
-  const int &pT3_occupancies() { return lstEff.pT3_occupancies(); }
-  const int &tc_occupancies() { return lstEff.tc_occupancies(); }
-  const std::vector<int> &sim_TC_matched() { return lstEff.sim_TC_matched(); }
-  const std::vector<int> &sim_TC_matched_mask() { return lstEff.sim_TC_matched_mask(); }
-  const std::vector<int> &pLS_isDuplicate() { return lstEff.pLS_isDuplicate(); }
-  const std::vector<int> &tce_anchorIndex() { return lstEff.tce_anchorIndex(); }
-  const std::vector<int> &t5_occupancies() { return lstEff.t5_occupancies(); }
-  const std::vector<int> &tc_type() { return lstEff.tc_type(); }
-  const std::vector<int> &tce_isFake() { return lstEff.tce_isFake(); }
-  const std::vector<float> &pLS_pt() { return lstEff.pLS_pt(); }
-  const std::vector<int> &pureTCE_anchorIndex() { return lstEff.pureTCE_anchorIndex(); }
-  const std::vector<std::vector<int> > &sim_T4_types() { return lstEff.sim_T4_types(); }
-  const std::vector<int> &pT4_isDuplicate() { return lstEff.pT4_isDuplicate(); }
-  const std::vector<float> &t4_pt() { return lstEff.t4_pt(); }
-  const std::vector<std::vector<int> > &sim_TC_types() { return lstEff.sim_TC_types(); }
-  const std::vector<int> &sg_occupancies() { return lstEff.sg_occupancies(); }
-  const std::vector<float> &pT4_pt() { return lstEff.pT4_pt(); }
-  const std::vector<float> &pureTCE_phi() { return lstEff.pureTCE_phi(); }
+  const std::vector<int> &sim_q() { return lstEff.sim_q(); }
+  const std::vector<int> &sim_pdgId() { return lstEff.sim_pdgId(); }
   const std::vector<float> &sim_vx() { return lstEff.sim_vx(); }
   const std::vector<float> &sim_vy() { return lstEff.sim_vy(); }
   const std::vector<float> &sim_vz() { return lstEff.sim_vz(); }
-  const std::vector<int> &tce_maxHitMatchedCounts() { return lstEff.tce_maxHitMatchedCounts(); }
+  const std::vector<float> &sim_vtxperp() { return lstEff.sim_vtxperp(); }
+  const std::vector<float> &sim_trkNtupIdx() { return lstEff.sim_trkNtupIdx(); }
+  const std::vector<int> &sim_tcIdx() { return lstEff.sim_tcIdx(); }
+  const std::vector<std::vector<int> > &sim_tcIdxAll() { return lstEff.sim_tcIdxAll(); }
+  const std::vector<std::vector<float> > &sim_tcIdxAllFrac() { return lstEff.sim_tcIdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_mdIdxAll() { return lstEff.sim_mdIdxAll(); }
+  const std::vector<std::vector<float> > &sim_mdIdxAllFrac() { return lstEff.sim_mdIdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_lsIdxAll() { return lstEff.sim_lsIdxAll(); }
+  const std::vector<std::vector<float> > &sim_lsIdxAllFrac() { return lstEff.sim_lsIdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_t3IdxAll() { return lstEff.sim_t3IdxAll(); }
+  const std::vector<std::vector<float> > &sim_t3IdxAllFrac() { return lstEff.sim_t3IdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_t5IdxAll() { return lstEff.sim_t5IdxAll(); }
+  const std::vector<std::vector<float> > &sim_t5IdxAllFrac() { return lstEff.sim_t5IdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_plsIdxAll() { return lstEff.sim_plsIdxAll(); }
+  const std::vector<std::vector<float> > &sim_plsIdxAllFrac() { return lstEff.sim_plsIdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_pt3IdxAll() { return lstEff.sim_pt3IdxAll(); }
+  const std::vector<std::vector<float> > &sim_pt3IdxAllFrac() { return lstEff.sim_pt3IdxAllFrac(); }
+  const std::vector<std::vector<int> > &sim_pt5IdxAll() { return lstEff.sim_pt5IdxAll(); }
+  const std::vector<std::vector<float> > &sim_pt5IdxAllFrac() { return lstEff.sim_pt5IdxAllFrac(); }
+  const std::vector<std::vector<float> > &sim_simHitX() { return lstEff.sim_simHitX(); }
+  const std::vector<std::vector<float> > &sim_simHitY() { return lstEff.sim_simHitY(); }
+  const std::vector<std::vector<float> > &sim_simHitZ() { return lstEff.sim_simHitZ(); }
+  const std::vector<std::vector<int> > &sim_simHitDetId() { return lstEff.sim_simHitDetId(); }
+  const std::vector<std::vector<int> > &sim_simHitLayer() { return lstEff.sim_simHitLayer(); }
+  const std::vector<std::vector<float> > &sim_simHitDistxyHelix() { return lstEff.sim_simHitDistxyHelix(); }
+  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyHelix() {
+    return lstEff.sim_simHitLayerMinDistxyHelix();
+  }
+  const std::vector<std::vector<float> > &sim_recoHitX() { return lstEff.sim_recoHitX(); }
+  const std::vector<std::vector<float> > &sim_recoHitY() { return lstEff.sim_recoHitY(); }
+  const std::vector<std::vector<float> > &sim_recoHitZ() { return lstEff.sim_recoHitZ(); }
+  const std::vector<std::vector<int> > &sim_recoHitDetId() { return lstEff.sim_recoHitDetId(); }
+  const std::vector<float> &tc_pt() { return lstEff.tc_pt(); }
+  const std::vector<float> &tc_eta() { return lstEff.tc_eta(); }
+  const std::vector<float> &tc_phi() { return lstEff.tc_phi(); }
+  const std::vector<int> &tc_type() { return lstEff.tc_type(); }
+  const std::vector<int> &tc_pt5Idx() { return lstEff.tc_pt5Idx(); }
+  const std::vector<int> &tc_pt3Idx() { return lstEff.tc_pt3Idx(); }
+  const std::vector<int> &tc_t5Idx() { return lstEff.tc_t5Idx(); }
+  const std::vector<int> &tc_plsIdx() { return lstEff.tc_plsIdx(); }
+  const std::vector<int> &tc_isFake() { return lstEff.tc_isFake(); }
+  const std::vector<int> &tc_isDuplicate() { return lstEff.tc_isDuplicate(); }
+  const std::vector<int> &tc_simIdx() { return lstEff.tc_simIdx(); }
+  const std::vector<std::vector<int> > &tc_simIdxAll() { return lstEff.tc_simIdxAll(); }
+  const std::vector<std::vector<float> > &tc_simIdxAllFrac() { return lstEff.tc_simIdxAllFrac(); }
+  const std::vector<float> &md_pt() { return lstEff.md_pt(); }
+  const std::vector<float> &md_eta() { return lstEff.md_eta(); }
+  const std::vector<float> &md_phi() { return lstEff.md_phi(); }
+  const std::vector<float> &md_anchor_x() { return lstEff.md_anchor_x(); }
+  const std::vector<float> &md_anchor_y() { return lstEff.md_anchor_y(); }
+  const std::vector<float> &md_anchor_z() { return lstEff.md_anchor_z(); }
+  const std::vector<float> &md_other_x() { return lstEff.md_other_x(); }
+  const std::vector<float> &md_other_y() { return lstEff.md_other_y(); }
+  const std::vector<float> &md_other_z() { return lstEff.md_other_z(); }
+  const std::vector<int> &md_type() { return lstEff.md_type(); }
+  const std::vector<int> &md_layer() { return lstEff.md_layer(); }
+  const std::vector<int> &md_detId() { return lstEff.md_detId(); }
+  const std::vector<int> &md_isFake() { return lstEff.md_isFake(); }
+  const std::vector<int> &md_simIdx() { return lstEff.md_simIdx(); }
+  const std::vector<std::vector<int> > &md_simIdxAll() { return lstEff.md_simIdxAll(); }
+  const std::vector<std::vector<float> > &md_simIdxAllFrac() { return lstEff.md_simIdxAllFrac(); }
+  const std::vector<float> &ls_pt() { return lstEff.ls_pt(); }
+  const std::vector<float> &ls_eta() { return lstEff.ls_eta(); }
+  const std::vector<float> &ls_phi() { return lstEff.ls_phi(); }
+  const std::vector<int> &ls_mdIdx0() { return lstEff.ls_mdIdx0(); }
+  const std::vector<int> &ls_mdIdx1() { return lstEff.ls_mdIdx1(); }
+  const std::vector<int> &ls_isFake() { return lstEff.ls_isFake(); }
+  const std::vector<int> &ls_simIdx() { return lstEff.ls_simIdx(); }
+  const std::vector<std::vector<int> > &ls_simIdxAll() { return lstEff.ls_simIdxAll(); }
+  const std::vector<std::vector<float> > &ls_simIdxAllFrac() { return lstEff.ls_simIdxAllFrac(); }
   const std::vector<float> &t3_pt() { return lstEff.t3_pt(); }
-  const std::vector<int> &module_rings() { return lstEff.module_rings(); }
-  const std::vector<std::vector<int> > &sim_T3_types() { return lstEff.sim_T3_types(); }
-  const std::vector<std::vector<int> > &sim_pT5_types() { return lstEff.sim_pT5_types(); }
-  const std::vector<int> &sim_pT5_matched() { return lstEff.sim_pT5_matched(); }
-  const std::vector<int> &module_layers() { return lstEff.module_layers(); }
-  const std::vector<float> &pT4_eta() { return lstEff.pT4_eta(); }
-  const std::vector<std::vector<int> > &sim_tce_types() { return lstEff.sim_tce_types(); }
-  const std::vector<float> &tce_rzChiSquared() { return lstEff.tce_rzChiSquared(); }
-  const std::vector<std::vector<int> > &pT3_matched_simIdx() { return lstEff.pT3_matched_simIdx(); }
+  const std::vector<float> &t3_eta() { return lstEff.t3_eta(); }
+  const std::vector<float> &t3_phi() { return lstEff.t3_phi(); }
+  const std::vector<int> &t3_lsIdx0() { return lstEff.t3_lsIdx0(); }
+  const std::vector<int> &t3_lsIdx1() { return lstEff.t3_lsIdx1(); }
+  const std::vector<int> &t3_isFake() { return lstEff.t3_isFake(); }
+  const std::vector<int> &t3_isDuplicate() { return lstEff.t3_isDuplicate(); }
+  const std::vector<int> &t3_simIdx() { return lstEff.t3_simIdx(); }
+  const std::vector<std::vector<int> > &t3_simIdxAll() { return lstEff.t3_simIdxAll(); }
+  const std::vector<std::vector<float> > &t3_simIdxAllFrac() { return lstEff.t3_simIdxAllFrac(); }
+  const std::vector<float> &t5_pt() { return lstEff.t5_pt(); }
+  const std::vector<float> &t5_eta() { return lstEff.t5_eta(); }
+  const std::vector<float> &t5_phi() { return lstEff.t5_phi(); }
+  const std::vector<int> &t5_t3Idx0() { return lstEff.t5_t3Idx0(); }
+  const std::vector<int> &t5_t3Idx1() { return lstEff.t5_t3Idx1(); }
+  const std::vector<int> &t5_isFake() { return lstEff.t5_isFake(); }
+  const std::vector<int> &t5_isDuplicate() { return lstEff.t5_isDuplicate(); }
+  const std::vector<int> &t5_simIdx() { return lstEff.t5_simIdx(); }
+  const std::vector<std::vector<int> > &t5_simIdxAll() { return lstEff.t5_simIdxAll(); }
+  const std::vector<std::vector<float> > &t5_simIdxAllFrac() { return lstEff.t5_simIdxAllFrac(); }
+  const std::vector<float> &pls_pt() { return lstEff.pls_pt(); }
+  const std::vector<float> &pls_eta() { return lstEff.pls_eta(); }
+  const std::vector<float> &pls_phi() { return lstEff.pls_phi(); }
+  const std::vector<int> &pls_nhit() { return lstEff.pls_nhit(); }
+  const std::vector<float> &pls_hit0_x() { return lstEff.pls_hit0_x(); }
+  const std::vector<float> &pls_hit0_y() { return lstEff.pls_hit0_y(); }
+  const std::vector<float> &pls_hit0_z() { return lstEff.pls_hit0_z(); }
+  const std::vector<float> &pls_hit1_x() { return lstEff.pls_hit1_x(); }
+  const std::vector<float> &pls_hit1_y() { return lstEff.pls_hit1_y(); }
+  const std::vector<float> &pls_hit1_z() { return lstEff.pls_hit1_z(); }
+  const std::vector<float> &pls_hit2_x() { return lstEff.pls_hit2_x(); }
+  const std::vector<float> &pls_hit2_y() { return lstEff.pls_hit2_y(); }
+  const std::vector<float> &pls_hit2_z() { return lstEff.pls_hit2_z(); }
+  const std::vector<float> &pls_hit3_x() { return lstEff.pls_hit3_x(); }
+  const std::vector<float> &pls_hit3_y() { return lstEff.pls_hit3_y(); }
+  const std::vector<float> &pls_hit3_z() { return lstEff.pls_hit3_z(); }
+  const std::vector<int> &pls_isFake() { return lstEff.pls_isFake(); }
+  const std::vector<int> &pls_isDuplicate() { return lstEff.pls_isDuplicate(); }
+  const std::vector<int> &pls_simIdx() { return lstEff.pls_simIdx(); }
+  const std::vector<std::vector<int> > &pls_simIdxAll() { return lstEff.pls_simIdxAll(); }
+  const std::vector<std::vector<float> > &pls_simIdxAllFrac() { return lstEff.pls_simIdxAllFrac(); }
+  const std::vector<float> &pt3_pt() { return lstEff.pt3_pt(); }
+  const std::vector<float> &pt3_eta() { return lstEff.pt3_eta(); }
+  const std::vector<float> &pt3_phi() { return lstEff.pt3_phi(); }
+  const std::vector<int> &pt3_plsIdx() { return lstEff.pt3_plsIdx(); }
+  const std::vector<int> &pt3_t3Idx() { return lstEff.pt3_t3Idx(); }
+  const std::vector<int> &pt3_isFake() { return lstEff.pt3_isFake(); }
+  const std::vector<int> &pt3_isDuplicate() { return lstEff.pt3_isDuplicate(); }
+  const std::vector<int> &pt3_simIdx() { return lstEff.pt3_simIdx(); }
+  const std::vector<std::vector<int> > &pt3_simIdxAll() { return lstEff.pt3_simIdxAll(); }
+  const std::vector<std::vector<float> > &pt3_simIdxAllFrac() { return lstEff.pt3_simIdxAllFrac(); }
+  const std::vector<float> &pt5_pt() { return lstEff.pt5_pt(); }
+  const std::vector<float> &pt5_eta() { return lstEff.pt5_eta(); }
+  const std::vector<float> &pt5_phi() { return lstEff.pt5_phi(); }
+  const std::vector<int> &pt5_plsIdx() { return lstEff.pt5_plsIdx(); }
+  const std::vector<int> &pt5_t5Idx() { return lstEff.pt5_t5Idx(); }
+  const std::vector<int> &pt5_isFake() { return lstEff.pt5_isFake(); }
+  const std::vector<int> &pt5_isDuplicate() { return lstEff.pt5_isDuplicate(); }
+  const std::vector<int> &pt5_simIdx() { return lstEff.pt5_simIdx(); }
+  const std::vector<std::vector<int> > &pt5_simIdxAll() { return lstEff.pt5_simIdxAll(); }
+  const std::vector<std::vector<float> > &pt5_simIdxAllFrac() { return lstEff.pt5_simIdxAllFrac(); }
 }  // namespace tas
