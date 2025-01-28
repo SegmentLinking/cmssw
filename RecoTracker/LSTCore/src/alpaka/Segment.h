@@ -187,6 +187,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float dPhiChange,
                                                          float dPhiChangeMin,
                                                          float dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                                         float& zHi,
+                                                         float& zLo,
+                                                         float& rtHi,
+                                                         float& rtLo,
+                                                         float& dAlphaInner,
+                                                         float& dAlphaOuter,
+                                                         float& dAlphaInnerOuter,
+#endif
                                                          unsigned int idx) {
     segments.mdIndices()[idx][0] = lowerMDIndex;
     segments.mdIndices()[idx][1] = upperMDIndex;
@@ -201,6 +210,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     segments.dPhiChanges()[idx] = __F2H(dPhiChange);
     segments.dPhiChangeMins()[idx] = __F2H(dPhiChangeMin);
     segments.dPhiChangeMaxs()[idx] = __F2H(dPhiChangeMax);
+
+#ifdef OUTPUT_LS_CUTS
+    segments.zHis()[idx] = __F2H(zHi);
+    segments.zLos()[idx] = __F2H(zLo);
+    segments.rtHis()[idx] = __F2H(rtHi);
+    segments.rtLos()[idx] = __F2H(rtLo);
+    segments.dAlphaInners()[idx] = __F2H(dAlphaInner);
+    segments.dAlphaOuters()[idx] = __F2H(dAlphaOuter);
+    segments.dAlphaInnerOuters()[idx] = __F2H(dAlphaInnerOuter);
+#endif
   }
 
   template <typename TAcc>
@@ -281,7 +300,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
                                                                   float& dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                                                  float& dAlphaInnerMDSegment,
+                                                                  float& dAlphaOuterMDSegment,
+                                                                  float& dAlphaInnerMDOuterMD,
+                                                                  float& zLo,
+                                                                  float& zHi,
+#endif
                                                                   const float ptCut) {
+#ifndef OUTPUT_LS_CUTS
+    float dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
+    float zLo, zHi;
+#endif
     float sdMuls = (modules.subdets()[innerLowerModuleIndex] == Barrel)
                        ? kMiniMulsPtScaleBarrel[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut
                        : kMiniMulsPtScaleEndcap[modules.layers()[innerLowerModuleIndex] - 1] * 3.f / ptCut;
@@ -304,9 +334,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     const float zGeom = modules.layers()[innerLowerModuleIndex] <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
-    float zLo = zIn + (zIn - kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) -
-                zGeom;  //slope-correction only on outer end
-    float zHi = zIn + (zIn + kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn < 0.f ? 1.f : dzDrtScale) + zGeom;
+    zLo = zIn + (zIn - kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) -
+          zGeom;  //slope-correction only on outer end
+    zHi = zIn + (zIn + kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn < 0.f ? 1.f : dzDrtScale) + zGeom;
 
     if ((zOut < zLo) || (zOut > zHi))
       return false;
@@ -344,9 +374,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
-    float dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
-    float dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
-    float dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
+    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
+    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
+    dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
@@ -373,7 +403,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& dPhiChange,
                                                                   float& dPhiChangeMin,
                                                                   float& dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                                                  float& dAlphaInnerMDSegment,
+                                                                  float& dAlphaOuterMDSegment,
+                                                                  float& dAlphaInnerMDOuterMD,
+                                                                  float& rtLo,
+                                                                  float& rtHi,
+#endif
                                                                   const float ptCut) {
+#ifndef OUTPUT_LS_CUTS
+    float dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
+    float rtLo, rtHi;
+#endif
     float xIn, yIn, zIn, rtIn, xOut, yOut, zOut, rtOut;
 
     xIn = mds.anchorX()[innerMDIndex];
@@ -405,10 +446,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
     float drtDzScale = sdSlope / alpaka::math::tan(acc, sdSlope);
 
-    float rtLo = alpaka::math::max(
+    rtLo = alpaka::math::max(
         acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);  //rt should increase
-    float rtHi = rtIn * (zOut - dLum) / (zIn - dLum) +
-                 rtGeom;  //dLum for luminous; rGeom for measurement size; no tanTheta_loc(pt) correction
+    rtHi = rtIn * (zOut - dLum) / (zIn - dLum) +
+           rtGeom;  //dLum for luminous; rGeom for measurement size; no tanTheta_loc(pt) correction
 
     // Completeness
     if ((rtOut < rtLo) || (rtOut > rtHi))
@@ -459,9 +500,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
-    float dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
-    float dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
-    float dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
+    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
+    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
+    dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
@@ -488,7 +529,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float& dPhiChange,
                                                             float& dPhiChangeMin,
                                                             float& dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                                            float& dAlphaInnerMDSegment,
+                                                            float& dAlphaOuterMDSegment,
+                                                            float& dAlphaInnerMDOuterMD,
+                                                            float& zLo,
+                                                            float& zHi,
+                                                            float& rtLo,
+                                                            float& rtHi,
+#endif
                                                             const float ptCut) {
+#ifdef OUTPUT_LS_CUTS
+    zLo = -999.f;
+    zHi = -999.f;
+    rtLo = -999.f;
+    rtHi = -999.f;
+#endif
     if (modules.subdets()[innerLowerModuleIndex] == Barrel and modules.subdets()[outerLowerModuleIndex] == Barrel) {
       return runSegmentDefaultAlgoBarrel(acc,
                                          modules,
@@ -503,6 +559,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          dPhiChange,
                                          dPhiChangeMin,
                                          dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                         dAlphaInnerMDSegment,
+                                         dAlphaOuterMDSegment,
+                                         dAlphaInnerMDOuterMD,
+                                         zLo,
+                                         zHi,
+#endif
                                          ptCut);
     } else {
       return runSegmentDefaultAlgoEndcap(acc,
@@ -518,6 +581,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          dPhiChange,
                                          dPhiChangeMin,
                                          dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                         dAlphaInnerMDSegment,
+                                         dAlphaOuterMDSegment,
+                                         dAlphaInnerMDOuterMD,
+                                         rtLo,
+                                         rtHi,
+#endif
                                          ptCut);
     }
   }
@@ -566,6 +636,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
 
+#ifdef OUTPUT_LS_CUTS
+            float zLo, zHi, rtLo, rtHi, dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
+#endif
+
             unsigned int innerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[innerMDIndex];
             unsigned int outerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[outerMDIndex];
             dPhiMin = 0;
@@ -585,6 +659,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                       dPhiChange,
                                       dPhiChangeMin,
                                       dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                      dAlphaInnerMDSegment,
+                                      dAlphaOuterMDSegment,
+                                      dAlphaInnerMDOuterMD,
+                                      zLo,
+                                      zHi,
+                                      rtLo,
+                                      rtHi,
+#endif
                                       ptCut)) {
               unsigned int totOccupancySegments =
                   alpaka::atomicAdd(acc,
@@ -615,6 +698,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    dPhiChange,
                                    dPhiChangeMin,
                                    dPhiChangeMax,
+#ifdef OUTPUT_LS_CUTS
+                                   zHi,
+                                   zLo,
+                                   rtHi,
+                                   rtLo,
+                                   dAlphaInnerMDSegment,
+                                   dAlphaOuterMDSegment,
+                                   dAlphaInnerMDOuterMD,
+#endif
                                    segmentIdx);
               }
             }

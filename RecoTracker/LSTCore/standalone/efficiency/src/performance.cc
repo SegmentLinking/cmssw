@@ -737,6 +737,7 @@ void fillFakeRateSets(std::vector<RecoTrackSetDefinition>& FRsets) {
 
 //__________________________________________________________________________________________________________________________________________________________________________
 void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset) {
+  std::cout << "pt variable size" << FRset.pt().size() << std::endl;
   float pt = FRset.pt().at(itc);
   float eta = FRset.eta().at(itc);
   float phi = FRset.phi().at(itc);
