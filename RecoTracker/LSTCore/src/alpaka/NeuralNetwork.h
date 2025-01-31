@@ -460,6 +460,17 @@ namespace lst::t4dnn {
     }
   }
 
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float delta_phi(const float phi1, const float phi2) {
+    float delta = phi1 - phi2;
+    // Adjust delta to be within the range [-M_PI, M_PI]
+    if (delta > kPi) {
+      delta -= 2 * kPi;
+    } else if (delta < -kPi) {
+      delta += 2 * kPi;
+    }
+    return delta;
+  }
+
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
                                                    lst::MiniDoublets const& mdsInGPU,
@@ -470,13 +481,18 @@ namespace lst::t4dnn {
                                                    const float innerRadius,
                                                    const float outerRadius) {
     // Constants
-    constexpr unsigned int kinputFeatures = 15; //change to 15 from 14, add rad ratio
+    constexpr unsigned int kinputFeatures = 19; 
     constexpr unsigned int khiddenFeatures = 32;
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
     float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
     float eta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex3]);  // inner T3 anchor hit 3 eta (t3_4_eta)
     float eta4 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex4]);  // outer T3 anchor hit 4 eta (t3_2_eta)
+
+    float phi1 = mdsInGPU.anchorPhi[mdIndex1];  // inner T3 anchor hit 1 phi
+    float phi2 = mdsInGPU.anchorPhi[mdIndex2];  // inner T3 anchor hit 2 phi
+    float phi3 = mdsInGPU.anchorPhi[mdIndex3];  // inner T3 anchor hit 3 phi
+    float phi4 = mdsInGPU.anchorPhi[mdIndex4];  // outer T3 anchor hit 4 phi
 
     float z1 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex1]);  // inner T3 anchor hit 1 z (t3_0_z)
     float z2 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex2]);  // inner T3 anchor hit 2 z (t3_2_z)
@@ -491,18 +507,22 @@ namespace lst::t4dnn {
     // Build the input feature vector using pairwise differences after the first hit
     float x[kinputFeatures] = {
         eta1 / kEta_norm,  // inner T3: First hit eta normalized
+        alpaka::math::abs(acc, phi1) / kPhi_norm,  // inner T3: First hit phi normalized
         z1 / kZ_max,       // inner T3: First hit z normalized
         r1 / kR_max,       // inner T3: First hit r normalized
 
         eta2 - eta1,         // inner T3: Difference in eta between hit 2 and 1
+        delta_phi(phi2, phi1) / kPhi_norm,         // inner T3: Difference in phi between hit 2 and 1
         (z2 - z1) / kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
         (r2 - r1) / kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
 
         eta3 - eta2,         // inner T3: Difference in eta between hit 3 and 2
+        delta_phi(phi3, phi2) / kPhi_norm,         // inner T3: Difference in phi between hit 3 and 2
         (z3 - z2) / kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
         (r3 - r2) / kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
 
         eta4 - eta3,         // outer T3: Difference in eta between hit 4 and 3
+        delta_phi(phi4, phi3) / kPhi_norm,         // inner T3: Difference in phi between hit 4 and 3
         (z4 - z3) / kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
         (r4 - r3) / kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
 

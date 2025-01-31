@@ -164,6 +164,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t4_isDup");
   ana.tx->createBranch<std::vector<float>>("t4_rzChiSquared");
   ana.tx->createBranch<std::vector<float>>("t4_pMatched");
+  ana.tx->createBranch<std::vector<float>>("t4_sim_vxy");
+  ana.tx->createBranch<std::vector<float>>("t4_sim_vz");
 
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -918,6 +920,21 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
           sim_t4_matched.at(simtrk) += 1;
         }
       }
+
+      // Avoid fakes when calculating the vertex distance, set default to 0.0.
+      if (simidx.size() == 0) {
+        ana.tx->pushbackToBranch<float>("t4_sim_vxy", 0.0);
+        ana.tx->pushbackToBranch<float>("t4_sim_vz", 0.0);
+        continue;
+      }
+
+      int vtxidx = trk.sim_parentVtxIdx()[simidx[0]];
+      float vtx_x = trk.simvtx_x()[vtxidx];
+      float vtx_y = trk.simvtx_y()[vtxidx];
+      float vtx_z = trk.simvtx_z()[vtxidx];
+
+      ana.tx->pushbackToBranch<float>("t4_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
+      ana.tx->pushbackToBranch<float>("t4_sim_vz", vtx_z);
     
     }
   }

@@ -60,7 +60,7 @@ namespace lst {
   // The constants below are usually used in functions like alpaka::math::min(),
   // expecting a reference (T const&) in the arguments. Hence,
   // ALPAKA_STATIC_ACC_MEM_GLOBAL needs to be used in addition to constexpr.
-
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPi = float(M_PI);
   // 15 MeV constant from the approximate Bethe-Bloch formula
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMulsInGeV = 0.015;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniMulsPtScaleBarrel[6] = {
@@ -108,12 +108,13 @@ namespace lst {
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kZ_max = 267.2349854f;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR_max = 110.1099396f;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPhi_norm = kPi;
     // pt, eta binned
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
     ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kPtBins][kEtaBins] = {
-        {0.0004, 0.0004, 0.0003, 0.0005, 0.0013, 0.0011, 0.0007, 0.004, 0.002, 0.0018},
-        {0.0003, 0.0003, 0.0006, 0.0008, 0.0008, 0.001, 0.0015, 0.001, 0.002, 0.0024}};
+        {0.0623, 0.0897, 0.1367, 0.2101, 0.332, 0.4381, 0.6449, 0.7911, 0.8863, 0.9467}, //98% retention
+        {0.0041, 0.0096, 0.0006, 0.0053, 0.0179, 0.0382, 0.0852, 0.1545, 0.5131, 0.3933}};
   }  // namespace t4dnn
 
 }  //namespace lst
