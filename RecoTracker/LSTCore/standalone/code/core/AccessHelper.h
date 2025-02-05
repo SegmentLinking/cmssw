@@ -7,7 +7,7 @@
 
 using LSTEvent = lst::Event<ALPAKA_ACCELERATOR_NAMESPACE::Acc3D>;
 
-enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8 };
+enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8, kT4 = 9 };
 
 // ----* Hit *----
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHitIdxsAndHitTypes(
@@ -84,4 +84,14 @@ std::vector<unsigned int> getHitsFromTC(LSTEvent* event, unsigned int TC);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(LSTEvent* event,
                                                                                              unsigned int TC);
 
+// ----* T4 *----
+std::vector<unsigned int> getT3sFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getLSsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getMDsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitIdxsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitTypesFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getModuleIdxsFromT4(LSTEvent* event, unsigned int T4);
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT4(LSTEvent* event,
+                                                                                             unsigned T4);
 #endif

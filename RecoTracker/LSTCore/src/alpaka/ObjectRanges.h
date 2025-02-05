@@ -18,11 +18,16 @@ namespace lst {
     int* trackCandidateRanges;
     // Others will be added later
     int* quintupletRanges;
+    int* quadrupletRanges;
 
     // This number is just nEligibleModules - 1, but still we want this to be independent of the TC kernel
     uint16_t* nEligibleT5Modules;
     // Will be allocated in createQuintuplets kernel!
     uint16_t* indicesOfEligibleT5Modules;
+
+    uint16_t* nEligibleT4Modules;
+    uint16_t* indicesOfEligibleT4Modules;
+
     // To store different starting points for variable occupancy stuff
     int* quintupletModuleIndices;
     int* quintupletModuleOccupancy;
@@ -32,11 +37,14 @@ namespace lst {
     int* segmentModuleOccupancy;
     int* tripletModuleIndices;
     int* tripletModuleOccupancy;
+    int* quadrupletModuleIndices;
+    int* quadrupletModuleOccupancy;
 
     unsigned int* device_nTotalMDs;
     unsigned int* device_nTotalSegs;
     unsigned int* device_nTotalTrips;
     unsigned int* device_nTotalQuints;
+    unsigned int* device_nTotalQuads;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -51,9 +59,12 @@ namespace lst {
       tripletRanges = alpaka::getPtrNative(buf.tripletRanges_buf);
       trackCandidateRanges = alpaka::getPtrNative(buf.trackCandidateRanges_buf);
       quintupletRanges = alpaka::getPtrNative(buf.quintupletRanges_buf);
+      quadrupletRanges = alpaka::getPtrNative(buf.quadrupletRanges_buf);
 
       nEligibleT5Modules = alpaka::getPtrNative(buf.nEligibleT5Modules_buf);
       indicesOfEligibleT5Modules = alpaka::getPtrNative(buf.indicesOfEligibleT5Modules_buf);
+      nEligibleT4Modules = alpaka::getPtrNative(buf.nEligibleT4Modules_buf);
+      indicesOfEligibleT4Modules = alpaka::getPtrNative(buf.indicesOfEligibleT4Modules_buf);
 
       quintupletModuleIndices = alpaka::getPtrNative(buf.quintupletModuleIndices_buf);
       quintupletModuleOccupancy = alpaka::getPtrNative(buf.quintupletModuleOccupancy_buf);
@@ -63,11 +74,14 @@ namespace lst {
       segmentModuleOccupancy = alpaka::getPtrNative(buf.segmentModuleOccupancy_buf);
       tripletModuleIndices = alpaka::getPtrNative(buf.tripletModuleIndices_buf);
       tripletModuleOccupancy = alpaka::getPtrNative(buf.tripletModuleOccupancy_buf);
+      quadrupletModuleIndices = alpaka::getPtrNative(buf.quadrupletModuleIndices_buf);
+      quadrupletModuleOccupancy = alpaka::getPtrNative(buf.quadrupletModuleOccupancy_buf);
 
       device_nTotalMDs = alpaka::getPtrNative(buf.device_nTotalMDs_buf);
       device_nTotalSegs = alpaka::getPtrNative(buf.device_nTotalSegs_buf);
       device_nTotalTrips = alpaka::getPtrNative(buf.device_nTotalTrips_buf);
       device_nTotalQuints = alpaka::getPtrNative(buf.device_nTotalQuints_buf);
+      device_nTotalQuads = alpaka::getPtrNative(buf.device_nTotalQuads_buf);
     }
   };
 
@@ -84,9 +98,12 @@ namespace lst {
     Buf<TDev, int> tripletRanges_buf;
     Buf<TDev, int> trackCandidateRanges_buf;
     Buf<TDev, int> quintupletRanges_buf;
+    Buf<TDev, int> quadrupletRanges_buf;
 
     Buf<TDev, uint16_t> nEligibleT5Modules_buf;
     Buf<TDev, uint16_t> indicesOfEligibleT5Modules_buf;
+    Buf<TDev, uint16_t> nEligibleT4Modules_buf;
+    Buf<TDev, uint16_t> indicesOfEligibleT4Modules_buf;
 
     Buf<TDev, int> quintupletModuleIndices_buf;
     Buf<TDev, int> quintupletModuleOccupancy_buf;
@@ -96,11 +113,14 @@ namespace lst {
     Buf<TDev, int> segmentModuleOccupancy_buf;
     Buf<TDev, int> tripletModuleIndices_buf;
     Buf<TDev, int> tripletModuleOccupancy_buf;
+    Buf<TDev, int> quadrupletModuleIndices_buf;
+    Buf<TDev, int> quadrupletModuleOccupancy_buf;
 
     Buf<TDev, unsigned int> device_nTotalMDs_buf;
     Buf<TDev, unsigned int> device_nTotalSegs_buf;
     Buf<TDev, unsigned int> device_nTotalTrips_buf;
     Buf<TDev, unsigned int> device_nTotalQuints_buf;
+    Buf<TDev, unsigned int> device_nTotalQuads_buf;
 
     ObjectRanges data_;
 
@@ -117,8 +137,11 @@ namespace lst {
           tripletRanges_buf(allocBufWrapper<int>(devAccIn, nMod * 2, queue)),
           trackCandidateRanges_buf(allocBufWrapper<int>(devAccIn, nMod * 2, queue)),
           quintupletRanges_buf(allocBufWrapper<int>(devAccIn, nMod * 2, queue)),
+          quadrupletRanges_buf(allocBufWrapper<int>(devAccIn, nMod * 2, queue)),
           nEligibleT5Modules_buf(allocBufWrapper<uint16_t>(devAccIn, 1, queue)),
           indicesOfEligibleT5Modules_buf(allocBufWrapper<uint16_t>(devAccIn, nLowerMod, queue)),
+          nEligibleT4Modules_buf(allocBufWrapper<uint16_t>(devAccIn, 1, queue)),
+          indicesOfEligibleT4Modules_buf(allocBufWrapper<uint16_t>(devAccIn, nLowerMod, queue)),
           quintupletModuleIndices_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
           quintupletModuleOccupancy_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
           miniDoubletModuleIndices_buf(allocBufWrapper<int>(devAccIn, nLowerMod + 1, queue)),
@@ -127,10 +150,13 @@ namespace lst {
           segmentModuleOccupancy_buf(allocBufWrapper<int>(devAccIn, nLowerMod + 1, queue)),
           tripletModuleIndices_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
           tripletModuleOccupancy_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
+          quadrupletModuleIndices_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
+          quadrupletModuleOccupancy_buf(allocBufWrapper<int>(devAccIn, nLowerMod, queue)),
           device_nTotalMDs_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           device_nTotalSegs_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
           device_nTotalTrips_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
-          device_nTotalQuints_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)) {
+          device_nTotalQuints_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)),
+          device_nTotalQuads_buf(allocBufWrapper<unsigned int>(devAccIn, 1, queue)) {
       alpaka::memset(queue, hitRanges_buf, 0xff);
       alpaka::memset(queue, hitRangesLower_buf, 0xff);
       alpaka::memset(queue, hitRangesUpper_buf, 0xff);
@@ -143,6 +169,8 @@ namespace lst {
       alpaka::memset(queue, trackCandidateRanges_buf, 0xff);
       alpaka::memset(queue, quintupletRanges_buf, 0xff);
       alpaka::memset(queue, quintupletModuleIndices_buf, 0xff);
+      alpaka::memset(queue, quadrupletRanges_buf, 0xff);
+      alpaka::memset(queue, quadrupletModuleIndices_buf, 0xff);
       alpaka::wait(queue);
       data_.setData(*this);
     }
