@@ -1,4 +1,0 @@
-import FWCore.ParameterSet.Config as cms
-
-from RecoTracker.MeasurementDet.maskedMeasurementTrackerEventProducer_cfi import maskedMeasurementTrackerEventProducer as _maskedMeasurementTrackerEventProducer
-MaskedMeasurementTrackerEvent = _maskedMeasurementTrackerEventProducer.clone()

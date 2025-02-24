@@ -1,3 +1,0 @@
-#include "L1Trigger/L1THGCal/interface/backend/HGCalTriggerClusterInterpreterBase.h"
-
-EDM_REGISTER_PLUGINFACTORY(HGCalTriggerClusterInterpreterFactory, "HGCalTriggerClusterInterpreterFactory");

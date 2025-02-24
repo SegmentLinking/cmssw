@@ -1,4 +1,0 @@
-import FWCore.ParameterSet.Config as cms
-
-from TrackingTools.Producers.analyticalPropagatorESProducer_cfi import analyticalPropagatorESProducer as _analyticalPropagatorESProducer
-AnalyticalPropagator = _analyticalPropagatorESProducer.clone()

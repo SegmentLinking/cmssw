@@ -1,4 +1,0 @@
-Block MASS   #
-#  PDG code    mass (GeV)         particle
-   9000006     1000.0          # chi
-Block

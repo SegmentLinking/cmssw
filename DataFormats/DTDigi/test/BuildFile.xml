@@ -1,5 +1,0 @@
-<use name="FWCore/Framework"/>
-<use name="DataFormats/DTDigi"/>
-<bin name="testDTDigis" file="testDTDigis.cpp">
-  <use name="cppunit"/>
-</bin>

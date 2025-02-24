@@ -1,2 +1,0 @@
-<!-- tests convertToRaw utility script -->
-<test name="testConvertToRaw" command="testConvertToRaw.sh"/>

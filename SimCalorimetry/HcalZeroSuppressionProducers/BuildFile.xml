@@ -1,6 +1,0 @@
-<use name="CalibFormats/HcalObjects"/>
-<use name="DataFormats/HcalDigi"/>
-<use name="boost"/>
-<export>
-  <lib name="1"/>
-</export>

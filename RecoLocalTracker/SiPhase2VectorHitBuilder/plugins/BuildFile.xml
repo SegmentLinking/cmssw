@@ -1,4 +1,0 @@
-<use   name="RecoLocalTracker/SiPhase2VectorHitBuilder"/>
-<library   file="*.cc" name="RecoLocalTrackerSiPhase2VectorHitBuilderPlugins">
-  <flags   EDM_PLUGIN="1"/>
-</library>

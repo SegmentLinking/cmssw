@@ -1,6 +1,0 @@
-<environment>
-  <use name="SimCalorimetry/CastorSim"/>
-  <bin file="CastorDigitizerTest.cpp">
-</bin>
-
-</environment>

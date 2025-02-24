@@ -1,4 +1,0 @@
-Block MASS   #
-#  PDG code    mass                 particle
-   9000006     10.0                  # chi
-Block

@@ -1,3 +1,0 @@
-<test name="testAlpakaBackendFilter" command="cmsRun ${LOCALTOP}/src/HeterogeneousCore/AlpakaCore/test/testAlpakaBackendFilter.py">
-  <flags ALPAKA_BACKENDS="1"/>
-</test>

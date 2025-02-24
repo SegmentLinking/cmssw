@@ -1,4 +1,0 @@
-#include "RecoLocalFastTime/FTLCommonAlgos/interface/MTDUncalibratedRecHitAlgoBase.h"
-
-EDM_REGISTER_PLUGINFACTORY(BTLUncalibratedRecHitAlgoFactory, "BTLUncalibratedRecHitAlgoFactory");
-EDM_REGISTER_PLUGINFACTORY(ETLUncalibratedRecHitAlgoFactory, "ETLUncalibratedRecHitAlgoFactory");

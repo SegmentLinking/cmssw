@@ -1,3 +1,0 @@
-<use name="dablooms"/>
-<bin file="bloom_filter_generator.c" name="bloom_filter_generator">
-</bin>

@@ -1,8 +1,0 @@
-<export>
-</export>
-<library name="CondToolsBTauplugins" file="*.cc">
-  <use name="CondFormats/BTauObjects"/>
-  <use name="FWCore/Framework"/>
-  <use name="FWCore/ParameterSet"/>
-  <use name="CondCore/DBOutputService"/>
-</library>

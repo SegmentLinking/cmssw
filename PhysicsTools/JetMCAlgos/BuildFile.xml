@@ -1,6 +1,0 @@
-<use name="PhysicsTools/JetMCUtils"/>
-<use name="DataFormats/Common"/>
-<use name="DataFormats/HepMCCandidate"/>
-<export>
-  <lib name="1"/>
-</export>

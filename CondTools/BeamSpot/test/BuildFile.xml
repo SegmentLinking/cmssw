@@ -1,2 +1,0 @@
-<test name="testReadWriteBeamSpotsFromDB" command="testReadWriteBeamSpotsFromDB.sh"/>
-<test name="testShiftBeamSpotsFromDB" command="testShiftBeamSpotsFromDB.sh"/>

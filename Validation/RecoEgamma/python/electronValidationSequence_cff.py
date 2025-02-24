@@ -1,8 +1,0 @@
-import FWCore.ParameterSet.Config as cms
-
-from Validation.RecoEgamma.ElectronMcSignalValidator_gedGsfElectrons_cfi import *
-from Validation.RecoEgamma.ElectronMcFakeValidator_gedGsfElectrons_cfi import *
-from Validation.RecoEgamma.ElectronMcSignalValidatorPt1000_gedGsfElectrons_cfi import *
- 
-electronValidationSequence = cms.Sequence(electronMcSignalValidator+electronMcFakeValidator+electronMcSignalValidatorPt1000)
-

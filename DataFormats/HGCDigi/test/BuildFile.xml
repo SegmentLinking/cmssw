@@ -1,4 +1,0 @@
-<bin file="HGCSampleTest.cpp" name="HGCSampleTest">
-  <flags TEST_RUNNER_ARGS=" 200000000 y"/>
-  <use name="DataFormats/HGCDigi"/>
-</bin>

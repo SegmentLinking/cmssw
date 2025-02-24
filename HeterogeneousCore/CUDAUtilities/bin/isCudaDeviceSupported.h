@@ -1,6 +1,0 @@
-#ifndef HeterogeneousCore_CUDAServices_bin_isCudaDeviceSupported_h
-#define HeterogeneousCore_CUDAServices_bin_isCudaDeviceSupported_h
-
-bool isCudaDeviceSupported(int device);
-
-#endif  // HeterogeneousCore_CUDAServices_bin_isCudaDeviceSupported_h

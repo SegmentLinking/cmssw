@@ -1,5 +1,0 @@
-import FWCore.ParameterSet.Config as cms
-
-from RecoTracker.MkFit.mkFitPhase2HitConverterDefault_cfi import mkFitPhase2HitConverterDefault as _mkFitPhase2HitConverterDefault
-
-mkFitPhase2HitConverter = _mkFitPhase2HitConverterDefault.clone()

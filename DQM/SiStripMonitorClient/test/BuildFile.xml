@@ -1,3 +1,0 @@
-<test name="testSiStripDQM_OfflineTkMap" command="test_SiStripDQM_OfflineTkMap.sh"/>
-
-<test name="test_TreeAndTkMapProducer" command="test_TreeAndTkMapProducer.sh"/>

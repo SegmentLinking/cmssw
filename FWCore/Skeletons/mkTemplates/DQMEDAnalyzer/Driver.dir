@@ -1,5 +1,0 @@
-plugins/BuildFile.xml
-plugins/DQMEDAnalyzer.cc
-python/ExampleConfig_cfg.py
-test
-doc

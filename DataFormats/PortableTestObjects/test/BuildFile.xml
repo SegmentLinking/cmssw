@@ -1,4 +1,0 @@
-<bin file="TestSoA.cc" name="testSoA">
-  <use name="DataFormats/PortableTestObjects"/>
-  <use name="HeterogeneousCore/AlpakaInterface"/>
-</bin>

@@ -1,5 +1,0 @@
-#include "DataFormats/HcalCalibObjects/interface/HOCalibVariables.h"
-#include "DataFormats/HcalCalibObjects/interface/HcalHBHEMuonVariables.h"
-#include "DataFormats/HcalCalibObjects/interface/HcalIsoTrkCalibVariables.h"
-#include "DataFormats/HcalCalibObjects/interface/HcalIsoTrkEventVariables.h"
-#include "DataFormats/Common/interface/Wrapper.h"

@@ -1,8 +1,0 @@
-<use name="DataFormats/EcalDigi"/>
-<use name="DataFormats/EcalDetId"/>
-<use name="DataFormats/FEDRawData"/>
-<use name="DataFormats/EcalRawData"/>
-<use name="FWCore/Framework"/>
-<use name="FWCore/ParameterSet"/>
-<use name="rootcore"/>
-<flags EDM_PLUGIN="1"/>

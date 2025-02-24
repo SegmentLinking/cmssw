@@ -1,4 +1,0 @@
-<library file="*.cc" name="L1TriggerL1TMuonCPPFPlugins">
-  <use name="L1Trigger/L1TMuonCPPF"/>
-  <flags EDM_PLUGIN="1"/>
-</library>

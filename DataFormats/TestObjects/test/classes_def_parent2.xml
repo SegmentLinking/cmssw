@@ -1,4 +1,0 @@
-<lcgdict>
- <class name="edmtest::TransientIntParentT<2>" persistent="false"/>
- <class name="edm::Wrapper<edmtest::TransientIntParentT<2>>" persistent="false"/>
-</lcgdict>

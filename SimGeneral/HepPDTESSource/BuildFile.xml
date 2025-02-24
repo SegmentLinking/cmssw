@@ -1,3 +1,0 @@
-<use name="SimGeneral/HepPDTRecord"/>
-<use name="heppdt"/>
-<flags EDM_PLUGIN="1"/>

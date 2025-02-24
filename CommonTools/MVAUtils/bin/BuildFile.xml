@@ -1,4 +1,0 @@
-<use name="CommonTools/MVAUtils"/>
-
-<bin name="convertXMLToGBRForestROOT" file="convertXMLToGBRForestROOT.cc">
-</bin>

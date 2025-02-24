@@ -1,5 +1,0 @@
-<library file="*.cc" name="DQMServicesExamplesPlugins">
-  <flags EDM_PLUGIN="1"/>
-  <use name="DQMServices/Examples"/>
-  <use name="FWCore/Framework"/>
-</library>

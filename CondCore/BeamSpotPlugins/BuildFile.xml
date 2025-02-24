@@ -1,4 +1,0 @@
-<use name="CondFormats/BeamSpotObjects"/>
-<use name="CondFormats/DataRecord"/>
-<use name="CondCore/ESSources"/>
-<flags EDM_PLUGIN="1"/>

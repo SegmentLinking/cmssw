@@ -1,4 +1,0 @@
-<use name="CalibTracker/StandaloneTrackerTopology"/>
-<use name="CalibTracker/SiPixelESProducers"/>
-<use name="CondFormats/SiPixelObjects"/>
-<use name="DQM/TrackerRemapper"/>

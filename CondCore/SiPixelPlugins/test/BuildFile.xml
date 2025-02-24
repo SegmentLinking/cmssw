@@ -1,8 +1,0 @@
-<use name="CondCore/Utilities"/>
-<use name="FWCore/PluginManager"/>
-<use name="CalibTracker/StandaloneTrackerTopology"/>
-<use name="CondFormats/SiPixelTransient"/>
-<use name="CalibTracker/SiPixelESProducers"/>
-<bin file="testSiPixelPayloadInspector.cpp" name="testPixelPayloadInspector">
-  <use name="DQM/TrackerRemapper"/>
-</bin>

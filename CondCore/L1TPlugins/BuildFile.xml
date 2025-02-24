@@ -1,4 +1,0 @@
-<use name="CondCore/ESSources"/>
-<use name="CondFormats/L1TObjects"/>
-<use name="CondFormats/DataRecord"/>
-<flags EDM_PLUGIN="1"/>

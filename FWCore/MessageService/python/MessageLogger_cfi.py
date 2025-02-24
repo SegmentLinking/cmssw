@@ -1,1 +1,0 @@
-from FWCore.ParameterSet.MessageLogger import MessageLogger

@@ -1,3 +1,0 @@
-<use name="alpaka"/>
-<use name="HeterogeneousCore/AlpakaInterface"/>
-<use name="HeterogeneousTest/AlpakaDevice"/>

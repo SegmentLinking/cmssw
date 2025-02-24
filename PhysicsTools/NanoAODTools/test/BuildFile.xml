@@ -1,6 +1,0 @@
-<use name="root"/>
-<use name="rootgeompainter"/>
-<library   file="examples/*.cc" name="PhysicsToolsNanoAODToolsTest">
-</library>
-
-<test name="PhysicsToolsNanoAODToolsTestDriver" command="runTest.sh"/>

@@ -1,5 +1,0 @@
-<library file="*.cc" name="SimGeneralCaloAnalysis_test">
-  <use name="FWCore/Framework"/>
-  <use name="SimDataFormats/CaloAnalysis"/>
-  <flags EDM_PLUGIN="1"/>
-</library>

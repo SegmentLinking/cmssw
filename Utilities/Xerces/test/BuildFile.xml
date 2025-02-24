@@ -1,3 +1,0 @@
-<bin file="test_xercesInitialize.cpp">
-  <use name="Utilities/Xerces"/>
-</bin>

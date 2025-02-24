@@ -1,8 +1,0 @@
-<use name="DataFormats/JetReco"/>
-<use name="fftjet"/>
-<use name="fftw3"/>
-<export>
-  <use name="fftjet"/>
-  <use name="fftw3"/>
-  <lib name="1"/>
-</export>

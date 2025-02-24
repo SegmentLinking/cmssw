@@ -1,4 +1,0 @@
-<use name="FWCore/Framework"/>
-<use name="CalibCalorimetry/HcalTPGAlgos"/>
-<use name="CalibFormats/HcalObjects"/>
-<flags EDM_PLUGIN="1"/>

@@ -1,4 +1,0 @@
-<library file="AlCaRecoTriggerBits_PayloadInspector.cc" name="AlCaRecoTriggerBits_PayloadInspector">
-  <use name="CondCore/Utilities"/>
-  <use name="CondCore/CondDB"/>
-</library>

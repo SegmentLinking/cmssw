@@ -1,7 +1,0 @@
-<use name="tensorflow-xla-runtime"/>
-
-<use name="FWCore/Utilities"/>
-
-<export>
-  <lib name="1"/>
-</export>

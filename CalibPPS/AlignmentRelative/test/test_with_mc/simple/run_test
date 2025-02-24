@@ -1,7 +1,0 @@
-#!/bin/bash
-
-mkdir -p "data"
-
-cd "data"
-
-cmsRun "../cfg.py" &> "log"

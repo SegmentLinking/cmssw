@@ -1,4 +1,0 @@
-<use name="FWCore/PluginManager"/>
-<use name="rootcore"/>
-<bin name="test_TFileAdaptor_TFile" file="tfileTest.cpp">
-</bin>

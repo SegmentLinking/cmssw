@@ -1,2 +1,0 @@
-<test name="test_SiStripQualityStatistics" command="test_SiStripQualityStatistics.sh"/>
-<test name="test_makeMergedBadComponentsWithFedErr" command="test_makeMergedBadComponentsWithFedErr.sh"/>

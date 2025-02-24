@@ -1,6 +1,0 @@
-<iftool name="cuda-gcc-support">
-  <use name="cuda"/>
-  <export>
-    <lib name="1"/>
-  </export>
-</iftool>

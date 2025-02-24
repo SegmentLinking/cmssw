@@ -1,4 +1,0 @@
-<bin name="TPGTreeReader" file="TPGTreeReader.cpp">
-  <use name="boost_header"/>
-  <use name="root"/>
-</bin>

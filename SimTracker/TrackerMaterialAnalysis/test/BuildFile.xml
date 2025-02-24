@@ -1,2 +1,0 @@
-<!--CMSBot IB tests-->
-<test name="trackerMaterialAnalysisPlots" command="genTrackerPlots.sh"/>

@@ -1,6 +1,0 @@
-<use name="clhep"/>
-<use name="DataFormats/VertexReco"/>
-<use name="root"/>
-<bin name="testDataFormatsVertexReco" file="testVertex.cc,testRunner.cpp">
-  <use name="cppunit"/>
-</bin>
