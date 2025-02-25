@@ -63,8 +63,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 acc, alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y + ihit_z * ihit_z) / hits.rts()[ihit]);
         auto found_pointer = alpaka_std::lower_bound(modules.mapdetId(), modules.mapdetId() + nModules, iDetId);
         int found_index = std::distance(modules.mapdetId(), found_pointer);
-        if (found_pointer == modules.mapdetId() + nModules)
-          found_index = -1;
+        if (found_pointer == modules.mapdetId() + nModules) {
+#ifdef WARNINGS
+          printf("detId %d not found in modules.mapdetId\n", iDetId);
+#endif
+          continue;
+        }
         uint16_t lastModuleIndex = modules.mapIdx()[found_index];
 
         hits.moduleIndices()[ihit] = lastModuleIndex;
@@ -72,8 +76,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (modules.subdets()[lastModuleIndex] == Endcap && modules.moduleType()[lastModuleIndex] == TwoS) {
           found_pointer = alpaka_std::lower_bound(geoMapDetId, geoMapDetId + nEndCapMap, iDetId);
           found_index = std::distance(geoMapDetId, found_pointer);
-          if (found_pointer == geoMapDetId + nEndCapMap)
-            found_index = -1;
+          if (found_pointer == geoMapDetId + nEndCapMap) {
+#ifdef WARNINGS
+            printf("detId %d not found in endcapGeometry.geoMapDetId", iDetId);
+#endif
+            continue;
+          }
           float phi = geoMapPhi[found_index];
           float cos_phi = alpaka::math::cos(acc, phi);
           hits.highEdgeXs()[ihit] = ihit_x + 2.5f * cos_phi;
