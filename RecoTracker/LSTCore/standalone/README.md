@@ -27,7 +27,7 @@ cmsenv
 git cms-init
 # If necessary, add the remote git@github.com:SegmentLinking/cmssw.git
 # and checkout a development/feature branch
-git cms-addpkg RecoTracker/LST RecoTracker/LSTCore
+git cms-addpkg RecoTracker/LST RecoTracker/LSTCore FWCore/MessageLogger
 # If modifying some dependencies, run `git cms-checkdeps -a -A`
 scram b -j 12
 cd RecoTracker/LSTCore/standalone
