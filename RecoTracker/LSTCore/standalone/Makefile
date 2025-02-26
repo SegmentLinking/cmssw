@@ -11,10 +11,7 @@ OBJECTS=$(OBJECTS_CPU) $(OBJECTS_CUDA) $(OBJECTS_ROCM)
 CXX         = g++
 CXXFLAGS    = -g -O2 -Wall -fPIC -Woverloaded-virtual -Wno-unused-function -fno-var-tracking -std=c++20
 INCLUDEFLAGS= -ILST -I$(shell pwd) -Icode -Icode/core -I${ALPAKA_ROOT}/include -I/${BOOST_ROOT}/include $(shell rooutil-config --include) -I$(shell root-config --incdir) -I${TRACKLOOPERDIR}/../../../ -I${CMSSW_BASE}/src -I${FMT_ROOT}/include -I../interface/ -I../interface/alpaka/ -I../src/ -I../src/alpaka/
-ifdef CMSSW_RELEASE_BASE
-INCLUDEFLAGS:= ${INCLUDEFLAGS} -I${CMSSW_RELEASE_BASE}/src
-endif
-LDFLAGS     = -g -O2 $(LSTLIB) -L${TRACKLOOPERDIR}/LST $(shell rooutil-config --libs) $(shell root-config --libs) -L${CMSSW_BASE}/lib/${SCRAM_ARCH} -L${CMSSW_RELEASE_BASE}/lib/${SCRAM_ARCH} -lFWCoreMessageLogger
+LDFLAGS     = -g -O2 $(LSTLIB) -L${TRACKLOOPERDIR}/LST $(shell rooutil-config --libs) $(shell root-config --libs)
 LDFLAGS_CUDA= -L${CUDA_HOME}/lib64 -lcudart
 LDFLAGS_ROCM= -L${ROCM_ROOT}/lib -lamdhip64
 ALPAKAFLAGS = -DALPAKA_DEBUG=0
@@ -27,6 +24,13 @@ EXTRAFLAGS  = -ITMultiDrawTreePlayer -Wunused-variable -lTMVA -lEG -lGenVector -
 DOQUINTUPLET =
 CUTVALUEFLAG =
 CUTVALUEFLAG_FLAGS = -DCUT_VALUE_DEBUG
+
+LDFLAGS += -L${CMSSW_BASE}/lib/${SCRAM_ARCH}
+ifdef CMSSW_RELEASE_BASE
+        INCLUDEFLAGS:= ${INCLUDEFLAGS} -I${CMSSW_RELEASE_BASE}/src
+        LDFLAGS += -L${CMSSW_RELEASE_BASE}/lib/${SCRAM_ARCH}
+endif
+LDFLAGS += -lFWCoreMessageLogger
 
 PRIMITIVEFLAG = 
 PRIMITIVEFLAG_FLAGS = -DPRIMITIVE_STUDY
