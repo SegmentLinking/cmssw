@@ -22,6 +22,7 @@ void createT5DNNBranches();
 void createT3DNNBranches();
 void createpT3DNNBranches();
 void createT4DNNBranches();
+void createT3DNNBranches();
 
 void fillOutputBranches(LSTEvent* event);
 void setOutputBranches(LSTEvent* event);
@@ -52,6 +53,7 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3);
 void setT5DNNBranches(LSTEvent* event);
 void fillT4DNNBranches(LSTEvent* event, unsigned int T3);
 void setT4DNNBranches(LSTEvent* event);
+void fillT3DNNBranches(LSTEvent* event, unsigned int iT3);
 void setT3DNNBranches(LSTEvent* event);
 void setpT3DNNBranches(LSTEvent* event);
 void setpLSOutputBranches(LSTEvent* event);
