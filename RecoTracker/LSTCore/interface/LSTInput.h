@@ -188,6 +188,25 @@ void prepareInput(std::vector<float> const& see_px,
       isQuad_vec.push_back(isQuad);
     }
   }
+
+  // Build the SoAs
+  unsigned int nHits = trkX.size();
+  // TODO: Maybe it would be better to separate this into two collections
+  // since here we don't know the number of modules
+  std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), 0}};
+  HitsHostCollection hitsHC(hits_sizes);
+
+  auto hits = hitsDC_->view<HitsSoA>();
+  auto xs_view = cms::alpakatools::make_host_view(hits.xs(), (Idx)hits.metadata().size());
+  auto ys_view = cms::alpakatools::make_host_view(queue_, hits.ys(), (Idx)hits.metadata().size());
+  auto zs_view = cms::alpakatools::make_host_view(queue_, hits.zs(), (Idx)hits.metadata().size());
+  auto detId_view = cms::alpakatools::make_host_view(queue_, hits.detid(), (Idx)hits.metadata().size());
+  auto idxs_view = cms::alpakatools::make_host_view(queue_, hits.idxs(), (Idx)hits.metadata().size());
+  std::memcpy(hits.xs(), trkX.data(), nHits * sizeof(float));
+  std::memcpy(hits.ys(), trkY.data(), nHits * sizeof(float));
+  std::memcpy(hits.zs(), trkZ.data(), nHits * sizeof(float));
+  std::memcpy(hits.detid(), hitId.data(), nHits * sizeof(unsigned int));
+  std::memcpy(hits.idxs(), hitIdxs.data(), nHits * sizeof(unsigned int));
 }
 
 }  // namespace lst
