@@ -75,11 +75,7 @@ void LSTEvent::resetEventSync() {
   modulesHC_.reset();
 }
 
-void LSTEvent::addHitToEvent(std::vector<float> const& x,
-                             std::vector<float> const& y,
-                             std::vector<float> const& z,
-                             std::vector<unsigned int> const& detId,
-                             std::vector<unsigned int> const& idxInNtuple) {
+void LSTEvent::addHitToEvent(HitsHostCollection const* hitsHC) {
   // Use the actual number of hits instead of a max.
   unsigned int nHits = x.size();
 
