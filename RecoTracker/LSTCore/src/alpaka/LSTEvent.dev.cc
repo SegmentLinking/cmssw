@@ -134,7 +134,7 @@ void LSTEvent::addHitToEvent(HitsHostCollection const* hitsHC) {
                       endcapGeometry_.const_view(),
                       modules_.const_view<ModulesSoA>(),
                       hitsDC_->view<HitsSoA>(),
-                      hitsDC_->view<HitsRangesSoA>(),
+                      hitsRangesDC_->view(),
                       nHits);
 
   auto const module_ranges_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
@@ -143,7 +143,7 @@ void LSTEvent::addHitToEvent(HitsHostCollection const* hitsHC) {
                       module_ranges_workdiv,
                       ModuleRangesKernel{},
                       modules_.const_view<ModulesSoA>(),
-                      hitsDC_->view<HitsRangesSoA>(),
+                      hitsRangesDC_->view(),
                       nLowerModules_);
 }
 
@@ -254,7 +254,7 @@ void LSTEvent::createMiniDoublets() {
                         createMDArrayRangesGPU_workDiv,
                         CreateMDArrayRangesGPU{},
                         modules_.const_view<ModulesSoA>(),
-                        hitsDC_->const_view<HitsRangesSoA>(),
+                        hitsRangesDC_->const_view(),
                         rangesDC_->view(),
                         ptCut_);
 
@@ -299,7 +299,7 @@ void LSTEvent::createMiniDoublets() {
                       CreateMiniDoublets{},
                       modules_.const_view<ModulesSoA>(),
                       hitsDC_->const_view<HitsSoA>(),
-                      hitsDC_->const_view<HitsRangesSoA>(),
+                      hitsRangesDC_->const_view(),
                       miniDoubletsDC_->view<MiniDoubletsSoA>(),
                       miniDoubletsDC_->view<MiniDoubletsOccupancySoA>(),
                       rangesDC_->const_view(),
@@ -313,7 +313,7 @@ void LSTEvent::createMiniDoublets() {
                       modules_.const_view<ModulesSoA>(),
                       miniDoubletsDC_->view<MiniDoubletsOccupancySoA>(),
                       rangesDC_->view(),
-                      hitsDC_->const_view<HitsRangesSoA>());
+                      hitsRangesDC_->const_view());
 
   if (addObjects_) {
     addMiniDoubletsToEventExplicit();
@@ -1356,14 +1356,14 @@ typename TSoA::ConstView LSTEvent::getHits(bool inCMSSW, bool sync) {
       if (inCMSSW) {
         auto hits_d = hitsDC_->view<HitsSoA>();
         auto nHits = hits_d.metadata().size();
-        std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
+        std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), 0}};
         hitsHC_.emplace(hits_sizes, queue_);
         auto hits_h = hitsHC_->view<HitsSoA>();
         auto idxs_h = cms::alpakatools::make_host_view(hits_h.idxs(), nHits);
         auto idxs_d = cms::alpakatools::make_device_view(queue_, hits_d.idxs(), nHits);
         alpaka::memcpy(queue_, idxs_h, idxs_d);
       } else {
-        hitsHC_.emplace(cms::alpakatools::CopyToHost<PortableMultiCollection<TDev, HitsSoA, HitsRangesSoA>>::copyAsync(
+        hitsHC_.emplace(cms::alpakatools::CopyToHost<PortableMultiCollection<TDev, HitsSoA, PixelHitsSoA>>::copyAsync(
             queue_, *hitsDC_));
       }
       if (sync)
@@ -1373,7 +1373,23 @@ typename TSoA::ConstView LSTEvent::getHits(bool inCMSSW, bool sync) {
   }
 }
 template HitsConst LSTEvent::getHits<HitsSoA>(bool, bool);
-template HitsRangesConst LSTEvent::getHits<HitsRangesSoA>(bool, bool);
+template HitsRangesConst LSTEvent::getHits<PixelHitsSoA>(bool, bool);
+
+template <typename TDev>
+HitsRangesConst LSTEvent::getHitsRanges(bool sync) {
+  if constexpr (std::is_same_v<TDev, DevHost>) {
+    return hitsRangesDC_->const_view();
+  } else {
+    if (!hitsRangesHC_) {
+      hitsRangesHC_.emplace(
+          cms::alpakatools::CopyToHost<PortableDeviceCollection<HitsRangesSoA, TDev>>::copyAsync(queue_, *hitsRangesDC_));
+      if (sync)
+        alpaka::wait(queue_);  // host consumers expect filled data
+    }
+    return hitsRangesHC_->const_view();
+  }
+}
+template HitsRangesConst LSTEvent::getHitsRanges<>(bool);
 
 template <typename TDev>
 ObjectRangesConst LSTEvent::getRanges(bool sync) {

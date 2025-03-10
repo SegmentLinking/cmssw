@@ -4,6 +4,7 @@
 #include <optional>
 
 #include "RecoTracker/LSTCore/interface/HitsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/HitsRangesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/MiniDoubletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelQuintupletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelTripletsHostCollection.h"
@@ -17,6 +18,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 #include "RecoTracker/LSTCore/interface/alpaka/HitsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/HitsRangesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelQuintupletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelTripletsDeviceCollection.h"
@@ -53,6 +55,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //Device stuff
     std::optional<ObjectRangesDeviceCollection> rangesDC_;
     std::optional<HitsDeviceCollection> hitsDC_;
+    std::optional<HitsRangesDeviceCollection> hitsRangesDC_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
     std::optional<SegmentsDeviceCollection> segmentsDC_;
     std::optional<PixelSegmentsDeviceCollection> pixelSegmentsDC_;
@@ -65,6 +68,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //CPU interface stuff
     std::optional<ObjectRangesHostCollection> rangesHC_;
     std::optional<HitsHostCollection> hitsHC_;
+    std::optional<HitsRangesHostCollection> hitsRangesHC_;
     std::optional<MiniDoubletsHostCollection> miniDoubletsHC_;
     std::optional<SegmentsHostCollection> segmentsHC_;
     std::optional<PixelSegmentsHostCollection> pixelSegmentsHC_;
@@ -179,6 +183,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // HANDLE WITH CARE
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getHits(bool inCMSSW = false, bool sync = true);
+    template <typename TDev = Device>
+    typename HitsRangesConst getHitsRanges(bool sync = true);
     template <typename TDev = Device>
     ObjectRangesConst getRanges(bool sync = true);
     template <typename TSoA, typename TDev = Device>
