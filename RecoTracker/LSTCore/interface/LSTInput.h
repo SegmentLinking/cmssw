@@ -1,3 +1,4 @@
+#include <memory>
 #include "Math/Vector3D.h"
 #include "Math/VectorUtil.h"
 
@@ -15,7 +16,7 @@ namespace lst {
       return {vx, vy, vz};
     }
 
-void prepareInput(std::vector<float> const& see_px,
+std::tuple<std::unique_ptr<HitsHostCollection>, std::unique_ptr<PixelSegmentsHostCollection>> prepareInput(std::vector<float> const& see_px,
                        std::vector<float> const& see_py,
                        std::vector<float> const& see_pz,
                        std::vector<float> const& see_dxy,
@@ -180,7 +181,7 @@ void prepareInput(std::vector<float> const& see_px,
       float nphi = 72.;
       float nz = 25.;
       int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
-      int phibin = (p3PCA_Phi + kPi) / ((2. * kPi) / nphi);
+      int phibin = (p3PCA_Phi + std::numbers::pi_v<float>) / ((2. * std::numbers::pi_v<float>) / nphi);
       int dzbin = (see_dz[iSeed] + 30) / (2 * 30 / nz);
       int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
       superbin_vec.push_back(isuperbin);
@@ -190,23 +191,55 @@ void prepareInput(std::vector<float> const& see_px,
   }
 
   // Build the SoAs
-  unsigned int nHits = trkX.size();
-  // TODO: Maybe it would be better to separate this into two collections
-  // since here we don't know the number of modules
-  std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), 0}};
-  HitsHostCollection hitsHC(hits_sizes);
+  int nHits = trkX.size();
+  int nPixelHits = hitIndices_vec0.size();
+  std::array<int, 2> const hits_sizes{{nHits, nPixelHits}};
+  auto hitsHC = std::make_unique<HitsHostCollection>(hits_sizes, cms::alpakatools::host());
 
-  auto hits = hitsDC_->view<HitsSoA>();
-  auto xs_view = cms::alpakatools::make_host_view(hits.xs(), (Idx)hits.metadata().size());
-  auto ys_view = cms::alpakatools::make_host_view(queue_, hits.ys(), (Idx)hits.metadata().size());
-  auto zs_view = cms::alpakatools::make_host_view(queue_, hits.zs(), (Idx)hits.metadata().size());
-  auto detId_view = cms::alpakatools::make_host_view(queue_, hits.detid(), (Idx)hits.metadata().size());
-  auto idxs_view = cms::alpakatools::make_host_view(queue_, hits.idxs(), (Idx)hits.metadata().size());
+  auto hits = hitsHC->view<HitsSoA>();
   std::memcpy(hits.xs(), trkX.data(), nHits * sizeof(float));
   std::memcpy(hits.ys(), trkY.data(), nHits * sizeof(float));
   std::memcpy(hits.zs(), trkZ.data(), nHits * sizeof(float));
   std::memcpy(hits.detid(), hitId.data(), nHits * sizeof(unsigned int));
   std::memcpy(hits.idxs(), hitIdxs.data(), nHits * sizeof(unsigned int));
+
+  auto pixelHits = hitsHC->view<PixelHitsSoA>();
+  std::memcpy(pixelHits.hitIndices0(), hitIndices_vec0.data(), nPixelHits * sizeof(unsigned int));
+  std::memcpy(pixelHits.hitIndices1(), hitIndices_vec1.data(), nPixelHits * sizeof(unsigned int));
+  std::memcpy(pixelHits.hitIndices2(), hitIndices_vec2.data(), nPixelHits * sizeof(unsigned int));
+  std::memcpy(pixelHits.hitIndices3(), hitIndices_vec3.data(), nPixelHits * sizeof(unsigned int));
+  std::memcpy(pixelHits.deltaPhi(), deltaPhi_vec.data(), nPixelHits * sizeof(float));
+
+  int pixelSegmentsSize = ptIn_vec.size();
+  // if (pixelSegmentsSize > n_max_pixel_segments_per_module) {
+    // lstWarning(
+    //     "\
+    //     *********************************************************\n\
+    //     * Warning: Pixel line segments will be truncated.       *\n\
+    //     * You need to increase n_max_pixel_segments_per_module. *\n\
+    //     *********************************************************");
+  //   pixelSegmentsSize = n_max_pixel_segments_per_module;
+  // }
+
+  // pixelModuleIndex_ = pixelMapping_.pixelModuleIndex;
+
+  auto pixelSegmentsHC = std::make_unique<PixelSegmentsHostCollection>(pixelSegmentsSize, cms::alpakatools::host());
+  PixelSegments pixelSegments = pixelSegmentsHC->view();
+  std::memcpy(pixelSegments.ptIn(), ptIn_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.ptErr(), ptErr_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.px(), px_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.py(), py_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.pz(), pz_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.etaErr(), etaErr_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.isQuad(), isQuad_vec.data(), pixelSegmentsSize * sizeof(char));
+  std::memcpy(pixelSegments.eta(), eta_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.phi(), phi_vec.data(), pixelSegmentsSize * sizeof(float));
+  std::memcpy(pixelSegments.charge(), charge_vec.data(), pixelSegmentsSize * sizeof(int));
+  std::memcpy(pixelSegments.seedIdx(), seedIdx_vec.data(), pixelSegmentsSize * sizeof(unsigned int));
+  std::memcpy(pixelSegments.superbin(), superbin_vec.data(), pixelSegmentsSize * sizeof(int));
+  std::memcpy(pixelSegments.pixelType(), pixelType_vec.data(), pixelSegmentsSize * sizeof(PixelType));
+
+  return std::move(std::make_tuple(std::move(hitsHC), std::move(pixelSegmentsHC)));
 }
 
 }  // namespace lst

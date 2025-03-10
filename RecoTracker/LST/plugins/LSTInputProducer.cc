@@ -33,17 +33,17 @@ private:
   const double ptCut_;
 
   const edm::EDGetTokenT<Phase2TrackerRecHit1DCollectionNew> phase2OTRecHitToken_;
-  const edm::EDPutTokenT<lst::HitsHostCollection> lstHitsInputPutToken_;
+  const edm::EDPutTokenT<std::unique_ptr<lst::HitsHostCollection>> lstHitsInputPutToken_;
 
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
   const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
   std::vector<edm::EDGetTokenT<edm::View<reco::Track>>> seedTokens_;
   const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
-  const edm::EDPutTokenT<lst::PixelSegmentsHostCollection> lstPixelSegmentsInputPutToken_;
+  const edm::EDPutTokenT<std::unique_ptr<lst::PixelSegmentsHostCollection>> lstPixelSegmentsInputPutToken_;
 };
 
 LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
-    : ptCut_(config.getParameter<double>("ptCut")),
+    : ptCut_(iConfig.getParameter<double>("ptCut")),
       phase2OTRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
       lstHitsInputPutToken_(produces()),
       mfToken_(esConsumes()),
@@ -185,7 +185,7 @@ void LSTInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
     }
   }
 
-  lst::prepareInput(see_px,
+  auto [hitsHC, pixelSegmentsHC] = lst::prepareInput(see_px,
       see_py,
       see_pz,
       see_dxy,
@@ -207,9 +207,9 @@ void LSTInputProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
         ptCut_
   );
 
-  //iEvent.emplace(lstPhase2OTHitsInputPutToken_, std::move(phase2OTHitsInput));
-  //iEvent.emplace(lstPixelSeedInputPutToken_, std::move(pixelSeedInput));
-  //iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
+  iEvent.emplace(lstHitsInputPutToken_, std::move(hitsHC));
+  iEvent.emplace(lstPixelSegmentsInputPutToken_, std::move(pixelSegmentsHC));
+  iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
 }
 
 DEFINE_FWK_MODULE(LSTInputProducer);

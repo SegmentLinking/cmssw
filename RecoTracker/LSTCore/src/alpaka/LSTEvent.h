@@ -54,11 +54,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //Device stuff
     std::optional<ObjectRangesDeviceCollection> rangesDC_;
-    std::optional<HitsDeviceCollection> hitsDC_;
+    HitsDeviceCollection* hitsDC_; // not owned
     std::optional<HitsRangesDeviceCollection> hitsRangesDC_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
     std::optional<SegmentsDeviceCollection> segmentsDC_;
-    std::optional<PixelSegmentsDeviceCollection> pixelSegmentsDC_;
+    PixelSegmentsDeviceCollection* pixelSegmentsDC_; // not owned
     std::optional<TripletsDeviceCollection> tripletsDC_;
     std::optional<QuintupletsDeviceCollection> quintupletsDC_;
     std::optional<TrackCandidatesDeviceCollection> trackCandidatesDC_;
@@ -111,11 +111,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void wait() const { alpaka::wait(queue_); }
 
     // Calls the appropriate hit function, then increments the counter
-    void addHitToEvent(std::vector<float> const& x,
-                       std::vector<float> const& y,
-                       std::vector<float> const& z,
-                       std::vector<unsigned int> const& detId,
-                       std::vector<unsigned int> const& idxInNtuple);
+    void addHitToEvent(HitsHostCollection const* hitsHC);
     void addPixelSegmentToEventStart(std::vector<float> const& ptIn,
                                      std::vector<float> const& ptErr,
                                      std::vector<float> const& px,
@@ -184,7 +180,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getHits(bool inCMSSW = false, bool sync = true);
     template <typename TDev = Device>
-    typename HitsRangesConst getHitsRanges(bool sync = true);
+    HitsRangesConst getHitsRanges(bool sync = true);
     template <typename TDev = Device>
     ObjectRangesConst getRanges(bool sync = true);
     template <typename TSoA, typename TDev = Device>

@@ -3,8 +3,8 @@
 
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTESData.h"
-#include "RecoTracker/LSTCore/interface/HitsHostCollection.h"
-#include "RecoTracker/LSTCore/interface/PixelSegmentsHostCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/HitsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/PixelSegmentsDeviceCollection.h"
 
 #include <cstdlib>
 #include <numeric>
@@ -21,8 +21,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              bool verbose,
              const float ptCut,
              LSTESData<Device> const* deviceESData,
-             HitsHostCollection const* hitsHC,
-             PixelSegmentsHostCollection const* pixelSegmentsHC,
+             HitsDeviceCollection const* hitsHC,
+             PixelSegmentsDeviceCollection const* pixelSegmentsHC,
              bool no_pls_dupclean,
              bool tc_pls_triplets);
     std::vector<std::vector<unsigned int>> const& hits() const { return out_tc_hitIdxs_; }

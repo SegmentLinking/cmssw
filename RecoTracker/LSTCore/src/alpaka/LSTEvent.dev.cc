@@ -53,10 +53,11 @@ void LSTEvent::resetEventSync() {
       n_quintuplets_by_layer_endcap_[i] = 0;
     }
   }
-  hitsDC_.reset();
+  hitsDC_ = nullptr;
   miniDoubletsDC_.reset();
   rangesDC_.reset();
   segmentsDC_.reset();
+  pixelSegmentsDC_ = nullptr;
   tripletsDC_.reset();
   quintupletsDC_.reset();
   trackCandidatesDC_.reset();
@@ -77,30 +78,30 @@ void LSTEvent::resetEventSync() {
 
 void LSTEvent::addHitToEvent(HitsHostCollection const* hitsHC) {
   // Use the actual number of hits instead of a max.
-  unsigned int nHits = x.size();
+  // unsigned int nHits = x.size();
 
-  // Initialize space on device/host for next event.
-  if (!hitsDC_) {
-    std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
-    hitsDC_.emplace(hits_sizes, queue_);
+  // // Initialize space on device/host for next event.
+  // if (!hitsDC_) {
+  //   std::array<int, 2> const hits_sizes{{static_cast<int>(nHits), static_cast<int>(nModules_)}};
+  //   hitsDC_.emplace(hits_sizes, queue_);
 
-    auto hitsRanges = hitsDC_->view<HitsRangesSoA>();
-    auto hitRanges_view =
-        cms::alpakatools::make_device_view(queue_, hitsRanges.hitRanges(), hitsRanges.metadata().size());
-    auto hitRangesLower_view =
-        cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesLower(), hitsRanges.metadata().size());
-    auto hitRangesUpper_view =
-        cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesUpper(), hitsRanges.metadata().size());
-    auto hitRangesnLower_view =
-        cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesnLower(), hitsRanges.metadata().size());
-    auto hitRangesnUpper_view =
-        cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesnUpper(), hitsRanges.metadata().size());
-    alpaka::memset(queue_, hitRanges_view, 0xff);
-    alpaka::memset(queue_, hitRangesLower_view, 0xff);
-    alpaka::memset(queue_, hitRangesUpper_view, 0xff);
-    alpaka::memset(queue_, hitRangesnLower_view, 0xff);
-    alpaka::memset(queue_, hitRangesnUpper_view, 0xff);
-  }
+  //   auto hitsRanges = hitsDC_->view<HitsRangesSoA>();
+  //   auto hitRanges_view =
+  //       cms::alpakatools::make_device_view(queue_, hitsRanges.hitRanges(), hitsRanges.metadata().size());
+  //   auto hitRangesLower_view =
+  //       cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesLower(), hitsRanges.metadata().size());
+  //   auto hitRangesUpper_view =
+  //       cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesUpper(), hitsRanges.metadata().size());
+  //   auto hitRangesnLower_view =
+  //       cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesnLower(), hitsRanges.metadata().size());
+  //   auto hitRangesnUpper_view =
+  //       cms::alpakatools::make_device_view(queue_, hitsRanges.hitRangesnUpper(), hitsRanges.metadata().size());
+  //   alpaka::memset(queue_, hitRanges_view, 0xff);
+  //   alpaka::memset(queue_, hitRangesLower_view, 0xff);
+  //   alpaka::memset(queue_, hitRangesUpper_view, 0xff);
+  //   alpaka::memset(queue_, hitRangesnLower_view, 0xff);
+  //   alpaka::memset(queue_, hitRangesnUpper_view, 0xff);
+  // }
 
   if (!rangesDC_) {
     rangesDC_.emplace(nLowerModules_ + 1, queue_);
@@ -109,42 +110,42 @@ void LSTEvent::addHitToEvent(HitsHostCollection const* hitsHC) {
   }
 
   // Copy the host arrays to the GPU.
-  auto hits = hitsDC_->view<HitsSoA>();
-  auto xs_d = cms::alpakatools::make_device_view(queue_, hits.xs(), (Idx)hits.metadata().size());
-  auto ys_d = cms::alpakatools::make_device_view(queue_, hits.ys(), (Idx)hits.metadata().size());
-  auto zs_d = cms::alpakatools::make_device_view(queue_, hits.zs(), (Idx)hits.metadata().size());
-  auto detId_d = cms::alpakatools::make_device_view(queue_, hits.detid(), (Idx)hits.metadata().size());
-  auto idxs_d = cms::alpakatools::make_device_view(queue_, hits.idxs(), (Idx)hits.metadata().size());
-  alpaka::memcpy(queue_, xs_d, x, (Idx)nHits);
-  alpaka::memcpy(queue_, ys_d, y, (Idx)nHits);
-  alpaka::memcpy(queue_, zs_d, z, (Idx)nHits);
-  alpaka::memcpy(queue_, detId_d, detId, (Idx)nHits);
-  alpaka::memcpy(queue_, idxs_d, idxInNtuple, (Idx)nHits);
-  alpaka::wait(queue_);  // FIXME: remove synch after inputs refactored to be in pinned memory
+  // auto hits = hitsDC_->view<HitsSoA>();
+  // auto xs_d = cms::alpakatools::make_device_view(queue_, hits.xs(), (Idx)hits.metadata().size());
+  // auto ys_d = cms::alpakatools::make_device_view(queue_, hits.ys(), (Idx)hits.metadata().size());
+  // auto zs_d = cms::alpakatools::make_device_view(queue_, hits.zs(), (Idx)hits.metadata().size());
+  // auto detId_d = cms::alpakatools::make_device_view(queue_, hits.detid(), (Idx)hits.metadata().size());
+  // auto idxs_d = cms::alpakatools::make_device_view(queue_, hits.idxs(), (Idx)hits.metadata().size());
+  // alpaka::memcpy(queue_, xs_d, x, (Idx)nHits);
+  // alpaka::memcpy(queue_, ys_d, y, (Idx)nHits);
+  // alpaka::memcpy(queue_, zs_d, z, (Idx)nHits);
+  // alpaka::memcpy(queue_, detId_d, detId, (Idx)nHits);
+  // alpaka::memcpy(queue_, idxs_d, idxInNtuple, (Idx)nHits);
+  // alpaka::wait(queue_);  // FIXME: remove synch after inputs refactored to be in pinned memory
 
-  auto const hit_loop_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+  // auto const hit_loop_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
 
-  alpaka::exec<Acc1D>(queue_,
-                      hit_loop_workdiv,
-                      HitLoopKernel{},
-                      Endcap,
-                      TwoS,
-                      nModules_,
-                      nEndCapMap_,
-                      endcapGeometry_.const_view(),
-                      modules_.const_view<ModulesSoA>(),
-                      hitsDC_->view<HitsSoA>(),
-                      hitsRangesDC_->view(),
-                      nHits);
+  // alpaka::exec<Acc1D>(queue_,
+  //                     hit_loop_workdiv,
+  //                     HitLoopKernel{},
+  //                     Endcap,
+  //                     TwoS,
+  //                     nModules_,
+  //                     nEndCapMap_,
+  //                     endcapGeometry_.const_view(),
+  //                     modules_.const_view<ModulesSoA>(),
+  //                     hitsDC_->view<HitsSoA>(),
+  //                     hitsRangesDC_->view(),
+  //                     nHits);
 
-  auto const module_ranges_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+  // auto const module_ranges_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
 
-  alpaka::exec<Acc1D>(queue_,
-                      module_ranges_workdiv,
-                      ModuleRangesKernel{},
-                      modules_.const_view<ModulesSoA>(),
-                      hitsRangesDC_->view(),
-                      nLowerModules_);
+  // alpaka::exec<Acc1D>(queue_,
+  //                     module_ranges_workdiv,
+  //                     ModuleRangesKernel{},
+  //                     modules_.const_view<ModulesSoA>(),
+  //                     hitsRangesDC_->view(),
+  //                     nLowerModules_);
 }
 
 void LSTEvent::addPixelSegmentToEventStart(std::vector<float> const& ptIn,
@@ -160,37 +161,37 @@ void LSTEvent::addPixelSegmentToEventStart(std::vector<float> const& ptIn,
                                            std::vector<int> const& superbin,
                                            std::vector<PixelType> const& pixelType,
                                            std::vector<char> const& isQuad) {
-  unsigned int size = ptIn.size();
-  pixelSize_ = size;
+  // unsigned int size = ptIn.size();
+  // pixelSize_ = size;
 
-  if (size > n_max_pixel_segments_per_module) {
-    lstWarning(
-        "\
-        *********************************************************\n\
-        * Warning: Pixel line segments will be truncated.       *\n\
-        * You need to increase n_max_pixel_segments_per_module. *\n\
-        *********************************************************");
-    size = n_max_pixel_segments_per_module;
-  }
+  // if (size > n_max_pixel_segments_per_module) {
+  //   lstWarning(
+  //       "\
+  //       *********************************************************\n\
+  //       * Warning: Pixel line segments will be truncated.       *\n\
+  //       * You need to increase n_max_pixel_segments_per_module. *\n\
+  //       *********************************************************");
+  //   size = n_max_pixel_segments_per_module;
+  // }
 
-  pixelModuleIndex_ = pixelMapping_.pixelModuleIndex;
+  // pixelModuleIndex_ = pixelMapping_.pixelModuleIndex;
 
-  pixelSegmentsDC_.emplace(n_max_pixel_segments_per_module, queue_);
+  // pixelSegmentsDC_.emplace(n_max_pixel_segments_per_module, queue_);
 
-  PixelSegments pixelSegments = pixelSegmentsDC_->view();
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.ptIn(), size), ptIn, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.ptErr(), size), ptErr, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.px(), size), px, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.py(), size), py, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.pz(), size), pz, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.etaErr(), size), etaErr, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.isQuad(), size), isQuad, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.eta(), size), eta, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.phi(), size), phi, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.charge(), size), charge, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.seedIdx(), size), seedIdx, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.superbin(), size), superbin, size);
-  alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.pixelType(), size), pixelType, size);
+  // PixelSegments pixelSegments = pixelSegmentsDC_->view();
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.ptIn(), size), ptIn, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.ptErr(), size), ptErr, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.px(), size), px, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.py(), size), py, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.pz(), size), pz, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.etaErr(), size), etaErr, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.isQuad(), size), isQuad, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.eta(), size), eta, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.phi(), size), phi, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.charge(), size), charge, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.seedIdx(), size), seedIdx, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.superbin(), size), superbin, size);
+  // alpaka::memcpy(queue_, cms::alpakatools::make_device_view(queue_, pixelSegments.pixelType(), size), pixelType, size);
 }
 
 void LSTEvent::addPixelSegmentToEventFinalize(std::vector<unsigned int> hitIndices0,
@@ -1373,7 +1374,7 @@ typename TSoA::ConstView LSTEvent::getHits(bool inCMSSW, bool sync) {
   }
 }
 template HitsConst LSTEvent::getHits<HitsSoA>(bool, bool);
-template HitsRangesConst LSTEvent::getHits<PixelHitsSoA>(bool, bool);
+template PixelHitsConst LSTEvent::getHits<PixelHitsSoA>(bool, bool);
 
 template <typename TDev>
 HitsRangesConst LSTEvent::getHitsRanges(bool sync) {
