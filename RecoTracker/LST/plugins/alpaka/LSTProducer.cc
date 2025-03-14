@@ -16,8 +16,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 #include "RecoTracker/LST/interface/LSTOutput.h"
-#include "RecoTracker/LST/interface/LSTPhase2OTHitsInput.h"
-#include "RecoTracker/LST/interface/LSTPixelSeedInput.h"
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
@@ -27,8 +25,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     LSTProducer(edm::ParameterSet const& config)
         : SynchronizingEDProducer(config),
-          lstPixelSeedInputToken_{consumes(config.getParameter<edm::InputTag>("pixelSeedInput"))},
-          lstPhase2OTHitsInputToken_{consumes(config.getParameter<edm::InputTag>("phase2OTHitsInput"))},
+          lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInputHC"))},
           lstESToken_{esConsumes(edm::ESInputTag("", config.getParameter<std::string>("ptCutLabel")))},
           verbose_(config.getParameter<bool>("verbose")),
           ptCut_(config.getParameter<double>("ptCut")),
@@ -38,8 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     void acquire(device::Event const& event, device::EventSetup const& setup) override {
       // Inputs
-      auto const& pixelSeeds = event.get(lstPixelSeedInputToken_);
-      auto const& phase2OTHits = event.get(lstPhase2OTHitsInputToken_);
+      auto const& lstInputDC = event.get(lstInputToken_);
 
       auto const& lstESDeviceData = setup.getData(lstESToken_);
 
@@ -47,25 +43,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                verbose_,
                static_cast<float>(ptCut_),
                &lstESDeviceData,
-               pixelSeeds.px(),
-               pixelSeeds.py(),
-               pixelSeeds.pz(),
-               pixelSeeds.dxy(),
-               pixelSeeds.dz(),
-               pixelSeeds.ptErr(),
-               pixelSeeds.etaErr(),
-               pixelSeeds.stateTrajGlbX(),
-               pixelSeeds.stateTrajGlbY(),
-               pixelSeeds.stateTrajGlbZ(),
-               pixelSeeds.stateTrajGlbPx(),
-               pixelSeeds.stateTrajGlbPy(),
-               pixelSeeds.stateTrajGlbPz(),
-               pixelSeeds.q(),
-               pixelSeeds.hitIdx(),
-               phase2OTHits.detId(),
-               phase2OTHits.x(),
-               phase2OTHits.y(),
-               phase2OTHits.z(),
+               &lstInputDC,
                nopLSDupClean_,
                tcpLSTriplets_);
     }
@@ -89,8 +67,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
   private:
-    edm::EDGetTokenT<LSTPixelSeedInput> lstPixelSeedInputToken_;
-    edm::EDGetTokenT<LSTPhase2OTHitsInput> lstPhase2OTHitsInputToken_;
+    edm::EDGetTokenT<lst::LSTInputDeviceCollection> lstInputToken_;
     device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_;
     const double ptCut_;

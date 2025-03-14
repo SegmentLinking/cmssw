@@ -730,15 +730,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
                                   ObjectRangesConst ranges,
+                                  InputHitsConst inputHits,
                                   HitsConst hits,
+                                  InputPixelHitsConst inputPixelHits,
                                   MiniDoublets mds,
                                   Segments segments,
                                   PixelSegments pixelSegments,
-                                  unsigned int* hitIndices0,
-                                  unsigned int* hitIndices1,
-                                  unsigned int* hitIndices2,
-                                  unsigned int* hitIndices3,
-                                  float* dPhiChange,
                                   uint16_t pixelModuleIndex,
                                   int size) const {
       for (int tid : cms::alpakatools::uniform_elements(acc, size)) {
@@ -748,10 +745,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         addMDToMemory(acc,
                       mds,
+                      inputHits,
                       hits,
                       modules,
-                      hitIndices0[tid],
-                      hitIndices1[tid],
+                      inputPixelHits.hitIndices0()[tid],
+                      inputPixelHits.hitIndices1()[tid],
                       pixelModuleIndex,
                       0,
                       0,
@@ -764,10 +762,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                       innerMDIndex);
         addMDToMemory(acc,
                       mds,
+                      inputHits,
                       hits,
                       modules,
-                      hitIndices2[tid],
-                      hitIndices3[tid],
+                      inputPixelHits.hitIndices2()[tid],
+                      inputPixelHits.hitIndices3()[tid],
                       pixelModuleIndex,
                       0,
                       0,
@@ -780,18 +779,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                       outerMDIndex);
 
         //in outer hits - pt, eta, phi
-        float slope = alpaka::math::sinh(acc, hits.ys()[mds.outerHitIndices()[innerMDIndex]]);
+        float slope = alpaka::math::sinh(acc, inputHits.ys()[mds.outerHitIndices()[innerMDIndex]]);
         float intercept =
-            hits.zs()[mds.anchorHitIndices()[innerMDIndex]] - slope * hits.rts()[mds.anchorHitIndices()[innerMDIndex]];
+            inputHits.zs()[mds.anchorHitIndices()[innerMDIndex]] - slope * hits.rts()[mds.anchorHitIndices()[innerMDIndex]];
         float score_lsq = (hits.rts()[mds.anchorHitIndices()[outerMDIndex]] * slope + intercept) -
-                          (hits.zs()[mds.anchorHitIndices()[outerMDIndex]]);
+                          (inputHits.zs()[mds.anchorHitIndices()[outerMDIndex]]);
         score_lsq = score_lsq * score_lsq;
 
         unsigned int hits1[Params_pLS::kHits];
-        hits1[0] = hits.idxs()[mds.anchorHitIndices()[innerMDIndex]];
-        hits1[1] = hits.idxs()[mds.anchorHitIndices()[outerMDIndex]];
-        hits1[2] = hits.idxs()[mds.outerHitIndices()[innerMDIndex]];
-        hits1[3] = hits.idxs()[mds.outerHitIndices()[outerMDIndex]];
+        hits1[0] = inputHits.idxs()[mds.anchorHitIndices()[innerMDIndex]];
+        hits1[1] = inputHits.idxs()[mds.anchorHitIndices()[outerMDIndex]];
+        hits1[2] = inputHits.idxs()[mds.outerHitIndices()[innerMDIndex]];
+        hits1[3] = inputHits.idxs()[mds.outerHitIndices()[outerMDIndex]];
         addPixelSegmentToMemory(acc,
                                 segments,
                                 pixelSegments,
@@ -800,9 +799,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 outerMDIndex,
                                 pixelModuleIndex,
                                 hits1,
-                                hitIndices0[tid],
-                                hitIndices2[tid],
-                                dPhiChange[tid],
+                                inputPixelHits.hitIndices0()[tid],
+                                inputPixelHits.hitIndices2()[tid],
+                                inputPixelHits.deltaPhi()[tid],
                                 pixelSegmentIndex,
                                 tid,
                                 score_lsq);
