@@ -15,6 +15,7 @@ using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
 // Common
 void createOutputBranches();
+void createOutputBranches_v1();
 void createRequiredOutputBranches();
 void createOptionalOutputBranches();
 void createGnnNtupleBranches();
@@ -22,6 +23,7 @@ void createT5DNNBranches();
 void createT3DNNBranches();
 
 void fillOutputBranches(LSTEvent* event);
+void fillOutputBranches_v1(LSTEvent* event);
 void setOutputBranches(LSTEvent* event);
 void setOptionalOutputBranches(LSTEvent* event);
 void setOccupancyBranches(LSTEvent* event);
@@ -58,5 +60,9 @@ void printpLSs(LSTEvent* event);
 void printT3s(LSTEvent* event);
 void printT4s(LSTEvent* event);
 void printTCs(LSTEvent* event);
+
+// LSTOD
+void createOutputBranches_v2();
+void fillOutputBranches_v2(LSTEvent* event);
 
 #endif
