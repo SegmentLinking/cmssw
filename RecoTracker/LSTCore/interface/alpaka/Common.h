@@ -82,6 +82,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           {0.4488, 0.4448, 0.5067, 0.5929, 0.4836, 0.4112, 0.4968, 0.4403, 0.5597, 0.5067}};
     }  // namespace t5dnn
 
+    namespace pt3dnn {
+      HOST_DEVICE_CONSTANT float kWp[kEtaBins] = {
+          0.2297, 0.2132, 0.2563, 0.3706, 0.3706, 0.2197, 0.0775, 0.0888, 0.2907, 0.133};
+    }  // namespace pt3dnn
+
   }  // namespace dnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

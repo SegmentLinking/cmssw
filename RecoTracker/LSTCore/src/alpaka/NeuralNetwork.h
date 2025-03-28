@@ -9,6 +9,7 @@
 
 #include "T5NeuralNetworkWeights.h"
 #include "T3NeuralNetworkWeights.h"
+#include "pT3NeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -135,6 +136,49 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t3dnn
+
+  namespace pt3dnn {
+
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
+                                                     const float pt3_rPhiChiSquared,
+                                                     const float pt3_trip_rad,
+                                                     const float pt3_pix_rad,
+                                                     const float pt3_pixRadError,
+                                                     const float pt3_rzChiSquared,
+                                                     const float pt3_eta) {
+      constexpr unsigned int kinputFeatures = 6;
+      float x[kinputFeatures] = {alpaka::math::log10(acc, pt3_rPhiChiSquared),
+                                 alpaka::math::log10(acc, pt3_trip_rad),
+                                 alpaka::math::log10(acc, pt3_pix_rad),
+                                 alpaka::math::log10(acc, pt3_pixRadError),
+                                 alpaka::math::log10(acc, (pt3_rzChiSquared < 0.f) ? 1e-3f : pt3_rzChiSquared),
+                                 alpaka::math::abs(acc, pt3_eta) / dnn::kEta_norm};
+
+      constexpr unsigned int khiddenFeatures = 32;
+      constexpr unsigned int koutputFeatures = 1;
+      float x1[khiddenFeatures];
+      float x2[khiddenFeatures];
+      float x3[koutputFeatures];
+
+      linear_layer<kinputFeatures, khiddenFeatures>(x, x1, dnn::pt3dnn::wgtT_layer1, dnn::pt3dnn::bias_layer1);
+      relu_activation<khiddenFeatures>(x1);
+
+      linear_layer<khiddenFeatures, khiddenFeatures>(x1, x2, dnn::pt3dnn::wgtT_layer2, dnn::pt3dnn::bias_layer2);
+      relu_activation<khiddenFeatures>(x2);
+
+      linear_layer<khiddenFeatures, koutputFeatures>(
+          x2, x3, dnn::pt3dnn::wgtT_output_layer, dnn::pt3dnn::bias_output_layer);
+      float output = sigmoid_activation(acc, x3[0]);
+
+      uint8_t bin_index = (alpaka::math::abs(acc, pt3_eta) > dnn::kEta_norm)
+                              ? (dnn::kEtaBins - 1)
+                              : static_cast<unsigned int>(alpaka::math::abs(acc, pt3_eta) / 0.25f);
+
+      return output > dnn::pt3dnn::kWp[bin_index];
+    }
+
+  }  // namespace pt3dnn
 
   namespace t5dnn {
     template <typename TAcc>

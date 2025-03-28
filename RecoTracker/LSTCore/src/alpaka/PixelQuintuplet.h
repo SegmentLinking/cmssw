@@ -488,7 +488,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int t5OuterT3Index = quintuplets.tripletIndices()[quintupletIndex][1];
 
     float pixelRadiusTemp, tripletRadius, rPhiChiSquaredTemp, rzChiSquaredTemp, rPhiChiSquaredInwardsTemp, centerXTemp,
-        centerYTemp;
+        centerYTemp, pixelRadiusErrorTemp;
 
     if (not runPixelTripletDefaultAlgo(acc,
                                        modules,
@@ -506,7 +506,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        rzChiSquaredTemp,
                                        rPhiChiSquaredTemp,
                                        rPhiChiSquaredInwardsTemp,
+                                       pixelRadiusErrorTemp,
                                        ptCut,
+                                       false,
                                        false))
       return false;
 
