@@ -482,7 +482,8 @@ namespace lst::t4dnn {
                                                    const unsigned int mdIndex3,
                                                    const unsigned int mdIndex4,
                                                    const float innerRadius,
-                                                   const float outerRadius) {
+                                                   const float outerRadius,
+                                                   float& x_5) {
     // Constants
     constexpr unsigned int kinputFeatures = 19; 
     constexpr unsigned int khiddenFeatures = 32;
@@ -548,7 +549,7 @@ namespace lst::t4dnn {
 
     // Layer 3: Linear + Sigmoid
     linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-    float x_5 = sigmoid_activation(acc, x_3[0]);
+    x_5 = sigmoid_activation(acc, x_3[0]);
 
     // Get the bin index based on abs(eta) of first hit and t5_pt
     float t4_pt = innerRadius * lst::k2Rinv1GeVf * 2;
