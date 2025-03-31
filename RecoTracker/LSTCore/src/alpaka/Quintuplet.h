@@ -1893,6 +1893,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           printf("Unhandled case in createEligibleModulesListForQuintupletsGPU! Module index = %i\n", i);
         }
 #endif
+        // Get matrix-based cap (use dynamic_count as fallback)
+        int matrix_cap =
+            (category_number != -1 && eta_number != -1) ? occupancy_matrix[category_number][eta_number] : 0;
+        // Cap occupancy at minimum of dynamic count and matrix value
+        int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
 
         // Get matrix-based cap (use dynamic_count as fallback)
         int matrix_cap =

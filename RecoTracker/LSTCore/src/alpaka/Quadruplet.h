@@ -27,6 +27,7 @@ namespace lst {
     FPX* pt;
     FPX* eta;
     FPX* phi;
+    FPX* score_rphisum;
     uint8_t* layer;
     char* isDup;
 
@@ -35,6 +36,7 @@ namespace lst {
     float* rzChiSquared;
 
     float* dBeta;
+    float* score_t4dnn;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -48,12 +50,14 @@ namespace lst {
       pt = alpaka::getPtrNative(buf.pt_buf);
       eta = alpaka::getPtrNative(buf.eta_buf);
       phi = alpaka::getPtrNative(buf.phi_buf);
+      score_rphisum = alpaka::getPtrNative(buf.score_rphisum_buf);
       layer = alpaka::getPtrNative(buf.layer_buf);
       isDup = alpaka::getPtrNative(buf.isDup_buf);
       logicalLayers = alpaka::getPtrNative(buf.logicalLayers_buf);
       hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
-      dBeta = alpaka::getPtrNative(buf.dBeta_buf); 
+      dBeta = alpaka::getPtrNative(buf.dBeta_buf);
+      score_t4dnn = alpaka::getPtrNative(buf.score_t4dnn_buf); 
     }
   };
 
@@ -70,6 +74,7 @@ namespace lst {
     Buf<TDev, FPX> pt_buf;
     Buf<TDev, FPX> eta_buf;
     Buf<TDev, FPX> phi_buf;
+    Buf<TDev, FPX> score_rphisum_buf;
     Buf<TDev, uint8_t> layer_buf;
     Buf<TDev, char> isDup_buf;
 
@@ -77,6 +82,7 @@ namespace lst {
     Buf<TDev, unsigned int> hitIndices_buf;
     Buf<TDev, float> rzChiSquared_buf;
     Buf<TDev, float> dBeta_buf;
+    Buf<TDev, float> score_t4dnn_buf;
 
     Quadruplets data_;
 
@@ -92,12 +98,14 @@ namespace lst {
           pt_buf(allocBufWrapper<FPX>(devAccIn, nTotalQuadruplets, queue)),
           eta_buf(allocBufWrapper<FPX>(devAccIn, nTotalQuadruplets, queue)),
           phi_buf(allocBufWrapper<FPX>(devAccIn, nTotalQuadruplets, queue)),
+          score_rphisum_buf(allocBufWrapper<FPX>(devAccIn, nTotalQuadruplets, queue)),
           layer_buf(allocBufWrapper<uint8_t>(devAccIn, nTotalQuadruplets, queue)),
           isDup_buf(allocBufWrapper<char>(devAccIn, nTotalQuadruplets, queue)),
           logicalLayers_buf(allocBufWrapper<uint8_t>(devAccIn, Params_T4::kLayers * nTotalQuadruplets, queue)),
           hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T4::kHits * nTotalQuadruplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
-          dBeta_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)) {
+          dBeta_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          score_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)) {
       alpaka::memset(queue, nQuadruplets_buf, 0u);
       alpaka::memset(queue, totOccupancyQuadruplets_buf, 0u);
       alpaka::memset(queue, isDup_buf, 0u);
@@ -128,11 +136,12 @@ namespace lst {
                                                             float pt,
                                                             float eta,
                                                             float phi,
-                                                            // float scores,
+                                                            float scores,
                                                             uint8_t layer,
                                                             unsigned int quadrupletIndex,
                                                             float rzChiSquared,
-                                                            float dBeta) {
+                                                            float dBeta,
+                                                            float x_5) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1] = outerTripletIndex;
 
@@ -145,6 +154,7 @@ namespace lst {
     quadrupletsInGPU.pt[quadrupletIndex] = __F2H(pt);
     quadrupletsInGPU.eta[quadrupletIndex] = __F2H(eta);
     quadrupletsInGPU.phi[quadrupletIndex] = __F2H(phi);
+    quadrupletsInGPU.score_rphisum[quadrupletIndex] = __F2H(scores);
     quadrupletsInGPU.layer[quadrupletIndex] = layer;
     quadrupletsInGPU.isDup[quadrupletIndex] = 0;
     quadrupletsInGPU.logicalLayers[Params_T4::kLayers * quadrupletIndex] =
@@ -175,6 +185,7 @@ namespace lst {
     
     quadrupletsInGPU.rzChiSquared[quadrupletIndex] = rzChiSquared;
     quadrupletsInGPU.dBeta[quadrupletIndex] = dBeta;
+    quadrupletsInGPU.score_t4dnn[quadrupletIndex] = x_5;
   };
 
   template <typename TAcc>
@@ -436,123 +447,171 @@ namespace lst {
       residual4_linear = residual4_linear * 100;
 
       rzChiSquared = 12 * (residual4_linear * residual4_linear);
-      // return rzChiSquared < 4.677f;
+      // return rzChiSquared < 10.683f; //full T3s 99%
+      return rzChiSquared < 12.293f; //full T3s 99%, pT>=10GeV
+      // return true;
     }
-
+    // return true;
     // The category numbers are related to module regions and layers, decoding of the region numbers can be found here in slide 2 table. https://github.com/SegmentLinking/TrackLooper/files/11420927/part.2.pdf
     // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T5 built with Endcap 1,2,3,4,5 ps modules
     if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10)  //0
     {
-      return rzChiSquared < 52.06f;
+      // return rzChiSquared < 52.06f; // leftover T3s
+      // return rzChiSquared < 59.185f; //full T3s 99%
+      return rzChiSquared < 31.293f; //full T3s 99%, pT>=10GeV
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15)  //1
     {
-      return true;
+      // return true;// leftover T3s
+      // return rzChiSquared <  9.97f; //full T3s 99%
+      return rzChiSquared < 5.540f; //full T3s 99%, pT>=10GeV
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 14 and layer4 == 15)  //2
     {
-      return rzChiSquared < 20.281f;
+      // return rzChiSquared < 20.281f; // leftover T3s
+      // return rzChiSquared < 6.526f; //full T3s 99%
+      return rzChiSquared < 4.935f; //full T3s 99%, pT>=10GeV
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
       if (layer4 == 11)  //3
       {
-        return rzChiSquared < 31.943f;
+        // return rzChiSquared < 31.943f; // leftover T3s;
+        // return rzChiSquared < 53.377f; //full T3s 99%
+        return rzChiSquared < 24.160f; //full T3s 99%, pT>=10GeV
       }
       if (layer4 == 16)  //4
       {
-        return rzChiSquared < 21.174f;
+        // return rzChiSquared < 21.174f; // leftover T3s
+        // return rzChiSquared < 14.157f; //full T3s 99%
+        return rzChiSquared < 8.625f; //full T3s 99%, pT>=10GeV
       }
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
     { 
-        return rzChiSquared < 4.439f; 
+        // return rzChiSquared < 4.439f;  // leftover T3s
+        // return rzChiSquared < 5.793f; //full T3s 99%
+        return rzChiSquared < true; //full T3s 99%, pT>=10GeV
     }
     else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 4)  //6
       {
-        return rzChiSquared < 81.34f;
+        // return rzChiSquared < 81.34f; // leftover T3s
+        // return rzChiSquared < 62.746f; //full T3s 99%
+        return rzChiSquared < 60.189f; //full T3s 99%, pT>=10GeV
       }
       else if (layer4 == 7)  //7
       {
-        return rzChiSquared < 101.77f;
+        // return rzChiSquared < 101.77f; // leftover T3s
+        // return rzChiSquared < 106.985f; //full T3s 99%
+        return rzChiSquared < 129.117f; //full T3s 99%, pT>=10GeV
       } else if (layer4 == 12)  //8
       {
-        return rzChiSquared < 63.544f;
+        // return rzChiSquared < 63.544f; // leftover T3s
+        // return rzChiSquared < 57.204f; //full T3s 99%
+        return rzChiSquared < 122.318f; //full T3s 99%, pT>=10GeV
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
       if (layer4 == 8)  //9
       {
-        return rzChiSquared < 150.822f;
+        // return rzChiSquared < 150.822f; // leftover T3s
+        // return rzChiSquared < 103.889f; //full T3s 99%
+        return rzChiSquared < 389.533f; //full T3s 99%, pT>=10GeV
       } else if (layer4 == 13)  //10
       {
-        return rzChiSquared < 16.378f;
+        // return rzChiSquared < 16.378f; // leftover T3s
+        // return rzChiSquared < 14.309f; //full T3s 99%
+        return rzChiSquared < 7.996f; //full T3s 99%, pT>=10GeV
       } 
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9) //1
+      if (layer4 == 9) //11
       {
-        return rzChiSquared < 44.633f;
+        // return rzChiSquared < 44.633f; // leftover T3s
+        // return rzChiSquared < 45.973f; //full T3s 99%
+        return rzChiSquared < 36.155f; //full T3s 99%, pT>=10GeV
       } else if (layer4 == 14)  //12
       {
-        return true;
+        return true; // leftover T3s, //full T3s 99%
       } 
     } else if (layer1 == 2 and layer2 ==3) {
       if (layer3 == 4) {
         if (layer4 == 5)  //13
         {
-          return rzChiSquared < 17.009f;
+          // return rzChiSquared < 17.009f; // leftover T3s
+          // return rzChiSquared < 10.248f; //full T3s 99%
+          return rzChiSquared < 8.341f; //full T3s 99%, pT>=10GeV
         }
         else if (layer4 == 12) //14
         { 
-          return rzChiSquared < 5.423f;
+          // return rzChiSquared < 5.423f; // leftover T3s
+          // return rzChiSquared < 6.075f; //full T3s 99%
+          return rzChiSquared < 5.826f; //full T3s 99%, pT>=10GeV
         }
       }
       else if (layer3 == 7) {
         if (layer4 == 8) // 15
         { 
-          return true;
+          return true; // leftover T3s, //full T3s 99%
         }
         else if (layer4 == 13) //16
         { 
-          return rzChiSquared < 96.629f;
+          // return rzChiSquared < 96.629f; // leftover T3s
+          // return rzChiSquared < 69.521f; //full T3s 99%
+          return rzChiSquared < 61.728f; //full T3s 99%, pT>=10GeV
         }
       }
       else if (layer3 == 12 and layer4 == 13) //17
       { 
-        return rzChiSquared < 6.167f;
+        // return rzChiSquared < 6.167f; // leftover T3s
+        // return rzChiSquared < 9.830f; //full T3s 99%
+        return rzChiSquared < 7.190f; //full T3s 99%, pT>=10GeV
       }
     } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
     { 
-      return true;
+      // return true; // leftover T3s
+      // return rzChiSquared < 58.469f; //full T3s 99%
+      return rzChiSquared < 24.042f; //full T3s 99%, pT>=10GeV
     } else if (layer1 == 2 and layer2 == 7)
     {
       if (layer3 == 8 and layer4 == 14) //19
       { 
-        return rzChiSquared < 78.513f;
+        // return rzChiSquared < 78.513f; // leftover T3s
+        // return rzChiSquared < 39.566f; //full T3s 99%
+        return rzChiSquared < 20.729f; //full T3s 99%, pT>=10GeV
       }
       else if (layer3 == 13 and layer4 == 14) //20
       { 
-        return rzChiSquared < 5.148f;
+        // return rzChiSquared < 5.148f; // leftover T3s
+        // return rzChiSquared < 4.47f; //full T3s 99%
+        return rzChiSquared < 2.431f; //full T3s 99%, pT>=10GeV
       }
     } else if (layer1 == 3)
     {
       if (layer2 == 4){
         if (layer3 == 5 and layer4 == 6 ) //21
         { 
-          return rzChiSquared < 104.004f;
+          // return rzChiSquared < 104.004f; // leftover T3s
+          // return rzChiSquared < 80.323f; //full T3s 99%
+          return rzChiSquared < 70.504f; //full T3s 99%, pT>=10GeV
         }
         else if (layer3 == 12 and layer4 == 13) //24
         {
-          return rzChiSquared < 23.359f;
+          // return rzChiSquared < 23.359f; // leftover T3s
+          // return rzChiSquared < 27.691f; //full T3s 99%
+          return rzChiSquared < 29.300f; //full T3s 99%, pT>=10GeV
         }
         else if (layer3 == 5 and layer4 == 12) //25
         {
-          return rzChiSquared < 44.752f;
+          // return rzChiSquared < 44.752f; // leftover T3s
+          // return rzChiSquared < 48.968f; //full T3s 99%
+          return rzChiSquared < 42.324f; //full T3s 99%, pT>=10GeV
         }
       }
       else if (layer2 == 7) {
         if (layer3 == 8 and layer4 == 14) //22
         {
-          return true;
+          return true; // leftover T3s, full T3s
         }
         else if (layer3 == 13 and layer4 == 14) //23
         {
-          return rzChiSquared < 11.313f;
+          // return rzChiSquared < 11.313f; // leftover T3s
+          // return rzChiSquared < 6.154f; //full T3s 99%
+          return rzChiSquared < 26.414f; //full T3s 99%, pT>=10GeV
           }
       }
     }
@@ -881,6 +940,104 @@ namespace lst {
 #endif
       }
     }
+  };
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusUsingRegressionT4(TAcc const& acc,
+                                                                    unsigned int nPoints,
+                                                                    float* xs,
+                                                                    float* ys,
+                                                                    float* delta1,
+                                                                    float* delta2,
+                                                                    float* slopes,
+                                                                    bool* isFlat,
+                                                                    float& g,
+                                                                    float& f,
+                                                                    float* sigmas2,
+                                                                    float& chiSquared) {
+    float radius = 0.f;
+
+    // Some extra variables
+    // the two variables will be called x1 and x2, and y (which is x^2 + y^2)
+
+    float sigmaX1Squared = 0.f;
+    float sigmaX2Squared = 0.f;
+    float sigmaX1X2 = 0.f;
+    float sigmaX1y = 0.f;
+    float sigmaX2y = 0.f;
+    float sigmaY = 0.f;
+    float sigmaX1 = 0.f;
+    float sigmaX2 = 0.f;
+    float sigmaOne = 0.f;
+
+    float xPrime, yPrime, absArctanSlope, angleM;
+    for (size_t i = 0; i < nPoints; i++) {
+      // Computing sigmas is a very tricky affair
+      // if the module is tilted or endcap, we need to use the slopes properly!
+
+      absArctanSlope = ((slopes[i] != lst::lst_INF) ? alpaka::math::abs(acc, alpaka::math::atan(acc, slopes[i]))
+                                                    : 0.5f * float(M_PI));
+
+      if (xs[i] > 0 and ys[i] > 0) {
+        angleM = 0.5f * float(M_PI) - absArctanSlope;
+      } else if (xs[i] < 0 and ys[i] > 0) {
+        angleM = absArctanSlope + 0.5f * float(M_PI);
+      } else if (xs[i] < 0 and ys[i] < 0) {
+        angleM = -(absArctanSlope + 0.5f * float(M_PI));
+      } else if (xs[i] > 0 and ys[i] < 0) {
+        angleM = -(0.5f * float(M_PI) - absArctanSlope);
+      } else {
+        angleM = 0;
+      }
+
+      if (not isFlat[i]) {
+        xPrime = xs[i] * alpaka::math::cos(acc, angleM) + ys[i] * alpaka::math::sin(acc, angleM);
+        yPrime = ys[i] * alpaka::math::cos(acc, angleM) - xs[i] * alpaka::math::sin(acc, angleM);
+      } else {
+        xPrime = xs[i];
+        yPrime = ys[i];
+      }
+      sigmas2[i] = 4 * ((xPrime * delta1[i]) * (xPrime * delta1[i]) + (yPrime * delta2[i]) * (yPrime * delta2[i]));
+
+      sigmaX1Squared += (xs[i] * xs[i]) / sigmas2[i];
+      sigmaX2Squared += (ys[i] * ys[i]) / sigmas2[i];
+      sigmaX1X2 += (xs[i] * ys[i]) / sigmas2[i];
+      sigmaX1y += (xs[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / sigmas2[i];
+      sigmaX2y += (ys[i] * (xs[i] * xs[i] + ys[i] * ys[i])) / sigmas2[i];
+      sigmaY += (xs[i] * xs[i] + ys[i] * ys[i]) / sigmas2[i];
+      sigmaX1 += xs[i] / sigmas2[i];
+      sigmaX2 += ys[i] / sigmas2[i];
+      sigmaOne += 1.0f / sigmas2[i];
+    }
+    float denominator = (sigmaX1X2 - sigmaX1 * sigmaX2) * (sigmaX1X2 - sigmaX1 * sigmaX2) -
+                        (sigmaX1Squared - sigmaX1 * sigmaX1) * (sigmaX2Squared - sigmaX2 * sigmaX2);
+
+    float twoG = ((sigmaX2y - sigmaX2 * sigmaY) * (sigmaX1X2 - sigmaX1 * sigmaX2) -
+                  (sigmaX1y - sigmaX1 * sigmaY) * (sigmaX2Squared - sigmaX2 * sigmaX2)) /
+                 denominator;
+    float twoF = ((sigmaX1y - sigmaX1 * sigmaY) * (sigmaX1X2 - sigmaX1 * sigmaX2) -
+                  (sigmaX2y - sigmaX2 * sigmaY) * (sigmaX1Squared - sigmaX1 * sigmaX1)) /
+                 denominator;
+
+    float c = -(sigmaY - twoG * sigmaX1 - twoF * sigmaX2) / sigmaOne;
+    g = 0.5f * twoG;
+    f = 0.5f * twoF;
+    if (g * g + f * f - c < 0) {
+#ifdef WARNINGS
+      printf("FATAL! r^2 < 0!\n");
+#endif
+      chiSquared = -1;
+      return -1;
+    }
+
+    radius = alpaka::math::sqrt(acc, g * g + f * f - c);
+    // compute chi squared
+    chiSquared = 0.f;
+    for (size_t i = 0; i < nPoints; i++) {
+      chiSquared += (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) *
+                    (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) / sigmas2[i];
+    }
+    return radius;
   };
 
   template <typename TAcc>
@@ -1628,7 +1785,6 @@ namespace lst {
     }
 
     return false;
-    // return true;
   };
 
   template <typename TAcc>
@@ -2038,6 +2194,54 @@ namespace lst {
   };
 
   template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool basicCutsT4(TAcc const& acc,
+                                                  struct lst::MiniDoublets& mdsInGPU,
+                                                  float innerRadius,
+                                                  float outerRadius,
+                                                  unsigned int firstMDIndex,
+                                                  unsigned int secondMDIndex,
+                                                  unsigned int thirdMDIndex,
+                                                  unsigned int fourthMDIndex) {
+    float absEta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[firstMDIndex]);
+    float absEta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[secondMDIndex]);
+    float absEta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[thirdMDIndex]);
+    float absEta4 = alpaka::math::abs(acc, mdsInGPU.anchorEta[fourthMDIndex]);
+
+    float dEta12 = alpaka::math::abs(acc, absEta2-absEta1); 
+    float dEta23 = alpaka::math::abs(acc, absEta3-absEta2);
+    float dEta34 = alpaka::math::abs(acc, absEta4-absEta3);  
+
+    float radRatio = innerRadius/outerRadius;
+     //90% cut
+    // if (radRatio > 1.65834f) //no T3 DNN
+    if (radRatio > 1.60852f) //add T3 DNN
+      return false;
+    
+    // if (dEta12 > 0.06549f) //no T3 DNN
+    if (dEta12 > 0.06488f) // add T3 DNN
+      return false;
+    // if (dEta23 > 0.04392f) // no T3 DNN
+    if (dEta23 > 0.04334f) //add T3 DNN
+      return false;
+    // if (dEta34 > 0.04020f) // no T3 DNN
+    if (dEta34 > 0.03997f) //add T3 DNN
+      return false;
+    
+    //95% cut
+    // if (radRatio > 2.43435f)
+    //   return false;
+    
+    // if (dEta12 > 0.08445f)
+    //   return false;
+    // if (dEta23 > 0.05428f)
+    //   return false;
+    // if (dEta34 > 0.04872f)
+    //   return false; 
+    
+    return true;
+  };
+
+  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletDefaultAlgo(TAcc const& acc,
                                                                struct lst::Modules& modulesInGPU,
                                                                struct lst::MiniDoublets& mdsInGPU,
@@ -2049,9 +2253,15 @@ namespace lst {
                                                                uint16_t lowerModuleIndex4,
                                                                unsigned int innerTripletIndex,
                                                                unsigned int outerTripletIndex,
+                                                               float& regressionG,
+                                                               float& regressionF,
+                                                               float& regressionRadius,
+                                                               float& chiSquared,
                                                                const float ptCut,
                                                                float& rzChiSquared,
-                                                               float& dBeta) {
+                                                               float& nonAnchorChiSquared,
+                                                               float& dBeta,
+                                                               float& x_5) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex]; //second and third segments are the same here
@@ -2073,8 +2283,8 @@ namespace lst {
       return false;
     if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
       return false; 
-
-    //require both T3s to have the same charge
+    // return true; //no cuts
+    // require both T3s to have the same charge
     int innerT3charge = tripletsInGPU.charge[innerTripletIndex];
     int outerT3charge = tripletsInGPU.charge[outerTripletIndex];
     if (innerT3charge != outerT3charge)
@@ -2083,25 +2293,84 @@ namespace lst {
     unsigned int firstMDIndex = segmentsInGPU.mdIndices[2 * firstSegmentIndex];
     unsigned int secondMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex];
     unsigned int thirdMDIndex = segmentsInGPU.mdIndices[2 * secondSegmentIndex + 1];
-    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1];
+    unsigned int fourthMDIndex = segmentsInGPU.mdIndices[2 * fourthSegmentIndex + 1]; 
 
-    // if (not runQuadrupletdBetaAlgoSelector(acc,
-    //                                        modulesInGPU,
-    //                                        mdsInGPU,
-    //                                        segmentsInGPU,
-    //                                        lowerModuleIndex1,
-    //                                        lowerModuleIndex2,
-    //                                        lowerModuleIndex3,
-    //                                        lowerModuleIndex4,
-    //                                        firstSegmentIndex,
-    //                                        thirdSegmentIndex,
-    //                                        firstMDIndex,
-    //                                        secondMDIndex,
-    //                                        thirdMDIndex,
-    //                                        fourthMDIndex,
-    //                                        dBeta,
-    //                                        ptCut))
+    float x1 = mdsInGPU.anchorX[firstMDIndex];
+    float x2 = mdsInGPU.anchorX[secondMDIndex];
+    float x3 = mdsInGPU.anchorX[thirdMDIndex];
+    float x4 = mdsInGPU.anchorX[fourthMDIndex];
+
+    float y1 = mdsInGPU.anchorY[firstMDIndex];
+    float y2 = mdsInGPU.anchorY[secondMDIndex];
+    float y3 = mdsInGPU.anchorY[thirdMDIndex];
+    float y4 = mdsInGPU.anchorY[fourthMDIndex];
+
+    float inner_circleCenterX = tripletsInGPU.circleCenterX[innerTripletIndex];
+    float inner_circleCenterY = tripletsInGPU.circleCenterY[innerTripletIndex];
+    float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
+    float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
+    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
+    float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
+
+    // if (not basicCutsT4(acc,
+    //                     mdsInGPU,
+    //                     innerRadius,
+    //                     outerRadius,
+    //                     firstMDIndex,
+    //                     secondMDIndex,
+    //                     thirdMDIndex,
+    //                     fourthMDIndex))
     //   return false;
+
+    bool inference = lst::t4dnn::runInference(acc,
+                                              mdsInGPU,
+                                              firstMDIndex,
+                                              secondMDIndex,
+                                              thirdMDIndex,
+                                              fourthMDIndex,
+                                              innerRadius,
+                                              outerRadius,
+                                              x_5);
+    if (!inference)
+      return false;
+    // if (not runQuadrupletdBetaAlgoSelector(acc,
+    //                                       modulesInGPU,
+    //                                       mdsInGPU,
+    //                                       segmentsInGPU,
+    //                                       lowerModuleIndex1,
+    //                                       lowerModuleIndex2,
+    //                                       lowerModuleIndex3,
+    //                                       lowerModuleIndex4,
+    //                                       firstSegmentIndex,
+    //                                       thirdSegmentIndex,
+    //                                       firstMDIndex,
+    //                                       secondMDIndex,
+    //                                       thirdMDIndex,
+    //                                       fourthMDIndex,
+    //                                       dBeta,
+    //                                       ptCut))
+    //   return false;
+    //run Beta Selector for high pT T4s
+    if (pt >10) {
+      if (not runQuadrupletdBetaAlgoSelector(acc,
+                                           modulesInGPU,
+                                           mdsInGPU,
+                                           segmentsInGPU,
+                                           lowerModuleIndex1,
+                                           lowerModuleIndex2,
+                                           lowerModuleIndex3,
+                                           lowerModuleIndex4,
+                                           firstSegmentIndex,
+                                           thirdSegmentIndex,
+                                           firstMDIndex,
+                                           secondMDIndex,
+                                           thirdMDIndex,
+                                           fourthMDIndex,
+                                           dBeta,
+                                           ptCut))
+      return false;
+    }
+    
 
     // if (not runQuadrupletAlgoSelector(acc,
     //                                   modulesInGPU,
@@ -2119,42 +2388,84 @@ namespace lst {
     //                                   fourthMDIndex,
     //                                   ptCut))
     //   return false;
+    if (pt>10){
+      if (not passT4RZConstraint(acc,
+                                modulesInGPU,
+                                mdsInGPU,
+                                firstMDIndex, 
+                                secondMDIndex, 
+                                thirdMDIndex, 
+                                fourthMDIndex, 
+                                lowerModuleIndex1, 
+                                lowerModuleIndex2, 
+                                lowerModuleIndex3, 
+                                lowerModuleIndex4, 
+                                rzChiSquared, 
+                                inner_pt, 
+                                innerRadius, 
+                                inner_circleCenterX, 
+                                inner_circleCenterY, 
+                                innerT3charge))
+        return false;
+    }
+    
 
-    float inner_circleCenterX = tripletsInGPU.circleCenterX[innerTripletIndex];
-    float inner_circleCenterY = tripletsInGPU.circleCenterY[innerTripletIndex];
-    float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
-    float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
-    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
+    // 4 categories for sigmas
+    float sigmas2[4], delta1[4], delta2[4], slopes[4];
+    bool isFlat[4];
 
-    bool inference = lst::t4dnn::runInference(acc,
-                                              mdsInGPU,
-                                              firstMDIndex,
-                                              secondMDIndex,
-                                              thirdMDIndex,
-                                              fourthMDIndex,
-                                              innerRadius,
-                                              outerRadius);
-    if (!inference)
-      return false;
+    float xVec[] = {x1, x2, x3, x4};
+    float yVec[] = {y1, y2, y3, y4};
 
-    if (not passT4RZConstraint(acc,
+    const uint16_t lowerModuleIndices[] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
+
+    computeSigmasForRegressionT4(acc, modulesInGPU, lowerModuleIndices, delta1, delta2, slopes, isFlat);
+    regressionRadius = computeRadiusUsingRegressionT4(acc,
+                                                    Params_T4::kLayers,
+                                                    xVec,
+                                                    yVec,
+                                                    delta1,
+                                                    delta2,
+                                                    slopes,
+                                                    isFlat,
+                                                    regressionG,
+                                                    regressionF,
+                                                    sigmas2,
+                                                    chiSquared);
+
+    //compute the other chisquared
+    //non anchor is always shifted for tilted and endcap!
+    float nonAnchorDelta1[Params_T4::kLayers], nonAnchorDelta2[Params_T4::kLayers], nonAnchorSlopes[Params_T4::kLayers];
+    float nonAnchorxs[] = {mdsInGPU.outerX[firstMDIndex],
+                           mdsInGPU.outerX[secondMDIndex],
+                           mdsInGPU.outerX[thirdMDIndex],
+                           mdsInGPU.outerX[fourthMDIndex]};
+    float nonAnchorys[] = {mdsInGPU.outerY[firstMDIndex],
+                           mdsInGPU.outerY[secondMDIndex],
+                           mdsInGPU.outerY[thirdMDIndex],
+                           mdsInGPU.outerY[fourthMDIndex]};
+
+    computeSigmasForRegressionT4(acc,
                                modulesInGPU,
-                               mdsInGPU,
-                               firstMDIndex, 
-                               secondMDIndex, 
-                               thirdMDIndex, 
-                               fourthMDIndex, 
-                               lowerModuleIndex1, 
-                               lowerModuleIndex2, 
-                               lowerModuleIndex3, 
-                               lowerModuleIndex4, 
-                               rzChiSquared, 
-                               inner_pt, 
-                               innerRadius, 
-                               inner_circleCenterX, 
-                               inner_circleCenterY, 
-                               innerT3charge))
-      return false;
+                               lowerModuleIndices,
+                               nonAnchorDelta1,
+                               nonAnchorDelta2,
+                               nonAnchorSlopes,
+                               isFlat,
+                               Params_T4::kLayers,
+                               false);
+    nonAnchorChiSquared = computeT4ChiSquared(acc,
+                                            Params_T4::kLayers,
+                                            nonAnchorxs,
+                                            nonAnchorys,
+                                            nonAnchorDelta1,
+                                            nonAnchorDelta2,
+                                            nonAnchorSlopes,
+                                            isFlat,
+                                            regressionG,
+                                            regressionF,
+                                            regressionRadius);  
 
     return true;
   };
@@ -2192,30 +2503,33 @@ namespace lst {
         for (unsigned int innerTripletArrayIndex = globalThreadIdx[1]; innerTripletArrayIndex < nInnerTriplets;
              innerTripletArrayIndex += gridThreadExtent[1]) {
           unsigned int innerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule1] + innerTripletArrayIndex;
-          if (tripletsInGPU.partOfPT5[innerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in pT5s
-          if (tripletsInGPU.partOfPT3[innerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in pT3s
-          if (tripletsInGPU.partOfT5[innerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in T5s
+          // if (tripletsInGPU.partOfPT5[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in pT5s
+          // if (tripletsInGPU.partOfPT3[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in pT3s
+          // if (tripletsInGPU.partOfT5[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in T5s
           uint16_t lowerModule2 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * innerTripletIndex + 1];
           unsigned int nOuterTriplets = tripletsInGPU.nTriplets[lowerModule2];
           for (unsigned int outerTripletArrayIndex = globalThreadIdx[2]; outerTripletArrayIndex < nOuterTriplets;
                outerTripletArrayIndex += gridThreadExtent[2]) {
             unsigned int outerTripletIndex = rangesInGPU.tripletModuleIndices[lowerModule2] + outerTripletArrayIndex;
-            if (tripletsInGPU.partOfPT5[outerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in pT5s
-            if (tripletsInGPU.partOfPT3[outerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in pT3s
-            if (tripletsInGPU.partOfT5[outerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in T5s
+            // if (tripletsInGPU.partOfPT5[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in pT5s
+            // if (tripletsInGPU.partOfPT3[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in pT3s
+            // if (tripletsInGPU.partOfT5[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in T5s
             uint16_t lowerModule3 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 1];
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
             float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
             float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];  
-            float rzChiSquared, dBeta; 
+            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, chiSquared, x_5; 
       
-
+            float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
+            // if (pt> 10){
+            //   continue; //just build low pt T4s to check
+            // }
             //selections: shared LS, same charge, rzChiSquared
             bool success = runQuadrupletDefaultAlgo(acc,
                                                     modulesInGPU,
@@ -2228,9 +2542,15 @@ namespace lst {
                                                     lowerModule4,
                                                     innerTripletIndex,
                                                     outerTripletIndex,
+                                                    regressionG,
+                                                    regressionF,
+                                                    regressionRadius,
+                                                    chiSquared,
                                                     ptCut,
                                                     rzChiSquared,
-                                                    dBeta);
+                                                    nonAnchorChiSquared,
+                                                    dBeta,
+                                                    x_5);
             // bool success = true;
 
             if (success) {
@@ -2265,7 +2585,8 @@ namespace lst {
                       mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
                   float eta =
                       mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
-                  float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
+                  
+                  float scores = chiSquared + nonAnchorChiSquared;
                   addQuadrupletToMemory(tripletsInGPU,
                                         quadrupletsInGPU,
                                         innerTripletIndex,
@@ -2279,11 +2600,12 @@ namespace lst {
                                         pt,
                                         eta,
                                         phi,
-                                        // scores,
+                                        scores,
                                         layer,
                                         quadrupletIndex,
                                         rzChiSquared,
-                                        dBeta);
+                                        dBeta,
+                                        x_5);
 
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
@@ -2305,6 +2627,8 @@ namespace lst {
                                   const float ptCut) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+      // implementation is 1D with a single block
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
 
       // Initialize variables in shared memory and set to 0
       int& nEligibleT4Modulesx = alpaka::declareSharedVar<int, __COUNTER__>(acc);
@@ -2317,18 +2641,18 @@ namespace lst {
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {5000, 5000, 5000, 5000},  // category 0
-          {5000, 5000, 5000, 5000},          // category 1
-          {5000, 5000, 5000, 5000},          // category 2
-          {5000, 5000, 5000, 5000}       // category 3
+          {500000, 500000, 500000, 500000},  // category 0
+          {500000, 500000, 500000, 500000},          // category 1
+          {500000, 500000, 500000, 500000},          // category 2
+          {500000, 500000, 500000, 500000}       // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
       constexpr int p06_occupancy_matrix[4][4] = {
-          {5000, 5000, 5000, 5000},  // category 0
-          {5000, 5000, 5000, 5000},          // category 1
-          {5000, 5000, 5000, 5000},          // category 2
-          {5000, 5000, 5000, 5000}       // category 3
+          {9000, 9000, 9000, 9000},  // category 0
+          {9000, 9000, 9000, 9000},          // category 1
+          {9000, 9000, 9000, 9000},          // category 2
+          {9000, 9000, 9000, 9000}       // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut
@@ -2349,21 +2673,43 @@ namespace lst {
         if (module_subdets == lst::Endcap and module_layers > 2)
           continue;
 
-        int nEligibleT4Modules = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nEligibleT4Modulesx, 1);
+        int dynamic_count = 0;
+
+        // How many triplets are in module i?
+        int nTriplets_i = tripletsInGPU.nTriplets[i];
+        int firstTripletIdx = rangesInGPU.tripletModuleIndices[i];
+
+        // Loop over all triplets that live in module i
+        for (int t = 0; t < nTriplets_i; t++) {
+          int tripletIndex = firstTripletIdx + t;
+          uint16_t outerModule = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers *tripletIndex+1];
+          dynamic_count += tripletsInGPU.nTriplets[outerModule];
+        }
+
+        // int nEligibleT4Modules = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nEligibleT4Modulesx, 1);
 
         int category_number = lst::getCategoryNumber(module_layers, module_subdets, module_rings);
         int eta_number = lst::getEtaBin(module_eta);
 
-        int occupancy = 0;
-        if (category_number != -1 && eta_number != -1) {
-          occupancy = occupancy_matrix[category_number][eta_number];
-        }
+        // int occupancy = 0;
+        // if (category_number != -1 && eta_number != -1) {
+        //   occupancy = occupancy_matrix[category_number][eta_number];
+        // }
 #ifdef WARNINGS
         else {
           printf("Unhandled case in createEligibleModulesListForQuadrupletsGPU! Module index = %i\n", i);
         }
 #endif
+        // Get matrix-based cap (use dynamic_count as fallback)
+        int matrix_cap =
+            (category_number != -1 && eta_number != -1) ? occupancy_matrix[category_number][eta_number] : 0;
+        // Cap occupancy at minimum of dynamic count and matrix value
+        int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
+        if (dynamic_count > matrix_cap){
+          printf("dynamic count: %d, matrix_cap: %d\n", dynamic_count, matrix_cap);
+        }
 
+        int nEligibleT4Modules = alpaka::atomicAdd(acc, &nEligibleT4Modulesx, 1);
         int nTotQ = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalQuadrupletsx, occupancy);
         rangesInGPU.quadrupletModuleIndices[i] = nTotQ;
         rangesInGPU.indicesOfEligibleT4Modules[nEligibleT4Modules] = i;
