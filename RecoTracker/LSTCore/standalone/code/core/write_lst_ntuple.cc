@@ -166,6 +166,9 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t4_pMatched");
   ana.tx->createBranch<std::vector<float>>("t4_sim_vxy");
   ana.tx->createBranch<std::vector<float>>("t4_sim_vz");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t4_matched_simIdx");
+  ana.tx->createBranch<std::vector<float>>("t4_score_rphisum");
+  ana.tx->createBranch<std::vector<float>>("t4_score_t4dnn");
 
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -232,40 +235,6 @@ void createT5DNNBranches() {
 }
 
 //________________________________________________________________________________________________________________________________
-void createT3DNNBranches() {
-  // Common branches for T3 properties based on TripletsSoA fields
-  ana.tx->createBranch<std::vector<float>>("t3_betaIn");
-  ana.tx->createBranch<std::vector<float>>("t3_centerX");
-  ana.tx->createBranch<std::vector<float>>("t3_centerY");
-  ana.tx->createBranch<std::vector<float>>("t3_radius");
-  ana.tx->createBranch<std::vector<bool>>("t3_partOfPT5");
-  ana.tx->createBranch<std::vector<bool>>("t3_partOfT5");
-  ana.tx->createBranch<std::vector<bool>>("t3_partOfPT3");
-  ana.tx->createBranch<std::vector<float>>("t3_pMatched");
-  ana.tx->createBranch<std::vector<float>>("t3_sim_vxy");
-  ana.tx->createBranch<std::vector<float>>("t3_sim_vz");
-
-  // Hit-specific branches (T3 has 4 hits from two segments)
-  std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
-  std::vector<std::string> hitProperties = {"r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType"};
-
-  for (const auto& idx : hitIndices) {
-    for (const auto& prop : hitProperties) {
-      std::string branchName = "t3_hit_" + idx + "_" + prop;
-      if (prop == "detId" || prop == "layer" || prop == "moduleType") {
-        ana.tx->createBranch<std::vector<int>>(branchName);
-      } else {
-        ana.tx->createBranch<std::vector<float>>(branchName);
-      }
-    }
-  }
-
-  // Additional metadata branches
-  ana.tx->createBranch<std::vector<int>>("t3_layer_binary");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("t3_matched_simIdx");
-}
-
-//________________________________________________________________________________________________________________________________
 void createT4DNNBranches() {
   // Common branches
   ana.tx->createBranch<std::vector<int>>("t4_t3_idx0");
@@ -324,6 +293,33 @@ void createT3DNNBranches() {
   // Additional metadata branches
   ana.tx->createBranch<std::vector<int>>("t3_layer_binary");
   ana.tx->createBranch<std::vector<std::vector<int>>>("t3_matched_simIdx");
+}
+
+//________________________________________________________________________________________________________________________________
+void createT4DNNBranches() {
+  // Common branches
+  ana.tx->createBranch<std::vector<int>>("t4_t3_idx0");
+  ana.tx->createBranch<std::vector<int>>("t4_t3_idx1");
+  ana.tx->createBranch<std::vector<int>>("t4_tc_idx");
+  ana.tx->createBranch<std::vector<int>>("t4_partOfTC");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_pt");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_eta");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_phi");
+
+  // Hit-specific branches
+  std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
+  std::vector<std::string> hitProperties = {"r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType", "moduleIdx"};
+
+  for (const auto& idx : hitIndices) {
+    for (const auto& prop : hitProperties) {
+      std::string branchName = "t4_t3_" + idx + "_" + prop;
+      if (prop == "detId" || prop == "layer" || prop == "moduleType" || prop == "moduleIdx") {
+        ana.tx->createBranch<std::vector<int>>(branchName);
+      } else {
+        ana.tx->createBranch<std::vector<float>>(branchName);
+      }
+    }
+  }
 }
 
 //________________________________________________________________________________________________________________________________
@@ -891,7 +887,9 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<int>("t4_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<int>("t4_moduleType_binary", moduleType_binary);
       ana.tx->pushbackToBranch<float>("t4_pMatched", percent_matched);
-      
+      ana.tx->pushbackToBranch<float>("t4_score_rphisum", __H2F(quadruplets->score_rphisum[quadrupletIndex]));
+      ana.tx->pushbackToBranch<float>("t4_score_t4dnn", quadruplets->score_t4dnn[quadrupletIndex]);
+
       int region = -1;
       if (layers[0]==7 and layers[1]==8 and layers[2]==9 and layers[3]==10) {
         region = 0;
@@ -989,6 +987,7 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
   }
 
   ana.tx->setBranch<std::vector<int>>("sim_T4_matched", sim_t4_matched);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("t4_matched_simIdx", t4_matched_simIdx);
   ana.tx->setBranch<std::vector<int>>("t4_isDuplicate", t4_isDuplicate);
   // ana.tx->setBranch<std::vector<std::vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
 }
@@ -1289,6 +1288,7 @@ void fillT4DNNBranches(lst::Event<Acc3D>* event, unsigned int iT3) {
     ana.tx->pushbackToBranch<int>("t4_t3_" + idx + "_detId", detId);
     ana.tx->pushbackToBranch<int>("t4_t3_" + idx + "_layer", layer);
     ana.tx->pushbackToBranch<int>("t4_t3_" + idx + "_moduleType", modules->moduleType[module]);
+    ana.tx->pushbackToBranch<int>("t4_t3_" + idx + "_moduleIdx", module);
   }
 
   float g, f;
@@ -1367,6 +1367,7 @@ void fillT3DNNBranches(LSTEvent* event, unsigned int iT3) {
 
   std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
   std::vector<lst_math::Hit> hitObjects;
+  std::vector<unsigned int> mdIdx = getMDsFromT3(event, iT3);
 
   for (int i = 0; i < hitIdx.size(); ++i) {
     unsigned int hit = hitIdx[i];
@@ -1389,10 +1390,13 @@ void fillT3DNNBranches(LSTEvent* event, unsigned int iT3) {
     int layer = trk.ph2_layer()[hits->idxs[hit]] + 6 * is_endcap;
     int detId = trk.ph2_detId()[hits->idxs[hit]];
     unsigned int module = hits->moduleIndices[hit];
+    unsigned int mdId = mdIdx[i/2];
 
     ana.tx->pushbackToBranch<int>("t3_hit_" + idx + "_detId", detId);
     ana.tx->pushbackToBranch<int>("t3_hit_" + idx + "_layer", layer);
     ana.tx->pushbackToBranch<int>("t3_hit_" + idx + "_moduleType", modules->moduleType[module]);
+    ana.tx->pushbackToBranch<int>("t3_hit_" + idx + "_moduleIdx", module);
+    ana.tx->pushbackToBranch<int>("t3_hit_" + idx + "_mdIdx", mdId);
   }
 }
 
@@ -2096,7 +2100,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   unsigned int Hit_6 = hits[6];
 
   // T4 radius is average of the inner and outer radius
-  const float pt = quadruplets->innerRadius[T4] + quadruplets->outerRadius[T4] * lst::k2Rinv1GeVf;
+  const float pt = (quadruplets->innerRadius[T4] + quadruplets->outerRadius[T4]) * lst::k2Rinv1GeVf;
 
   // T4 eta and phi are computed using outer and innermost hits
   lst_math::Hit hitA(trk.ph2_x()[Hit_0], trk.ph2_y()[Hit_0], trk.ph2_z()[Hit_0]);
