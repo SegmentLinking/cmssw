@@ -185,6 +185,17 @@ protected:
   std::vector<float> *md_phi_;
   TBranch *md_phi_branch;
   bool md_phi_isLoaded;
+#ifdef CUT_VALUE_DEBUG
+  std::vector<float> *md_dphi_;
+  TBranch *md_dphi_branch;
+  bool md_dphi_isLoaded;
+  std::vector<float> *md_dphichange_;
+  TBranch *md_dphichange_branch;
+  bool md_dphichange_isLoaded;
+  std::vector<float> *md_dz_;
+  TBranch *md_dz_branch;
+  bool md_dz_isLoaded;
+#endif
   std::vector<float> *md_anchor_x_;
   TBranch *md_anchor_x_branch;
   bool md_anchor_x_isLoaded;
@@ -245,6 +256,47 @@ protected:
   std::vector<int> *ls_simIdx_;
   TBranch *ls_simIdx_branch;
   bool ls_simIdx_isLoaded;
+#ifdef CUT_VALUE_DEBUG
+  std::vector<int> *ls_zLos_;
+  TBranch *ls_zLos_branch;
+  bool ls_zLos_isLoaded;
+  std::vector<int> *ls_zHis_;
+  TBranch *ls_zHis_branch;
+  bool ls_zHis_isLoaded;
+  std::vector<int> *ls_rtLos_;
+  TBranch *ls_rtLos_branch;
+  bool ls_rtLos_isLoaded;
+  std::vector<int> *ls_rtHis_;
+  TBranch *ls_rtHis_branch;
+  bool ls_rtHis_isLoaded;
+  std::vector<int> *ls_dPhis_;
+  TBranch *ls_dPhis_branch;
+  bool ls_dPhis_isLoaded;
+  std::vector<int> *ls_dPhiMins_;
+  TBranch *ls_dPhiMins_branch;
+  bool ls_dPhiMins_isLoaded;
+  std::vector<int> *ls_dPhiMaxs_;
+  TBranch *ls_dPhiMaxs_branch;
+  bool ls_dPhiMaxs_isLoaded;
+  std::vector<int> *ls_dPhiChanges_;
+  TBranch *ls_dPhiChanges_branch;
+  bool ls_dPhiChanges_isLoaded;
+  std::vector<int> *ls_dPhiChangeMins_;
+  TBranch *ls_dPhiChangeMins_branch;
+  bool ls_dPhiChangeMins_isLoaded;
+  std::vector<int> *ls_dPhiChangeMaxs_;
+  TBranch *ls_dPhiChangeMaxs_branch;
+  bool ls_dPhiChangeMaxs_isLoaded;
+  std::vector<int> *ls_dAlphaInners_;
+  TBranch *ls_dAlphaInners_branch;
+  bool ls_dAlphaInners_isLoaded;
+  std::vector<int> *ls_dAlphaOuters_;
+  TBranch *ls_dAlphaOuters_branch;
+  bool ls_dAlphaOuters_isLoaded;
+  std::vector<int> *ls_dAlphaInnerOuters_;
+  TBranch *ls_dAlphaInnerOuters_branch;
+  bool ls_dAlphaInnerOuters_isLoaded;
+#endif
   std::vector<std::vector<int> > *ls_simIdxAll_;
   TBranch *ls_simIdxAll_branch;
   bool ls_simIdxAll_isLoaded;
@@ -495,6 +547,11 @@ public:
   const std::vector<float> &md_pt();
   const std::vector<float> &md_eta();
   const std::vector<float> &md_phi();
+#ifdef CUT_VALUE_DEBUG
+  const std::vector<float> &md_dphi();
+  const std::vector<float> &md_dphichange();
+  const std::vector<float> &md_dz();
+#endif
   const std::vector<float> &md_anchor_x();
   const std::vector<float> &md_anchor_y();
   const std::vector<float> &md_anchor_z();
@@ -515,6 +572,21 @@ public:
   const std::vector<int> &ls_mdIdx1();
   const std::vector<int> &ls_isFake();
   const std::vector<int> &ls_simIdx();
+#ifdef CUT_VALUE_DEBUG
+  const std::vector<int> &ls_zLos();
+  const std::vector<int> &ls_zHis();
+  const std::vector<int> &ls_rtLos();
+  const std::vector<int> &ls_rtHis();
+  const std::vector<int> &ls_dPhis();
+  const std::vector<int> &ls_dPhiMins();
+  const std::vector<int> &ls_dPhiMaxs();
+  const std::vector<int> &ls_dPhiChanges();
+  const std::vector<int> &ls_dPhiChangeMins();
+  const std::vector<int> &ls_dPhiChangeMaxs();
+  const std::vector<int> &ls_dAlphaInners();
+  const std::vector<int> &ls_dAlphaOuters();
+  const std::vector<int> &ls_dAlphaInnerOuters();
+#endif
   const std::vector<std::vector<int> > &ls_simIdxAll();
   const std::vector<std::vector<float> > &ls_simIdxAllFrac();
   const std::vector<float> &t3_pt();
@@ -643,6 +715,11 @@ namespace tas {
   const std::vector<float> &md_pt();
   const std::vector<float> &md_eta();
   const std::vector<float> &md_phi();
+#ifdef CUT_VALUE_DEBUG
+  const std::vector<float> &md_pt();
+  const std::vector<float> &md_eta();
+  const std::vector<float> &md_phi();
+#endif
   const std::vector<float> &md_anchor_x();
   const std::vector<float> &md_anchor_y();
   const std::vector<float> &md_anchor_z();
@@ -663,6 +740,21 @@ namespace tas {
   const std::vector<int> &ls_mdIdx1();
   const std::vector<int> &ls_isFake();
   const std::vector<int> &ls_simIdx();
+#ifdef CUT_VALUE_DEBUG
+  const std::vector<int> &ls_zLos();
+  const std::vector<int> &ls_zHis();
+  const std::vector<int> &ls_rtLos();
+  const std::vector<int> &ls_rtHis();
+  const std::vector<int> &ls_dPhis();
+  const std::vector<int> &ls_dPhiMins();
+  const std::vector<int> &ls_dPhiMaxs();
+  const std::vector<int> &ls_dPhiChanges();
+  const std::vector<int> &ls_dPhiChangeMins();
+  const std::vector<int> &ls_dPhiChangeMaxs();
+  const std::vector<int> &ls_dAlphaInners();
+  const std::vector<int> &ls_dAlphaOuters();
+  const std::vector<int> &ls_dAlphaInnerOuters();
+#endif
   const std::vector<std::vector<int> > &ls_simIdxAll();
   const std::vector<std::vector<float> > &ls_simIdxAllFrac();
   const std::vector<float> &t3_pt();

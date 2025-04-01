@@ -237,6 +237,8 @@ void createGnnNtupleBranches() {
   ana.tx->createBranch<std::vector<float>>("MD_eta");
   ana.tx->createBranch<std::vector<float>>("MD_phi");
   ana.tx->createBranch<std::vector<float>>("MD_dphichange");
+  ana.tx->createBranch<std::vector<float>>("MD_dphi");
+  ana.tx->createBranch<std::vector<float>>("MD_dz");
   ana.tx->createBranch<std::vector<int>>("MD_isFake");
   ana.tx->createBranch<std::vector<int>>("MD_tpType");
   ana.tx->createBranch<std::vector<int>>("MD_detId");
@@ -787,7 +789,7 @@ void setT3DNNBranches(LSTEvent* event) {
 
       // Get matching information with percent matched
       float percent_matched;
-      std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type, false, &percent_matched);
+      std::vector<int> simidx = matchedSimTrkIdxs(hit_idx, hit_type, false, 0.75, &percent_matched);
 
       // Fill the branches with T3-specific data
       ana.tx->pushbackToBranch<float>("t3_betaIn", triplets.betaIn()[tripletIndex]);
@@ -1058,6 +1060,9 @@ void setGnnNtupleMiniDoublet(LSTEvent* event, unsigned int MD) {
   // Obtaining dPhiChange
   float dphichange = miniDoublets.dphichanges()[MD];
 
+  float dphi = miniDoublets.dphis()[MD];
+  float dz = miniDoublets.dzs()[MD];
+
   // Computing pt
   float pt = hit0_r * k2Rinv1GeVf / sin(dphichange);
 
@@ -1083,6 +1088,8 @@ void setGnnNtupleMiniDoublet(LSTEvent* event, unsigned int MD) {
   ana.tx->pushbackToBranch<float>("MD_1_x", hit1_x);
   ana.tx->pushbackToBranch<float>("MD_1_y", hit1_y);
   ana.tx->pushbackToBranch<float>("MD_1_z", hit1_z);
+  ana.tx->pushbackToBranch<float>("MD_dz", dz);
+  ana.tx->pushbackToBranch<float>("MD_dphi", dphi);
   // ana.tx->pushbackToBranch<int>("MD_sim_idx", simidxs.size() > 0 ? simidxs[0] : -999);
 }
 
@@ -1646,9 +1653,14 @@ void createOutputBranches_v2() {
   //
   //    The container will hold per entry a mini-doublet built by LST in the event.
   //
-  ana.tx->createBranch<std::vector<float>>("md_pt");        // pt (computed based on delta phi change)
-  ana.tx->createBranch<std::vector<float>>("md_eta");       // eta (computed based on anchor hit's eta)
-  ana.tx->createBranch<std::vector<float>>("md_phi");       // phi (computed based on anchor hit's phi)
+  ana.tx->createBranch<std::vector<float>>("md_pt");   // pt (computed based on delta phi change)
+  ana.tx->createBranch<std::vector<float>>("md_eta");  // eta (computed based on anchor hit's eta)
+  ana.tx->createBranch<std::vector<float>>("md_phi");  // phi (computed based on anchor hit's phi)
+#ifdef CUT_VALUE_DEBUG
+  ana.tx->createBranch<std::vector<float>>("md_dphi");
+  ana.tx->createBranch<std::vector<float>>("md_dphichange");
+  ana.tx->createBranch<std::vector<float>>("md_dz");
+#endif
   ana.tx->createBranch<std::vector<float>>("md_anchor_x");  // anchor hit x
   ana.tx->createBranch<std::vector<float>>("md_anchor_y");  // anchor hit y
   ana.tx->createBranch<std::vector<float>>("md_anchor_z");  // anchor hit z
@@ -1681,6 +1693,21 @@ void createOutputBranches_v2() {
   ana.tx->createBranch<std::vector<int>>("ls_mdIdx1");  // index to the second MD
   ana.tx->createBranch<std::vector<int>>("ls_isFake");  // 1 if md is fake 0 other if not
   ana.tx->createBranch<std::vector<int>>("ls_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+#ifdef CUT_VALUE_DEBUG
+  ana.tx->createBranch<std::vector<float>>("ls_zLos");
+  ana.tx->createBranch<std::vector<float>>("ls_zHis");
+  ana.tx->createBranch<std::vector<float>>("ls_rtLos");
+  ana.tx->createBranch<std::vector<float>>("ls_rtHis");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhis");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiMins");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiMaxs");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChanges");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChangeMins");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChangeMaxs");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaInners");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaOuters");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaInnerOuters");
+#endif
   ana.tx->createBranch<std::vector<std::vector<int>>>(
       "ls_simIdxAll");  // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<float>>>(
@@ -1998,7 +2025,8 @@ void fillOutputBranches_v2(LSTEvent* event) {
   auto ranges = event->getRanges();
   auto miniDoublets = event->getMiniDoublets<MiniDoubletsSoA>();
   auto miniDoubletsOccupancy = event->getMiniDoublets<MiniDoubletsOccupancySoA>();
-  auto segments = event->getSegments<SegmentsPixelSoA>();
+  auto segments = event->getSegments<SegmentsSoA>();
+  auto pixelSegments = event->getPixelSegments();
   auto segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
   auto triplets = event->getTriplets<TripletsOccupancySoA>();
   auto quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
@@ -2070,6 +2098,8 @@ void fillOutputBranches_v2(LSTEvent* event) {
 
       // Pt is computed via dphichange and the eta and phi are computed based on anchor hit
       float dphichange = miniDoublets.dphichanges()[mdIdx];
+      float dphi = miniDoublets.dphis()[mdIdx];
+      float dz = miniDoublets.dzs()[mdIdx];
       float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
       float pt = anchor_hit.rt() * k2Rinv1GeVf / sin(dphichange);
       float eta = anchor_hit.eta();
@@ -2091,6 +2121,11 @@ void fillOutputBranches_v2(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("md_pt", pt);
       ana.tx->pushbackToBranch<float>("md_eta", eta);
       ana.tx->pushbackToBranch<float>("md_phi", phi);
+#ifdef CUT_VALUE_DEBUG
+      ana.tx->pushbackToBranch<float>("md_dphichange", dphichange);
+      ana.tx->pushbackToBranch<float>("md_dphi", dphi);
+      ana.tx->pushbackToBranch<float>("md_dz", dz);
+#endif
       ana.tx->pushbackToBranch<float>("md_anchor_x", anchor_x);
       ana.tx->pushbackToBranch<float>("md_anchor_y", anchor_y);
       ana.tx->pushbackToBranch<float>("md_anchor_z", anchor_z);
@@ -2220,10 +2255,42 @@ void fillOutputBranches_v2(LSTEvent* event) {
       float eta = hitC.eta();
       float phi = hitB.phi();
 
+#ifdef CUT_VALUE_DEBUG
+      float zHi = segments.zHis()[lsIdx];
+      float zLo = segments.zLos()[lsIdx];
+      float rtHi = segments.rtHis()[lsIdx];
+      float rtLo = segments.rtLos()[lsIdx];
+      float dAlphaInner = segments.dAlphaInners()[lsIdx];
+      float dAlphaOuter = segments.dAlphaOuters()[lsIdx];
+      float dAlphaInnerOuter = segments.dAlphaInnerOuters()[lsIdx];
+#endif
+      float dPhi = segments.dPhis()[lsIdx];
+      float dPhiMin = segments.dPhiMins()[lsIdx];
+      float dPhiMax = segments.dPhiMaxs()[lsIdx];
+      float dPhiChange = segments.dPhiChanges()[lsIdx];
+      float dPhiChangeMin = segments.dPhiChangeMins()[lsIdx];
+      float dPhiChangeMax = segments.dPhiChangeMaxs()[lsIdx];
+
       // Write out the ntuple
       ana.tx->pushbackToBranch<float>("ls_pt", pt);
       ana.tx->pushbackToBranch<float>("ls_eta", eta);
       ana.tx->pushbackToBranch<float>("ls_phi", phi);
+#ifdef CUT_VALUE_DEBUG
+      ana.tx->pushbackToBranch<float>("ls_zHis", zHi);
+      ana.tx->pushbackToBranch<float>("ls_zLos", zLo);
+      ana.tx->pushbackToBranch<float>("ls_rtHis", rtHi);
+      ana.tx->pushbackToBranch<float>("ls_rtLos", rtLo);
+      ana.tx->pushbackToBranch<float>("ls_dPhis", dPhi);
+      ana.tx->pushbackToBranch<float>("ls_dPhiMins", dPhiMin);
+      ana.tx->pushbackToBranch<float>("ls_dPhiMaxs", dPhiMax);
+      ana.tx->pushbackToBranch<float>("ls_dPhiChanges", dPhiChange);
+      ana.tx->pushbackToBranch<float>("ls_dPhiChangeMins", dPhiChangeMin);
+      ana.tx->pushbackToBranch<float>("ls_dPhiChangeMaxs", dPhiChangeMax);
+      ana.tx->pushbackToBranch<float>("ls_dAlphaInners", dAlphaInner);
+      ana.tx->pushbackToBranch<float>("ls_dAlphaOuters", dAlphaOuter);
+      ana.tx->pushbackToBranch<float>("ls_dAlphaInnerOuters", dAlphaInnerOuter);
+
+#endif
       ana.tx->pushbackToBranch<int>("ls_mdIdx0", md_idx_map[mdIdxs[0]]);
       ana.tx->pushbackToBranch<int>("ls_mdIdx1", md_idx_map[mdIdxs[1]]);
 
@@ -2544,7 +2611,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       std::vector<int> simidx;
       std::vector<float> simidxfrac;
       std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, false, 0);
-      int seedIdx = segments.seedIdx()[ipLS];
+      int seedIdx = pixelSegments.seedIdx()[ipLS];
       ana.tx->pushbackToBranch<float>("pls_pt", trk.see_pt()[seedIdx]);
       ana.tx->pushbackToBranch<float>("pls_eta", trk.see_eta()[seedIdx]);
       ana.tx->pushbackToBranch<float>("pls_phi", trk.see_phi()[seedIdx]);
@@ -2662,9 +2729,9 @@ void fillOutputBranches_v2(LSTEvent* event) {
     unsigned int ipLS = getPixelLSFrompT3(event, ipT3);
     unsigned int plsIdx = ranges.segmentModuleIndices()[modules.nLowerModules()] + ipLS;
     unsigned int pls_idx = pls_idx_map[plsIdx];
-    float pt = segments.ptIn()[ipLS];
-    float eta = segments.eta()[ipLS];
-    float phi = segments.phi()[ipLS];
+    float pt = pixelSegments.ptIn()[ipLS];
+    float eta = pixelSegments.eta()[ipLS];
+    float phi = pixelSegments.phi()[ipLS];
     ana.tx->pushbackToBranch<float>("pt3_pt", pt);
     ana.tx->pushbackToBranch<float>("pt3_eta", eta);
     ana.tx->pushbackToBranch<float>("pt3_phi", phi);
@@ -2769,9 +2836,9 @@ void fillOutputBranches_v2(LSTEvent* event) {
     unsigned int ipLS = getPixelLSFrompT5(event, ipT5);
     unsigned int plsIdx = ranges.segmentModuleIndices()[modules.nLowerModules()] + ipLS;
     unsigned int pls_idx = pls_idx_map[plsIdx];
-    float pt = segments.ptIn()[ipLS];
-    float eta = segments.eta()[ipLS];
-    float phi = segments.phi()[ipLS];
+    float pt = pixelSegments.ptIn()[ipLS];
+    float eta = pixelSegments.eta()[ipLS];
+    float phi = pixelSegments.phi()[ipLS];
     ana.tx->pushbackToBranch<float>("pt5_pt", pt);
     ana.tx->pushbackToBranch<float>("pt5_eta", eta);
     ana.tx->pushbackToBranch<float>("pt5_phi", phi);
@@ -2996,7 +3063,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     float bestmatch_frac = -999;
     for (size_t jj = 0; jj < sim_tcIdxAll_to_write.at(i).size(); ++jj) {
       int idx = sim_tcIdxAll_to_write.at(i).at(jj);
-      float frac = sim_tcIdxAll_to_write.at(i).at(jj);
+      float frac = sim_tcIdxAllFrac_to_write.at(i).at(jj);
       if (bestmatch_frac < frac) {
         bestmatch_idx = idx;
         bestmatch_frac = frac;
