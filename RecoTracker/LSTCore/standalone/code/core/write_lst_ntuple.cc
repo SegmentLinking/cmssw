@@ -323,6 +323,16 @@ void setOutputBranches(LSTEvent* event) {
     float pt, eta, phi;
     std::vector<int> simidx;
     std::tie(type, pt, eta, phi, isFake, simidx) = parseTrackCandidate(event, idx);
+    // Very temporary fix to remove these from the performance plots if flagged.
+    if (trackCandidates.isDupFilter()[idx] == 1) {
+      ana.tx->pushbackToBranch<float>("tc_pt", 0);
+      ana.tx->pushbackToBranch<float>("tc_eta", 0);
+      ana.tx->pushbackToBranch<float>("tc_phi", 0);
+      ana.tx->pushbackToBranch<int>("tc_type", 8);
+      ana.tx->pushbackToBranch<int>("tc_isFake", 1);
+      tc_matched_simIdx.push_back({});
+      continue;
+    }
     ana.tx->pushbackToBranch<float>("tc_pt", pt);
     ana.tx->pushbackToBranch<float>("tc_eta", eta);
     ana.tx->pushbackToBranch<float>("tc_phi", phi);
@@ -355,6 +365,10 @@ void setOutputBranches(LSTEvent* event) {
       if (sim_TC_matched_for_duplicate[simidx] > 1) {
         isDuplicate = true;
       }
+    }
+    if (trackCandidates.isDupFilter()[i] == 1) {
+      tc_isDuplicate[i] = 0;
+      continue;
     }
     tc_isDuplicate[i] = isDuplicate;
   }

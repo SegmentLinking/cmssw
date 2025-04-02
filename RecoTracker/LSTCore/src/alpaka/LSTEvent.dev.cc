@@ -620,6 +620,9 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       pixelSegmentsDC_->const_view(),
                       tc_pls_triplets);
 
+  auto const trackCandDupFilter_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {32, 16});
+  alpaka::exec<Acc2D>(queue_, trackCandDupFilter_workDiv, TrackCandidateDuplicateFilter{}, trackCandidatesDC_->view());
+
   // Check if either n_max_pixel_track_candidates or n_max_nonpixel_track_candidates was reached
   auto nTrackCanpT5Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTrackCanpT3Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
@@ -1555,6 +1558,9 @@ const TrackCandidatesConst& LSTEvent::getTrackCandidates(bool inCMSSW, bool sync
           queue_,
           cms::alpakatools::make_host_view((*trackCandidatesHC_)->directObjectIndices(), nTrackCanHost),
           cms::alpakatools::make_device_view(queue_, (*trackCandidatesDC_)->directObjectIndices(), nTrackCanHost));
+      alpaka::memcpy(queue_,
+                     cms::alpakatools::make_host_view((*trackCandidatesHC_)->isDupFilter(), nTrackCanHost),
+                     cms::alpakatools::make_device_view(queue_, (*trackCandidatesDC_)->isDupFilter(), nTrackCanHost));
       alpaka::memcpy(
           queue_,
           cms::alpakatools::make_host_view((*trackCandidatesHC_)->objectIndices()->data(), 2 * nTrackCanHost),

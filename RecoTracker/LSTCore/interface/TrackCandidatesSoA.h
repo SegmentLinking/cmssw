@@ -19,6 +19,11 @@ namespace lst {
                       SOA_COLUMN(FPX, centerX),                                     //
                       SOA_COLUMN(FPX, centerY),                                     //
                       SOA_COLUMN(FPX, radius),                                      //
+                      SOA_COLUMN(FPX, embeddingDim0),                               //
+                      SOA_COLUMN(FPX, embeddingDim1),                               //
+                      SOA_COLUMN(FPX, embeddingDim2),                               //
+                      SOA_COLUMN(FPX, embeddingDim3),                               //
+                      SOA_COLUMN(bool, isDupFilter),                                //
                       SOA_SCALAR(unsigned int, nTrackCandidates),                   //
                       SOA_SCALAR(unsigned int, nTrackCandidatespT3),                //
                       SOA_SCALAR(unsigned int, nTrackCandidatespT5),                //
