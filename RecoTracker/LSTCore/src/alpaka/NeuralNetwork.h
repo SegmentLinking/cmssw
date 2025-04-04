@@ -434,6 +434,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 
 namespace lst::t4dnn {
+  template <int FEATURES, typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void softmax_activation(TAcc const& acc, float (&input)[FEATURES]) {
+    float sum = 0.f;
+    // Compute exp and sum
+#pragma unroll FEATURES
+    for (unsigned int i = 0; i < FEATURES; ++i) {
+      input[i] = alpaka::math::exp(acc, input[i]);
+      sum += input[i];
+    }
+
+    // Normalize
+#pragma unroll FEATURES
+    for (unsigned int i = 0; i < FEATURES; ++i) {
+      input[i] /= sum;
+    }
+  }
 
   template <int FEATURES>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
@@ -482,11 +498,11 @@ namespace lst::t4dnn {
                                                    const unsigned int mdIndex3,
                                                    const unsigned int mdIndex4,
                                                    const float innerRadius,
-                                                   const float outerRadius,
-                                                   float& x_5) {
+                                                   const float outerRadius) {
     // Constants
     constexpr unsigned int kinputFeatures = 19; 
     constexpr unsigned int khiddenFeatures = 32;
+    constexpr unsigned int koutputFeatures = 3;
 
     float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
     float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
@@ -537,7 +553,8 @@ namespace lst::t4dnn {
 
     float x_1[khiddenFeatures];  // Layer 1 output
     float x_2[khiddenFeatures];  // Layer 2 output
-    float x_3[1];                // Layer 3 linear output
+    float x_3[koutputFeatures];  // Layer 3 output (3 classes) multi-class version
+    // float x_3[1];                // Layer 3 linear output
 
     // Layer 1: Linear + Relu
     linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_layer1, bias_layer1);
@@ -547,19 +564,25 @@ namespace lst::t4dnn {
     linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_layer2, bias_layer2);
     relu_activation<khiddenFeatures>(x_2);
 
-    // Layer 3: Linear + Sigmoid
-    linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-    x_5 = sigmoid_activation(acc, x_3[0]);
+    // // Layer 3: Linear + Sigmoid
+    // linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
+    // x_5 = sigmoid_activation(acc, x_3[0]);
 
-    // Get the bin index based on abs(eta) of first hit and t5_pt
-    float t4_pt = innerRadius * lst::k2Rinv1GeVf * 2;
+    // Layer 3: Linear + Softmax multi-class version
+    linear_layer<khiddenFeatures, koutputFeatures>(x_2, x_3, wgtT_output_layer, bias_output_layer);
+    softmax_activation<koutputFeatures>(acc, x_3);
+
+    // Get the bin index based on abs(eta) of first hit and t4_pt
+    // float t4_pt = innerRadius * lst::k2Rinv1GeVf * 2;
+    float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf; //t4 pt is average
 
     uint8_t pt_index = (t4_pt > 5);
     uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
     // uint8_t bin_index = (eta1 > 1.0f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.1f);
 
     // Compare x_5 to the cut value for the relevant bin
-    return x_5 > kWp[pt_index][bin_index];
+    // return x_5 > kWp[pt_index][bin_index];
+    return x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index];
   }
 
 }  //namespace lst::t4dnn

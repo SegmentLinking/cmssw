@@ -2329,8 +2329,7 @@ namespace lst {
                                               thirdMDIndex,
                                               fourthMDIndex,
                                               innerRadius,
-                                              outerRadius,
-                                              x_5);
+                                              outerRadius);
     if (!inference)
       return false;
     // if (not runQuadrupletdBetaAlgoSelector(acc,
