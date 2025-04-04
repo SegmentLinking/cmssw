@@ -12,6 +12,7 @@
 #include "Quintuplet.h"
 #include "PixelQuintuplet.h"
 #include "PixelTriplet.h"
+#include "Quadruplet.h"
 
 namespace lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(lst::Quintuplets& quintupletsInGPU,
@@ -34,6 +35,12 @@ namespace lst {
                                                                unsigned int pixelSegmentArrayIndex,
                                                                bool secondpass = false) {
     segmentsInGPU.isDup[pixelSegmentArrayIndex] |= 1 + secondpass;
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuadrupletFromMemory(lst::Quadruplets& quadrupletsInGPU,
+                                                             unsigned int quadrupletIndex,
+                                                            bool secondpass = false) {
+    quadrupletsInGPU.isDup[quadrupletIndex] |= 1 + secondpass;
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT5(unsigned int ix,
@@ -141,6 +148,34 @@ namespace lst {
     matched[0] = npMatched;
     matched[1] = nMatched;
   };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT4(unsigned int ix,
+                                                 unsigned int jx,
+                                                 lst::Quadruplets const& quadrupletsInGPU) {
+    unsigned int hits1[Params_T4::kHits];
+    unsigned int hits2[Params_T4::kHits];
+
+    for (int i = 0; i < Params_T4::kHits; i++) {
+      hits1[i] = quadrupletsInGPU.hitIndices[Params_T4::kHits * ix + i];
+      hits2[i] = quadrupletsInGPU.hitIndices[Params_T4::kHits * jx + i];
+    }
+   
+    int nMatched = 0;
+    for (int i = 0; i < Params_T4::kHits; i++) {
+      bool matched = false;
+      for (int j = 0; j < Params_T4::kHits; j++) {
+        if (hits1[i] == hits2[j]) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
+        nMatched++;
+      }
+    }
+    return nMatched;
+  };
+
 
   struct removeDupQuintupletsInGPUAfterBuild {
     template <typename TAcc>
@@ -265,6 +300,127 @@ namespace lst {
                   rmQuintupletFromMemory(quintupletsInGPU, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintupletsInGPU, (ix < jx ? ix : jx), true);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  struct removeDupQuadrupletsInGPUAfterBuild {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  lst::Modules modulesInGPU,
+                                  lst::Quadruplets quadrupletsInGPU,
+                                  lst::ObjectRanges rangesInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      for (unsigned int lowmod = globalThreadIdx[0]; lowmod < *modulesInGPU.nLowerModules;
+            lowmod += gridThreadExtent[0]) {
+        unsigned int nQuadruplets_lowmod = quadrupletsInGPU.nQuadruplets[lowmod];
+        int quadrupletModuleIndices_lowmod = rangesInGPU.quadrupletModuleIndices[lowmod];
+
+        for (unsigned int ix1 = globalThreadIdx[1]; ix1 < nQuadruplets_lowmod; ix1 += gridThreadExtent[1]) {
+          unsigned int ix = quadrupletModuleIndices_lowmod + ix1;
+          float eta1 = __H2F(quadrupletsInGPU.eta[ix]);
+          float phi1 = __H2F(quadrupletsInGPU.phi[ix]);
+          // float score_rphisum1 = __H2F(quadrupletsInGPU.score_rphisum[ix]);
+          float score_t4dnn1 = quadrupletsInGPU.score_t4dnn[ix]; 
+
+          for (unsigned int jx1 = globalThreadIdx[2] + ix1 + 1; jx1 < nQuadruplets_lowmod; jx1 += gridThreadExtent[2]) {
+            unsigned int jx = quadrupletModuleIndices_lowmod + jx1;
+
+            float eta2 = __H2F(quadrupletsInGPU.eta[jx]);
+            float phi2 = __H2F(quadrupletsInGPU.phi[jx]);
+            float dEta = alpaka::math::abs(acc, eta1 - eta2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
+            // float score_rphisum2 = __H2F(quadrupletsInGPU.score_rphisum[jx]);
+            float score_t4dnn2 = quadrupletsInGPU.score_t4dnn[jx];
+
+            if (dEta > 0.1f)
+              continue;
+
+            if (alpaka::math::abs(acc, dPhi) > 0.1f)
+              continue;
+          
+            int nMatched = checkHitsT4(ix, jx, quadrupletsInGPU);
+            const int minNHitsForDup_T4 = 6;
+            if (nMatched >= minNHitsForDup_T4) {
+              if (score_t4dnn1 >= score_t4dnn2){
+                rmQuadrupletFromMemory(quadrupletsInGPU, jx);
+              } else{
+                rmQuadrupletFromMemory(quadrupletsInGPU, ix);
+              }
+            }
+          }
+        }
+      }
+      // add in second pass of dup removal
+      for (unsigned int lowmodIdx1 = globalThreadIdx[1]; lowmodIdx1 < *(rangesInGPU.nEligibleT4Modules);
+           lowmodIdx1 += gridThreadExtent[1]) {
+        uint16_t lowmod1 = rangesInGPU.indicesOfEligibleT4Modules[lowmodIdx1];
+        unsigned int nQuadruplets_lowmod1 = quadrupletsInGPU.nQuadruplets[lowmod1];
+        if (nQuadruplets_lowmod1 == 0)
+          continue;
+
+        unsigned int quadrupletModuleIndices_lowmod1 = rangesInGPU.quadrupletModuleIndices[lowmod1];
+
+        for (unsigned int lowmodIdx2 = globalThreadIdx[2] + lowmodIdx1; lowmodIdx2 < *(rangesInGPU.nEligibleT4Modules);
+             lowmodIdx2 += gridThreadExtent[2]) {
+          uint16_t lowmod2 = rangesInGPU.indicesOfEligibleT4Modules[lowmodIdx2];
+          unsigned int nQuadruplets_lowmod2 = quadrupletsInGPU.nQuadruplets[lowmod2];
+          if (nQuadruplets_lowmod2 == 0)
+            continue;
+
+          unsigned int quadrupletModuleIndices_lowmod2 = rangesInGPU.quadrupletModuleIndices[lowmod2];
+
+          for (unsigned int ix1 = 0; ix1 < nQuadruplets_lowmod1; ix1 += 1) {
+            unsigned int ix = quadrupletModuleIndices_lowmod1 + ix1;
+            if ((quadrupletsInGPU.isDup[ix] & 1))
+              continue;
+
+            for (unsigned int jx1 = 0; jx1 < nQuadruplets_lowmod2; jx1++) {
+              unsigned int jx = quadrupletModuleIndices_lowmod2 + jx1;
+              if (ix == jx)
+                continue;
+
+              if ((quadrupletsInGPU.isDup[jx] & 1))
+                continue;
+
+              float eta1 = __H2F(quadrupletsInGPU.eta[ix]);
+              float phi1 = __H2F(quadrupletsInGPU.phi[ix]);
+              // float score_rphisum1 = __H2F(quadrupletsInGPU.score_rphisum[ix]);
+              float score_t4dnn1 = quadrupletsInGPU.score_t4dnn[ix];
+
+              float eta2 = __H2F(quadrupletsInGPU.eta[jx]);
+              float phi2 = __H2F(quadrupletsInGPU.phi[jx]);
+              // float score_rphisum2 = __H2F(quadrupletsInGPU.score_rphisum[jx]);
+              float score_t4dnn2 = quadrupletsInGPU.score_t4dnn[jx];
+
+              float dEta = alpaka::math::abs(acc, eta1 - eta2);
+              float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+              if (dEta > 0.1f)
+                continue;
+
+              if (alpaka::math::abs(acc, dPhi) > 0.1f)
+                continue;
+
+              float dR2 = dEta * dEta + dPhi * dPhi;
+              int nMatched = checkHitsT4(ix, jx, quadrupletsInGPU);
+              // const int minNHitsForDup_T4 = 7;
+              const int minNHitsForDup_T4 = 6;
+              // if (dR2 < 0.0001f || nMatched >= minNHitsForDup_T4) {
+              if (dR2 < 0.001f || nMatched >= minNHitsForDup_T4) {
+                if (score_t4dnn1 > score_t4dnn2) {
+                  rmQuadrupletFromMemory(quadrupletsInGPU, jx, true);
+                } else if (score_t4dnn1 < score_t4dnn2) {
+                  rmQuadrupletFromMemory(quadrupletsInGPU, ix, true);
+                } else {
+                  rmQuadrupletFromMemory(quadrupletsInGPU, (ix < jx ? ix : jx), true);
                 }
               }
             }
