@@ -7,7 +7,7 @@
 
 using LSTEvent = lst::Event<ALPAKA_ACCELERATOR_NAMESPACE::Acc3D>;
 
-enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8 };
+enum { kpT5 = 7, kpT3 = 5, kT5 = 4, kpLS = 8, kT4 = 9, kpT4 = 11 };
 
 // ----* Hit *----
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHitIdxsAndHitTypes(
@@ -22,12 +22,14 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 // ----* MD *----
 std::vector<unsigned int> getHitsFromMD(LSTEvent* event, unsigned int MD);
+std::vector<unsigned int> getModuleIdxsFromMD(LSTEvent* event, unsigned int MD);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromMD(LSTEvent* event,
                                                                                              unsigned MD);
 
 // ----* LS *----
 std::vector<unsigned int> getMDsFromLS(LSTEvent* event, unsigned int LS);
 std::vector<unsigned int> getHitsFromLS(LSTEvent* event, unsigned int LS);
+std::vector<unsigned int> getModuleIdxsFromLS(LSTEvent* event, unsigned int LS);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromLS(LSTEvent* event,
                                                                                              unsigned LS);
 
@@ -35,6 +37,8 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 std::vector<unsigned int> getLSsFromT3(LSTEvent* event, unsigned int T3);
 std::vector<unsigned int> getMDsFromT3(LSTEvent* event, unsigned int T3);
 std::vector<unsigned int> getHitsFromT3(LSTEvent* event, unsigned int T3);
+std::vector<unsigned int> getHitTypesFromT3(LSTEvent* event, unsigned int T3);
+std::vector<unsigned int> getModuleIdxsFromT3(LSTEvent* event, unsigned int T3);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT3(LSTEvent* event,
                                                                                              unsigned T3);
 
@@ -84,4 +88,29 @@ std::vector<unsigned int> getHitsFromTC(LSTEvent* event, unsigned int TC);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(LSTEvent* event,
                                                                                              unsigned int TC);
 
+// ----* T4 *----
+std::vector<unsigned int> getT3sFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getLSsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getMDsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitIdxsFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getHitTypesFromT4(LSTEvent* event, unsigned int T4);
+std::vector<unsigned int> getModuleIdxsFromT4(LSTEvent* event, unsigned int T4);
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT4(LSTEvent* event,
+                                                                                             unsigned T4);
+
+// ----* pT4 *----
+unsigned int getPixelLSFrompT4(LSTEvent* event, unsigned int pT4);
+unsigned int getT4FrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getT3sFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getLSsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getMDsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getOuterTrackerHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getPixelHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitIdxsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitTypesFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getModuleIdxsFrompT4(LSTEvent* event, unsigned int pT4);
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT4(LSTEvent* event,
+                                                                                              unsigned pT5);
 #endif
