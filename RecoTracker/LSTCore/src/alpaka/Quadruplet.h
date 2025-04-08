@@ -38,6 +38,12 @@ namespace lst {
     float* dBeta;
     float* score_t4dnn;
 
+    float* regressionRadius;
+    float* regressionG;
+    float* regressionF;
+
+    bool* partOfPT4;
+
     template <typename TBuff>
     void setData(TBuff& buf) {
       tripletIndices = alpaka::getPtrNative(buf.tripletIndices_buf);
@@ -58,6 +64,10 @@ namespace lst {
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
       dBeta = alpaka::getPtrNative(buf.dBeta_buf);
       score_t4dnn = alpaka::getPtrNative(buf.score_t4dnn_buf); 
+      regressionRadius = alpaka::getPtrNative(buf.regressionRadius_buf);
+      regressionG = alpaka::getPtrNative(buf.regressionG_buf);
+      regressionF = alpaka::getPtrNative(buf.regressionF_buf);
+      partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
     }
   };
 
@@ -84,6 +94,12 @@ namespace lst {
     Buf<TDev, float> dBeta_buf;
     Buf<TDev, float> score_t4dnn_buf;
 
+    Buf<TDev, float> regressionRadius_buf;
+    Buf<TDev, float> regressionG_buf;
+    Buf<TDev, float> regressionF_buf;
+
+    Buf<TDev, bool> partOfPT4_buf;
+
     Quadruplets data_;
 
     template <typename TQueue, typename TDevAcc>
@@ -105,10 +121,15 @@ namespace lst {
           hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T4::kHits * nTotalQuadruplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           dBeta_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
-          score_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)) {
+          score_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          regressionRadius_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          regressionG_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)) {
       alpaka::memset(queue, nQuadruplets_buf, 0u);
       alpaka::memset(queue, totOccupancyQuadruplets_buf, 0u);
       alpaka::memset(queue, isDup_buf, 0u);
+      alpaka::memset(queue, partOfPT4_buf, false);
       alpaka::wait(queue);
     }
 
@@ -141,7 +162,10 @@ namespace lst {
                                                             unsigned int quadrupletIndex,
                                                             float rzChiSquared,
                                                             float dBeta,
-                                                            float x_5) {
+                                                            float x_5,
+                                                            float regressionG,
+                                                            float regressionF,
+                                                            float regressionRadius) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1] = outerTripletIndex;
 
@@ -186,6 +210,10 @@ namespace lst {
     quadrupletsInGPU.rzChiSquared[quadrupletIndex] = rzChiSquared;
     quadrupletsInGPU.dBeta[quadrupletIndex] = dBeta;
     quadrupletsInGPU.score_t4dnn[quadrupletIndex] = x_5;
+
+    quadrupletsInGPU.regressionRadius[quadrupletIndex] = regressionRadius;
+    quadrupletsInGPU.regressionG[quadrupletIndex] = regressionG;
+    quadrupletsInGPU.regressionF[quadrupletIndex] = regressionF;
   };
 
   template <typename TAcc>
@@ -2604,7 +2632,10 @@ namespace lst {
                                         quadrupletIndex,
                                         rzChiSquared,
                                         dBeta,
-                                        x_5);
+                                        x_5,
+                                        regressionG,
+                                        regressionF,
+                                        regressionRadius);
 
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;

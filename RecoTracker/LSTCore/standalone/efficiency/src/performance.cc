@@ -1,6 +1,6 @@
 #include "performance.h"
 
-enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9 };
+enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9, pT4 = 11 };
 
 //__________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char** argv) {
@@ -92,6 +92,12 @@ int main(int argc, char** argv) {
             /* pdgid */ pdgid,
             /* q     */ charge,
             /* pass  */ [&](unsigned int isim) { return lstEff.sim_TC_matched_mask().at(isim) & (1 << T4); },
+            /* sel   */ sels[isel]));
+        list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */ TString("pT4_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */ [&](unsigned int isim) { return lstEff.sim_TC_matched_mask().at(isim) & (1 << pT4); },
             /* sel   */ sels[isel]));
 
         if (ana.do_lower_level) {
@@ -191,6 +197,14 @@ int main(int argc, char** argv) {
       RecoTrackSetDefinition(/* name  */ "T4",
                              /* pass  */ [&](unsigned int itc) { return lstEff.tc_isFake().at(itc) > 0; },
                              /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == T4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
+  list_FRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "pT4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isFake().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == pT4; },
                              /* pt    */ tas::tc_pt,
                              /* eta   */ tas::tc_eta,
                              /* phi   */ tas::tc_phi,
@@ -296,6 +310,14 @@ int main(int argc, char** argv) {
       RecoTrackSetDefinition(/* name  */ "T4",
                              /* pass  */ [&](unsigned int itc) { return lstEff.tc_isDuplicate().at(itc) > 0; },
                              /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == T4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
+  list_DRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "pT4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isDuplicate().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == pT4; },
                              /* pt    */ tas::tc_pt,
                              /* eta   */ tas::tc_eta,
                              /* phi   */ tas::tc_phi,

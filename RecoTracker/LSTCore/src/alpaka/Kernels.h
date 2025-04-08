@@ -15,6 +15,7 @@
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "Quadruplet.h"
+#include "PixelQuadruplet.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(Quintuplets quintuplets,
@@ -43,6 +44,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              unsigned int quadrupletIndex,
                                                             bool secondpass = false) {
     quadrupletsInGPU.isDup[quadrupletIndex] |= 1 + secondpass;
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmPixelQuadrupletFromMemory(lst::PixelQuadruplets& pixelQuadrupletsInGPU,
+                                                                   unsigned int pixelQuadrupletIndex) {
+    pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex] = true;
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT5(unsigned int ix, unsigned int jx, QuintupletsConst quintuplets) {
@@ -176,6 +182,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return nMatched;
   };
 
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT4(unsigned int ix,
+                                                  unsigned int jx,
+                                                  lst::PixelQuadruplets const& pixelQuadrupletsInGPU) {
+    unsigned int hits1[Params_pT4::kHits];
+    unsigned int hits2[Params_pT4::kHits];
+
+    for (int i = 0; i < Params_pT4::kHits; i++) {
+      hits1[i] = pixelQuadrupletsInGPU.hitIndices[Params_pT4::kHits * ix + i];
+      hits2[i] = pixelQuadrupletsInGPU.hitIndices[Params_pT5::kHits * jx + i];
+    }
+
+    int nMatched = 0;
+    for (int i = 0; i < Params_pT4::kHits; i++) {
+      bool matched = false;
+      for (int j = 0; j < Params_pT4::kHits; j++) {
+        if (hits1[i] == hits2[j]) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
+        nMatched++;
+      }
+    }
+    return nMatched;
+  };
 
   struct RemoveDupQuintupletsAfterBuild {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
@@ -576,6 +608,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nMatched >= minNHitsForDup_pT5) {
             if (score1 > score2 or ((score1 == score2) and (ix > jx))) {
               rmPixelQuintupletFromMemory(pixelQuintuplets, ix);
+              break;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  struct removeDupPixelQuadrupletsInGPUFromMap {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc, lst::PixelQuadruplets pixelQuadrupletsInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      unsigned int nPixelQuadruplets = *pixelQuadrupletsInGPU.nPixelQuadruplets;
+      for (unsigned int ix = globalThreadIdx[1]; ix < nPixelQuadruplets; ix += gridThreadExtent[1]) {
+        float score1 = __H2F(pixelQuadrupletsInGPU.score[ix]);
+        for (unsigned int jx = globalThreadIdx[2]; jx < nPixelQuadruplets; jx += gridThreadExtent[2]) {
+          if (ix == jx)
+            continue;
+
+          int nMatched = checkHitspT4(ix, jx, pixelQuadrupletsInGPU);
+          float score2 = __H2F(pixelQuadrupletsInGPU.score[jx]);
+          const int minNHitsForDup_pT4 = 5; //FIXEME: to be tuned
+          if (nMatched >= minNHitsForDup_pT4) {
+            if (score1 > score2 or ((score1 == score2) and (ix > jx))) {
+              rmPixelQuadrupletFromMemory(pixelQuadrupletsInGPU, ix);
               break;
             }
           }

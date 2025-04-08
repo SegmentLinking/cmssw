@@ -32,6 +32,7 @@ void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
 void setPixelTripletOutputBranches(LSTEvent* event);
 void setQuadrupletOutputBranches(LSTEvent* event);
+void setPixelQuadrupletOutputBranches(LSTEvent* event);
 void setGnnNtupleBranches(LSTEvent* event);
 void setGnnNtupleMiniDoublet(LSTEvent* event,
                              unsigned int MD,
@@ -80,6 +81,8 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(LSTEvent* event,
                                                                                                unsigned int);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT4(LSTEvent* event,
+                                                                                               unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT4(LSTEvent* event,
                                                                                                unsigned int);
 
 // Print multiplicities

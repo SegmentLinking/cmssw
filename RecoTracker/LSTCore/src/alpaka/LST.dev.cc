@@ -435,6 +435,10 @@ void lst::LST<Acc3D>::run(Queue& queue,
     printf("# of Quadruplets produced endcap layer 5: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(4));
   }
 
+  event.createPixelQuadruplets();
+  if (verbose)
+    printf("# of Pixel Quadruplets produced: %d\n", event.getNumberOfPixelQuadruplets());
+
   event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
   if (verbose) {
     printf("# of TrackCandidates produced: %d\n", event.getNumberOfTrackCandidates());
@@ -444,6 +448,7 @@ void lst::LST<Acc3D>::run(Queue& queue,
     printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
     printf("        # of T4 TrackCandidates produced: %d\n", event.getNumberOfT4TrackCandidates());
+    printf("        # of pT4 TrackCandidates produced: %d\n", event.getNumberOfPT4TrackCandidates());
   }
 
   getOutput(event);

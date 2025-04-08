@@ -20,12 +20,14 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 
 // ----* MD *----
 std::vector<unsigned int> getHitsFromMD(LSTEvent* event, unsigned int MD);
+std::vector<unsigned int> getModuleIdxsFromMD(LSTEvent* event, unsigned int MD);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromMD(LSTEvent* event,
                                                                                              unsigned MD);
 
 // ----* LS *----
 std::vector<unsigned int> getMDsFromLS(LSTEvent* event, unsigned int LS);
 std::vector<unsigned int> getHitsFromLS(LSTEvent* event, unsigned int LS);
+std::vector<unsigned int> getModuleIdxsFromLS(LSTEvent* event, unsigned int LS);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromLS(LSTEvent* event,
                                                                                              unsigned LS);
 
@@ -94,4 +96,19 @@ std::vector<unsigned int> getHitTypesFromT4(LSTEvent* event, unsigned int T4);
 std::vector<unsigned int> getModuleIdxsFromT4(LSTEvent* event, unsigned int T4);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT4(LSTEvent* event,
                                                                                              unsigned T4);
+
+// ----* pT4 *----
+unsigned int getPixelLSFrompT4(LSTEvent* event, unsigned int pT4);
+unsigned int getT4FrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getT3sFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getLSsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getMDsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getOuterTrackerHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getPixelHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitIdxsFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getHitTypesFrompT4(LSTEvent* event, unsigned int pT4);
+std::vector<unsigned int> getModuleIdxsFrompT4(LSTEvent* event, unsigned int pT4);
+std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT4(LSTEvent* event,
+                                                                                              unsigned pT5);
 #endif
