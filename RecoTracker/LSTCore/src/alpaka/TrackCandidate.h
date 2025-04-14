@@ -15,12 +15,15 @@
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 
+#include "NeuralNetwork.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addpLSTrackCandidateToMemory(TrackCandidates& cands,
                                                                    unsigned int trackletIndex,
                                                                    unsigned int trackCandidateIndex,
                                                                    uint4 hitIndices,
-                                                                   int pixelSeedIndex) {
+                                                                   int pixelSeedIndex,
+                                                                   float const embedding[4]) {
     cands.trackCandidateType()[trackCandidateIndex] = LSTObjType::pLS;
     cands.directObjectIndices()[trackCandidateIndex] = trackletIndex;
     cands.pixelSeedIndex()[trackCandidateIndex] = pixelSeedIndex;
@@ -33,6 +36,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     cands.hitIndices()[trackCandidateIndex][1] = hitIndices.z;
     cands.hitIndices()[trackCandidateIndex][2] = hitIndices.y;
     cands.hitIndices()[trackCandidateIndex][3] = hitIndices.w;
+
+    cands.embeddingDim0()[trackCandidateIndex] = embedding[0];
+    cands.embeddingDim1()[trackCandidateIndex] = embedding[1];
+    cands.embeddingDim2()[trackCandidateIndex] = embedding[2];
+    cands.embeddingDim3()[trackCandidateIndex] = embedding[3];
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateToMemory(TrackCandidates& cands,
@@ -389,12 +397,75 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           break;
 
         } else {
+          float myEmbedding[4];
+          lst::tcdnn::runInference(acc,
+                                   pixelSegments.ptIn()[pixelArrayIndex],
+                                   pixelSegments.eta()[pixelArrayIndex],
+                                   pixelSegments.phi()[pixelArrayIndex],
+                                   8.0,
+                                   myEmbedding);
+
           alpaka::atomicAdd(acc, &cands.nTrackCandidatespLS(), 1u, alpaka::hierarchy::Threads{});
           addpLSTrackCandidateToMemory(cands,
                                        pixelArrayIndex,
                                        trackCandidateIdx,
                                        pixelSegments.pLSHitsIdxs()[pixelArrayIndex],
-                                       pixelSegments.seedIdx()[pixelArrayIndex]);
+                                       pixelSegments.seedIdx()[pixelArrayIndex],
+                                       myEmbedding);
+        }
+      }
+    }
+  };
+
+  struct TrackCandidateDuplicateFilter {
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc, TrackCandidates cands) const {
+      unsigned int nTC = cands.nTrackCandidates();
+
+      // 2D loop: each thread processes (iTC, jTC).
+      for (unsigned int iTC : cms::alpakatools::uniform_elements_x(acc, nTC)) {
+        // Retrieve the 4D embedding for iTC
+        float e0i = cands.embeddingDim0()[iTC];
+        float e1i = cands.embeddingDim1()[iTC];
+        float e2i = cands.embeddingDim2()[iTC];
+        float e3i = cands.embeddingDim3()[iTC];
+
+        // Skip if iTC's embedding is all zero
+        bool iTC_isDefault = (e0i == 0.f && e1i == 0.f && e2i == 0.f && e3i == 0.f);
+        if (iTC_isDefault) {
+          cands.isDupFilter()[iTC] = false;
+          continue;  // Don't compare iTC to anyone
+        }
+
+        for (unsigned int jTC : cms::alpakatools::uniform_elements_y(acc, nTC)) {
+          // Only compare jTC > iTC to avoid double counting and self-comparison
+          if (jTC <= iTC) {
+            continue;
+          }
+
+          // Retrieve the 4D embedding for jTC
+          float e0j = cands.embeddingDim0()[jTC];
+          float e1j = cands.embeddingDim1()[jTC];
+          float e2j = cands.embeddingDim2()[jTC];
+          float e3j = cands.embeddingDim3()[jTC];
+
+          // Skip if jTC's embedding is all zero
+          bool jTC_isDefault = (e0j == 0.f && e1j == 0.f && e2j == 0.f && e3j == 0.f);
+          if (jTC_isDefault) {
+            cands.isDupFilter()[jTC] = false;
+            continue;  // No need to compare iTC vs jTC
+          }
+
+          // Compute squared distance in embedding space
+          float dx = e0i - e0j;
+          float dy = e1i - e1j;
+          float dz = e2i - e2j;
+          float dw = e3i - e3j;
+          float dist2 = dx * dx + dy * dy + dz * dz + dw * dw;
+
+          float threshold = 0.05f;
+          if (dist2 < threshold * threshold) {
+            cands.isDupFilter()[jTC] = true;
+          }
         }
       }
     }
