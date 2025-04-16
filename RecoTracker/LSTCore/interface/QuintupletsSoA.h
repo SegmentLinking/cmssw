@@ -13,6 +13,8 @@ namespace lst {
                       SOA_COLUMN(Params_T5::ArrayU16xLayers, lowerModuleIndices),  // lower module index in each layer
                       SOA_COLUMN(Params_T5::ArrayU8xLayers, logicalLayers),        // layer ID
                       SOA_COLUMN(Params_T5::ArrayUxHits, hitIndices),              // hit indices
+                      SOA_COLUMN(Params_Embedding::ArrayFx6, embInner),
+                      SOA_COLUMN(Params_Embedding::ArrayFx6, embOuter),
                       SOA_COLUMN(FPX, innerRadius),                                // inner triplet circle radius
                       SOA_COLUMN(FPX, bridgeRadius),                               // "middle"/bridge triplet radius
                       SOA_COLUMN(FPX, outerRadius),                                // outer triplet radius

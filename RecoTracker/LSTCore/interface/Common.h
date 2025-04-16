@@ -57,6 +57,12 @@ namespace lst {
   };
 #endif
 
+
+  struct Params_Embedding {
+    // Embedding is a fixed array of 6 floats.
+    using ArrayFx6 = edm::StdArray<float, 6>;
+  };
+
   // Defining the constant host device variables right up here
   // Currently pixel tracks treated as LSs with 2 double layers (IT layers 1+2 and 3+4) and 4 hits. To be potentially handled better in the future.
   struct Params_Modules {

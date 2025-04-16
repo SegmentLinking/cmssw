@@ -137,6 +137,9 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
   ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
+  ana.tx->createBranch<std::vector<int>>("t5_isDupAlgoFlag");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("t5_embInner");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("t5_embOuter");
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -198,6 +201,7 @@ void createT3DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t3_betaIn");
   ana.tx->createBranch<std::vector<float>>("t3_centerX");
   ana.tx->createBranch<std::vector<float>>("t3_centerY");
+  ana.tx->createBranch<std::vector<float>>("t3_rzChiSquared");
   ana.tx->createBranch<std::vector<float>>("t3_radius");
   ana.tx->createBranch<std::vector<bool>>("t3_partOfPT5");
   ana.tx->createBranch<std::vector<bool>>("t3_partOfT5");
@@ -559,6 +563,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets.innerRadius()[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets.bridgeRadius()[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets.outerRadius()[quintupletIndex]));
+      ana.tx->pushbackToBranch<int>("t5_isDupAlgoFlag", quintuplets.isDup()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets.chiSquared()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets.rzChiSquared()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_nonAnchorChiSquared", quintuplets.nonAnchorChiSquared()[quintupletIndex]);
@@ -566,6 +571,15 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t5_dBeta2", quintuplets.dBeta2()[quintupletIndex]);
       ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
+
+      std::vector<float> innerEmb(8);
+      std::vector<float> outerEmb(8);
+      for(unsigned int comp = 0; comp < 6; ++comp) {
+          innerEmb[comp] = quintuplets.embInner()[quintupletIndex][comp];
+          outerEmb[comp] = quintuplets.embOuter()[quintupletIndex][comp];
+      }
+      ana.tx->pushbackToBranch<std::vector<float>>("t5_embInner", innerEmb);
+      ana.tx->pushbackToBranch<std::vector<float>>("t5_embOuter", outerEmb);
 
       t5_matched_simIdx.push_back(simidx);
 
@@ -788,6 +802,7 @@ void setT3DNNBranches(LSTEvent* event) {
       // Fill the branches with T3-specific data
       ana.tx->pushbackToBranch<float>("t3_betaIn", triplets.betaIn()[tripletIndex]);
       ana.tx->pushbackToBranch<float>("t3_centerX", triplets.centerX()[tripletIndex]);
+      ana.tx->pushbackToBranch<float>("t3_rzChiSquared", triplets.rzChiSquared()[tripletIndex]);
       ana.tx->pushbackToBranch<float>("t3_centerY", triplets.centerY()[tripletIndex]);
       ana.tx->pushbackToBranch<float>("t3_radius", triplets.radius()[tripletIndex]);
       ana.tx->pushbackToBranch<bool>("t3_partOfPT5", triplets.partOfPT5()[tripletIndex]);

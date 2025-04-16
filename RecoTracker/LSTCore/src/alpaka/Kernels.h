@@ -2,6 +2,7 @@
 #define RecoTracker_LSTCore_src_alpaka_Kernels_h
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
+#include "FWCore/Utilities/interface/CMSUnrollLoop.h"
 
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
@@ -250,6 +251,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               int nMatched = checkHitsT5(ix, jx, quintuplets);
               const int minNHitsForDup_T5 = 5;
               if (dR2 < 0.001f || nMatched >= minNHitsForDup_T5) {
+                // Compute Euclidean distances between the two embeddings.
+                float d_inner_sq = 0.f;
+                float d_outer_sq = 0.f;
+                CMS_UNROLL_LOOP
+                for (unsigned int k = 0; k < 6; ++k) {
+                  float diff_inner = quintuplets.embInner()[ix][k] - quintuplets.embInner()[jx][k];
+                  d_inner_sq += diff_inner * diff_inner;
+                  float diff_outer = quintuplets.embOuter()[ix][k] - quintuplets.embOuter()[jx][k];
+                  d_outer_sq += diff_outer * diff_outer;
+                }
+                float d_av = (d_inner_sq + d_outer_sq)/2.;
+                //std::cout << "d_av: " << d_av << ", d_inner_sq: " << d_inner_sq << ", d_outer_sq: " << d_outer_sq << ", nMatched: " << nMatched << ", dR2: " << dR2 << std::endl;
+                if (d_av > 0.1) {
+                  continue;
+                }
                 if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
                 } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {

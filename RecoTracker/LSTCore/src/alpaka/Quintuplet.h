@@ -44,6 +44,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float scores,
                                                             uint8_t layer,
                                                             unsigned int quintupletIndex,
+                                                            const float (&embInner)[8],
+                                                            const float (&embOuter)[8],
                                                             bool tightCutFlag) {
     quintuplets.tripletIndices()[quintupletIndex][0] = innerTripletIndex;
     quintuplets.tripletIndices()[quintupletIndex][1] = outerTripletIndex;
@@ -86,6 +88,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.nonAnchorChiSquared()[quintupletIndex] = nonAnchorChiSquared;
     quintuplets.dBeta1()[quintupletIndex] = dBeta1;
     quintuplets.dBeta2()[quintupletIndex] = dBeta2;
+
+    for (unsigned int i = 0; i < 6; ++i) {
+        quintuplets.embInner()[quintupletIndex][i] = embInner[i];
+        quintuplets.embOuter()[quintupletIndex][i] = embOuter[i];
+    }
   }
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
@@ -1485,6 +1492,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& dBeta1,
                                                                float& dBeta2,
                                                                bool& tightCutFlag,
+                                                               float (&embInner)[8],
+                                                               float (&embOuter)[8],
                                                                const float ptCut) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
@@ -1522,6 +1531,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     outerRadius = triplets.radius()[outerTripletIndex];
     std::tie(bridgeRadius, g, f) = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4);
     innerRadius = triplets.radius()[innerTripletIndex];
+
+    const float* tripEmbInner = triplets.embedding()[innerTripletIndex].data();
+    const float* tripEmbOuter = triplets.embedding()[outerTripletIndex].data();
+
+    for (unsigned int i = 0; i < 6; ++i) {
+      embInner[i] = tripEmbInner[i];
+      embOuter[i] = tripEmbOuter[i];
+    }
+
+    float embeddingDistance = 0.f;
+    for (unsigned int i = 0; i < 6; ++i) {
+      float diff = embInner[i] - embOuter[i];
+      embeddingDistance += diff * diff;
+    }
+    embeddingDistance = alpaka::math::sqrt(acc, embeddingDistance);
+
+    // if (embeddingDistance > 0.4f) {
+    //   return false;
+    // }
 
     bool inference = lst::t5dnn::runInference(acc,
                                               mds,
@@ -1698,6 +1726,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
                 rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
 
+            float embInner[6];
+            float embOuter[6];
+
             bool tightCutFlag = false;
             bool success = runQuintupletDefaultAlgo(acc,
                                                     modules,
@@ -1723,6 +1754,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     dBeta1,
                                                     dBeta2,
                                                     tightCutFlag,
+                                                    embInner,
+                                                    embOuter,
                                                     ptCut);
 
             if (success) {
@@ -1776,6 +1809,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         scores,
                                         layer,
                                         quintupletIndex,
+                                        embInner,
+                                        embOuter,
                                         tightCutFlag);
 
                   triplets.partOfT5()[quintuplets.tripletIndices()[quintupletIndex][0]] = true;

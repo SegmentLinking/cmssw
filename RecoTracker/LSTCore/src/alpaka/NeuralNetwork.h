@@ -9,6 +9,7 @@
 
 #include "T5NeuralNetworkWeights.h"
 #include "T3NeuralNetworkWeights.h"
+#include "T3EmbedNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -135,6 +136,91 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t3dnn
+
+  namespace t3embdnn {
+
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE void runEmbed(TAcc const& acc,
+                                                MiniDoubletsConst mds,
+                                                const unsigned int mdIndex0,  // First hit index
+                                                const unsigned int mdIndex2,  // Middle hit index
+                                                const unsigned int mdIndex4,  // Outer hit index
+                                                const float radius,         // T3 circle radius
+                                                const float rz,             // t3_rzChiSquared value
+                                                const float betaIn,         // Beta angle of inner segment
+                                                float (&embedding)[8]) {     // Output embedding
+
+      // Network dimensions: input (16 features) -> hidden layers (64, 32) -> embedding (8)
+      constexpr unsigned int kinputFeatures  = 16;
+      constexpr unsigned int khidden        = 32;
+      constexpr unsigned int kembedding      = 6;
+
+      // Hard-coded normalization constants.
+      constexpr float kEta_norm = 3.00f;
+      constexpr float kZ_max    = 267.23f;
+      constexpr float kR_max    = 110.11f;
+      constexpr float kPhi_norm = 3.1416f;
+
+      // Input feature vector.
+      float x[kinputFeatures];
+
+      // Extract hit parameters directly (without absolute value corrections)
+      float eta0 = mds.anchorEta()[mdIndex0];  // first hit eta
+      float phi0 = mds.anchorPhi()[mdIndex0];  // first hit phi
+      float z0   = mds.anchorZ()[mdIndex0];    // first hit z
+      float r0   = mds.anchorRt()[mdIndex0];    // first hit r
+
+      float eta2 = mds.anchorEta()[mdIndex2];  // middle hit eta
+      float phi2 = mds.anchorPhi()[mdIndex2];  // middle hit phi
+      float z2   = mds.anchorZ()[mdIndex2];    // middle hit z
+      float r2   = mds.anchorRt()[mdIndex2];    // middle hit r
+
+      float eta4 = mds.anchorEta()[mdIndex4];  // outer hit eta
+      float phi4 = mds.anchorPhi()[mdIndex4];  // outer hit phi
+      float z4   = mds.anchorZ()[mdIndex4];    // outer hit z
+      float r4   = mds.anchorRt()[mdIndex4];    // outer hit r
+
+      // Use safe values for logarithms.
+      float safe_radius = (radius > 1e-6f ? radius : 1e-6f);
+      float safe_rz     = (rz     > 1e-6f ? rz     : 1e-6f);
+
+      x[0]  = eta0 / kEta_norm;
+      x[1]  = alpaka::math::cos(acc, phi0);
+      x[2]  = alpaka::math::sin(acc, phi0);
+      x[3]  = z0 / kZ_max;
+      x[4]  = r0 / kR_max;
+      x[5]  = (eta2 - eta0) / kEta_norm;
+      x[6]  = cms::alpakatools::deltaPhi(acc, phi2, phi0) / kPhi_norm;
+      x[7]  = (z2 - z0) / kZ_max;
+      x[8]  = (r2 - r0) / kR_max;
+      x[9]  = (eta4 - eta2) / kEta_norm;
+      x[10] = cms::alpakatools::deltaPhi(acc, phi4, phi2) / kPhi_norm;
+      x[11] = (z4 - z2) / kZ_max;
+      x[12] = (r4 - r2) / kR_max;
+      x[13] = alpaka::math::log10(acc, safe_radius);
+      x[14] = betaIn;
+      x[15] = alpaka::math::log10(acc, safe_rz);
+
+      // Intermediate layer outputs.
+      float x1[khidden];
+      float x2[khidden];
+      float x3[kembedding];
+
+      linear_layer<kinputFeatures, khidden>(x, x1, dnn::t3embdnn::wgtT_fc1, dnn::t3embdnn::bias_fc1);
+      relu_activation<khidden>(x1);
+
+      linear_layer<khidden, khidden>(x1, x2, dnn::t3embdnn::wgtT_fc2, dnn::t3embdnn::bias_fc2);
+      relu_activation<khidden>(x2);
+
+      linear_layer<khidden, kembedding>(x2, x3, dnn::t3embdnn::wgtT_fc3, dnn::t3embdnn::bias_fc3);
+
+      // Copy the output to the embedding array.
+      for (unsigned int i = 0; i < kembedding; ++i) {
+        embedding[i] = x3[i];
+      }
+    }
+
+  }  // namespace t3embdnn
 
   namespace t5dnn {
     template <typename TAcc>

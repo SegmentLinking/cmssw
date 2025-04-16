@@ -10,6 +10,8 @@
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/Circle.h"
 
+#include "FWCore/Utilities/interface/CMSUnrollLoop.h"
+
 #include "NeuralNetwork.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -32,6 +34,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float circleRadius,
                                                          float circleCenterX,
                                                          float circleCenterY,
+                                                         float rzChiSquared,
+                                                         float (&embedding)[8],
                                                          unsigned int tripletIndex) {
     triplets.segmentIndices()[tripletIndex][0] = innerSegmentIndex;
     triplets.segmentIndices()[tripletIndex][1] = outerSegmentIndex;
@@ -43,6 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     triplets.radius()[tripletIndex] = circleRadius;
     triplets.centerX()[tripletIndex] = circleCenterX;
     triplets.centerY()[tripletIndex] = circleCenterY;
+    triplets.rzChiSquared()[tripletIndex] = rzChiSquared;
     triplets.logicalLayers()[tripletIndex][0] =
         modules.layers()[innerInnerLowerModuleIndex] + (modules.subdets()[innerInnerLowerModuleIndex] == 4) * 6;
     triplets.logicalLayers()[tripletIndex][1] =
@@ -65,6 +70,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     triplets.rtOut()[tripletIndex] = rtOut;
     triplets.betaInCut()[tripletIndex] = betaInCut;
 #endif
+
+    CMS_UNROLL_LOOP
+    for (unsigned int i = 0; i < 6; ++i) {
+      triplets.embedding()[tripletIndex][i] = embedding[i];
+    }
   }
 
   template <typename TAcc>
@@ -79,7 +89,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        unsigned int thirdMDIndex,
                                                        float circleRadius,
                                                        float circleCenterX,
-                                                       float circleCenterY) {
+                                                       float circleCenterY,
+                                                       float& rzChiSquared) {
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modules.lstLayers()[innerInnerLowerModuleIndex];
     const int layer2 = modules.lstLayers()[middleLowerModuleIndex];
@@ -231,7 +242,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float a = -2.f * k2Rinv1GeVf * 100 * charge;
     float rou = a / p;
 
-    float rzChiSquared = 0;
+    rzChiSquared = 0;
     float error = 0;
 
     //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
@@ -647,6 +658,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleRadius,
                                                                    float& circleCenterX,
                                                                    float& circleCenterY,
+                                                                   float& rzChiSquared,
+                                                                   float (&embedding)[8],
                                                                    const float ptCut) {
     //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
     if (segments.mdIndices()[innerSegmentIndex][1] != segments.mdIndices()[outerSegmentIndex][0])
@@ -677,7 +690,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                              thirdMDIndex,
                              circleRadius,
                              circleCenterX,
-                             circleCenterY))
+                             circleCenterY,
+                             rzChiSquared))
       return false;
 
     if (not passPointingConstraint(acc,
@@ -704,6 +718,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         lst::t3dnn::runInference(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn);
     if (!inference)  // T3-building cut
       return false;
+
+    t3embdnn::runEmbed(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, rzChiSquared, betaIn, embedding);
 
     return true;
   }
@@ -743,7 +759,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
 
-            float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
+            float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY, rzChiSquared;
+            float embedding[8];
 
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modules,
@@ -761,6 +778,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                         circleRadius,
                                                         circleCenterX,
                                                         circleCenterY,
+                                                        rzChiSquared,
+                                                        embedding,
                                                         ptCut);
 
             if (success) {
@@ -799,6 +818,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    circleRadius,
                                    circleCenterX,
                                    circleCenterY,
+                                   rzChiSquared,
+                                   embedding,
                                    tripletIndex);
               }
             }
