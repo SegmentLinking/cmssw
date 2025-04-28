@@ -1885,7 +1885,7 @@ void fillOutputBranches_LSTOD(LSTEvent* event) {
 
     std::vector<std::vector<int>> simHitIdxs(11);
     float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
-    float matchfrac = 0.75;
+    
 
     // Loop over the simhits (truth hits)
     for (size_t isimhit = 0; isimhit < trk.sim_simHitIdx()[isimtrk].size(); ++isimhit) {
@@ -2017,11 +2017,15 @@ void fillOutputBranches_LSTOD(LSTEvent* event) {
   auto pixelSegments = event->getPixelSegments();
   auto segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
   auto tripletOccupancies = event->getTriplets<TripletsOccupancySoA>();
+  auto triplets = event->getTriplets<TripletsSoA>();
   auto quintupletOccupancies = event->getQuintuplets<QuintupletsOccupancySoA>();
-  auto quints = event->getQuintuplets<QuintupletsSoA>();
+  auto quintuplets = event->getQuintuplets<QuintupletsSoA>();
   auto pixelQuintuplets = event->getPixelQuintuplets();
   auto pixelTriplets = event->getPixelTriplets();
   auto trackCandidates = event->getTrackCandidates();
+
+  //setting matchfrac used for defining accepted tracks
+  float matchfrac = 0.75;
 
   //--------------------------------------------
   //
