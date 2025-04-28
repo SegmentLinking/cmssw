@@ -30,6 +30,8 @@ namespace lst {
     bool* partOfPT5;
     bool* partOfT5;
     bool* partOfPT3;
+    bool* partOfPT4;
+    bool* partOfT4;
     int* charge;
 
 #ifdef CUT_VALUE_DEBUG
@@ -54,6 +56,8 @@ namespace lst {
       partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
       partOfT5 = alpaka::getPtrNative(buf.partOfT5_buf);
       partOfPT3 = alpaka::getPtrNative(buf.partOfPT3_buf);
+      partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
+      partOfT4 = alpaka::getPtrNative(buf.partOfT4_buf);
       charge = alpaka::getPtrNative(buf.charge_buf);
 #ifdef CUT_VALUE_DEBUG
       zOut = alpaka::getPtrNative(buf.zOut_buf);
@@ -78,6 +82,8 @@ namespace lst {
     Buf<TDev, float> circleCenterY_buf;
     Buf<TDev, bool> partOfPT5_buf;
     Buf<TDev, bool> partOfT5_buf;
+    Buf<TDev, bool> partOfPT4_buf;
+    Buf<TDev, bool> partOfT4_buf;
     Buf<TDev, bool> partOfPT3_buf;
     Buf<TDev, int> charge_buf;
 
@@ -113,6 +119,8 @@ namespace lst {
           circleCenterY_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           partOfT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
+          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
+          partOfT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           charge_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue))
 #ifdef CUT_VALUE_DEBUG
@@ -136,6 +144,8 @@ namespace lst {
       alpaka::memset(queue, partOfPT5_buf, false);
       alpaka::memset(queue, partOfT5_buf, false);
       alpaka::memset(queue, partOfPT3_buf, false);
+      alpaka::memset(queue, partOfPT4_buf, false);
+      alpaka::memset(queue, partOfT4_buf, false);
     }
 
     inline Triplets const* data() const { return &data_; }

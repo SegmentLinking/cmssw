@@ -36,6 +36,7 @@ namespace lst {
     char* isDup;
     bool* partOfPT5;
     bool* partOfPT3;
+    bool* partOfPT4;
     float* ptIn;
     float* ptErr;
     float* px;
@@ -73,6 +74,7 @@ namespace lst {
       isQuad = alpaka::getPtrNative(buf.isQuad_buf);
       isDup = alpaka::getPtrNative(buf.isDup_buf);
       partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
+      partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
       partOfPT3 = alpaka::getPtrNative(buf.partOfPT3_buf); 
       ptIn = alpaka::getPtrNative(buf.ptIn_buf);
       ptErr = alpaka::getPtrNative(buf.ptErr_buf);
@@ -114,6 +116,7 @@ namespace lst {
     Buf<TDev, char> isDup_buf;
     Buf<TDev, bool> partOfPT5_buf;
     Buf<TDev, bool> partOfPT3_buf;
+    Buf<TDev, bool> partOfPT4_buf;
     Buf<TDev, float> ptIn_buf;
     Buf<TDev, float> ptErr_buf;
     Buf<TDev, float> px_buf;
@@ -158,6 +161,7 @@ namespace lst {
           isDup_buf(allocBufWrapper<char>(devAccIn, maxPixelSegments, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
           partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
+          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, maxPixelSegments, queue)),
           ptIn_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           ptErr_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
           px_buf(allocBufWrapper<float>(devAccIn, maxPixelSegments, queue)),
@@ -174,6 +178,7 @@ namespace lst {
       alpaka::memset(queue, totOccupancySegments_buf, 0u);
       alpaka::memset(queue, partOfPT5_buf, false);
       alpaka::memset(queue, partOfPT3_buf, false);
+      alpaka::memset(queue, partOfPT4_buf, false);
       alpaka::memset(queue, pLSHitsIdxs_buf, 0u);
       alpaka::wait(queue);
     }

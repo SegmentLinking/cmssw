@@ -25,12 +25,14 @@ namespace lst {
     unsigned int* hitIndices;
     uint16_t* lowerModuleIndices;
     FPX* pixelRadius;
+    FPX* pixelRadiusError;
     FPX* quadrupletRadius;
     FPX* centerX;
     FPX* centerY;
     float* rzChiSquared;
     float* rPhiChiSquared;
     float* rPhiChiSquaredInwards;
+    float* pt;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -46,12 +48,14 @@ namespace lst {
       hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
       lowerModuleIndices = alpaka::getPtrNative(buf.lowerModuleIndices_buf);
       pixelRadius = alpaka::getPtrNative(buf.pixelRadius_buf);
+      pixelRadiusError = alpaka::getPtrNative(buf.pixelRadiusError_buf);
       quadrupletRadius = alpaka::getPtrNative(buf.quadrupletRadius_buf);
       centerX = alpaka::getPtrNative(buf.centerX_buf);
       centerY = alpaka::getPtrNative(buf.centerY_buf);
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
       rPhiChiSquared = alpaka::getPtrNative(buf.rPhiChiSquared_buf);
       rPhiChiSquaredInwards = alpaka::getPtrNative(buf.rPhiChiSquaredInwards_buf);
+      pt = alpaka::getPtrNative(buf.pt_buf);
     }
   };
 
@@ -69,12 +73,14 @@ namespace lst {
     Buf<TDev, unsigned int> hitIndices_buf;
     Buf<TDev, uint16_t> lowerModuleIndices_buf;
     Buf<TDev, FPX> pixelRadius_buf;
+    Buf<TDev, FPX> pixelRadiusError_buf;
     Buf<TDev, FPX> quadrupletRadius_buf;
     Buf<TDev, FPX> centerX_buf;
     Buf<TDev, FPX> centerY_buf;
     Buf<TDev, float> rzChiSquared_buf;
     Buf<TDev, float> rPhiChiSquared_buf;
     Buf<TDev, float> rPhiChiSquaredInwards_buf;
+    Buf<TDev, float> pt_buf;
 
     PixelQuadruplets data_;
 
@@ -92,12 +98,14 @@ namespace lst {
           hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, maxPixelQuadruplets * Params_pT4::kHits, queue)),
           lowerModuleIndices_buf(allocBufWrapper<uint16_t>(devAccIn, maxPixelQuadruplets * Params_pT4::kLayers, queue)),
           pixelRadius_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuadruplets, queue)),
+          pixelRadiusError_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuadruplets, queue)),
           quadrupletRadius_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuadruplets, queue)),
           centerX_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuadruplets, queue)),
           centerY_buf(allocBufWrapper<FPX>(devAccIn, maxPixelQuadruplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, maxPixelQuadruplets, queue)),
           rPhiChiSquared_buf(allocBufWrapper<float>(devAccIn, maxPixelQuadruplets, queue)),
-          rPhiChiSquaredInwards_buf(allocBufWrapper<float>(devAccIn, maxPixelQuadruplets, queue)) {
+          rPhiChiSquaredInwards_buf(allocBufWrapper<float>(devAccIn, maxPixelQuadruplets, queue)),
+          pt_buf(allocBufWrapper<float>(devAccIn, maxPixelQuadruplets, queue)) {
       alpaka::memset(queue, nPixelQuadruplets_buf, 0u);
       alpaka::memset(queue, totOccupancyPixelQuadruplets_buf, 0u);
       alpaka::wait(queue);
@@ -122,9 +130,11 @@ namespace lst {
                                                                  float eta,
                                                                  float phi,
                                                                  float pixelRadius,
+                                                                 float pixelRadiusError,
                                                                  float quadrupletRadius,
                                                                  float centerX,
-                                                                 float centerY) {
+                                                                 float centerY,
+                                                                 float pt) {
     pixelQuadrupletsInGPU.pixelIndices[pixelQuadrupletIndex] = pixelIndex;
     pixelQuadrupletsInGPU.T4Indices[pixelQuadrupletIndex] = T4Index;
     pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex] = false;
@@ -133,6 +143,7 @@ namespace lst {
     pixelQuadrupletsInGPU.phi[pixelQuadrupletIndex] = __F2H(phi);
 
     pixelQuadrupletsInGPU.pixelRadius[pixelQuadrupletIndex] = __F2H(pixelRadius);
+    pixelQuadrupletsInGPU.pixelRadiusError[pixelQuadrupletIndex] = __F2H(pixelRadiusError);
     pixelQuadrupletsInGPU.quadrupletRadius[pixelQuadrupletIndex] = __F2H(quadrupletRadius);
     pixelQuadrupletsInGPU.centerX[pixelQuadrupletIndex] = __F2H(centerX);
     pixelQuadrupletsInGPU.centerY[pixelQuadrupletIndex] = __F2H(centerY);
@@ -193,6 +204,7 @@ namespace lst {
     pixelQuadrupletsInGPU.rzChiSquared[pixelQuadrupletIndex] = rzChiSquared;
     pixelQuadrupletsInGPU.rPhiChiSquared[pixelQuadrupletIndex] = rPhiChiSquared;
     pixelQuadrupletsInGPU.rPhiChiSquaredInwards[pixelQuadrupletIndex] = rPhiChiSquaredInwards;
+    pixelQuadrupletsInGPU.pt[pixelQuadrupletIndex] = pt;
   };
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT4RZChiSquaredCuts(lst::Modules const& modulesInGPU,
@@ -518,6 +530,7 @@ namespace lst {
                                                                     float& rPhiChiSquared,
                                                                     float& rPhiChiSquaredInwards,
                                                                     float& pixelRadius,
+                                                                    float& pixelRadiusError,
                                                                     float& quadrupletRadius,
                                                                     float& centerX,
                                                                     float& centerY,
@@ -587,6 +600,9 @@ namespace lst {
     float pixelSegmentPz = segmentsInGPU.pz[pixelSegmentArrayIndex];
     int pixelSegmentCharge = segmentsInGPU.charge[pixelSegmentArrayIndex];
 
+    float pixelSegmentPtError = segmentsInGPU.ptErr[pixelSegmentArrayIndex];
+    pixelRadiusError = pixelSegmentPtError * kR1GeVf;
+
     rzChiSquared = 0;
 
     //get the appropriate centers
@@ -655,31 +671,44 @@ namespace lst {
     float T4CenterX = quadrupletsInGPU.regressionG[quadrupletIndex];
     float T4CenterY = quadrupletsInGPU.regressionF[quadrupletIndex];
     quadrupletRadius = quadrupletsInGPU.regressionRadius[quadrupletIndex];
+    float quadrupletEta = quadrupletsInGPU.eta[quadrupletIndex];
 
     rPhiChiSquared =
         computePT4RPhiChiSquared(acc, modulesInGPU, lowerModuleIndices, centerX, centerY, pixelRadius, xs, ys);
 
-    if (pixelRadius < 5.0f * kR1GeVf) {
-      if (not passPT4RPhiChiSquaredCuts(modulesInGPU,
-                                        lowerModuleIndex1,
-                                        lowerModuleIndex2,
-                                        lowerModuleIndex3,
-                                        lowerModuleIndex4,
-                                        rPhiChiSquared))
-        return false;
-    }
+    // if (pixelRadius < 5.0f * kR1GeVf) {
+    //   if (not passPT4RPhiChiSquaredCuts(modulesInGPU,
+    //                                     lowerModuleIndex1,
+    //                                     lowerModuleIndex2,
+    //                                     lowerModuleIndex3,
+    //                                     lowerModuleIndex4,
+    //                                     rPhiChiSquared))
+    //     return false;
+    // }
 
     rPhiChiSquaredInwards = computePT4RPhiChiSquaredInwards(T4CenterX, T4CenterY, quadrupletRadius, xPix, yPix);
 
-    if (quadrupletsInGPU.regressionRadius[quadrupletIndex] < 5.0f * kR1GeVf) {
-      if (not passPT4RPhiChiSquaredInwardsCuts(modulesInGPU,
-                                               lowerModuleIndex1,
-                                               lowerModuleIndex2,
-                                               lowerModuleIndex3,
-                                               lowerModuleIndex4,
-                                               rPhiChiSquaredInwards))
-        return false;
-    }
+    // if (quadrupletsInGPU.regressionRadius[quadrupletIndex] < 5.0f * kR1GeVf) {
+    //   if (not passPT4RPhiChiSquaredInwardsCuts(modulesInGPU,
+    //                                            lowerModuleIndex1,
+    //                                            lowerModuleIndex2,
+    //                                            lowerModuleIndex3,
+    //                                            lowerModuleIndex4,
+    //                                            rPhiChiSquaredInwards))
+    //     return false;
+    // }
+    float T4InnerRadius = quadrupletsInGPU.innerRadius[quadrupletIndex];
+    bool inference = lst::pt4dnn::runInference(acc,
+                                              T4InnerRadius,
+                                              pixelSegmentPt,
+                                              rPhiChiSquared,
+                                              quadrupletRadius,
+                                              pixelRadius,
+                                              pixelRadiusError,
+                                              rzChiSquared,
+                                              quadrupletEta);
+    if (!inference)
+      return false;
     //trusting the T4 regression center to also be a good estimate..
     centerX = (centerX + T4CenterX) / 2;
     centerY = (centerY + T4CenterY) / 2;
@@ -794,6 +823,7 @@ namespace lst {
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       for (unsigned int i_pLS = globalThreadIdx[1]; i_pLS < nPixelSegments; i_pLS += gridThreadExtent[1]) {
+        // continue; //don't build any pT4s
         auto iLSModule_max = connectedPixelIndex[i_pLS] + connectedPixelSize[i_pLS];
         for (unsigned int iLSModule = connectedPixelIndex[i_pLS] + globalBlockIdx[0]; iLSModule < iLSModule_max;
              iLSModule += gridBlockExtent[0]) {
@@ -822,8 +852,10 @@ namespace lst {
 
             if (quadrupletsInGPU.isDup[quadrupletIndex])
               continue;
+            // if (!(quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex]))
+            //   continue;
 
-            float rzChiSquared, rPhiChiSquared, rPhiChiSquaredInwards, pixelRadius, quadrupletRadius, centerX, centerY;
+            float rzChiSquared, rPhiChiSquared, rPhiChiSquaredInwards, pixelRadius, pixelRadiusError, quadrupletRadius, centerX, centerY;
 
             bool success = runPixelQuadrupletDefaultAlgo(acc,
                                                          modulesInGPU,
@@ -838,6 +870,7 @@ namespace lst {
                                                          rPhiChiSquared,
                                                          rPhiChiSquaredInwards,
                                                          pixelRadius,
+                                                         pixelRadiusError,
                                                          quadrupletRadius,
                                                          centerX,
                                                          centerY,
@@ -855,6 +888,7 @@ namespace lst {
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuadrupletsInGPU.nPixelQuadruplets, 1u);
                 float eta = __H2F(quadrupletsInGPU.eta[quadrupletIndex]);
                 float phi = __H2F(quadrupletsInGPU.phi[quadrupletIndex]);
+                float pt =  (__H2F(quadrupletsInGPU.innerRadius[quadrupletIndex]) * lst::k2Rinv1GeVf * 2 + segmentsInGPU.ptIn[i_pLS]) / 2; 
 
                 addPixelQuadrupletToMemory(modulesInGPU,
                                            mdsInGPU,
@@ -871,12 +905,15 @@ namespace lst {
                                            eta,
                                            phi,
                                            pixelRadius,
+                                           pixelRadiusError,
                                            quadrupletRadius,
                                            centerX,
-                                           centerY);
+                                           centerY,
+                                           pt);
 
-                // tripletsInGPU.partOfPT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
-                // tripletsInGPU.partOfPT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
+                tripletsInGPU.partOfPT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
+                tripletsInGPU.partOfPT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
+                segmentsInGPU.partOfPT4[i_pLS] = true;
                 quadrupletsInGPU.partOfPT4[quadrupletIndex] = true;
               }  // tot occupancy
             }  // end success
