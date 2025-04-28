@@ -56,6 +56,8 @@ void fillT4DNNBranches(LSTEvent* event, unsigned int T3);
 void setT4DNNBranches(LSTEvent* event);
 void fillT3DNNBranches(LSTEvent* event, unsigned int iT3);
 void setT3DNNBranches(LSTEvent* event);
+void fillpT4DNNBranches(LSTEvent* event, unsigned int ipT4);
+void setpT4DNNBranches(LSTEvent* event);
 void setpT3DNNBranches(LSTEvent* event);
 void setpLSOutputBranches(LSTEvent* event);
 

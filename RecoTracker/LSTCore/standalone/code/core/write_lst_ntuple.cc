@@ -168,7 +168,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t4_sim_vz");
   ana.tx->createBranch<std::vector<std::vector<int>>>("t4_matched_simIdx");
   ana.tx->createBranch<std::vector<float>>("t4_score_rphisum");
-  ana.tx->createBranch<std::vector<float>>("t4_score_t4dnn");
+  ana.tx->createBranch<std::vector<float>>("t4_promptscore_t4dnn");
+  ana.tx->createBranch<std::vector<float>>("t4_displacedscore_t4dnn");
 
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -191,6 +192,9 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("pT4_rPhiChiSquaredInwards");
   ana.tx->createBranch<std::vector<float>>("pT4_pMatched");
   ana.tx->createBranch<std::vector<int>>("pT4_region");
+  ana.tx->createBranch<std::vector<float>>("pT4_pixelRadius");
+  ana.tx->createBranch<std::vector<float>>("pT4_pixelRadiusError");
+  ana.tx->createBranch<std::vector<float>>("pT4_quadrupletRadius");
 
   // Occupancy branches
   ana.tx->createBranch<std::vector<int>>("module_layers");
@@ -518,6 +522,7 @@ void setOptionalOutputBranches(LSTEvent* event) {
   setpLSOutputBranches(event);
   setT4DNNBranches(event);
   setT3DNNBranches(event);
+  setpT4DNNBranches(event);
 
 #endif
 }
@@ -911,7 +916,8 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<int>("t4_moduleType_binary", moduleType_binary);
       ana.tx->pushbackToBranch<float>("t4_pMatched", percent_matched);
       ana.tx->pushbackToBranch<float>("t4_score_rphisum", __H2F(quadruplets->score_rphisum[quadrupletIndex]));
-      ana.tx->pushbackToBranch<float>("t4_score_t4dnn", quadruplets->score_t4dnn[quadrupletIndex]);
+      ana.tx->pushbackToBranch<float>("t4_promptscore_t4dnn", quadruplets->promptscore_t4dnn[quadrupletIndex]);
+      ana.tx->pushbackToBranch<float>("t4_displacedscore_t4dnn", quadruplets->displacedscore_t4dnn[quadrupletIndex]);
 
       int region = -1;
       if (layers[0]==7 and layers[1]==8 and layers[2]==9 and layers[3]==10) {
@@ -1630,6 +1636,48 @@ void setT3DNNBranches(LSTEvent* event) {
       // Fill hit-specific information
       fillT3DNNBranches(event, tripletIndex);
     }
+  }
+}
+
+//________________________________________________________________________________________________________________________________
+void fillpT4DNNBranches(LSTEvent* event, unsigned int ipT4) {
+  lst::PixelQuadruplets const* pixelQuadruplets = event->getPixelQuadruplets()->data();
+
+  float pixelRadius = pixelQuadruplets->pixelRadius[ipT4];
+  float pixelRadiusError = pixelQuadruplets->pixelRadiusError[ipT4];
+  float quadrupletRadius = pixelQuadruplets->quadrupletRadius[ipT4];
+
+  ana.tx->pushbackToBranch<float>("pT4_pixelRadius", pixelRadius);
+  ana.tx->pushbackToBranch<float>("pT4_pixelRadiusError", pixelRadiusError);
+  ana.tx->pushbackToBranch<float>("pT4_quadrupletRadius", quadrupletRadius); 
+}
+
+void setpT4DNNBranches(lst::Event<Acc3D>* event) {
+  lst::PixelQuadruplets const* pixelQuadruplets = event->getPixelQuadruplets()->data();
+  unsigned int nPT4 = *pixelQuadruplets->nPixelQuadruplets;
+  for (unsigned int ipT4 = 0; ipT4 < nPT4; ++ipT4) {
+    fillpT4DNNBranches(event, ipT4);
+  }
+}
+
+//________________________________________________________________________________________________________________________________
+void fillpT4DNNBranches(LSTEvent* event, unsigned int ipT4) {
+  lst::PixelQuadruplets const* pixelQuadruplets = event->getPixelQuadruplets()->data();
+
+  float pixelRadius = pixelQuadruplets->pixelRadius[ipT4];
+  float pixelRadiusError = pixelQuadruplets->pixelRadiusError[ipT4];
+  float quadrupletRadius = pixelQuadruplets->quadrupletRadius[ipT4];
+
+  ana.tx->pushbackToBranch<float>("pT4_pixelRadius", pixelRadius);
+  ana.tx->pushbackToBranch<float>("pT4_pixelRadiusError", pixelRadiusError);
+  ana.tx->pushbackToBranch<float>("pT4_quadrupletRadius", quadrupletRadius); 
+}
+
+void setpT4DNNBranches(lst::Event<Acc3D>* event) {
+  lst::PixelQuadruplets const* pixelQuadruplets = event->getPixelQuadruplets()->data();
+  unsigned int nPT4 = *pixelQuadruplets->nPixelQuadruplets;
+  for (unsigned int ipT4 = 0; ipT4 < nPT4; ++ipT4) {
+    fillpT4DNNBranches(event, ipT4);
   }
 }
 

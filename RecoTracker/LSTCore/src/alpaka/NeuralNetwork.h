@@ -15,6 +15,7 @@
 #include "NeuralNetworkWeights.h"
 #include "MiniDoublet.h"
 #include "Hit.h"
+#include "pT4NeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -498,7 +499,11 @@ namespace lst::t4dnn {
                                                    const unsigned int mdIndex3,
                                                    const unsigned int mdIndex4,
                                                    const float innerRadius,
-                                                   const float outerRadius) {
+                                                   const float outerRadius,
+                                                   float& promptScore,
+                                                   float& displacedScore,
+                                                   bool& TightPromptFlag,
+                                                   bool& TightDisplacedFlag) {
     // Constants
     constexpr unsigned int kinputFeatures = 19; 
     constexpr unsigned int khiddenFeatures = 32;
@@ -582,8 +587,21 @@ namespace lst::t4dnn {
 
     // Compare x_5 to the cut value for the relevant bin
     // return x_5 > kWp[pt_index][bin_index];
+    promptScore = x_3[1];
+    displacedScore = x_3[2];
+
+    // if (x_3[1] > kWp_prompt_tight[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index])
+    //   TightPromptFlag = true;
+    // if (x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced_tight[pt_index][bin_index]) 
+      // TightDisplacedFlag = true;
+    if (x_3[1] < 0.06 and x_3[2] > 0.34 and x_3[2] < 0.78) {
+      TightPromptFlag = false;
+    } else {
+      TightPromptFlag = true;
+    }
+
     return x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index];
-  }
+  } 
 
 }  //namespace lst::t4dnn
 
@@ -704,5 +722,80 @@ namespace lst::t3dnn {
     return x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index];
   }
 }  // namespace lst::t3dnn
+
+namespace lst::pt4dnn {
+  template <int FEATURES>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
+#pragma unroll FEATURES
+    for (unsigned int col = 0; col < FEATURES; ++col) {
+      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
+    }
+  }
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
+    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
+  }
+
+  template <int IN_FEATURES, int OUT_FEATURES>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
+                                                   float (&output)[OUT_FEATURES],
+                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
+                                                   const float (&biases)[OUT_FEATURES]) {
+#pragma unroll OUT_FEATURES
+    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
+      output[i] = biases[i];
+#pragma unroll IN_FEATURES
+      for (int j = 0; j < IN_FEATURES; ++j) {
+        output[i] += input[j] * weights[j][i];
+      }
+    }
+  }
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
+                                                   const float t4InnerRadius,
+                                                   const float pLS_pt,
+                                                   const float pt4_rPhiChiSquared,
+                                                   const float pt4_quad_rad,
+                                                   const float pt4_pix_rad,
+                                                   const float pt4_pixRadError,
+                                                   const float pt4_rzChiSquared,
+                                                   const float pt4_eta) {
+    constexpr unsigned int kinputFeatures = 6;
+    float x[kinputFeatures] = {alpaka::math::log10(acc, pt4_rPhiChiSquared),
+                               alpaka::math::log10(acc, pt4_quad_rad),
+                               alpaka::math::log10(acc, pt4_pix_rad),
+                               alpaka::math::log10(acc, pt4_pixRadError),
+                               alpaka::math::log10(acc, (pt4_rzChiSquared < 0.f) ? 1e-3f : pt4_rzChiSquared),
+                               alpaka::math::abs(acc, pt4_eta) / kEta_norm};
+
+    constexpr unsigned int khiddenFeatures = 32;
+    constexpr unsigned int koutputFeatures = 1;
+    float x1[khiddenFeatures];
+    float x2[khiddenFeatures];
+    float x3[koutputFeatures];
+
+    linear_layer<kinputFeatures, khiddenFeatures>(x, x1, wgtT_layer1, bias_layer1);
+    relu_activation<khiddenFeatures>(x1);
+
+    linear_layer<khiddenFeatures, khiddenFeatures>(x1, x2, wgtT_layer2, bias_layer2);
+    relu_activation<khiddenFeatures>(x2);
+
+    linear_layer<khiddenFeatures, koutputFeatures>(
+        x2, x3, wgtT_output_layer, bias_output_layer);
+    float output = sigmoid_activation(acc, x3[0]);
+
+    uint8_t bin_index = (alpaka::math::abs(acc, pt4_eta) > kEta_norm)
+                            ? (kEtaBins - 1)
+                            : static_cast<unsigned int>(alpaka::math::abs(acc, pt4_eta) / 0.25f);
+
+    return output > kWp[bin_index];
+    // float pt4_pt =(t4InnerRadius*lst::k2Rinv1GeVf * 2 + pLS_pt)/2;
+    // uint8_t pt_index = (pt4_pt > 5);
+    // return output > kWp[pt_index][bin_index];
+  }
+
+}  // namespace pt4dnn
 
 #endif

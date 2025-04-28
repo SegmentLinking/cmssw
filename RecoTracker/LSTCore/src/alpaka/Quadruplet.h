@@ -36,13 +36,18 @@ namespace lst {
     float* rzChiSquared;
 
     float* dBeta;
-    float* score_t4dnn;
+    float* promptscore_t4dnn;
+    float* displacedscore_t4dnn;
 
     float* regressionRadius;
     float* regressionG;
     float* regressionF;
 
     bool* partOfPT4;
+    bool* TightPromptFlag;
+    bool* TightDisplacedFlag;
+    bool* TightRPhiFlag;
+    bool* partOfTC;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -63,11 +68,16 @@ namespace lst {
       hitIndices = alpaka::getPtrNative(buf.hitIndices_buf);
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
       dBeta = alpaka::getPtrNative(buf.dBeta_buf);
-      score_t4dnn = alpaka::getPtrNative(buf.score_t4dnn_buf); 
+      promptscore_t4dnn = alpaka::getPtrNative(buf.promptscore_t4dnn_buf);
+      displacedscore_t4dnn = alpaka::getPtrNative(buf.displacedscore_t4dnn_buf);  
       regressionRadius = alpaka::getPtrNative(buf.regressionRadius_buf);
       regressionG = alpaka::getPtrNative(buf.regressionG_buf);
       regressionF = alpaka::getPtrNative(buf.regressionF_buf);
       partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
+      TightPromptFlag = alpaka::getPtrNative(buf.TightPromptFlag_buf);
+      TightDisplacedFlag = alpaka::getPtrNative(buf.TightDisplacedFlag_buf);
+      TightRPhiFlag = alpaka::getPtrNative(buf.TightRPhiFlag_buf);
+      partOfTC = alpaka::getPtrNative(buf.partOfTC_buf);
     }
   };
 
@@ -92,13 +102,18 @@ namespace lst {
     Buf<TDev, unsigned int> hitIndices_buf;
     Buf<TDev, float> rzChiSquared_buf;
     Buf<TDev, float> dBeta_buf;
-    Buf<TDev, float> score_t4dnn_buf;
+    Buf<TDev, float> promptscore_t4dnn_buf;
+    Buf<TDev, float> displacedscore_t4dnn_buf;
 
     Buf<TDev, float> regressionRadius_buf;
     Buf<TDev, float> regressionG_buf;
     Buf<TDev, float> regressionF_buf;
 
     Buf<TDev, bool> partOfPT4_buf;
+    Buf<TDev, bool> TightPromptFlag_buf;
+    Buf<TDev, bool> TightDisplacedFlag_buf;
+    Buf<TDev, bool> TightRPhiFlag_buf;
+    Buf<TDev, bool> partOfTC_buf;
 
     Quadruplets data_;
 
@@ -121,15 +136,24 @@ namespace lst {
           hitIndices_buf(allocBufWrapper<unsigned int>(devAccIn, Params_T4::kHits * nTotalQuadruplets, queue)),
           rzChiSquared_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           dBeta_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
-          score_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          promptscore_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          displacedscore_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionRadius_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionG_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
-          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)) {
+          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          TightPromptFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          TightDisplacedFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          TightRPhiFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          partOfTC_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)) {
       alpaka::memset(queue, nQuadruplets_buf, 0u);
       alpaka::memset(queue, totOccupancyQuadruplets_buf, 0u);
       alpaka::memset(queue, isDup_buf, 0u);
       alpaka::memset(queue, partOfPT4_buf, false);
+      alpaka::memset(queue, TightPromptFlag_buf, false);
+      alpaka::memset(queue, TightDisplacedFlag_buf, false);
+      alpaka::memset(queue, partOfTC_buf, false);
+      alpaka::memset(queue, TightRPhiFlag_buf, false);
       alpaka::wait(queue);
     }
 
@@ -162,10 +186,14 @@ namespace lst {
                                                             unsigned int quadrupletIndex,
                                                             float rzChiSquared,
                                                             float dBeta,
-                                                            float x_5,
+                                                            float promptScore,
+                                                            float displacedScore,
                                                             float regressionG,
                                                             float regressionF,
-                                                            float regressionRadius) {
+                                                            float regressionRadius,
+                                                            bool TightPromptFlag,
+                                                            bool TightDisplacedFlag,
+                                                            bool TightRPhiFlag) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1] = outerTripletIndex;
 
@@ -209,11 +237,16 @@ namespace lst {
     
     quadrupletsInGPU.rzChiSquared[quadrupletIndex] = rzChiSquared;
     quadrupletsInGPU.dBeta[quadrupletIndex] = dBeta;
-    quadrupletsInGPU.score_t4dnn[quadrupletIndex] = x_5;
+    quadrupletsInGPU.promptscore_t4dnn[quadrupletIndex] = promptScore;
+    quadrupletsInGPU.displacedscore_t4dnn[quadrupletIndex] = displacedScore;
 
     quadrupletsInGPU.regressionRadius[quadrupletIndex] = regressionRadius;
     quadrupletsInGPU.regressionG[quadrupletIndex] = regressionG;
     quadrupletsInGPU.regressionF[quadrupletIndex] = regressionF;
+
+    quadrupletsInGPU.TightPromptFlag[quadrupletIndex] = TightPromptFlag;
+    quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex] = TightDisplacedFlag;
+    quadrupletsInGPU.TightRPhiFlag[quadrupletIndex] = TightRPhiFlag;
   };
 
   template <typename TAcc>
@@ -2289,7 +2322,12 @@ namespace lst {
                                                                float& rzChiSquared,
                                                                float& nonAnchorChiSquared,
                                                                float& dBeta,
-                                                               float& x_5) {
+                                                               float& promptScore,
+                                                               float& displacedScore,
+                                                               float& x_5,
+                                                               bool& TightPromptFlag,
+                                                               bool& TightDisplacedFlag,
+                                                               bool& TightRPhiFlag) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex]; //second and third segments are the same here
@@ -2357,7 +2395,11 @@ namespace lst {
                                               thirdMDIndex,
                                               fourthMDIndex,
                                               innerRadius,
-                                              outerRadius);
+                                              outerRadius,
+                                              promptScore,
+                                              displacedScore,
+                                              TightPromptFlag,
+                                              TightDisplacedFlag);
     if (!inference)
       return false;
     // if (not runQuadrupletdBetaAlgoSelector(acc,
@@ -2492,8 +2534,11 @@ namespace lst {
                                             isFlat,
                                             regressionG,
                                             regressionF,
-                                            regressionRadius);  
+                                            regressionRadius); 
+    float rphisum = chiSquared + nonAnchorChiSquared; 
 
+    if (rphisum < 5.76f)
+      TightRPhiFlag = true; //~95% retention for displaced tracks
     return true;
   };
 
@@ -2551,7 +2596,10 @@ namespace lst {
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
             float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
             float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];  
-            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, chiSquared, x_5; 
+            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, chiSquared, promptScore, displacedScore, x_5; 
+            bool TightPromptFlag = false;
+            bool TightDisplacedFlag = false;
+            bool TightRPhiFlag = false;
       
             float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
             // if (pt> 10){
@@ -2577,7 +2625,12 @@ namespace lst {
                                                     rzChiSquared,
                                                     nonAnchorChiSquared,
                                                     dBeta,
-                                                    x_5);
+                                                    promptScore,
+                                                    displacedScore,
+                                                    x_5,
+                                                    TightPromptFlag,
+                                                    TightDisplacedFlag,
+                                                    TightRPhiFlag);
             // bool success = true;
 
             if (success) {
@@ -2632,10 +2685,14 @@ namespace lst {
                                         quadrupletIndex,
                                         rzChiSquared,
                                         dBeta,
-                                        x_5,
+                                        promptScore,
+                                        displacedScore,
                                         regressionG,
                                         regressionF,
-                                        regressionRadius);
+                                        regressionRadius,
+                                        TightPromptFlag,
+                                        TightDisplacedFlag,
+                                        TightRPhiFlag);
 
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
