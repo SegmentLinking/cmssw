@@ -20,6 +20,9 @@ protected:
   int pT5_occupancies_;
   TBranch *pT5_occupancies_branch;
   bool pT5_occupancies_isLoaded;
+  int pT4_occupancies_;
+  TBranch *pT4_occupancies_branch;
+  bool pT4_occupancies_isLoaded;
   std::vector<float> *t3_phi_;
   TBranch *t3_phi_branch;
   bool t3_phi_isLoaded;
@@ -461,6 +464,7 @@ public:
   void GetEntry(unsigned int idx);
   void LoadAllBranches();
   const int &pT5_occupancies();
+  const int &pT4_occupancies();
   const std::vector<float> &t3_phi();
   const std::vector<float> &t5_score_rphisum();
   const std::vector<int> &pT4_isFake();
@@ -616,6 +620,7 @@ extern LSTEff lstEff;
 namespace tas {
 
   const int &pT5_occupancies();
+  const int &pT4_occupancies();
   const std::vector<float> &t3_phi();
   const std::vector<float> &t5_score_rphisum();
   const std::vector<int> &pT4_isFake();

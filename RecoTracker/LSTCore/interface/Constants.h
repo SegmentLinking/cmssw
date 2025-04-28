@@ -43,9 +43,10 @@ namespace lst {
 
   constexpr unsigned int n_max_pixel_triplets = 5000;
   constexpr unsigned int n_max_pixel_quintuplets = 15000;
+  constexpr unsigned int n_max_pixel_quadruplets = 15000;
 
   constexpr unsigned int n_max_pixel_track_candidates = 30000;
-  constexpr unsigned int n_max_nonpixel_track_candidates = 1000;
+  constexpr unsigned int n_max_nonpixel_track_candidates = 11000;
 
   constexpr unsigned int size_superbins = 45000;
 
@@ -59,6 +60,12 @@ namespace lst {
   };
   struct Params_T3 {
     static constexpr int kLayers = 3, kHits = 6;
+  };
+  struct Params_T4 {
+    static constexpr int kLayers = 4, kHits = 8;
+  };
+  struct Params_pT4 {
+    static constexpr int kLayers = 6, kHits = 12;
   };
   struct Params_pT3 {
     static constexpr int kLayers = 5, kHits = 10;
