@@ -53,6 +53,12 @@ protected:
   std::vector<float> *sim_trkNtupIdx_;
   TBranch *sim_trkNtupIdx_branch;
   bool sim_trkNtupIdx_isLoaded;
+  std::vector<int> *sim_tcIdxBest_;
+  TBranch *sim_tcIdxBest_branch;
+  bool sim_tcIdxBest_isLoaded;
+  std::vector<float> *sim_tcIdxBestFrac_;
+  TBranch *sim_tcIdxBestFrac_branch;
+  bool sim_tcIdxBestFrac_isLoaded;
   std::vector<int> *sim_tcIdx_;
   TBranch *sim_tcIdx_branch;
   bool sim_tcIdx_isLoaded;
@@ -125,6 +131,9 @@ protected:
   std::vector<std::vector<float> > *sim_simHitLayerMinDistxyHelix_;
   TBranch *sim_simHitLayerMinDistxyHelix_branch;
   bool sim_simHitLayerMinDistxyHelix_isLoaded;
+  std::vector<std::vector<float> > *sim_simHitLayerMinDistxyPrevHit_;
+  TBranch *sim_simHitLayerMinDistxyPrevHit_branch;
+  bool sim_simHitLayerMinDistxyPrevHit_isLoaded;
   std::vector<std::vector<float> > *sim_recoHitX_;
   TBranch *sim_recoHitX_branch;
   bool sim_recoHitX_isLoaded;
@@ -185,7 +194,6 @@ protected:
   std::vector<float> *md_phi_;
   TBranch *md_phi_branch;
   bool md_phi_isLoaded;
-#ifdef CUT_VALUE_DEBUG
   std::vector<float> *md_dphi_;
   TBranch *md_dphi_branch;
   bool md_dphi_isLoaded;
@@ -195,7 +203,6 @@ protected:
   std::vector<float> *md_dz_;
   TBranch *md_dz_branch;
   bool md_dz_isLoaded;
-#endif
   std::vector<float> *md_anchor_x_;
   TBranch *md_anchor_x_branch;
   bool md_anchor_x_isLoaded;
@@ -256,47 +263,45 @@ protected:
   std::vector<int> *ls_simIdx_;
   TBranch *ls_simIdx_branch;
   bool ls_simIdx_isLoaded;
-#ifdef CUT_VALUE_DEBUG
-  std::vector<int> *ls_zLos_;
+  std::vector<float> *ls_zLos_;
   TBranch *ls_zLos_branch;
   bool ls_zLos_isLoaded;
-  std::vector<int> *ls_zHis_;
+  std::vector<float> *ls_zHis_;
   TBranch *ls_zHis_branch;
   bool ls_zHis_isLoaded;
-  std::vector<int> *ls_rtLos_;
+  std::vector<float> *ls_rtLos_;
   TBranch *ls_rtLos_branch;
   bool ls_rtLos_isLoaded;
-  std::vector<int> *ls_rtHis_;
+  std::vector<float> *ls_rtHis_;
   TBranch *ls_rtHis_branch;
   bool ls_rtHis_isLoaded;
-  std::vector<int> *ls_dPhis_;
+  std::vector<float> *ls_dPhis_;
   TBranch *ls_dPhis_branch;
   bool ls_dPhis_isLoaded;
-  std::vector<int> *ls_dPhiMins_;
+  std::vector<float> *ls_dPhiMins_;
   TBranch *ls_dPhiMins_branch;
   bool ls_dPhiMins_isLoaded;
-  std::vector<int> *ls_dPhiMaxs_;
+  std::vector<float> *ls_dPhiMaxs_;
   TBranch *ls_dPhiMaxs_branch;
   bool ls_dPhiMaxs_isLoaded;
-  std::vector<int> *ls_dPhiChanges_;
+  std::vector<float> *ls_dPhiChanges_;
   TBranch *ls_dPhiChanges_branch;
   bool ls_dPhiChanges_isLoaded;
-  std::vector<int> *ls_dPhiChangeMins_;
+  std::vector<float> *ls_dPhiChangeMins_;
   TBranch *ls_dPhiChangeMins_branch;
   bool ls_dPhiChangeMins_isLoaded;
-  std::vector<int> *ls_dPhiChangeMaxs_;
+  std::vector<float> *ls_dPhiChangeMaxs_;
   TBranch *ls_dPhiChangeMaxs_branch;
   bool ls_dPhiChangeMaxs_isLoaded;
-  std::vector<int> *ls_dAlphaInners_;
+  std::vector<float> *ls_dAlphaInners_;
   TBranch *ls_dAlphaInners_branch;
   bool ls_dAlphaInners_isLoaded;
-  std::vector<int> *ls_dAlphaOuters_;
+  std::vector<float> *ls_dAlphaOuters_;
   TBranch *ls_dAlphaOuters_branch;
   bool ls_dAlphaOuters_isLoaded;
-  std::vector<int> *ls_dAlphaInnerOuters_;
+  std::vector<float> *ls_dAlphaInnerOuters_;
   TBranch *ls_dAlphaInnerOuters_branch;
   bool ls_dAlphaInnerOuters_isLoaded;
-#endif
   std::vector<std::vector<int> > *ls_simIdxAll_;
   TBranch *ls_simIdxAll_branch;
   bool ls_simIdxAll_isLoaded;
@@ -486,7 +491,6 @@ protected:
   std::vector<std::vector<float> > *pt5_simIdxAllFrac_;
   TBranch *pt5_simIdxAllFrac_branch;
   bool pt5_simIdxAllFrac_isLoaded;
-
 public:
   void Init(TTree *tree);
   void GetEntry(unsigned int idx);
@@ -503,6 +507,8 @@ public:
   const std::vector<float> &sim_vz();
   const std::vector<float> &sim_vtxperp();
   const std::vector<float> &sim_trkNtupIdx();
+  const std::vector<int> &sim_tcIdxBest();
+  const std::vector<float> &sim_tcIdxBestFrac();
   const std::vector<int> &sim_tcIdx();
   const std::vector<std::vector<int> > &sim_tcIdxAll();
   const std::vector<std::vector<float> > &sim_tcIdxAllFrac();
@@ -527,6 +533,7 @@ public:
   const std::vector<std::vector<int> > &sim_simHitLayer();
   const std::vector<std::vector<float> > &sim_simHitDistxyHelix();
   const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyHelix();
+  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyPrevHit();
   const std::vector<std::vector<float> > &sim_recoHitX();
   const std::vector<std::vector<float> > &sim_recoHitY();
   const std::vector<std::vector<float> > &sim_recoHitZ();
@@ -547,11 +554,9 @@ public:
   const std::vector<float> &md_pt();
   const std::vector<float> &md_eta();
   const std::vector<float> &md_phi();
-#ifdef CUT_VALUE_DEBUG
   const std::vector<float> &md_dphi();
   const std::vector<float> &md_dphichange();
   const std::vector<float> &md_dz();
-#endif
   const std::vector<float> &md_anchor_x();
   const std::vector<float> &md_anchor_y();
   const std::vector<float> &md_anchor_z();
@@ -572,21 +577,19 @@ public:
   const std::vector<int> &ls_mdIdx1();
   const std::vector<int> &ls_isFake();
   const std::vector<int> &ls_simIdx();
-#ifdef CUT_VALUE_DEBUG
-  const std::vector<int> &ls_zLos();
-  const std::vector<int> &ls_zHis();
-  const std::vector<int> &ls_rtLos();
-  const std::vector<int> &ls_rtHis();
-  const std::vector<int> &ls_dPhis();
-  const std::vector<int> &ls_dPhiMins();
-  const std::vector<int> &ls_dPhiMaxs();
-  const std::vector<int> &ls_dPhiChanges();
-  const std::vector<int> &ls_dPhiChangeMins();
-  const std::vector<int> &ls_dPhiChangeMaxs();
-  const std::vector<int> &ls_dAlphaInners();
-  const std::vector<int> &ls_dAlphaOuters();
-  const std::vector<int> &ls_dAlphaInnerOuters();
-#endif
+  const std::vector<float> &ls_zLos();
+  const std::vector<float> &ls_zHis();
+  const std::vector<float> &ls_rtLos();
+  const std::vector<float> &ls_rtHis();
+  const std::vector<float> &ls_dPhis();
+  const std::vector<float> &ls_dPhiMins();
+  const std::vector<float> &ls_dPhiMaxs();
+  const std::vector<float> &ls_dPhiChanges();
+  const std::vector<float> &ls_dPhiChangeMins();
+  const std::vector<float> &ls_dPhiChangeMaxs();
+  const std::vector<float> &ls_dAlphaInners();
+  const std::vector<float> &ls_dAlphaOuters();
+  const std::vector<float> &ls_dAlphaInnerOuters();
   const std::vector<std::vector<int> > &ls_simIdxAll();
   const std::vector<std::vector<float> > &ls_simIdxAllFrac();
   const std::vector<float> &t3_pt();
@@ -650,7 +653,7 @@ public:
   const std::vector<int> &pt5_simIdx();
   const std::vector<std::vector<int> > &pt5_simIdxAll();
   const std::vector<std::vector<float> > &pt5_simIdxAllFrac();
-  static void progress(int nEventsTotal, int nEventsChain);
+  static void progress( int nEventsTotal, int nEventsChain );
 };
 
 #ifndef __CINT__
@@ -671,6 +674,8 @@ namespace tas {
   const std::vector<float> &sim_vz();
   const std::vector<float> &sim_vtxperp();
   const std::vector<float> &sim_trkNtupIdx();
+  const std::vector<int> &sim_tcIdxBest();
+  const std::vector<float> &sim_tcIdxBestFrac();
   const std::vector<int> &sim_tcIdx();
   const std::vector<std::vector<int> > &sim_tcIdxAll();
   const std::vector<std::vector<float> > &sim_tcIdxAllFrac();
@@ -695,6 +700,7 @@ namespace tas {
   const std::vector<std::vector<int> > &sim_simHitLayer();
   const std::vector<std::vector<float> > &sim_simHitDistxyHelix();
   const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyHelix();
+  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyPrevHit();
   const std::vector<std::vector<float> > &sim_recoHitX();
   const std::vector<std::vector<float> > &sim_recoHitY();
   const std::vector<std::vector<float> > &sim_recoHitZ();
@@ -715,11 +721,9 @@ namespace tas {
   const std::vector<float> &md_pt();
   const std::vector<float> &md_eta();
   const std::vector<float> &md_phi();
-#ifdef CUT_VALUE_DEBUG
-  const std::vector<float> &md_pt();
-  const std::vector<float> &md_eta();
-  const std::vector<float> &md_phi();
-#endif
+  const std::vector<float> &md_dphi();
+  const std::vector<float> &md_dphichange();
+  const std::vector<float> &md_dz();
   const std::vector<float> &md_anchor_x();
   const std::vector<float> &md_anchor_y();
   const std::vector<float> &md_anchor_z();
@@ -740,21 +744,19 @@ namespace tas {
   const std::vector<int> &ls_mdIdx1();
   const std::vector<int> &ls_isFake();
   const std::vector<int> &ls_simIdx();
-#ifdef CUT_VALUE_DEBUG
-  const std::vector<int> &ls_zLos();
-  const std::vector<int> &ls_zHis();
-  const std::vector<int> &ls_rtLos();
-  const std::vector<int> &ls_rtHis();
-  const std::vector<int> &ls_dPhis();
-  const std::vector<int> &ls_dPhiMins();
-  const std::vector<int> &ls_dPhiMaxs();
-  const std::vector<int> &ls_dPhiChanges();
-  const std::vector<int> &ls_dPhiChangeMins();
-  const std::vector<int> &ls_dPhiChangeMaxs();
-  const std::vector<int> &ls_dAlphaInners();
-  const std::vector<int> &ls_dAlphaOuters();
-  const std::vector<int> &ls_dAlphaInnerOuters();
-#endif
+  const std::vector<float> &ls_zLos();
+  const std::vector<float> &ls_zHis();
+  const std::vector<float> &ls_rtLos();
+  const std::vector<float> &ls_rtHis();
+  const std::vector<float> &ls_dPhis();
+  const std::vector<float> &ls_dPhiMins();
+  const std::vector<float> &ls_dPhiMaxs();
+  const std::vector<float> &ls_dPhiChanges();
+  const std::vector<float> &ls_dPhiChangeMins();
+  const std::vector<float> &ls_dPhiChangeMaxs();
+  const std::vector<float> &ls_dAlphaInners();
+  const std::vector<float> &ls_dAlphaOuters();
+  const std::vector<float> &ls_dAlphaInnerOuters();
   const std::vector<std::vector<int> > &ls_simIdxAll();
   const std::vector<std::vector<float> > &ls_simIdxAllFrac();
   const std::vector<float> &t3_pt();

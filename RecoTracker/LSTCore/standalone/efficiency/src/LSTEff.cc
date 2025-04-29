@@ -87,6 +87,20 @@ void LSTEff::Init(TTree *tree) {
       sim_trkNtupIdx_branch->SetAddress(&sim_trkNtupIdx_);
     }
   }
+  sim_tcIdxBest_branch = 0;
+  if (tree->GetBranch("sim_tcIdxBest") != 0) {
+    sim_tcIdxBest_branch = tree->GetBranch("sim_tcIdxBest");
+    if (sim_tcIdxBest_branch) {
+      sim_tcIdxBest_branch->SetAddress(&sim_tcIdxBest_);
+    }
+  }
+  sim_tcIdxBestFrac_branch = 0;
+  if (tree->GetBranch("sim_tcIdxBestFrac") != 0) {
+    sim_tcIdxBestFrac_branch = tree->GetBranch("sim_tcIdxBestFrac");
+    if (sim_tcIdxBestFrac_branch) {
+      sim_tcIdxBestFrac_branch->SetAddress(&sim_tcIdxBestFrac_);
+    }
+  }
   sim_tcIdx_branch = 0;
   if (tree->GetBranch("sim_tcIdx") != 0) {
     sim_tcIdx_branch = tree->GetBranch("sim_tcIdx");
@@ -255,6 +269,13 @@ void LSTEff::Init(TTree *tree) {
       sim_simHitLayerMinDistxyHelix_branch->SetAddress(&sim_simHitLayerMinDistxyHelix_);
     }
   }
+  sim_simHitLayerMinDistxyPrevHit_branch = 0;
+  if (tree->GetBranch("sim_simHitLayerMinDistxyPrevHit") != 0) {
+    sim_simHitLayerMinDistxyPrevHit_branch = tree->GetBranch("sim_simHitLayerMinDistxyPrevHit");
+    if (sim_simHitLayerMinDistxyPrevHit_branch) {
+      sim_simHitLayerMinDistxyPrevHit_branch->SetAddress(&sim_simHitLayerMinDistxyPrevHit_);
+    }
+  }
   sim_recoHitX_branch = 0;
   if (tree->GetBranch("sim_recoHitX") != 0) {
     sim_recoHitX_branch = tree->GetBranch("sim_recoHitX");
@@ -395,7 +416,6 @@ void LSTEff::Init(TTree *tree) {
       md_phi_branch->SetAddress(&md_phi_);
     }
   }
-#ifdef CUT_VALUE_DEBUG
   md_dphi_branch = 0;
   if (tree->GetBranch("md_dphi") != 0) {
     md_dphi_branch = tree->GetBranch("md_dphi");
@@ -417,7 +437,6 @@ void LSTEff::Init(TTree *tree) {
       md_dz_branch->SetAddress(&md_dz_);
     }
   }
-#endif
   md_anchor_x_branch = 0;
   if (tree->GetBranch("md_anchor_x") != 0) {
     md_anchor_x_branch = tree->GetBranch("md_anchor_x");
@@ -558,7 +577,6 @@ void LSTEff::Init(TTree *tree) {
       ls_simIdx_branch->SetAddress(&ls_simIdx_);
     }
   }
-#ifdef CUT_VALUE_DEBUG
   ls_zLos_branch = 0;
   if (tree->GetBranch("ls_zLos") != 0) {
     ls_zLos_branch = tree->GetBranch("ls_zLos");
@@ -578,6 +596,13 @@ void LSTEff::Init(TTree *tree) {
     ls_rtLos_branch = tree->GetBranch("ls_rtLos");
     if (ls_rtLos_branch) {
       ls_rtLos_branch->SetAddress(&ls_rtLos_);
+    }
+  }
+  ls_rtHis_branch = 0;
+  if (tree->GetBranch("ls_rtHis") != 0) {
+    ls_rtHis_branch = tree->GetBranch("ls_rtHis");
+    if (ls_rtHis_branch) {
+      ls_rtHis_branch->SetAddress(&ls_rtHis_);
     }
   }
   ls_dPhis_branch = 0;
@@ -643,7 +668,6 @@ void LSTEff::Init(TTree *tree) {
       ls_dAlphaInnerOuters_branch->SetAddress(&ls_dAlphaInnerOuters_);
     }
   }
-#endif
   ls_simIdxAll_branch = 0;
   if (tree->GetBranch("ls_simIdxAll") != 0) {
     ls_simIdxAll_branch = tree->GetBranch("ls_simIdxAll");
@@ -1101,6 +1125,8 @@ void LSTEff::GetEntry(unsigned int idx) {
   sim_vz_isLoaded = false;
   sim_vtxperp_isLoaded = false;
   sim_trkNtupIdx_isLoaded = false;
+  sim_tcIdxBest_isLoaded = false;
+  sim_tcIdxBestFrac_isLoaded = false;
   sim_tcIdx_isLoaded = false;
   sim_tcIdxAll_isLoaded = false;
   sim_tcIdxAllFrac_isLoaded = false;
@@ -1125,6 +1151,7 @@ void LSTEff::GetEntry(unsigned int idx) {
   sim_simHitLayer_isLoaded = false;
   sim_simHitDistxyHelix_isLoaded = false;
   sim_simHitLayerMinDistxyHelix_isLoaded = false;
+  sim_simHitLayerMinDistxyPrevHit_isLoaded = false;
   sim_recoHitX_isLoaded = false;
   sim_recoHitY_isLoaded = false;
   sim_recoHitZ_isLoaded = false;
@@ -1145,11 +1172,9 @@ void LSTEff::GetEntry(unsigned int idx) {
   md_pt_isLoaded = false;
   md_eta_isLoaded = false;
   md_phi_isLoaded = false;
-#ifdef CUT_VALUE_DEBUG
   md_dphi_isLoaded = false;
   md_dphichange_isLoaded = false;
   md_dz_isLoaded = false;
-#endif
   md_anchor_x_isLoaded = false;
   md_anchor_y_isLoaded = false;
   md_anchor_z_isLoaded = false;
@@ -1170,7 +1195,6 @@ void LSTEff::GetEntry(unsigned int idx) {
   ls_mdIdx1_isLoaded = false;
   ls_isFake_isLoaded = false;
   ls_simIdx_isLoaded = false;
-#ifdef CUT_VALUE_DEBUG
   ls_zLos_isLoaded = false;
   ls_zHis_isLoaded = false;
   ls_rtLos_isLoaded = false;
@@ -1184,7 +1208,6 @@ void LSTEff::GetEntry(unsigned int idx) {
   ls_dAlphaInners_isLoaded = false;
   ls_dAlphaOuters_isLoaded = false;
   ls_dAlphaInnerOuters_isLoaded = false;
-#endif
   ls_simIdxAll_isLoaded = false;
   ls_simIdxAllFrac_isLoaded = false;
   t3_pt_isLoaded = false;
@@ -1274,6 +1297,10 @@ void LSTEff::LoadAllBranches() {
     sim_vtxperp();
   if (sim_trkNtupIdx_branch != 0)
     sim_trkNtupIdx();
+  if (sim_tcIdxBest_branch != 0)
+    sim_tcIdxBest();
+  if (sim_tcIdxBestFrac_branch != 0)
+    sim_tcIdxBestFrac();
   if (sim_tcIdx_branch != 0)
     sim_tcIdx();
   if (sim_tcIdxAll_branch != 0)
@@ -1322,6 +1349,8 @@ void LSTEff::LoadAllBranches() {
     sim_simHitDistxyHelix();
   if (sim_simHitLayerMinDistxyHelix_branch != 0)
     sim_simHitLayerMinDistxyHelix();
+  if (sim_simHitLayerMinDistxyPrevHit_branch != 0)
+    sim_simHitLayerMinDistxyPrevHit();
   if (sim_recoHitX_branch != 0)
     sim_recoHitX();
   if (sim_recoHitY_branch != 0)
@@ -1362,14 +1391,12 @@ void LSTEff::LoadAllBranches() {
     md_eta();
   if (md_phi_branch != 0)
     md_phi();
-#ifdef CUT_VALUE_DEBUG
   if (md_dphi_branch != 0)
     md_dphi();
   if (md_dphichange_branch != 0)
     md_dphichange();
   if (md_dz_branch != 0)
     md_dz();
-#endif
   if (md_anchor_x_branch != 0)
     md_anchor_x();
   if (md_anchor_y_branch != 0)
@@ -1410,7 +1437,6 @@ void LSTEff::LoadAllBranches() {
     ls_isFake();
   if (ls_simIdx_branch != 0)
     ls_simIdx();
-#ifdef CUT_VALUE_DEBUG
   if (ls_zLos_branch != 0)
     ls_zLos();
   if (ls_zHis_branch != 0)
@@ -1437,7 +1463,6 @@ void LSTEff::LoadAllBranches() {
     ls_dAlphaOuters();
   if (ls_dAlphaInnerOuters_branch != 0)
     ls_dAlphaInnerOuters();
-#endif
   if (ls_simIdxAll_branch != 0)
     ls_simIdxAll();
   if (ls_simIdxAllFrac_branch != 0)
@@ -1708,6 +1733,30 @@ const std::vector<float> &LSTEff::sim_trkNtupIdx() {
     sim_trkNtupIdx_isLoaded = true;
   }
   return *sim_trkNtupIdx_;
+}
+const std::vector<int> &LSTEff::sim_tcIdxBest() {
+  if (not sim_tcIdxBest_isLoaded) {
+    if (sim_tcIdxBest_branch != 0) {
+      sim_tcIdxBest_branch->GetEntry(index);
+    } else {
+      printf("branch sim_tcIdxBest_branch does not exist!\n");
+      exit(1);
+    }
+    sim_tcIdxBest_isLoaded = true;
+  }
+  return *sim_tcIdxBest_;
+}
+const std::vector<float> &LSTEff::sim_tcIdxBestFrac() {
+  if (not sim_tcIdxBestFrac_isLoaded) {
+    if (sim_tcIdxBestFrac_branch != 0) {
+      sim_tcIdxBestFrac_branch->GetEntry(index);
+    } else {
+      printf("branch sim_tcIdxBestFrac_branch does not exist!\n");
+      exit(1);
+    }
+    sim_tcIdxBestFrac_isLoaded = true;
+  }
+  return *sim_tcIdxBestFrac_;
 }
 const std::vector<int> &LSTEff::sim_tcIdx() {
   if (not sim_tcIdx_isLoaded) {
@@ -1997,6 +2046,18 @@ const std::vector<std::vector<float> > &LSTEff::sim_simHitLayerMinDistxyHelix() 
   }
   return *sim_simHitLayerMinDistxyHelix_;
 }
+const std::vector<std::vector<float> > &LSTEff::sim_simHitLayerMinDistxyPrevHit() {
+  if (not sim_simHitLayerMinDistxyPrevHit_isLoaded) {
+    if (sim_simHitLayerMinDistxyPrevHit_branch != 0) {
+      sim_simHitLayerMinDistxyPrevHit_branch->GetEntry(index);
+    } else {
+      printf("branch sim_simHitLayerMinDistxyPrevHit_branch does not exist!\n");
+      exit(1);
+    }
+    sim_simHitLayerMinDistxyPrevHit_isLoaded = true;
+  }
+  return *sim_simHitLayerMinDistxyPrevHit_;
+}
 const std::vector<std::vector<float> > &LSTEff::sim_recoHitX() {
   if (not sim_recoHitX_isLoaded) {
     if (sim_recoHitX_branch != 0) {
@@ -2237,7 +2298,6 @@ const std::vector<float> &LSTEff::md_phi() {
   }
   return *md_phi_;
 }
-#ifdef CUT_VALUE_DEBUG
 const std::vector<float> &LSTEff::md_dphi() {
   if (not md_dphi_isLoaded) {
     if (md_dphi_branch != 0) {
@@ -2248,7 +2308,7 @@ const std::vector<float> &LSTEff::md_dphi() {
     }
     md_dphi_isLoaded = true;
   }
-  return *md_dphichange_;
+  return *md_dphi_;
 }
 const std::vector<float> &LSTEff::md_dphichange() {
   if (not md_dphichange_isLoaded) {
@@ -2260,7 +2320,7 @@ const std::vector<float> &LSTEff::md_dphichange() {
     }
     md_dphichange_isLoaded = true;
   }
-  return *md_dz_;
+  return *md_dphichange_;
 }
 const std::vector<float> &LSTEff::md_dz() {
   if (not md_dz_isLoaded) {
@@ -2274,7 +2334,6 @@ const std::vector<float> &LSTEff::md_dz() {
   }
   return *md_dz_;
 }
-#endif
 const std::vector<float> &LSTEff::md_anchor_x() {
   if (not md_anchor_x_isLoaded) {
     if (md_anchor_x_branch != 0) {
@@ -2515,8 +2574,7 @@ const std::vector<int> &LSTEff::ls_simIdx() {
   }
   return *ls_simIdx_;
 }
-#ifdef CUT_VALUE_DEBUG
-const std::vector<int> &LSTEff::ls_zLos() {
+const std::vector<float> &LSTEff::ls_zLos() {
   if (not ls_zLos_isLoaded) {
     if (ls_zLos_branch != 0) {
       ls_zLos_branch->GetEntry(index);
@@ -2528,7 +2586,7 @@ const std::vector<int> &LSTEff::ls_zLos() {
   }
   return *ls_zLos_;
 }
-const std::vector<int> &LSTEff::ls_zHis() {
+const std::vector<float> &LSTEff::ls_zHis() {
   if (not ls_zHis_isLoaded) {
     if (ls_zHis_branch != 0) {
       ls_zHis_branch->GetEntry(index);
@@ -2540,7 +2598,7 @@ const std::vector<int> &LSTEff::ls_zHis() {
   }
   return *ls_zHis_;
 }
-const std::vector<int> &LSTEff::ls_rtLos() {
+const std::vector<float> &LSTEff::ls_rtLos() {
   if (not ls_rtLos_isLoaded) {
     if (ls_rtLos_branch != 0) {
       ls_rtLos_branch->GetEntry(index);
@@ -2552,7 +2610,7 @@ const std::vector<int> &LSTEff::ls_rtLos() {
   }
   return *ls_rtLos_;
 }
-const std::vector<int> &LSTEff::ls_rtHis() {
+const std::vector<float> &LSTEff::ls_rtHis() {
   if (not ls_rtHis_isLoaded) {
     if (ls_rtHis_branch != 0) {
       ls_rtHis_branch->GetEntry(index);
@@ -2564,7 +2622,7 @@ const std::vector<int> &LSTEff::ls_rtHis() {
   }
   return *ls_rtHis_;
 }
-const std::vector<int> &LSTEff::ls_dPhis() {
+const std::vector<float> &LSTEff::ls_dPhis() {
   if (not ls_dPhis_isLoaded) {
     if (ls_dPhis_branch != 0) {
       ls_dPhis_branch->GetEntry(index);
@@ -2576,7 +2634,7 @@ const std::vector<int> &LSTEff::ls_dPhis() {
   }
   return *ls_dPhis_;
 }
-const std::vector<int> &LSTEff::ls_dPhiMins() {
+const std::vector<float> &LSTEff::ls_dPhiMins() {
   if (not ls_dPhiMins_isLoaded) {
     if (ls_dPhiMins_branch != 0) {
       ls_dPhiMins_branch->GetEntry(index);
@@ -2588,7 +2646,7 @@ const std::vector<int> &LSTEff::ls_dPhiMins() {
   }
   return *ls_dPhiMins_;
 }
-const std::vector<int> &LSTEff::ls_dPhiMaxs() {
+const std::vector<float> &LSTEff::ls_dPhiMaxs() {
   if (not ls_dPhiMaxs_isLoaded) {
     if (ls_dPhiMaxs_branch != 0) {
       ls_dPhiMaxs_branch->GetEntry(index);
@@ -2600,7 +2658,7 @@ const std::vector<int> &LSTEff::ls_dPhiMaxs() {
   }
   return *ls_dPhiMaxs_;
 }
-const std::vector<int> &LSTEff::ls_dPhiChanges() {
+const std::vector<float> &LSTEff::ls_dPhiChanges() {
   if (not ls_dPhiChanges_isLoaded) {
     if (ls_dPhiChanges_branch != 0) {
       ls_dPhiChanges_branch->GetEntry(index);
@@ -2612,7 +2670,7 @@ const std::vector<int> &LSTEff::ls_dPhiChanges() {
   }
   return *ls_dPhiChanges_;
 }
-const std::vector<int> &LSTEff::ls_dPhiChangeMins() {
+const std::vector<float> &LSTEff::ls_dPhiChangeMins() {
   if (not ls_dPhiChangeMins_isLoaded) {
     if (ls_dPhiChangeMins_branch != 0) {
       ls_dPhiChangeMins_branch->GetEntry(index);
@@ -2624,7 +2682,7 @@ const std::vector<int> &LSTEff::ls_dPhiChangeMins() {
   }
   return *ls_dPhiChangeMins_;
 }
-const std::vector<int> &LSTEff::ls_dPhiChangeMaxs() {
+const std::vector<float> &LSTEff::ls_dPhiChangeMaxs() {
   if (not ls_dPhiChangeMaxs_isLoaded) {
     if (ls_dPhiChangeMaxs_branch != 0) {
       ls_dPhiChangeMaxs_branch->GetEntry(index);
@@ -2636,7 +2694,7 @@ const std::vector<int> &LSTEff::ls_dPhiChangeMaxs() {
   }
   return *ls_dPhiChangeMaxs_;
 }
-const std::vector<int> &LSTEff::ls_dAlphaInners() {
+const std::vector<float> &LSTEff::ls_dAlphaInners() {
   if (not ls_dAlphaInners_isLoaded) {
     if (ls_dAlphaInners_branch != 0) {
       ls_dAlphaInners_branch->GetEntry(index);
@@ -2648,7 +2706,7 @@ const std::vector<int> &LSTEff::ls_dAlphaInners() {
   }
   return *ls_dAlphaInners_;
 }
-const std::vector<int> &LSTEff::ls_dAlphaOuters() {
+const std::vector<float> &LSTEff::ls_dAlphaOuters() {
   if (not ls_dAlphaOuters_isLoaded) {
     if (ls_dAlphaOuters_branch != 0) {
       ls_dAlphaOuters_branch->GetEntry(index);
@@ -2660,7 +2718,7 @@ const std::vector<int> &LSTEff::ls_dAlphaOuters() {
   }
   return *ls_dAlphaOuters_;
 }
-const std::vector<int> &LSTEff::ls_dAlphaInnerOuters() {
+const std::vector<float> &LSTEff::ls_dAlphaInnerOuters() {
   if (not ls_dAlphaInnerOuters_isLoaded) {
     if (ls_dAlphaInnerOuters_branch != 0) {
       ls_dAlphaInnerOuters_branch->GetEntry(index);
@@ -2672,7 +2730,6 @@ const std::vector<int> &LSTEff::ls_dAlphaInnerOuters() {
   }
   return *ls_dAlphaInnerOuters_;
 }
-#endif
 const std::vector<std::vector<int> > &LSTEff::ls_simIdxAll() {
   if (not ls_simIdxAll_isLoaded) {
     if (ls_simIdxAll_branch != 0) {
@@ -3429,22 +3486,19 @@ const std::vector<std::vector<float> > &LSTEff::pt5_simIdxAllFrac() {
   }
   return *pt5_simIdxAllFrac_;
 }
-void LSTEff::progress(int nEventsTotal, int nEventsChain) {
+void LSTEff::progress(int nEventsTotal, int nEventsChain){
   int period = 1000;
-  if (nEventsTotal % 1000 == 0) {
+  if(nEventsTotal%1000 == 0) {
     if (isatty(1)) {
-      if ((nEventsChain - nEventsTotal) > period) {
-        float frac = (float)nEventsTotal / (nEventsChain * 0.01);
-        printf(
-            "\015\033[32m ---> \033[1m\033[31m%4.1f%%"
-            "\033[0m\033[32m <---\033[0m\015",
-            frac);
+      if( ( nEventsChain - nEventsTotal ) > period ){
+        float frac = (float)nEventsTotal/(nEventsChain*0.01);
+        printf("\015\033[32m ---> \033[1m\033[31m%4.1f%%"
+               "\033[0m\033[32m <---\033[0m\015", frac);
         fflush(stdout);
-      } else {
-        printf(
-            "\015\033[32m ---> \033[1m\033[31m%4.1f%%"
-            "\033[0m\033[32m <---\033[0m\015",
-            100.);
+      }
+      else {
+        printf("\015\033[32m ---> \033[1m\033[31m%4.1f%%"
+               "\033[0m\033[32m <---\033[0m\015", 100.);
         std::cout << std::endl;
       }
     }
@@ -3463,6 +3517,8 @@ namespace tas {
   const std::vector<float> &sim_vz() { return lstEff.sim_vz(); }
   const std::vector<float> &sim_vtxperp() { return lstEff.sim_vtxperp(); }
   const std::vector<float> &sim_trkNtupIdx() { return lstEff.sim_trkNtupIdx(); }
+  const std::vector<int> &sim_tcIdxBest() { return lstEff.sim_tcIdxBest(); }
+  const std::vector<float> &sim_tcIdxBestFrac() { return lstEff.sim_tcIdxBestFrac(); }
   const std::vector<int> &sim_tcIdx() { return lstEff.sim_tcIdx(); }
   const std::vector<std::vector<int> > &sim_tcIdxAll() { return lstEff.sim_tcIdxAll(); }
   const std::vector<std::vector<float> > &sim_tcIdxAllFrac() { return lstEff.sim_tcIdxAllFrac(); }
@@ -3486,9 +3542,8 @@ namespace tas {
   const std::vector<std::vector<int> > &sim_simHitDetId() { return lstEff.sim_simHitDetId(); }
   const std::vector<std::vector<int> > &sim_simHitLayer() { return lstEff.sim_simHitLayer(); }
   const std::vector<std::vector<float> > &sim_simHitDistxyHelix() { return lstEff.sim_simHitDistxyHelix(); }
-  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyHelix() {
-    return lstEff.sim_simHitLayerMinDistxyHelix();
-  }
+  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyHelix() { return lstEff.sim_simHitLayerMinDistxyHelix(); }
+  const std::vector<std::vector<float> > &sim_simHitLayerMinDistxyPrevHit() { return lstEff.sim_simHitLayerMinDistxyPrevHit(); }
   const std::vector<std::vector<float> > &sim_recoHitX() { return lstEff.sim_recoHitX(); }
   const std::vector<std::vector<float> > &sim_recoHitY() { return lstEff.sim_recoHitY(); }
   const std::vector<std::vector<float> > &sim_recoHitZ() { return lstEff.sim_recoHitZ(); }
@@ -3509,11 +3564,9 @@ namespace tas {
   const std::vector<float> &md_pt() { return lstEff.md_pt(); }
   const std::vector<float> &md_eta() { return lstEff.md_eta(); }
   const std::vector<float> &md_phi() { return lstEff.md_phi(); }
-#ifdef CUT_VALUE_DEBUG
   const std::vector<float> &md_dphi() { return lstEff.md_dphi(); }
   const std::vector<float> &md_dphichange() { return lstEff.md_dphichange(); }
   const std::vector<float> &md_dz() { return lstEff.md_dz(); }
-#endif
   const std::vector<float> &md_anchor_x() { return lstEff.md_anchor_x(); }
   const std::vector<float> &md_anchor_y() { return lstEff.md_anchor_y(); }
   const std::vector<float> &md_anchor_z() { return lstEff.md_anchor_z(); }
@@ -3534,21 +3587,19 @@ namespace tas {
   const std::vector<int> &ls_mdIdx1() { return lstEff.ls_mdIdx1(); }
   const std::vector<int> &ls_isFake() { return lstEff.ls_isFake(); }
   const std::vector<int> &ls_simIdx() { return lstEff.ls_simIdx(); }
-#ifdef CUT_VALUE_DEBUG
-  const std::vector<int> &ls_zLos() { return lstEff.ls_zLos(); }
-  const std::vector<int> &ls_zHis() { return lstEff.ls_zHis(); }
-  const std::vector<int> &ls_rtLos() { return lstEff.ls_rtLos(); }
-  const std::vector<int> &ls_rtHis() { return lstEff.ls_rtHis(); }
-  const std::vector<int> &ls_dPhis() { return lstEff.ls_dPhis(); }
-  const std::vector<int> &ls_dPhiMins() { return lstEff.ls_dPhiMins(); }
-  const std::vector<int> &ls_dPhiMaxs() { return lstEff.ls_dPhiMaxs(); }
-  const std::vector<int> &ls_dPhiChanges() { return lstEff.ls_dPhiChanges(); }
-  const std::vector<int> &ls_dPhiChangeMins() { return lstEff.ls_dPhiChangeMins(); }
-  const std::vector<int> &ls_dPhiChangeMaxs() { return lstEff.ls_dPhiChangeMaxs(); }
-  const std::vector<int> &ls_dAlphaInners() { return lstEff.ls_dAlphaInners(); }
-  const std::vector<int> &ls_dAlphaOuters() { return lstEff.ls_dAlphaOuters(); }
-  const std::vector<int> &ls_dAlphaInnerOuters() { return lstEff.ls_dAlphaInnerOuters(); }
-#endif
+  const std::vector<float> &ls_zLos() { return lstEff.ls_zLos(); }
+  const std::vector<float> &ls_zHis() { return lstEff.ls_zHis(); }
+  const std::vector<float> &ls_rtLos() { return lstEff.ls_rtLos(); }
+  const std::vector<float> &ls_rtHis() { return lstEff.ls_rtHis(); }
+  const std::vector<float> &ls_dPhis() { return lstEff.ls_dPhis(); }
+  const std::vector<float> &ls_dPhiMins() { return lstEff.ls_dPhiMins(); }
+  const std::vector<float> &ls_dPhiMaxs() { return lstEff.ls_dPhiMaxs(); }
+  const std::vector<float> &ls_dPhiChanges() { return lstEff.ls_dPhiChanges(); }
+  const std::vector<float> &ls_dPhiChangeMins() { return lstEff.ls_dPhiChangeMins(); }
+  const std::vector<float> &ls_dPhiChangeMaxs() { return lstEff.ls_dPhiChangeMaxs(); }
+  const std::vector<float> &ls_dAlphaInners() { return lstEff.ls_dAlphaInners(); }
+  const std::vector<float> &ls_dAlphaOuters() { return lstEff.ls_dAlphaOuters(); }
+  const std::vector<float> &ls_dAlphaInnerOuters() { return lstEff.ls_dAlphaInnerOuters(); }
   const std::vector<std::vector<int> > &ls_simIdxAll() { return lstEff.ls_simIdxAll(); }
   const std::vector<std::vector<float> > &ls_simIdxAllFrac() { return lstEff.ls_simIdxAllFrac(); }
   const std::vector<float> &t3_pt() { return lstEff.t3_pt(); }
