@@ -190,13 +190,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float dPhiChangeMin,
                                                          float dPhiChangeMax,
 #ifdef CUT_VALUE_DEBUG
-                                                         float& zHi,
-                                                         float& zLo,
-                                                         float& rtHi,
-                                                         float& rtLo,
-                                                         float& dAlphaInner,
-                                                         float& dAlphaOuter,
-                                                         float& dAlphaInnerOuter,
+                                                         float zHi,
+                                                         float zLo,
+                                                         float rtHi,
+                                                         float rtLo,
+                                                         float dAlphaInner,
+                                                         float dAlphaOuter,
+                                                         float dAlphaInnerOuter,
 #endif
                                                          unsigned int idx) {
     segments.mdIndices()[idx][0] = lowerMDIndex;
@@ -544,13 +544,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float& rtHi,
 #endif
                                                             const float ptCut) {
-#ifdef CUT_VALUE_DEBUG
-    zLo = -999.f;
-    zHi = -999.f;
-    rtLo = -999.f;
-    rtHi = -999.f;
-#endif
     if (modules.subdets()[innerLowerModuleIndex] == Barrel and modules.subdets()[outerLowerModuleIndex] == Barrel) {
+#ifdef CUT_VALUE_DEBUG
+      rtLo = -999.f;
+      rtHi = -999.f;
+#endif
       return runSegmentDefaultAlgoBarrel(acc,
                                          modules,
                                          mds,
@@ -573,6 +571,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
                                          ptCut);
     } else {
+#ifdef CUT_VALUE_DEBUG
+      zLo = -999.f;
+      zHi = -999.f;
+#endif
       return runSegmentDefaultAlgoEndcap(acc,
                                          modules,
                                          mds,

@@ -420,11 +420,8 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
           std::vector<int> intermediate,
           size_t n,
           std::vector<std::vector<int>> &va) {
-        // std::cout <<  " 'called': " << "called" <<  std::endl;
         if (va.size() > n) {
           for (auto x : va[n]) {
-            // std::cout <<  " n: " << n <<  std::endl;
-            // std::cout <<  " intermediate.size(): " << intermediate.size() <<  std::endl;
             std::vector<int> copy_intermediate(intermediate);
             copy_intermediate.push_back(x);
             perm(result, copy_intermediate, n + 1, va);
@@ -462,12 +459,9 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
     if (trkidx < 0)
       continue;
     float percent_matched = static_cast<float>(counts[rawidx]) / nhits_input;
-    // std::cout <<  " counts[rawidx]: " << counts[rawidx] <<  std::endl;
-    // std::cout <<  " nhits_input: " << nhits_input <<  std::endl;
     if (verbose) {
       std::cout << " fr: " << percent_matched << std::endl;
     }
-    // std::cout <<  " matchfrac: " << matchfrac <<  std::endl;
     if (percent_matched > matchfrac) {
       matched_sim_trk_idxs.push_back(trkidx);
       matched_sim_trk_idxs_frac.push_back(percent_matched);
@@ -492,11 +486,6 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
     } else {
       pairs[idx] = frac;
     }
-    // if (std::find(result.begin(), result.end(), idx) == result.end())
-    // {
-    //     result.push_back(idx);
-    //     result_frac.push_back(frac);
-    // }
   }
   std::vector<int> result;
   std::vector<float> result_frac;
@@ -514,15 +503,7 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
     sorted_result[i] = result[indices[i]];
     sorted_result_frac[i] = result_frac[indices[i]];
   }
-  // for (size_t i = 0; i < sorted_result.size(); ++i)
-  // {
-  //     int sorted_idx = sorted_result.at(i);
-  //     float sorted_frac = sorted_result_frac.at(i);
-  //     std::cout <<  " i: " << i <<  " sorted_idx: " << sorted_idx <<  " sorted_frac: " << sorted_frac <<  " hitidxs.size(): " << hitidxs.size() <<  std::endl;
-  // }
   return std::make_tuple(sorted_result, sorted_result_frac);
-  // matched_sim_trk_idxs.assign(s.begin(), s.end());
-  // return matched_sim_trk_idxs;
 }
 
 //__________________________________________________________________________________________

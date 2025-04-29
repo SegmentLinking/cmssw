@@ -62,7 +62,7 @@ void printT4s(LSTEvent* event);
 void printTCs(LSTEvent* event);
 
 // LSTOD
-void createOutputBranches_v2();
-void fillOutputBranches_v2(LSTEvent* event);
+void createOutputBranches_LSTOD();
+void fillOutputBranches_LSTOD(LSTEvent* event);
 
 #endif

@@ -6,7 +6,7 @@
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
 //________________________________________________________________________________________________________________________________
-void createOutputBranches() { createOutputBranches_v2(); }
+void createOutputBranches() { createOutputBranches_LSTOD(); }
 //________________________________________________________________________________________________________________________________
 void createOutputBranches_v1() {
   createRequiredOutputBranches();
@@ -14,7 +14,7 @@ void createOutputBranches_v1() {
 }
 
 //________________________________________________________________________________________________________________________________
-void fillOutputBranches(LSTEvent* event) { fillOutputBranches_v2(event); }
+void fillOutputBranches(LSTEvent* event) { fillOutputBranches_LSTOD(event); }
 //________________________________________________________________________________________________________________________________
 void fillOutputBranches_v1(LSTEvent* event) {
   setOutputBranches(event);
@@ -25,7 +25,7 @@ void fillOutputBranches_v1(LSTEvent* event) {
   // Now actually fill the ttree
   ana.tx->fill();
 
-  // Then clear the branches to default values (e.g. -999, or clear the std::vectors to empty std::vectors)
+  // Then clear the branches to default values (e.g. -999, or clear the vectors to empty vectors)
   ana.tx->clear();
 }
 
@@ -338,7 +338,7 @@ void setOutputBranches(LSTEvent* event) {
 
     // Loop over matched sim idx and increase counter of TC_matched
     for (auto& idx : simidx) {
-      // NOTE Important to note that the idx of the std::vector<> is same
+      // NOTE Important to note that the idx of the vector<> is same
       // as the tracking-ntuple's sim track idx ONLY because event==0 and bunchCrossing==0 condition is applied!!
       // Also do not try to access beyond the event and bunchCrossing
       if (idx < n_accepted_simtrk) {
@@ -491,7 +491,7 @@ void setPixelQuintupletOutputBranches(LSTEvent* event) {
 
     // Loop over matched sim idx and increase counter of pT5_matched
     for (auto& idx : simidx) {
-      // NOTE Important to note that the idx of the std::vector<> is same
+      // NOTE Important to note that the idx of the vector<> is same
       // as the tracking-ntuple's sim track idx ONLY because event==0 and bunchCrossing==0 condition is applied!!
       // Also do not try to access beyond the event and bunchCrossing
       if (idx < n_accepted_simtrk) {
@@ -1130,21 +1130,20 @@ std::tuple<int, float, float, float, int, std::vector<int>, std::vector<float>> 
   // Get the type of the track candidate
   auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[idx];
-  enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
   // Compute pt eta phi and hit indices that will be used to figure out whether the TC matched
   float pt, eta, phi;
   std::vector<unsigned int> hit_idx, hit_type;
   switch (type) {
-    case pT5:
+    case LSTObjType::pT5:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT5(event, idx);
       break;
-    case pT3:
+    case LSTObjType::pT3:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT3(event, idx);
       break;
-    case T5:
+    case LSTObjType::T5:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parseT5(event, idx);
       break;
-    case pLS:
+    case LSTObjType::pLS:
       std::tie(pt, eta, phi, hit_idx, hit_type) = parsepLS(event, idx);
       break;
   }
@@ -1267,7 +1266,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   float pt_T5 = __H2F(quintuplets.innerRadius()[T5Index]) * 2 * k2Rinv1GeVf;
   const float pt = (pt_T5 + pt_pLS) / 2;
 
-  // Form the hit idx/type std::vector
+  // Form the hit idx/type vector
   std::vector<unsigned int> hit_idx = getHitIdxsFrompT5(event, pT5);
   std::vector<unsigned int> hit_type = getHitTypesFrompT5(event, pT5);
 
@@ -1302,7 +1301,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   // average pt
   const float pt = (pt_pLS + pt_T3) / 2;
 
-  // Form the hit idx/type std::vector
+  // Form the hit idx/type vector
   std::vector<unsigned int> hit_idx = getHitIdxsFrompT3(event, pT3);
   std::vector<unsigned int> hit_type = getHitTypesFrompT3(event, pT3);
 
@@ -1535,21 +1534,7 @@ void printT3s(LSTEvent* event) {
   }
   std::cout << "VALIDATION nTriplets: " << nTriplets << std::endl;
 }
-
-//    (# of simulated track) && (is reconstructed)
-// --------------------------------------------------
-//    (# of simulated track)
-
-//    (# of simulated track w/ pt > 0.9 GeV and pt < 1.0 GeV and "some selection requirement on the sim track") && (is reconstructed)
-// ----------------------------------------------------------------------------------- --------------------------------------------------
-//    (# of simulated track w/ pt > 0.9 GeV and pt < 1.0 GeV and "some selection requirement on the sim track")
-
-//    (# of reconstructed track w/ pt > 0.9 GeV and pt < 1.0 GeV and "some selection requirement on the reconstructed track") && (is_fake)
-// ----------------------------------------------------------------------------------- --------------------------------------------------
-//    (# of reconstructed track w/ pt > 0.9 GeV and pt < 1.0 GeV and "some selection requirement on the reconstructed track")
-
-//________________________________________________________________________________________________________________________________
-void createOutputBranches_v2() {
+void createOutputBranches_LSTOD() {
   //---------------------------------------------------------------------------------------------------------------------------------
   // Simulated Track Container
   //
@@ -1757,11 +1742,11 @@ void createOutputBranches_v2() {
   //    The container will hold per entry a pixel line segment (built by an external algo, e.g. patatrack) accepted by LST in the event.
   //
   ana.tx->createBranch<std::vector<float>>(
-      "pls_pt");  // pt (taken from pt of the 3-std::vector from see_stateTrajGlbPx/Py/Pz)
+      "pls_pt");  // pt (taken from pt of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<float>>(
-      "pls_eta");  // eta (taken from eta of the 3-std::vector from see_stateTrajGlbPx/Py/Pz)
+      "pls_eta");  // eta (taken from eta of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<float>>(
-      "pls_phi");  // phi (taken from phi of the 3-std::vector from see_stateTrajGlbPx/Py/Pz)
+      "pls_phi");  // phi (taken from phi of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<int>>("pls_nhit");         // Number of actual hit: 3 if triplet, 4 if quadruplet
   ana.tx->createBranch<std::vector<float>>("pls_hit0_x");     // pLS's reco hit0 x
   ana.tx->createBranch<std::vector<float>>("pls_hit0_y");     // pLS's reco hit0 y
@@ -1821,8 +1806,8 @@ void createOutputBranches_v2() {
 }
 
 //________________________________________________________________________________________________________________________________
-void fillOutputBranches_v2(LSTEvent* event) {
-  // This function will go through each object and fill in the branches defined in createOutputBranches_v2 function.
+void fillOutputBranches_LSTOD(LSTEvent* event) {
+  // This function will go through each object and fill in the branches defined in createOutputBranches_LSTOD function.
 
   //--------------------------------------------
   //
@@ -1863,8 +1848,8 @@ void fillOutputBranches_v2(LSTEvent* event) {
     ana.tx->pushbackToBranch<int>("sim_pdgId", trk.sim_pdgId()[isimtrk]);
 
     // For vertex we need to look it up from simvtx info for the given simtrack
-    int vtxidx = trk.sim_parentVtxIdx()
-                     [isimtrk];  // for each simulated track, there is an index that points to the production vertex
+    // for each simulated track, there is an index that points to the production vertex
+    int vtxidx = trk.sim_parentVtxIdx()[isimtrk];
     ana.tx->pushbackToBranch<float>("sim_vx", trk.simvtx_x()[vtxidx]);  // using the index we retrieve xyz position
     ana.tx->pushbackToBranch<float>("sim_vy", trk.simvtx_y()[vtxidx]);
     ana.tx->pushbackToBranch<float>("sim_vz", trk.simvtx_z()[vtxidx]);
@@ -1898,6 +1883,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     std::vector<float> simHitLayerMinDistxyHelix(11, 999);
 
     std::vector<std::vector<int>> simHitIdxs(11);
+    float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
 
     // Loop over the simhits (truth hits)
     for (size_t isimhit = 0; isimhit < trk.sim_simHitIdx()[isimtrk].size(); ++isimhit) {
@@ -1912,24 +1898,22 @@ void fillOutputBranches_v2(LSTEvent* event) {
       float distxyconsistent = distxySimHitConsistentWithHelix(helix, isimhitidx);
 
       // Also retrieve some basic information about the simhit's location (layers, isbarrel?, etc.)
-      int subdet =
-          trk.simhit_subdet()
-              [isimhitidx];  // subdet == 4 means endcap of the outer tracker, subdet == 5 means barrel of the outer tracker)
+      // subdet == 4 means endcap of the outer tracker, subdet == 5 means barrel of the outer tracker)
+      int subdet = trk.simhit_subdet()[isimhitidx];
       int is_endcap = subdet == 4;
 
       // Now compute "logical layer" index
       // N.B. if a hit is in the inner tracker, layer would be staying at layer = 0
       int layer = 0;
       if (subdet == 4 or subdet == 5)  // this is not an outer tracker hit
-        layer =
-            trk.simhit_layer()[isimhitidx] +
-            6 * (is_endcap);  // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+        // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+        layer = trk.simhit_layer()[isimhitidx] + 6 * (is_endcap);
 
       // keep track of isimhits in each layers so we can compute mindistxy from previous hit in previous layer
       if (subdet == 4 or subdet == 5)
         simHitIdxs[layer - 1].push_back(isimhitidx);
 
-      // For this hit, now we push back to the std::vector that we are keeping track of
+      // For this hit, now we push back to the vector that we are keeping track of
       simHitLayer.push_back(layer);
       simHitDistxyHelix.push_back(distxyconsistent);
       simHitX.push_back(trk.simhit_x()[isimhitidx]);
@@ -2028,11 +2012,16 @@ void fillOutputBranches_v2(LSTEvent* event) {
   auto segments = event->getSegments<SegmentsSoA>();
   auto pixelSegments = event->getPixelSegments();
   auto segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
-  auto triplets = event->getTriplets<TripletsOccupancySoA>();
-  auto quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
+  auto tripletOccupancies = event->getTriplets<TripletsOccupancySoA>();
+  auto triplets = event->getTriplets<TripletsSoA>();
+  auto quintupletOccupancies = event->getQuintuplets<QuintupletsOccupancySoA>();
+  auto quintuplets = event->getQuintuplets<QuintupletsSoA>();
   auto pixelQuintuplets = event->getPixelQuintuplets();
   auto pixelTriplets = event->getPixelTriplets();
   auto trackCandidates = event->getTrackCandidates();
+
+  //setting matchfrac used for defining accepted tracks
+  float matchfrac = 0.75;
 
   //--------------------------------------------
   //
@@ -2042,7 +2031,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   //
   //--------------------------------------------
 
-  // Following are some std::vectors to keep track of the information to write to the ntuple
+  // Following are some vectors to keep track of the information to write to the ntuple
   // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_mdIdxAll branch is NOT that long
   // Later in the code, it will restrict to only the ones to write out.
   // The reason at this stage, the entire mdIdxAll is being tracked is to compute duplicate properly later on
@@ -2093,7 +2082,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       float other_y = hits.ys()[UpperHitIndex];
       float other_z = hits.zs()[UpperHitIndex];
 
-      // Construct the anchor hit 3 std::vector
+      // Construct the anchor hit 3 vector
       lst_math::Hit anchor_hit(anchor_x, anchor_y, anchor_z, LowerHitIndex);
 
       // Pt is computed via dphichange and the eta and phi are computed based on anchor hit
@@ -2108,13 +2097,11 @@ void fillOutputBranches_v2(LSTEvent* event) {
       // Obtain where the actual hit is located in terms of their layer, module, rod, and ring number
       int subdet = trk.ph2_subdet()[hit0];
       int is_endcap = subdet == 4;
-      int layer =
-          trk.ph2_layer()[hit0] +
-          6 * (is_endcap);  // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+      // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+      int layer = trk.ph2_layer()[hit0] + 6 * (is_endcap);
       int detId = trk.ph2_detId()[hit0];
-      int ring =
-          (detId & (15 << 12)) >>
-          12;  // See https://github.com/SegmentLinking/TrackLooper/blob/158804cab7fd0976264a7bc4cee236f4986328c2/SDL/Module.cc and Module.h
+      // See https://github.com/SegmentLinking/TrackLooper/blob/158804cab7fd0976264a7bc4cee236f4986328c2/SDL/Module.cc and Module.h
+      int ring = (detId & (15 << 12)) >> 12;
       int isPS = is_endcap ? (layer <= 2 ? ring <= 10 : ring <= 7) : layer <= 3;
 
       // Write out the ntuple
@@ -2139,7 +2126,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       // Compute whether this is a fake
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
-        if (simidxfrac[isim] > 0.75) {
+        if (simidxfrac[isim] > matchfrac) {
           isfake = false;
           break;
         }
@@ -2169,7 +2156,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         int thisidx = simidx[isim];
         float thisfrac = simidxfrac[isim];
-        if (thisfrac > md_simIdxBestFrac and thisfrac > 0.75) {
+        if (thisfrac > md_simIdxBestFrac and thisfrac > matchfrac) {
           md_simIdxBestFrac = thisfrac;
           md_simIdx = thisidx;
         }
@@ -2207,7 +2194,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   //
   //--------------------------------------------
 
-  // Following are some std::vectors to keep track of the information to write to the ntuple
+  // Following are some vectors to keep track of the information to write to the ntuple
   // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_objIdxAll branch is NOT that long
   // Later in the code, it will restrict to only the ones to write out.
   // The reason at this stage, the entire objIdxAll is being tracked is to compute duplicate properly later on
@@ -2297,7 +2284,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       // Compute whether this is a fake
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
-        if (simidxfrac[isim] > 0.75) {
+        if (simidxfrac[isim] > matchfrac) {
           isfake = false;
           break;
         }
@@ -2328,7 +2315,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         int thisidx = simidx[isim];
         float thisfrac = simidxfrac[isim];
-        if (thisfrac > ls_simIdxBestFrac and thisfrac > 0.75) {
+        if (thisfrac > ls_simIdxBestFrac and thisfrac > matchfrac) {
           ls_simIdxBestFrac = thisfrac;
           ls_simIdx = thisidx;
         }
@@ -2377,7 +2364,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   // printT3s(event);
   for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
     unsigned int nmods = modules.nLowerModules();
-    for (unsigned int iT3 = 0; iT3 < triplets.nTriplets()[idx]; iT3++) {
+    for (unsigned int iT3 = 0; iT3 < tripletOccupancies.nTriplets()[idx]; iT3++) {
       unsigned int t3Idx = ranges.tripletModuleIndices()[idx] + iT3;
       t3_idx_map[t3Idx] = t3_idx;
       std::vector<unsigned int> hit_idx, hit_type;
@@ -2390,10 +2377,8 @@ void fillOutputBranches_v2(LSTEvent* event) {
       ana.tx->pushbackToBranch<int>("t3_lsIdx1", ls_idx_map[lsIdxs[1]]);
       // Computing line segment pt estimate (assuming beam spot is at zero)
       lst_math::Hit hitA(hits.xs()[hit_idx[0]], hits.ys()[hit_idx[0]], hits.zs()[hit_idx[0]]);
-      lst_math::Hit hitB(hits.xs()[hit_idx[2]], hits.ys()[hit_idx[2]], hits.zs()[hit_idx[2]]);
       lst_math::Hit hitC(hits.xs()[hit_idx[4]], hits.ys()[hit_idx[4]], hits.zs()[hit_idx[4]]);
-      lst_math::Hit center = lst_math::getCenterFromThreePoints(hitA, hitB, hitC);
-      float pt = lst_math::ptEstimateFromRadius(center.rt());
+      float pt = __H2F(triplets.radius()[t3Idx]) * k2Rinv1GeVf * 2;
       float eta = hitC.eta();
       float phi = hitA.phi();
       ana.tx->pushbackToBranch<float>("t3_pt", pt);
@@ -2401,7 +2386,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t3_phi", phi);
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
-        if (simidxfrac[isim] > 0.75) {
+        if (simidxfrac[isim] > matchfrac) {
           isfake = false;
           break;
         }
@@ -2422,7 +2407,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         int thisidx = simidx[isim];
         float thisfrac = simidxfrac[isim];
-        if (thisfrac > t3_simIdxBestFrac and thisfrac > 0.75) {
+        if (thisfrac > t3_simIdxBestFrac and thisfrac > matchfrac) {
           t3_simIdxBestFrac = thisfrac;
           t3_simIdx = thisidx;
         }
@@ -2454,7 +2439,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = t3_simIdxAll[t3_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_t3IdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_t3IdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_t3IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -2486,7 +2471,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   // printT3s(event);
   for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
     unsigned int nmods = modules.nLowerModules();
-    for (unsigned int iT5 = 0; iT5 < quintuplets.nQuintuplets()[idx]; iT5++) {
+    for (unsigned int iT5 = 0; iT5 < quintupletOccupancies.nQuintuplets()[idx]; iT5++) {
       unsigned int t5Idx = ranges.quintupletModuleIndices()[idx] + iT5;
       t5_idx_map[t5Idx] = t5_idx;
       std::vector<unsigned int> hit_idx, hit_type;
@@ -2497,29 +2482,17 @@ void fillOutputBranches_v2(LSTEvent* event) {
       std::vector<unsigned int> t3Idxs = getT3sFromT5(event, t5Idx);
       ana.tx->pushbackToBranch<int>("t5_t3Idx0", t3_idx_map[t3Idxs[0]]);
       ana.tx->pushbackToBranch<int>("t5_t3Idx1", t3_idx_map[t3Idxs[1]]);
-      // Computing line segment pt estimate (assuming beam spot is at zero)
       lst_math::Hit hitA(hits.xs()[hit_idx[0]], hits.ys()[hit_idx[0]], hits.zs()[hit_idx[0]]);
-      lst_math::Hit hitB(hits.xs()[hit_idx[2]], hits.ys()[hit_idx[2]], hits.zs()[hit_idx[2]]);
-      lst_math::Hit hitC(hits.xs()[hit_idx[4]], hits.ys()[hit_idx[4]], hits.zs()[hit_idx[4]]);
-      lst_math::Hit hitD(hits.xs()[hit_idx[6]], hits.ys()[hit_idx[6]], hits.zs()[hit_idx[6]]);
       lst_math::Hit hitE(hits.xs()[hit_idx[8]], hits.ys()[hit_idx[8]], hits.zs()[hit_idx[8]]);
-      lst_math::Hit center = lst_math::getCenterFromThreePoints(hitA, hitB, hitC);
-      float pt = lst_math::ptEstimateFromRadius(center.rt());
-      lst_math::Hit center2 = lst_math::getCenterFromThreePoints(hitB, hitC, hitD);
-      float pt2 = lst_math::ptEstimateFromRadius(center2.rt());
-      lst_math::Hit center3 = lst_math::getCenterFromThreePoints(hitC, hitD, hitE);
-      float pt3 = lst_math::ptEstimateFromRadius(center3.rt());
-      lst_math::Hit center4 = lst_math::getCenterFromThreePoints(hitA, hitC, hitE);
-      float pt4 = lst_math::ptEstimateFromRadius(center4.rt());
-      float ptavg = (pt + pt2 + pt3 + pt4) / 4;
+      float pt = __H2F(quintuplets.innerRadius()[t5Idx]) * k2Rinv1GeVf * 2;
       float eta = hitE.eta();
       float phi = hitA.phi();
-      ana.tx->pushbackToBranch<float>("t5_pt", ptavg);
+      ana.tx->pushbackToBranch<float>("t5_pt", pt);
       ana.tx->pushbackToBranch<float>("t5_eta", eta);
       ana.tx->pushbackToBranch<float>("t5_phi", phi);
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
-        if (simidxfrac[isim] > 0.75) {
+        if (simidxfrac[isim] > matchfrac) {
           isfake = false;
           break;
         }
@@ -2540,7 +2513,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         int thisidx = simidx[isim];
         float thisfrac = simidxfrac[isim];
-        if (thisfrac > t5_simIdxBestFrac and thisfrac > 0.75) {
+        if (thisfrac > t5_simIdxBestFrac and thisfrac > matchfrac) {
           t5_simIdxBestFrac = thisfrac;
           t5_simIdx = thisidx;
         }
@@ -2571,7 +2544,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = t5_simIdxAll[t5_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_t5IdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_t5IdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_t5IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -2633,7 +2606,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       }
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
-        if (simidxfrac[isim] > 0.75) {
+        if (simidxfrac[isim] > matchfrac) {
           isfake = false;
           break;
         }
@@ -2654,7 +2627,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         int thisidx = simidx[isim];
         float thisfrac = simidxfrac[isim];
-        if (thisfrac > pls_simIdxBestFrac and thisfrac > 0.75) {
+        if (thisfrac > pls_simIdxBestFrac and thisfrac > matchfrac) {
           pls_simIdxBestFrac = thisfrac;
           pls_simIdx = thisidx;
         }
@@ -2686,7 +2659,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = pls_simIdxAll[pls_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_plsIdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_plsIdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_plsIdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -2741,7 +2714,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     ana.tx->pushbackToBranch<int>("pt3_t3Idx", t3_idx);
     bool isfake = true;
     for (size_t isim = 0; isim < simidx.size(); ++isim) {
-      if (simidxfrac[isim] > 0.75) {
+      if (simidxfrac[isim] > matchfrac) {
         isfake = false;
         break;
       }
@@ -2762,7 +2735,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     for (size_t isim = 0; isim < simidx.size(); ++isim) {
       int thisidx = simidx[isim];
       float thisfrac = simidxfrac[isim];
-      if (thisfrac > pt3_simIdxBestFrac and thisfrac > 0.75) {
+      if (thisfrac > pt3_simIdxBestFrac and thisfrac > matchfrac) {
         pt3_simIdxBestFrac = thisfrac;
         pt3_simIdx = thisidx;
       }
@@ -2793,7 +2766,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = pt3_simIdxAll[pt3_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_pt3IdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_pt3IdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_pt3IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -2848,7 +2821,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     ana.tx->pushbackToBranch<int>("pt5_t5Idx", t5_idx);
     bool isfake = true;
     for (size_t isim = 0; isim < simidx.size(); ++isim) {
-      if (simidxfrac[isim] > 0.75) {
+      if (simidxfrac[isim] > matchfrac) {
         isfake = false;
         break;
       }
@@ -2869,7 +2842,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     for (size_t isim = 0; isim < simidx.size(); ++isim) {
       int thisidx = simidx[isim];
       float thisfrac = simidxfrac[isim];
-      if (thisfrac > pt5_simIdxBestFrac and thisfrac > 0.75) {
+      if (thisfrac > pt5_simIdxBestFrac and thisfrac > matchfrac) {
         pt5_simIdxBestFrac = thisfrac;
         pt5_simIdx = thisidx;
       }
@@ -2900,7 +2873,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = pt5_simIdxAll[pt5_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_pt5IdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_pt5IdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_pt5IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -2921,7 +2894,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   //
   //--------------------------------------------
 
-  // Following are some std::vectors to keep track of the information to write to the ntuple
+  // Following are some vectors to keep track of the information to write to the ntuple
   // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_tcIdxAll branch is NOT that long
   // Later in the code, it will restrict to only the ones to write out.
   // The reason at this stage, the entire tcIdxAll is being tracked is to compute duplicate properly later on
@@ -2950,23 +2923,22 @@ void fillOutputBranches_v2(LSTEvent* event) {
     ana.tx->pushbackToBranch<float>("tc_eta", eta);
     ana.tx->pushbackToBranch<float>("tc_phi", phi);
     ana.tx->pushbackToBranch<int>("tc_type", type);
-    enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
-    if (type == pT5) {
+    if (type == LSTObjType::pT5) {
       ana.tx->pushbackToBranch<int>("tc_pt5Idx", pt5_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
       ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
-    } else if (type == pT3) {
+    } else if (type == LSTObjType::pT3) {
       ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_pt3Idx", pt3_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
       ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
-    } else if (type == T5) {
+    } else if (type == LSTObjType::T5) {
       ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_t5Idx", t5_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
       ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
-    } else if (type == pLS) {
+    } else if (type == LSTObjType::pLS) {
       ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
       ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
@@ -3000,7 +2972,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     for (size_t isim = 0; isim < simidx.size(); ++isim) {
       int thisidx = simidx[isim];
       float thisfrac = simidxfrac[isim];
-      if (thisfrac > tc_simIdxBestFrac and thisfrac > 0.75) {
+      if (thisfrac > tc_simIdxBestFrac and thisfrac > matchfrac) {
         tc_simIdxBestFrac = thisfrac;
         tc_simIdx = thisidx;
       }
@@ -3022,7 +2994,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
   std::copy(sim_tcIdxAll.begin(),
             sim_tcIdxAll.begin() + n_accepted_simtrk,
             std::back_inserter(
-                sim_tcIdxAll_to_write));  // this is where the std::vector is only copying the first "n_accepted_simtrk"
+                sim_tcIdxAll_to_write));  // this is where the vector is only copying the first "n_accepted_simtrk"
   std::copy(sim_tcIdxAllFrac.begin(),
             sim_tcIdxAllFrac.begin() + n_accepted_simtrk,
             std::back_inserter(sim_tcIdxAllFrac_to_write));  // ditto
@@ -3040,7 +3012,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
       int sim_idx = tc_simIdxAll[tc_idx][isim];
       int n_sim_matched = 0;
       for (size_t ism = 0; ism < sim_tcIdxAll.at(sim_idx).size(); ++ism) {
-        if (sim_tcIdxAllFrac.at(sim_idx).at(ism) > 0.75) {
+        if (sim_tcIdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
           n_sim_matched += 1;
           if (n_sim_matched > 1) {
             isDuplicate = true;
@@ -3071,7 +3043,7 @@ void fillOutputBranches_v2(LSTEvent* event) {
     }
     ana.tx->pushbackToBranch<int>("sim_tcIdxBest", bestmatch_idx);
     ana.tx->pushbackToBranch<float>("sim_tcIdxBestFrac", bestmatch_frac);
-    if (bestmatch_frac > 0.75)  // then this is a good match according to MTV
+    if (bestmatch_frac > matchfrac)  // then this is a good match according to MTV
       ana.tx->pushbackToBranch<int>("sim_tcIdx", bestmatch_idx);
     else
       ana.tx->pushbackToBranch<int>("sim_tcIdx", -999);
@@ -3088,6 +3060,6 @@ void fillOutputBranches_v2(LSTEvent* event) {
   // Now actually fill the ttree
   ana.tx->fill();
 
-  // Then clear the branches to default values (e.g. -999, or clear the std::vectors to empty std::vectors)
+  // Then clear the branches to default values (e.g. -999, or clear the vectors to empty vectors)
   ana.tx->clear();
 }
