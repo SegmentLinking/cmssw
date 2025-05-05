@@ -86,6 +86,7 @@ namespace lst {
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
+    using ArrayFx6 = edm::StdArray<float, 6>;
   };
   struct Params_pT5 {
     static constexpr int kLayers = 7, kHits = 14;
