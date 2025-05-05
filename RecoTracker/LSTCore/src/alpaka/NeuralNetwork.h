@@ -10,6 +10,7 @@
 #include "T5NeuralNetworkWeights.h"
 #include "T3NeuralNetworkWeights.h"
 #include "pT3NeuralNetworkWeights.h"
+#include "T5EmbedNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -287,6 +288,95 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return x_5 > dnn::t5dnn::kWp[pt_index][bin_index];
     }
   }  // namespace t5dnn
+
+  namespace t5embdnn {
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE void runEmbed(TAcc const& acc,
+                                                 MiniDoubletsConst mds,
+                                                 unsigned int mdIndex1,
+                                                 unsigned int mdIndex2,
+                                                 unsigned int mdIndex3,
+                                                 unsigned int mdIndex4,
+                                                 unsigned int mdIndex5,
+                                                 float innerRadius,
+                                                 float outerRadius,
+                                                 float bridgeRadius,
+                                                 float (&embedding)[6]) {
+      constexpr unsigned int kinputFeatures = 23;
+      constexpr unsigned int khidden = 32;
+      constexpr unsigned int kembed = 6;
+
+      float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);
+      float eta2 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex2]);
+      float eta3 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex3]);
+      float eta4 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex4]);
+      float eta5 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex5]);
+
+      float phi1 = mds.anchorPhi()[mdIndex1];
+      float phi2 = mds.anchorPhi()[mdIndex2];
+      float phi3 = mds.anchorPhi()[mdIndex3];
+      float phi4 = mds.anchorPhi()[mdIndex4];
+      float phi5 = mds.anchorPhi()[mdIndex5];
+
+      float z1 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex1]);
+      float z2 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex2]);
+      float z3 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex3]);
+      float z4 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex4]);
+      float z5 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex5]);
+
+      float r1 = mds.anchorRt()[mdIndex1];
+      float r2 = mds.anchorRt()[mdIndex2];
+      float r3 = mds.anchorRt()[mdIndex3];
+      float r4 = mds.anchorRt()[mdIndex4];
+      float r5 = mds.anchorRt()[mdIndex5];
+
+      float x[kinputFeatures] = {eta1 / dnn::kEta_norm,
+                                 alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,
+                                 z1 / dnn::t5dnn::kZ_max,
+                                 r1 / dnn::t5dnn::kR_max,
+
+                                 eta2 - eta1,
+                                 cms::alpakatools::deltaPhi(acc, phi2, phi1) / dnn::kPhi_norm,
+                                 (z2 - z1) / dnn::t5dnn::kZ_max,
+                                 (r2 - r1) / dnn::t5dnn::kR_max,
+
+                                 eta3 - eta2,
+                                 cms::alpakatools::deltaPhi(acc, phi3, phi2) / dnn::kPhi_norm,
+                                 (z3 - z2) / dnn::t5dnn::kZ_max,
+                                 (r3 - r2) / dnn::t5dnn::kR_max,
+
+                                 eta4 - eta3,
+                                 cms::alpakatools::deltaPhi(acc, phi4, phi3) / dnn::kPhi_norm,
+                                 (z4 - z3) / dnn::t5dnn::kZ_max,
+                                 (r4 - r3) / dnn::t5dnn::kR_max,
+
+                                 eta5 - eta4,
+                                 cms::alpakatools::deltaPhi(acc, phi5, phi4) / dnn::kPhi_norm,
+                                 (z5 - z4) / dnn::t5dnn::kZ_max,
+                                 (r5 - r4) / dnn::t5dnn::kR_max,
+
+                                 alpaka::math::log10(acc, innerRadius),
+                                 alpaka::math::log10(acc, bridgeRadius),
+                                 alpaka::math::log10(acc, outerRadius)};
+
+      float h1[khidden];
+      float h2[khidden];
+      float out[kembed];
+
+      linear_layer<kinputFeatures, khidden>(x, h1, dnn::t5embdnn::wgtT_fc1, dnn::t5embdnn::bias_fc1);
+      relu_activation<khidden>(h1);
+
+      linear_layer<khidden, khidden>(h1, h2, dnn::t5embdnn::wgtT_fc2, dnn::t5embdnn::bias_fc2);
+      relu_activation<khidden>(h2);
+
+      linear_layer<khidden, kembed>(h2, out, dnn::t5embdnn::wgtT_fc3, dnn::t5embdnn::bias_fc3);
+
+      CMS_UNROLL_LOOP
+      for (unsigned int i = 0; i < kembed; ++i)
+        embedding[i] = out[i];
+    }
+
+  }  // namespace t5embdnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 

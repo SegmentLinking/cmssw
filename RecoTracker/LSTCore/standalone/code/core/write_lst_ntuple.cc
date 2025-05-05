@@ -137,6 +137,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
   ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
+  ana.tx->createBranch<std::vector<int>>("t5_isDupAlgoFlag");
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
   ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
@@ -560,6 +561,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets.innerRadius()[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets.bridgeRadius()[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets.outerRadius()[quintupletIndex]));
+      ana.tx->pushbackToBranch<int>("t5_isDupAlgoFlag", quintuplets.isDup()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets.chiSquared()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets.rzChiSquared()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_nonAnchorChiSquared", quintuplets.nonAnchorChiSquared()[quintupletIndex]);
