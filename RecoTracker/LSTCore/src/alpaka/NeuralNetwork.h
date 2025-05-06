@@ -9,6 +9,7 @@
 
 #include "T5NeuralNetworkWeights.h"
 #include "T3NeuralNetworkWeights.h"
+#include "TCNeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -135,6 +136,44 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t3dnn
+
+  namespace tcdnn {
+
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE void runInference(TAcc const& acc,
+                                                     const float tc_pt,
+                                                     const float tc_eta,
+                                                     const float tc_phi,
+                                                     const float tc_type,
+                                                     float (&embedding)[4]) {
+      // Normalize the input features as during training:
+      // - Transverse momentum: take log10.
+      // - Pseudorapidity: divided by 4.0.
+      // - Azimuthal angle: divided by π (3.1415926).
+      // - Track type: subtract 6.0 and divide by 2.0.
+      float norm_pt = alpaka::math::log10(acc, tc_pt);
+      float norm_eta = tc_eta / 4.0f;
+      float norm_phi = tc_phi / 3.1415926f;
+      float norm_type = (tc_type - 6.0f) / 2.0f;
+
+      // Build the input feature vector.
+      float x[4] = {norm_pt, norm_eta, norm_phi, norm_type};
+
+      // Layer 1: Linear (4 -> 32) then ReLU activation.
+      float x1[32];
+      linear_layer<4, 32>(x, x1, dnn::tcdnn::wgtT_embedding_net_fc1, dnn::tcdnn::bias_embedding_net_fc1);
+      relu_activation<32>(x1);
+
+      // Layer 2: Linear (32 -> 16) then ReLU activation.
+      float x2[16];
+      linear_layer<32, 16>(x1, x2, dnn::tcdnn::wgtT_embedding_net_fc2, dnn::tcdnn::bias_embedding_net_fc2);
+      relu_activation<16>(x2);
+
+      // Layer 3: Linear (16 -> 4).
+      linear_layer<16, 4>(x2, embedding, dnn::tcdnn::wgtT_embedding_net_fc3, dnn::tcdnn::bias_embedding_net_fc3);
+    }
+
+  }  // namespace tcdnn
 
   namespace t5dnn {
     template <typename TAcc>
