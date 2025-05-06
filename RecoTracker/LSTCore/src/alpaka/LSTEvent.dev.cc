@@ -80,12 +80,9 @@ void LSTEvent::resetEventSync() {
 void LSTEvent::addHitToEvent(std::vector<float> const& x,
                              std::vector<float> const& y,
                              std::vector<float> const& z,
+                             std::vector<size_t> const& clustSizes,
                              std::vector<unsigned int> const& detId,
                              std::vector<unsigned int> const& idxInNtuple) {
-  // TUNA PLACEHOLDER WRONG TUNA
-  std::vector<unsigned int> clustSizes(x.size());
-  std::iota(clustSizes.begin(), clustSizes.end(), 0);
-  // TUNA PLACEHOLDER WRONG TUNA
 
   // Use the actual number of hits instead of a max.
   unsigned int nHits = x.size();

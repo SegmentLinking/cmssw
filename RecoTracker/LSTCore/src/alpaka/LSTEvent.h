@@ -110,6 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void addHitToEvent(std::vector<float> const& x,
                        std::vector<float> const& y,
                        std::vector<float> const& z,
+                       std::vector<size_t> const& clustSize,
                        std::vector<unsigned int> const& detId,
                        std::vector<unsigned int> const& idxInNtuple);
     void addPixelSegmentToEventStart(std::vector<float> const& ptIn,

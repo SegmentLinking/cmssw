@@ -897,7 +897,7 @@ float addInputsToEventPreLoad(LSTEvent *event,
 
   my_timer.Start();
 
-  event->addHitToEvent(trkX, trkY, trkZ, hitId, hitIdxs);
+  event->addHitToEvent(trkX, trkY, trkZ, hitClustSize, hitId, hitIdxs);
 
   event->addPixelSegmentToEventStart(ptIn_vec,
                                      ptErr_vec,
