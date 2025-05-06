@@ -610,6 +610,7 @@ TVector3 calculateR3FromPCA(const TVector3 &p3, const float dxy, const float dz)
 void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_trkX,
                                            std::vector<std::vector<float>> &out_trkY,
                                            std::vector<std::vector<float>> &out_trkZ,
+                                           std::vector<std::vector<size_t>> &out_hitClustSize,
                                            std::vector<std::vector<unsigned int>> &out_hitId,
                                            std::vector<std::vector<unsigned int>> &out_hitIdxs,
                                            std::vector<std::vector<unsigned int>> &out_hitIndices_vec0,
@@ -665,6 +666,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
   std::vector<float> trkX = trk.ph2_x();
   std::vector<float> trkY = trk.ph2_y();
   std::vector<float> trkZ = trk.ph2_z();
+  std::vector<size_t> hitClustSize = trk.ph2_clustSize();
   std::vector<unsigned int> hitId = trk.ph2_detId();
   std::vector<unsigned int> hitIdxs(trk.ph2_detId().size());
 
@@ -778,6 +780,9 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
       trkX.push_back(r3LH.X());
       trkY.push_back(r3LH.Y());
       trkZ.push_back(r3LH.Z());
+      hitClustSize.push_back(1);
+      hitClustSize.push_back(1);
+      hitClustSize.push_back(1);
       hitId.push_back(1);
       hitId.push_back(1);
       hitId.push_back(1);
@@ -785,6 +790,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
         trkX.push_back(r3LH.X());
         trkY.push_back(trk.see_dxy()[iSeed]);
         trkZ.push_back(trk.see_dz()[iSeed]);
+        hitClustSize.push_back(1);
         hitId.push_back(1);
       }
       px_vec.push_back(px);
@@ -834,6 +840,7 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
   out_trkX.push_back(trkX);
   out_trkY.push_back(trkY);
   out_trkZ.push_back(trkZ);
+  out_hitClustSize.push_back(hitClustSize);
   out_hitId.push_back(hitId);
   out_hitIdxs.push_back(hitIdxs);
   out_hitIndices_vec0.push_back(hitIndices_vec0);
@@ -866,6 +873,7 @@ float addInputsToEventPreLoad(LSTEvent *event,
                               std::vector<float> trkX,
                               std::vector<float> trkY,
                               std::vector<float> trkZ,
+                              std::vector<size_t> hitClustSize,
                               std::vector<unsigned int> hitId,
                               std::vector<unsigned int> hitIdxs,
                               std::vector<float> ptIn_vec,

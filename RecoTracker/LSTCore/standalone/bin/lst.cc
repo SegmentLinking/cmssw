@@ -330,6 +330,7 @@ void run_lst() {
   std::vector<std::vector<float>> out_trkX;
   std::vector<std::vector<float>> out_trkY;
   std::vector<std::vector<float>> out_trkZ;
+  std::vector<std::vector<size_t>> out_hitClustSize;
   std::vector<std::vector<unsigned int>> out_hitId;
   std::vector<std::vector<unsigned int>> out_hitIdxs;
   std::vector<std::vector<unsigned int>> out_hitIndices_vec0;
@@ -366,6 +367,7 @@ void run_lst() {
     addInputsToLineSegmentTrackingPreLoad(out_trkX,
                                           out_trkY,
                                           out_trkZ,
+                                          out_hitClustSize,
                                           out_hitId,
                                           out_hitIdxs,
                                           out_hitIndices_vec0,
@@ -428,6 +430,7 @@ void run_lst() {
                                                      out_trkX.at(evt),
                                                      out_trkY.at(evt),
                                                      out_trkZ.at(evt),
+                                                     out_hitClustSize.at(evt),
                                                      out_hitId.at(evt),
                                                      out_hitIdxs.at(evt),
                                                      out_ptIn_vec.at(evt),

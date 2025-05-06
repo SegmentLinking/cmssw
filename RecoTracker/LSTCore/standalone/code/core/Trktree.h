@@ -116,6 +116,9 @@ protected:
   std::vector<float> *see_pt_;
   TBranch *see_pt_branch;
   bool see_pt_isLoaded;
+  std::vector<size_t> *ph2_clustSize_;
+  TBranch *ph2_clustSize_branch;
+  bool ph2_clustSize_isLoaded;
   std::vector<unsigned int> *ph2_detId_;
   TBranch *ph2_detId_branch;
   bool ph2_detId_isLoaded;
@@ -964,6 +967,7 @@ public:
   const std::vector<unsigned short> &simhit_subdet();
   const std::vector<std::vector<int> > &see_hitIdx();
   const std::vector<float> &see_pt();
+  const std::vector<size_t> &ph2_clustSize();
   const std::vector<unsigned int> &ph2_detId();
   const std::vector<unsigned int> &trk_nStripLay();
   const std::vector<int> &see_bestFromFirstHitSimTrkIdx();
@@ -1276,6 +1280,7 @@ namespace tas {
   const std::vector<unsigned short> &simhit_subdet();
   const std::vector<std::vector<int> > &see_hitIdx();
   const std::vector<float> &see_pt();
+  const std::vector<size_t> &ph2_clustSize();
   const std::vector<unsigned int> &ph2_detId();
   const std::vector<unsigned int> &trk_nStripLay();
   const std::vector<int> &see_bestFromFirstHitSimTrkIdx();
