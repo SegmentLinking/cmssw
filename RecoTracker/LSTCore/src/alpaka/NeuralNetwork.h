@@ -67,7 +67,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      const unsigned int mdIndex2,
                                                      const unsigned int mdIndex3,
                                                      const float radius,
-                                                     const float betaIn) {
+                                                     const float betaIn,
+                                                     float (&output)[3]) {
       // Constants for T3 DNN
       constexpr unsigned int kInputFeatures = 14;
       constexpr unsigned int kHiddenFeatures = 32;
@@ -113,7 +114,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       float x_1[kHiddenFeatures];  // Layer 1 output
       float x_2[kHiddenFeatures];  // Layer 2 output
-      float x_3[kOutputFeatures];  // Layer 3 output (3 classes)
 
       // Layer 1: Linear + Relu
       linear_layer<kInputFeatures, kHiddenFeatures>(x, x_1, dnn::t3dnn::wgtT_layer1, dnn::t3dnn::bias_layer1);
@@ -125,16 +125,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       // Layer 3: Linear + Softmax
       linear_layer<kHiddenFeatures, kOutputFeatures>(
-          x_2, x_3, dnn::t3dnn::wgtT_output_layer, dnn::t3dnn::bias_output_layer);
-      softmax_activation<kOutputFeatures>(acc, x_3);
+          x_2, output, dnn::t3dnn::wgtT_output_layer, dnn::t3dnn::bias_output_layer);
+      softmax_activation<kOutputFeatures>(acc, output);
 
       // Get pt and eta bin indices
       float t3_pt = radius * lst::k2Rinv1GeVf * 2;
       uint8_t pt_index = (t3_pt > 5);
       uint8_t bin_index = (eta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1 / dnn::kEtaSize);
 
-      return x_3[1] > dnn::t3dnn::kWp_prompt[pt_index][bin_index] ||
-             x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
+      return output[1] > dnn::t3dnn::kWp_prompt[pt_index][bin_index] ||
+             output[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t3dnn
 
@@ -302,9 +302,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                  float outerRadius,
                                                  float bridgeRadius,
                                                  float (&embedding)[6]) {
-      constexpr unsigned int kinputFeatures = 23;
-      constexpr unsigned int khidden = 32;
-      constexpr unsigned int kembed = 6;
+      constexpr unsigned int kInputFeatures = 23;
+      constexpr unsigned int kHiddenFeatures = 32;
+      constexpr unsigned int kEmbedDim = 6;
 
       float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);
       float eta2 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex2]);
@@ -330,7 +330,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       float r4 = mds.anchorRt()[mdIndex4];
       float r5 = mds.anchorRt()[mdIndex5];
 
-      float x[kinputFeatures] = {eta1 / dnn::kEta_norm,
+      float x[kInputFeatures] = {eta1 / dnn::kEta_norm,
                                  alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,
                                  z1 / dnn::t5dnn::kZ_max,
                                  r1 / dnn::t5dnn::kR_max,
@@ -359,20 +359,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  alpaka::math::log10(acc, bridgeRadius),
                                  alpaka::math::log10(acc, outerRadius)};
 
-      float h1[khidden];
-      float h2[khidden];
-      float out[kembed];
+      float h1[kHiddenFeatures];
+      float h2[kHiddenFeatures];
+      float out[kEmbedDim];
 
-      linear_layer<kinputFeatures, khidden>(x, h1, dnn::t5embdnn::wgtT_fc1, dnn::t5embdnn::bias_fc1);
-      relu_activation<khidden>(h1);
+      linear_layer<kInputFeatures, kHiddenFeatures>(x, h1, dnn::t5embdnn::wgtT_fc1, dnn::t5embdnn::bias_fc1);
+      relu_activation<kHiddenFeatures>(h1);
 
-      linear_layer<khidden, khidden>(h1, h2, dnn::t5embdnn::wgtT_fc2, dnn::t5embdnn::bias_fc2);
-      relu_activation<khidden>(h2);
+      linear_layer<kHiddenFeatures, kHiddenFeatures>(h1, h2, dnn::t5embdnn::wgtT_fc2, dnn::t5embdnn::bias_fc2);
+      relu_activation<kHiddenFeatures>(h2);
 
-      linear_layer<khidden, kembed>(h2, out, dnn::t5embdnn::wgtT_fc3, dnn::t5embdnn::bias_fc3);
+      linear_layer<kHiddenFeatures, kEmbedDim>(h2, out, dnn::t5embdnn::wgtT_fc3, dnn::t5embdnn::bias_fc3);
 
       CMS_UNROLL_LOOP
-      for (unsigned int i = 0; i < kembed; ++i)
+      for (unsigned int i = 0; i < kEmbedDim; ++i)
         embedding[i] = out[i];
     }
 

@@ -176,6 +176,12 @@ void createT5DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_t3_pt");
   ana.tx->createBranch<std::vector<float>>("t5_t3_eta");
   ana.tx->createBranch<std::vector<float>>("t5_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_fakeScore1");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_promptScore1");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_displacedScore1");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_fakeScore2");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_promptScore2");
+  ana.tx->createBranch<std::vector<float>>("t5_t3_displacedScore2");
 
   // Hit-specific branches
   std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
@@ -866,7 +872,8 @@ void setT3DNNBranches(LSTEvent* event) {
 
 //________________________________________________________________________________________________________________________________
 void setT5DNNBranches(LSTEvent* event) {
-  auto triplets = event->getTriplets<TripletsOccupancySoA>();
+  auto tripletsOcc = event->getTriplets<TripletsOccupancySoA>();
+  auto tripletsSoA = event->getTriplets<TripletsSoA>();
   auto modules = event->getModules<ModulesSoA>();
   auto ranges = event->getRanges();
   auto const quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
@@ -876,7 +883,7 @@ void setT5DNNBranches(LSTEvent* event) {
   std::unordered_map<unsigned int, unsigned int> t3_index_map;
 
   for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
-    for (unsigned int jdx = 0; jdx < triplets.nTriplets()[idx]; ++jdx) {
+    for (unsigned int jdx = 0; jdx < tripletsOcc.nTriplets()[idx]; ++jdx) {
       unsigned int t3Idx = ranges.tripletModuleIndices()[idx] + jdx;
       if (allT3s.insert(t3Idx).second) {
         t3_index_map[t3Idx] = allT3s.size() - 1;
@@ -903,6 +910,13 @@ void setT5DNNBranches(LSTEvent* event) {
 
       ana.tx->pushbackToBranch<int>("t5_t3_idx0", t3_index_map[t3sIdx[0]]);
       ana.tx->pushbackToBranch<int>("t5_t3_idx1", t3_index_map[t3sIdx[1]]);
+
+      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore1",      tripletsSoA.fakeScore()[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_promptScore1",    tripletsSoA.promptScore()[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_displacedScore1", tripletsSoA.displacedScore()[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore2",      tripletsSoA.fakeScore()[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_promptScore2",    tripletsSoA.promptScore()[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_displacedScore2", tripletsSoA.displacedScore()[t3sIdx[1]]);
 
       if (t5s_used_in_tc.find(t5Idx) != t5s_used_in_tc.end()) {
         ana.tx->pushbackToBranch<int>("t5_partOfTC", 1);
