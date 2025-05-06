@@ -66,7 +66,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      const unsigned int mdIndex2,
                                                      const unsigned int mdIndex3,
                                                      const float radius,
-                                                     const float betaIn) {
+                                                     const float betaIn,
+                                                     float (&output)[3]) {
       // Constants for T3 DNN
       constexpr unsigned int kinputFeatures = 14;
       constexpr unsigned int khiddenFeatures = 32;
@@ -112,7 +113,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       float x_1[khiddenFeatures];  // Layer 1 output
       float x_2[khiddenFeatures];  // Layer 2 output
-      float x_3[koutputFeatures];  // Layer 3 output (3 classes)
 
       // Layer 1: Linear + Relu
       linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, dnn::t3dnn::wgtT_layer1, dnn::t3dnn::bias_layer1);
@@ -124,16 +124,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       // Layer 3: Linear + Softmax
       linear_layer<khiddenFeatures, koutputFeatures>(
-          x_2, x_3, dnn::t3dnn::wgtT_output_layer, dnn::t3dnn::bias_output_layer);
-      softmax_activation<koutputFeatures>(acc, x_3);
+          x_2, output, dnn::t3dnn::wgtT_output_layer, dnn::t3dnn::bias_output_layer);
+      softmax_activation<koutputFeatures>(acc, output);
 
       // Get pt and eta bin indices
       float t3_pt = radius * lst::k2Rinv1GeVf * 2;
       uint8_t pt_index = (t3_pt > 5);
       uint8_t bin_index = (eta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
 
-      return x_3[1] > dnn::t3dnn::kWp_prompt[pt_index][bin_index] ||
-             x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
+      return output[1] > dnn::t3dnn::kWp_prompt[pt_index][bin_index] ||
+             output[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t3dnn
 

@@ -17,6 +17,9 @@ namespace lst {
                       SOA_COLUMN(float, centerX),  // lower/anchor-hit based circle center x
                       SOA_COLUMN(float, centerY),  // lower/anchor-hit based circle center y
                       SOA_COLUMN(float, radius),   // lower/anchor-hit based circle radius
+                      SOA_COLUMN(float, fakeScore),
+                      SOA_COLUMN(float, promptScore),
+                      SOA_COLUMN(float, displacedScore),
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(float, zOut),
                       SOA_COLUMN(float, rtOut),
