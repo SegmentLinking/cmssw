@@ -80,8 +80,10 @@ void LSTEvent::resetEventSync() {
 void LSTEvent::addHitToEvent(std::vector<float> const& x,
                              std::vector<float> const& y,
                              std::vector<float> const& z,
+                             std::vector<uint8_t> const& clustSizes,
                              std::vector<unsigned int> const& detId,
                              std::vector<unsigned int> const& idxInNtuple) {
+
   // Use the actual number of hits instead of a max.
   unsigned int nHits = x.size();
 
@@ -121,11 +123,13 @@ void LSTEvent::addHitToEvent(std::vector<float> const& x,
   auto zs_d = cms::alpakatools::make_device_view(queue_, hits.zs(), (Idx)hits.metadata().size());
   auto detId_d = cms::alpakatools::make_device_view(queue_, hits.detid(), (Idx)hits.metadata().size());
   auto idxs_d = cms::alpakatools::make_device_view(queue_, hits.idxs(), (Idx)hits.metadata().size());
+  auto clustSizes_d = cms::alpakatools::make_device_view(queue_, hits.clustSizes(), (Idx)hits.metadata().size());
   alpaka::memcpy(queue_, xs_d, x, (Idx)nHits);
   alpaka::memcpy(queue_, ys_d, y, (Idx)nHits);
   alpaka::memcpy(queue_, zs_d, z, (Idx)nHits);
   alpaka::memcpy(queue_, detId_d, detId, (Idx)nHits);
   alpaka::memcpy(queue_, idxs_d, idxInNtuple, (Idx)nHits);
+  alpaka::memcpy(queue_, clustSizes_d, clustSizes, (Idx)nHits);
   alpaka::wait(queue_);  // FIXME: remove synch after inputs refactored to be in pinned memory
 
   auto const hit_loop_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);

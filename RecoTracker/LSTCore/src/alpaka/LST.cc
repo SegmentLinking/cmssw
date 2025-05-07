@@ -76,10 +76,12 @@ void LST::prepareInput(std::vector<float> const& see_px,
                        std::vector<float> const& ph2_x,
                        std::vector<float> const& ph2_y,
                        std::vector<float> const& ph2_z,
+                       std::vector<uint8_t> const& ph2_clustSize,
                        float const ptCut) {
   in_trkX_.clear();
   in_trkY_.clear();
   in_trkZ_.clear();
+  in_clustSize_.clear();
   in_hitId_.clear();
   in_hitIdxs_.clear();
   in_hitIndices_vec0_.clear();
@@ -121,6 +123,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
   in_trkX_ = ph2_x;
   in_trkY_ = ph2_y;
   in_trkZ_ = ph2_z;
+  in_clustSize_ = ph2_clustSize;
   in_hitId_ = ph2_detId;
   in_hitIdxs_.resize(ph2_detId.size());
 
@@ -183,6 +186,9 @@ void LST::prepareInput(std::vector<float> const& see_px,
       in_trkX_.push_back(r3LH.x());
       in_trkY_.push_back(r3LH.y());
       in_trkZ_.push_back(r3LH.z());
+      in_clustSize_.push_back(1);
+      in_clustSize_.push_back(1);
+      in_clustSize_.push_back(1);
       in_hitId_.push_back(1);
       in_hitId_.push_back(1);
       in_hitId_.push_back(1);
@@ -190,6 +196,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
         in_trkX_.push_back(r3LH.x());
         in_trkY_.push_back(see_dxy[iSeed]);
         in_trkZ_.push_back(see_dz[iSeed]);
+        in_clustSize_.push_back(1);
         in_hitId_.push_back(1);
       }
       in_px_vec_.push_back(px);
@@ -277,6 +284,7 @@ void LST::run(Queue& queue,
               std::vector<float> const& ph2_x,
               std::vector<float> const& ph2_y,
               std::vector<float> const& ph2_z,
+              std::vector<uint8_t> const& ph2_clustSize,
               bool no_pls_dupclean,
               bool tc_pls_triplets) {
   auto event = LSTEvent(verbose, ptCut, queue, deviceESData);
@@ -299,9 +307,10 @@ void LST::run(Queue& queue,
                ph2_x,
                ph2_y,
                ph2_z,
+               ph2_clustSize,
                ptCut);
 
-  event.addHitToEvent(in_trkX_, in_trkY_, in_trkZ_, in_hitId_, in_hitIdxs_);
+  event.addHitToEvent(in_trkX_, in_trkY_, in_trkZ_, in_clustSize_, in_hitId_, in_hitIdxs_);
   event.addPixelSegmentToEventStart(in_ptIn_vec_,
                                     in_ptErr_vec_,
                                     in_px_vec_,

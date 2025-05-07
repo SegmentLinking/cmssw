@@ -38,6 +38,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              std::vector<float> const& ph2_x,
              std::vector<float> const& ph2_y,
              std::vector<float> const& ph2_z,
+             std::vector<uint8_t> const& ph2_clustSize,
              bool no_pls_dupclean,
              bool tc_pls_triplets);
     std::vector<std::vector<unsigned int>> const& hits() const { return out_tc_hitIdxs_; }
@@ -65,6 +66,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                       std::vector<float> const& ph2_x,
                       std::vector<float> const& ph2_y,
                       std::vector<float> const& ph2_z,
+                      std::vector<uint8_t> const& ph2_clustSize,
                       const float ptCut);
 
     void getOutput(LSTEvent& event);
@@ -73,6 +75,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::vector<float> in_trkX_;
     std::vector<float> in_trkY_;
     std::vector<float> in_trkZ_;
+    std::vector<uint8_t> in_clustSize_;
     std::vector<unsigned int> in_hitId_;
     std::vector<unsigned int> in_hitIdxs_;
     std::vector<unsigned int> in_hitIndices_vec0_;

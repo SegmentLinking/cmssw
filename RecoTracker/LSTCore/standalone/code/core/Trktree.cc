@@ -234,6 +234,13 @@ void Trktree::Init(TTree *tree) {
       see_pt_branch->SetAddress(&see_pt_);
     }
   }
+  ph2_clustSize_branch = 0;
+  if (tree->GetBranch("ph2_clustSize") != 0) {
+    ph2_clustSize_branch = tree->GetBranch("ph2_clustSize");
+    if (ph2_clustSize_branch) {
+      ph2_clustSize_branch->SetAddress(&ph2_clustSize_);
+    }
+  }
   ph2_detId_branch = 0;
   if (tree->GetBranch("ph2_detId") != 0) {
     ph2_detId_branch = tree->GetBranch("ph2_detId");
@@ -2163,6 +2170,7 @@ void Trktree::GetEntry(unsigned int idx) {
   simhit_subdet_isLoaded = false;
   see_hitIdx_isLoaded = false;
   see_pt_isLoaded = false;
+  ph2_clustSize_isLoaded = false;
   ph2_detId_isLoaded = false;
   trk_nStripLay_isLoaded = false;
   see_bestFromFirstHitSimTrkIdx_isLoaded = false;
@@ -2501,6 +2509,8 @@ void Trktree::LoadAllBranches() {
     see_hitIdx();
   if (see_pt_branch != 0)
     see_pt();
+  if (ph2_clustSize_branch != 0)
+    ph2_clustSize();
   if (ph2_detId_branch != 0)
     ph2_detId();
   if (trk_nStripLay_branch != 0)
@@ -3437,6 +3447,18 @@ const std::vector<float> &Trktree::see_pt() {
     see_pt_isLoaded = true;
   }
   return *see_pt_;
+}
+const std::vector<size_t> &Trktree::ph2_clustSize() {
+  if (not ph2_clustSize_isLoaded) {
+    if (ph2_clustSize_branch != 0) {
+      ph2_clustSize_branch->GetEntry(index);
+    } else {
+      printf("branch ph2_clustSize_branch does not exist!\n");
+      exit(1);
+    }
+    ph2_clustSize_isLoaded = true;
+  }
+  return *ph2_clustSize_;
 }
 const std::vector<unsigned int> &Trktree::ph2_detId() {
   if (not ph2_detId_isLoaded) {
@@ -6733,6 +6755,7 @@ namespace tas {
   const std::vector<unsigned short> &simhit_subdet() { return trk.simhit_subdet(); }
   const std::vector<std::vector<int> > &see_hitIdx() { return trk.see_hitIdx(); }
   const std::vector<float> &see_pt() { return trk.see_pt(); }
+  const std::vector<size_t> &ph2_clustSize() { return trk.ph2_clustSize(); }
   const std::vector<unsigned int> &ph2_detId() { return trk.ph2_detId(); }
   const std::vector<unsigned int> &trk_nStripLay() { return trk.trk_nStripLay(); }
   const std::vector<int> &see_bestFromFirstHitSimTrkIdx() { return trk.see_bestFromFirstHitSimTrkIdx(); }
