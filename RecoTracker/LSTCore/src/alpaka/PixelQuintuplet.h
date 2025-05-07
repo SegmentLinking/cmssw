@@ -33,7 +33,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  float pixelRadius,
                                                                  float quintupletRadius,
                                                                  float centerX,
-                                                                 float centerY) {
+                                                                 float centerY,
+                                                                 const float* pT5Embed) {
     pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex] = pixelIndex;
     pixelQuintuplets.quintupletIndices()[pixelQuintupletIndex] = t5Index;
     pixelQuintuplets.isDup()[pixelQuintupletIndex] = false;
@@ -84,6 +85,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelQuintuplets.rzChiSquared()[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintuplets.rPhiChiSquared()[pixelQuintupletIndex] = rPhiChiSquared;
     pixelQuintuplets.rPhiChiSquaredInwards()[pixelQuintupletIndex] = rPhiChiSquaredInwards;
+
+    for (unsigned int i = 0; i < 6; ++i) {
+      pixelQuintuplets.pT5Embed()[pixelQuintupletIndex][i] = pT5Embed[i];
+    }
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT5RZChiSquaredCuts(ModulesConst modules,
@@ -730,7 +735,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                            pixelRadius,
                                            quintupletRadius,
                                            centerX,
-                                           centerY);
+                                           centerY,
+                                           quintuplets.t5Embed()[quintupletIndex].data());
 
                 triplets.partOfPT5()[quintuplets.tripletIndices()[quintupletIndex][0]] = true;
                 triplets.partOfPT5()[quintuplets.tripletIndices()[quintupletIndex][1]] = true;
