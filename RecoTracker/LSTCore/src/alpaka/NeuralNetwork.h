@@ -252,12 +252,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                  float innerRadius,
                                                  float outerRadius,
                                                  float bridgeRadius,
+                                                 float fakeScore1,
+                                                 float promptScore1,
+                                                 float dispScore1,
+                                                 float fakeScore2,
+                                                 float promptScore2,
+                                                 float dispScore2,
                                                  float (&embedding)[6]) {
-      constexpr unsigned int kinputFeatures = 23;
+      constexpr unsigned int kinputFeatures = 30;
       constexpr unsigned int khidden = 32;
       constexpr unsigned int kembed = 6;
 
-      float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);
+      float eta1 = mds.anchorEta()[mdIndex1];
       float eta2 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex2]);
       float eta3 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex3]);
       float eta4 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex4]);
@@ -282,33 +288,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       float r5 = mds.anchorRt()[mdIndex5];
 
       float x[kinputFeatures] = {eta1 / dnn::kEta_norm,
-                                 alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,
+                                 alpaka::math::cos(acc, phi1),
+                                 alpaka::math::sin(acc, phi1),
                                  z1 / dnn::t5dnn::kZ_max,
                                  r1 / dnn::t5dnn::kR_max,
 
-                                 eta2 - eta1,
-                                 cms::alpakatools::deltaPhi(acc, phi2, phi1) / dnn::kPhi_norm,
+                                 eta2 - alpaka::math::abs(acc, eta1),
+                                 cms::alpakatools::deltaPhi(acc, phi2, phi1),
                                  (z2 - z1) / dnn::t5dnn::kZ_max,
                                  (r2 - r1) / dnn::t5dnn::kR_max,
 
                                  eta3 - eta2,
-                                 cms::alpakatools::deltaPhi(acc, phi3, phi2) / dnn::kPhi_norm,
+                                 cms::alpakatools::deltaPhi(acc, phi3, phi2),
                                  (z3 - z2) / dnn::t5dnn::kZ_max,
                                  (r3 - r2) / dnn::t5dnn::kR_max,
 
                                  eta4 - eta3,
-                                 cms::alpakatools::deltaPhi(acc, phi4, phi3) / dnn::kPhi_norm,
+                                 cms::alpakatools::deltaPhi(acc, phi4, phi3),
                                  (z4 - z3) / dnn::t5dnn::kZ_max,
                                  (r4 - r3) / dnn::t5dnn::kR_max,
 
                                  eta5 - eta4,
-                                 cms::alpakatools::deltaPhi(acc, phi5, phi4) / dnn::kPhi_norm,
+                                 cms::alpakatools::deltaPhi(acc, phi5, phi4),
                                  (z5 - z4) / dnn::t5dnn::kZ_max,
                                  (r5 - r4) / dnn::t5dnn::kR_max,
 
                                  alpaka::math::log10(acc, innerRadius),
                                  alpaka::math::log10(acc, bridgeRadius),
-                                 alpaka::math::log10(acc, outerRadius)};
+                                 alpaka::math::log10(acc, outerRadius),
+
+                                 fakeScore1,
+                                 promptScore1,
+                                 dispScore1,
+                                 (fakeScore2 - fakeScore1),
+                                 (promptScore2 - promptScore1),
+                                 (dispScore2 - dispScore1)};
 
       float h1[khidden];
       float h2[khidden];

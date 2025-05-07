@@ -1615,6 +1615,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                             innerRadius,
                             outerRadius,
                             bridgeRadius,
+                            triplets.fakeScore()[innerTripletIndex],
+                            triplets.promptScore()[innerTripletIndex],
+                            triplets.displacedScore()[innerTripletIndex],
+                            triplets.fakeScore()[outerTripletIndex],
+                            triplets.promptScore()[outerTripletIndex],
+                            triplets.displacedScore()[outerTripletIndex],
                             t5Embed);
 
     // 5 categories for sigmas
