@@ -69,7 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     triplets.fakeScore()[tripletIndex] = t3Scores[0];
     triplets.promptScore()[tripletIndex] = t3Scores[1];
-    triplets.displacedScore()[tripletIndex] = t3Scores[2];    
+    triplets.displacedScore()[tripletIndex] = t3Scores[2];
   }
 
   template <typename TAcc>

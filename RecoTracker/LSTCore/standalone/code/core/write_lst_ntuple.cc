@@ -911,11 +911,11 @@ void setT5DNNBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<int>("t5_t3_idx0", t3_index_map[t3sIdx[0]]);
       ana.tx->pushbackToBranch<int>("t5_t3_idx1", t3_index_map[t3sIdx[1]]);
 
-      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore1",      tripletsSoA.fakeScore()[t3sIdx[0]]);
-      ana.tx->pushbackToBranch<float>("t5_t3_promptScore1",    tripletsSoA.promptScore()[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore1", tripletsSoA.fakeScore()[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_promptScore1", tripletsSoA.promptScore()[t3sIdx[0]]);
       ana.tx->pushbackToBranch<float>("t5_t3_displacedScore1", tripletsSoA.displacedScore()[t3sIdx[0]]);
-      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore2",      tripletsSoA.fakeScore()[t3sIdx[1]]);
-      ana.tx->pushbackToBranch<float>("t5_t3_promptScore2",    tripletsSoA.promptScore()[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_fakeScore2", tripletsSoA.fakeScore()[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t5_t3_promptScore2", tripletsSoA.promptScore()[t3sIdx[1]]);
       ana.tx->pushbackToBranch<float>("t5_t3_displacedScore2", tripletsSoA.displacedScore()[t3sIdx[1]]);
 
       if (t5s_used_in_tc.find(t5Idx) != t5s_used_in_tc.end()) {
