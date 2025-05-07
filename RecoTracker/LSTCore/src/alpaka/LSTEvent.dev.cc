@@ -80,7 +80,7 @@ void LSTEvent::resetEventSync() {
 void LSTEvent::addHitToEvent(std::vector<float> const& x,
                              std::vector<float> const& y,
                              std::vector<float> const& z,
-                             std::vector<size_t> const& clustSizes,
+                             std::vector<uint8_t> const& clustSizes,
                              std::vector<unsigned int> const& detId,
                              std::vector<unsigned int> const& idxInNtuple) {
 

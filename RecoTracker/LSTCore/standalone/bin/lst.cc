@@ -330,7 +330,7 @@ void run_lst() {
   std::vector<std::vector<float>> out_trkX;
   std::vector<std::vector<float>> out_trkY;
   std::vector<std::vector<float>> out_trkZ;
-  std::vector<std::vector<size_t>> out_hitClustSize;
+  std::vector<std::vector<uint8_t>> out_hitClustSize;
   std::vector<std::vector<unsigned int>> out_hitId;
   std::vector<std::vector<unsigned int>> out_hitIdxs;
   std::vector<std::vector<unsigned int>> out_hitIndices_vec0;

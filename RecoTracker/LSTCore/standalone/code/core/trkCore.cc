@@ -610,7 +610,7 @@ TVector3 calculateR3FromPCA(const TVector3 &p3, const float dxy, const float dz)
 void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_trkX,
                                            std::vector<std::vector<float>> &out_trkY,
                                            std::vector<std::vector<float>> &out_trkZ,
-                                           std::vector<std::vector<size_t>> &out_hitClustSize,
+                                           std::vector<std::vector<uint8_t>> &out_hitClustSize,
                                            std::vector<std::vector<unsigned int>> &out_hitId,
                                            std::vector<std::vector<unsigned int>> &out_hitIdxs,
                                            std::vector<std::vector<unsigned int>> &out_hitIndices_vec0,
@@ -666,10 +666,14 @@ void addInputsToLineSegmentTrackingPreLoad(std::vector<std::vector<float>> &out_
   std::vector<float> trkX = trk.ph2_x();
   std::vector<float> trkY = trk.ph2_y();
   std::vector<float> trkZ = trk.ph2_z();
-  std::vector<size_t> hitClustSize = trk.ph2_clustSize();
   std::vector<unsigned int> hitId = trk.ph2_detId();
   std::vector<unsigned int> hitIdxs(trk.ph2_detId().size());
-
+  std::vector<size_t> hitClustSize64 = trk.ph2_clustSize();
+  // Please remove this once the cluster size is saved in the ntuple as uint8_t
+  std::vector<uint8_t> hitClustSize(hitClustSize64.size());
+  std::ranges::transform(hitClustSize64, hitClustSize.begin(),
+                         [](const auto& n){ return static_cast<uint8_t>(n); });
+  // </remove>
   std::vector<int> superbin_vec;
   std::vector<PixelType> pixelType_vec;
   std::vector<char> isQuad_vec;
@@ -873,7 +877,7 @@ float addInputsToEventPreLoad(LSTEvent *event,
                               std::vector<float> trkX,
                               std::vector<float> trkY,
                               std::vector<float> trkZ,
-                              std::vector<size_t> hitClustSize,
+                              std::vector<uint8_t> hitClustSize,
                               std::vector<unsigned int> hitId,
                               std::vector<unsigned int> hitIdxs,
                               std::vector<float> ptIn_vec,

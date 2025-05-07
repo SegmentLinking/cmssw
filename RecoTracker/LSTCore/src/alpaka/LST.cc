@@ -76,7 +76,7 @@ void LST::prepareInput(std::vector<float> const& see_px,
                        std::vector<float> const& ph2_x,
                        std::vector<float> const& ph2_y,
                        std::vector<float> const& ph2_z,
-                       std::vector<size_t> const& ph2_clustSize,
+                       std::vector<uint8_t> const& ph2_clustSize,
                        float const ptCut) {
   in_trkX_.clear();
   in_trkY_.clear();
@@ -284,7 +284,7 @@ void LST::run(Queue& queue,
               std::vector<float> const& ph2_x,
               std::vector<float> const& ph2_y,
               std::vector<float> const& ph2_z,
-              std::vector<size_t> const& ph2_clustSize,
+              std::vector<uint8_t> const& ph2_clustSize,
               bool no_pls_dupclean,
               bool tc_pls_triplets) {
   auto event = LSTEvent(verbose, ptCut, queue, deviceESData);

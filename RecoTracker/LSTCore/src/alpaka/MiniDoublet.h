@@ -377,14 +377,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float yLower,
                                                      float zLower,
                                                      float rtLower,
-                                                     size_t clustSizeLower,
+                                                     uint8_t clustSizeLower,
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
                                                      float rtUpper,
-                                                     size_t clustSizeUpper,
+                                                     uint8_t clustSizeUpper,
                                                      const float ptCut) {
-    if (clustSizeLower > 1000 or clustSizeUpper > 1000) {
+    if (clustSizeLower >= 0xff or clustSizeUpper >= 0xff) {
       return false;
     }
 
@@ -511,19 +511,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float yLower,
                                                      float zLower,
                                                      float rtLower,
-                                                     size_t clustSizeLower,
+                                                     uint8_t clustSizeLower,
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
                                                      float rtUpper,
-                                                     size_t clustSizeUpper,
+                                                     uint8_t clustSizeUpper,
                                                      const float ptCut) {
     // There are series of cuts that applies to mini-doublet in a "endcap" region
     // Cut #1 : dz cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3093
     // For PS module in case when it is tilted a different dz (after the strip hit shift) is calculated later.
 
-    if (clustSizeLower > 1000 or clustSizeUpper > 1000) {
+    if (clustSizeLower >= 0xff or clustSizeUpper >= 0xff) {
       return false;
     }
 
@@ -629,12 +629,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                float yLower,
                                                float zLower,
                                                float rtLower,
-                                               size_t clustSizeLower,
+                                               uint8_t clustSizeLower,
                                                float xUpper,
                                                float yUpper,
                                                float zUpper,
                                                float rtUpper,
-                                               size_t clustSizeUpper,
+                                               uint8_t clustSizeUpper,
                                                const float ptCut) {
     if (modules.subdets()[lowerModuleIndex] == Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
@@ -722,13 +722,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float yLower = hits.ys()[lowerHitArrayIndex];
           float zLower = hits.zs()[lowerHitArrayIndex];
           float rtLower = hits.rts()[lowerHitArrayIndex];
-          size_t clustSizeLower = hits.clustSizes()[lowerHitArrayIndex];
+          uint8_t clustSizeLower = hits.clustSizes()[lowerHitArrayIndex];
           unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
           float xUpper = hits.xs()[upperHitArrayIndex];
           float yUpper = hits.ys()[upperHitArrayIndex];
           float zUpper = hits.zs()[upperHitArrayIndex];
           float rtUpper = hits.rts()[upperHitArrayIndex];
-          size_t clustSizeUpper = hits.clustSizes()[upperHitArrayIndex];
+          uint8_t clustSizeUpper = hits.clustSizes()[upperHitArrayIndex];
 
           float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
           bool success = runMiniDoubletDefaultAlgo(acc,
