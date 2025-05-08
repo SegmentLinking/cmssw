@@ -183,24 +183,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
             float dR2 = dEta * dEta + dPhi * dPhi;
 
-            if (dR2 < 1e-3f) {
-              if (jx < pixelQuintuplets.nPixelQuintuplets()) {
-                unsigned int t5j = pixelQuintuplets.quintupletIndices()[jx];
-                float d2 = 0.f;
-                CMS_UNROLL_LOOP for (unsigned k = 0; k < 6; ++k) {
-                  float e1 = __H2F(quintuplets.t5Embed()[ix][k]);
-                  float e2 = __H2F(quintuplets.t5Embed()[t5j][k]);
-                  float df = e1 - e2;
-                  d2 += df * df;
-                }
-                if (d2 < 1.0f) {
-                  quintuplets.isDup()[ix] = true;
-                }
-              } else {
-                // pixel-triplet branch unchanged
+            if (jx < pixelQuintuplets.nPixelQuintuplets()) {
+              unsigned int t5j = pixelQuintuplets.quintupletIndices()[jx];
+              float d2 = 0.f;
+              CMS_UNROLL_LOOP for (unsigned k = 0; k < 6; ++k) {
+                float e1 = __H2F(quintuplets.t5Embed()[ix][k]);
+                float e2 = __H2F(quintuplets.t5Embed()[t5j][k]);
+                float df = e1 - e2;
+                d2 += df * df;
+              }
+              if ((dR2 < 0.02f && d2 < 0.1f) || (dR2 < 1e-3f && d2 < 1.0f)) {
                 quintuplets.isDup()[ix] = true;
               }
+            } else if (dR2 < 1e-3f) {
+              quintuplets.isDup()[ix] = true;
             }
+
             if (quintuplets.isDup()[ix])
               break;
           }
