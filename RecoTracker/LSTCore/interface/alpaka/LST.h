@@ -4,6 +4,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTESData.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/LSTOutputHostCollection.h"
 
 #include <cstdlib>
 #include <numeric>
@@ -23,19 +24,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              LSTInputDeviceCollection const* lstInputDC,
              bool no_pls_dupclean,
              bool tc_pls_triplets);
-    std::vector<std::vector<unsigned int>> const& hits() const { return out_tc_hitIdxs_; }
-    std::vector<unsigned int> const& len() const { return out_tc_len_; }
-    std::vector<int> const& seedIdx() const { return out_tc_seedIdx_; }
-    std::vector<short> const& trackCandidateType() const { return out_tc_trackCandidateType_; }
+    std::unique_ptr<LSTOutputHostCollection> getOutput() { return std::move(outputHC_); }
 
   private:
-    void getOutput(LSTEvent& event);
+    void makeOutput(LSTEvent& event, Queue& queue);
 
-    // Output vectors
-    std::vector<std::vector<unsigned int>> out_tc_hitIdxs_;
-    std::vector<unsigned int> out_tc_len_;
-    std::vector<int> out_tc_seedIdx_;
-    std::vector<short> out_tc_trackCandidateType_;
+    // Output SoA
+    std::unique_ptr<LSTOutputHostCollection> outputHC_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

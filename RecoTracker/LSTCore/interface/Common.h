@@ -98,6 +98,9 @@ namespace lst {
   using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
 
+  static constexpr int kMaxTrackHits = Params_pT5::kHits;
+  using ArrayUxMaxTrackHits = edm::StdArray<unsigned int, kMaxTrackHits>;
+
 }  //namespace lst
 
 #endif
