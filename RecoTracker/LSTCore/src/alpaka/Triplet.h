@@ -166,48 +166,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float y_center = circleCenterY / 100;
     float pt = 2 * k2Rinv1GeVf * circleRadius;  //k2Rinv1GeVf is already in cm^(-1)
 
-    //determine the charge
-    int charge = 0;
-    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
-      charge = -1;
-    else
-      charge = 1;
-
+    float cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+    int charge = -1 * ((int)copysignf(1.0f, cross));
+      
     //get the absolute value of px and py at the initial point
     float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (y_init - y_center)) * 100;
     float py = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (x_init - x_center)) * 100;
 
     //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
     //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
-    if (x_init > x_center && y_init > y_center)  //1st quad
-    {
-      if (charge == 1)
-        py = -py;
-      if (charge == -1)
-        px = -px;
-    }
-    if (x_init < x_center && y_init > y_center)  //2nd quad
-    {
-      if (charge == -1) {
-        px = -px;
-        py = -py;
-      }
-    }
-    if (x_init < x_center && y_init < y_center)  //3rd quad
-    {
-      if (charge == 1)
-        px = -px;
-      if (charge == -1)
-        py = -py;
-    }
-    if (x_init > x_center && y_init < y_center)  //4th quad
-    {
-      if (charge == 1) {
-        px = -px;
-        py = -py;
-      }
-    }
-
+    int quad1 = (x_init > x_center) && (y_init > y_center);  // top-right
+    int quad2 = (x_init < x_center) && (y_init > y_center);  // top-left
+    int quad3 = (x_init < x_center) && (y_init < y_center);  // bottom-left
+    int quad4 = (x_init > x_center) && (y_init < y_center);  // bottom-right
+    
+    // Compute flip flags
+    int flip_px = 
+        (quad1 && (charge == -1)) ||
+        (quad2 && (charge == -1)) ||
+        (quad3 && (charge == 1))  ||
+        (quad4 && (charge == 1));
+    
+    int flip_py = 
+        (quad1 && (charge == 1))  ||
+        (quad2 && (charge == -1)) ||
+        (quad3 && (charge == -1)) ||
+        (quad4 && (charge == 1));
+    
+    // Apply sign flips (1 - 2 * flag) → 1 if flag==0, -1 if flag==1
+    px *= (1 - 2 * flip_px);
+    py *= (1 - 2 * flip_py);
+    
     //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of px,py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
       px = -alpaka::math::abs(acc, px);
@@ -254,13 +243,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       float solz2 = alpaka::math::asin(acc, sol2) / rou * pz / p + z_init;
       float diffz1 = (solz1 - z_target) * 100;
       float diffz2 = (solz2 - z_target) * 100;
-      if (edm::isNotFinite(diffz1))
-        residual = diffz2;
-      else if (edm::isNotFinite(diffz2))
-        residual = diffz1;
-      else {
-        residual = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
-      }
+      residual = edm::isNotFinite(diffz1) ? diffz2 :
+                 edm::isNotFinite(diffz2) ? diffz1 :
+                 ((alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2);
     } else {  // for endcap
       float s = (z_target - z_init) * p / pz;
       float x = x_init + px / a * alpaka::math::sin(acc, rou * s) - py / a * (1 - alpaka::math::cos(acc, rou * s));
@@ -268,12 +253,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       residual = (r_target - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
     }
 
-    // error
-    if (moduleType3 == 0) {
-      error = 0.15f;  //PS
-    } else {
-      error = 5.0f;  //2S
-    }
+    // error, PS layer uncertainty is 0.15cm, 2S uncertainty is 5cm.
+    error = 0.15f * (moduleType3 == 0) + 5.0f * (moduleType3 != 0);
 
     float projection_missing2 = 1;
     if (drdz < 1)
