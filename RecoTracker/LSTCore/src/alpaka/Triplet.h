@@ -349,161 +349,47 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintBBB(TAcc const& acc,
-                                                                float rt_InLo,
-                                                                float rt_InOut,
-                                                                float sdIn_alpha,
-                                                                float drt_tl_axis,
-                                                                float rt_InSeg,
-                                                                float& betaIn,
-                                                                float& betaInCut,
-                                                                const float ptCut) {
-    float drt_InSeg = rt_InOut - rt_InLo;
-
-    betaInCut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / drt_InSeg);
-
-    //Beta cut
-    return alpaka::math::abs(acc, betaIn) < betaInCut;
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintBBE(TAcc const& acc,
-                                                                float rt_InLo,
-                                                                float rt_InOut,
-                                                                float sdIn_alpha,
-                                                                float drt_tl_axis,
-                                                                float rt_InSeg,
-                                                                float& betaIn,
-                                                                float& betaInCut,
-                                                                const float ptCut) {
-
-    float betaInRHmin = betaIn;
-    float betaInRHmax = betaIn;
-
-    float swapTemp;
-
-    if (alpaka::math::abs(acc, betaInRHmin) > alpaka::math::abs(acc, betaInRHmax)) {
-      swapTemp = betaInRHmin;
-      betaInRHmin = betaInRHmax;
-      betaInRHmax = swapTemp;
-    }
-
-    float sdIn_d = rt_InOut - rt_InLo;
-
-    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-                (0.02f / sdIn_d);
-
-    //Beta cut
-    return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraintEEE(TAcc const& acc,
-                                                                SegmentsConst segments,
-                                                                float& zOut,
-                                                                float& rtOut,
-                                                                float rt_InLo,
-                                                                float rt_InOut,
-                                                                float sdIn_alpha,
-                                                                float drt_tl_axis,
-                                                                float rt_InSeg,
-                                                                unsigned int innerSegmentIndex,
-                                                                float& betaIn,
-                                                                float& betaInCut,
-                                                                const float ptCut) {
-
-    float sdIn_alphaRHmin = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
-    float sdIn_alphaRHmax = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
-    float betaInRHmin = betaIn + sdIn_alphaRHmin - sdIn_alpha;
-    float betaInRHmax = betaIn + sdIn_alphaRHmax - sdIn_alpha;
-
-    float swapTemp;
-
-    if (alpaka::math::abs(acc, betaInRHmin) > alpaka::math::abs(acc, betaInRHmax)) {
-      swapTemp = betaInRHmin;
-      betaInRHmin = betaInRHmax;
-      betaInRHmax = swapTemp;
-    }
-
-    float sdIn_d = rt_InOut - rt_InLo;
-
-    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-                (0.02f / sdIn_d);
-
-    //Beta cut
-    return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
-  }
-
-  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraint(TAcc const& acc,
                                                              ModulesConst modules,
-                                                             MiniDoubletsConst mds,
                                                              SegmentsConst segments,
                                                              uint16_t innerInnerLowerModuleIndex,
                                                              uint16_t middleLowerModuleIndex,
                                                              uint16_t outerOuterLowerModuleIndex,
-                                                             unsigned int firstMDIndex,
-                                                             unsigned int secondMDIndex,
-                                                             unsigned int thirdMDIndex,
                                                              float& zOut,
                                                              float& rtOut,
-                                                             float rt_InLo,
-                                                             float rt_InOut,
+                                                             const float drt_InSeg,
                                                              float sdIn_alpha,
                                                              float drt_tl_axis,
                                                              float rt_InSeg,
                                                              uint16_t innerOuterLowerModuleIndex,
                                                              unsigned int innerSegmentIndex,
-                                                             unsigned int outerSegmentIndex,
                                                              float& betaIn,
                                                              float& betaInCut,
                                                              const float ptCut) {
-    short innerInnerLowerModuleSubdet = modules.subdets()[innerInnerLowerModuleIndex];
-    short middleLowerModuleSubdet = modules.subdets()[middleLowerModuleIndex];
-    short outerOuterLowerModuleSubdet = modules.subdets()[outerOuterLowerModuleIndex];
+    const short innerInnerLowerModuleSubdet = modules.subdets()[innerInnerLowerModuleIndex];
+    const short middleLowerModuleSubdet = modules.subdets()[middleLowerModuleIndex];
+    const short outerOuterLowerModuleSubdet = modules.subdets()[outerOuterLowerModuleIndex];
 
-    if (innerInnerLowerModuleSubdet == Barrel and middleLowerModuleSubdet == Barrel and
-        outerOuterLowerModuleSubdet == Barrel) {
-      return passPointingConstraintBBB(acc,
-                                       rt_InLo,
-                                       rt_InOut,
-                                       sdIn_alpha,
-                                       drt_tl_axis,
-                                       rt_InSeg,
-                                       betaIn,
-                                       betaInCut,
-                                       ptCut);
-    } else if (innerInnerLowerModuleSubdet == Barrel and
-               outerOuterLowerModuleSubdet == Endcap) {
-      return passPointingConstraintBBE(acc,
-                                       rt_InLo,
-                                       rt_InOut,
-                                       sdIn_alpha,
-                                       drt_tl_axis,
-                                       rt_InSeg,
-                                       betaIn,
-                                       betaInCut,
-                                       ptCut);
-    } 
-    else if (innerInnerLowerModuleSubdet == Endcap and middleLowerModuleSubdet == Endcap and
+    float betaInRHmin = betaIn;
+
+    if (innerInnerLowerModuleSubdet == Endcap and middleLowerModuleSubdet == Endcap and
              outerOuterLowerModuleSubdet == Endcap) {
-      return passPointingConstraintEEE(acc,
-                                       segments,
-                                       zOut,
-                                       rtOut,
-                                       rt_InLo,
-                                       rt_InOut,
-                                       sdIn_alpha,
-                                       drt_tl_axis,
-                                       rt_InSeg,
-                                       innerSegmentIndex,
-                                       betaIn,
-                                       betaInCut,
-                                       ptCut);
+              float sdIn_alphaRHmin = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
+              float sdIn_alphaRHmax = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
+
+              betaInRHmin = betaIn + sdIn_alphaRHmin - sdIn_alpha;
+              float betaInRHmax = betaIn + sdIn_alphaRHmax - sdIn_alpha;
+              float swapTemp;
+          
+              if (alpaka::math::abs(acc, betaInRHmin) > alpaka::math::abs(acc, betaInRHmax)) {
+                swapTemp = betaInRHmin;
+                betaInRHmin = betaInRHmax;
+                betaInRHmax = swapTemp;
+              }
     }
-    return false;  // failsafe
+    
+    //Beta cut
+    return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
   }
 
   template <typename TAcc>
@@ -535,12 +421,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float y2 = mds.anchorY()[secondMDIndex];
     float y3 = mds.anchorY()[thirdMDIndex];
 
-    float rt_InLo = mds.anchorRt()[firstMDIndex];
-    float rt_InOut = mds.anchorRt()[secondMDIndex];
-    float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+    const float rt_InLo = mds.anchorRt()[firstMDIndex];
+    const float rt_InOut = mds.anchorRt()[secondMDIndex];
+    const float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+
+    const float drt_InSeg = rt_InOut - rt_InLo;
     
-    float tl_axis_x = x3 - x1;
-    float tl_axis_y = y3 - y1;
+    const float tl_axis_x = x3 - x1;
+    const float tl_axis_y = y3 - y1;
 
     betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
                               acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
@@ -553,6 +441,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   (mds.anchorX()[secondMDIndex] - mds.anchorX()[firstMDIndex]) +
                                   (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]) *
                                   (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]));
+
+    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
+                (0.02f / drt_InSeg);
 
     std::tie(circleRadius, circleCenterX, circleCenterY) =
         computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3);
@@ -573,24 +464,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (not passPointingConstraint(acc,
                                    modules,
-                                   mds,
                                    segments,
                                    innerInnerLowerModuleIndex,
                                    middleLowerModuleIndex,
                                    outerOuterLowerModuleIndex,
-                                   firstMDIndex,
-                                   secondMDIndex,
-                                   thirdMDIndex,
                                    zOut,
                                    rtOut,
-                                   rt_InLo,
-                                   rt_InOut,
+                                   drt_InSeg,
                                    sdIn_alpha,
                                    drt_tl_axis,
                                    rt_InSeg,
                                    middleLowerModuleIndex,
                                    innerSegmentIndex,
-                                   outerSegmentIndex,
                                    betaIn,
                                    betaInCut,
                                    ptCut))
