@@ -11,6 +11,7 @@
 #include "T3NeuralNetworkWeights.h"
 #include "pT3NeuralNetworkWeights.h"
 #include "T5EmbedNetworkWeights.h"
+#include "pLSEmbedNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -362,9 +363,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                  (z5 - z4) / dnn::t5dnn::kZ_max,
                                  (r5 - r4) / dnn::t5dnn::kR_max,
 
-                                 alpaka::math::log10(acc, innerRadius),
-                                 alpaka::math::log10(acc, bridgeRadius),
-                                 alpaka::math::log10(acc, outerRadius),
+                                 1.0f / innerRadius,
+                                 1.0f / bridgeRadius,
+                                 1.0f / outerRadius,
 
                                  fakeScore1,
                                  promptScore1,
@@ -391,6 +392,54 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
   }  // namespace t5embdnn
+
+  namespace plsembdnn {
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE void runEmbed(TAcc const& acc,
+                                                 const float eta,
+                                                 const float etaErr,
+                                                 const float phi,
+                                                 const float circleCenterX,
+                                                 const float circleCenterY,
+                                                 const float circleRadius,
+                                                 const float ptIn,
+                                                 const float ptErr,
+                                                 const bool isQuad,
+                                                 float (&embedding)[6]) {
+      constexpr unsigned int kInputFeatures = 10;
+      constexpr unsigned int kHiddenFeatures = 32;
+      constexpr unsigned int kEmbedDim = 6;
+
+      float x[kInputFeatures] = {eta / 4.0f,
+                                 etaErr / 0.00139f,
+                                 alpaka::math::cos(acc, phi),
+                                 alpaka::math::sin(acc, phi),
+                                 1.0f / ptIn,
+                                 alpaka::math::log10(acc, ptErr),
+                                 isQuad ? 1.0f : 0.0f,
+                                 alpaka::math::log10(acc, alpaka::math::abs(acc, circleCenterX)),
+                                 alpaka::math::log10(acc, alpaka::math::abs(acc, circleCenterY)),
+                                 alpaka::math::log10(acc, circleRadius)};
+
+      float h1[kHiddenFeatures];
+      float h2[kHiddenFeatures];
+      float out[kEmbedDim];
+
+      linear_layer<kInputFeatures, kHiddenFeatures>(x, h1, dnn::plsembdnn::wgtT_fc1, dnn::plsembdnn::bias_fc1);
+      relu_activation<kHiddenFeatures>(h1);
+
+      linear_layer<kHiddenFeatures, kHiddenFeatures>(h1, h2, dnn::plsembdnn::wgtT_fc2, dnn::plsembdnn::bias_fc2);
+      relu_activation<kHiddenFeatures>(h2);
+
+      linear_layer<kHiddenFeatures, kEmbedDim>(h2, out, dnn::plsembdnn::wgtT_fc3, dnn::plsembdnn::bias_fc3);
+
+      CMS_UNROLL_LOOP
+      for (unsigned int i = 0; i < kEmbedDim; ++i) {
+        embedding[i] = out[i];
+      }
+    }
+
+  }  // namespace plsembdnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 

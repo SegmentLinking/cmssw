@@ -15,6 +15,8 @@
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 
+#include "NeuralNetwork.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addpLSTrackCandidateToMemory(TrackCandidates& cands,
                                                                    unsigned int trackletIndex,
@@ -240,10 +242,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
             float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 1e-3f)
-              pixelSegments.isDup()[pixelArrayIndex] = true;
+
+            if (dR2 < 0.02f) {
+              // build 6‑D embedding for this pLS
+              float plsEmbed[6];
+              plsembdnn::runEmbed(acc,
+                                  eta1,
+                                  pixelSeeds.etaErr()[pixelArrayIndex],
+                                  phi1,
+                                  pixelSegments.circleCenterX()[pixelArrayIndex],
+                                  pixelSegments.circleCenterY()[pixelArrayIndex],
+                                  pixelSegments.circleRadius()[pixelArrayIndex],
+                                  pixelSeeds.ptIn()[pixelArrayIndex],
+                                  pixelSeeds.ptErr()[pixelArrayIndex],
+                                  static_cast<bool>(pixelSeeds.isQuad()[pixelArrayIndex]),
+                                  plsEmbed);
+
+              float d2 = 0.f;
+              CMS_UNROLL_LOOP for (unsigned k = 0; k < 6; ++k) {
+                float diff = plsEmbed[k] - __H2F(quintuplets.t5Embed()[quintupletIndex][k]);
+                d2 += diff * diff;
+              }
+
+              if (d2 < 0.70f) {
+                pixelSegments.isDup()[pixelArrayIndex] = true;
+              }
+            }
           }
           if (type == LSTObjType::pT3) {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
