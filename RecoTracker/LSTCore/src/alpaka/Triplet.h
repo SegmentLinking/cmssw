@@ -364,20 +364,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 float rt_InLo,
                                                                 float rt_InOut,
                                                                 float sdIn_alpha,
+                                                                float drt_tl_axis,
                                                                 unsigned int innerSegmentIndex,
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
     float drt_InSeg = rt_InOut - rt_InLo;
-
-    // raw betaIn value without any correction, based on the mini-doublet hit positions
-    float tl_axis_x = mds.anchorX()[thirdMDIndex] - mds.anchorX()[firstMDIndex];
-    float tl_axis_y = mds.anchorY()[thirdMDIndex] - mds.anchorY()[firstMDIndex];
-    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
-                              acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
-
-    //beta computation
-    float drt_tl_axis = alpaka::math::sqrt(acc, tl_axis_x * tl_axis_x + tl_axis_y * tl_axis_y);
 
     //innerOuterAnchor - innerInnerAnchor
     const float rt_InSeg = alpaka::math::sqrt(acc,
@@ -409,18 +401,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 float rt_InLo,
                                                                 float rt_InOut,
                                                                 float sdIn_alpha,
+                                                                float drt_tl_axis,
                                                                 uint16_t innerOuterLowerModuleIndex,
                                                                 unsigned int innerSegmentIndex,
                                                                 unsigned int outerSegmentIndex,
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
-
-    float tl_axis_x = mds.anchorX()[thirdMDIndex] - mds.anchorX()[firstMDIndex];
-    float tl_axis_y = mds.anchorY()[thirdMDIndex] - mds.anchorY()[firstMDIndex];
-
-    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
-                              acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
 
     float betaInRHmin = betaIn;
     float betaInRHmax = betaIn;
@@ -440,8 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]));
     float sdIn_d = rt_InOut - rt_InLo;
 
-    float dr = alpaka::math::sqrt(acc, tl_axis_x * tl_axis_x + tl_axis_y * tl_axis_y);
-    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + dr) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
+    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
                 (0.02f / sdIn_d);
 
     //Beta cut
@@ -464,17 +450,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                 float rt_InLo,
                                                                 float rt_InOut,
                                                                 float sdIn_alpha,
+                                                                float drt_tl_axis,
                                                                 unsigned int innerSegmentIndex,
                                                                 unsigned int outerSegmentIndex,
                                                                 float& betaIn,
                                                                 float& betaInCut,
                                                                 const float ptCut) {
-
-    float tl_axis_x = mds.anchorX()[thirdMDIndex] - mds.anchorX()[firstMDIndex];
-    float tl_axis_y = mds.anchorY()[thirdMDIndex] - mds.anchorY()[firstMDIndex];
-
-    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
-                              acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
 
     float sdIn_alphaRHmin = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
     float sdIn_alphaRHmax = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
@@ -495,8 +476,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]));
     float sdIn_d = rt_InOut - rt_InLo;
 
-    float dr = alpaka::math::sqrt(acc, tl_axis_x * tl_axis_x + tl_axis_y * tl_axis_y);
-    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + dr) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
+    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-sdIn_dr + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
                 (0.02f / sdIn_d);
 
     //Beta cut
@@ -519,6 +499,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              float rt_InLo,
                                                              float rt_InOut,
                                                              float sdIn_alpha,
+                                                             float drt_tl_axis,
                                                              uint16_t innerOuterLowerModuleIndex,
                                                              unsigned int innerSegmentIndex,
                                                              unsigned int outerSegmentIndex,
@@ -546,6 +527,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        rt_InLo,
                                        rt_InOut,
                                        sdIn_alpha,
+                                       drt_tl_axis,
                                        innerSegmentIndex,
                                        betaIn,
                                        betaInCut,
@@ -567,6 +549,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        rt_InLo,
                                        rt_InOut,
                                        sdIn_alpha,
+                                       drt_tl_axis,
                                        innerOuterLowerModuleIndex,
                                        innerSegmentIndex,
                                        outerSegmentIndex,
@@ -590,6 +573,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        rt_InLo,
                                        rt_InOut,
                                        sdIn_alpha,
+                                       drt_tl_axis,
                                        innerOuterLowerModuleIndex,
                                        innerSegmentIndex,
                                        outerSegmentIndex,
@@ -616,6 +600,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        rt_InLo,
                                        rt_InOut,
                                        sdIn_alpha,
+                                       drt_tl_axis,
                                        innerSegmentIndex,
                                        outerSegmentIndex,
                                        betaIn,
@@ -657,6 +642,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float rt_InLo = mds.anchorRt()[firstMDIndex];
     float rt_InOut = mds.anchorRt()[secondMDIndex];
     float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+    
+    float tl_axis_x = x3 - x1;
+    float tl_axis_y = y3 - y1;
+
+    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
+                              acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
+
+    float drt_tl_axis = alpaka::math::sqrt(acc, tl_axis_x * tl_axis_x + tl_axis_y * tl_axis_y);
 
     std::tie(circleRadius, circleCenterX, circleCenterY) =
         computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3);
@@ -690,6 +683,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    rt_InLo,
                                    rt_InOut,
                                    sdIn_alpha,
+                                   drt_tl_axis,
                                    middleLowerModuleIndex,
                                    innerSegmentIndex,
                                    outerSegmentIndex,
