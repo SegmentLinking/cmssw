@@ -14,7 +14,7 @@ import vector
 
 
 # Takes an entry from a tree and extracts lists of key parameters.
-def getLists(entry, hardSc = False): #, pTcut=0):
+def getLists(entry, hardSc = True, pTcut=True):
         # This applies to the entire event
         pdgidList = entry.sim_pdgId
         evLen = len(pdgidList)
@@ -34,7 +34,7 @@ def getLists(entry, hardSc = False): #, pTcut=0):
                 if (hardSc and entry.sim_event[j] !=0 ): 
                         # print(f"event != 0 {entry.sim_event[j]}")
                         continue
-                if(entry.sim_q[j] != 0 and entry.sim_pt[j] < 0.75 ):
+                if(pTcut and entry.sim_q[j] != 0 and entry.sim_pt[j] < 0.75 ):
                         continue
                 pdgid = pdgidList[j]
                 massList[j] = Particle.from_pdgid(pdgid).mass/1000.
@@ -102,16 +102,16 @@ def plotOneJet(jet, name):
     plt.savefig(name)
     plt.clf()
 
-def matchArr(jetArr, treeArr):
-        # Convert to int so np.where() is available
-        intjetArr = (10000*jetArr).astype(int)
-        inttreeArr = (10000*treeArr).astype(int)
+def matchArr(jetArrpT, jetArreta, jetArrphi, treeArrpT, treeArreta, treeArrphi, evnum, jetnum):
+        indexArr = np.ones(len(jetArrpT))*-999
 
-        # Stores recovered index of particle in jet
-        indexArr = np.zeros(len(jetArr))
-        
-        for i in range(len(intjetArr)):
-                indexArr[i] = np.where(inttreeArr == intjetArr[i])[0][0]
+        for i in range(len(jetArrpT)):
+                for j in range(len(treeArrpT)):
+                        if(np.abs(jetArrpT[i]-treeArrpT[j])<0.00001 and np.abs(jetArreta[i]-treeArreta[j])<0.00001 and np.abs(np.cos(jetArrphi[i])-np.cos(treeArrphi[j]))<0.00001):
+                                if(indexArr[i]!=-999): continue # print(f"Error: double matched at Event={evnum}, Jet={jetnum} i={i}")
+                                indexArr[i] = j
+        if(indexArr[i]==-999.0):
+                print(f"Error: Event={evnum}, Jet={jetnum} i={i}, pT = {jetArrpT[i]}, eta = {jetArreta[i]}, phi = {jetArrphi[i]}")
 
         return indexArr
 

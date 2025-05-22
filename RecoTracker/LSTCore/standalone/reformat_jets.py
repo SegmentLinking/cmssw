@@ -20,7 +20,7 @@ file =  TFile("/data2/segmentlinking/CMSSW_12_2_0_pre2/trackingNtuple_ttbar_PU20
 old_tree = file["trackingNtuple"]["tree"]
 
 # Create a new ROOT file to store the new TTree
-new_file = ROOT.TFile("new_tree_ttbar_cut.root", "RECREATE")
+new_file = ROOT.TFile("new_tree_hard_sc.root", "RECREATE")
 
 # Create a new subdirectory in the new file
 new_directory = new_file.mkdir("trackingNtuple")
@@ -64,7 +64,7 @@ for i in range(old_tree.GetEntries()):
     new_leaf_jet_pt.clear()
 
     # Creates the lists that will fill the leaves
-    pTList, etaList, phiList, massList = getLists(old_tree)#, 0)
+    pTList, etaList, phiList, massList = getLists(old_tree, pTcut=True)
     cluster, jets = createJets(pTList, etaList, phiList, massList)
     
     jetIndex = np.array([])
@@ -75,20 +75,20 @@ for i in range(old_tree.GetEntries()):
     jet_phi = np.array([])
     jet_pt = np.array([])
 
-    for jet in jets:
+    for j, jet in enumerate(jets):
         const = jet.constituents()
         c_len = len(const)
         c_pts = np.zeros(c_len)
         c_etas = np.zeros(c_len)
         c_phis = np.zeros(c_len)
 
-        for i in range(c_len):
-            c_pts[i] = const[i].pt()
-            c_etas[i] = const[i].eta()
-            c_phis[i] = const[i].phi()
+        for k in range(c_len):
+            c_pts[k] = const[k].pt()
+            c_etas[k] = const[k].eta()
+            c_phis[k] = const[k].phi()
 
         # Reorder particles within jet (jet clustering does not respect original index)
-        jetIndex = np.append(jetIndex, matchArr(c_pts, pTList)) # order restored by matching pT
+        jetIndex = np.append(jetIndex, matchArr(c_pts, c_etas, c_phis, np.array(old_tree.sim_pt), np.array(old_tree.sim_eta), np.array(old_tree.sim_phi), i, j)) # order restored by matching pT
         jetIndex = jetIndex.astype(int)
 
         # Compute the distance to jet
@@ -109,7 +109,7 @@ for i in range(old_tree.GetEntries()):
         jet_pt = np.append(jet_pt, jet_pt_val)
     
     # Reordering branches appropriately
-    length = len(pTList)
+    length = len(np.array(old_tree.sim_pt))
 
     re_eta_diffs = np.ones(length)*(-999)
     re_phi_diffs = np.ones(length)*(-999)
