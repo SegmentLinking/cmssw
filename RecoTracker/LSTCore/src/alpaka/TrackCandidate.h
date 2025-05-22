@@ -245,7 +245,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dR2 = dEta * dEta + dPhi * dPhi;
 
             if (dR2 < 0.02f) {
-              // build 6‑D embedding for this pLS
               float plsEmbed[6];
               plsembdnn::runEmbed(acc,
                                   eta1,
@@ -265,7 +264,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 d2 += diff * diff;
               }
 
-              if (d2 < 0.70f) {
+              float absEta1 = alpaka::math::abs(acc, eta1);
+              uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
+
+              if (alpaka::math::sqrt(acc, d2) < dnn::plsembdnn::kWP[bin_idx]) {
                 pixelSegments.isDup()[pixelArrayIndex] = true;
               }
             }
