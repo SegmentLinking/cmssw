@@ -176,7 +176,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
     //flip signs of px and/or py according to charge (clockwise vs. anti-clockwise) and quadrant
     px *= (1 - 2 * (y_init < y_center)) * charge;
-    py *= (1 - 2 * (x_init > x_center)) * charge;    
+    py *= (1 - 2 * (x_init > x_center)) * charge;  
     
     //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of px,py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
@@ -237,13 +237,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // error, PS layer uncertainty is 0.15cm, 2S uncertainty is 5cm.
     error = 0.15f * (moduleType3 == 0) + 5.0f * (moduleType3 != 0);
 
+    bool isEndcapOrCenter = (subdets == lst::Endcap) or (side == lst::Center);
     float projection_missing2 = 1;
     if (drdz < 1)
-      projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
+      projection_missing2 = isEndcapOrCenter
                                 ? 1.f
                                 : 1 / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
     if (drdz > 1)
-      projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
+      projection_missing2 = isEndcapOrCenter
                                 ? 1.f
                                 : drdz * drdz / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
 
@@ -331,25 +332,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPointingConstraint(TAcc const& acc,
-                                                             ModulesConst modules,
                                                              SegmentsConst segments,
-                                                             uint16_t innerInnerLowerModuleIndex,
-                                                             uint16_t middleLowerModuleIndex,
-                                                             uint16_t outerOuterLowerModuleIndex,
-                                                             float& zOut,
-                                                             float& rtOut,
-                                                             const float drt_InSeg,
+                                                             uint16_t innerInnerLowerModuleSubdet,
+                                                             uint16_t middleLowerModuleSubdet,
+                                                             uint16_t outerOuterLowerModuleSubdet,
                                                              float sdIn_alpha,
-                                                             float drt_tl_axis,
-                                                             float rt_InSeg,
-                                                             uint16_t innerOuterLowerModuleIndex,
                                                              unsigned int innerSegmentIndex,
                                                              float& betaIn,
-                                                             float& betaInCut,
-                                                             const float ptCut) {
-    const short innerInnerLowerModuleSubdet = modules.subdets()[innerInnerLowerModuleIndex];
-    const short middleLowerModuleSubdet = modules.subdets()[middleLowerModuleIndex];
-    const short outerOuterLowerModuleSubdet = modules.subdets()[outerOuterLowerModuleIndex];
+                                                             float& betaInCut) {
 
     float betaInRHmin = betaIn;
 
@@ -368,7 +358,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 betaInRHmax = swapTemp;
               }
     }
-    
+
     //Beta cut
     return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
   }
@@ -383,9 +373,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    uint16_t outerOuterLowerModuleIndex,
                                                                    unsigned int innerSegmentIndex,
                                                                    unsigned int outerSegmentIndex,
-                                                                   unsigned int firstMDIndex,
-                                                                   unsigned int secondMDIndex,
-                                                                   unsigned int thirdMDIndex,
                                                                    float& zOut,
                                                                    float& rtOut,
                                                                    float& betaIn,
@@ -395,36 +382,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleCenterY,
                                                                    const float ptCut) {
 
-    float x1 = mds.anchorX()[firstMDIndex];
-    float x2 = mds.anchorX()[secondMDIndex];
-    float x3 = mds.anchorX()[thirdMDIndex];
-    float y1 = mds.anchorY()[firstMDIndex];
-    float y2 = mds.anchorY()[secondMDIndex];
-    float y3 = mds.anchorY()[thirdMDIndex];
+    unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
+    unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
+    unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
 
-    const float rt_InLo = mds.anchorRt()[firstMDIndex];
-    const float rt_InOut = mds.anchorRt()[secondMDIndex];
-    const float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
-
-    const float drt_InSeg = rt_InOut - rt_InLo;
-    
-    const float tl_axis_x = x3 - x1;
-    const float tl_axis_y = y3 - y1;
-
-    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
-                              acc, cms::alpakatools::phi(acc, tl_axis_x, tl_axis_y) - mds.anchorPhi()[firstMDIndex]);
-
-    float drt_tl_axis = alpaka::math::sqrt(acc, tl_axis_x * tl_axis_x + tl_axis_y * tl_axis_y);
-
-    //innerOuterAnchor - innerInnerAnchor
-    float rt_InSeg = alpaka::math::sqrt(acc,
-                                  (mds.anchorX()[secondMDIndex] - mds.anchorX()[firstMDIndex]) *
-                                  (mds.anchorX()[secondMDIndex] - mds.anchorX()[firstMDIndex]) +
-                                  (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]) *
-                                  (mds.anchorY()[secondMDIndex] - mds.anchorY()[firstMDIndex]));
-
-    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-                (0.02f / drt_InSeg);
+    const float x1 = mds.anchorX()[firstMDIndex];
+    const float x2 = mds.anchorX()[secondMDIndex];
+    const float x3 = mds.anchorX()[thirdMDIndex];
+    const float y1 = mds.anchorY()[firstMDIndex];
+    const float y2 = mds.anchorY()[secondMDIndex];
+    const float y3 = mds.anchorY()[thirdMDIndex];
 
     std::tie(circleRadius, circleCenterX, circleCenterY) =
         computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3);
@@ -443,23 +410,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                              circleCenterY))
       return false;
 
+    const short innerInnerLowerModuleSubdet = modules.subdets()[innerInnerLowerModuleIndex];
+    const short middleLowerModuleSubdet = modules.subdets()[middleLowerModuleIndex];
+    const short outerOuterLowerModuleSubdet = modules.subdets()[outerOuterLowerModuleIndex];
+
+    const float rt_InLo = mds.anchorRt()[firstMDIndex];
+    const float rt_InOut = mds.anchorRt()[secondMDIndex];
+    const float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
+
+    const float drt_InSeg = rt_InOut - rt_InLo;
+    const float drt_tl_axis = alpaka::math::sqrt(acc, (x3 - x1) * (x3 - x1) + (y3 - y1) * (y3 - y1));
+
+    //innerOuterAnchor - innerInnerAnchor
+    const float rt_InSeg = alpaka::math::sqrt(acc, (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+    betaIn = sdIn_alpha - cms::alpakatools::reducePhiRange(
+                              acc, cms::alpakatools::phi(acc, x3 - x1, y3 - y1) - mds.anchorPhi()[firstMDIndex]);
+    betaInCut = alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
+                (0.02f / drt_InSeg);
+
     if (not passPointingConstraint(acc,
-                                   modules,
                                    segments,
-                                   innerInnerLowerModuleIndex,
-                                   middleLowerModuleIndex,
-                                   outerOuterLowerModuleIndex,
-                                   zOut,
-                                   rtOut,
-                                   drt_InSeg,
+                                   innerInnerLowerModuleSubdet,
+                                   middleLowerModuleSubdet,
+                                   outerOuterLowerModuleSubdet,
                                    sdIn_alpha,
-                                   drt_tl_axis,
-                                   rt_InSeg,
-                                   middleLowerModuleIndex,
                                    innerSegmentIndex,
                                    betaIn,
-                                   betaInCut,
-                                   ptCut))
+                                   betaInCut))
       return false;
 
     bool inference =
@@ -511,10 +489,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
 
-            unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
-            unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
-            unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
-
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modules,
                                                         mds,
@@ -524,9 +498,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                         outerOuterLowerModuleIndex,
                                                         innerSegmentIndex,
                                                         outerSegmentIndex,
-                                                        firstMDIndex,
-                                                        secondMDIndex,
-                                                        thirdMDIndex,
                                                         zOut,
                                                         rtOut,
                                                         betaIn,
