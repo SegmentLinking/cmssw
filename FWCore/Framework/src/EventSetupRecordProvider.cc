@@ -17,6 +17,7 @@
 // user include files
 #include "FWCore/Framework/interface/EventSetupRecordProvider.h"
 
+#include "FWCore/Framework/interface/ComponentDescription.h"
 #include "FWCore/Framework/interface/ParameterSetIDHolder.h"
 #include "FWCore/Framework/interface/EventSetupImpl.h"
 #include "FWCore/Framework/interface/EventSetupProvider.h"
@@ -234,8 +235,8 @@ namespace edm {
 
     void EventSetupRecordProvider::fillReferencedDataKeys(
         std::map<DataKey, ComponentDescription const*>& referencedDataKeys) const {
-      std::vector<DataKey> keys;
-      firstRecordImpl().fillRegisteredDataKeys(keys);
+      std::vector<DataKey> const& keys = firstRecordImpl().registeredDataKeys();
+
       std::vector<ComponentDescription const*> components = firstRecordImpl().componentsForRegisteredDataKeys();
       auto itComponents = components.begin();
       for (auto const& k : keys) {
@@ -250,6 +251,16 @@ namespace edm {
       }
       using std::placeholders::_1;
       for_all(providers_, std::bind(&EventSetupRecordProvider::addResolversToRecordHelper, this, _1, iMap));
+    }
+
+    void EventSetupRecordProvider::fillAllESProductResolverProviders(
+        std::vector<ESProductResolverProvider const*>& allESProductResolverProviders,
+        std::unordered_set<unsigned int>& componentIDs) const {
+      for (auto const& provider : providers_) {
+        if (componentIDs.insert(provider->description().id_).second) {
+          allESProductResolverProviders.push_back(provider.get());
+        }
+      }
     }
 
     void EventSetupRecordProvider::updateLookup(ESRecordsToProductResolverIndices const& iResolverToIndices) {
@@ -305,14 +316,16 @@ namespace edm {
       }
     }
 
-    std::vector<DataKey> EventSetupRecordProvider::registeredDataKeys() const {
-      std::vector<DataKey> ret;
-      firstRecordImpl().fillRegisteredDataKeys(ret);
-      return ret;
+    std::vector<DataKey> const& EventSetupRecordProvider::registeredDataKeys() const {
+      return firstRecordImpl().registeredDataKeys();
     }
 
     std::vector<ComponentDescription const*> EventSetupRecordProvider::componentsForRegisteredDataKeys() const {
       return firstRecordImpl().componentsForRegisteredDataKeys();
+    }
+
+    std::vector<unsigned int> EventSetupRecordProvider::produceMethodIDsForRegisteredDataKeys() const {
+      return firstRecordImpl().produceMethodIDsForRegisteredDataKeys();
     }
 
   }  // namespace eventsetup

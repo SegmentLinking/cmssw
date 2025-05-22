@@ -10,6 +10,7 @@
 #include "DataFormats/VertexSoA/interface/ZVertexSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/HistoContainer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/debug.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoVertex/PixelVertexFinding/interface/PixelVertexWorkSpaceLayout.h"
 
@@ -30,6 +31,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
                                   float errmax,  // max error to be "seed"
                                   float chi2max  // max normalized distance to cluster
     ) const {
+      // workaround for #47808
+      debug::do_not_optimise(ws);
+
       constexpr bool verbose = false;
 
       if constexpr (verbose) {
@@ -76,7 +80,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::vertexFinder {
       // fill hist (bin shall be wider than "eps")
       for (auto i : cms::alpakatools::uniform_elements(acc, nt)) {
         int iz = static_cast<int>(zt[i] * 10.f);  // valid if eps <= 0.1
-        iz = std::clamp(iz, INT8_MIN, INT8_MAX);
+        // Equivalent of iz = std::clamp(iz, INT8_MIN, INT8_MAX)
+        // which doesn't compile with gcc14 due to reference to __glibcxx_assert
+        // See https://github.com/llvm/llvm-project/issues/95183
+        int tmp_max = std::max<int>(iz, INT8_MIN);
+        iz = std::min<int>(tmp_max, INT8_MAX);
         izt[i] = iz - INT8_MIN;
         ALPAKA_ASSERT_ACC(iz - INT8_MIN >= 0);
         ALPAKA_ASSERT_ACC(iz - INT8_MIN < 256);

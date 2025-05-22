@@ -30,12 +30,13 @@ the worker is reset().
 #include "FWCore/Framework/interface/ModuleContextSentry.h"
 #include "FWCore/Framework/interface/OccurrenceTraits.h"
 #include "FWCore/Framework/interface/ProductResolverIndexAndSkipBit.h"
+#include "FWCore/Framework/interface/ModuleConsumesMinimalESInfo.h"
 #include "FWCore/Concurrency/interface/WaitingTask.h"
 #include "FWCore/Concurrency/interface/WaitingTaskHolder.h"
 #include "FWCore/Concurrency/interface/WaitingTaskList.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/ActivityRegistry.h"
-#include "FWCore/ServiceRegistry/interface/ConsumesInfo.h"
+#include "FWCore/ServiceRegistry/interface/ServiceRegistryfwd.h"
 #include "FWCore/ServiceRegistry/interface/InternalContext.h"
 #include "FWCore/ServiceRegistry/interface/ModuleCallingContext.h"
 #include "FWCore/ServiceRegistry/interface/ParentContext.h"
@@ -73,7 +74,6 @@ namespace edm {
   class EventPrincipal;
   class EventSetupImpl;
   class EarlyDeleteHelper;
-  class ModuleProcessName;
   class ProductResolverIndexHelper;
   class ProductResolverIndexAndSkipBit;
   class ProductRegistry;
@@ -84,8 +84,9 @@ namespace edm {
     class CallImpl;
   }
   namespace eventsetup {
+    struct ComponentDescription;
     class ESRecordsToProductResolverIndices;
-  }
+  }  // namespace eventsetup
 
   class Worker {
   public:
@@ -211,21 +212,17 @@ namespace edm {
     //Used to make EDGetToken work
     virtual void updateLookup(BranchType iBranchType, ProductResolverIndexHelper const&) = 0;
     virtual void updateLookup(eventsetup::ESRecordsToProductResolverIndices const&) = 0;
+    virtual void releaseMemoryPostLookupSignal() = 0;
     virtual void selectInputProcessBlocks(ProductRegistry const&, ProcessBlockHelperBase const&) = 0;
     virtual void resolvePutIndicies(
         BranchType iBranchType,
         std::unordered_multimap<std::string, std::tuple<TypeID const*, const char*, edm::ProductResolverIndex>> const&
             iIndicies) = 0;
 
-    virtual void modulesWhoseProductsAreConsumed(
-        std::array<std::vector<ModuleDescription const*>*, NumBranchTypes>& modules,
-        std::vector<ModuleProcessName>& modulesInPreviousProcesses,
-        ProductRegistry const& preg,
-        std::map<std::string, ModuleDescription const*> const& labelsToDesc) const = 0;
-
     virtual void convertCurrentProcessAlias(std::string const& processName) = 0;
 
-    virtual std::vector<ConsumesInfo> consumesInfo() const = 0;
+    virtual std::vector<ModuleConsumesInfo> moduleConsumesInfos() const = 0;
+    virtual std::vector<ModuleConsumesMinimalESInfo> moduleConsumesMinimalESInfos() const = 0;
 
     virtual Types moduleType() const = 0;
     virtual ConcurrencyTypes moduleConcurrencyType() const = 0;
@@ -562,7 +559,7 @@ namespace edm {
                         info = m_eventTransitionInfo,
                         parentContext = m_parentContext,
                         serviceToken = m_serviceToken,
-                        holder = std::move(m_holder)]() {
+                        holder = std::move(m_holder)]() mutable {
                          //Need to make the services available
                          ServiceRegistry::Operate operateRunAcquire(serviceToken.lock());
 

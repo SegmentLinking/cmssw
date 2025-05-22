@@ -15,7 +15,6 @@
 #include "DataFormats/Provenance/interface/ParentageRegistry.h"
 #include "DataFormats/Provenance/interface/ProductProvenance.h"
 #include "FWCore/Framework/interface/ProductProvenanceRetriever.h"
-#include "DataFormats/Provenance/interface/SubProcessParentageHelper.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/TimeOfDay.h"
@@ -59,7 +58,7 @@ namespace edm {
         outputFileCount_(0),
         inputFileCount_(0),
         branchParents_(),
-        branchChildren_(),
+        productDependencies_(),
         overrideInputFileSplitLevels_(pset.getUntrackedParameter<bool>("overrideInputFileSplitLevels")),
         compactEventAuxiliary_(pset.getUntrackedParameter<bool>("compactEventAuxiliary")),
         mergeJob_(pset.getUntrackedParameter<bool>("mergeJob")),
@@ -101,6 +100,12 @@ namespace edm {
                                                  s.getUntrackedParameter<int>("splitLevel"));
     }
 
+    auto const& branchAliases{pset.getUntrackedParameterSetVector("branchAliases")};
+    aliasForBranches_.reserve(branchAliases.size());
+    for (auto const& a : branchAliases) {
+      aliasForBranches_.emplace_back(a.getUntrackedParameter<std::string>("branch"),
+                                     a.getUntrackedParameter<std::string>("alias"));
+    }
     // We don't use this next parameter, but we read it anyway because it is part
     // of the configuration of this module.  An external parser creates the
     // configuration by reading this source code.
@@ -155,15 +160,29 @@ namespace edm {
     return lh < rh;
   }
 
+  namespace {
+    std::regex convertBranchExpression(std::string const& iGlobBranchExpression) {
+      std::string tmp(iGlobBranchExpression);
+      boost::replace_all(tmp, "*", ".*");
+      boost::replace_all(tmp, "?", ".");
+      return std::regex(tmp);
+    }
+  }  // namespace
+
   inline bool PoolOutputModule::SpecialSplitLevelForBranch::match(std::string const& iBranchName) const {
     return std::regex_match(iBranchName, branch_);
   }
 
   std::regex PoolOutputModule::SpecialSplitLevelForBranch::convert(std::string const& iGlobBranchExpression) const {
-    std::string tmp(iGlobBranchExpression);
-    boost::replace_all(tmp, "*", ".*");
-    boost::replace_all(tmp, "?", ".");
-    return std::regex(tmp);
+    return convertBranchExpression(iGlobBranchExpression);
+  }
+
+  bool PoolOutputModule::AliasForBranch::match(std::string const& iBranchName) const {
+    return std::regex_match(iBranchName, branch_);
+  }
+
+  std::regex PoolOutputModule::AliasForBranch::convert(std::string const& iGlobBranchExpression) const {
+    return convertBranchExpression(iGlobBranchExpression);
   }
 
   void PoolOutputModule::fillSelectedItemList(BranchType branchType,
@@ -245,10 +264,10 @@ namespace edm {
     if (isFileOpen()) {
       //Faster to read ChildrenBranches directly from input
       // file than to build it every event
-      auto const& branchToChildMap = fb.branchChildren().childLookup();
+      auto const& branchToChildMap = fb.productDependencies().childLookup();
       for (auto const& parentToChildren : branchToChildMap) {
         for (auto const& child : parentToChildren.second) {
-          branchChildren_.insertChild(parentToChildren.first, child);
+          productDependencies_.insertChild(parentToChildren.first, child);
         }
       }
       rootOutputFile_->beginInputFile(fb, remainingEvents());
@@ -343,9 +362,9 @@ namespace edm {
     writeParentageRegistry();
     writeBranchIDListRegistry();
     writeThinnedAssociationsHelper();
-    writeProductDependencies();  //branchChildren used here
+    writeProductDependencies();  //productDependencies used here
     writeProcessBlockHelper();
-    branchChildren_.clear();
+    productDependencies_.clear();
     finishEndFile();
 
     doExtrasAfterCloseFile();
@@ -444,12 +463,6 @@ namespace edm {
     for (auto const& bid : producedBranches_) {
       updateBranchParentsForOneBranch(provRetriever, bid);
     }
-    SubProcessParentageHelper const* helper = subProcessParentageHelper();
-    if (helper) {
-      for (auto const& bid : subProcessParentageHelper()->producedProducts()) {
-        updateBranchParentsForOneBranch(provRetriever, bid);
-      }
-    }
   }
 
   void PoolOutputModule::preActionBeforeRunEventAsync(WaitingTaskHolder iTask,
@@ -475,7 +488,7 @@ namespace edm {
         ParentageRegistry::instance()->getMapped(eId, entryDesc);
         std::vector<BranchID> const& parents = entryDesc.parents();
         for (auto const& parent : parents) {
-          branchChildren_.insertChild(parent, child);
+          productDependencies_.insertChild(parent, child);
         }
       }
     }
@@ -559,6 +572,13 @@ namespace edm {
           "Name of branch needing a special split level. The name can contain wildcards '*' and '?'");
       specialSplit.addUntracked<int>("splitLevel")->setComment("The special split level for the branch");
       desc.addVPSetUntracked("overrideBranchesSplitLevel", specialSplit, std::vector<ParameterSet>());
+    }
+    {
+      ParameterSetDescription alias;
+      alias.addUntracked<std::string>("branch")->setComment(
+          "Name of branch which will get alias. The name can contain wildcards '*' and '?'");
+      alias.addUntracked<std::string>("alias")->setComment("The alias to give to the TBranch");
+      desc.addVPSetUntracked("branchAliases", alias, std::vector<ParameterSet>());
     }
     OutputModule::fillDescription(desc);
   }

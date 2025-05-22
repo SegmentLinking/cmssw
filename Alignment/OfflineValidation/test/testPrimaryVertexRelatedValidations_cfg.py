@@ -139,7 +139,6 @@ else:
           from CondCore.DBCommon.CondDBSetup_cfi import *
           process.trackerAlignment = cms.ESSource("PoolDBESSource",CondDBSetup,
                                                   connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
-                                                  timetype = cms.string("runnumber"),
                                                   toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentRcd'),
                                                                              tag = cms.string('TrackerAlignment_Upgrade2017_design_v4')
                                                                         )
@@ -152,7 +151,6 @@ else:
           ####################################################################
           process.setAPE = cms.ESSource("PoolDBESSource",CondDBSetup,
                                         connect = cms.string('frontier://FrontierProd/CMS_CONDITIONS'),
-                                        timetype = cms.string("runnumber"),
                                         toGet = cms.VPSet(cms.PSet(record = cms.string('TrackerAlignmentErrorExtendedRcd'),
                                                                    tag = cms.string('TrackerAlignmentErrorsExtended_Upgrade2017_design_v0')
                                                               )
@@ -407,8 +405,8 @@ process.vertexanalysis = cms.EDAnalyzer('GeneralPurposeVertexAnalyzer',
                                         TkSizeMin = cms.double(499.5),
                                         TkSizeMax = cms.double(-0.5),
                                         DxyBin = cms.int32(100),
-                                        DxyMin = cms.double(5000),
-                                        DxyMax = cms.double(-5000),
+                                        DxyMin = cms.double(-2000),
+                                        DxyMax = cms.double(2000),
                                         DzBin = cms.int32(100),
                                         DzMin = cms.double(-2000),
                                         DzMax = cms.double(2000),

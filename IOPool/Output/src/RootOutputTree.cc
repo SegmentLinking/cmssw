@@ -3,12 +3,12 @@
 
 #include "DataFormats/Common/interface/RefCoreStreamer.h"
 #include "DataFormats/Provenance/interface/ProductDescription.h"
+#include "FWCore/AbstractServices/interface/RootHandlers.h"
 #include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/Utilities/interface/Algorithms.h"
 #include "FWCore/Utilities/interface/EDMException.h"
-#include "FWCore/Utilities/interface/RootHandlers.h"
 #include "FWCore/Catalog/interface/SiteLocalConfig.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
@@ -324,7 +324,6 @@ namespace edm {
       // in the TTree instead of calling Fill once for the entire TTree.
       tree->SetEntries(-1);
     }
-    setRefCoreStreamer(true);
     tree->AutoSave("FlushBaskets");
   }
 

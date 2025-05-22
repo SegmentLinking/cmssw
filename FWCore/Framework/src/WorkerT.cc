@@ -19,6 +19,8 @@
 #include "FWCore/Framework/interface/limited/EDAnalyzerBase.h"
 #include "FWCore/Framework/interface/limited/OutputModuleBase.h"
 
+#include "FWCore/ServiceRegistry/interface/ModuleConsumesInfo.h"
+
 #include <type_traits>
 
 namespace edm {
@@ -744,6 +746,11 @@ namespace edm {
   }
 
   template <typename T>
+  void WorkerT<T>::releaseMemoryPostLookupSignal() {
+    module_->releaseMemoryPostLookupSignal();
+  }
+
+  template <typename T>
   void WorkerT<T>::selectInputProcessBlocks(ProductRegistry const& productRegistry,
                                             ProcessBlockHelperBase const& processBlockHelperBase) {
     module_->selectInputProcessBlocks(productRegistry, processBlockHelperBase);
@@ -915,6 +922,11 @@ namespace edm {
   template <>
   Worker::ConcurrencyTypes WorkerT<edm::stream::EDAnalyzerAdaptorBase>::moduleConcurrencyType() const {
     return Worker::kStream;
+  }
+
+  template <typename T>
+  std::vector<ModuleConsumesInfo> WorkerT<T>::moduleConsumesInfos() const {
+    return module_->moduleConsumesInfos();
   }
 
   //Explicitly instantiate our needed templates to avoid having the compiler

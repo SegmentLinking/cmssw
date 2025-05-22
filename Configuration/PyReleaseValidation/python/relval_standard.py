@@ -572,6 +572,7 @@ workflows[143.902] = ['',['RunUPC2024','RECODR3_2025_HIN','HARVESTDPROMPTR3']]
 
 ### run3-2025 (2025 HI OXY data)
 workflows[143.911] = ['',['RunUPC2024','RECODR3_2025_OXY','HARVESTDPROMPTR3']]
+workflows[143.912] = ['',['RunUPC2024','RECODR3_2025_UPC_OXY','HARVESTDPROMPTR3']]
 
 
 ## Lumi mask fixed 2024 wfs
@@ -581,13 +582,46 @@ offset_pd = 0.001 # less than 100 pds per year
 
 for e_n,era in enumerate(era_mask_2024):
     for p_n,pd in enumerate(pds_2024):
+        
+        # JetMET1 PD is used to run the TeVJet skims
+        # we don't really need it here
+        # (also as is the numbering conflicts with 
+        # the scouting wf below, so if we really want to
+        # extend the pds for standar relvals for 2024 data
+        # one needs to change the 145.415 below)
+        if pd == 'JetMET1':
+            continue
+
         wf_number = round(base_wf + offset_era * e_n + offset_pd * p_n,3)
-        dataset = "/" + pd + "/" + era + "-v1/RAW"
-        step_name = "Run" + pd.replace("ParkingDouble","Park2") + era.split("Run")[1]
-        suff = "ZB_" if "ZeroBias" in step_name else ""
-        workflows[wf_number] = ['',[step_name,'HLTDR3_2024','RECONANORUN3_' + suff + 'reHLT_2024','HARVESTRUN3_' + suff + '2024']]
+        dataset = '/' + pd + '/' + era + '-v1/RAW'
+
+        ## ZeroBias have their own HARVESTING
+        suff = 'ZB_' if 'ZeroBias' in step_name else ''
+
+        # Running C,D,E with the offline GT.
+        # Could be removed once 2025 wfs are in and we'll test the online GT with them
+        recosetup = 'RECONANORUN3_' + suff + 'reHLT_2024' 
+        recosetup = recosetup if era[-1] > 'E' else recosetup + '_Offline'
+
+        step_name = 'Run' + pd.replace('ParkingDouble','Park2') + era.split('Run')[1]
+        workflows[wf_number] = ['',[step_name,'HLTDR3_2024',recosetup,'HARVESTRUN3_' + suff + '2024']]
+
+## special HLT scouting workflow (with hardcoded private input file from ScoutingPFMonitor skimmed to remove all events without scouting)
+workflows[145.415] = ['',['HLTDR3_ScoutingPFMonitor_2024','RECONANORUN3_ScoutingPFMonitor_reHLT_2024','HARVESTRUN3_ScoutingPFMonitor_2024']]
 
 ##################################################################
+### run3 (2024) skims - Era F ###
+workflows[146.101] = ['',['RunZeroBias2024F','HLTDR3_2024','SKIMZEROBIASRUN3_reHLT_2024','HARVESTRUN3_ZB_2024']]
+workflows[146.102] = ['',['RunBTagMu2024F','HLTDR3_2024','SKIMBTAGMURUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.103] = ['',['RunJetMET02024F','HLTDR3_2024','SKIMJETMET0RUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.104] = ['',['RunDisplacedJet2024F','HLTDR3_2024','SKIMDISPLACEDJETRUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.105] = ['',['RunEGamma02024F','HLTDR3_2024','SKIMEGAMMA0RUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.106] = ['',['RunTau2024F','HLTDR3_2024','SKIMTAURUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.107] = ['',['RunMuon02024F','HLTDR3_2024','SKIMMUON0RUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.108] = ['',['RunMuonEG2024F','HLTDR3_2024','SKIMMUONEGRUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.109] = ['',['RunNoBPTX2024F','HLTDR3_2024','SKIMNOBPTXRUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.110] = ['',['RunHcalNZS2024F','HLTDR3_2024','SKIMHCALNZSRUN3_reHLT_2024','HARVESTRUN3_2024']]
+workflows[146.111] = ['',['RunPark2MuonLowMass02024F','HLTDR3_2024','SKIMPARKINGDOUBLEMUONLOWMASS0RUN3_reHLT_2024','HARVESTRUN3_2024']]
 
 ### fastsim ###
 workflows[5.1] = ['TTbarFS', ['TTbarFS','HARVESTFS']]
@@ -700,6 +734,7 @@ workflows[7.21] = ['', ['Cosmics_UP17','DIGICOS_UP17','RECOCOS_UP17','ALCACOS_UP
 workflows[7.22] = ['', ['Cosmics_UP16','DIGICOS_UP16','RECOCOS_UP16','ALCACOS_UP16','HARVESTCOS_UP16']]#2016
 workflows[7.23] = ['', ['Cosmics_UP21','DIGICOS_UP21','RECOCOS_UP21','ALCACOS_UP21','HARVESTCOS_UP21']]#2021
 workflows[7.24] = ['', ['Cosmics_UP21_0T','DIGICOS_UP21_0T','RECOCOS_UP21_0T','ALCACOS_UP21_0T','HARVESTCOS_UP21_0T']]#2021 0T
+workflows[7.25] = ['', ['Cosmics_UP25','DIGICOS_UP25','RECOCOS_UP25','ALCACOS_UP25','HARVESTCOS_UP25']]#2025
 workflows[7.3] = ['CosmicsSPLoose2018', ['CosmicsSPLoose_UP18','DIGICOS_UP18','RECOCOS_UP18','ALCACOS_UP18','HARVESTCOS_UP18']]
 workflows[7.4] = ['CosmicsPEAK2018', ['Cosmics_UP18','DIGICOSPEAK_UP18','RECOCOSPEAK_UP18','ALCACOS_UP18','HARVESTCOS_UP18']]
 workflows[7.5] = ['', ['Cosmics_Phase2','DIGICOS_Phase2','RECOCOS_Phase2']] #,'ALCACOS_Phase2','HARVESTCOS_Phase2']] inactive at the moment

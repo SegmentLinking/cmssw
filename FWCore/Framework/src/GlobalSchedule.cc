@@ -28,7 +28,7 @@ namespace edm {
       std::shared_ptr<ModuleRegistry> modReg,
       std::vector<std::string> const& iModulesToUse,
       ParameterSet& proc_pset,
-      SignallingProductRegistry& pregistry,
+      SignallingProductRegistryFiller& pregistry,
       PreallocationConfiguration const& prealloc,
       ExceptionToActionTable const& actions,
       std::shared_ptr<ActivityRegistry> areg,
@@ -98,7 +98,6 @@ namespace edm {
   void GlobalSchedule::beginJob(ProductRegistry const& iRegistry,
                                 eventsetup::ESRecordsToProductResolverIndices const& iESIndices,
                                 ProcessBlockHelperBase const& processBlockHelperBase,
-                                PathsAndConsumesOfModulesBase const& pathsAndConsumesOfModules,
                                 ProcessContext const& processContext) {
     GlobalContext globalContext(GlobalContext::Transition::kBeginJob, processContext_);
     unsigned int const managerIndex =
@@ -107,9 +106,7 @@ namespace edm {
     std::exception_ptr exceptionPtr;
     CMS_SA_ALLOW try {
       try {
-        convertException::wrap([this, &pathsAndConsumesOfModules, &processContext]() {
-          actReg_->preBeginJobSignal_(pathsAndConsumesOfModules, processContext);
-        });
+        convertException::wrap([this, &processContext]() { actReg_->preBeginJobSignal_(processContext); });
       } catch (cms::Exception& ex) {
         exceptionContext(ex, globalContext, "Handling pre signal, likely in a service function");
         throw;
@@ -192,6 +189,12 @@ namespace edm {
     for (auto& wm : workerManagers_) {
       wm.deleteModuleIfExists(iLabel);
     }
+  }
+
+  void GlobalSchedule::releaseMemoryPostLookupSignal() {
+    unsigned int const managerIndex =
+        numberOfConcurrentLumis_ + numberOfConcurrentRuns_ + numberOfConcurrentProcessBlocks_;
+    workerManagers_[managerIndex].releaseMemoryPostLookupSignal();
   }
 
   std::vector<ModuleDescription const*> GlobalSchedule::getAllModuleDescriptions() const {

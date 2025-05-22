@@ -15,6 +15,7 @@
 // system include files
 #include <algorithm>
 #include <cassert>
+#include <unordered_set>
 
 // user include files
 #include "FWCore/Framework/interface/EventSetupProvider.h"
@@ -73,6 +74,23 @@ namespace edm {
       }
       auto index = std::distance(recordKeys_.begin(), lb);
       return recordProviders_[index].get();
+    }
+
+    EventSetupRecordProvider const* EventSetupProvider::tryToGetRecordProvider(const EventSetupRecordKey& iKey) const {
+      auto lb = std::lower_bound(recordKeys_.begin(), recordKeys_.end(), iKey);
+      if (lb == recordKeys_.end() || iKey != *lb) {
+        return nullptr;
+      }
+      auto index = std::distance(recordKeys_.begin(), lb);
+      return recordProviders_[index].get();
+    }
+
+    void EventSetupProvider::fillAllESProductResolverProviders(
+        std::vector<ESProductResolverProvider const*>& allESProductResolverProviders) const {
+      std::unordered_set<unsigned int> componentIDs;
+      for (auto const& recordProvider : recordProviders_) {
+        recordProvider->fillAllESProductResolverProviders(allESProductResolverProviders, componentIDs);
+      }
     }
 
     void EventSetupProvider::insert(const EventSetupRecordKey& iKey,
@@ -765,8 +783,11 @@ namespace edm {
 
       unsigned int index = 0;
       for (const auto& provider : recordProviders_) {
-        index = ret.dataKeysInRecord(
-            index, provider->key(), provider->registeredDataKeys(), provider->componentsForRegisteredDataKeys());
+        index = ret.dataKeysInRecord(index,
+                                     provider->key(),
+                                     provider->registeredDataKeys(),
+                                     provider->componentsForRegisteredDataKeys(),
+                                     provider->produceMethodIDsForRegisteredDataKeys());
       }
 
       return ret;

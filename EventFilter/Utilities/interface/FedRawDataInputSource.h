@@ -108,6 +108,7 @@ private:
   //std::vector<std::string> fileNamesSorted_;
 
   const bool fileListMode_;
+  const bool fileDiscoveryMode_ = false;
   unsigned int fileListIndex_ = 0;
   const bool fileListLoopMode_;
   unsigned int loopModeIterationInc_ = 0;
@@ -184,6 +185,7 @@ private:
 
   std::map<unsigned int, unsigned int> sourceEventsReport_;
   std::mutex monlock_;
+  unsigned int expectedFedsInEvent_ = 0;
 };
 
 #endif  // EventFilter_Utilities_FedRawDataInputSource_h

@@ -21,7 +21,7 @@
 #include "FWCore/MessageLogger/interface/JobReport.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "DataFormats/Common/interface/BasicHandle.h"
-#include "DataFormats/Provenance/interface/BranchChildren.h"
+#include "DataFormats/Provenance/interface/ProductDependencies.h"
 #include "DataFormats/Provenance/interface/BranchIDList.h"
 #include "DataFormats/Provenance/interface/Parentage.h"
 #include "DataFormats/Provenance/interface/ParentageRegistry.h"
@@ -698,8 +698,8 @@ namespace edm {
     b->Fill();
   }
   void RootOutputFile::writeProductDependencies() {
-    BranchChildren& pDeps = const_cast<BranchChildren&>(om_->branchChildren());
-    BranchChildren* ppDeps = &pDeps;
+    ProductDependencies& pDeps = const_cast<ProductDependencies&>(om_->productDependencies());
+    ProductDependencies* ppDeps = &pDeps;
     TBranch* b =
         metaDataTree_->Branch(poolNames::productDependenciesBranchName().c_str(), &ppDeps, om_->basketSize(), 0);
     assert(b);
@@ -815,13 +815,21 @@ namespace edm {
                                         SelectedProducts const& branches,
                                         std::string const& processName) const {
     if (tree && tree->GetNbranches() != 0) {
+      auto const& aliasForBranches = om_->aliasForBranches();
       for (auto const& selection : branches) {
         ProductDescription const& pd = *selection.first;
         if (pd.branchType() == InProcess && processName != pd.processName()) {
           continue;
         }
         std::string const& full = pd.branchName() + "obj";
-        if (pd.branchAliases().empty()) {
+        bool matched = false;
+        for (auto const& matcher : aliasForBranches) {
+          if (matcher.match(pd.branchName())) {
+            tree->SetAlias(matcher.alias_.c_str(), full.c_str());
+            matched = true;
+          }
+        }
+        if (not matched and pd.branchAliases().empty()) {
           std::string const& alias = (pd.productInstanceName().empty() ? pd.moduleLabel() : pd.productInstanceName());
           tree->SetAlias(alias.c_str(), full.c_str());
         } else {

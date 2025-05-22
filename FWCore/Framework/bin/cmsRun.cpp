@@ -3,6 +3,7 @@ This is a generic main that can be used with any plugin and a
 PSet script.   See notes in EventProcessor.cpp for details about it.
 ----------------------------------------------------------------------*/
 
+#include "FWCore/AbstractServices/interface/TimingServiceBase.h"
 #include "FWCore/Framework/interface/CmsRunParser.h"
 #include "FWCore/Framework/interface/EventProcessor.h"
 #include "FWCore/Framework/interface/defaultCmsRunServices.h"
@@ -26,7 +27,6 @@ PSet script.   See notes in EventProcessor.cpp for details about it.
 #include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/ConvertException.h"
 #include "FWCore/Utilities/interface/Presence.h"
-#include "FWCore/Utilities/interface/TimingServiceBase.h"
 #include "FWCore/Utilities/interface/thread_safety_macros.h"
 
 #include "TError.h"
@@ -274,8 +274,7 @@ int main(int argc, const char* argv[]) {
 
         // EventSetupsController uses pointers to the ParameterSet
         // owned by ProcessDesc while it is dealing with sharing of
-        // ESProducers among the top-level process and the
-        // SubProcesses. Therefore the ProcessDesc needs to be kept
+        // ESProducers. Therefore the ProcessDesc needs to be kept
         // alive until the beginJob transition has finished.
         processDesc.reset();
 

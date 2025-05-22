@@ -14,7 +14,7 @@
 #include "FWCore/Framework/interface/WorkerManager.h"
 #include "FWCore/Framework/interface/maker/Worker.h"
 #include "FWCore/Framework/interface/WorkerRegistry.h"
-#include "FWCore/Framework/interface/SignallingProductRegistry.h"
+#include "FWCore/Framework/interface/SignallingProductRegistryFiller.h"
 #include "FWCore/MessageLogger/interface/ExceptionMessages.h"
 #include "FWCore/ServiceRegistry/interface/GlobalContext.h"
 #include "FWCore/ServiceRegistry/interface/ServiceRegistry.h"
@@ -60,7 +60,7 @@ namespace edm {
                    std::shared_ptr<ModuleRegistry> modReg,
                    std::vector<std::string> const& modulesToUse,
                    ParameterSet& proc_pset,
-                   SignallingProductRegistry& pregistry,
+                   SignallingProductRegistryFiller& pregistry,
                    PreallocationConfiguration const& prealloc,
                    ExceptionToActionTable const& actions,
                    std::shared_ptr<ActivityRegistry> areg,
@@ -77,7 +77,6 @@ namespace edm {
     void beginJob(ProductRegistry const&,
                   eventsetup::ESRecordsToProductResolverIndices const&,
                   ProcessBlockHelperBase const&,
-                  PathsAndConsumesOfModulesBase const&,
                   ProcessContext const&);
     void endJob(ExceptionCollector& collector);
 
@@ -100,6 +99,8 @@ namespace edm {
 
     /// returns the collection of pointers to workers
     AllWorkers const& allWorkers() const { return workerManagers_[0].allWorkers(); }
+
+    void releaseMemoryPostLookupSignal();
 
   private:
     /// returns the action table

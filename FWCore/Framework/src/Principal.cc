@@ -31,7 +31,6 @@
 #include <stdexcept>
 #include <typeinfo>
 #include <atomic>
-
 namespace edm {
 
   static ProcessHistory const s_emptyProcessHistory;
@@ -109,10 +108,10 @@ namespace edm {
     }
   }  // namespace
 
-  //0 means unset
-  static std::atomic<Principal::CacheIdentifier_t> s_nextIdentifier{1};
-  static inline Principal::CacheIdentifier_t nextIdentifier() {
-    return s_nextIdentifier.fetch_add(1, std::memory_order_acq_rel);
+  // Value 0 means unset and is used in Principal constructor. First call to fillPrincipal() will get value 1.
+  static std::array<std::atomic<Principal::CacheIdentifier_t>, edm::NumBranchTypes> s_nextIdentifiers{{1, 1, 1, 1}};
+  static inline Principal::CacheIdentifier_t nextIdentifier(edm::BranchType bt) {
+    return s_nextIdentifiers[bt].fetch_add(1, std::memory_order_acq_rel);
   }
 
   Principal::Principal(std::shared_ptr<ProductRegistry const> reg,
@@ -132,7 +131,7 @@ namespace edm {
         reader_(),
         branchType_(bt),
         historyAppender_(historyAppender),
-        cacheIdentifier_(nextIdentifier()) {}
+        cacheIdentifier_(0) {}
   Principal::~Principal() {}
 
   // Number of products in the Principal.
@@ -149,21 +148,11 @@ namespace edm {
     return size;
   }
 
-  // adjust provenance for input products after new input file has been merged
-  bool Principal::adjustToNewProductRegistry(ProductRegistry const& reg) {
-    ProductRegistry::ProductList const& prodsList = reg.productList();
-    for (auto const& prod : prodsList) {
-      ProductDescription const& bd = prod.second;
-      if (!bd.produced() && (bd.branchType() == branchType_)) {
-        auto cbd = std::make_shared<ProductDescription const>(bd);
-        auto phb = getExistingProduct(cbd->branchID());
-        if (phb == nullptr || phb->productDescription().branchName() != cbd->branchName()) {
-          return false;
-        }
-        phb->resetProductDescription(cbd);
-      }
+  void Principal::possiblyUpdateAfterAddition(std::shared_ptr<ProductRegistry const> iProd) {
+    if (iProd.get() != preg_.get() || iProd->cacheIdentifier() != preg_->cacheIdentifier()) {
+      preg_ = iProd;
+      adjustIndexesAfterProductRegistryAddition();
     }
-    return true;
   }
 
   void Principal::addDroppedProduct(ProductDescription const& bd) {
@@ -193,7 +182,7 @@ namespace edm {
 
   void Principal::fillPrincipal(DelayedReader* reader) {
     //increment identifier here since clearPrincipal isn't called for Run/Lumi
-    cacheIdentifier_ = nextIdentifier();
+    cacheIdentifier_ = nextIdentifier(branchType_);
     if (reader) {
       reader_ = reader;
     }

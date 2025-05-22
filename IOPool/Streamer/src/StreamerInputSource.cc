@@ -49,7 +49,6 @@ namespace edm::streamer {
         xbuf_(TBuffer::kRead, init_size),
         sendEvent_(),
         eventPrincipalHolder_(),
-        adjustEventToNewProductRegistry_(false),
         processName_(),
         protocolVersion_(0U) {}
 
@@ -159,9 +158,6 @@ namespace edm::streamer {
   void StreamerInputSource::deserializeAndMergeWithRegistry(InitMsgView const& initView, bool subsequent) {
     std::unique_ptr<SendJobHeader> sd = deserializeRegistry(initView);
     mergeIntoRegistry(*sd, productRegistryUpdate(), subsequent);
-    if (subsequent) {
-      adjustEventToNewProductRegistry_ = true;
-    }
     SendJobHeader::ParameterSetMap const& psetMap = sd->processParameterSet();
     pset::Registry& psetRegistry = *pset::Registry::instance();
     for (auto const& item : psetMap) {
@@ -252,12 +248,8 @@ namespace edm::streamer {
     // multi-threaded there will be multiple EventPrincipals being used
     // simultaneously.
     eventPrincipalHolder_ = std::make_unique<EventPrincipalHolder>();  // propagate_const<T> has no reset() function
-    setRefCoreStreamer(eventPrincipalHolder_.get());
     {
-      std::shared_ptr<void> refCoreStreamerGuard(nullptr, [](void*) {
-        setRefCoreStreamer();
-        ;
-      });
+      RefCoreStreamerGuard guard(eventPrincipalHolder_.get());
       sendEvent_ = std::unique_ptr<SendEvent>(reinterpret_cast<SendEvent*>(xbuf_.ReadObjectAny(tc_)));
     }
 
@@ -297,12 +289,6 @@ namespace edm::streamer {
   }
 
   void StreamerInputSource::read(EventPrincipal& eventPrincipal) {
-    if (adjustEventToNewProductRegistry_) {
-      eventPrincipal.adjustIndexesAfterProductRegistryAddition();
-      bool eventOK = eventPrincipal.adjustToNewProductRegistry(productRegistry());
-      assert(eventOK);
-      adjustEventToNewProductRegistry_ = false;
-    }
     EventSelectionIDVector ids(sendEvent_->eventSelectionIDs());
     BranchListIndexes indexes(sendEvent_->branchListIndexes());
     branchIDListHelper()->fixBranchListIndexes(indexes);

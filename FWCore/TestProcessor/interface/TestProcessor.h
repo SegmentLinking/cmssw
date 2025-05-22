@@ -30,7 +30,7 @@
 #include "FWCore/Common/interface/FWCoreCommonFwd.h"
 #include "FWCore/Framework/interface/SharedResourcesAcquirer.h"
 #include "FWCore/Framework/interface/PrincipalCache.h"
-#include "FWCore/Framework/interface/SignallingProductRegistry.h"
+#include "FWCore/Framework/interface/SignallingProductRegistryFiller.h"
 #include "FWCore/Framework/interface/PreallocationConfiguration.h"
 #include "FWCore/Framework/interface/ModuleRegistry.h"
 #include "FWCore/Framework/interface/Schedule.h"
@@ -331,6 +331,12 @@ This simulates a problem happening early in the job which causes processing not 
       ProcessBlockPrincipal const* endProcessBlock();
       void closeOutputFiles();
       void endJob();
+
+      template <typename Traits>
+      void processTransitionForAllStreams(typename Traits::TransitionInfoType& transitionInfo);
+
+      template <typename Traits>
+      void processGlobalTransition(typename Traits::TransitionInfoType& transitionInfo);
 
       // ---------- member data --------------------------------
       oneapi::tbb::global_control globalControl_;

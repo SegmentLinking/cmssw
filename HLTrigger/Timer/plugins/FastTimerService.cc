@@ -822,8 +822,7 @@ FastTimerService::FastTimerService(const edm::ParameterSet& config, edm::Activit
 
   // register EDM call backs
   registry.watchPreallocate(this, &FastTimerService::preallocate);
-  registry.watchPreBeginJob(this, &FastTimerService::preBeginJob);
-  registry.watchPostBeginJob(this, &FastTimerService::postBeginJob);
+  registry.watchLookupInitializationComplete(this, &FastTimerService::lookupInitializationComplete);
   registry.watchPostEndJob(this, &FastTimerService::postEndJob);
   registry.watchPreGlobalBeginRun(this, &FastTimerService::preGlobalBeginRun);
   //registry.watchPostGlobalBeginRun(         this, & FastTimerService::postGlobalBeginRun );
@@ -990,12 +989,9 @@ void FastTimerService::preSourceConstruction(edm::ModuleDescription const& modul
   callgraph_.preSourceConstruction(module);
 }
 
-void FastTimerService::preBeginJob(edm::PathsAndConsumesOfModulesBase const& pathsAndConsumes,
-                                   edm::ProcessContext const& context) {
-  callgraph_.preBeginJob(pathsAndConsumes, context);
-}
-
-void FastTimerService::postBeginJob() {
+void FastTimerService::lookupInitializationComplete(edm::PathsAndConsumesOfModulesBase const& pathsAndConsumes,
+                                                    edm::ProcessContext const& context) {
+  callgraph_.lookupInitializationComplete(pathsAndConsumes, context);
   unsigned int modules = callgraph_.size();
 
   // module highlights
@@ -1407,10 +1403,11 @@ void FastTimerService::writeSummaryJSON(ResourcesPerJob const& data, std::string
   json j;
 
   // write a description of the resources
-  j["resources"] = json::array({json{{"time_real", "real time"}},
-                                json{{"time_thread", "cpu time"}},
-                                json{{"mem_alloc", "allocated memory"}},
-                                json{{"mem_free", "deallocated memory"}}});
+  j["resources"] = json::array(
+      {json{{"name", "time_real"}, {"description", "real time"}, {"unit", "ms"}, {"title", "Time"}},
+       json{{"name", "time_thread"}, {"description", "cpu time"}, {"unit", "ms"}, {"title", "Time"}},
+       json{{"name", "mem_alloc"}, {"description", "allocated memory"}, {"unit", "kB"}, {"title", "Memory"}},
+       json{{"name", "mem_free"}, {"description", "deallocated memory"}, {"unit", "kB"}, {"title", "Memory"}}});
 
   // write the resources used by the job
   j["total"] = encodeToJSON("Job",

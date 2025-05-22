@@ -16,10 +16,9 @@ configured in the user's main() function, and is set running.
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/InputSource.h"
 #include "FWCore/Framework/interface/MergeableRunProductProcesses.h"
-#include "FWCore/Framework/interface/PathsAndConsumesOfModules.h"
 #include "FWCore/Framework/interface/SharedResourcesAcquirer.h"
 #include "FWCore/Framework/interface/PrincipalCache.h"
-#include "FWCore/Framework/interface/SignallingProductRegistry.h"
+#include "FWCore/Framework/interface/SignallingProductRegistryFiller.h"
 #include "FWCore/Framework/interface/PreallocationConfiguration.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
@@ -56,7 +55,6 @@ namespace edm {
   class EDLooperBase;
   class HistoryAppender;
   class ProcessDesc;
-  class SubProcess;
   class WaitingTaskHolder;
   class LuminosityBlockPrincipal;
   class LuminosityBlockProcessingStatus;
@@ -281,8 +279,7 @@ namespace edm {
 
     void processEventWithLooper(EventPrincipal&, unsigned int iStreamIndex);
 
-    std::shared_ptr<SignallingProductRegistry const> preg() const { return get_underlying_safe(preg_); }
-    std::shared_ptr<SignallingProductRegistry>& preg() { return get_underlying_safe(preg_); }
+    std::shared_ptr<ProductRegistry const> preg() const { return get_underlying_safe(preg_); }
     std::shared_ptr<BranchIDListHelper const> branchIDListHelper() const {
       return get_underlying_safe(branchIDListHelper_);
     }
@@ -313,7 +310,7 @@ namespace edm {
     oneapi::tbb::task_group taskGroup_;
 
     std::shared_ptr<ActivityRegistry> actReg_;  // We do not use propagate_const because the registry itself is mutable.
-    edm::propagate_const<std::shared_ptr<SignallingProductRegistry>> preg_;
+    edm::propagate_const<std::shared_ptr<ProductRegistry>> preg_;
     edm::propagate_const<std::shared_ptr<BranchIDListHelper>> branchIDListHelper_;
     edm::propagate_const<std::shared_ptr<ProcessBlockHelper>> processBlockHelper_;
     edm::propagate_const<std::shared_ptr<ThinnedAssociationsHelper>> thinnedAssociationsHelper_;
@@ -327,7 +324,6 @@ namespace edm {
     std::unique_ptr<ExceptionToActionTable const> act_table_;
     std::shared_ptr<ProcessConfiguration const> processConfiguration_;
     ProcessContext processContext_;
-    PathsAndConsumesOfModules pathsAndConsumesOfModules_;
     MergeableRunProductProcesses mergeableRunProductProcesses_;
     edm::propagate_const<std::unique_ptr<Schedule>> schedule_;
     std::vector<edm::SerialTaskQueue> streamQueues_;
@@ -344,7 +340,6 @@ namespace edm {
     std::multimap<std::string, std::string> referencesToBranches_;
     std::vector<std::string> modulesToIgnoreForDeleteEarly_;
 
-    std::vector<SubProcess> subProcesses_;
     edm::propagate_const<std::unique_ptr<HistoryAppender>> historyAppender_;
 
     edm::propagate_const<std::shared_ptr<FileBlock>> fb_;
