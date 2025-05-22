@@ -169,15 +169,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
     int charge = -1 * ((int)copysignf(1.0f, cross));
       
-    //get the absolute value of px and py at the initial point
-    float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (y_init - y_center)) * 100;
-    float py = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (x_init - x_center)) * 100;
+    //get the px and py at the initial point
+    float px = 2 * charge * k2Rinv1GeVf * (y_init - y_center) * 100;
+    float py = - 2 * charge * k2Rinv1GeVf * (x_init - x_center) * 100;
 
-    //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
-    //flip signs of px and/or py according to charge (clockwise vs. anti-clockwise) and quadrant
-    px *= (1 - 2 * (y_init < y_center)) * charge;
-    py *= (1 - 2 * (x_init > x_center)) * charge;  
-    
     //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of px,py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
       px = -alpaka::math::abs(acc, px);
