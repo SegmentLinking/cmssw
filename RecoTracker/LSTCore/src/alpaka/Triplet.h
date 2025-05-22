@@ -174,28 +174,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float py = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (x_init - x_center)) * 100;
 
     //Above line only gives you the correct value of px and py, but signs of px and py calculated below.
-    //We look at if the circle is clockwise or anti-clock wise, to make it simpler, we separate the x-y plane into 4 quarters.
-    int quad1 = (x_init > x_center) && (y_init > y_center);  // top-right
-    int quad2 = (x_init < x_center) && (y_init > y_center);  // top-left
-    int quad3 = (x_init < x_center) && (y_init < y_center);  // bottom-left
-    int quad4 = (x_init > x_center) && (y_init < y_center);  // bottom-right
-    
-    // Compute flip flags
-    int flip_px = 
-        (quad1 && (charge == -1)) ||
-        (quad2 && (charge == -1)) ||
-        (quad3 && (charge == 1))  ||
-        (quad4 && (charge == 1));
-    
-    int flip_py = 
-        (quad1 && (charge == 1))  ||
-        (quad2 && (charge == -1)) ||
-        (quad3 && (charge == -1)) ||
-        (quad4 && (charge == 1));
-    
-    // Apply sign flips (1 - 2 * flag) → 1 if flag==0, -1 if flag==1
-    px *= (1 - 2 * flip_px);
-    py *= (1 - 2 * flip_py);
+    //flip signs of px and/or py according to charge (clockwise vs. anti-clockwise) and quadrant
+    px *= (1 - 2 * (y_init < y_center)) * charge;
+    py *= (1 - 2 * (x_init > x_center)) * charge;    
     
     //But if the initial T3 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of px,py signs on these to avoid errors
     if (x3 < x2 && x2 < x1)
