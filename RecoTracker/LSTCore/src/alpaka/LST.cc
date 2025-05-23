@@ -47,27 +47,37 @@ namespace {
 
 }  // namespace
 
-void LST::getOutput(LSTEvent& event) {
-  out_tc_hitIdxs_.clear();
-  out_tc_len_.clear();
-  out_tc_seedIdx_.clear();
-  out_tc_trackCandidateType_.clear();
-
+void LST::makeOutput(LSTEvent& event, Queue& queue) {
   auto const hitsBase = event.getTrimmedHitsBase(false);  // sync on next line
   auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/ true, /*sync*/ true);
 
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
+
+  outputHC_ = std::make_unique<LSTOutputHostCollection>(nTrackCandidates, cms::alpakatools::host());
+  auto output_view = outputHC_->view();
 
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     short trackCandidateType = trackCandidates.trackCandidateType()[idx];
     std::vector<unsigned int> hit_idx =
         getHitIdxs(trackCandidateType, trackCandidates.hitIndices()[idx], hitsBase.idxs());
 
-    out_tc_hitIdxs_.push_back(hit_idx);
-    out_tc_len_.push_back(hit_idx.size());
-    out_tc_seedIdx_.push_back(trackCandidates.pixelSeedIndex()[idx]);
-    out_tc_trackCandidateType_.push_back(trackCandidateType);
+    unsigned int nHits = hit_idx.size();
+    for (unsigned int i = 0; i < nHits; i++) {
+      output_view.hitIdx()[idx][i] = hit_idx[i];
+    }
+    output_view.nHits()[idx] = nHits;
   }
+
+  auto tc_seedIdx_view =
+      cms::alpakatools::make_host_view(trackCandidates.pixelSeedIndex(), output_view.metadata().size());
+  auto tc_trackCandidateType_view =
+      cms::alpakatools::make_host_view(trackCandidates.trackCandidateType(), output_view.metadata().size());
+  auto output_seedIdx_view = cms::alpakatools::make_host_view(output_view.seedIdx(), output_view.metadata().size());
+  auto output_trackCandidateType_view =
+      cms::alpakatools::make_host_view(output_view.trackCandidateType(), output_view.metadata().size());
+  alpaka::memcpy(queue, output_seedIdx_view, tc_seedIdx_view);
+  alpaka::memcpy(queue, output_trackCandidateType_view, tc_trackCandidateType_view);
+  alpaka::wait(queue);  // TODO: check if this is necessary
 }
 
 void LST::run(Queue& queue,
@@ -177,5 +187,5 @@ void LST::run(Queue& queue,
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
   }
 
-  getOutput(event);
+  makeOutput(event, queue);
 }
