@@ -38,6 +38,7 @@ namespace lst {
     float* dBeta;
     float* promptscore_t4dnn;
     float* displacedscore_t4dnn;
+    float* fakescore_t4dnn;
 
     float* regressionRadius;
     float* regressionG;
@@ -46,8 +47,10 @@ namespace lst {
     bool* partOfPT4;
     bool* TightPromptFlag;
     bool* TightDisplacedFlag;
-    bool* TightRPhiFlag;
+    bool* TightCutFlag;
     bool* partOfTC;
+
+    float* uncertainty;
 
     template <typename TBuff>
     void setData(TBuff& buf) {
@@ -69,15 +72,17 @@ namespace lst {
       rzChiSquared = alpaka::getPtrNative(buf.rzChiSquared_buf);
       dBeta = alpaka::getPtrNative(buf.dBeta_buf);
       promptscore_t4dnn = alpaka::getPtrNative(buf.promptscore_t4dnn_buf);
-      displacedscore_t4dnn = alpaka::getPtrNative(buf.displacedscore_t4dnn_buf);  
+      displacedscore_t4dnn = alpaka::getPtrNative(buf.displacedscore_t4dnn_buf); 
+      fakescore_t4dnn = alpaka::getPtrNative(buf.fakescore_t4dnn_buf);   
       regressionRadius = alpaka::getPtrNative(buf.regressionRadius_buf);
       regressionG = alpaka::getPtrNative(buf.regressionG_buf);
       regressionF = alpaka::getPtrNative(buf.regressionF_buf);
       partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
       TightPromptFlag = alpaka::getPtrNative(buf.TightPromptFlag_buf);
       TightDisplacedFlag = alpaka::getPtrNative(buf.TightDisplacedFlag_buf);
-      TightRPhiFlag = alpaka::getPtrNative(buf.TightRPhiFlag_buf);
+      TightCutFlag = alpaka::getPtrNative(buf.TightCutFlag_buf);
       partOfTC = alpaka::getPtrNative(buf.partOfTC_buf);
+      uncertainty = alpaka::getPtrNative(buf.uncertainty_buf);
     }
   };
 
@@ -104,6 +109,7 @@ namespace lst {
     Buf<TDev, float> dBeta_buf;
     Buf<TDev, float> promptscore_t4dnn_buf;
     Buf<TDev, float> displacedscore_t4dnn_buf;
+    Buf<TDev, float> fakescore_t4dnn_buf;
 
     Buf<TDev, float> regressionRadius_buf;
     Buf<TDev, float> regressionG_buf;
@@ -112,8 +118,9 @@ namespace lst {
     Buf<TDev, bool> partOfPT4_buf;
     Buf<TDev, bool> TightPromptFlag_buf;
     Buf<TDev, bool> TightDisplacedFlag_buf;
-    Buf<TDev, bool> TightRPhiFlag_buf;
+    Buf<TDev, bool> TightCutFlag_buf;
     Buf<TDev, bool> partOfTC_buf;
+    Buf<TDev, float> uncertainty_buf;
 
     Quadruplets data_;
 
@@ -138,14 +145,16 @@ namespace lst {
           dBeta_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           promptscore_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           displacedscore_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
+          fakescore_t4dnn_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionRadius_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionG_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           partOfPT4_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           TightPromptFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           TightDisplacedFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
-          TightRPhiFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
-          partOfTC_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)) {
+          TightCutFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          partOfTC_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          uncertainty_buf(allocBufWrapper<float>(devAccIn, Params_T4::kLayers * nTotalQuadruplets, queue)) {
       alpaka::memset(queue, nQuadruplets_buf, 0u);
       alpaka::memset(queue, totOccupancyQuadruplets_buf, 0u);
       alpaka::memset(queue, isDup_buf, 0u);
@@ -153,7 +162,7 @@ namespace lst {
       alpaka::memset(queue, TightPromptFlag_buf, false);
       alpaka::memset(queue, TightDisplacedFlag_buf, false);
       alpaka::memset(queue, partOfTC_buf, false);
-      alpaka::memset(queue, TightRPhiFlag_buf, false);
+      alpaka::memset(queue, TightCutFlag_buf, false);
       alpaka::wait(queue);
     }
 
@@ -188,12 +197,14 @@ namespace lst {
                                                             float dBeta,
                                                             float promptScore,
                                                             float displacedScore,
+                                                            float fakeScore,
                                                             float regressionG,
                                                             float regressionF,
                                                             float regressionRadius,
                                                             bool TightPromptFlag,
                                                             bool TightDisplacedFlag,
-                                                            bool TightRPhiFlag) {
+                                                            bool TightCutFlag,
+                                                            float* error2s) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1] = outerTripletIndex;
 
@@ -239,6 +250,7 @@ namespace lst {
     quadrupletsInGPU.dBeta[quadrupletIndex] = dBeta;
     quadrupletsInGPU.promptscore_t4dnn[quadrupletIndex] = promptScore;
     quadrupletsInGPU.displacedscore_t4dnn[quadrupletIndex] = displacedScore;
+    quadrupletsInGPU.fakescore_t4dnn[quadrupletIndex] = fakeScore;
 
     quadrupletsInGPU.regressionRadius[quadrupletIndex] = regressionRadius;
     quadrupletsInGPU.regressionG[quadrupletIndex] = regressionG;
@@ -246,7 +258,13 @@ namespace lst {
 
     quadrupletsInGPU.TightPromptFlag[quadrupletIndex] = TightPromptFlag;
     quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex] = TightDisplacedFlag;
-    quadrupletsInGPU.TightRPhiFlag[quadrupletIndex] = TightRPhiFlag;
+    quadrupletsInGPU.TightCutFlag[quadrupletIndex] = TightCutFlag;
+
+    quadrupletsInGPU.uncertainty[Params_T4::kLayers * quadrupletIndex] = error2s[0];
+    quadrupletsInGPU.uncertainty[Params_T4::kLayers * quadrupletIndex + 1] = error2s[1];
+    quadrupletsInGPU.uncertainty[Params_T4::kLayers * quadrupletIndex + 2] = error2s[2];
+    quadrupletsInGPU.uncertainty[Params_T4::kLayers * quadrupletIndex + 3] = error2s[3];
+
   };
 
   template <typename TAcc>
@@ -266,7 +284,8 @@ namespace lst {
                                                          float innerRadius,
                                                          float g,
                                                          float f,
-                                                         int charge) {
+                                                         int charge,
+                                                         bool& TightCutFlag) {
     //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
     const float& rt1 = mdsInGPU.anchorRt[firstMDIndex] / 100;  //in the unit of m instead of cm
     const float& rt2 = mdsInGPU.anchorRt[secondMDIndex] / 100;
@@ -305,7 +324,7 @@ namespace lst {
     float x_init = mdsInGPU.anchorX[thirdMDIndex] / 100;
     float y_init = mdsInGPU.anchorY[thirdMDIndex] / 100;
     float z_init = mdsInGPU.anchorZ[thirdMDIndex] / 100;
-    float rt_init = mdsInGPU.anchorRt[thirdMDIndex] / 100;  //use the second MD as initial point
+    float rt_init = mdsInGPU.anchorRt[thirdMDIndex] / 100;  //use the third MD as initial point
 
     if (moduleType3 == 1)  // 1: if MD3 is in 2s layer
     {
@@ -508,8 +527,8 @@ namespace lst {
       residual4_linear = residual4_linear * 100;
 
       rzChiSquared = 12 * (residual4_linear * residual4_linear);
-      // return rzChiSquared < 10.683f; //full T3s 99%
-      return rzChiSquared < 12.293f; //full T3s 99%, pT>=10GeV
+      return rzChiSquared < 10.683f; //full T3s 99%
+      // return rzChiSquared < 12.293f; //full T3s 99%, pT>=10GeV
       // return true;
     }
     // return true;
@@ -519,72 +538,108 @@ namespace lst {
     {
       // return rzChiSquared < 52.06f; // leftover T3s
       // return rzChiSquared < 59.185f; //full T3s 99%
-      return rzChiSquared < 31.293f; //full T3s 99%, pT>=10GeV
+      // return rzChiSquared < 31.293f; //full T3s 99%, pT>=10GeV
+      if (rzChiSquared < 19.246f) //95% displaced retention
+        TightCutFlag = true;
+      return rzChiSquared < 28.056f; //full t3s, multi dnn 99%
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15)  //1
     {
       // return true;// leftover T3s
       // return rzChiSquared <  9.97f; //full T3s 99%
-      return rzChiSquared < 5.540f; //full T3s 99%, pT>=10GeV
+      // return rzChiSquared < 5.540f; //full T3s 99%, pT>=10GeV
+      if (rzChiSquared < 6.274f) //95% displaced retention
+        TightCutFlag = true;
+      return rzChiSquared < 8.968f; //full t3s, multi dnn 99%
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 14 and layer4 == 15)  //2
     {
       // return rzChiSquared < 20.281f; // leftover T3s
       // return rzChiSquared < 6.526f; //full T3s 99%
-      return rzChiSquared < 4.935f; //full T3s 99%, pT>=10GeV
+      // return rzChiSquared < 4.935f; //full T3s 99%, pT>=10GeV
+      if (rzChiSquared < 3.824f) //95% displaced retention
+        TightCutFlag = true;
+      return rzChiSquared < 5.032f; //full t3s, multi dnn 99%
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
       if (layer4 == 11)  //3
       {
         // return rzChiSquared < 31.943f; // leftover T3s;
         // return rzChiSquared < 53.377f; //full T3s 99%
-        return rzChiSquared < 24.160f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 24.160f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 18.572f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 29.292f; //full t3s, multi dnn 99%
       }
       if (layer4 == 16)  //4
       {
         // return rzChiSquared < 21.174f; // leftover T3s
         // return rzChiSquared < 14.157f; //full T3s 99%
-        return rzChiSquared < 8.625f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 8.625f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 6.362f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 9.359f; //full t3s, multi dnn 99%
       }
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
     { 
         // return rzChiSquared < 4.439f;  // leftover T3s
         // return rzChiSquared < 5.793f; //full T3s 99%
-        return rzChiSquared < true; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < true; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 3.379f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 4.190f; //full t3s, multi dnn 99%
     }
     else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 4)  //6
       {
         // return rzChiSquared < 81.34f; // leftover T3s
         // return rzChiSquared < 62.746f; //full T3s 99%
-        return rzChiSquared < 60.189f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 60.189f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 13.331f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 23.235f; //full t3s, multi dnn 99%
       }
       else if (layer4 == 7)  //7
       {
         // return rzChiSquared < 101.77f; // leftover T3s
         // return rzChiSquared < 106.985f; //full T3s 99%
-        return rzChiSquared < 129.117f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 129.117f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 17.074f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 29.561f; //full t3s, multi dnn 99%
       } else if (layer4 == 12)  //8
       {
         // return rzChiSquared < 63.544f; // leftover T3s
         // return rzChiSquared < 57.204f; //full T3s 99%
-        return rzChiSquared < 122.318f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 122.318f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 10.879f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 18.687f; //full t3s, multi dnn 99%
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
       if (layer4 == 8)  //9
       {
         // return rzChiSquared < 150.822f; // leftover T3s
         // return rzChiSquared < 103.889f; //full T3s 99%
-        return rzChiSquared < 389.533f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 389.533f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 18.237f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 30.072f; //full t3s, multi dnn 99%
       } else if (layer4 == 13)  //10
       {
         // return rzChiSquared < 16.378f; // leftover T3s
         // return rzChiSquared < 14.309f; //full T3s 99%
-        return rzChiSquared < 7.996f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 7.996f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 8.467f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 12.88f; //full t3s, multi dnn 99%
       } 
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 9) //11
       {
         // return rzChiSquared < 44.633f; // leftover T3s
         // return rzChiSquared < 45.973f; //full T3s 99%
-        return rzChiSquared < 36.155f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 36.155f; //full T3s 99%, pT>=10
+        if (rzChiSquared < 18.778f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 27.908f; //full t3s, multi dnn 99%GeV
       } else if (layer4 == 14)  //12
       {
         return true; // leftover T3s, //full T3s 99%
@@ -595,51 +650,75 @@ namespace lst {
         {
           // return rzChiSquared < 17.009f; // leftover T3s
           // return rzChiSquared < 10.248f; //full T3s 99%
-          return rzChiSquared < 8.341f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 8.341f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 4.426f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 5.419f; //full t3s, multi dnn 99%
         }
         else if (layer4 == 12) //14
         { 
           // return rzChiSquared < 5.423f; // leftover T3s
           // return rzChiSquared < 6.075f; //full T3s 99%
-          return rzChiSquared < 5.826f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 5.826f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared <4.07f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 4.949f; //full t3s, multi dnn 99%
         }
       }
       else if (layer3 == 7) {
         if (layer4 == 8) // 15
         { 
-          return true; // leftover T3s, //full T3s 99%
+          // return true; // leftover T3s, //full T3s 99%
+          if (rzChiSquared < 11.934f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 20.491f; //full t3s, multi dnn 99%
         }
         else if (layer4 == 13) //16
         { 
           // return rzChiSquared < 96.629f; // leftover T3s
           // return rzChiSquared < 69.521f; //full T3s 99%
-          return rzChiSquared < 61.728f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 61.728f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 9.671f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 14.355f; //full t3s, multi dnn 99%
         }
       }
       else if (layer3 == 12 and layer4 == 13) //17
       { 
         // return rzChiSquared < 6.167f; // leftover T3s
         // return rzChiSquared < 9.830f; //full T3s 99%
-        return rzChiSquared < 7.190f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 7.190f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 4.107f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 5.160f; //full t3s, multi dnn 99%
       }
     } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
     { 
       // return true; // leftover T3s
       // return rzChiSquared < 58.469f; //full T3s 99%
-      return rzChiSquared < 24.042f; //full T3s 99%, pT>=10GeV
+      // return rzChiSquared < 24.042f; //full T3s 99%, pT>=10GeV
+      if (rzChiSquared < 22.416f) //95% displaced retention
+        TightCutFlag = true;
+      return rzChiSquared < 35.778f; //full t3s, multi dnn 99%
     } else if (layer1 == 2 and layer2 == 7)
     {
       if (layer3 == 8 and layer4 == 14) //19
       { 
         // return rzChiSquared < 78.513f; // leftover T3s
         // return rzChiSquared < 39.566f; //full T3s 99%
-        return rzChiSquared < 20.729f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 20.729f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 7.129f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 10.899f; //full t3s, multi dnn 99%
       }
       else if (layer3 == 13 and layer4 == 14) //20
       { 
         // return rzChiSquared < 5.148f; // leftover T3s
         // return rzChiSquared < 4.47f; //full T3s 99%
-        return rzChiSquared < 2.431f; //full T3s 99%, pT>=10GeV
+        // return rzChiSquared < 2.431f; //full T3s 99%, pT>=10GeV
+        if (rzChiSquared < 3.217f) //95% displaced retention
+          TightCutFlag = true;
+        return rzChiSquared < 3.876f; //full t3s, multi dnn 99%
       }
     } else if (layer1 == 3)
     {
@@ -648,31 +727,46 @@ namespace lst {
         { 
           // return rzChiSquared < 104.004f; // leftover T3s
           // return rzChiSquared < 80.323f; //full T3s 99%
-          return rzChiSquared < 70.504f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 70.504f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 56.658f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 75.304f; //full t3s, multi dnn 99%
         }
         else if (layer3 == 12 and layer4 == 13) //24
         {
           // return rzChiSquared < 23.359f; // leftover T3s
           // return rzChiSquared < 27.691f; //full T3s 99%
-          return rzChiSquared < 29.300f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 29.300f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 16.991f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 24.917f; //full t3s, multi dnn 99%
         }
         else if (layer3 == 5 and layer4 == 12) //25
         {
           // return rzChiSquared < 44.752f; // leftover T3s
           // return rzChiSquared < 48.968f; //full T3s 99%
-          return rzChiSquared < 42.324f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 42.324f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 35.097f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 44.968f; //full t3s, multi dnn 99%
         }
       }
       else if (layer2 == 7) {
         if (layer3 == 8 and layer4 == 14) //22
         {
+          if (rzChiSquared < 3.971f) //95% displaced retention
+            TightCutFlag = true;
           return true; // leftover T3s, full T3s
+          // return rzChiSquared < 6.822f; //full t3s, multi dnn 99%
         }
         else if (layer3 == 13 and layer4 == 14) //23
         {
           // return rzChiSquared < 11.313f; // leftover T3s
           // return rzChiSquared < 6.154f; //full T3s 99%
-          return rzChiSquared < 26.414f; //full T3s 99%, pT>=10GeV
+          // return rzChiSquared < 26.414f; //full T3s 99%, pT>=10GeV
+          if (rzChiSquared < 3.53f) //95% displaced retention
+            TightCutFlag = true;
+          return rzChiSquared < 4.342f; //full t3s, multi dnn 99%
           }
       }
     }
@@ -2324,10 +2418,12 @@ namespace lst {
                                                                float& dBeta,
                                                                float& promptScore,
                                                                float& displacedScore,
+                                                               float& fakeScore,
                                                                float& x_5,
                                                                bool& TightPromptFlag,
                                                                bool& TightDisplacedFlag,
-                                                               bool& TightRPhiFlag) {
+                                                               bool& TightCutFlag,
+                                                               float* error2s) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
     unsigned int secondSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex + 1];
     unsigned int thirdSegmentIndex = tripletsInGPU.segmentIndices[2 * outerTripletIndex]; //second and third segments are the same here
@@ -2349,7 +2445,7 @@ namespace lst {
       return false;
     if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
       return false; 
-    // return true; //no cuts
+    
     // require both T3s to have the same charge
     int innerT3charge = tripletsInGPU.charge[innerTripletIndex];
     int outerT3charge = tripletsInGPU.charge[outerTripletIndex];
@@ -2388,18 +2484,79 @@ namespace lst {
     //                     fourthMDIndex))
     //   return false;
 
+    // const int moduleType1 = modulesInGPU.moduleType[lowerModuleIndex1];  //0 is ps, 1 is 2s
+    // const int moduleType2 = modulesInGPU.moduleType[lowerModuleIndex2];
+    // const int moduleType3 = modulesInGPU.moduleType[lowerModuleIndex3];
+    // const int moduleType4 = modulesInGPU.moduleType[lowerModuleIndex4];
+    
+    // for (size_t i = 0; i < 4; i++) {
+    //   float error2;
+    //   int moduleTypei;
+    //   if (i == 0) {
+    //     moduleTypei = moduleType1;
+    //   } else if (i == 1) {
+    //     moduleTypei = moduleType2;
+    //   } else if (i == 2) {
+    //     moduleTypei = moduleType3;
+    //   } else if (i == 3) {
+    //     moduleTypei = moduleType4;
+    //   } 
+    //   if (moduleTypei == 0) {
+    //     error2 = kPixelPSZpitch * kPixelPSZpitch;
+    //   } else  //2S modules
+    //   {
+    //     error2 = kStrip2SZpitch * kStrip2SZpitch;
+    //   }
+
+    //   //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
+    //   float drdz;
+    //   short side, subdets;
+    //   if (i == 0) {
+    //     drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[lowerModuleIndex1]);
+    //     side = modulesInGPU.sides[lowerModuleIndex1];
+    //     subdets = modulesInGPU.subdets[lowerModuleIndex1];
+    //   }
+    //   if (i == 1) {
+    //     drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[lowerModuleIndex2]);
+    //     side = modulesInGPU.sides[lowerModuleIndex2];
+    //     subdets = modulesInGPU.subdets[lowerModuleIndex2];
+    //   }
+    //   if (i == 2) {
+    //     drdz = alpaka::math::abs(acc, modulesInGPU.drdzs[lowerModuleIndex3]);
+    //     side = modulesInGPU.sides[lowerModuleIndex3];
+    //     subdets = modulesInGPU.subdets[lowerModuleIndex3];
+    //   }
+    //   if (i==0 || i == 1 || i == 2) {
+    //     float projection_missing2 = 1.f;
+    //     if (drdz < 1)
+    //       projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
+    //                                 ? 1.f
+    //                                 : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+    //     if (drdz > 1)
+    //       projection_missing2 = ((subdets == lst::Endcap) or (side == lst::Center))
+    //                                 ? 1.f
+    //                                 : (drdz * drdz) / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+    //     error2 = error2 * projection_missing2;
+    //   }  
+    //   error2s[i] = error2;
+    // }
+ 
     bool inference = lst::t4dnn::runInference(acc,
                                               mdsInGPU,
+                                              modulesInGPU,
                                               firstMDIndex,
                                               secondMDIndex,
                                               thirdMDIndex,
                                               fourthMDIndex,
+                                              lowerModuleIndex1,
                                               innerRadius,
                                               outerRadius,
                                               promptScore,
                                               displacedScore,
+                                              fakeScore,
                                               TightPromptFlag,
-                                              TightDisplacedFlag);
+                                              TightDisplacedFlag,
+                                              error2s);
     if (!inference)
       return false;
     // if (not runQuadrupletdBetaAlgoSelector(acc,
@@ -2457,27 +2614,45 @@ namespace lst {
     //                                   fourthMDIndex,
     //                                   ptCut))
     //   return false;
-    if (pt>10){
-      if (not passT4RZConstraint(acc,
-                                modulesInGPU,
-                                mdsInGPU,
-                                firstMDIndex, 
-                                secondMDIndex, 
-                                thirdMDIndex, 
-                                fourthMDIndex, 
-                                lowerModuleIndex1, 
-                                lowerModuleIndex2, 
-                                lowerModuleIndex3, 
-                                lowerModuleIndex4, 
-                                rzChiSquared, 
-                                inner_pt, 
-                                innerRadius, 
-                                inner_circleCenterX, 
-                                inner_circleCenterY, 
-                                innerT3charge))
-        return false;
-    }
-    
+    // if (pt>10){
+    //   if (not passT4RZConstraint(acc,
+    //                             modulesInGPU,
+    //                             mdsInGPU,
+    //                             firstMDIndex, 
+    //                             secondMDIndex, 
+    //                             thirdMDIndex, 
+    //                             fourthMDIndex, 
+    //                             lowerModuleIndex1, 
+    //                             lowerModuleIndex2, 
+    //                             lowerModuleIndex3, 
+    //                             lowerModuleIndex4, 
+    //                             rzChiSquared, 
+    //                             inner_pt, 
+    //                             innerRadius, 
+    //                             inner_circleCenterX, 
+    //                             inner_circleCenterY, 
+    //                             innerT3charge))
+    //     return false;
+    // }
+    if (not passT4RZConstraint(acc,
+                              modulesInGPU,
+                              mdsInGPU,
+                              firstMDIndex, 
+                              secondMDIndex, 
+                              thirdMDIndex, 
+                              fourthMDIndex, 
+                              lowerModuleIndex1, 
+                              lowerModuleIndex2, 
+                              lowerModuleIndex3, 
+                              lowerModuleIndex4, 
+                              rzChiSquared, 
+                              inner_pt, 
+                              innerRadius, 
+                              inner_circleCenterX, 
+                              inner_circleCenterY, 
+                              innerT3charge,
+                              TightCutFlag))
+    return false; 
 
     // 4 categories for sigmas
     float sigmas2[4], delta1[4], delta2[4], slopes[4];
@@ -2535,10 +2710,10 @@ namespace lst {
                                             regressionG,
                                             regressionF,
                                             regressionRadius); 
-    float rphisum = chiSquared + nonAnchorChiSquared; 
+    // float rphisum = chiSquared + nonAnchorChiSquared; 
 
-    if (rphisum < 5.76f)
-      TightRPhiFlag = true; //~95% retention for displaced tracks
+    // if (rphisum < 5.76f)
+    //   TightRPhiFlag = true; //~95% retention for displaced tracks
     return true;
   };
 
@@ -2560,17 +2735,21 @@ namespace lst {
     // all modules (non-zero) are eligible now since not doing duplicate removal yet
       for (int iter = globalThreadIdx[0]; iter < nEligibleT4Modules; iter += gridThreadExtent[0]) {
         uint16_t lowerModule1 = rangesInGPU.indicesOfEligibleT4Modules[iter];
-        // short layer2_adjustment;
+        short layer2_adjustment;
+        short md_adjustment;
         int layer = modulesInGPU.layers[lowerModule1];
-        // if (layer == 1) {
-        //   layer2_adjustment = 1;
-        // }  // get upper segment to be in second layer
-        // else if (layer == 2) {
-        //   layer2_adjustment = 0;
-        // }  // get lower segment to be in second layer
-        // else {
-        //   continue;
-        // }
+        if (layer == 1) {
+          layer2_adjustment = 1;
+          md_adjustment = 1;
+        }  // get upper segment to be in third layer
+        else if (layer ==2) {
+          layer2_adjustment = 1; 
+          md_adjustment = 0;
+        }  // get lower segment to be in third layer
+        else {
+          layer2_adjustment = 0; 
+          md_adjustment = 0;
+        }
         unsigned int nInnerTriplets = tripletsInGPU.nTriplets[lowerModule1];
         for (unsigned int innerTripletArrayIndex = globalThreadIdx[1]; innerTripletArrayIndex < nInnerTriplets;
              innerTripletArrayIndex += gridThreadExtent[1]) {
@@ -2596,10 +2775,11 @@ namespace lst {
             uint16_t lowerModule4 = tripletsInGPU.lowerModuleIndices[Params_T3::kLayers * outerTripletIndex + 2];
             float innerRadius = tripletsInGPU.circleRadius[innerTripletIndex];
             float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];  
-            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, chiSquared, promptScore, displacedScore, x_5; 
+            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
+            float error2s[4]; 
             bool TightPromptFlag = false;
             bool TightDisplacedFlag = false;
-            bool TightRPhiFlag = false;
+            bool TightCutFlag = false;
       
             float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
             // if (pt> 10){
@@ -2627,10 +2807,12 @@ namespace lst {
                                                     dBeta,
                                                     promptScore,
                                                     displacedScore,
+                                                    fakeScore,
                                                     x_5,
                                                     TightPromptFlag,
                                                     TightDisplacedFlag,
-                                                    TightRPhiFlag);
+                                                    TightCutFlag,
+                                                    error2s);
             // bool success = true;
 
             if (success) {
@@ -2654,17 +2836,17 @@ namespace lst {
                 } else {
                   unsigned int quadrupletIndex =
                       rangesInGPU.quadrupletModuleIndices[lowerModule1] + quadrupletModuleIndex;
-                  // float phi =
-                  //     mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
-                  //                                                                                 layer2_adjustment]]];
-                  // float eta =
-                  //     mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
-                  //                                                                                 layer2_adjustment]]];
-                  //test phi and eta without layer adjustment
                   float phi =
-                      mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
+                      mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment] + md_adjustment]]; //layer 3
                   float eta =
-                      mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
+                      mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment] + md_adjustment]]; //layer 3
+                  //test phi and eta without layer adjustment
+                  // float phi =
+                  //     mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
+                  // float eta =
+                  //     mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex]]];
                   
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuadrupletToMemory(tripletsInGPU,
@@ -2687,12 +2869,14 @@ namespace lst {
                                         dBeta,
                                         promptScore,
                                         displacedScore,
+                                        fakeScore,
                                         regressionG,
                                         regressionF,
                                         regressionRadius,
                                         TightPromptFlag,
                                         TightDisplacedFlag,
-                                        TightRPhiFlag);
+                                        TightCutFlag,
+                                        error2s);
 
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // tripletsInGPU.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
@@ -2734,12 +2918,12 @@ namespace lst {
           {500000, 500000, 500000, 500000}       // category 3
       };
 
-      // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99% //FIXME -recalculate 
       constexpr int p06_occupancy_matrix[4][4] = {
-          {9000, 9000, 9000, 9000},  // category 0
-          {9000, 9000, 9000, 9000},          // category 1
-          {9000, 9000, 9000, 9000},          // category 2
-          {9000, 9000, 9000, 9000}       // category 3
+          {1500000, 1500000, 1500000, 1500000},  // category 0
+          {1500000, 1500000, 1500000, 1500000},          // category 1
+          {1500000, 1500000, 1500000, 1500000},          // category 2
+          {1500000, 1500000, 1500000, 1500000}       // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut

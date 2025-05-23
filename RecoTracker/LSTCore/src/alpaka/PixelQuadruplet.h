@@ -886,8 +886,24 @@ namespace lst {
               } else {
                 unsigned int pixelQuadrupletIndex =
                     alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuadrupletsInGPU.nPixelQuadruplets, 1u);
-                float eta = __H2F(quadrupletsInGPU.eta[quadrupletIndex]);
-                float phi = __H2F(quadrupletsInGPU.phi[quadrupletIndex]);
+                // float eta = __H2F(quadrupletsInGPU.eta[quadrupletIndex]);
+                // float phi = __H2F(quadrupletsInGPU.phi[quadrupletIndex]);
+                int layer = modulesInGPU.layers[quadrupletLowerModuleIndex];
+                short layer2_adjustment;
+                if (layer == 1) {
+                  layer2_adjustment = 1;
+                } else {
+                  layer2_adjustment = 0;
+                }
+                unsigned int innerTripletIndex = quadrupletsInGPU.tripletIndices[2*quadrupletIndex];
+
+                float phi =
+                      mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment]]]; //layer 2
+                float eta =
+                      mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment]]]; //layer 2
+
                 float pt =  (__H2F(quadrupletsInGPU.innerRadius[quadrupletIndex]) * lst::k2Rinv1GeVf * 2 + segmentsInGPU.ptIn[i_pLS]) / 2; 
 
                 addPixelQuadrupletToMemory(modulesInGPU,
