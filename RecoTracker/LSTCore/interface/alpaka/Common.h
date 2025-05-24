@@ -64,6 +64,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
 
+    namespace plsembdnn {
+      HOST_DEVICE_CONSTANT float kWP[kEtaBins] = {
+          0.9235, 0.8974, 0.9061, 0.9431, 0.8262, 0.7998, 0.7714, 0.7017, 0.6749, 0.6624};
+    }
+
     namespace t3dnn {
       HOST_DEVICE_CONSTANT float kZ_max = 224.149505f;
       HOST_DEVICE_CONSTANT float kR_max = 98.932365f;

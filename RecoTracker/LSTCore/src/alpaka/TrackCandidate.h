@@ -15,6 +15,8 @@
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 
+#include "NeuralNetwork.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addpLSTrackCandidateToMemory(TrackCandidates& cands,
                                                                    unsigned int trackletIndex,
@@ -150,40 +152,57 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   PixelQuintupletsConst pixelQuintuplets,
                                   PixelTripletsConst pixelTriplets,
                                   ObjectRangesConst ranges) const {
-      for (int innerInnerInnerLowerModuleArrayIndex :
-           cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
-        if (ranges.quintupletModuleIndices()[innerInnerInnerLowerModuleArrayIndex] == -1)
+      for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
+        if (ranges.quintupletModuleIndices()[lowmod] == -1)
           continue;
 
-        unsigned int nQuints = quintupletsOccupancy.nQuintuplets()[innerInnerInnerLowerModuleArrayIndex];
-        for (unsigned int innerObjectArrayIndex : cms::alpakatools::uniform_elements_y(acc, nQuints)) {
-          unsigned int quintupletIndex =
-              ranges.quintupletModuleIndices()[innerInnerInnerLowerModuleArrayIndex] + innerObjectArrayIndex;
+        unsigned int nQuints = quintupletsOccupancy.nQuintuplets()[lowmod];
+        for (unsigned int iOff : cms::alpakatools::uniform_elements_y(acc, nQuints)) {
+          unsigned int ix = ranges.quintupletModuleIndices()[lowmod] + iOff;
 
-          // Don't add duplicate T5s or T5s that are accounted in pT5s
-          if (quintuplets.isDup()[quintupletIndex] or quintuplets.partOfPT5()[quintupletIndex])
+          // skip already-dup or already in pT5
+          if (quintuplets.isDup()[ix] || quintuplets.partOfPT5()[ix])
             continue;
-          unsigned int loop_bound = pixelQuintuplets.nPixelQuintuplets() + pixelTriplets.nPixelTriplets();
-          // Cross cleaning step
-          float eta1 = __H2F(quintuplets.eta()[quintupletIndex]);
-          float phi1 = __H2F(quintuplets.phi()[quintupletIndex]);
 
+          unsigned int loop_bound = pixelQuintuplets.nPixelQuintuplets() + pixelTriplets.nPixelTriplets();
+
+          float eta1 = __H2F(quintuplets.eta()[ix]);
+          float phi1 = __H2F(quintuplets.phi()[ix]);
+
+          // Cross-clean against both pT5s and pixel-t3s
           for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, loop_bound)) {
             float eta2, phi2;
             if (jx < pixelQuintuplets.nPixelQuintuplets()) {
               eta2 = __H2F(pixelQuintuplets.eta()[jx]);
               phi2 = __H2F(pixelQuintuplets.phi()[jx]);
             } else {
-              eta2 = __H2F(pixelTriplets.eta()[jx - pixelQuintuplets.nPixelQuintuplets()]);
-              phi2 = __H2F(pixelTriplets.phi()[jx - pixelQuintuplets.nPixelQuintuplets()]);
+              unsigned int ptidx = jx - pixelQuintuplets.nPixelQuintuplets();
+              eta2 = __H2F(pixelTriplets.eta()[ptidx]);
+              phi2 = __H2F(pixelTriplets.phi()[ptidx]);
             }
 
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
             float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 1e-3f)
-              quintuplets.isDup()[quintupletIndex] = true;
+
+            if (jx < pixelQuintuplets.nPixelQuintuplets()) {
+              unsigned int t5j = pixelQuintuplets.quintupletIndices()[jx];
+              float d2 = 0.f;
+              CMS_UNROLL_LOOP for (unsigned k = 0; k < 6; ++k) {
+                float e1 = __H2F(quintuplets.t5Embed()[ix][k]);
+                float e2 = __H2F(quintuplets.t5Embed()[t5j][k]);
+                float df = e1 - e2;
+                d2 += df * df;
+              }
+              if ((dR2 < 0.02f && d2 < 0.1f) || (dR2 < 1e-3f && d2 < 1.0f)) {
+                quintuplets.isDup()[ix] = true;
+              }
+            } else if (dR2 < 1e-3f) {
+              quintuplets.isDup()[ix] = true;
+            }
+
+            if (quintuplets.isDup()[ix])
+              break;
           }
         }
       }
@@ -223,10 +242,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
             float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 1e-3f)
-              pixelSegments.isDup()[pixelArrayIndex] = true;
+
+            if (dR2 < 0.02f) {
+              float plsEmbed[6];
+              plsembdnn::runEmbed(acc,
+                                  eta1,
+                                  pixelSeeds.etaErr()[pixelArrayIndex],
+                                  phi1,
+                                  pixelSegments.circleCenterX()[pixelArrayIndex],
+                                  pixelSegments.circleCenterY()[pixelArrayIndex],
+                                  pixelSegments.circleRadius()[pixelArrayIndex],
+                                  pixelSeeds.ptIn()[pixelArrayIndex],
+                                  pixelSeeds.ptErr()[pixelArrayIndex],
+                                  static_cast<bool>(pixelSeeds.isQuad()[pixelArrayIndex]),
+                                  plsEmbed);
+
+              float d2 = 0.f;
+              CMS_UNROLL_LOOP for (unsigned k = 0; k < 6; ++k) {
+                float diff = plsEmbed[k] - __H2F(quintuplets.t5Embed()[quintupletIndex][k]);
+                d2 += diff * diff;
+              }
+
+              float absEta1 = alpaka::math::abs(acc, eta1);
+              uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
+
+              if (alpaka::math::sqrt(acc, d2) < dnn::plsembdnn::kWP[bin_idx]) {
+                pixelSegments.isDup()[pixelArrayIndex] = true;
+              }
+            }
           }
           if (type == LSTObjType::pT3) {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
