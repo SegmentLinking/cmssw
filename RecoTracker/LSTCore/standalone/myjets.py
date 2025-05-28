@@ -14,7 +14,7 @@ import vector
 
 
 # Takes an entry from a tree and extracts lists of key parameters.
-def getLists(entry, hardSc = True, pTcut=True):
+def getLists(entry, hardSc = False, pTcut=True):
         # This applies to the entire event
         pdgidList = entry.sim_pdgId
         evLen = len(pdgidList)
@@ -35,6 +35,10 @@ def getLists(entry, hardSc = True, pTcut=True):
                         # print(f"event != 0 {entry.sim_event[j]}")
                         continue
                 if(pTcut and entry.sim_q[j] != 0 and entry.sim_pt[j] < 0.75 ):
+                        continue
+                vtxX = entry.simvtx_x[entry.sim_parentVtxIdx[j]]
+                vtxY = entry.simvtx_y[entry.sim_parentVtxIdx[j]]
+                if(np.sqrt(vtxX**2 + vtxY**2)>10):
                         continue
                 pdgid = pdgidList[j]
                 massList[j] = Particle.from_pdgid(pdgid).mass/1000.
