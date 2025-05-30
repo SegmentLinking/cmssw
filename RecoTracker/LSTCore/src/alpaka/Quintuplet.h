@@ -1724,7 +1724,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
                 rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
 
-            float t5Embed[Params_T5::kEmbed];
+            float t5Embed[Params_T5::kEmbed] = {0.f};
 
             bool tightCutFlag = false;
             bool success = runQuintupletDefaultAlgo(acc,
