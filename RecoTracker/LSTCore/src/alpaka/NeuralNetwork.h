@@ -375,7 +375,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       float h1[kHiddenFeatures];
       float h2[kHiddenFeatures];
-      float out[Params_T5::kEmbed];
 
       linear_layer<kInputFeatures, kHiddenFeatures>(x, h1, dnn::t5embdnn::wgtT_fc1, dnn::t5embdnn::bias_fc1);
       relu_activation<kHiddenFeatures>(h1);
@@ -383,11 +382,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       linear_layer<kHiddenFeatures, kHiddenFeatures>(h1, h2, dnn::t5embdnn::wgtT_fc2, dnn::t5embdnn::bias_fc2);
       relu_activation<kHiddenFeatures>(h2);
 
-      linear_layer<kHiddenFeatures, Params_T5::kEmbed>(h2, out, dnn::t5embdnn::wgtT_fc3, dnn::t5embdnn::bias_fc3);
-
-      CMS_UNROLL_LOOP
-      for (unsigned int i = 0; i < Params_T5::kEmbed; ++i)
-        embedding[i] = out[i];
+      linear_layer<kHiddenFeatures, Params_T5::kEmbed>(h2, embedding, dnn::t5embdnn::wgtT_fc3, dnn::t5embdnn::bias_fc3);
     }
 
   }  // namespace t5embdnn
@@ -421,7 +416,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       float h1[kHiddenFeatures];
       float h2[kHiddenFeatures];
-      float out[Params_pLS::kEmbed];
 
       linear_layer<kInputFeatures, kHiddenFeatures>(x, h1, dnn::plsembdnn::wgtT_fc1, dnn::plsembdnn::bias_fc1);
       relu_activation<kHiddenFeatures>(h1);
@@ -429,12 +423,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       linear_layer<kHiddenFeatures, kHiddenFeatures>(h1, h2, dnn::plsembdnn::wgtT_fc2, dnn::plsembdnn::bias_fc2);
       relu_activation<kHiddenFeatures>(h2);
 
-      linear_layer<kHiddenFeatures, Params_pLS::kEmbed>(h2, out, dnn::plsembdnn::wgtT_fc3, dnn::plsembdnn::bias_fc3);
-
-      CMS_UNROLL_LOOP
-      for (unsigned int i = 0; i < Params_pLS::kEmbed; ++i) {
-        embedding[i] = out[i];
-      }
+      linear_layer<kHiddenFeatures, Params_pLS::kEmbed>(
+          h2, embedding, dnn::plsembdnn::wgtT_fc3, dnn::plsembdnn::bias_fc3);
     }
 
   }  // namespace plsembdnn
