@@ -23,6 +23,7 @@ namespace lst {
 
   GENERATE_SOA_LAYOUT(SegmentsOccupancySoALayout,
                       SOA_COLUMN(unsigned int, nSegments),  //number of segments per inner lower module
+                      SOA_COLUMN(unsigned int, nSegmentsPerMD), //number of segments per inner MD
                       SOA_COLUMN(unsigned int, totOccupancySegments))
 
   using SegmentsSoA = SegmentsSoALayout<>;
