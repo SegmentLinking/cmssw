@@ -230,7 +230,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     // error, PS layer uncertainty is 0.15cm, 2S uncertainty is 5cm.
-    error = 0.15f * (moduleType3 == 0) + 5.0f * (moduleType3 != 0);
+    error = moduleType3 == 0 ? 0.15f : 5.0f;
 
     bool isEndcapOrCenter = (subdets == lst::Endcap) or (side == lst::Center);
     float projection_missing2 = 1;
