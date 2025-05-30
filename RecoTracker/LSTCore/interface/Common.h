@@ -18,7 +18,7 @@ namespace lst {
   enum PixelType : int8_t { kInvalid = -1, kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };
 
   // Named types for LST objects
-  enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
+  enum LSTObjType : int8_t { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
 
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
@@ -97,6 +97,9 @@ namespace lst {
 
   using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
+
+  static constexpr int kMaxTrackHits = Params_pT5::kHits;
+  using ArrayUxMaxTrackHits = edm::StdArray<unsigned int, kMaxTrackHits>;
 
 }  //namespace lst
 
