@@ -1,6 +1,7 @@
 #ifndef RecoTracker_LSTCore_interface_LSTOutputSoA_h
 #define RecoTracker_LSTCore_interface_LSTOutputSoA_h
 
+#include "Common.h"
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 #include "DataFormats/Portable/interface/PortableCollection.h"
 
@@ -12,7 +13,7 @@ namespace lst {
                       SOA_COLUMN(ArrayUxMaxTrackHits, hitIdx),
                       SOA_COLUMN(unsigned int, nHits),
                       SOA_COLUMN(int, seedIdx),
-                      SOA_COLUMN(short, trackCandidateType))
+                      SOA_COLUMN(LSTObjType, trackCandidateType))
 
   using OutputSoA = OutputSoALayout<>;
 

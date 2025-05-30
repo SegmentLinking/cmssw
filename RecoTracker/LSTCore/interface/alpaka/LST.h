@@ -4,7 +4,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTESData.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
-#include "RecoTracker/LSTCore/interface/LSTOutputHostCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
 
 #include <cstdlib>
 #include <numeric>
@@ -24,13 +24,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              LSTInputDeviceCollection const* lstInputDC,
              bool no_pls_dupclean,
              bool tc_pls_triplets);
-    std::unique_ptr<LSTOutputHostCollection> getOutput() { return std::move(outputHC_); }
+    std::unique_ptr<TrackCandidatesBaseDeviceCollection> getTrackCandidates() {
+      return std::move(trackCandidatesBaseDC_);
+    }
 
   private:
-    void makeOutput(LSTEvent& event, Queue& queue);
-
-    // Output SoA
-    std::unique_ptr<LSTOutputHostCollection> outputHC_;
+    // Output collection
+    std::unique_ptr<TrackCandidatesBaseDeviceCollection> trackCandidatesBaseDC_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

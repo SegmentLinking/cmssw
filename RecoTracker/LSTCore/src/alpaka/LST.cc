@@ -8,78 +8,6 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 #include "Math/VectorUtil.h"
 using XYZVector = ROOT::Math::XYZVector;
 
-namespace {
-  using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
-  std::vector<unsigned int> getHitIdxs(short trackCandidateType,
-                                       Params_pT5::ArrayUxHits const& tcHitIndices,
-                                       unsigned int const* hitIndices) {
-    std::vector<unsigned int> hits;
-
-    unsigned int maxNHits = 0;
-    if (trackCandidateType == LSTObjType::pT5)
-      maxNHits = Params_pT5::kHits;
-    else if (trackCandidateType == LSTObjType::pT3)
-      maxNHits = Params_pT3::kHits;
-    else if (trackCandidateType == LSTObjType::T5)
-      maxNHits = Params_T5::kHits;
-    else if (trackCandidateType == LSTObjType::pLS)
-      maxNHits = Params_pLS::kHits;
-
-    for (unsigned int i = 0; i < maxNHits; i++) {
-      unsigned int hitIdxDev = tcHitIndices[i];
-      unsigned int hitIdx =
-          (trackCandidateType == LSTObjType::pLS)
-              ? hitIdxDev
-              : hitIndices[hitIdxDev];  // Hit indices are stored differently in the standalone for pLS.
-
-      // For p objects, the 3rd and 4th hit maybe the same,
-      // due to the way pLS hits are stored in the standalone.
-      // This is because pixel seeds can be either triplets or quadruplets.
-      if (trackCandidateType != LSTObjType::T5 && hits.size() == 3 &&
-          hits.back() == hitIdx)  // Remove duplicate 4th hits.
-        continue;
-
-      hits.push_back(hitIdx);
-    }
-
-    return hits;
-  }
-
-}  // namespace
-
-void LST::makeOutput(LSTEvent& event, Queue& queue) {
-  auto const hitsBase = event.getTrimmedHitsBase(false);  // sync on next line
-  auto const& trackCandidates = event.getTrackCandidates(/*inCMSSW*/ true, /*sync*/ true);
-
-  unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
-
-  outputHC_ = std::make_unique<LSTOutputHostCollection>(nTrackCandidates, cms::alpakatools::host());
-  auto output_view = outputHC_->view();
-
-  for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
-    short trackCandidateType = trackCandidates.trackCandidateType()[idx];
-    std::vector<unsigned int> hit_idx =
-        getHitIdxs(trackCandidateType, trackCandidates.hitIndices()[idx], hitsBase.idxs());
-
-    unsigned int nHits = hit_idx.size();
-    for (unsigned int i = 0; i < nHits; i++) {
-      output_view.hitIdx()[idx][i] = hit_idx[i];
-    }
-    output_view.nHits()[idx] = nHits;
-  }
-
-  auto tc_seedIdx_view =
-      cms::alpakatools::make_host_view(trackCandidates.pixelSeedIndex(), output_view.metadata().size());
-  auto tc_trackCandidateType_view =
-      cms::alpakatools::make_host_view(trackCandidates.trackCandidateType(), output_view.metadata().size());
-  auto output_seedIdx_view = cms::alpakatools::make_host_view(output_view.seedIdx(), output_view.metadata().size());
-  auto output_trackCandidateType_view =
-      cms::alpakatools::make_host_view(output_view.trackCandidateType(), output_view.metadata().size());
-  alpaka::memcpy(queue, output_seedIdx_view, tc_seedIdx_view);
-  alpaka::memcpy(queue, output_trackCandidateType_view, tc_trackCandidateType_view);
-  alpaka::wait(queue);  // TODO: check if this is necessary
-}
-
 void LST::run(Queue& queue,
               bool verbose,
               float const ptCut,
@@ -187,5 +115,5 @@ void LST::run(Queue& queue,
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
   }
 
-  makeOutput(event, queue);
+  trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
 }
