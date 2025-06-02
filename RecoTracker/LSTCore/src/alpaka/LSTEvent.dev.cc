@@ -1310,28 +1310,6 @@ typename TSoA::ConstView LSTEvent::getInput(bool sync) {
 template HitsBaseConst LSTEvent::getInput<HitsBaseSoA>(bool);
 template PixelSeedsConst LSTEvent::getInput<PixelSeedsSoA>(bool);
 
-template <typename TDev>
-HitsBaseConst LSTEvent::getTrimmedHitsBase(bool sync) {
-  if constexpr (std::is_same_v<TDev, DevHost>) {
-    return lstInputDC_->const_view<HitsBaseSoA>();
-  } else {
-    if (!lstInputHC_) {
-      auto hits_d = lstInputDC_->view<HitsBaseSoA>();
-      int nHits = hits_d.metadata().size();
-      std::array<int, 2> const hits_sizes{{nHits, 0}};
-      lstInputHC_.emplace(hits_sizes, queue_);
-      auto hits_h = lstInputHC_->view<HitsBaseSoA>();
-      auto idxs_h = cms::alpakatools::make_host_view(hits_h.idxs(), nHits);
-      auto idxs_d = cms::alpakatools::make_device_view(queue_, hits_d.idxs(), nHits);
-      alpaka::memcpy(queue_, idxs_h, idxs_d);
-      if (sync)
-        alpaka::wait(queue_);  // host consumers expect filled data
-    }
-    return lstInputHC_->const_view<HitsBaseSoA>();
-  }
-}
-template HitsBaseConst LSTEvent::getTrimmedHitsBase(bool);
-
 template <typename TSoA, typename TDev>
 typename TSoA::ConstView LSTEvent::getHits(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {

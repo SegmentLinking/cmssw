@@ -315,8 +315,8 @@ void setOutputBranches(LSTEvent* event) {
   std::vector<std::vector<int>> tc_matched_simIdx;
 
   // ============ Track candidates =============
-  auto const& trackCandidates = event->getTrackCandidates();
-  unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
+  auto const& trackCandidatesBase = event->getTrackCandidatesBase();
+  unsigned int nTrackCandidates = trackCandidatesBase.nTrackCandidates();
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     // Compute reco quantities of track candidate based on final object
     int type, isFake;
@@ -390,7 +390,7 @@ void setOccupancyBranches(LSTEvent* event) {
   auto quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
   auto pixelQuintuplets = event->getPixelQuintuplets();
   auto pixelTriplets = event->getPixelTriplets();
-  auto trackCandidates = event->getTrackCandidates();
+  auto trackCandidatesBase = event->getTrackCandidatesBase();
 
   std::vector<int> moduleLayer;
   std::vector<int> moduleSubdet;
@@ -437,7 +437,7 @@ void setOccupancyBranches(LSTEvent* event) {
   ana.tx->setBranch<std::vector<int>>("md_occupancies", mdOccupancy);
   ana.tx->setBranch<std::vector<int>>("sg_occupancies", segmentOccupancy);
   ana.tx->setBranch<std::vector<int>>("t3_occupancies", tripletOccupancy);
-  ana.tx->setBranch<int>("tc_occupancies", trackCandidates.nTrackCandidates());
+  ana.tx->setBranch<int>("tc_occupancies", trackCandidatesBase.nTrackCandidates());
   ana.tx->setBranch<int>("pT3_occupancies", pixelTriplets.totOccupancyPixelTriplets());
   ana.tx->setBranch<std::vector<int>>("t5_occupancies", quintupletOccupancy);
   ana.tx->setBranch<int>("pT5_occupancies", pixelQuintuplets.totOccupancyPixelQuintuplets());
@@ -868,7 +868,8 @@ void setT5DNNBranches(LSTEvent* event) {
   auto modules = event->getModules<ModulesSoA>();
   auto ranges = event->getRanges();
   auto const quintuplets = event->getQuintuplets<QuintupletsOccupancySoA>();
-  auto trackCandidates = event->getTrackCandidates();
+  auto trackCandidatesBase = event->getTrackCandidatesBase();
+  auto trackCandidatesExtended = event->getTrackCandidatesExtended();
 
   std::unordered_set<unsigned int> allT3s;
   std::unordered_map<unsigned int, unsigned int> t3_index_map;
@@ -886,9 +887,9 @@ void setT5DNNBranches(LSTEvent* event) {
   std::unordered_map<unsigned int, unsigned int> t5_tc_index_map;
   std::unordered_set<unsigned int> t5s_used_in_tc;
 
-  for (unsigned int idx = 0; idx < trackCandidates.nTrackCandidates(); idx++) {
-    if (trackCandidates.trackCandidateType()[idx] == LSTObjType::T5) {
-      unsigned int objIdx = trackCandidates.directObjectIndices()[idx];
+  for (unsigned int idx = 0; idx < trackCandidatesBase.nTrackCandidates(); idx++) {
+    if (trackCandidatesBase.trackCandidateType()[idx] == LSTObjType::T5) {
+      unsigned int objIdx = trackCandidatesExtended.directObjectIndices()[idx];
       t5s_used_in_tc.insert(objIdx);
       t5_tc_index_map[objIdx] = idx;
     }
@@ -921,7 +922,7 @@ void setGnnNtupleBranches(LSTEvent* event) {
   auto hitsBase = event->getInput<HitsBaseSoA>();
   auto modules = event->getModules<ModulesSoA>();
   auto ranges = event->getRanges();
-  auto const& trackCandidates = event->getTrackCandidates();
+  auto const& trackCandidatesBase = event->getTrackCandidatesBase();
 
   std::set<unsigned int> mds_used_in_sg;
   std::map<unsigned int, unsigned int> md_index_map;
@@ -936,7 +937,7 @@ void setGnnNtupleBranches(LSTEvent* event) {
   }
 
   std::set<unsigned int> lss_used_in_true_tc;
-  unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
+  unsigned int nTrackCandidates = trackCandidatesBase.nTrackCandidates();
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     // Only consider true track candidates
     std::vector<unsigned int> hitidxs;
@@ -1125,8 +1126,8 @@ void setGnnNtupleMiniDoublet(LSTEvent* event, unsigned int MD) {
 //________________________________________________________________________________________________________________________________
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(LSTEvent* event, unsigned int idx) {
   // Get the type of the track candidate
-  auto const& trackCandidates = event->getTrackCandidates();
-  short type = trackCandidates.trackCandidateType()[idx];
+  auto const& trackCandidatesBase = event->getTrackCandidatesBase();
+  short type = trackCandidatesBase.trackCandidateType()[idx];
 
   // Compute pt eta phi and hit indices that will be used to figure out whether the TC matched
   float pt, eta, phi;
@@ -1157,7 +1158,7 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(LSTEvent* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  auto const trackCandidates = event->getTrackCandidates();
+  auto const trackCandidatesExtended = event->getTrackCandidatesExtended();
   auto const quintuplets = event->getQuintuplets<QuintupletsSoA>();
   auto const pixelSeeds = event->getInput<PixelSeedsSoA>();
 
@@ -1170,7 +1171,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   // ****           oo -- oo -- oo -- oo -- oo   pT5
   //                oo -- oo -- oo               first T3 of the T5
   //                            oo -- oo -- oo   second T3 of the T5
-  unsigned int pT5 = trackCandidates.directObjectIndices()[idx];
+  unsigned int pT5 = trackCandidatesExtended.directObjectIndices()[idx];
   unsigned int pLS = getPixelLSFrompT5(event, pT5);
   unsigned int T5Index = getT5FrompT5(event, pT5);
 
@@ -1269,7 +1270,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(LSTEvent* event,
                                                                                                unsigned int idx) {
   // Get relevant information
-  auto const trackCandidates = event->getTrackCandidates();
+  auto const trackCandidatesExtended = event->getTrackCandidatesExtended();
   auto const triplets = event->getTriplets<TripletsSoA>();
   auto const pixelSeeds = event->getInput<PixelSeedsSoA>();
 
@@ -1280,7 +1281,7 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   // -------------  --------------------------
   // pLS            01    23    45               (anchor hit of a minidoublet is always the first of the pair)
   // ****           oo -- oo -- oo               pT3
-  unsigned int pT3 = trackCandidates.directObjectIndices()[idx];
+  unsigned int pT3 = trackCandidatesExtended.directObjectIndices()[idx];
   unsigned int pLS = getPixelLSFrompT3(event, pT3);
   unsigned int T3 = getT3FrompT3(event, pT3);
 
@@ -1303,9 +1304,9 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT5(LSTEvent* event,
                                                                                               unsigned int idx) {
-  auto const trackCandidates = event->getTrackCandidates();
+  auto const trackCandidatesExtended = event->getTrackCandidatesExtended();
   auto const quintuplets = event->getQuintuplets<QuintupletsSoA>();
-  unsigned int T5 = trackCandidates.directObjectIndices()[idx];
+  unsigned int T5 = trackCandidatesExtended.directObjectIndices()[idx];
   std::vector<unsigned int> hits = getHitsFromT5(event, T5);
 
   //
@@ -1337,11 +1338,11 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
 //________________________________________________________________________________________________________________________________
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(LSTEvent* event,
                                                                                                unsigned int idx) {
-  auto const& trackCandidates = event->getTrackCandidates();
+  auto const& trackCandidatesExtended = event->getTrackCandidatesExtended();
   auto pixelSeeds = event->getInput<PixelSeedsSoA>();
 
   // Getting pLS index
-  unsigned int pLS = trackCandidates.directObjectIndices()[idx];
+  unsigned int pLS = trackCandidatesExtended.directObjectIndices()[idx];
 
   // Getting pt eta and phi
   float pt = pixelSeeds.ptIn()[pLS];

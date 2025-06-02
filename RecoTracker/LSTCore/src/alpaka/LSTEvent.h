@@ -167,8 +167,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // HANDLE WITH CARE
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getInput(bool sync = true);
-    template <typename TDev = Device>
-    HitsBaseConst getTrimmedHitsBase(bool sync = true);
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getHits(bool sync = true);
     template <typename TDev = Device>

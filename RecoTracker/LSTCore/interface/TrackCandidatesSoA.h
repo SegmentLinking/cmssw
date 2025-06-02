@@ -9,16 +9,16 @@
 
 namespace lst {
   GENERATE_SOA_LAYOUT(TrackCandidatesBaseSoALayout,
-                      SOA_COLUMN(Params_pT5::ArrayUxHits, hitIndices),
-                      SOA_COLUMN(int, pixelSeedIndex),
+                      SOA_COLUMN(Params_TC::ArrayUxHits, hitIndices),
+                      SOA_COLUMN(unsigned int, pixelSeedIndex),
                       SOA_COLUMN(LSTObjType, trackCandidateType),
                       SOA_SCALAR(unsigned int, nTrackCandidates))
 
   GENERATE_SOA_LAYOUT(TrackCandidatesExtendedSoALayout,
                       SOA_COLUMN(unsigned int, directObjectIndices),  // direct indices to each type containers
                       SOA_COLUMN(ArrayUx2, objectIndices),            // tracklet and  triplet indices
-                      SOA_COLUMN(Params_pT5::ArrayU8xLayers, logicalLayers),
-                      SOA_COLUMN(Params_pT5::ArrayU16xLayers, lowerModuleIndices),
+                      SOA_COLUMN(Params_TC::ArrayU8xLayers, logicalLayers),
+                      SOA_COLUMN(Params_TC::ArrayU16xLayers, lowerModuleIndices),
                       SOA_COLUMN(FPX, centerX),
                       SOA_COLUMN(FPX, centerY),
                       SOA_COLUMN(FPX, radius),

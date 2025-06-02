@@ -94,12 +94,15 @@ namespace lst {
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
+  struct Params_TC {
+    static constexpr int kLayers = 7, kHits = 14;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
+  };
 
   using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
-
-  static constexpr int kMaxTrackHits = Params_pT5::kHits;
-  using ArrayUxMaxTrackHits = edm::StdArray<unsigned int, kMaxTrackHits>;
 
 }  //namespace lst
 

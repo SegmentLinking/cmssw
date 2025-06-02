@@ -34,18 +34,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           lstOutputToken_{produces()} {}
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
-        lst::LST lst;
-        // Inputs
-        auto const& lstInputDC = iEvent.get(lstInputToken_);
-        auto const& lstESDeviceData = iSetup.getData(lstESToken_);
+      lst::LST lst;
+      // Inputs
+      auto const& lstInputDC = iEvent.get(lstInputToken_);
+      auto const& lstESDeviceData = iSetup.getData(lstESToken_);
 
-        lst.run(iEvent.queue(),
-                 verbose_,
-                 static_cast<float>(ptCut_),
-                 &lstESDeviceData,
-                 &lstInputDC,
-                 nopLSDupClean_,
-                 tcpLSTriplets_);
+      lst.run(iEvent.queue(),
+              verbose_,
+              static_cast<float>(ptCut_),
+              &lstESDeviceData,
+              &lstInputDC,
+              nopLSDupClean_,
+              tcpLSTriplets_);
 
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
