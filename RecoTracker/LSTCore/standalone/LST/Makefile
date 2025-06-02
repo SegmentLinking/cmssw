@@ -46,7 +46,7 @@ GENCODE_CUDA := -gencode arch=compute_70,code=[sm_70,compute_70] -gencode arch=c
 CXX                  = g++
 CXXFLAGS_CPU         = -march=native -mtune=native -Ofast -fno-reciprocal-math -fopenmp-simd -g -Wall -Woverloaded-virtual -fPIC -fopenmp -I..
 CXXFLAGS_CUDA        = -O3 -g --compiler-options -Wall --compiler-options -Woverloaded-virtual --compiler-options -fPIC --compiler-options -fopenmp -dc -lineinfo --ptxas-options=-v --cudart shared $(GENCODE_CUDA) --use_fast_math --default-stream per-thread -I..
-CXXFLAGS_ROCM        = -O3 -g -Wall -Woverloaded-virtual -fPIC -I${ROCM_ROOT}/include -I..
+CXXFLAGS_ROCM        = -O3 -g -Wall -Woverloaded-virtual -fPIC -isystem ${ROCM_ROOT}/include -I..
 CMSSWINCLUDE        := -I${TRACKLOOPERDIR}/../../../ -I${CMSSW_BASE}/src -I${FMT_ROOT}/include
 ifdef CMSSW_RELEASE_BASE
 CMSSWINCLUDE        := ${CMSSWINCLUDE} -I${CMSSW_RELEASE_BASE}/src
