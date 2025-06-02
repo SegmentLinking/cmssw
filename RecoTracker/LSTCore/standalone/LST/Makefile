@@ -81,7 +81,7 @@ ALPAKABACKEND_CUDA   = $(ALPAKACUDA)
 COMPILE_CMD_CUDA     = $(LD_CUDA) -x cu
 
 LD_ROCM              = hipcc
-SOFLAGS_ROCM         = -g -shared -fPIC
+SOFLAGS_ROCM         = -g -shared -fPIC -L${ROCM_ROOT}/lib
 ALPAKABACKEND_ROCM   = $(ALPAKAROCM)
 COMPILE_CMD_ROCM     = $(LD_ROCM) -c
 
