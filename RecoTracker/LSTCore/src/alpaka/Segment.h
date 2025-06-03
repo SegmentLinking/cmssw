@@ -724,7 +724,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           ranges.segmentRanges()[i][1] = ranges.segmentModuleIndices()[i] + segmentsOccupancy.nSegments()[i] - 1;
         }
       }
-
+/*
       for (uint16_t i : cms::alpakatools::uniform_elements(acc, mds.nMDs())) {
         if (segmentsOccupancy.nSegmentsPerMD()[i] == 0) {
           ranges.segmentRangesMDBased()[i][0] = -1;
@@ -734,7 +734,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           ranges.segmentRangesMDBased()[i][1] = ranges.segmentMDIndices()[i] + segmentsOccupancy.nSegmentsPerMD()[i] - 1;
         }
       }
-
+*/
     }
   };
 

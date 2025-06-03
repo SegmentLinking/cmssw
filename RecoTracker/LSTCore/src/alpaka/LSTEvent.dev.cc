@@ -314,6 +314,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
                       addSegmentRangesToEventExplicit_workDiv,
                       AddSegmentRangesToEventExplicit{},
                       modules_.const_view<ModulesSoA>(),
+                      miniDoubletsDC_.const_view<MiniDoubletsSoA>(),
                       segmentsDC_->view<SegmentsOccupancySoA>(),
                       rangesDC_->view());
 
@@ -402,7 +403,7 @@ void LSTEvent::createTriplets() {
   auto index_gpu_buf = cms::alpakatools::make_device_buffer<uint16_t[]>(queue_, nLowerModules_);
   alpaka::memcpy(queue_, index_gpu_buf, index_buf_h, nonZeroModules);
 
-  auto const createTriplets_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nonZeroModules, 1, 1}, {1, 256, 1});
+  auto const createTriplets_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nonZeroModules, 1, 1}, {1, 16, 16});
 
   alpaka::exec<Acc3D>(queue_,
                       createTriplets_workDiv,
