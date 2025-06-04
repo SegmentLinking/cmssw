@@ -344,7 +344,7 @@ void run_lst() {
       continue;
 
     auto lstInputHC = prepareInput(trk.getVF("see_px"),
-                                   trk.getVF("see_px"),
+                                   trk.getVF("see_py"),
                                    trk.getVF("see_pz"),
                                    trk.getVF("see_dxy"),
                                    trk.getVF("see_dz"),
