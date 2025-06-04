@@ -314,7 +314,6 @@ void LSTEvent::createSegmentsWithModuleMap() {
                       addSegmentRangesToEventExplicit_workDiv,
                       AddSegmentRangesToEventExplicit{},
                       modules_.const_view<ModulesSoA>(),
-                      miniDoubletsDC_.const_view<MiniDoubletsSoA>(),
                       segmentsDC_->view<SegmentsOccupancySoA>(),
                       rangesDC_->view());
 

@@ -455,36 +455,100 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t* index_gpu,
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
+      constexpr int maxMiddleMD = 572;
+      constexpr int maxMatchedPairs = 2048;
+      int middleMDs[maxMiddleMD];
+      int InnerSegmentIndices[maxMiddleMD];
+      int middleMDCounts;
+      int innerOuterSgPairs[maxMatchedPairs][2];
+      int matchCount;
+      uint16_t MidModuleIndices[maxMiddleMD];
+
+      const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
+      const auto blockDim = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc);
+      const auto gridIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
+      const auto blockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+  
+      const int threadIdX = threadIdx[0];
+      const int threadIdY = threadIdx[1];
+      const int blockSizeX = blockDim[0];
+      const int blockSizeY = blockDim[1];
+      const int blockSizeZ = blockDim[2];
+      const int blockSize = blockSizeX * blockSizeY * blockSizeZ;
+      const int flatThreadIdxXY = threadIdY * blockSizeX + threadIdX;
+      const int flatThreadExtent = blockSize; // total threads per block  
+
       for (uint16_t innerLowerModuleArrayIdx : cms::alpakatools::uniform_elements_z(acc, nonZeroModules)) {
+
         uint16_t innerInnerLowerModuleIndex = index_gpu[innerLowerModuleArrayIdx];
         if (innerInnerLowerModuleIndex >= modules.nLowerModules())
           continue;
 
         uint16_t nConnectedModules = modules.nConnectedModules()[innerInnerLowerModuleIndex];
         if (nConnectedModules == 0)
-          continue;
+            continue;
 
         unsigned int nInnerSegments = segmentsOccupancy.nSegments()[innerInnerLowerModuleIndex];
-        for (unsigned int innerSegmentArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerSegments)) {
-          unsigned int innerSegmentIndex =
-              ranges.segmentRanges()[innerInnerLowerModuleIndex][0] + innerSegmentArrayIndex;
 
-          // middle lower module - outer lower module of inner segment
+        if (flatThreadIdxXY == 0) {
+            middleMDCounts = 0;
+            matchCount = 0;
+        }
+
+        alpaka::syncBlockThreads(acc);
+
+        // Step 1: Collect middle MDs
+        const int xyThreadIdx = threadIdY * blockSizeX + threadIdX;
+        const int xyExtent = blockSizeX * blockSizeY;
+        for (unsigned int innerSegmentArrayIndex = xyThreadIdx;
+             innerSegmentArrayIndex < nInnerSegments;
+             innerSegmentArrayIndex += xyExtent) {
+          unsigned int innerSegmentIndex = ranges.segmentRanges()[innerInnerLowerModuleIndex][0] + innerSegmentArrayIndex;
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
+          int middleMDIndice = segments.mdIndices()[innerSegmentIndex][1];
+          int MiddleMDidx = alpaka::atomicAdd(acc, &middleMDCounts, 1u, alpaka::hierarchy::Blocks{});
 
-          unsigned int nOuterSegments = segmentsOccupancy.nSegments()[middleLowerModuleIndex];
-          for (unsigned int outerSegmentArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterSegments)) {
-            unsigned int outerSegmentIndex = ranges.segmentRanges()[middleLowerModuleIndex][0] + outerSegmentArrayIndex;
+          InnerSegmentIndices[MiddleMDidx] = innerSegmentIndex;
+          middleMDs[MiddleMDidx] = middleMDIndice;
+          MidModuleIndices[MiddleMDidx] = middleLowerModuleIndex;
+        }
 
-            //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
-            if (segments.mdIndices()[innerSegmentIndex][1] != segments.mdIndices()[outerSegmentIndex][0])
+        alpaka::syncBlockThreads(acc);
+      
+        // Step 2: Collect middleMD->outerSegment pairs
+        for (int MidModule = threadIdY; MidModule < middleMDCounts; MidModule += blockSizeY) {
+          uint16_t MidModuleIdx = MidModuleIndices[MidModule];
+          uint16_t middleMDIdxInner = middleMDs[MidModule];
+          unsigned int nOuterSegments = segmentsOccupancy.nSegments()[MidModuleIdx];
+
+          for (unsigned int outerSegmentArrayIndex = threadIdX; outerSegmentArrayIndex < nOuterSegments; outerSegmentArrayIndex += blockSizeX) {
+            unsigned int outerSegmentIndex = ranges.segmentRanges()[MidModuleIdx][0] + outerSegmentArrayIndex;
+            int middleMDIndiceOuter = segments.mdIndices()[outerSegmentIndex][0];
+            if (middleMDIdxInner!=middleMDIndiceOuter) 
               continue;
 
-            uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
+            // Match inner Sg and Outer Sg
+            int mIdx = alpaka::atomicAdd(acc, &matchCount, 1u, alpaka::hierarchy::Blocks{});
 
-            float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
+            if (mIdx < maxMatchedPairs) {
+              innerOuterSgPairs[mIdx][0] = InnerSegmentIndices[MidModule];  // inner segment index
+              innerOuterSgPairs[mIdx][1] = outerSegmentIndex;
+            }
+          }
+        }
 
-            bool success = runTripletConstraintsAndAlgo(acc,
+        alpaka::syncBlockThreads(acc);
+
+        // Step 3: Parallel processing of segment pairs
+        for (int i = flatThreadIdxXY; i < matchCount; i += flatThreadExtent) {
+          int innerSegmentIndex = innerOuterSgPairs[i][0];
+          int outerSegmentIndex = innerOuterSgPairs[i][1];
+
+          uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
+          uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
+
+          float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
+          bool success = runTripletConstraintsAndAlgo(acc,
                                                         modules,
                                                         mds,
                                                         segments,
@@ -502,44 +566,43 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                         circleCenterY,
                                                         ptCut);
 
-            if (success) {
-              unsigned int totOccupancyTriplets =
-                  alpaka::atomicAdd(acc,
-                                    &tripletsOccupancy.totOccupancyTriplets()[innerInnerLowerModuleIndex],
-                                    1u,
-                                    alpaka::hierarchy::Threads{});
-              if (static_cast<int>(totOccupancyTriplets) >=
-                  ranges.tripletModuleOccupancy()[innerInnerLowerModuleIndex]) {
+          if (success) {
+            unsigned int totOccupancyTriplets =
+                alpaka::atomicAdd(acc,
+                                  &tripletsOccupancy.totOccupancyTriplets()[innerInnerLowerModuleIndex],
+                                  1u,
+                                  alpaka::hierarchy::Threads{});
+            if (static_cast<int>(totOccupancyTriplets) >=
+                ranges.tripletModuleOccupancy()[innerInnerLowerModuleIndex]) {
 #ifdef WARNINGS
-                printf("Triplet excess alert! Module index = %d, Occupancy = %d\n",
-                       innerInnerLowerModuleIndex,
-                       totOccupancyTriplets);
+              printf("Triplet excess alert! Module index = %d, Occupancy = %d\n",
+                    innerInnerLowerModuleIndex,
+                    totOccupancyTriplets);
 #endif
-              } else {
-                unsigned int tripletModuleIndex = alpaka::atomicAdd(
-                    acc, &tripletsOccupancy.nTriplets()[innerInnerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
-                unsigned int tripletIndex =
-                    ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + tripletModuleIndex;
-                addTripletToMemory(modules,
-                                   mds,
-                                   segments,
-                                   triplets,
-                                   innerSegmentIndex,
-                                   outerSegmentIndex,
-                                   innerInnerLowerModuleIndex,
-                                   middleLowerModuleIndex,
-                                   outerOuterLowerModuleIndex,
+            } else {
+              unsigned int tripletModuleIndex = alpaka::atomicAdd(
+                  acc, &tripletsOccupancy.nTriplets()[innerInnerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+              unsigned int tripletIndex =
+                  ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + tripletModuleIndex;
+              addTripletToMemory(modules,
+                                 mds,
+                                 segments,
+                                 triplets,
+                                 innerSegmentIndex,
+                                 outerSegmentIndex,
+                                 innerInnerLowerModuleIndex,
+                                 middleLowerModuleIndex,
+                                 outerOuterLowerModuleIndex,
 #ifdef CUT_VALUE_DEBUG
-                                   zOut,
-                                   rtOut,
+                                 zOut,
+                                 rtOut,
 #endif
-                                   betaIn,
-                                   betaInCut,
-                                   circleRadius,
-                                   circleCenterX,
-                                   circleCenterY,
-                                   tripletIndex);
-              }
+                                 betaIn,
+                                 betaInCut,
+                                 circleRadius,
+                                 circleCenterX,
+                                 circleCenterY,
+                                 tripletIndex);
             }
           }
         }
@@ -605,8 +668,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Loop over all segments that live in module i
         for (int s = 0; s < nSegments_i; ++s) {
           int segIndex = firstSegmentIdx + s;
-          uint16_t midModule = segments.outerLowerModuleIndices()[segIndex];
-          dynamic_count += segmentsOccupancy.nSegments()[midModule];
+          uint16_t MidModuleIdx = segments.outerLowerModuleIndices()[segIndex];
+          dynamic_count += segmentsOccupancy.nSegments()[MidModuleIdx];
         }
 
 #ifdef WARNINGS

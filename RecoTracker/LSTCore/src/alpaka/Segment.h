@@ -709,7 +709,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct AddSegmentRangesToEventExplicit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
-                                  MiniDoubletsConst mds,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   ObjectRanges ranges) const {
       // implementation is 1D with a single block
