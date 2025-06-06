@@ -456,19 +456,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
       constexpr int maxMiddleMD = 572;
-      constexpr int maxMatchedPairs = 2048;
-      int middleMDs[maxMiddleMD];
-      int InnerSegmentIndices[maxMiddleMD];
-      int middleMDCounts;
-      int innerOuterSgPairs[maxMatchedPairs][2];
-      int matchCount;
-      uint16_t MidModuleIndices[maxMiddleMD];
+      constexpr int maxMatchedPairs = 5000;
+      auto& middleMDs = alpaka::declareSharedVar<int[maxMiddleMD], __COUNTER__>(acc);
+      auto& InnerSegmentIndices = alpaka::declareSharedVar<int[maxMiddleMD], __COUNTER__>(acc);
+      auto& MidModuleIndices = alpaka::declareSharedVar<uint16_t[maxMiddleMD], __COUNTER__>(acc);
+      auto& innerOuterSgPairs = alpaka::declareSharedVar<int[maxMatchedPairs][2], __COUNTER__>(acc);
+      int& middleMDCounts = alpaka::declareSharedVar<int, __COUNTER__>(acc);
+      int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc);
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
       const auto blockDim = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc);
-      const auto gridIdx = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc);
-      const auto blockIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
-  
+
       const int threadIdX = threadIdx[0];
       const int threadIdY = threadIdx[1];
       const int blockSizeX = blockDim[0];
@@ -480,6 +478,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       for (uint16_t innerLowerModuleArrayIdx : cms::alpakatools::uniform_elements_z(acc, nonZeroModules)) {
 
+        if (flatThreadIdxXY == 0) {
+          middleMDCounts = 0;
+          matchCount = 0;
+        }
+
         uint16_t innerInnerLowerModuleIndex = index_gpu[innerLowerModuleArrayIdx];
         if (innerInnerLowerModuleIndex >= modules.nLowerModules())
           continue;
@@ -490,10 +493,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         unsigned int nInnerSegments = segmentsOccupancy.nSegments()[innerInnerLowerModuleIndex];
 
-        if (flatThreadIdxXY == 0) {
-            middleMDCounts = 0;
-            matchCount = 0;
-        }
+        if (nInnerSegments == 0)
+            continue;
 
         alpaka::syncBlockThreads(acc);
 
@@ -506,14 +507,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int innerSegmentIndex = ranges.segmentRanges()[innerInnerLowerModuleIndex][0] + innerSegmentArrayIndex;
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
           int middleMDIndice = segments.mdIndices()[innerSegmentIndex][1];
-          int MiddleMDidx = alpaka::atomicAdd(acc, &middleMDCounts, 1u, alpaka::hierarchy::Blocks{});
-
-          InnerSegmentIndices[MiddleMDidx] = innerSegmentIndex;
-          middleMDs[MiddleMDidx] = middleMDIndice;
-          MidModuleIndices[MiddleMDidx] = middleLowerModuleIndex;
+          int MiddleMDidx = alpaka::atomicAdd(acc, &middleMDCounts, 1, alpaka::hierarchy::Blocks{});
+          if (MiddleMDidx<maxMiddleMD){
+            InnerSegmentIndices[MiddleMDidx] = innerSegmentIndex;
+            middleMDs[MiddleMDidx] = middleMDIndice;
+            MidModuleIndices[MiddleMDidx] = middleLowerModuleIndex;
+          }
         }
 
         alpaka::syncBlockThreads(acc);
+        if (!(middleMDCounts<maxMiddleMD) || middleMDCounts==0)
+          continue;
+
+        //printf("Matched middle MD:%d \n", middleMDCounts);
       
         // Step 2: Collect middleMD->outerSegment pairs
         for (int MidModule = threadIdY; MidModule < middleMDCounts; MidModule += blockSizeY) {
@@ -528,7 +534,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               continue;
 
             // Match inner Sg and Outer Sg
-            int mIdx = alpaka::atomicAdd(acc, &matchCount, 1u, alpaka::hierarchy::Blocks{});
+            int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
 
             if (mIdx < maxMatchedPairs) {
               innerOuterSgPairs[mIdx][0] = InnerSegmentIndices[MidModule];  // inner segment index
@@ -538,11 +544,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         }
 
         alpaka::syncBlockThreads(acc);
+        if (!(matchCount<maxMatchedPairs)){
+          printf("matched Pairs: %d\n", matchCount);
+          continue;
+        }
+        //printf("Matched Segment pairs:%d \n", matchCount);
 
         // Step 3: Parallel processing of segment pairs
         for (int i = flatThreadIdxXY; i < matchCount; i += flatThreadExtent) {
           int innerSegmentIndex = innerOuterSgPairs[i][0];
           int outerSegmentIndex = innerOuterSgPairs[i][1];
+          //printf("Segment Index:inner %d, outer: %d \n", innerSegmentIndex, outerSegmentIndex);
 
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
           uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
