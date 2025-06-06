@@ -1,4 +1,4 @@
-name: Testing
+name: Testing (self-hosted)
 
 on:
   issue_comment:
@@ -13,11 +13,10 @@ permissions:
   pull-requests: write
 
 jobs:
-  standalone:
+  standalone-selfhosted:
     if: >
       github.event.issue.pull_request &&
-      (contains(github.event.comment.body, '/run standalone') || contains(github.event.comment.body, '/run all')) &&
-      (!contains(github.event.comment.body, '/run cmssw-gpu') && !contains(github.event.comment.body, '/run all-gpu')) &&
+      (contains(github.event.comment.body, '/run standalone-gpu') || contains(github.event.comment.body, '/run all-gpu')) &&
       ( github.event.comment.user.login == 'ariostas' ||
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||
@@ -26,14 +25,13 @@ jobs:
         github.event.comment.user.login == 'bucket420' ||
         github.event.comment.user.login == 'jchismar' ||
         github.event.comment.user.login == 'kk428' ||
-        github.event.comment.user.login == 'Hoobidoobidoo' ||
         github.event.comment.user.login == 'mmasciov' ||
         github.event.comment.user.login == 'pwittich' ||
         github.event.comment.user.login == 'sgnoohc' ||
         github.event.comment.user.login == 'slava77devel' ||
         github.event.comment.user.login == 'slava77'
       )
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check out PR
         uses: actions/checkout@v4
@@ -65,7 +63,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run Standalone PU200${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run Standalone PU200${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }} on GPU
           status: in_progress
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
@@ -73,7 +71,7 @@ jobs:
       - name: Build and run PR
         timeout-minutes: 60
         id: build-and-run
-        uses: SegmentLinking/TrackLooper-actions/standalone@cmssw
+        uses: SegmentLinking/TrackLooper-actions/standalone-selfhosted@cmssw
         with:
           pr-number: ${{ github.event.issue.number }}
           low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true' || 'false' }}
@@ -104,7 +102,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `There was a problem while building and running in standalone mode. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
+              body: `There was a problem while building and running in standalone mode on GPU. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
             })
       - name: Create App Token
         if: always()
@@ -119,17 +117,16 @@ jobs:
         with:
           token: ${{ steps.app-token-end.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run Standalone PU200${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run Standalone PU200${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }} on GPU
           conclusion: ${{ job.status }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
             {"title": "Status: ${{ job.status }}", "summary": "The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."}
 
-  cmssw:
+  cmssw-selfhosted:
     if: >
       github.event.issue.pull_request &&
-      (contains(github.event.comment.body, '/run cmssw') || contains(github.event.comment.body, '/run all')) &&
-      (!contains(github.event.comment.body, '/run cmssw-gpu') && !contains(github.event.comment.body, '/run all-gpu')) &&
+      (contains(github.event.comment.body, '/run cmssw-gpu') || contains(github.event.comment.body, '/run all-gpu')) &&
       ( github.event.comment.user.login == 'ariostas' ||
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||
@@ -145,7 +142,7 @@ jobs:
         github.event.comment.user.login == 'slava77devel' ||
         github.event.comment.user.login == 'slava77'
       )
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout PR
         uses: actions/checkout@v4
@@ -167,7 +164,7 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run CMSSW 29834.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run CMSSW 29834.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }} on GPU
           status: in_progress
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
@@ -175,7 +172,7 @@ jobs:
       - name: Build and run PR
         timeout-minutes: 200
         id: build-and-run
-        uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
+        uses: SegmentLinking/TrackLooper-actions/cmssw-selfhosted@cmssw
         with:
           pr-number: ${{ github.event.issue.number }}
           low-pt: ${{ contains(github.event.comment.body, 'lowpt') && 'true' || 'false' }}
@@ -206,7 +203,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `There was a problem while building and running with CMSSW. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
+              body: `There was a problem while building and running with CMSSW on GPU. The logs can be found [here](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).`
             })
       - name: Create App Token
         if: always()
@@ -221,7 +218,7 @@ jobs:
         with:
           token: ${{ steps.app-token-end.outputs.token }}
           sha: ${{ env.COMMIT_SHA }}
-          name: Run CMSSW 29834.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }}
+          name: Run CMSSW 29834.1${{ contains(github.event.comment.body, 'lowpt') && ' (low pT setup)' || '' }} on GPU
           conclusion: ${{ job.status }}
           details_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           output: |
