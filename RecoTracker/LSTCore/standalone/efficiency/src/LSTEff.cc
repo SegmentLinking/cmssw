@@ -14,20 +14,12 @@ void LSTEff::Init(TTree* treeIn) {
 }
 
 void LSTEff::GetEntry(unsigned int idx) {
-
-  // Added by Kasia
-  sim_etadiffs_isLoaded = false;
-  sim_phidiffs_isLoaded = false;
-  sim_rjet_isLoaded = false;
-  sim_jet_eta_isLoaded = false;
-  sim_jet_phi_isLoaded = false;
-  sim_jet_pt_isLoaded = false;
-
   index = idx;
   for (auto& pair : data) {
     pair.second.isLoaded = false;
   }
 }
+
 
 void LSTEff::progress(int nEventsTotal, int nEventsChain) {
   int period = 1000;

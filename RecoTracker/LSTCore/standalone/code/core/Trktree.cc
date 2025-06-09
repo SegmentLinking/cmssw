@@ -4,6 +4,7 @@ Trktree trk;
 void Trktree::Init(TTree *tree) {
   tree->SetMakeClass(1);
 
+//  #ifdef JET_BRANCHES
   // Added by Kasia --------------------------------------------------------------------
   sim_etadiffs_branch = 0;
   if (tree->GetBranch("sim_etadiffs") != 0) {
@@ -36,7 +37,8 @@ void Trktree::Init(TTree *tree) {
     if (sim_jet_pt_branch) { sim_jet_pt_branch->SetAddress(&sim_jet_pt_); }
   }
   //------------------------------------------------------------------------------------
-
+//  #endif
+  
   see_stateCcov01_branch = 0;
   if (tree->GetBranch("see_stateCcov01") != 0) {
     see_stateCcov01_branch = tree->GetBranch("see_stateCcov01");
@@ -2164,12 +2166,14 @@ void Trktree::Init(TTree *tree) {
 }
 void Trktree::GetEntry(unsigned int idx) {
 
+//  #ifdef JET_BRANCHES
   sim_etadiffs_isLoaded = false; // Added by Kasia
   sim_phidiffs_isLoaded = false; // Added by Kasia
   sim_rjet_isLoaded = false; // Added by Kasia
   sim_jet_eta_isLoaded = false; // Added by Kasia
   sim_jet_phi_isLoaded = false; // Added by Kasia
   sim_jet_pt_isLoaded = false; // Added by Kasia
+//  #endif
 
   index = idx;
   see_stateCcov01_isLoaded = false;
@@ -2478,12 +2482,14 @@ void Trktree::GetEntry(unsigned int idx) {
 }
 void Trktree::LoadAllBranches() {
 
+//  #ifdef JET_BRANCHES
   if (sim_etadiffs_branch != 0) sim_etadiffs(); // Added by Kasia
   if (sim_phidiffs_branch != 0) sim_phidiffs(); // Added by Kasia
   if (sim_rjet_branch != 0) sim_rjet(); // Added by Kasia
   if (sim_jet_eta_branch != 0) sim_jet_eta(); // Added by Kasia
   if (sim_jet_phi_branch != 0) sim_jet_phi(); // Added by Kasia
   if (sim_jet_pt_branch != 0) sim_jet_pt(); // Added by Kasia
+//  #endif
 
   if (see_stateCcov01_branch != 0)
     see_stateCcov01();
@@ -3093,6 +3099,7 @@ void Trktree::LoadAllBranches() {
     see_stateTrajGlbPy();
 }
 
+// #ifdef JET_BRANCHES
 // Added by Kasia
 const std::vector<float> &Trktree::sim_etadiffs() {
   if (not sim_etadiffs_isLoaded) {
@@ -3171,6 +3178,7 @@ const std::vector<float> &Trktree::sim_jet_pt() {
   }
   return *sim_jet_pt_;
 }
+// #endif
 
 const std::vector<float> &Trktree::see_stateCcov01() {
   if (not see_stateCcov01_isLoaded) {

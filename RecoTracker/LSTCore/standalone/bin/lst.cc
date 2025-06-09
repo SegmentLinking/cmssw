@@ -70,9 +70,12 @@ int main(int argc, char **argv) {
       "I,job_index",
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
       cxxopts::value<int>())("3,tc_pls_triplets", "Allow triplet pLSs in TC collection")(
-      "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")("h,help", "Print help");
+      "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")("h,help", "Print help")(
+        "J,jet_branches", "Accounts for specific jet branches in input root file for testing"
+      );
 
   auto result = options.parse(argc, argv);
+  float JET_BRANCHES = result.count("jet_branches"); // Added by Kasia-- TBC
 
   // NOTE: When an option was provided (e.g. -i or --input), then the result.count("<option name>") is more than 0
   // Therefore, the option can be parsed easily by asking the condition if (result.count("<option name>");
@@ -125,7 +128,7 @@ int main(int argc, char **argv) {
     ana.input_file_list_tstring =
         TString::Format("%s/trackingNtuple_10mu_10k_pt_0p5_50_50cm_cube.root", TrackingNtupleDir.Data());
   else {
-    ana.input_file_list_tstring = "new_tree.root"; // ana.input_raw_string; // Added by Kasia
+    ana.input_file_list_tstring = "new_tree_QCD.root"; // ana.input_raw_string; // Added by Kasia
   }
 
   //_______________________________________________________________________________

@@ -11,12 +11,14 @@
 #include "TBits.h"
 #include <vector>
 #include <unistd.h>
+
 typedef ROOT::Math::LorentzVector<ROOT::Math::PxPyPzE4D<float> > LorentzVector;
 
 class Trktree {
 private:
 protected:
 
+  // #ifdef JET_BRANCHES
   // Added by Kasia
   std::vector<float> *sim_etadiffs_;
   TBranch *sim_etadiffs_branch;
@@ -46,6 +48,7 @@ protected:
   std::vector<float> *sim_jet_pt_;
   TBranch *sim_jet_pt_branch;
   bool sim_jet_pt_isLoaded;
+  // #endif
 
   unsigned int index;
   std::vector<float> *see_stateCcov01_;
@@ -963,13 +966,15 @@ public:
   void GetEntry(unsigned int idx);
   void LoadAllBranches();
 
+  // #ifdef JET_BRANCHES
   const std::vector<float> &sim_etadiffs(); // Added by Kasia
   const std::vector<float> &sim_phidiffs(); // Added by Kasia
   const std::vector<float> &sim_rjet(); // Added by Kasia
   const std::vector<float> &sim_jet_eta(); // Added by Kasia
   const std::vector<float> &sim_jet_phi(); // Added by Kasia
   const std::vector<float> &sim_jet_pt(); // Added by Kasia
-
+  // #endif
+  
   const std::vector<float> &see_stateCcov01();
   const std::vector<unsigned short> &simhit_rod();
   const std::vector<float> &trk_phi();
@@ -1282,12 +1287,14 @@ extern Trktree trk;
 
 namespace tas {
 
+  // #ifdef JET_BRANCHES
   const std::vector<float> &sim_etadiffs(); // Added by Kasia
   const std::vector<float> &sim_phidiffs(); // Added by Kasia
   const std::vector<float> &sim_rjet(); // Added by Kasia
   const std::vector<float> &sim_jet_eta(); // Added by Kasia
   const std::vector<float> &sim_jet_phi(); // Added by Kasia
   const std::vector<float> &sim_jet_pt(); // Added by Kasia
+  // #endif
 
   const std::vector<float> &see_stateCcov01();
   const std::vector<unsigned short> &simhit_rod();

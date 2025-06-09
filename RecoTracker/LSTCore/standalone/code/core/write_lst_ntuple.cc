@@ -5,6 +5,8 @@
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
+float JET_BRANCHES = 5;
+
 //________________________________________________________________________________________________________________________________
 void createOutputBranches() {
   createRequiredOutputBranches();
@@ -29,13 +31,14 @@ void fillOutputBranches(LSTEvent* event) {
 void createRequiredOutputBranches() {
   // Setup output TTree
 
+  if(JET_BRANCHES){
   ana.tx->createBranch<std::vector<float>>("sim_etadiffs"); // Added by Kasia
   ana.tx->createBranch<std::vector<float>>("sim_phidiffs"); // Added by Kasia
   ana.tx->createBranch<std::vector<float>>("sim_rjet"); // Added by Kasia
   ana.tx->createBranch<std::vector<float>>("sim_jet_eta"); // Added by Kasia
   ana.tx->createBranch<std::vector<float>>("sim_jet_phi"); // Added by Kasia
   ana.tx->createBranch<std::vector<float>>("sim_jet_pt"); // Added by Kasia
-
+  }
   ana.tx->createBranch<std::vector<float>>("sim_pt");
   ana.tx->createBranch<std::vector<float>>("sim_eta");
   ana.tx->createBranch<std::vector<float>>("sim_phi");
@@ -292,12 +295,14 @@ void setOutputBranches(LSTEvent* event) {
     if (trk.sim_event()[isimtrk] != 0)
       continue;
 
+    if(JET_BRANCHES){
     ana.tx->pushbackToBranch<float>("sim_etadiffs", trk.sim_etadiffs()[isimtrk]); // Added by Kasia
     ana.tx->pushbackToBranch<float>("sim_phidiffs", trk.sim_phidiffs()[isimtrk]); // Added by Kasia
     ana.tx->pushbackToBranch<float>("sim_rjet", trk.sim_rjet()[isimtrk]); // Added by Kasia
     ana.tx->pushbackToBranch<float>("sim_jet_eta", trk.sim_jet_eta()[isimtrk]); // Added by Kasia
     ana.tx->pushbackToBranch<float>("sim_jet_phi", trk.sim_jet_phi()[isimtrk]); // Added by Kasia
     ana.tx->pushbackToBranch<float>("sim_jet_pt", trk.sim_jet_pt()[isimtrk]); // Added by Kasia
+    }
 
     ana.tx->pushbackToBranch<float>("sim_pt", trk.sim_pt()[isimtrk]);
     ana.tx->pushbackToBranch<float>("sim_eta", trk.sim_eta()[isimtrk]);
