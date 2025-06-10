@@ -10,6 +10,7 @@
 #include "PixelTriplet.h"
 #include "Quintuplet.h"
 #include "Quadruplet.h"
+#include "PixelQuadruplet.h"
 #include "Hit.h"
 #include "ObjectRanges.h"
 
@@ -259,8 +260,11 @@ namespace lst {
                                   lst::ObjectRanges rangesInGPU,
                                   lst::PixelTriplets pixelTripletsInGPU,
                                   lst::Segments segmentsInGPU,
-                                  lst::PixelQuintuplets pixelQuintupletsInGPU,
-                                  lst::PixelQuadruplets pixelQuadrupletsInGPU) const {
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU
+#ifdef USE_pT4
+                                  ,lst::PixelQuadruplets pixelQuadrupletsInGPU
+#endif
+                                ) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -276,20 +280,20 @@ namespace lst {
 
         int pixelModuleIndex = *modulesInGPU.nLowerModules;
         unsigned int prefix = rangesInGPU.segmentModuleIndices[pixelModuleIndex];
+        unsigned int nPixelQuintuplets = *pixelQuintupletsInGPU.nPixelQuintuplets;
+        for (unsigned int pixelQuintupletIndex = globalThreadIdx[1]; pixelQuintupletIndex < nPixelQuintuplets;
+             pixelQuintupletIndex += gridThreadExtent[1]) {
+          unsigned int pLS_jx = pixelQuintupletsInGPU.pixelIndices[pixelQuintupletIndex];
+          float eta2 = segmentsInGPU.eta[pLS_jx - prefix];
+          float phi2 = segmentsInGPU.phi[pLS_jx - prefix];
+          float dEta = alpaka::math::abs(acc, (eta1 - eta2));
+          float dPhi = lst::calculate_dPhi(phi1, phi2);
 
-        // unsigned int nPixelQuintuplets = *pixelQuintupletsInGPU.nPixelQuintuplets;
-        // for (unsigned int pixelQuintupletIndex = globalThreadIdx[1]; pixelQuintupletIndex < nPixelQuintuplets;
-        //      pixelQuintupletIndex += gridThreadExtent[1]) {
-        //   unsigned int pLS_jx = pixelQuintupletsInGPU.pixelIndices[pixelQuintupletIndex];
-        //   float eta2 = segmentsInGPU.eta[pLS_jx - prefix];
-        //   float phi2 = segmentsInGPU.phi[pLS_jx - prefix];
-        //   float dEta = alpaka::math::abs(acc, (eta1 - eta2));
-        //   float dPhi = lst::calculate_dPhi(phi1, phi2);
-
-        //   float dR2 = dEta * dEta + dPhi * dPhi;
-        //   if (dR2 < 1e-5f)
-        //     pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
-        // }
+          float dR2 = dEta * dEta + dPhi * dPhi;
+          if (dR2 < 1e-5f)
+            pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
+        }
+#ifdef USE_pT4
         unsigned int nPixelQuadruplets = *pixelQuadrupletsInGPU.nPixelQuadruplets;
         for (unsigned int pixelQuadrupletIndex = globalThreadIdx[1]; pixelQuadrupletIndex < nPixelQuadruplets;
              pixelQuadrupletIndex += gridThreadExtent[1]) {
@@ -303,24 +307,8 @@ namespace lst {
           if (dR2 < 1e-5f)
             pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
         }
-        // unsigned int loop_bound = *pixelQuintupletsInGPU.nPixelQuintuplets + *pixelQuadrupletsInGPU.nPixelQuadruplets;
-
-        // for (unsigned int jx = globalThreadIdx[1]; jx < loop_bound; jx += gridThreadExtent[1]) {
-        //   unsigned int pLS_jx;
-        //   if (jx < *pixelQuintupletsInGPU.nPixelQuintuplets) {
-        //     pLS_jx = pixelQuintupletsInGPU.pixelIndices[jx];  
-        //   } else {
-        //     pLS_jx = pixelQuadrupletsInGPU.pixelIndices[jx- *pixelQuintupletsInGPU.nPixelQuintuplets];
-        //   }
-        //   float eta2 = segmentsInGPU.eta[pLS_jx - prefix];
-        //   float phi2 = segmentsInGPU.phi[pLS_jx - prefix];
-        //   float dEta = alpaka::math::abs(acc, (eta1 - eta2));
-        //   float dPhi = lst::calculate_dPhi(phi1, phi2);
-
-        //   float dR2 = dEta * dEta + dPhi * dPhi;
-        //   if (dR2 < 1e-5f)
-        //     pixelTripletsInGPU.isDup[pixelTripletIndex] = true;
-        // }
+#endif
+        
       }
     }
   };
@@ -332,8 +320,11 @@ namespace lst {
                                   lst::Quintuplets quintupletsInGPU,
                                   lst::PixelQuintuplets pixelQuintupletsInGPU,
                                   lst::PixelTriplets pixelTripletsInGPU,
-                                  lst::ObjectRanges rangesInGPU,
-                                  lst::PixelQuadruplets pixelQuadrupletsInGPU) const {
+                                  lst::ObjectRanges rangesInGPU
+#ifdef USE_pT4                                  
+                                  ,lst::PixelQuadruplets pixelQuadrupletsInGPU
+#endif                                
+                                ) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -350,33 +341,41 @@ namespace lst {
               rangesInGPU.quintupletModuleIndices[innerInnerInnerLowerModuleArrayIndex] + innerObjectArrayIndex;
 
           // Don't add duplicate T5s or T5s that are accounted in pT5s
-          // if (quintupletsInGPU.isDup[quintupletIndex] or quintupletsInGPU.partOfPT5[quintupletIndex])
-          if (quintupletsInGPU.isDup[quintupletIndex])
+          if (quintupletsInGPU.isDup[quintupletIndex] or quintupletsInGPU.partOfPT5[quintupletIndex]) 
             continue;
 #ifdef Crossclean_T5
-          // unsigned int loop_bound = *pixelQuintupletsInGPU.nPixelQuintuplets + *pixelTripletsInGPU.nPixelTriplets;
-          unsigned int loop_bound = *pixelQuadrupletsInGPU.nPixelQuadruplets + *pixelTripletsInGPU.nPixelTriplets;
           // Cross cleaning step
           float eta1 = __H2F(quintupletsInGPU.eta[quintupletIndex]);
           float phi1 = __H2F(quintupletsInGPU.phi[quintupletIndex]);
-
+#ifndef USE_pT4
+          unsigned int loop_bound = *pixelQuintupletsInGPU.nPixelQuintuplets + *pixelTripletsInGPU.nPixelTriplets;
           for (unsigned int jx = globalThreadIdx[2]; jx < loop_bound; jx += gridThreadExtent[2]) {
             float eta2, phi2;
-            // if (jx < *pixelQuintupletsInGPU.nPixelQuintuplets) {
-            //   eta2 = __H2F(pixelQuintupletsInGPU.eta[jx]);
-            //   phi2 = __H2F(pixelQuintupletsInGPU.phi[jx]);
-            if (jx < *pixelQuadrupletsInGPU.nPixelQuadruplets) {
-              eta2 = __H2F(pixelQuadrupletsInGPU.eta[jx]);
-              phi2 = __H2F(pixelQuadrupletsInGPU.phi[jx]);
-            // } else {
-            //   eta2 = __H2F(pixelTripletsInGPU.eta[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
-            //   phi2 = __H2F(pixelTripletsInGPU.phi[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
-            // }
-            } else {
-              eta2 = __H2F(pixelTripletsInGPU.eta[jx - *pixelQuadrupletsInGPU.nPixelQuadruplets]);
-              phi2 = __H2F(pixelTripletsInGPU.phi[jx - *pixelQuadrupletsInGPU.nPixelQuadruplets]);
-            }
 
+            if (jx < *pixelQuintupletsInGPU.nPixelQuintuplets) {
+              eta2 = __H2F(pixelQuintupletsInGPU.eta[jx]);
+              phi2 = __H2F(pixelQuintupletsInGPU.phi[jx]);
+            } else {
+              eta2 = __H2F(pixelTripletsInGPU.eta[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
+              phi2 = __H2F(pixelTripletsInGPU.phi[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
+            }
+#endif
+#ifdef USE_pT4
+          unsigned int loop_bound = *pixelQuintupletsInGPU.nPixelQuintuplets + *pixelQuadrupletsInGPU.nPixelQuadruplets + *pixelTripletsInGPU.nPixelTriplets;
+          for (unsigned int jx = globalThreadIdx[2]; jx < loop_bound; jx += gridThreadExtent[2]) {
+            float eta2, phi2;
+
+            if (jx < *pixelQuintupletsInGPU.nPixelQuintuplets) {
+              eta2 = __H2F(pixelQuintupletsInGPU.eta[jx]);
+              phi2 = __H2F(pixelQuintupletsInGPU.phi[jx]);
+            } else if (jx < *pixelQuintupletsInGPU.nPixelQuintuplets + *pixelQuadrupletsInGPU.nPixelQuadruplets){
+              eta2 = __H2F(pixelQuadrupletsInGPU.eta[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
+              phi2 = __H2F(pixelQuadrupletsInGPU.phi[jx - *pixelQuintupletsInGPU.nPixelQuintuplets]);
+            } else {
+              eta2 = __H2F(pixelTripletsInGPU.eta[jx - (*pixelQuintupletsInGPU.nPixelQuintuplets + *pixelQuadrupletsInGPU.nPixelQuadruplets)]);
+              phi2 = __H2F(pixelTripletsInGPU.phi[jx - (*pixelQuintupletsInGPU.nPixelQuintuplets + *pixelQuadrupletsInGPU.nPixelQuadruplets)]);
+            }
+#endif
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = lst::calculate_dPhi(phi1, phi2);
 
@@ -400,8 +399,11 @@ namespace lst {
                                   lst::Segments segmentsInGPU,
                                   lst::MiniDoublets mdsInGPU,
                                   lst::Hits hitsInGPU,
-                                  lst::Quintuplets quintupletsInGPU,
-                                  lst::Quadruplets quadrupletsInGPU) const {
+                                  lst::Quintuplets quintupletsInGPU
+#ifdef USE_T4
+                                  , lst::Quadruplets quadrupletsInGPU
+#endif                                
+                                ) const {
       auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
@@ -450,23 +452,23 @@ namespace lst {
             if (dR2 < 0.000001f)
               segmentsInGPU.isDup[pixelArrayIndex] = true;
           }
-          // if (type == 7)  // pT5
-          // {
-          //   unsigned int pLSIndex = innerTrackletIdx;
-          //   int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mdsInGPU, segmentsInGPU, hitsInGPU);
-          //   if (npMatched > 0) {
-          //     segmentsInGPU.isDup[pixelArrayIndex] = true;
-          //   }
+          if (type == 7)  // pT5
+          {
+            unsigned int pLSIndex = innerTrackletIdx;
+            int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mdsInGPU, segmentsInGPU, hitsInGPU);
+            if (npMatched > 0) {
+              segmentsInGPU.isDup[pixelArrayIndex] = true;
+            }
 
-          //   float eta2 = segmentsInGPU.eta[pLSIndex - prefix];
-          //   float phi2 = segmentsInGPU.phi[pLSIndex - prefix];
-          //   float dEta = alpaka::math::abs(acc, eta1 - eta2);
-          //   float dPhi = lst::calculate_dPhi(phi1, phi2);
+            float eta2 = segmentsInGPU.eta[pLSIndex - prefix];
+            float phi2 = segmentsInGPU.phi[pLSIndex - prefix];
+            float dEta = alpaka::math::abs(acc, eta1 - eta2);
+            float dPhi = lst::calculate_dPhi(phi1, phi2);
 
-          //   float dR2 = dEta * dEta + dPhi * dPhi;
-          //   if (dR2 < 0.000001f)
-          //     segmentsInGPU.isDup[pixelArrayIndex] = true;
-          // }
+            float dR2 = dEta * dEta + dPhi * dPhi;
+            if (dR2 < 0.000001f)
+              segmentsInGPU.isDup[pixelArrayIndex] = true;
+          }
           if (type == 11)  // pT4
           {
             unsigned int pLSIndex = innerTrackletIdx;
@@ -484,6 +486,7 @@ namespace lst {
             if (dR2 < 0.000001f)
               segmentsInGPU.isDup[pixelArrayIndex] = true;
           }
+#ifdef USE_T4          
           if (type == 9)  // T4
           {
             unsigned int quadrupletIndex = innerTrackletIdx;  // T4 index
@@ -496,6 +499,7 @@ namespace lst {
             if (dR2 < 1e-3f)
               segmentsInGPU.isDup[pixelArrayIndex] = true;
           }
+#endif
         }
       }
     }
@@ -506,7 +510,10 @@ namespace lst {
     ALPAKA_FN_ACC void operator()(TAcc const& acc,
                                   lst::Modules modulesInGPU,
                                   lst::Quadruplets quadrupletsInGPU,
+#ifdef USE_pT4                                  
                                   lst::PixelQuadruplets pixelQuadrupletsInGPU,
+#endif                                 
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU,
                                   lst::PixelTriplets pixelTripletsInGPU,
                                   lst::Quintuplets quintupletsInGPU,
                                   lst::TrackCandidates trackCandidatesInGPU,
@@ -541,10 +548,10 @@ namespace lst {
           for (unsigned int trackCandidateIndex = globalThreadIdx[2]; trackCandidateIndex < nTrackCandidates;
                trackCandidateIndex += gridThreadExtent[2]) {
             short type = trackCandidatesInGPU.trackCandidateType[trackCandidateIndex];
-            unsigned int innerTrackletIdx = trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex];
+            unsigned int outerTrackletIdx = trackCandidatesInGPU.objectIndices[2 * trackCandidateIndex + 1];
             if (type == 4)  // T5
             {
-              unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
+              unsigned int quintupletIndex = outerTrackletIdx;  // T5 index
               uint16_t t5_lowerModIdx1 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers*quintupletIndex];
               short layer2_adjustment =1;
               short layer3_adjustment;
@@ -573,11 +580,11 @@ namespace lst {
             }
             if (type == 5)  // pT3
             { 
-              int pT3Index = innerTrackletIdx;
-              uint16_t t3_lowerModIdx1 = quintupletsInGPU.lowerModuleIndices[Params_pT3::kLayers*pT3Index];
+              int pT3Index = outerTrackletIdx;
+              uint16_t pT3_lowerModIdx1 = pixelTripletsInGPU.lowerModuleIndices[Params_pT3::kLayers*pT3Index];
               short layer2_adjustment = 1;
               short layer3_adjustment;
-              int layer = modulesInGPU.layers[t3_lowerModIdx1];
+              int layer = modulesInGPU.layers[pT3_lowerModIdx1];
               if (layer == 1) {
                 layer3_adjustment = 1;
               }  // third layer
@@ -598,6 +605,35 @@ namespace lst {
               if (dR2 < 1e-3f)
                 quadrupletsInGPU.isDup[quadrupletIndex] = true;
             }
+            if (type == 7)  // pT5
+            { 
+              unsigned int quintupletIndex = outerTrackletIdx;  // T5 index
+              uint16_t t5_lowerModIdx1 = quintupletsInGPU.lowerModuleIndices[Params_T5::kLayers*quintupletIndex];
+              short layer2_adjustment =1;
+              short layer3_adjustment;
+              int layer = modulesInGPU.layers[t5_lowerModIdx1];
+              if (layer == 1) {
+                layer3_adjustment = 1;
+              }  // third layer
+              else {
+                layer3_adjustment = 0;  //third layer
+              }
+              int innerTripletIndex = quintupletsInGPU.tripletIndices[2*quintupletIndex];
+              float phi2 =
+                      mdsInGPU.anchorPhi[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment] + layer3_adjustment]]; //layer 3
+              float eta2 =
+                      mdsInGPU.anchorEta[segmentsInGPU.mdIndices[2 * tripletsInGPU.segmentIndices[2 * innerTripletIndex +
+                                                                                                  layer2_adjustment] + layer3_adjustment]]; //layer 3
+              float dEta = alpaka::math::abs(acc, eta1 - eta2);
+              float dPhi = lst::calculate_dPhi(phi1, phi2);
+  
+              float dR2 = dEta * dEta + dPhi * dPhi;
+              if (dR2 < 1e-3f) {
+                quadrupletsInGPU.isDup[quadrupletIndex] = true;
+              }
+            }
+  #ifdef USE_pT4          
             if (type == 11)  // pT4
             {
               unsigned int pT4Index = trackCandidatesInGPU.directObjectIndices[trackCandidateIndex]; 
@@ -610,7 +646,51 @@ namespace lst {
               if (dR2 < 1e-3f)
                 quadrupletsInGPU.isDup[quadrupletIndex] = true;
             }
+#endif            
           }
+        }
+      }
+    }
+  };
+
+  struct crossCleanpT4 {
+    template <typename TAcc>
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  lst::Modules modulesInGPU,
+                                  lst::ObjectRanges rangesInGPU,
+                                  lst::PixelQuadruplets pixelQuadrupletsInGPU,
+                                  lst::Segments segmentsInGPU,
+                                  lst::PixelQuintuplets pixelQuintupletsInGPU) const {
+      auto const globalThreadIdx = alpaka::getIdx<alpaka::Grid, alpaka::Threads>(acc);
+      auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
+
+      unsigned int nPixelQuadruplets = *pixelQuadrupletsInGPU.nPixelQuadruplets;
+      for (unsigned int pixelQuadrupletIndex = globalThreadIdx[2]; pixelQuadrupletIndex < nPixelQuadruplets;
+           pixelQuadrupletIndex += gridThreadExtent[2]) {
+        if (pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex])
+          continue;
+
+        // Cross cleaning step
+        unsigned int pLS_ix = pixelQuadrupletsInGPU.pixelIndices[pixelQuadrupletIndex];
+
+        int pixelModuleIndex = *modulesInGPU.nLowerModules;
+        unsigned int prefix = rangesInGPU.segmentModuleIndices[pixelModuleIndex];
+
+        float eta1 = segmentsInGPU.eta[pLS_ix - prefix];
+        float phi1 = segmentsInGPU.phi[pLS_ix - prefix];
+
+        unsigned int nPixelQuintuplets = *pixelQuintupletsInGPU.nPixelQuintuplets;
+        for (unsigned int pixelQuintupletIndex = globalThreadIdx[1]; pixelQuintupletIndex < nPixelQuintuplets;
+             pixelQuintupletIndex += gridThreadExtent[1]) {
+          unsigned int pLS_jx = pixelQuintupletsInGPU.pixelIndices[pixelQuintupletIndex];
+          float eta2 = segmentsInGPU.eta[pLS_jx - prefix];
+          float phi2 = segmentsInGPU.phi[pLS_jx - prefix];
+          float dEta = alpaka::math::abs(acc, (eta1 - eta2));
+          float dPhi = lst::calculate_dPhi(phi1, phi2);
+
+          float dR2 = dEta * dEta + dPhi * dPhi;
+          if (dR2 < 1e-5f)
+            pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex] = true;
         }
       }
     }
@@ -830,6 +910,7 @@ namespace lst {
           continue;
 
         unsigned int nQuads = quadrupletsInGPU.nQuadruplets[idx];
+        // printf("%d\n", nQuads);
         for (unsigned int jdx = globalThreadIdx[2]; jdx < nQuads; jdx += gridThreadExtent[2]) {
           unsigned int quadrupletIndex = rangesInGPU.quadrupletModuleIndices[idx] + jdx;
           if (!(quadrupletsInGPU.TightCutFlag[quadrupletIndex]))
@@ -867,7 +948,6 @@ namespace lst {
                                       trackCandidateIdx,
                                       quadrupletIndex);
             quadrupletsInGPU.partOfTC[quadrupletIndex] = true;
-          
           }
         }
       }
@@ -887,15 +967,16 @@ namespace lst {
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       int nPixelQuadruplets = *pixelQuadrupletsInGPU.nPixelQuadruplets;
+      // printf("n pt4 %d\n", nPixelQuadruplets);
       unsigned int pLS_offset = rangesInGPU.segmentModuleIndices[nLowerModules];
       for (int pixelQuadrupletIndex = globalThreadIdx[2]; pixelQuadrupletIndex < nPixelQuadruplets;
            pixelQuadrupletIndex += gridThreadExtent[2]) {
         if (pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex])
           continue;
-
+        // printf("start add pt4 as tc\n");
         unsigned int trackCandidateIdx =
             alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
-        if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatespT5 >= n_max_pixel_track_candidates)  
+        if (trackCandidateIdx >= n_max_pixel_track_candidates)  
         {
 #ifdef WARNINGS
           printf("Track Candidate excess alert! Type = pT4");
@@ -905,7 +986,7 @@ namespace lst {
 
         } else {
           alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidatespT4, 1u);
-
+          // printf("running add pt4 as tc\n");
           float radius = 0.5f * (__H2F(pixelQuadrupletsInGPU.pixelRadius[pixelQuadrupletIndex]) +
                                  __H2F(pixelQuadrupletsInGPU.quadrupletRadius[pixelQuadrupletIndex]));
           unsigned int pT4PixelIndex = pixelQuadrupletsInGPU.pixelIndices[pixelQuadrupletIndex];

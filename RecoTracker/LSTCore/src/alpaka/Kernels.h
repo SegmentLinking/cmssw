@@ -589,7 +589,7 @@ namespace lst {
       }
     }
   };
-
+//#endif
   struct checkHitspLS {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(TAcc const& acc,

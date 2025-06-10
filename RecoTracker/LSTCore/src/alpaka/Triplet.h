@@ -33,6 +33,9 @@ namespace lst {
     bool* partOfPT4;
     bool* partOfT4;
     int* charge;
+    float* fakeScore;
+    float* promptScore;
+    float* displacedScore;
 
 #ifdef CUT_VALUE_DEBUG
     //debug variables
@@ -59,6 +62,9 @@ namespace lst {
       partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
       partOfT4 = alpaka::getPtrNative(buf.partOfT4_buf);
       charge = alpaka::getPtrNative(buf.charge_buf);
+      fakeScore = alpaka::getPtrNative(buf.fakeScore_buf);
+      promptScore = alpaka::getPtrNative(buf.promptScore_buf);
+      displacedScore = alpaka::getPtrNative(buf.displacedScore_buf);
 #ifdef CUT_VALUE_DEBUG
       zOut = alpaka::getPtrNative(buf.zOut_buf);
       rtOut = alpaka::getPtrNative(buf.rtOut_buf);
@@ -86,6 +92,9 @@ namespace lst {
     Buf<TDev, bool> partOfT4_buf;
     Buf<TDev, bool> partOfPT3_buf;
     Buf<TDev, int> charge_buf;
+    Buf<TDev, float> fakeScore_buf;
+    Buf<TDev, float> promptScore_buf;
+    Buf<TDev, float> displacedScore_buf;
 
 #ifdef CUT_VALUE_DEBUG
     Buf<TDev, float> zOut_buf;
@@ -122,7 +131,10 @@ namespace lst {
           partOfPT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           partOfT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
-          charge_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue))
+          charge_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue)),
+          fakeScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          promptScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          displacedScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue))
 #ifdef CUT_VALUE_DEBUG
           ,
           zOut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
@@ -170,7 +182,8 @@ namespace lst {
                                                          float circleCenterX,
                                                          float circleCenterY,
                                                          unsigned int tripletIndex,
-                                                         int charge)
+                                                         int charge,
+                                                         float (&t3Scores)[3])
 #else
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTripletToMemory(lst::Modules const& modulesInGPU,
                                                          lst::MiniDoublets const& mdsInGPU,
@@ -186,7 +199,8 @@ namespace lst {
                                                          float circleCenterX,
                                                          float circleCenterY,
                                                          unsigned int tripletIndex,
-                                                         int charge)
+                                                         int charge,
+                                                         float (&t3Scores)[3])
 #endif
   {
     tripletsInGPU.segmentIndices[tripletIndex * 2] = innerSegmentIndex;
@@ -218,6 +232,9 @@ namespace lst {
     tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 5] = mdsInGPU.outerHitIndices[thirdMDIndex];
 
     tripletsInGPU.charge[tripletIndex] = charge;
+    tripletsInGPU.fakeScore[tripletIndex] = t3Scores[0];
+    tripletsInGPU.promptScore[tripletIndex] = t3Scores[1];
+    tripletsInGPU.displacedScore[tripletIndex] = t3Scores[2];
 #ifdef CUT_VALUE_DEBUG
     tripletsInGPU.zOut[tripletIndex] = zOut;
     tripletsInGPU.rtOut[tripletIndex] = rtOut;
@@ -842,7 +859,8 @@ namespace lst {
                                                                    float& circleCenterX,
                                                                    float& circleCenterY,
                                                                    const float ptCut,
-                                                                   int& charge) {
+                                                                   int& charge,
+                                                                   float (&t3Scores) [3]) {
     //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
     if (segmentsInGPU.mdIndices[2 * innerSegmentIndex + 1] != segmentsInGPU.mdIndices[2 * outerSegmentIndex])
       return false;
@@ -897,7 +915,7 @@ namespace lst {
       return false;
 
     bool inference =
-      lst::t3dnn::runInference(acc, mdsInGPU, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn);
+      lst::t3dnn::runInference(acc, mdsInGPU, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);
     if (!inference)  // T3-building cut
       return false;
 
@@ -947,6 +965,7 @@ namespace lst {
 
             float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
             int charge = 0;
+            float t3Scores[3] = {0.f};
 
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modulesInGPU,
@@ -965,7 +984,8 @@ namespace lst {
                                                         circleCenterX,
                                                         circleCenterY,
                                                         ptCut,
-                                                        charge);
+                                                        charge,
+                                                        t3Scores);
             if (success) {
               unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
                   acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
@@ -999,7 +1019,8 @@ namespace lst {
                                    circleCenterX,
                                    circleCenterY,
                                    tripletIndex,
-                                   charge);
+                                   charge,
+                                   t3Scores);
 #else
                 addTripletToMemory(modulesInGPU,
                                    mdsInGPU,
@@ -1015,7 +1036,8 @@ namespace lst {
                                    circleCenterX,
                                    circleCenterY,
                                    tripletIndex,
-                                   charge);
+                                   charge,
+                                   t3Scores);
 #endif
               }
             }
