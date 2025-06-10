@@ -20,6 +20,7 @@ void LSTEff::GetEntry(unsigned int idx) {
   }
 }
 
+
 void LSTEff::progress(int nEventsTotal, int nEventsChain) {
   int period = 1000;
   if (nEventsTotal % 1000 == 0) {
