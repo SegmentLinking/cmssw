@@ -29,12 +29,14 @@ usage()
   echo "  -R    ROCm backend              (Compile for ROCm)"
   echo "  -A    All backends              (Compile for all backends, including ROCm)"
   echo "  -w    Warning mode              (Print extra warning outputs)"
+  echo "  -t    Use T4                    (Create T4s)"
+  echo "  -T    Use pT4                   (Create pT4s)"
   echo
   exit
 }
 
 # Parsing command-line opts
-while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
+while getopts ":cxgsmdp3NCGRA2ehwtTP:" OPTION; do
   case $OPTION in
     c) MAKECACHE=true;;
     s) SHOWLOG=true;;
@@ -46,6 +48,8 @@ while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
     R) ROCMBACKEND=true;;
     A) ALLBACKENDS=true;;
     w) PRINTWARNINGS=true;;
+    t) USET4=true;;
+    T) USEPT4=true;;
     h) usage;;
     :) usage;;
   esac
@@ -62,6 +66,8 @@ if [ -z ${CUDABACKEND} ]; then CUDABACKEND=false; fi
 if [ -z ${ROCMBACKEND} ]; then ROCMBACKEND=false; fi
 if [ -z ${ALLBACKENDS} ]; then ALLBACKENDS=false; fi
 if [ -z ${PRINTWARNINGS} ]; then PRINTWARNINGS=false; fi
+if [ -z ${USET4} ]; then USET4=false; fi
+if [ -z ${USEPT4} ]; then USEPT4=false; fi
 
 # Default to only CPU and CUDA backends
 if [ "${CPUBACKEND}" == false ] && [ "${CUDABACKEND}" == false ] && [ "${ROCMBACKEND}" == false ]; then
@@ -98,6 +104,8 @@ echo "  CPUBACKEND        : ${CPUBACKEND}"                    | tee -a ${LOG}
 echo "  CUDABACKEND       : ${CUDABACKEND}"                   | tee -a ${LOG}
 echo "  ROCMBACKEND       : ${ROCMBACKEND}"                   | tee -a ${LOG}
 echo "  PRINTWARNINGS     : ${PRINTWARNINGS}"                 | tee -a ${LOG}
+echo "  USET4             : ${USET4}"                         | tee -a ${LOG}
+echo "  USEPT4            : ${USEPT4}"                        | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
 echo "  (cf. Run > sh $(basename $0) -h to see all options)"  | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
@@ -159,6 +167,18 @@ if [ -z "${MAXMAKETHREADS}" ]; then
     MAXMAKETHREADS=32
 fi
 
+USET4OPT=
+if [ "${USET4}" = true ]; then
+    USET4OPT="T4FLAG=-DUSE_T4"
+    export T4FLAG="-DUSE_T4"
+fi
+
+USEPT4OPT=
+if [ "${USEPT4}" == true ]; then
+    USEPT4OPT="PT4FLAG=-DUSE_pT4"
+    export PT4FLAG="-DUSE_pT4"
+fi
+
 ###
 ###
 ### Making Line Segment Tracking Library
@@ -171,9 +191,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${T4FLAGOPT} ${PT4FLAGOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${T4FLAGOPT} ${PT4FLAGOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then

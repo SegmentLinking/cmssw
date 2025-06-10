@@ -848,6 +848,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
           if (pixelSegments.partOfPT5()[i_pLS])
             continue;  //don't make pT3s for those pixels that are part of pT5
+//#endif
+//#ifdef USE_T4_PT4
+          if (segmentsInGPU.partOfPT4[i_pLS])
+            continue;  //don't make pT3s for those pixels that are part of pT4
+//#endif
 
           short layer2_adjustment;
           if (modules.layers()[tripletLowerModuleIndex] == 1) {
@@ -869,6 +874,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             if (triplets.partOfPT5()[outerTripletIndex])
               continue;  //don't create pT3s for T3s accounted in pT5s
+//#endif
+//#ifdef USE_T4_PT4
+            if (tripletsInGPU.partOfPT4[outerTripletIndex])
+              continue;  //don't create pT3s for T3s accounted in pT4s
+//#endif
 
             float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY,
                 pixelRadiusError;

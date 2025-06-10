@@ -423,8 +423,12 @@ void run_lst() {
       timing_T5 = runQuintuplet(events.at(omp_get_thread_num()));
 
       timing_pLS = runPixelLineSegment(events.at(omp_get_thread_num()), ana.no_pls_dupclean);
+#if (defined(USE_T4) or defined(USE_pT4))
       timing_T4 = runQuadruplet(events.at(omp_get_thread_num()));
+#endif
+#ifdef USE_pT4
       timing_pT4 = runPixelQuadruplet(events.at(omp_get_thread_num()));
+#endif
       timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);

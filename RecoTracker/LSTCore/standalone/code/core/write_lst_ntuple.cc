@@ -148,7 +148,12 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
   ana.tx->createBranch<std::vector<int>>("t5_isDupAlgoFlag");
   ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
+  ana.tx->createBranch<std::vector<int>>("t5_isDup"); 
 
+  ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
+  ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
+
+#if (defined(USE_T4) || defined(USE_pT4))
   // T4 branches
   ana.tx->createBranch<std::vector<int>>("sim_T4_matched");
   ana.tx->createBranch<std::vector<int>>("t4_isFake");
@@ -170,10 +175,16 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t4_score_rphisum");
   ana.tx->createBranch<std::vector<float>>("t4_promptscore_t4dnn");
   ana.tx->createBranch<std::vector<float>>("t4_displacedscore_t4dnn");
+  ana.tx->createBranch<std::vector<float>>("t4_fakescore_t4dnn");
+  ana.tx->createBranch<std::vector<float>>("t4_partOfPT4");
 
-  ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
-  ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
+  // T4 DNN branches
+  createT4DNNBranches();
+    
+  ana.tx->createBranch<std::vector<int>>("t4_occupancies");
 
+#endif
+#ifdef USE_pT4 
   // pT4 branches
   ana.tx->createBranch<std::vector<std::vector<int>>>("pT4_matched_simIdx");
   ana.tx->createBranch<std::vector<std::vector<int>>>("pT4_hitIdxs");
@@ -196,6 +207,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("pT4_pixelRadiusError");
   ana.tx->createBranch<std::vector<float>>("pT4_quadrupletRadius");
 
+  ana.tx->createBranch<int>("pT4_occupancies");
+#endif
   // Occupancy branches
   ana.tx->createBranch<std::vector<int>>("module_layers");
   ana.tx->createBranch<std::vector<int>>("module_subdets");
@@ -212,8 +225,6 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("t5_occupancies");
   ana.tx->createBranch<int>("pT3_occupancies");
   ana.tx->createBranch<int>("pT5_occupancies");
-  ana.tx->createBranch<std::vector<int>>("t4_occupancies");
-  ana.tx->createBranch<int>("pT4_occupancies");
 
   // T5 DNN branches
   createT5DNNBranches();
@@ -268,6 +279,18 @@ void createT4DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t4_t3_pt");
   ana.tx->createBranch<std::vector<float>>("t4_t3_eta");
   ana.tx->createBranch<std::vector<float>>("t4_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("t4_uncert1");
+  ana.tx->createBranch<std::vector<float>>("t4_uncert2");
+  ana.tx->createBranch<std::vector<float>>("t4_uncert3");
+  ana.tx->createBranch<std::vector<float>>("t4_uncert4");
+  ana.tx->createBranch<std::vector<float>>("t4_regressionRadius");
+  ana.tx->createBranch<std::vector<float>>("t4_nonAnchorRegressionRadius");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_fakeScore1"); 
+  ana.tx->createBranch<std::vector<float>>("t4_t3_promptScore1");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_displacedScore1");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_fakeScore2"); 
+  ana.tx->createBranch<std::vector<float>>("t4_t3_promptScore2");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_displacedScore2");
 
   // Hit-specific branches
   std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
@@ -298,6 +321,9 @@ void createT3DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t3_pMatched");
   ana.tx->createBranch<std::vector<float>>("t3_sim_vxy");
   ana.tx->createBranch<std::vector<float>>("t3_sim_vz");
+  ana.tx->createBranch<std::vector<float>>("t3_fakeScore"); 
+  ana.tx->createBranch<std::vector<float>>("t3_promptScore");
+  ana.tx->createBranch<std::vector<float>>("t3_displacedScore");
 
   // Hit-specific branches (T3 has 4 hits from two segments)
   std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
@@ -514,6 +540,7 @@ void setOptionalOutputBranches(LSTEvent* event) {
   setQuintupletOutputBranches(event);
   setPixelTripletOutputBranches(event);
   setOccupancyBranches(event);
+// #ifdef USE_T4_PT4
   setQuadrupletOutputBranches(event);
   setPixelQuadrupletOutputBranches(event);
   setT3DNNBranches(event);
@@ -521,8 +548,8 @@ void setOptionalOutputBranches(LSTEvent* event) {
   setpT3DNNBranches(event);
   setpLSOutputBranches(event);
   setT4DNNBranches(event);
-  setT3DNNBranches(event);
   setpT4DNNBranches(event);
+// #endif
 
 #endif
 }
@@ -733,6 +760,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t5_dBeta1", quintuplets.dBeta1()[quintupletIndex]);
       ana.tx->pushbackToBranch<float>("t5_dBeta2", quintuplets.dBeta2()[quintupletIndex]);
       ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
+      ana.tx->pushbackToBranch<int>("t5_isDup", quintuplets->isDup[quintupletIndex]);
       ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
 
       t5_matched_simIdx.push_back(simidx);
@@ -918,6 +946,8 @@ void setQuadrupletOutputBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<float>("t4_score_rphisum", __H2F(quadruplets->score_rphisum[quadrupletIndex]));
       ana.tx->pushbackToBranch<float>("t4_promptscore_t4dnn", quadruplets->promptscore_t4dnn[quadrupletIndex]);
       ana.tx->pushbackToBranch<float>("t4_displacedscore_t4dnn", quadruplets->displacedscore_t4dnn[quadrupletIndex]);
+      ana.tx->pushbackToBranch<float>("t4_fakescore_t4dnn", quadruplets->fakescore_t4dnn[quadrupletIndex]);
+      ana.tx->pushbackToBranch<float>("t4_partOfPT4", quadruplets->partOfPT4[quadrupletIndex]); 
 
       int region = -1;
       if (layers[0]==7 and layers[1]==8 and layers[2]==9 and layers[3]==10) {
@@ -1519,6 +1549,24 @@ void setT4DNNBranches(lst::Event<Acc3D>* event) {
       ana.tx->pushbackToBranch<int>("t4_t3_idx0", t3_index_map[t3sIdx[0]]);
       ana.tx->pushbackToBranch<int>("t4_t3_idx1", t3_index_map[t3sIdx[1]]);
 
+      ana.tx->pushbackToBranch<float>("t4_t3_fakeScore1", triplets->fakeScore[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t4_t3_promptScore1", triplets->promptScore[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t4_t3_displacedScore1", triplets->displacedScore[t3sIdx[0]]);
+      ana.tx->pushbackToBranch<float>("t4_t3_fakeScore2", triplets->fakeScore[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t4_t3_promptScore2", triplets->promptScore[t3sIdx[1]]);
+      ana.tx->pushbackToBranch<float>("t4_t3_displacedScore2", triplets->displacedScore[t3sIdx[1]]);
+
+      // uncertainties
+      // printf("uncertainties (in write ntuple): %f %f %f %f\n", quadruplets->uncertainty[t4Idx], quadruplets->uncertainty[t4Idx+1], quadruplets->uncertainty[t4Idx+2], quadruplets->uncertainty[t4Idx+3]);
+
+      ana.tx->pushbackToBranch<float>("t4_uncert1", quadruplets->uncertainty[4*t4Idx]);
+      ana.tx->pushbackToBranch<float>("t4_uncert2", quadruplets->uncertainty[4*t4Idx+1]);
+      ana.tx->pushbackToBranch<float>("t4_uncert3", quadruplets->uncertainty[4*t4Idx+2]);
+      ana.tx->pushbackToBranch<float>("t4_uncert4", quadruplets->uncertainty[4*t4Idx+3]);
+      
+      ana.tx->pushbackToBranch<float>("t4_regressionRadius", quadruplets->regressionRadius[t4Idx]);
+      ana.tx->pushbackToBranch<float>("t4_nonAnchorRegressionRadius", quadruplets->nonAnchorRegressionRadius[t4Idx]);
+
       if (t4s_used_in_tc.find(t4Idx) != t4s_used_in_tc.end()) {
         ana.tx->pushbackToBranch<int>("t4_partOfTC", 1);
         ana.tx->pushbackToBranch<int>("t4_tc_idx", t4_tc_index_map[t4Idx]);
@@ -1613,6 +1661,9 @@ void setT3DNNBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<int>("t3_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<std::vector<int>>("t3_matched_simIdx", simidx);
       ana.tx->pushbackToBranch<float>("t3_pMatched", percent_matched);
+      ana.tx->createBranch<std::vector<float>>("t3_fakeScore"); 
+      ana.tx->createBranch<std::vector<float>>("t3_promptScore");
+      ana.tx->createBranch<std::vector<float>>("t3_displacedScore");
 
       // Add vertex information for matched sim tracks
       if (simidx.size() == 0) {

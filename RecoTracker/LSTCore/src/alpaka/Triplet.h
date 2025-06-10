@@ -64,6 +64,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     triplets.hitIndices()[tripletIndex][5] = mds.outerHitIndices()[thirdMDIndex];
 
     tripletsInGPU.charge[tripletIndex] = charge;
+    tripletsInGPU.fakeScore[tripletIndex] = t3Scores[0];
+    tripletsInGPU.promptScore[tripletIndex] = t3Scores[1];
+    tripletsInGPU.displacedScore[tripletIndex] = t3Scores[2];
 #ifdef CUT_VALUE_DEBUG
     triplets.zOut()[tripletIndex] = zOut;
     triplets.rtOut()[tripletIndex] = rtOut;

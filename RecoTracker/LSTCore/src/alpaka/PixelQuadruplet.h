@@ -234,70 +234,127 @@ namespace lst {
     // This slides shows the cut threshold definition. The comments below in the code, e.g, "cat 10", is consistent with the region separation in the slides
     // https://indico.cern.ch/event/1410985/contributions/5931017/attachments/2875400/5035406/helix%20approxi%20for%20pT4%20rzchi2%20new%20results%20versions.pdf
     // all 99% retention cuts
+    // return true;
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 12) {  // cat 8
-        return rzChiSquared < 11.958f;
+        // return rzChiSquared < 11.958f;
+        // return rzChiSquared < 9.766f;
+        // return rzChiSquared < 10.318f; //radii in t4 dnn
+        return rzChiSquared < 10.358f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 4) {  // cat 6
-        return rzChiSquared < 5.385f;
+        // return rzChiSquared < 5.385f;
+        // return rzChiSquared < 9.832f;
+        // return rzChiSquared < 9.686f; //radii in t4 dnn
+        return rzChiSquared < 9.514f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 7) {  // cat 7
-        return rzChiSquared < 16.717f;
+        // return rzChiSquared < 16.717f;
+        // return rzChiSquared < 9.441f;
+        // return rzChiSquared < 9.85f; //radii in t4 dnn
+        return rzChiSquared < 9.441f; //radii and t3 scores in t4 dnn
       } 
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
       if (layer4 == 13) {  // cat 10
-        return rzChiSquared < 8.608f;
+        // return rzChiSquared < 8.608f;
+        // return rzChiSquared < 9.678f;
+        // return rzChiSquared < 9.548f; //radii in t4 dnn
+        return rzChiSquared < 9.415f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 8) {  // cat 9
-        return rzChiSquared < 15.255f;
+        // return rzChiSquared < 15.255f;
+        // return rzChiSquared < 9.967f;
+        // return rzChiSquared < 10.404f; //radii in t4 dnn
+        return rzChiSquared < 10.128f; //radii and t3 scores in t4 dnn
       }
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 9) {  // cat 11
-        return rzChiSquared < 13.638f;
+        // return rzChiSquared < 13.638f;
+        // return rzChiSquared < 10.107f;
+        // return rzChiSquared < 10.327f; //radii in t4 dnn
+        return rzChiSquared < 9.943f; //radii and t3 scores in t4 dnn
       } 
     } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
       if (layer4 == 12) {  // cat 14
-        return rzChiSquared < 9.466f;
+        // return rzChiSquared < 9.466f;
+        // return rzChiSquared < 11.958f;
+        // return rzChiSquared < 1.604f; //radii in t4 dnn
+        return rzChiSquared < 0.081f; //radii and t3 scores in t4 dnn
+        // return true;
       } else if (layer4 == 5) {  // cat 13
-        return rzChiSquared < 4.056f;
+        // return rzChiSquared < 4.056f;
+        return true;
       } 
     } else if (layer1 == 2 and layer2 == 3 and layer4 == 7) {
       if (layer4 == 13) {  // cat 16
-        return rzChiSquared < 20.042f;
+        // return rzChiSquared < 20.042f;
+        // return rzChiSquared < 1.223f;
+        // return rzChiSquared < 3.895f; //radii in t4 dnn
+        return rzChiSquared < 3.895f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 8) {  // cat 15
-        return rzChiSquared < 60.747f;
+        // return rzChiSquared < 60.747f;
+        return true;
       }
     } else if (layer1 == 2 and layer2 == 3 and layer4 == 13) {
       if (layer4 == 14) {  // cat 17
-        return rzChiSquared < 13.88f;
+        // return rzChiSquared < 13.88f;
+        // return rzChiSquared < 2.123f;
+        // return rzChiSquared < 2.395f; //radii in t4 dnn
+        return rzChiSquared < 4.158f; //radii and t3 scores in t4 dnn
       } 
     } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 14) {  // cat 19
-        return rzChiSquared < 11.738f;
+        // return rzChiSquared < 11.738f;
+        // return rzChiSquared < 3.895f;
+        // return rzChiSquared < 3.556f; //radii in t4 dnn
+        return rzChiSquared < 5.118f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 9) {  // cat 18
-        return rzChiSquared < 17.664f;
+        // return rzChiSquared < 17.664f;
+        // return rzChiSquared < 5.119f;
+        // return rzChiSquared < 5.845f; //radii in t4 dnn
+        return rzChiSquared < 5.178f; //radii and t3 scores in t4 dnn
       }
     } else if (layer1 == 2 and layer2 == 7 and layer3 == 13) {
       if (layer4 == 14) {  // cat 20
-        return rzChiSquared < 9.142f;
+        // return rzChiSquared < 9.142f;
+        // return rzChiSquared < 3.470f;
+        // return rzChiSquared < 4.051f; //radii in t4 dnn
+        return rzChiSquared < 9.034f; //radii and t3 scores in t4 dnn
       } 
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
       if (layer4 == 10) {  // cat 0
-        return rzChiSquared < 6.937f;;
+        // return rzChiSquared < 6.937f;
+        // return rzChiSquared < 10.470f;
+        // return rzChiSquared < 10.346f; //radii in t4 dnn
+        return rzChiSquared < 10.125f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 15) {  // cat 1
-        return rzChiSquared < 6.066f;
+        // return rzChiSquared < 6.066f;
+        // return rzChiSquared < 8.880f;
+        // return rzChiSquared < 10.026f; //radii in t4 dnn
+        return rzChiSquared < 9.769f; //radii and t3 scores in t4 dnn
       }
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 14) {
       if (layer4 == 15) {  // cat 2
-        return rzChiSquared < 5.608f;
+        // return rzChiSquared < 5.608f;
+        // return rzChiSquared < 9.681f;
+        // return rzChiSquared < 9.807f; //radii in t4 dnn
+        return rzChiSquared < 9.721f; //radii and t3 scores in t4 dnn
       } 
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
       if (layer4 == 11) {  // cat 3
-        return rzChiSquared < 11.059f;
+        // return rzChiSquared < 11.059f;
+        // return rzChiSquared < 10.202f;
+        // return rzChiSquared < 10.528f; //radii in t4 dnn
+        return rzChiSquared < 10.452f; //radii and t3 scores in t4 dnn
       } else if (layer4 == 16) {  // cat 4
-        return rzChiSquared < 13.641f;
+        // return rzChiSquared < 13.641f;
+        // return rzChiSquared < 10.502f;
+        // return rzChiSquared < 10.847f; //radii in t4 dnn
+        return rzChiSquared < 11.063f; //radii and t3 scores in t4 dnn
       }
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 15) {
       if (layer4 == 16) {  // cat 5
-        printf("region 5");
-        return true;
+        // return true;
+        // return rzChiSquared < 11.266f;
+        // return rzChiSquared < 11.528f; //radii in t4 dnn
+        return rzChiSquared < 10.734f; //radii and t3 scores in t4 dnn
       } 
     }
     return true;
@@ -540,7 +597,7 @@ namespace lst {
     unsigned int T4OuterT3Index = quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1];
 
     float pixelRadiusTemp, tripletRadius, rPhiChiSquaredTemp, rzChiSquaredTemp, rPhiChiSquaredInwardsTemp, centerXTemp,
-        centerYTemp;
+        centerYTemp, pixelRadiusErrorTemp;
     // return true;
     if (not runPixelTripletDefaultAlgo(acc,
                                        modulesInGPU,
@@ -557,7 +614,9 @@ namespace lst {
                                        rzChiSquaredTemp,
                                        rPhiChiSquaredTemp,
                                        rPhiChiSquaredInwardsTemp,
+                                       pixelRadiusErrorTemp,
                                        ptCut,
+                                       true,
                                        false))
       return false;
     // return true; //no other cuts for now
@@ -630,30 +689,6 @@ namespace lst {
                                       rzChiSquared))
         return false;
 
-    // if (pixelRadius < 5.0f * kR1GeVf) {  //only apply r-z chi2 cuts for <5GeV tracks
-    //   rzChiSquared = computePT4RZChiSquared(acc,
-    //                                         modulesInGPU,
-    //                                         lowerModuleIndices,
-    //                                         rtPix,
-    //                                         xPix,
-    //                                         yPix,
-    //                                         zPix,
-    //                                         rts,
-    //                                         zs,
-    //                                         pixelSegmentPt,
-    //                                         pixelSegmentPx,
-    //                                         pixelSegmentPy,
-    //                                         pixelSegmentPz,
-    //                                         pixelSegmentCharge);
-    //   if (not passPT4RZChiSquaredCuts(modulesInGPU,
-    //                                   lowerModuleIndex1,
-    //                                   lowerModuleIndex2,
-    //                                   lowerModuleIndex3,
-    //                                   lowerModuleIndex4,
-    //                                   rzChiSquared))
-    //     return false;
-    // }
-
     //outer T4
     float xs[Params_T4::kLayers] = {mdsInGPU.anchorX[firstMDIndex],
                                     mdsInGPU.anchorX[secondMDIndex],
@@ -676,28 +711,10 @@ namespace lst {
     rPhiChiSquared =
         computePT4RPhiChiSquared(acc, modulesInGPU, lowerModuleIndices, centerX, centerY, pixelRadius, xs, ys);
 
-    // if (pixelRadius < 5.0f * kR1GeVf) {
-    //   if (not passPT4RPhiChiSquaredCuts(modulesInGPU,
-    //                                     lowerModuleIndex1,
-    //                                     lowerModuleIndex2,
-    //                                     lowerModuleIndex3,
-    //                                     lowerModuleIndex4,
-    //                                     rPhiChiSquared))
-    //     return false;
-    // }
-
     rPhiChiSquaredInwards = computePT4RPhiChiSquaredInwards(T4CenterX, T4CenterY, quadrupletRadius, xPix, yPix);
 
-    // if (quadrupletsInGPU.regressionRadius[quadrupletIndex] < 5.0f * kR1GeVf) {
-    //   if (not passPT4RPhiChiSquaredInwardsCuts(modulesInGPU,
-    //                                            lowerModuleIndex1,
-    //                                            lowerModuleIndex2,
-    //                                            lowerModuleIndex3,
-    //                                            lowerModuleIndex4,
-    //                                            rPhiChiSquaredInwards))
-    //     return false;
-    // }
     float T4InnerRadius = quadrupletsInGPU.innerRadius[quadrupletIndex];
+    // return true; //no DNN
     bool inference = lst::pt4dnn::runInference(acc,
                                               T4InnerRadius,
                                               pixelSegmentPt,
@@ -852,8 +869,6 @@ namespace lst {
 
             if (quadrupletsInGPU.isDup[quadrupletIndex])
               continue;
-            // if (!(quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex]))
-            //   continue;
 
             float rzChiSquared, rPhiChiSquared, rPhiChiSquaredInwards, pixelRadius, pixelRadiusError, quadrupletRadius, centerX, centerY;
 
@@ -931,6 +946,7 @@ namespace lst {
                 tripletsInGPU.partOfPT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
                 segmentsInGPU.partOfPT4[i_pLS] = true;
                 quadrupletsInGPU.partOfPT4[quadrupletIndex] = true;
+                
               }  // tot occupancy
             }  // end success
           }  // end T4
