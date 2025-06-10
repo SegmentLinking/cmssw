@@ -16,7 +16,7 @@ jobs:
   linter:
     if: >
       github.event.issue.pull_request &&
-      (contains(github.event.comment.body, '/run checks') || contains(github.event.comment.body, '/run all')) &&
+      (contains(github.event.comment.body, '/run checks') || contains(github.event.comment.body, '/run all') || contains(github.event.comment.body, '/run gpu-all')) &&
       ( github.event.comment.user.login == 'ariostas' ||
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||

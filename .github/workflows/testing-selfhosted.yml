@@ -16,7 +16,7 @@ jobs:
   standalone-selfhosted:
     if: >
       github.event.issue.pull_request &&
-      (contains(github.event.comment.body, '/run standalone-gpu') || contains(github.event.comment.body, '/run all-gpu')) &&
+      (contains(github.event.comment.body, '/run gpu-standalone') || contains(github.event.comment.body, '/run gpu-all')) &&
       ( github.event.comment.user.login == 'ariostas' ||
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||
@@ -126,7 +126,7 @@ jobs:
   cmssw-selfhosted:
     if: >
       github.event.issue.pull_request &&
-      (contains(github.event.comment.body, '/run cmssw-gpu') || contains(github.event.comment.body, '/run all-gpu')) &&
+      (contains(github.event.comment.body, '/run gpu-cmssw') || contains(github.event.comment.body, '/run gpu-all')) &&
       ( github.event.comment.user.login == 'ariostas' ||
         github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'YonsiG' ||
