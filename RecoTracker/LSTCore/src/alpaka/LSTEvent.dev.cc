@@ -360,6 +360,9 @@ void LSTEvent::createTriplets() {
     alpaka::memset(queue_, partOfT5_view, 0u);
     auto partOfPT3_view = cms::alpakatools::make_device_view(queue_, triplets.partOfPT3(), triplets.metadata().size());
     alpaka::memset(queue_, partOfPT3_view, 0u);
+    auto connectedMax_view =
+        cms::alpakatools::make_device_view(queue_, triplets.connectedMax(), triplets.metadata().size());
+    alpaka::memset(queue_, connectedMax_view, 0u);
   }
 
   uint16_t nonZeroModules = 0;
@@ -707,6 +710,17 @@ void LSTEvent::createPixelTriplets() {
 }
 
 void LSTEvent::createQuintuplets() {
+  auto const countConn_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+
+  alpaka::exec<Acc3D>(queue_,
+                      countConn_workDiv,
+                      CountTripletConnections{},
+                      modules_.const_view<ModulesSoA>(),
+                      segmentsDC_->const_view<SegmentsSoA>(),
+                      tripletsDC_->view<TripletsSoA>(),
+                      tripletsDC_->const_view<TripletsOccupancySoA>(),
+                      rangesDC_->const_view());
+
   auto const createEligibleModulesListForQuintuplets_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
   alpaka::exec<Acc1D>(queue_,
@@ -715,8 +729,7 @@ void LSTEvent::createQuintuplets() {
                       modules_.const_view<ModulesSoA>(),
                       tripletsDC_->const_view<TripletsOccupancySoA>(),
                       rangesDC_->view(),
-                      tripletsDC_->view<TripletsSoA>(),
-                      ptCut_);
+                      tripletsDC_->view<TripletsSoA>());
 
   auto nEligibleT5Modules_buf = cms::alpakatools::make_host_buffer<uint16_t>(queue_);
   auto nTotalQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
