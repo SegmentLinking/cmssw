@@ -384,8 +384,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float rtUpper,
                                                      uint8_t clustSizeUpper,
                                                      const float ptCut) {
-    constexpr uint8_t CLUSTSIZE{254};
-    if (clustSizeLower > CLUSTSIZE or clustSizeUpper > CLUSTSIZE) {
+    constexpr uint8_t CLUSTSIZE_MAX_PIXEL{254};
+    constexpr uint8_t CLUSTSIZE_MAX_STRIP{254};
+    if ((modules.moduleLayerType()[lowerModuleIndex] == Pixel and clustSizeLower > CLUSTSIZE_MAX_PIXEL) or
+        (modules.moduleLayerType()[upperModuleIndex] == Pixel and clustSizeUpper > CLUSTSIZE_MAX_PIXEL) or
+        (modules.moduleLayerType()[lowerModuleIndex] == Strip and clustSizeLower > CLUSTSIZE_MAX_STRIP) or
+        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > CLUSTSIZE_MAX_STRIP)
+        ) {
       return false;
     }
 
@@ -524,8 +529,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3093
     // For PS module in case when it is tilted a different dz (after the strip hit shift) is calculated later.
 
-    constexpr uint8_t CLUSTSIZE{254};
-    if (clustSizeLower > CLUSTSIZE or clustSizeUpper > CLUSTSIZE) {
+    constexpr uint8_t CLUSTSIZE_MAX_PIXEL{254};
+    constexpr uint8_t CLUSTSIZE_MAX_STRIP{254};
+    if ((modules.moduleLayerType()[lowerModuleIndex] == lst::Pixel and clustSizeLower > CLUSTSIZE_MAX_PIXEL) or
+        (modules.moduleLayerType()[upperModuleIndex] == lst::Pixel and clustSizeUpper > CLUSTSIZE_MAX_PIXEL) or
+        (modules.moduleLayerType()[lowerModuleIndex] == lst::Strip and clustSizeLower > CLUSTSIZE_MAX_STRIP) or
+        (modules.moduleLayerType()[upperModuleIndex] == lst::Strip and clustSizeUpper > CLUSTSIZE_MAX_STRIP)
+        ) {
       return false;
     }
 
