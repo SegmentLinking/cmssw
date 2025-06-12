@@ -1,0 +1,54 @@
+name: Nightly Testing
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# We run the usual tests using one old merged PR. We picked 175
+env:
+    TEST_PR: 175
+
+jobs:
+  standalone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ env.TEST_PR }}/head
+          sparse-checkout: |
+            RecoTracker/LST
+            RecoTracker/LSTCore
+            Configuration/ProcessModifiers
+            RecoTracker/ConversionSeedGenerators
+            RecoTracker/FinalTrackSelectors
+            RecoTracker/IterativeTracking
+            HeterogeneousCore/AlpakaInterface
+            HeterogeneousCore/AlpakaMath
+            DataFormats/Portable
+      - name: Build and run PR
+        timeout-minutes: 60
+        id: build-and-run
+        uses: SegmentLinking/TrackLooper-actions/standalone@cmssw
+        with:
+          pr-number: ${{ env.TEST_PR }}
+          low-pt: 'false'
+
+  cmssw:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build and run PR
+        timeout-minutes: 200
+        id: build-and-run
+        uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
+        with:
+          pr-number: ${{ env.TEST_PR }}
+          low-pt: 'false'
