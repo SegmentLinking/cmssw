@@ -45,6 +45,10 @@ jobs:
   cmssw:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ env.TEST_PR }}/head
       - name: Build and run PR
         timeout-minutes: 200
         id: build-and-run
