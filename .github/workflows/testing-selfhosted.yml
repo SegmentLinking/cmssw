@@ -33,6 +33,8 @@ jobs:
       )
     runs-on: self-hosted
     steps:
+      - name: Clean the workspace
+        run: rm -rf ./*
       - name: Check out PR
         uses: actions/checkout@v4
         with:
@@ -144,6 +146,8 @@ jobs:
       )
     runs-on: self-hosted
     steps:
+      - name: Clean the workspace
+        run: rm -rf ./*
       - name: Checkout PR
         uses: actions/checkout@v4
         with:
