@@ -456,7 +456,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
       constexpr int maxMiddleMD = 572;
-      constexpr int maxMatchedPairs = 5000;
+      constexpr int maxMatchedPairs = 500;
       auto& middleMDs = alpaka::declareSharedVar<int[maxMiddleMD], __COUNTER__>(acc);
       auto& InnerSegmentIndices = alpaka::declareSharedVar<int[maxMiddleMD], __COUNTER__>(acc);
       auto& MidModuleIndices = alpaka::declareSharedVar<uint16_t[maxMiddleMD], __COUNTER__>(acc);
@@ -466,22 +466,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
       const auto blockDim = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc);
-
+/*
       const int threadIdX = threadIdx[0];
       const int threadIdY = threadIdx[1];
       const int blockSizeX = blockDim[0];
       const int blockSizeY = blockDim[1];
       const int blockSizeZ = blockDim[2];
+*/
+      const int threadIdX = threadIdx[2];
+      const int threadIdY = threadIdx[1];
+      const int blockSizeX = blockDim[2];
+      const int blockSizeY = blockDim[1];
+      const int blockSizeZ = blockDim[0]; 
       const int blockSize = blockSizeX * blockSizeY * blockSizeZ;
       const int flatThreadIdxXY = threadIdY * blockSizeX + threadIdX;
       const int flatThreadExtent = blockSize; // total threads per block  
 
       for (uint16_t innerLowerModuleArrayIdx : cms::alpakatools::uniform_elements_z(acc, nonZeroModules)) {
 
-        if (flatThreadIdxXY == 0) {
+        //if (modules.subdets()[innerLowerModuleArrayIdx] == Barrel) printf("Barrel Module: 1");
+     
+        //if (flatThreadIdxXY == 0) {
+        if (cms::alpakatools::once_per_block(acc)){
           middleMDCounts = 0;
           matchCount = 0;
         }
+        alpaka::syncBlockThreads(acc);
 
         uint16_t innerInnerLowerModuleIndex = index_gpu[innerLowerModuleArrayIdx];
         if (innerInnerLowerModuleIndex >= modules.nLowerModules())
@@ -489,14 +499,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         uint16_t nConnectedModules = modules.nConnectedModules()[innerInnerLowerModuleIndex];
         if (nConnectedModules == 0)
-            continue;
+          continue;
 
         unsigned int nInnerSegments = segmentsOccupancy.nSegments()[innerInnerLowerModuleIndex];
-
+/*
         if (nInnerSegments == 0)
-            continue;
-
+          continue;
+*/
         alpaka::syncBlockThreads(acc);
+
+        //if (modules.subdets()[innerLowerModuleArrayIdx] == Barrel) printf("Barrel Module: 2");
 
         // Step 1: Collect middle MDs
         const int xyThreadIdx = threadIdY * blockSizeX + threadIdX;
@@ -516,11 +528,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         }
 
         alpaka::syncBlockThreads(acc);
+        //printf("Middle MDs:%d \n", middleMDCounts);
         if (!(middleMDCounts<maxMiddleMD) || middleMDCounts==0)
           continue;
+        
+        alpaka::syncBlockThreads(acc);
+        //if (modules.subdets()[innerLowerModuleArrayIdx] == Barrel) printf("Barrel Module: 3");
 
-        //printf("Matched middle MD:%d \n", middleMDCounts);
-      
         // Step 2: Collect middleMD->outerSegment pairs
         for (int MidModule = threadIdY; MidModule < middleMDCounts; MidModule += blockSizeY) {
           uint16_t MidModuleIdx = MidModuleIndices[MidModule];
@@ -542,22 +556,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             }
           }
         }
-
+        
         alpaka::syncBlockThreads(acc);
-        if (!(matchCount<maxMatchedPairs)){
-          printf("matched Pairs: %d\n", matchCount);
+        if (!(matchCount<maxMatchedPairs) || matchCount==0){
           continue;
         }
+        alpaka::syncBlockThreads(acc);
         //printf("Matched Segment pairs:%d \n", matchCount);
 
         // Step 3: Parallel processing of segment pairs
         for (int i = flatThreadIdxXY; i < matchCount; i += flatThreadExtent) {
+          
           int innerSegmentIndex = innerOuterSgPairs[i][0];
           int outerSegmentIndex = innerOuterSgPairs[i][1];
-          //printf("Segment Index:inner %d, outer: %d \n", innerSegmentIndex, outerSegmentIndex);
-
+          //printf("Segment pair :inner %d, outer: %d \n", innerSegmentIndex, outerSegmentIndex);
+          //printf("Segment pair :inner %d, outer: %d \n", innerSegmentIndex, outerSegmentIndex);
+          
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
           uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
+//          if (modules.subdets()[innerLowerModuleArrayIdx] == Barrel) printf("MidModule: %d, OuterModule:%d\n", middleLowerModuleIndex, outerOuterLowerModuleIndex);
 
           float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
           bool success = runTripletConstraintsAndAlgo(acc,
