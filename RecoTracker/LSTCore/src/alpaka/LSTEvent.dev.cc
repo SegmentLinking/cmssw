@@ -207,6 +207,10 @@ void LSTEvent::createMiniDoublets() {
     alpaka::memset(queue_, totOccupancyMDs_view, 0u);
   }
 
+  auto mdView = miniDoubletsDC_->view<MiniDoubletsSoA>();
+  auto connView = cms::alpakatools::make_device_view(queue_, mdView.connectedMax(), mdView.metadata().size());
+  alpaka::memset(queue_, connView, 0u);
+
   unsigned int mdSize = pixelSize_ * 2;
   auto src_view_mdSize = cms::alpakatools::make_host_view(mdSize);
 
@@ -253,6 +257,17 @@ void LSTEvent::createMiniDoublets() {
 
 void LSTEvent::createSegmentsWithModuleMap() {
   if (!segmentsDC_) {
+    auto const countMDConn_wd = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+
+    alpaka::exec<Acc3D>(queue_,
+                        countMDConn_wd,
+                        CountMiniDoubletConnections{},
+                        modules_.const_view<ModulesSoA>(),
+                        miniDoubletsDC_->view<MiniDoubletsSoA>(),
+                        miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>(),
+                        rangesDC_->const_view(),
+                        ptCut_);
+
     auto const createSegmentArrayRanges_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
     alpaka::exec<Acc1D>(queue_,
@@ -261,8 +276,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
                         modules_.const_view<ModulesSoA>(),
                         rangesDC_->view(),
                         miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
-                        miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>(),
-                        ptCut_);
+                        miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>());
 
     auto rangesOccupancy = rangesDC_->view();
     auto nTotalSegments_view_h = cms::alpakatools::make_host_view(nTotalSegments_);
@@ -298,7 +312,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
     alpaka::wait(queue_);
   }
 
-  auto const createSegments_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 1, 64});
+  auto const createSegments_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
 
   alpaka::exec<Acc3D>(queue_,
                       createSegments_workDiv,
