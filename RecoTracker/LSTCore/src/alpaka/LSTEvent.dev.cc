@@ -276,12 +276,15 @@ void LSTEvent::createSegmentsWithModuleMap() {
     segmentsDC_.emplace(segments_sizes, queue_);
 
     auto segmentsOccupancy = segmentsDC_->view<SegmentsOccupancySoA>();
+    auto segments = segmentsDC_->view<SegmentsSoA>();
     auto nSegments_view =
         cms::alpakatools::make_device_view(queue_, segmentsOccupancy.nSegments(), segmentsOccupancy.metadata().size());
     auto totOccupancySegments_view = cms::alpakatools::make_device_view(
         queue_, segmentsOccupancy.totOccupancySegments(), segmentsOccupancy.metadata().size());
     alpaka::memset(queue_, nSegments_view, 0u);
     alpaka::memset(queue_, totOccupancySegments_view, 0u);
+    auto conn_view = cms::alpakatools::make_device_view(queue_, segments.connectedMax(), segments.metadata().size());
+    alpaka::memset(queue_, conn_view, 0u);
 
     auto src_view_size = cms::alpakatools::make_host_view(pixelSize_);
 
@@ -324,6 +327,16 @@ void LSTEvent::createSegmentsWithModuleMap() {
 
 void LSTEvent::createTriplets() {
   if (!tripletsDC_) {
+    auto const countSegConn_wd = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+
+    alpaka::exec<Acc3D>(queue_,
+                        countSegConn_wd,
+                        CountSegmentConnections{},
+                        modules_.const_view<ModulesSoA>(),
+                        segmentsDC_->view<SegmentsSoA>(),
+                        segmentsDC_->const_view<SegmentsOccupancySoA>(),
+                        rangesDC_->const_view());
+
     auto const createTripletArrayRanges_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
     alpaka::exec<Acc1D>(queue_,
@@ -332,8 +345,7 @@ void LSTEvent::createTriplets() {
                         modules_.const_view<ModulesSoA>(),
                         rangesDC_->view(),
                         segmentsDC_->const_view<SegmentsSoA>(),
-                        segmentsDC_->const_view<SegmentsOccupancySoA>(),
-                        ptCut_);
+                        segmentsDC_->const_view<SegmentsOccupancySoA>());
 
     // TODO: Why are we pulling this back down only to put it back on the device in a new struct?
     auto rangesOccupancy = rangesDC_->view();
@@ -360,6 +372,9 @@ void LSTEvent::createTriplets() {
     alpaka::memset(queue_, partOfT5_view, 0u);
     auto partOfPT3_view = cms::alpakatools::make_device_view(queue_, triplets.partOfPT3(), triplets.metadata().size());
     alpaka::memset(queue_, partOfPT3_view, 0u);
+    auto connectedMax_view =
+        cms::alpakatools::make_device_view(queue_, triplets.connectedMax(), triplets.metadata().size());
+    alpaka::memset(queue_, connectedMax_view, 0u);
   }
 
   uint16_t nonZeroModules = 0;
@@ -707,6 +722,17 @@ void LSTEvent::createPixelTriplets() {
 }
 
 void LSTEvent::createQuintuplets() {
+  auto const countConn_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+
+  alpaka::exec<Acc3D>(queue_,
+                      countConn_workDiv,
+                      CountTripletConnections{},
+                      modules_.const_view<ModulesSoA>(),
+                      segmentsDC_->const_view<SegmentsSoA>(),
+                      tripletsDC_->view<TripletsSoA>(),
+                      tripletsDC_->const_view<TripletsOccupancySoA>(),
+                      rangesDC_->const_view());
+
   auto const createEligibleModulesListForQuintuplets_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
   alpaka::exec<Acc1D>(queue_,
@@ -715,8 +741,7 @@ void LSTEvent::createQuintuplets() {
                       modules_.const_view<ModulesSoA>(),
                       tripletsDC_->const_view<TripletsOccupancySoA>(),
                       rangesDC_->view(),
-                      tripletsDC_->view<TripletsSoA>(),
-                      ptCut_);
+                      tripletsDC_->view<TripletsSoA>());
 
   auto nEligibleT5Modules_buf = cms::alpakatools::make_host_buffer<uint16_t>(queue_);
   auto nTotalQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
