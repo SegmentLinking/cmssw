@@ -418,7 +418,7 @@ def set_label(eff, output_name, raw_number):
     elif "_deltaPhi" in output_name: # Added by Kasia
         title = "#phi diffs"
     elif "_deltaR" in output_name: # Added by Kasia
-        title = "r_jet"
+        title = "#Delta R"
     elif "_jet_eta" in output_name: # Added by Kasia
         title = "jet #eta"
     elif "_jet_phi" in output_name: # Added by Kasia

@@ -33,8 +33,6 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
-extern float JET_BRANCHES;
-
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   class LSTEvent {
