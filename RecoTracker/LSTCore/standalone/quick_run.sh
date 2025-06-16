@@ -9,7 +9,7 @@ rm -r LST*.root
 lst_make_tracklooper -mcC; #-w;
 
 # Takes new_tree.root as input and produces LSTNtuple.root, which includes only the relevant branches + reconstructed tracks
-lst_cpu -J -s 32 -i QCD1800-2400PU0 -l -o LSTNtuple.root;
+lst_cpu -J -s 32 -i "new_tree.root" -l -o LSTNtuple.root;
 # lst_cpu -s 32 -i PU200 -l -o LSTNtuple.root;
 
 # Creates LSTNumDen.root, a collection of all the numerator/denominator histograms

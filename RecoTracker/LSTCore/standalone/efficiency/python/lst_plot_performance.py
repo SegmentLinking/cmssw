@@ -9,7 +9,7 @@ from math import sqrt
 
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate"]
-variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "etadiffs", "phidiffs", "rjet", "jet_eta", "jet_phi", "jet_pt"] # Last six added by Kasia
+variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"] # Last six added by Kasia
 objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
@@ -413,11 +413,11 @@ def get_chargestr(charge):
 def set_label(eff, output_name, raw_number):
     if "phi" in output_name:
         title = "#phi"
-    elif "_etadiffs" in output_name: # Added by Kasia
+    elif "_deltaEta" in output_name: # Added by Kasia
         title = "#eta diffs"
-    elif "_phidiffs" in output_name: # Added by Kasia
+    elif "_deltaPhi" in output_name: # Added by Kasia
         title = "#phi diffs"
-    elif "_rjet" in output_name: # Added by Kasia
+    elif "_deltaR" in output_name: # Added by Kasia
         title = "r_jet"
     elif "_jet_eta" in output_name: # Added by Kasia
         title = "jet #eta"
@@ -543,7 +543,7 @@ def draw_plot(effs, nums, dens, params):
     if "_pt" in output_name:
         c1.SetLogx()
     
-    # if "_rjet" in output_name: # Added by Kasia
+    # if "_deltaR" in output_name: # Added by Kasia
     #     c1.SetLogx()
 
     # Set title
@@ -660,7 +660,7 @@ def plot_standard_performance_plots(args):
     metrics = metric_choices
     yzooms = [False, True]
     variables = {
-            "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "etadiffs", "phidiffs", "rjet", "jet_eta", "jet_phi", "jet_pt"], # Last six added by Kasia,
+            "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"], # Last six added by Kasia,
             "fakerate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             "duplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             }
@@ -678,9 +678,9 @@ def plot_standard_performance_plots(args):
             "dxy": [False, True],
             "vxy": [False, True],
             "dz": [False, True],
-            "etadiffs": [False, True], # Added by Kasia
-            "phidiffs": [False, True],  # Added by Kasia
-            "rjet": [False, True],  # Added by Kasia
+            "deltaEta": [False, True], # Added by Kasia
+            "deltaPhi": [False, True],  # Added by Kasia
+            "deltaR": [False, True],  # Added by Kasia
             "jet_eta": [False, True], # Added by Kasia
             "jet_phi": [False, True],  # Added by Kasia
             "jet_pt": [False, True]  # Added by Kasia

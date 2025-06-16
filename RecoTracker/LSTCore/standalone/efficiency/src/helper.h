@@ -5,8 +5,6 @@
 #include "cxxopts.h"
 #include "rooutil.h"
 
-extern float JET_BRANCHES;
-
 class AnalysisConfig {
 public:
   // TString that holds the input file list (comma separated)
@@ -63,6 +61,9 @@ public:
 
   // do lower level
   bool do_lower_level;
+
+  // Boolean to enable jet branches
+  bool jet_branches;
 
   AnalysisConfig();
 };

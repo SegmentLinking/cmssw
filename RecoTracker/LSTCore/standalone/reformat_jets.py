@@ -12,15 +12,13 @@ from ROOT import TFile
 from myjets import getLists, createJets, matchArr
 import numpy as np
 
-# Possible pT cut
-# pTCut = 100
 
 # Load existing tree
 file =  TFile("/data2/segmentlinking/CMSSW_12_2_0_pre2/trackingNtuple_ttbar_PU200.root")
 old_tree = file["trackingNtuple"]["tree"]
 
 # Create a new ROOT file to store the new TTree
-new_file = ROOT.TFile("new_tree_hard_sc.root", "RECREATE")
+new_file = ROOT.TFile("new_tree.root", "RECREATE")
 
 # Create a new subdirectory in the new file
 new_directory = new_file.mkdir("trackingNtuple")
@@ -35,18 +33,18 @@ new_tree = old_tree.CloneTree(0)
 new_tree.SetBranchStatus("ph2_bbxi", False) 
 
 # Create a variable to hold the new leaves' data (a list of floats)
-new_leaf_etadiffs = ROOT.std.vector('float')()
-new_leaf_phidiffs = ROOT.std.vector('float')()
-new_leaf_rjet = ROOT.std.vector('float')()
+new_leaf_deltaEta = ROOT.std.vector('float')()
+new_leaf_deltaPhi = ROOT.std.vector('float')()
+new_leaf_deltaR = ROOT.std.vector('float')()
 new_leaf_jet_eta = ROOT.std.vector('float')()
 new_leaf_jet_phi = ROOT.std.vector('float')()
 new_leaf_jet_pt = ROOT.std.vector('float')()
 
 
 # Create a new branch in the tree
-new_tree.Branch("sim_etadiffs", new_leaf_etadiffs)
-new_tree.Branch("sim_phidiffs", new_leaf_phidiffs)
-new_tree.Branch("sim_rjet", new_leaf_rjet)
+new_tree.Branch("sim_deltaEta", new_leaf_deltaEta)
+new_tree.Branch("sim_deltaPhi", new_leaf_deltaPhi)
+new_tree.Branch("sim_deltaR", new_leaf_deltaR)
 new_tree.Branch("sim_jet_eta", new_leaf_jet_eta)
 new_tree.Branch("sim_jet_phi", new_leaf_jet_phi)
 new_tree.Branch("sim_jet_pt", new_leaf_jet_pt)
@@ -56,9 +54,9 @@ for i in range(old_tree.GetEntries()):
     old_tree.GetEntry(i)
 
     # Clear the vector to start fresh for this entry
-    new_leaf_etadiffs.clear()
-    new_leaf_phidiffs.clear()
-    new_leaf_rjet.clear()
+    new_leaf_deltaEta.clear()
+    new_leaf_deltaPhi.clear()
+    new_leaf_deltaR.clear()
     new_leaf_jet_eta.clear()
     new_leaf_jet_phi.clear()
     new_leaf_jet_pt.clear()
@@ -70,7 +68,7 @@ for i in range(old_tree.GetEntries()):
     jetIndex = np.array([])
     eta_diffs = np.array([])
     phi_diffs = np.array([])
-    rjets = np.array([])
+    deltaRs = np.array([])
     jet_eta = np.array([])
     jet_phi = np.array([])
     jet_pt = np.array([])
@@ -98,7 +96,7 @@ for i in range(old_tree.GetEntries()):
         phi_diffs = np.append(phi_diffs, phival)
 
         rval = np.sqrt(etaval**2 + np.arccos(np.cos(phival))**2)
-        rjets = np.append(rjets, rval)
+        deltaRs = np.append(deltaRs, rval)
 
         # Save values of closest jet
         jet_eta_val = np.ones(c_len)*jet.eta()
@@ -113,14 +111,14 @@ for i in range(old_tree.GetEntries()):
 
     re_eta_diffs = np.ones(length)*(-999)
     re_phi_diffs = np.ones(length)*(-999)
-    re_rjets = np.ones(length)*(-999)
+    re_deltaRs = np.ones(length)*(-999)
     re_jet_eta = np.ones(length)*(-999)
     re_jet_phi = np.ones(length)*(-999)
     re_jet_pt = np.ones(length)*(-999)
 
     # re_eta_diffs = np.zeros(length)
     # re_phi_diffs = np.zeros(length)
-    # re_rjets = np.zeros(length)
+    # re_deltaRs = np.zeros(length)
     # re_jet_eta = np.zeros(length)
     # re_jet_phi = np.zeros(length)
     # re_jet_pt = np.zeros(length)
@@ -128,18 +126,18 @@ for i in range(old_tree.GetEntries()):
     for i in range(len(jetIndex)):
         re_eta_diffs[jetIndex[i]] = eta_diffs[i]
         re_phi_diffs[jetIndex[i]] = phi_diffs[i]
-        re_rjets[jetIndex[i]] = rjets[i]
+        re_deltaRs[jetIndex[i]] = deltaRs[i]
         re_jet_eta[jetIndex[i]] = jet_eta[i]
         re_jet_phi[jetIndex[i]] = jet_phi[i]
         re_jet_pt[jetIndex[i]] = jet_pt[i]
 
     # Add the list elements to the vector
     for value in re_eta_diffs:
-        new_leaf_etadiffs.push_back(value)
+        new_leaf_deltaEta.push_back(value)
     for value in re_phi_diffs:
-        new_leaf_phidiffs.push_back(value)
-    for value in re_rjets:
-        new_leaf_rjet.push_back(value)
+        new_leaf_deltaPhi.push_back(value)
+    for value in re_deltaRs:
+        new_leaf_deltaR.push_back(value)
     for value in re_jet_eta:
         new_leaf_jet_eta.push_back(value)
     for value in re_jet_phi:
@@ -160,7 +158,7 @@ new_tree.Write()
 # Debugging: print new_tree events
 # new_tree.GetEntry(0) # only look at first event
 # for i in range(3): # only look at first 3 tracks in event
-#     print(f"Track {i}: sim_phi = {new_tree.sim_phi[i]}\t sim_eta = {new_tree.sim_eta[i]} \t sim_pt = {new_tree.sim_pt[i]} \t sim_rjet = {new_tree.sim_rjet[i]}") 
+#     print(f"Track {i}: sim_phi = {new_tree.sim_phi[i]}\t sim_eta = {new_tree.sim_eta[i]} \t sim_pt = {new_tree.sim_pt[i]} \t sim_deltaR = {new_tree.sim_deltaR[i]}") 
 
 new_file.Close()
 file.Close()

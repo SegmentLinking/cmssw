@@ -75,7 +75,6 @@ int main(int argc, char **argv) {
       );
 
   auto result = options.parse(argc, argv);
-  float JET_BRANCHES = result.count("jet_branches"); // Added by Kasia-- TBC
 
   // NOTE: When an option was provided (e.g. -i or --input), then the result.count("<option name>") is more than 0
   // Therefore, the option can be parsed easily by asking the condition if (result.count("<option name>");
@@ -128,7 +127,7 @@ int main(int argc, char **argv) {
     ana.input_file_list_tstring =
         TString::Format("%s/trackingNtuple_10mu_10k_pt_0p5_50_50cm_cube.root", TrackingNtupleDir.Data());
   else {
-    ana.input_file_list_tstring = "new_tree_QCD.root"; // ana.input_raw_string; // Added by Kasia
+    ana.input_file_list_tstring = ana.input_raw_string;
   }
 
   //_______________________________________________________________________________
@@ -270,6 +269,10 @@ int main(int argc, char **argv) {
   //_______________________________________________________________________________
   // --no_pls_dupclean
   ana.no_pls_dupclean = result["no_pls_dupclean"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --jet_branches
+  ana.jet_branches = result["jet_branches"].as<bool>();
 
   // Printing out the option settings overview
   std::cout << "=========================================================" << std::endl;

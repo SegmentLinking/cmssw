@@ -36,8 +36,6 @@ void parseArguments(int argc, char** argv) {
       );
 
   auto result = options.parse(argc, argv);
-  // float JET_BRANCHES = result.count("jet_branches"); // Added by Kasia-- TBC
-  float JET_BRANCHES = 5;
 
   // NOTE: When an option was provided (e.g. -i or --input), then the result.count("<option name>") is more than 0
   // Therefore, the option can be parsed easily by asking the condition if (result.count("<option name>");
@@ -133,6 +131,10 @@ void parseArguments(int argc, char** argv) {
   } else {
     ana.job_index = -1;
   }
+
+  //_______________________________________________________________________________
+  // --jet_branches
+  ana.jet_branches = result["jet_branches"].as<bool>();
 
   // Sanity check for split jobs (if one is set the other must be set too)
   if (result.count("job_index") or result.count("nsplit_jobs")) {
