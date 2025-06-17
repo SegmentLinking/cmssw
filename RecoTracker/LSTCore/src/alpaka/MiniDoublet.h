@@ -199,7 +199,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
-                                                     float* shiftedCoords,
+                                                     float *  shiftedCoords,
                                                      float xLower,
                                                      float yLower,
                                                      float zLower,
@@ -340,7 +340,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Computing new Z position
     absdzprime = alpaka::math::abs(
         acc,
-        moduleSeparation / alpaka::math::sin(acc, angleA + angleB) *
+        moduleSeparation / alpaka::math::sin(acc, angleA + angleB)  * 
             alpaka::math::cos(
                 acc,
                 angleA));  // module separation sign is for shifting in radial direction for z-axis direction take care of the sign later
@@ -820,18 +820,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {49*50, 42*50, 37*50, 41*50},  // category 0
-          {100*1, 100*1, 0, 0},  // category 1
-          {0, 16*1, 19*1, 0},    // category 2
-          {0, 14*1, 20*1, 25*1}    // category 3
+          {49 *70, 42  *70, 37  *70, 41  *70},  // category 0
+          {100 *70, 100 *70, 0, 0},  // category 1
+          {0, 16 *70, 19 *70, 0},    // category 2
+          {0, 14 *70, 20 *70, 25 *70}    // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
       constexpr int p06_occupancy_matrix[4][4] = {
-          {60*50, 57*50, 54*50, 48*50},  // category 0
-          {259*1, 195*1, 0, 0},  // category 1
-          {0, 23*1, 28*1, 0},    // category 2
-          {0, 25*1, 25*1, 33*1}    // category 3
+          {60  *70, 57  *70, 54  *70, 48  *70},  // category 0
+          {259 *70, 195 *70, 0, 0},  // category 1
+          {0, 23 *70, 28 *70, 0},    // category 2
+          {0, 25 *70, 25 *70, 33 *70}    // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut

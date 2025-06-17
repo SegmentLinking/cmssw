@@ -560,11 +560,13 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_phi");
+  // ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_deltaR"); // Added by Kasia
 
   // Numerator tracks' quantities
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_phi");
+  // ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_deltaR"); // Added by Kasia
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_dr_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -582,6 +584,9 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.histograms.addVecHistogram(category_name + "_dr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_phi");
   });
+  // ana.histograms.addVecHistogram(category_name + "_dr_denom_deltaR", 50 , 0  , 0.1  , [&, category_name]() {
+  //   return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_deltaR");
+  // });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_pt", getPtBounds(0), [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
@@ -597,6 +602,9 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.histograms.addVecHistogram(category_name + "_dr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_phi");
   });
+  // ana.histograms.addVecHistogram(category_name + "_dr_numer_deltaR", 50 , 0  , 0.1  , [&, category_name]() {
+  //   return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_deltaR");
+  // });
 }
 
 //__________________________________________________________________________________________________________________________________________________________________________

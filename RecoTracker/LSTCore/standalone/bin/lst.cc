@@ -71,8 +71,7 @@ int main(int argc, char **argv) {
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
       cxxopts::value<int>())("3,tc_pls_triplets", "Allow triplet pLSs in TC collection")(
       "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")("h,help", "Print help")(
-        "J,jet_branches", "Accounts for specific jet branches in input root file for testing"
-      );
+      "J,jet_branches", "Accounts for specific jet branches in input root file for testing");
 
   auto result = options.parse(argc, argv);
 
@@ -93,12 +92,6 @@ int main(int argc, char **argv) {
 
   // A default value one
   TString TrackingNtupleDir = gSystem->Getenv("TRACKINGNTUPLEDIR");
-
-  // Added by Kasia
-  // std::cout << "\n\n\n\n" << std::endl;
-  // std::cout << TrackingNtupleDir.Data() << std::endl;
-  // std::cout << "\n\n\n\n" << std::endl;
-
 
   if (ana.input_raw_string.EqualTo("muonGun"))
     ana.input_file_list_tstring = TString::Format("%s/trackingNtuple_10mu_pt_0p5_2.root", TrackingNtupleDir.Data());
