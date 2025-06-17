@@ -456,7 +456,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
-      constexpr int maxMatchedPairs = 2000;
+      constexpr int maxMatchedPairs = 5000;
       auto& innerOuterSgPairs = alpaka::declareSharedVar<int[maxMatchedPairs][2], __COUNTER__>(acc);
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc);
 
