@@ -409,7 +409,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 1e-3f)
+            if (dR2 < 5e-3f)
               pixelSegments.isDup()[pixelArrayIndex] = true;
           }
           if (type == 11)  // pT4
@@ -813,7 +813,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int trackCandidateIdx =
               alpaka::atomicAdd(acc, &cands.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
           if (trackCandidateIdx - cands.nTrackCandidatespT5() - cands.nTrackCandidatespT3() - *trackCandidatesInGPU.nTrackCandidatespT4 >=
-              n_max_nonpixel_track_candidates)  // pT5 and pT3 TCs have been added, but not pLS TCs
+              n_max_nonpixel_track_candidates)  // pT5, pT4, and pT3 TCs have been added, but not pLS TCs
           {
 #ifdef WARNINGS
             printf("Track Candidate excess alert! Type = T5");
@@ -856,8 +856,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         unsigned int trackCandidateIdx =
             alpaka::atomicAdd(acc, &cands.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
-        if (trackCandidateIdx - cands.nTrackCandidatesT5() >=
-            n_max_pixel_track_candidates)  // T5 TCs have already been added
+        if (trackCandidateIdx - cands.nTrackCandidatesT5() - *trackCandidatesInGPU.nTrackCandidatesT4 >=
+            n_max_pixel_track_candidates)  // T5, T4 TCs have already been added
         {
 #ifdef WARNINGS
           printf("Track Candidate excess alert! Type = pLS");
@@ -943,21 +943,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           continue;
 
         unsigned int nQuads = quadrupletsInGPU.nQuadruplets[idx];
-        // printf("%d\n", nQuads);
+
         for (unsigned int jdx = globalThreadIdx[2]; jdx < nQuads; jdx += gridThreadExtent[2]) {
           unsigned int quadrupletIndex = rangesInGPU.quadrupletModuleIndices[idx] + jdx;
           if (!(quadrupletsInGPU.TightCutFlag[quadrupletIndex]))
             continue;
-          if (!(quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex]))
+          if (!(quadrupletsInGPU.tightDNNFlag[quadrupletIndex]))
             continue;
           if (quadrupletsInGPU.isDup[quadrupletIndex] or quadrupletsInGPU.partOfPT4[quadrupletIndex])
             continue;
 
           unsigned int trackCandidateIdx =
               alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
-          if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatespT4 -
+          if (trackCandidateIdx - *trackCandidatesInGPU.nTrackCandidatespT5 - *trackCandidatesInGPU.nTrackCandidatespT4 -
                   *trackCandidatesInGPU.nTrackCandidatespT3 -  *trackCandidatesInGPU.nTrackCandidatesT5 >=
-              n_max_nonpixel_track_candidates)  // pT4, pT3, T5 TCs have all been added
+              n_max_nonpixel_track_candidates)  //pT5, pT4, pT3, T5 TCs have all been added
           {
 #ifdef WARNINGS
             printf("Track Candidate excess alert! Type = T4");
@@ -1000,13 +1000,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       auto const gridThreadExtent = alpaka::getWorkDiv<alpaka::Grid, alpaka::Threads>(acc);
 
       int nPixelQuadruplets = *pixelQuadrupletsInGPU.nPixelQuadruplets;
-      // printf("n pt4 %d\n", nPixelQuadruplets);
+
       unsigned int pLS_offset = rangesInGPU.segmentModuleIndices[nLowerModules];
       for (int pixelQuadrupletIndex = globalThreadIdx[2]; pixelQuadrupletIndex < nPixelQuadruplets;
            pixelQuadrupletIndex += gridThreadExtent[2]) {
         if (pixelQuadrupletsInGPU.isDup[pixelQuadrupletIndex])
           continue;
-        // printf("start add pt4 as tc\n");
+        
         unsigned int trackCandidateIdx =
             alpaka::atomicOp<alpaka::AtomicAdd>(acc, trackCandidatesInGPU.nTrackCandidates, 1u);
         if (trackCandidateIdx >= n_max_pixel_track_candidates)  

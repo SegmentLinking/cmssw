@@ -1660,10 +1660,7 @@ void setT3DNNBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<bool>("t3_partOfPT3", triplets->partOfPT3[tripletIndex]);
       ana.tx->pushbackToBranch<int>("t3_layer_binary", layer_binary);
       ana.tx->pushbackToBranch<std::vector<int>>("t3_matched_simIdx", simidx);
-      ana.tx->pushbackToBranch<float>("t3_pMatched", percent_matched);
-      ana.tx->createBranch<std::vector<float>>("t3_fakeScore"); 
-      ana.tx->createBranch<std::vector<float>>("t3_promptScore");
-      ana.tx->createBranch<std::vector<float>>("t3_displacedScore");
+      ana.tx->pushbackToBranch<float>("t3_pMatched", percent_matched); 
 
       // Add vertex information for matched sim tracks
       if (simidx.size() == 0) {

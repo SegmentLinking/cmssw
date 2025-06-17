@@ -509,7 +509,7 @@ namespace lst::t4dnn {
                                                    float& displacedScore,
                                                    float& fakeScore,
                                                    bool& TightPromptFlag,
-                                                   bool& TightDisplacedFlag,
+                                                   bool& tightDNNFlag,
                                                    float* errors,
                                                    const float regressionRadius,
                                                    const float nonAnchorRegressionRadius,
@@ -622,208 +622,141 @@ namespace lst::t4dnn {
     softmax_activation<koutputFeatures>(acc, x_3);
 
     // Get the bin index based on abs(eta) of first hit and t4_pt
-    // float t4_pt = innerRadius * lst::k2Rinv1GeVf * 2;
     float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf; //t4 pt is average
 
     uint8_t pt_index = (t4_pt > 5);
     uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
-    // uint8_t bin_index = (eta1 > 1.0f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.1f);
 
-    // Compare x_5 to the cut value for the relevant bin
-    // return x_5 > kWp[pt_index][bin_index];
     promptScore = x_3[1];
     displacedScore = x_3[2];
     fakeScore = x_3[0];
 
-    // if (x_3[1] > kWp_prompt_tight[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index])
-    //   TightPromptFlag = true;
-    // if (x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced_tight[pt_index][bin_index]) 
-      // TightDisplacedFlag = true;
-    // if (x_3[1] < 0.06 and x_3[2] > 0.34 and x_3[2] < 0.78) {
-    //   TightPromptFlag = false;
-    // } else {
-    //   TightPromptFlag = true;
-    // }
-    TightDisplacedFlag = false;
+    tightDNNFlag = false;
     if (layer1 == 1){ //barrel 1
-      // if ((x_3[2] < 0.344f or x_3[2] > 0.627f) and x_3[0]<0.111f){ //95% true disp retention
-      // if ((x_3[2] < 0.377f or x_3[2] > 0.568f) and x_3[0]<0.127f){ //95% true disp retention, add uncert to dnn
-      // if ((x_3[2] < 0.364f or x_3[2] > 0.697f) and x_3[0]<0.077f){ //90% true disp retention, add uncert to dnn
-      //   TightDisplacedFlag = true;
       if (layer2==2) { 
         if (layer3 == 3) {
-          if (layer4 == 4) {//reg 6 80% cut
-            // if ((x_3[2] < 0.358f or x_3[2] > 0.839f) and x_3[0]<0.046f)
-            // if ((x_3[2] < 0.401f or x_3[2] > 0.728f) and x_3[0]<0.108f) //85/90% add radii
-            // if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.111f) //90% add radii and t3 score
-            if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.077f) //90/85% add radii and t3 score
-              TightDisplacedFlag = true;
+          if (layer4 == 4) {//reg 6 
+            // if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.077f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f) //70
+              tightDNNFlag = true;
           }
-          else if (layer4 == 7) { //reg 7 95%
-            // if ((x_3[2] < 0.983f or x_3[2] > 0.99f) and x_3[0]<0.069f)
-            // if ((x_3[2] < 0.257f or x_3[2] > 0.303f) and x_3[0]<0.085f) //95% add radii
-            if ((x_3[2] < 0.374f or x_3[2] > 0.741) and x_3[0]<0.076f) //90/85% add radii and t3 score
-              TightDisplacedFlag = true;
+          else if (layer4 == 7) { //reg 7
+            // if ((x_3[2] < 0.374f or x_3[2] > 0.741) and x_3[0]<0.076f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f) //70
+              tightDNNFlag = true;
           }
-          else if (layer4 == 13) { //reg 8 80%
-            // if ((x_3[2] < 0.365f or x_3[2] > 0.841f) and x_3[0]<0.085f)
-            // if ((x_3[2] < 0.482f or x_3[2] > 0.662f) and x_3[0]<0.180f) //90% add radii
-            // if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.150f) //90% add radii and t3 score
-            if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.103f) //90/85% add radii and t3 score
-              TightDisplacedFlag = true;
+          else if (layer4 == 13) { //reg 8
+            // if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.103f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f) //70% add radii and t3 score
+              tightDNNFlag = true;
           }
         }
         else if (layer3==7) {
-          if (layer4 == 8) { //reg 9 95%
-            // if ((x_3[2] < 0.429f or x_3[2] > 0.701f) and x_3[0]<0.050f)
-            // if ((x_3[2] < 0.469f or x_3[2] > 0.721f) and x_3[0]<0.065f) //95% add radii
-            if ((x_3[2] < 0.883f or x_3[2] > 0.924f) and x_3[0]<0.049f) //90% add radii and t3 score
-                TightDisplacedFlag = true;
+          if (layer4 == 8) { //reg 9
+            // if ((x_3[2] < 0.883f or x_3[2] > 0.924f) and x_3[0]<0.049f) //90% add radii and t3 score
+            if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f) //70% add radii and t3 score
+                tightDNNFlag = true;
           }
-          // else if (layer4 == 13) { //reg 10 90%
-          //   if ((x_3[2] < 0.358f or x_3[2] > 0.685f) and x_3[0]<0.070f)
-          //       TightDisplacedFlag = true;
-          // }
         }
       } else if (layer2 == 7) {
         if (layer3 == 8) {
-          if (layer4 == 9) { //reg 11 95%
-            // if ((x_3[2] < 0.220f or x_3[2] > 0.553f) and x_3[0]<0.087f)
-            // if ((x_3[2] < 0.362f or x_3[2] > 0.708f) and x_3[0]<0.047f) //95% add radii
-            if ((x_3[2] < 0.308f or x_3[2] > 0.780f) and x_3[0]<0.025f) //90% add radii and t3 score
-                TightDisplacedFlag = true;
+          if (layer4 == 9) { //reg 11
+            // if ((x_3[2] < 0.308f or x_3[2] > 0.780f) and x_3[0]<0.025f) //90% add radii and t3 score
+            if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f) //70% add radii and t3 score
+                tightDNNFlag = true;
           }
         }
       }
     } else if (layer1 == 2) { //barrel 2
-      // if ((x_3[2] < 0.355f or x_3[2] > 0.673f) and x_3[0]<0.125f) { //90% true retention (tighter since most number of fakes)
-      // if ((x_3[2] < 0.352f or x_3[2] > 0.577f) and x_3[0]<0.247f){ //90% true disp retention, add uncert to dnn
-      // if ((x_3[2] < 0.371f or x_3[2] > 0.644f) and x_3[0]<0.198f){ //87% true disp retention, (85% fake score cut) add uncert to dnn
-      //   TightDisplacedFlag = true;
-      // }
       if (layer2 == 3) {
         if (layer3 == 4) {
-          if (layer4 == 5) { //reg 13 75/80%
-            // if ((x_3[2] < 0.358f or x_3[2] > 0.819f) and x_3[0]<0.090f)
-            // if ((x_3[2] < 0.447f or x_3[2] > 0.779f) and x_3[0]<0.193f) //85/90% add radii
-            // if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.221f) //90% add radii and t3 score
-            if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.166f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
-          } else if (layer4 == 12) { //reg 14 75/80%
-            // if ((x_3[2] < 0.527f or x_3[2] > 0.742f) and x_3[0]<0.320f)
-            // if ((x_3[2] < 0.446f or x_3[2] > 0.663f) and x_3[0]<0.346f) //90% add radii
-            // if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.302f) //90% add radii and t3 score
-            if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.233f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+          if (layer4 == 5) { //reg 13
+            // if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.166f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f) //70% add radii and t3 score
+                tightDNNFlag = true;
+          } else if (layer4 == 12) { //reg 14
+            // if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.233f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f) //70% add radii and t3 score
+                tightDNNFlag = true;
           }
         } else if (layer3 == 7) {
-          if (layer4 == 13) { //reg16 95%
-            // if ((x_3[2] < 0.815f or x_3[2] > 0.895f) and x_3[0]<0.174f)
-            // if ((x_3[2] < 0.686f or x_3[2] > 0.733f) and x_3[0]<0.265f) //95% add radii
-            if ((x_3[2] < 0.842f or x_3[2] > 0.909f) and x_3[0]<0.057f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+          if (layer4 == 13) { //reg 16
+            // if ((x_3[2] < 0.842f or x_3[2] > 0.909f) and x_3[0]<0.057f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f) //70% add radii and t3 score
+                tightDNNFlag = true;
           }
-        } else if (layer3 == 12) { //reg 17 75/80%
-          // if ((x_3[2] < 0.329f or x_3[2] > 0.668f) and x_3[0]<0.227f)
-          // if ((x_3[2] < 0.375f or x_3[2] > 0.54f) and x_3[0]<0.432f) //90% add radii
-          // if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.359f) //90% add radii and t3 score
-          if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.280f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+        } else if (layer3 == 12) { //reg 17
+          // if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.280f) //90/85% add radii and t3 score
+          if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f) //70% add radii and t3 score
+                tightDNNFlag = true;
         }
       } else if (layer2 == 7) {
-        if (layer3 == 8) { //reg 19 95
-          // if ((x_3[2] < 0.301f or x_3[2] > 0.619f) and x_3[0]<0.159f)
-          // if ((x_3[2] < 0.648f or x_3[2] > 0.748f) and x_3[0]<0.141f) //95% add radii
-          if ((x_3[2] < 0.582f or x_3[2] > 0.852f) and x_3[0]<0.044f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
-        } else if (layer3 == 13) { //reg 20 75/80%
-          // if ((x_3[2] < 0.255f or x_3[2] > 0.627f) and x_3[0]<0.246f)
-          // if ((x_3[2] < 0.344f or x_3[2] > 0.579f) and x_3[0]<0.303f) //90% add radii
-          // if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.438f) //90% add radii and t3 score
-          if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.261f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+        if (layer3 == 8) { //reg 19
+          // if ((x_3[2] < 0.582f or x_3[2] > 0.852f) and x_3[0]<0.044f) //90/85% add radii and t3 score
+          if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f) //70% add radii and t3 score
+                tightDNNFlag = true;
+        } else if (layer3 == 13) { //reg 20
+          // if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.261f) //90/85% add radii and t3 score
+          if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039) //70% add radii and t3 score
+                tightDNNFlag = true;
         }
       }
     } else if (layer1 == 3) { //barrel 3
-      // if ((x_3[2] < 0.434f or x_3[2] > 0.550f) and x_3[0]<0.306f) { //95% true retention
-      // if ((x_3[2] < 0.359f or x_3[2] > 0.439f) and x_3[0]<0.498f){ //95% true disp retention, add uncert to dnn
-      // if ((x_3[2] < 0.360f or x_3[2] > 0.501f) and x_3[0]<0.428f){ //90% true disp retention, add uncert to dnn
-      //   TightDisplacedFlag = true;
-      // }
       if (layer2 == 4) {
         if (layer3 == 5) {
-          if (layer4 == 6) { //reg 21 75/80%
-            // if ((x_3[2] < 0.250f or x_3[2] > 0.696f) and x_3[0]<0.237f)
-            // if ((x_3[2] < 0.324f or x_3[2] > 0.642f) and x_3[0]<0.371f) //85/90% add radii
-            // if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.344f) //90% add radii and t3 score
-            if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.276f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
-          } else if (layer4 == 12) { //reg 25 75/80%
-            // if ((x_3[2] < 0.578f or x_3[2] > 0.773f) and x_3[0]<0.077f)
-            // if ((x_3[2] < 0.691f or x_3[2] > 0.793f) and x_3[0]<0.510f) //90% add radii
-            // if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.463f) //90% add radii and t3 score
-            if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.376f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+          if (layer4 == 6) { //reg 21
+            // if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.276f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f) //70% add radii and t3 score
+                tightDNNFlag = true;
+          } else if (layer4 == 12) { //reg 25
+            // if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.376f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f) //70% add radii and t3 score
+                tightDNNFlag = true;
           }
-        } else if (layer3 == 12) { //reg 24 75/80%
-          // if ((x_3[2] < 0.280f or x_3[2] > 0.502f) and x_3[0]<0.475f)
-          // if ((x_3[2] < 0.569f or x_3[2] > 0.692f) and x_3[0]<0.529f) //85/90% add radii
+        } else if (layer3 == 12) { //reg 24
           // if ((x_3[2] < 0.293f or x_3[2] > 0.492f) and x_3[0]<0.44f) //90% add radii and t3 score
-          if ((x_3[2] < 0.293f or x_3[2] > 0.492f) and x_3[0]<0.376f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+          if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f) //70% add radii and t3 score
+                tightDNNFlag = true;
         }
-      } else if (layer2 == 7) { //reg 23 95%
-        // if ((x_3[2] < 0.624f or x_3[2] > 0.671f) and x_3[0]<0.459f)
-        // if ((x_3[2] < 0.487f or x_3[2] > 0.585f) and x_3[0]<0.467f) //95% add radii
-        // if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.230f) //90% add radii and t3 score
-        if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.159f) //90/85% add radii and t3 score
-                TightDisplacedFlag = true;
+      } else if (layer2 == 7) { //reg 23
+        // if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.159f) //90/85% add radii and t3 score
+        if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054) //70% add radii and t3 score
+                tightDNNFlag = true;
       }
     } else if (layer1 == 7) { //endcap 1
-      // if ((x_3[2] < 0.352f or x_3[2] > 0.609f) and x_3[0]<0.125f) { //95% true retention
-      // if ((x_3[2] < 0.626f or x_3[2] > 0.718f) and x_3[0]<0.224f){ //95% true disp retention, add uncert to dnn
-      // if ((x_3[2] < 0.626f or x_3[2] > 0.718f) and x_3[0]<0.132f){ //95% true disp retention, (90% fake cut) add uncert to dnn
-        // TightDisplacedFlag = true;
-      // }
       if (layer2 == 8) {
         if (layer3 == 9) {
           if (layer4 ==10) { //reg 0
-            // if ((x_3[2] < 0.299f or x_3[2] > 0.783f) and x_3[0]<0.012f) //90% add radii
-            if ((x_3[2] < 0.405f or x_3[2] > 0.871f) and x_3[0]<0.012f) //90% add radii and t3 score
-              TightDisplacedFlag = true;
+            // if ((x_3[2] < 0.405f or x_3[2] > 0.871f) and x_3[0]<0.012f) //90% add radii and t3 score
+            if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f) //70% add radii and t3 score
+              tightDNNFlag = true;
           } else if (layer4 == 15) { //reg 1
-            // if ((x_3[2] < 0.463f or x_3[2] > 0.710f) and x_3[0]<0.049f) //90% add radii
-            if ((x_3[2] < 0.438f or x_3[2] > 0.825f) and x_3[0]<0.045f) //90% add radii and t3 score
-              TightDisplacedFlag = true;
+            // if ((x_3[2] < 0.438f or x_3[2] > 0.825f) and x_3[0]<0.045f) //90% add radii and t3 score
+            if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f) //70% add radii and t3 score
+              tightDNNFlag = true;
           }
         } else if (layer3 == 14) { //reg 2
-          // if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.186f) //90% add radii
-          if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.134f) //90% add radii and t3 score
-            TightDisplacedFlag = true;
+          // if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.134f) //90% add radii and t3 score
+          if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f) //70% add radii and t3 score
+            tightDNNFlag = true;
         }
       }
     } else { //endcap 2
-      // if ((x_3[2] < 0.358f or x_3[2] > 0.576f) and x_3[0]<0.144f) { //95% true retention
-      // if ((x_3[2] < 0.443f or x_3[2] > 0.583f) and x_3[0]<0.220f){ //95% true disp retention, add uncert to dnn
-      // if ((x_3[2] < 0.443f or x_3[2] > 0.583f) and x_3[0]<0.124f){ //95% true disp retention, (90% fake cut) add uncert to dnn
-      //   TightDisplacedFlag = true;
-      // }
       if (layer2 == 9) {
         if (layer3 == 10) {
           if (layer4 == 11) { //reg 3
-            // if ((x_3[2] < 0.846f or x_3[2] > 0.934f) and x_3[0]<0.018f) //90% add radii
-            if ((x_3[2] < 0.793f or x_3[2] > 0.866f) and x_3[0]<0.021f) //90% add radii and t3 score
-              TightDisplacedFlag = true;
+            // if ((x_3[2] < 0.793f or x_3[2] > 0.866f) and x_3[0]<0.021f) //90% add radii and t3 score
+            if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f) //70% add radii and t3 score
+              tightDNNFlag = true;
           } else if (layer4 == 16) { //reg 4
-            // if ((x_3[2] < 0.517f or x_3[2] > 0.801f) and x_3[0]<0.069f) //90% add radii
-            if ((x_3[2] < 0.281f or x_3[2] > 0.805f) and x_3[0]<0.060f) //90/95% add radii and t3 score
-              TightDisplacedFlag = true;
+            // if ((x_3[2] < 0.281f or x_3[2] > 0.805f) and x_3[0]<0.060f) //90/95% add radii and t3 score
+            if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f) //70% add radii and t3 score
+              tightDNNFlag = true;
           }
         } else { //reg 5
-          // if ((x_3[2] < 0.350f or x_3[2] > 0.651f) and x_3[0]<0.247f) //90% add radii
-          // if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.205f) //90% add radii and t3 score
-          if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.168f) //90/85% add radii and t3 score
-            TightDisplacedFlag = true;
+          // if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.168f) //90/85% add radii and t3 score
+          if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f) //70% add radii and t3 score
+            tightDNNFlag = true;
         }
       }
     }

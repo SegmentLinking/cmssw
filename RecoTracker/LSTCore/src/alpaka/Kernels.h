@@ -359,7 +359,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int ix = quadrupletModuleIndices_lowmod + ix1;
           float eta1 = __H2F(quadrupletsInGPU.eta[ix]);
           float phi1 = __H2F(quadrupletsInGPU.phi[ix]);
-          // float score_rphisum1 = __H2F(quadrupletsInGPU.score_rphisum[ix]);
           float promptscore_t4dnn1 = quadrupletsInGPU.promptscore_t4dnn[ix];
           float displacedscore_t4dnn1 = quadrupletsInGPU.displacedscore_t4dnn[ix];
           float fakescore_t4dnn1 = quadrupletsInGPU.fakescore_t4dnn[ix];
@@ -372,7 +371,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float phi2 = __H2F(quadrupletsInGPU.phi[jx]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = lst::calculate_dPhi(phi1, phi2);
-            // float score_rphisum2 = __H2F(quadrupletsInGPU.score_rphisum[jx]);
             float promptscore_t4dnn2 = quadrupletsInGPU.promptscore_t4dnn[jx];
             float displacedscore_t4dnn2 = quadrupletsInGPU.displacedscore_t4dnn[jx];
             float fakescore_t4dnn2 = quadrupletsInGPU.fakescore_t4dnn[jx];
@@ -448,21 +446,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
               float eta1 = __H2F(quadrupletsInGPU.eta[ix]);
               float phi1 = __H2F(quadrupletsInGPU.phi[ix]);
-              // float score_rphisum1 = __H2F(quadrupletsInGPU.score_rphisum[ix]);
               float promptscore_t4dnn1 = quadrupletsInGPU.promptscore_t4dnn[ix];
               float displacedscore_t4dnn1 = quadrupletsInGPU.displacedscore_t4dnn[ix];
               float fakescore_t4dnn1 = quadrupletsInGPU.fakescore_t4dnn[ix];
               float score_t4dnn1 = (promptscore_t4dnn1 > displacedscore_t4dnn1 ? promptscore_t4dnn1 : displacedscore_t4dnn1)-fakescore_t4dnn1;
-              // score_t4dnn1 = score_t4dnn1*score_t4dnn1;
 
               float eta2 = __H2F(quadrupletsInGPU.eta[jx]);
               float phi2 = __H2F(quadrupletsInGPU.phi[jx]);
-              // float score_rphisum2 = __H2F(quadrupletsInGPU.score_rphisum[jx]);
               float promptscore_t4dnn2 = quadrupletsInGPU.promptscore_t4dnn[jx];
               float displacedscore_t4dnn2 = quadrupletsInGPU.displacedscore_t4dnn[jx];
               float fakescore_t4dnn2 = quadrupletsInGPU.fakescore_t4dnn[jx];
               float score_t4dnn2 = (promptscore_t4dnn2 > displacedscore_t4dnn2 ? promptscore_t4dnn2 : displacedscore_t4dnn2)-fakescore_t4dnn2;
-              // score_t4dnn2 = score_t4dnn2*score_t4dnn2; 
 
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = lst::calculate_dPhi(phi1, phi2);
@@ -484,13 +478,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 } else {
                   rmQuadrupletFromMemory(quadrupletsInGPU, (ix < jx ? ix : jx), true);
                 }
-                // if (isPT4_jx || score_rphisum1 > score_rphisum2) {
-                //   rmQuadrupletFromMemory(quadrupletsInGPU, ix, true);
-                // } else if (isPT4_ix || score_rphisum1 < score_rphisum2) {
-                //   rmQuadrupletFromMemory(quadrupletsInGPU, jx, true);
-                // } else {
-                //   rmQuadrupletFromMemory(quadrupletsInGPU, (ix < jx ? ix : jx), true);
-                // }
               }
             }
           }

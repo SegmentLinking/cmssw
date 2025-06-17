@@ -47,7 +47,7 @@ namespace lst {
 
     bool* partOfPT4;
     bool* TightPromptFlag;
-    bool* TightDisplacedFlag;
+    bool* tightDNNFlag;
     bool* TightCutFlag;
     bool* partOfTC;
 
@@ -81,7 +81,7 @@ namespace lst {
       regressionF = alpaka::getPtrNative(buf.regressionF_buf);
       partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
       TightPromptFlag = alpaka::getPtrNative(buf.TightPromptFlag_buf);
-      TightDisplacedFlag = alpaka::getPtrNative(buf.TightDisplacedFlag_buf);
+      tightDNNFlag = alpaka::getPtrNative(buf.tightDNNFlag_buf);
       TightCutFlag = alpaka::getPtrNative(buf.TightCutFlag_buf);
       partOfTC = alpaka::getPtrNative(buf.partOfTC_buf);
       uncertainty = alpaka::getPtrNative(buf.uncertainty_buf);
@@ -120,7 +120,7 @@ namespace lst {
 
     Buf<TDev, bool> partOfPT4_buf;
     Buf<TDev, bool> TightPromptFlag_buf;
-    Buf<TDev, bool> TightDisplacedFlag_buf;
+    Buf<TDev, bool> tightDNNFlag_buf;
     Buf<TDev, bool> TightCutFlag_buf;
     Buf<TDev, bool> partOfTC_buf;
     Buf<TDev, float> uncertainty_buf;
@@ -155,7 +155,7 @@ namespace lst {
           regressionF_buf(allocBufWrapper<float>(devAccIn, nTotalQuadruplets, queue)),
           partOfPT4_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           TightPromptFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
-          TightDisplacedFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
+          tightDNNFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           TightCutFlag_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           partOfTC_buf(allocBufWrapper<bool>(devAccIn, nTotalQuadruplets, queue)),
           uncertainty_buf(allocBufWrapper<float>(devAccIn, Params_T4::kLayers * nTotalQuadruplets, queue)) {
@@ -164,7 +164,7 @@ namespace lst {
       alpaka::memset(queue, isDup_buf, 0u);
       alpaka::memset(queue, partOfPT4_buf, false);
       alpaka::memset(queue, TightPromptFlag_buf, false);
-      alpaka::memset(queue, TightDisplacedFlag_buf, false);
+      alpaka::memset(queue, tightDNNFlag_buf, false);
       alpaka::memset(queue, partOfTC_buf, false);
       alpaka::memset(queue, TightCutFlag_buf, false);
       alpaka::wait(queue);
@@ -207,7 +207,7 @@ namespace lst {
                                                             float regressionRadius,
                                                             float nonAnchorRegressionRadius,
                                                             bool TightPromptFlag,
-                                                            bool TightDisplacedFlag,
+                                                            bool tightDNNFlag,
                                                             bool TightCutFlag,
                                                             float* error2s) {
     quadrupletsInGPU.tripletIndices[2 * quadrupletIndex] = innerTripletIndex;
@@ -263,7 +263,7 @@ namespace lst {
     quadrupletsInGPU.regressionF[quadrupletIndex] = regressionF;
 
     quadrupletsInGPU.TightPromptFlag[quadrupletIndex] = TightPromptFlag;
-    quadrupletsInGPU.TightDisplacedFlag[quadrupletIndex] = TightDisplacedFlag;
+    quadrupletsInGPU.tightDNNFlag[quadrupletIndex] = tightDNNFlag;
     quadrupletsInGPU.TightCutFlag[quadrupletIndex] = TightCutFlag;
 
     quadrupletsInGPU.uncertainty[Params_T4::kLayers * quadrupletIndex] = error2s[0];
@@ -2440,54 +2440,6 @@ namespace lst {
   };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool basicCutsT4(TAcc const& acc,
-                                                  struct lst::MiniDoublets& mdsInGPU,
-                                                  float innerRadius,
-                                                  float outerRadius,
-                                                  unsigned int firstMDIndex,
-                                                  unsigned int secondMDIndex,
-                                                  unsigned int thirdMDIndex,
-                                                  unsigned int fourthMDIndex) {
-    float absEta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[firstMDIndex]);
-    float absEta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[secondMDIndex]);
-    float absEta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[thirdMDIndex]);
-    float absEta4 = alpaka::math::abs(acc, mdsInGPU.anchorEta[fourthMDIndex]);
-
-    float dEta12 = alpaka::math::abs(acc, absEta2-absEta1); 
-    float dEta23 = alpaka::math::abs(acc, absEta3-absEta2);
-    float dEta34 = alpaka::math::abs(acc, absEta4-absEta3);  
-
-    float radRatio = innerRadius/outerRadius;
-     //90% cut
-    // if (radRatio > 1.65834f) //no T3 DNN
-    if (radRatio > 1.60852f) //add T3 DNN
-      return false;
-    
-    // if (dEta12 > 0.06549f) //no T3 DNN
-    if (dEta12 > 0.06488f) // add T3 DNN
-      return false;
-    // if (dEta23 > 0.04392f) // no T3 DNN
-    if (dEta23 > 0.04334f) //add T3 DNN
-      return false;
-    // if (dEta34 > 0.04020f) // no T3 DNN
-    if (dEta34 > 0.03997f) //add T3 DNN
-      return false;
-    
-    //95% cut
-    // if (radRatio > 2.43435f)
-    //   return false;
-    
-    // if (dEta12 > 0.08445f)
-    //   return false;
-    // if (dEta23 > 0.05428f)
-    //   return false;
-    // if (dEta34 > 0.04872f)
-    //   return false; 
-    
-    return true;
-  };
-
-  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletDefaultAlgo(TAcc const& acc,
                                                                struct lst::Modules& modulesInGPU,
                                                                struct lst::MiniDoublets& mdsInGPU,
@@ -2513,7 +2465,7 @@ namespace lst {
                                                                float& fakeScore,
                                                                float& x_5,
                                                                bool& TightPromptFlag,
-                                                               bool& TightDisplacedFlag,
+                                                               bool& tightDNNFlag,
                                                                bool& TightCutFlag,
                                                                float* error2s) {
     unsigned int firstSegmentIndex = tripletsInGPU.segmentIndices[2 * innerTripletIndex];
@@ -2565,16 +2517,6 @@ namespace lst {
     float outerRadius = tripletsInGPU.circleRadius[outerTripletIndex];
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
     float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
-
-    // if (not basicCutsT4(acc,
-    //                     mdsInGPU,
-    //                     innerRadius,
-    //                     outerRadius,
-    //                     firstMDIndex,
-    //                     secondMDIndex,
-    //                     thirdMDIndex,
-    //                     fourthMDIndex))
-    //   return false;
 
     const int moduleType1 = modulesInGPU.moduleType[lowerModuleIndex1];  //0 is ps, 1 is 2s
     const int moduleType2 = modulesInGPU.moduleType[lowerModuleIndex2];
@@ -2709,7 +2651,7 @@ namespace lst {
                                               displacedScore,
                                               fakeScore,
                                               TightPromptFlag,
-                                              TightDisplacedFlag,
+                                              tightDNNFlag,
                                               error2s,
                                               regressionRadius,
                                               nonAnchorRegressionRadius,
@@ -2722,23 +2664,7 @@ namespace lst {
 
     if (!inference)
       return false;
-    // if (not runQuadrupletdBetaAlgoSelector(acc,
-    //                                       modulesInGPU,
-    //                                       mdsInGPU,
-    //                                       segmentsInGPU,
-    //                                       lowerModuleIndex1,
-    //                                       lowerModuleIndex2,
-    //                                       lowerModuleIndex3,
-    //                                       lowerModuleIndex4,
-    //                                       firstSegmentIndex,
-    //                                       thirdSegmentIndex,
-    //                                       firstMDIndex,
-    //                                       secondMDIndex,
-    //                                       thirdMDIndex,
-    //                                       fourthMDIndex,
-    //                                       dBeta,
-    //                                       ptCut))
-    //   return false;
+
     //run Beta Selector for high pT T4s
     if (pt >10) {
       if (not runQuadrupletdBetaAlgoSelector(acc,
@@ -2760,43 +2686,6 @@ namespace lst {
       return false;
     }
     
-
-    // if (not runQuadrupletAlgoSelector(acc,
-    //                                   modulesInGPU,
-    //                                   mdsInGPU,
-    //                                   segmentsInGPU,
-    //                                   lowerModuleIndex1,
-    //                                   lowerModuleIndex2,
-    //                                   lowerModuleIndex3,
-    //                                   lowerModuleIndex4,
-    //                                   firstSegmentIndex,
-    //                                   thirdSegmentIndex,
-    //                                   firstMDIndex,
-    //                                   secondMDIndex,
-    //                                   thirdMDIndex,
-    //                                   fourthMDIndex,
-    //                                   ptCut))
-    //   return false;
-    // if (pt>10){
-    //   if (not passT4RZConstraint(acc,
-    //                             modulesInGPU,
-    //                             mdsInGPU,
-    //                             firstMDIndex, 
-    //                             secondMDIndex, 
-    //                             thirdMDIndex, 
-    //                             fourthMDIndex, 
-    //                             lowerModuleIndex1, 
-    //                             lowerModuleIndex2, 
-    //                             lowerModuleIndex3, 
-    //                             lowerModuleIndex4, 
-    //                             rzChiSquared, 
-    //                             inner_pt, 
-    //                             innerRadius, 
-    //                             inner_circleCenterX, 
-    //                             inner_circleCenterY, 
-    //                             innerT3charge))
-    //     return false;
-    // }
     if (not passT4RZConstraint(acc,
                               modulesInGPU,
                               mdsInGPU,
@@ -2829,10 +2718,7 @@ namespace lst {
                                             regressionG,
                                             regressionF,
                                             regressionRadius); 
-    // float rphisum = chiSquared + nonAnchorChiSquared; 
 
-    // if (rphisum < 5.76f)
-    //   TightRPhiFlag = true; //~95% retention for displaced tracks
     return true;
   };
 
@@ -2898,7 +2784,7 @@ namespace lst {
             float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
             float error2s[4]; 
             bool TightPromptFlag = false;
-            bool TightDisplacedFlag = false;
+            bool tightDNNFlag = false;
             bool TightCutFlag = false;
       
             float pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;
@@ -2931,7 +2817,7 @@ namespace lst {
                                                     fakeScore,
                                                     x_5,
                                                     TightPromptFlag,
-                                                    TightDisplacedFlag,
+                                                    tightDNNFlag,
                                                     TightCutFlag,
                                                     error2s);
             // bool success = true;
@@ -2996,7 +2882,7 @@ namespace lst {
                                         regressionRadius,
                                         nonAnchorRegressionRadius,
                                         TightPromptFlag,
-                                        TightDisplacedFlag,
+                                        tightDNNFlag,
                                         TightCutFlag,
                                         error2s);
 
