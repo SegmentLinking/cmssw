@@ -24,6 +24,7 @@ namespace lst {
     float* rzChiSquared;
 
     FPX* pixelRadius;
+    FPX* pixelRadiusError;
     FPX* tripletRadius;
     FPX* pt;
     FPX* eta;
@@ -47,6 +48,7 @@ namespace lst {
       nPixelTriplets = alpaka::getPtrNative(buf.nPixelTriplets_buf);
       totOccupancyPixelTriplets = alpaka::getPtrNative(buf.totOccupancyPixelTriplets_buf);
       pixelRadius = alpaka::getPtrNative(buf.pixelRadius_buf);
+      pixelRadiusError = alpaka::getPtrNative(buf.pixelRadiusError_buf);
       tripletRadius = alpaka::getPtrNative(buf.tripletRadius_buf);
       pt = alpaka::getPtrNative(buf.pt_buf);
       eta = alpaka::getPtrNative(buf.eta_buf);
@@ -149,10 +151,12 @@ namespace lst {
                                                               float phi,
                                                               float eta_pix,
                                                               float phi_pix,
+                                                              float pixelRadiusError,
                                                               float score) {
     pixelTripletsInGPU.pixelSegmentIndices[pixelTripletIndex] = pixelSegmentIndex;
     pixelTripletsInGPU.tripletIndices[pixelTripletIndex] = tripletIndex;
     pixelTripletsInGPU.pixelRadius[pixelTripletIndex] = __F2H(pixelRadius);
+    pixelTripletsInGPU.pixelRadiusError[pixelTripletIndex] = __F2H(pixelRadiusError);
     pixelTripletsInGPU.tripletRadius[pixelTripletIndex] = __F2H(tripletRadius);
     pixelTripletsInGPU.pt[pixelTripletIndex] = __F2H(pt);
     pixelTripletsInGPU.eta[pixelTripletIndex] = __F2H(eta);
@@ -744,7 +748,9 @@ namespace lst {
                                                                  float& rzChiSquared,
                                                                  float& rPhiChiSquared,
                                                                  float& rPhiChiSquaredInwards,
+                                                                 float& pixelRadiusError,
                                                                  const float ptCut,
+                                                                 bool runDNN = true,
                                                                  bool runChiSquaredCuts = true) {
     //run pT4 compatibility between the pixel segment and inner segment, and between the pixel and outer segment of the triplet
     uint16_t pixelModuleIndex = segmentsInGPU.innerLowerModuleIndices[pixelSegmentIndex];
@@ -800,7 +806,7 @@ namespace lst {
     unsigned int pixelOuterMDIndex = segmentsInGPU.mdIndices[Params_pLS::kLayers * pixelSegmentIndex + 1];
 
     pixelRadius = pixelSegmentPt * kR1GeVf;
-    float pixelRadiusError = pixelSegmentPtError * kR1GeVf;
+    pixelRadiusError = pixelSegmentPtError * kR1GeVf;
     unsigned int tripletInnerSegmentIndex = tripletsInGPU.segmentIndices[2 * tripletIndex];
     unsigned int tripletOuterSegmentIndex = tripletsInGPU.segmentIndices[2 * tripletIndex + 1];
 
@@ -830,7 +836,7 @@ namespace lst {
 
     uint16_t lowerModuleIndices[Params_T3::kLayers] = {lowerModuleIndex, middleModuleIndex, upperModuleIndex};
 
-    if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
+    if (runDNN || runChiSquaredCuts) {
       float rts[Params_T3::kLayers] = {
           mdsInGPU.anchorRt[firstMDIndex], mdsInGPU.anchorRt[secondMDIndex], mdsInGPU.anchorRt[thirdMDIndex]};
       float zs[Params_T3::kLayers] = {
@@ -856,33 +862,42 @@ namespace lst {
                                             pixelSegmentPy,
                                             pixelSegmentPz,
                                             pixelSegmentCharge);
-      if (not passPT3RZChiSquaredCuts(
-              modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rzChiSquared))
-        return false;
-    } else {
-      rzChiSquared = -1;
-    }
+      if (runChiSquaredCuts && pixelSegmentPt < 5.0f) {
+        if (!passPT3RZChiSquaredCuts(modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rzChiSquared))
+          return false;
+      } 
 
-    rPhiChiSquared =
-        computePT3RPhiChiSquared(acc, modulesInGPU, lowerModuleIndices, pixelG, pixelF, pixelRadiusPCA, xs, ys);
+      rPhiChiSquared =
+          computePT3RPhiChiSquared(acc, modulesInGPU, lowerModuleIndices, pixelG, pixelF, pixelRadiusPCA, xs, ys);
 
-    if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
-      if (not passPT3RPhiChiSquaredCuts(
-              modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rPhiChiSquared))
-        return false;
-    }
+      if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
+        if (not passPT3RPhiChiSquaredCuts(
+                modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rPhiChiSquared))
+          return false;
+      }
 
-    float xPix[Params_pLS::kLayers] = {mdsInGPU.anchorX[pixelInnerMDIndex], mdsInGPU.anchorX[pixelOuterMDIndex]};
-    float yPix[Params_pLS::kLayers] = {mdsInGPU.anchorY[pixelInnerMDIndex], mdsInGPU.anchorY[pixelOuterMDIndex]};
-    rPhiChiSquaredInwards = computePT3RPhiChiSquaredInwards(g, f, tripletRadius, xPix, yPix);
+      rPhiChiSquaredInwards = computePT3RPhiChiSquaredInwards(g, f, tripletRadius, xPix, yPix);
 
-    if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
-      if (not passPT3RPhiChiSquaredInwardsCuts(
-              modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rPhiChiSquaredInwards))
-        return false;
+      if (runChiSquaredCuts and pixelSegmentPt < 5.0f) {
+        if (not passPT3RPhiChiSquaredInwardsCuts(
+                modulesInGPU, lowerModuleIndex, middleModuleIndex, upperModuleIndex, rPhiChiSquaredInwards))
+          return false;
+      }
     }
     centerX = 0;
     centerY = 0;
+
+    if (runDNN and !lst::pt3dnn::runInference(acc,
+                                              rPhiChiSquared,
+                                              tripletRadius,
+                                              pixelRadius,
+                                              pixelRadiusError,
+                                              rzChiSquared,
+                                              segmentsInGPU.eta[pixelSegmentArrayIndex],
+                                              pixelSegmentPt)) {
+      return false;
+    }
+
     return true;
   };
 
@@ -906,7 +921,7 @@ namespace lst {
 
       for (unsigned int i_pLS = globalThreadIdx[1]; i_pLS < nPixelSegments; i_pLS += gridThreadExtent[1]) {
         auto iLSModule_max = connectedPixelIndex[i_pLS] + connectedPixelSize[i_pLS];
-
+        // continue; //don't build any pT3s
         for (unsigned int iLSModule = connectedPixelIndex[i_pLS] + globalBlockIdx[0]; iLSModule < iLSModule_max;
              iLSModule += gridBlockExtent[0]) {
           uint16_t tripletLowerModuleIndex =
@@ -933,8 +948,14 @@ namespace lst {
 
           if (segmentsInGPU.isDup[i_pLS])
             continue;
+//#ifndef USE_T4_PT4
           if (segmentsInGPU.partOfPT5[i_pLS])
             continue;  //don't make pT3s for those pixels that are part of pT5
+//#endif
+//#ifdef USE_T4_PT4
+          if (segmentsInGPU.partOfPT4[i_pLS])
+            continue;  //don't make pT3s for those pixels that are part of pT4
+//#endif
 
           short layer2_adjustment;
           if (modulesInGPU.layers[tripletLowerModuleIndex] == 1) {
@@ -954,11 +975,16 @@ namespace lst {
                 rangesInGPU.tripletModuleIndices[tripletLowerModuleIndex] + outerTripletArrayIndex;
             if (modulesInGPU.moduleType[tripletsInGPU.lowerModuleIndices[3 * outerTripletIndex + 1]] == lst::TwoS)
               continue;  //REMOVES PS-2S
-
+//#ifndef USE_T4_PT4
             if (tripletsInGPU.partOfPT5[outerTripletIndex])
               continue;  //don't create pT3s for T3s accounted in pT5s
+//#endif
+//#ifdef USE_T4_PT4
+            if (tripletsInGPU.partOfPT4[outerTripletIndex])
+              continue;  //don't create pT3s for T3s accounted in pT4s
+//#endif
 
-            float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY;
+            float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY, pixelRadiusError;
             bool success = runPixelTripletDefaultAlgo(acc,
                                                       modulesInGPU,
                                                       rangesInGPU,
@@ -974,6 +1000,7 @@ namespace lst {
                                                       rzChiSquared,
                                                       rPhiChiSquared,
                                                       rPhiChiSquaredInwards,
+                                                      pixelRadiusError,
                                                       ptCut);
 
             if (success) {
@@ -1015,6 +1042,7 @@ namespace lst {
                                         phi,
                                         eta_pix,
                                         phi_pix,
+                                        pixelRadiusError,
                                         score);
                 tripletsInGPU.partOfPT3[outerTripletIndex] = true;
               }

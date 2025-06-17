@@ -60,7 +60,7 @@ namespace lst {
   // The constants below are usually used in functions like alpaka::math::min(),
   // expecting a reference (T const&) in the arguments. Hence,
   // ALPAKA_STATIC_ACC_MEM_GLOBAL needs to be used in addition to constexpr.
-
+  ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPi = float(M_PI);
   // 15 MeV constant from the approximate Bethe-Bloch formula
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMulsInGeV = 0.015;
   ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kMiniMulsPtScaleBarrel[6] = {
@@ -105,6 +105,52 @@ namespace lst {
         {0.4493, 0.4939, 0.5715, 0.6488, 0.5709, 0.5938, 0.7164, 0.7565, 0.8103, 0.8593},
         {0.4488, 0.4448, 0.5067, 0.5929, 0.4836, 0.4112, 0.4968, 0.4403, 0.5597, 0.5067}};
   }  // namespace t5dnn
+  namespace t3dnn {
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kZ_max = 224.149505f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR_max = 98.932365f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPhi_norm = kPi;
+    constexpr unsigned int kPtBins = 2;
+    constexpr unsigned int kEtaBins = 10;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp_prompt[kPtBins][kEtaBins] = {
+        {0.4805, 0.4796, 0.4868, 0.4948, 0.4148, 0.4374, 0.4664, 0.4813, 0.5375, 0.5437},
+        {0.0087, 0.0158, 0.0456, 0.0795, 0.1072, 0.1662, 0.2793, 0.2937, 0.2526, 0.2738}}; //90% retention
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp_displaced[kPtBins][kEtaBins] = {
+        {0.0411, 0.0487, 0.0650, 0.1041, 0.1146, 0.1124, 0.1339, 0.1961, 0.1982, 0.2045},
+        {0.0066, 0.0062, 0.0297, 0.0295, 0.0669, 0.0376, 0.2249, 0.2131, 0.1783, 0.0528}}; //99% retention
+  }  // namespace t3dnn
 
+  //#ifdef USE_T4_PT4
+  namespace t4dnn {
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kZ_max = 267.2349854f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kR_max = 110.1099396f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kPhi_norm = kPi;
+    // pt, eta binned
+    constexpr unsigned int kPtBins = 2;
+    constexpr unsigned int kEtaBins = 10;
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp_prompt[kPtBins][kEtaBins] = {
+      {0.6398, 0.6448, 0.6586, 0.6875, 0.6146, 0.6181, 0.6515, 0.6528, 0.6872, 0.6870}, //85% low pt, w/ radii, t3 scores
+      {0.2145, 0.2547, 0.2754, 0.2830, 0.2413, 0.2249, 0.3232, 0.3532, 0.3180, 0.2721}}; //90% high pt, w/ radii, t3 scores
+      ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp_displaced[kPtBins][kEtaBins] = {
+      {0.4056, 0.4600, 0.4429, 0.4547, 0.3771, 0.3657, 0.3660, 0.3992, 0.4521, 0.4764}, //75% low pt, w/ radii, t3 scores
+      {0.4893, 0.4653, 0.4464, 0.4310, 0.3706, 0.3340, 0.3140, 0.2800, 0.3107, 0.3028}}; //85% high pt, w/ radii, t3 scores
+  }  // namespace t4dnn
+
+  namespace pt4dnn {
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+    constexpr unsigned int kEtaBins = 10; 
+    ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kEtaBins] = 
+        {0.8497, 0.8674, 0.8501, 0.8416, 0.7457, 0.7593, 0.7884, 0.7622, 0.658, 0.5348}; //98% retention
+  }  // namespace pt4dnn
+//#endif
+  namespace pt3dnn {
+      ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEta_norm = 2.5f;
+      ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kEtaSize = 0.25f;
+      constexpr unsigned int kEtaBins = 10;
+      ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWp[kEtaBins] = {
+          0.189f, 0.1805f, 0.2267f, 0.3104f, 0.4719f, 0.3159f, 0.1372f, 0.1571f, 0.3198f, 0.186f};
+      ALPAKA_STATIC_ACC_MEM_GLOBAL constexpr float kWpHigh = 0.0473f;
+    }  // namespace pt3dnn
 }  //namespace lst
 #endif

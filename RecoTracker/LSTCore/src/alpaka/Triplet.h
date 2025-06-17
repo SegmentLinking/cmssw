@@ -12,6 +12,8 @@
 #include "Hit.h"
 #include "ObjectRanges.h"
 
+#include "NeuralNetwork.h"
+
 namespace lst {
   struct Triplets {
     unsigned int* segmentIndices;
@@ -28,6 +30,12 @@ namespace lst {
     bool* partOfPT5;
     bool* partOfT5;
     bool* partOfPT3;
+    bool* partOfPT4;
+    bool* partOfT4;
+    int* charge;
+    float* fakeScore;
+    float* promptScore;
+    float* displacedScore;
 
 #ifdef CUT_VALUE_DEBUG
     //debug variables
@@ -51,6 +59,12 @@ namespace lst {
       partOfPT5 = alpaka::getPtrNative(buf.partOfPT5_buf);
       partOfT5 = alpaka::getPtrNative(buf.partOfT5_buf);
       partOfPT3 = alpaka::getPtrNative(buf.partOfPT3_buf);
+      partOfPT4 = alpaka::getPtrNative(buf.partOfPT4_buf);
+      partOfT4 = alpaka::getPtrNative(buf.partOfT4_buf);
+      charge = alpaka::getPtrNative(buf.charge_buf);
+      fakeScore = alpaka::getPtrNative(buf.fakeScore_buf);
+      promptScore = alpaka::getPtrNative(buf.promptScore_buf);
+      displacedScore = alpaka::getPtrNative(buf.displacedScore_buf);
 #ifdef CUT_VALUE_DEBUG
       zOut = alpaka::getPtrNative(buf.zOut_buf);
       rtOut = alpaka::getPtrNative(buf.rtOut_buf);
@@ -74,7 +88,13 @@ namespace lst {
     Buf<TDev, float> circleCenterY_buf;
     Buf<TDev, bool> partOfPT5_buf;
     Buf<TDev, bool> partOfT5_buf;
+    Buf<TDev, bool> partOfPT4_buf;
+    Buf<TDev, bool> partOfT4_buf;
     Buf<TDev, bool> partOfPT3_buf;
+    Buf<TDev, int> charge_buf;
+    Buf<TDev, float> fakeScore_buf;
+    Buf<TDev, float> promptScore_buf;
+    Buf<TDev, float> displacedScore_buf;
 
 #ifdef CUT_VALUE_DEBUG
     Buf<TDev, float> zOut_buf;
@@ -108,7 +128,13 @@ namespace lst {
           circleCenterY_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
           partOfPT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
           partOfT5_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
-          partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue))
+          partOfPT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
+          partOfT4_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
+          partOfPT3_buf(allocBufWrapper<bool>(devAccIn, maxTriplets, queue)),
+          charge_buf(allocBufWrapper<int>(devAccIn, maxTriplets, queue)),
+          fakeScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          promptScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
+          displacedScore_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue))
 #ifdef CUT_VALUE_DEBUG
           ,
           zOut_buf(allocBufWrapper<float>(devAccIn, maxTriplets, queue)),
@@ -130,6 +156,8 @@ namespace lst {
       alpaka::memset(queue, partOfPT5_buf, false);
       alpaka::memset(queue, partOfT5_buf, false);
       alpaka::memset(queue, partOfPT3_buf, false);
+      alpaka::memset(queue, partOfPT4_buf, false);
+      alpaka::memset(queue, partOfT4_buf, false);
     }
 
     inline Triplets const* data() const { return &data_; }
@@ -153,7 +181,9 @@ namespace lst {
                                                          float circleRadius,
                                                          float circleCenterX,
                                                          float circleCenterY,
-                                                         unsigned int tripletIndex)
+                                                         unsigned int tripletIndex,
+                                                         int charge,
+                                                         float (&t3Scores)[3])
 #else
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTripletToMemory(lst::Modules const& modulesInGPU,
                                                          lst::MiniDoublets const& mdsInGPU,
@@ -168,7 +198,9 @@ namespace lst {
                                                          float circleRadius,
                                                          float circleCenterX,
                                                          float circleCenterY,
-                                                         unsigned int tripletIndex)
+                                                         unsigned int tripletIndex,
+                                                         int charge,
+                                                         float (&t3Scores)[3])
 #endif
   {
     tripletsInGPU.segmentIndices[tripletIndex * 2] = innerSegmentIndex;
@@ -198,6 +230,11 @@ namespace lst {
     tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 3] = mdsInGPU.outerHitIndices[secondMDIndex];
     tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 4] = mdsInGPU.anchorHitIndices[thirdMDIndex];
     tripletsInGPU.hitIndices[tripletIndex * Params_T3::kHits + 5] = mdsInGPU.outerHitIndices[thirdMDIndex];
+
+    tripletsInGPU.charge[tripletIndex] = charge;
+    tripletsInGPU.fakeScore[tripletIndex] = t3Scores[0];
+    tripletsInGPU.promptScore[tripletIndex] = t3Scores[1];
+    tripletsInGPU.displacedScore[tripletIndex] = t3Scores[2];
 #ifdef CUT_VALUE_DEBUG
     tripletsInGPU.zOut[tripletIndex] = zOut;
     tripletsInGPU.rtOut[tripletIndex] = rtOut;
@@ -218,7 +255,8 @@ namespace lst {
                                                        unsigned int thirdMDIndex,
                                                        float circleRadius,
                                                        float circleCenterX,
-                                                       float circleCenterY) {
+                                                       float circleCenterY,
+                                                       int& charge) {
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modulesInGPU.lstLayers[innerInnerLowerModuleIndex];
     const int layer2 = modulesInGPU.lstLayers[middleLowerModuleIndex];
@@ -233,6 +271,22 @@ namespace lst {
     const float z1 = mdsInGPU.anchorZ[firstMDIndex] / 100;
     const float z2 = mdsInGPU.anchorZ[secondMDIndex] / 100;
     const float z3 = mdsInGPU.anchorZ[thirdMDIndex] / 100;
+
+    //get the x,y position of each MD
+    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
+    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
+    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
+
+    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
+    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
+    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
+
+    //determine the charge
+    // int charge = 0;
+    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
+      charge = -1;
+    else
+      charge = 1;
 
     //use linear approximation for regions 9 and 20-24 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
     float residual = alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
@@ -260,15 +314,6 @@ namespace lst {
 
     //get the type of module: 0 is ps, 1 is 2s
     const int moduleType3 = modulesInGPU.moduleType[outerOuterLowerModuleIndex];
-
-    //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
-    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
-
-    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
-    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
 
     //set initial and target points
     float x_init = x2;
@@ -304,13 +349,6 @@ namespace lst {
     float x_center = circleCenterX / 100;
     float y_center = circleCenterY / 100;
     float pt = 2 * k2Rinv1GeVf * circleRadius;  //k2Rinv1GeVf is already in cm^(-1)
-
-    //determine the charge
-    int charge = 0;
-    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
-      charge = -1;
-    else
-      charge = 1;
 
     //get the absolute value of px and py at the initial point
     float px = 2 * k2Rinv1GeVf * alpaka::math::abs(acc, (y_init - y_center)) * 100;
@@ -820,7 +858,9 @@ namespace lst {
                                                                    float& circleRadius,
                                                                    float& circleCenterX,
                                                                    float& circleCenterY,
-                                                                   const float ptCut) {
+                                                                   const float ptCut,
+                                                                   int& charge,
+                                                                   float (&t3Scores) [3]) {
     //this cut reduces the number of candidates by a factor of 4, i.e., 3 out of 4 warps can end right here!
     if (segmentsInGPU.mdIndices[2 * innerSegmentIndex + 1] != segmentsInGPU.mdIndices[2 * outerSegmentIndex])
       return false;
@@ -850,7 +890,8 @@ namespace lst {
                              thirdMDIndex,
                              circleRadius,
                              circleCenterX,
-                             circleCenterY)))
+                             circleCenterY,
+                             charge)))
       return false;
 
     if (not(passPointingConstraint(acc,
@@ -871,6 +912,11 @@ namespace lst {
                                    betaIn,
                                    betaInCut,
                                    ptCut)))
+      return false;
+
+    bool inference =
+      lst::t3dnn::runInference(acc, mdsInGPU, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);
+    if (!inference)  // T3-building cut
       return false;
 
     return true;
@@ -918,6 +964,8 @@ namespace lst {
             uint16_t outerOuterLowerModuleIndex = segmentsInGPU.outerLowerModuleIndices[outerSegmentIndex];
 
             float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
+            int charge = 0;
+            float t3Scores[3] = {0.f};
 
             bool success = runTripletConstraintsAndAlgo(acc,
                                                         modulesInGPU,
@@ -935,8 +983,9 @@ namespace lst {
                                                         circleRadius,
                                                         circleCenterX,
                                                         circleCenterY,
-                                                        ptCut);
-
+                                                        ptCut,
+                                                        charge,
+                                                        t3Scores);
             if (success) {
               unsigned int totOccupancyTriplets = alpaka::atomicOp<alpaka::AtomicAdd>(
                   acc, &tripletsInGPU.totOccupancyTriplets[innerInnerLowerModuleIndex], 1u);
@@ -969,7 +1018,9 @@ namespace lst {
                                    circleRadius,
                                    circleCenterX,
                                    circleCenterY,
-                                   tripletIndex);
+                                   tripletIndex,
+                                   charge,
+                                   t3Scores);
 #else
                 addTripletToMemory(modulesInGPU,
                                    mdsInGPU,
@@ -984,7 +1035,9 @@ namespace lst {
                                    circleRadius,
                                    circleCenterX,
                                    circleCenterY,
-                                   tripletIndex);
+                                   tripletIndex,
+                                   charge,
+                                   t3Scores);
 #endif
               }
             }

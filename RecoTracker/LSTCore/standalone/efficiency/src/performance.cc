@@ -1,6 +1,6 @@
 #include "performance.h"
 
-enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
+enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9, pT4 = 11 };
 
 //__________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char** argv) {
@@ -74,6 +74,18 @@ int main(int argc, char** argv) {
             /* q     */ charge,
             /* pass  */ [&](unsigned int isim) { return lstEff.sim_TC_matched_mask().at(isim) & (1 << pLS); },
             /* sel   */ sels[isel]));
+        list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */ TString("T4_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */ [&](unsigned int isim) { return lstEff.sim_TC_matched_mask().at(isim) & (1 << T4); },
+            /* sel   */ sels[isel]));
+        list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */ TString("pT4_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */ [&](unsigned int isim) { return lstEff.sim_TC_matched_mask().at(isim) & (1 << pT4); },
+            /* sel   */ sels[isel]));
 
         if (ana.do_lower_level) {
           //lower objects - name will have pT5_lower_, T5_lower_, pT3_lower_
@@ -98,6 +110,12 @@ int main(int argc, char** argv) {
               /* q     */ charge,
               /* pass  */ [&](unsigned int isim) { return lstEff.sim_pT3_matched().at(isim) > 0; },
               /* sel   */ sels[isel]));
+          list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */ TString("T4_lower_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */ [&](unsigned int isim) { return lstEff.sim_T4_matched().at(isim) > 0; },
+            /* sel   */ sels[isel]));
         }
       }
     }
@@ -152,6 +170,22 @@ int main(int argc, char** argv) {
                              /* eta   */ tas::tc_eta,
                              /* phi   */ tas::tc_phi,
                              /* type  */ tas::tc_type));
+  list_FRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "T4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isFake().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == T4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
+  list_FRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "pT4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isFake().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == pT4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
 
   if (ana.do_lower_level) {
     list_FRSetDef.push_back(RecoTrackSetDefinition(
@@ -181,6 +215,14 @@ int main(int argc, char** argv) {
         /* eta   */ tas::pT3_eta,
         /* phi   */ tas::pT3_phi,
         /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::pT3_pt().size(), 1)); }));
+    list_FRSetDef.push_back(RecoTrackSetDefinition(
+        /* name  */ "T4_lower",
+        /* pass  */ [&](unsigned int it4) { return lstEff.t4_isFake().at(it4) > 0; },
+        /* sel   */ [&](unsigned int it4) { return 1; },
+        /* pt    */ tas::t4_pt,
+        /* eta   */ tas::t4_eta,
+        /* phi   */ tas::t4_phi,
+        /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::t4_pt().size(), 1)); }));
   }
 
   bookFakeRateSets(list_FRSetDef);
@@ -232,6 +274,22 @@ int main(int argc, char** argv) {
                              /* eta   */ tas::tc_eta,
                              /* phi   */ tas::tc_phi,
                              /* type  */ tas::tc_type));
+  list_DRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "T4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isDuplicate().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == T4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
+  list_DRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */ "pT4",
+                             /* pass  */ [&](unsigned int itc) { return lstEff.tc_isDuplicate().at(itc) > 0; },
+                             /* sel   */ [&](unsigned int itc) { return lstEff.tc_type().at(itc) == pT4; },
+                             /* pt    */ tas::tc_pt,
+                             /* eta   */ tas::tc_eta,
+                             /* phi   */ tas::tc_phi,
+                             /* type  */ tas::tc_type));
 
   if (ana.do_lower_level) {
     list_DRSetDef.push_back(RecoTrackSetDefinition(
@@ -261,6 +319,15 @@ int main(int argc, char** argv) {
         /* eta   */ tas::pT3_eta,
         /* phi   */ tas::pT3_phi,
         /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::pT3_pt().size(), 1)); }));
+    list_DRSetDef.push_back(RecoTrackSetDefinition(
+        /* name  */ "T4_lower",
+        /* pass  */ [&](unsigned int iT4) { return lstEff.t4_isDuplicate().at(iT4) > 0; },
+        /* sel   */ [&](unsigned int iT4) { return 1; },
+        /* pt    */ tas::t4_pt,
+        /* eta   */ tas::t4_eta,
+        /* phi   */ tas::t4_phi,
+        /* type  */ [&]() { return static_cast<const std::vector<int>>(std::vector<int>(tas::t4_pt().size(), 1)); }));
+        printf("t4_pt.size: %i", tas::t4_pt().size());
   }
 
   bookDuplicateRateSets(list_DRSetDef);

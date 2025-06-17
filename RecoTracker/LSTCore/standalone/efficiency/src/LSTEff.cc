@@ -10,6 +10,13 @@ void LSTEff::Init(TTree *tree) {
       pT5_occupancies_branch->SetAddress(&pT5_occupancies_);
     }
   }
+  pT4_occupancies_branch = 0;
+  if (tree->GetBranch("pT4_occupancies") != 0) {
+    pT4_occupancies_branch = tree->GetBranch("pT4_occupancies");
+    if (pT4_occupancies_branch) {
+      pT4_occupancies_branch->SetAddress(&pT4_occupancies_);
+    }
+  }
   t3_phi_branch = 0;
   if (tree->GetBranch("t3_phi") != 0) {
     t3_phi_branch = tree->GetBranch("t3_phi");
@@ -1030,6 +1037,7 @@ void LSTEff::Init(TTree *tree) {
 void LSTEff::GetEntry(unsigned int idx) {
   index = idx;
   pT5_occupancies_isLoaded = false;
+  pT4_occupancies_isLoaded = false;
   t3_phi_isLoaded = false;
   t5_score_rphisum_isLoaded = false;
   pT4_isFake_isLoaded = false;
@@ -1179,6 +1187,8 @@ void LSTEff::GetEntry(unsigned int idx) {
 void LSTEff::LoadAllBranches() {
   if (pT5_occupancies_branch != 0)
     pT5_occupancies();
+  if (pT4_occupancies_branch != 0)
+    pT4_occupancies();
   if (t3_phi_branch != 0)
     t3_phi();
   if (t5_score_rphisum_branch != 0)
@@ -1481,6 +1491,18 @@ const int &LSTEff::pT5_occupancies() {
     pT5_occupancies_isLoaded = true;
   }
   return pT5_occupancies_;
+}
+const int &LSTEff::pT4_occupancies() {
+  if (not pT4_occupancies_isLoaded) {
+    if (pT4_occupancies_branch != 0) {
+      pT4_occupancies_branch->GetEntry(index);
+    } else {
+      printf("branch pT4_occupancies_branch does not exist!\n");
+      exit(1);
+    }
+    pT4_occupancies_isLoaded = true;
+  }
+  return pT4_occupancies_;
 }
 const std::vector<float> &LSTEff::t3_phi() {
   if (not t3_phi_isLoaded) {
@@ -3245,6 +3267,7 @@ void LSTEff::progress(int nEventsTotal, int nEventsChain) {
 }
 namespace tas {
   const int &pT5_occupancies() { return lstEff.pT5_occupancies(); }
+  const int &pT4_occupancies() { return lstEff.pT4_occupancies(); }
   const std::vector<float> &t3_phi() { return lstEff.t3_phi(); }
   const std::vector<float> &t5_score_rphisum() { return lstEff.t5_score_rphisum(); }
   const std::vector<int> &pT4_isFake() { return lstEff.pT4_isFake(); }
