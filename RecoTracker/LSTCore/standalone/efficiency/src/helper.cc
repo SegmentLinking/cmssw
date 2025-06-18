@@ -31,7 +31,9 @@ void parseArguments(int argc, char** argv) {
       "p,pt_cut", "Transverse momentum cut", cxxopts::value<float>()->default_value("0.9"))(
       "e,eta_cut", "Pseudorapidity cut", cxxopts::value<float>()->default_value("4.5"))(
       "d,debug", "Run debug job. i.e. overrides output option to 'debug.root' and 'recreate's the file.")("h,help",
-                                                                                                          "Print help");
+                                                                                                          "Print help")(
+        "J,jet_branches", "Accounts for specific jet branches in input root file for testing"
+      );
 
   auto result = options.parse(argc, argv);
 
@@ -129,6 +131,10 @@ void parseArguments(int argc, char** argv) {
   } else {
     ana.job_index = -1;
   }
+
+  //_______________________________________________________________________________
+  // --jet_branches
+  ana.jet_branches = result["jet_branches"].as<bool>();
 
   // Sanity check for split jobs (if one is set the other must be set too)
   if (result.count("job_index") or result.count("nsplit_jobs")) {
