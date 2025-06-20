@@ -40,9 +40,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override;
 
-    const device::EDGetToken<lst::TrackCandidatesBaseHostCollection> lstOutputToken_;
-    const device::EDGetToken<lst::LSTInputHostCollection> lstInputToken_;
-    const device::EDGetToken<TrajectorySeedCollection> lstPixelSeedToken_;
+    const edm::EDGetTokenT<lst::TrackCandidatesBaseHostCollection> lstOutputToken_;
+    const edm::EDGetTokenT<lst::LSTInputHostCollection> lstInputToken_;
+    const edm::EDGetTokenT<TrajectorySeedCollection> lstPixelSeedToken_;
     const bool includeT5s_;
     const bool includeNonpLSTSs_;
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;

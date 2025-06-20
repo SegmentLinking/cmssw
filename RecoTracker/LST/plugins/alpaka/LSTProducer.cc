@@ -70,7 +70,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const double ptCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
-    edm::EDPutTokenT<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
+    device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
