@@ -36,6 +36,7 @@ parser.add_argument('--pt_cut'      ,        dest='pt_cut'      , type=float    
 parser.add_argument('--eta_cut'     ,        dest='eta_cut'     , type=float          , default=4.5, help='pseudorapidity cut [DEFAULT=4.5]')
 parser.add_argument('--compare'     , '-C' , dest='compare'     , action="store_true" , help='plot comparisons of input files')
 parser.add_argument('--comp_labels' , '-L' , dest='comp_labels' , type=str            , help='comma separated legend labels for comparison plots (e.g. reference,pT5_update')
+parser.add_argument('--jet_branches' , '-j', dest='jet_branches', action="store_true" , help='Accounts for specific jet branches in input root file for testing')
 
 
 #______________________________________________________________________________________________________
@@ -659,11 +660,13 @@ def plot_standard_performance_plots(args):
     # Efficiency plots
     metrics = metric_choices
     yzooms = [False, True]
+
     variables = {
-            "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"], # Last six added by Kasia,
+            "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy"],
             "fakerate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             "duplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             }
+    if(args.jet_branches): variables["eff"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
     sels = {
             "eff": ["base", "loweta"],
             "fakerate": ["none"],
@@ -677,14 +680,16 @@ def plot_standard_performance_plots(args):
             "phi": [False, True],
             "dxy": [False, True],
             "vxy": [False, True],
-            "dz": [False, True],
-            "deltaEta": [False, True], # Added by Kasia
-            "deltaPhi": [False, True],  # Added by Kasia
-            "deltaR": [False, True],  # Added by Kasia
-            "jet_eta": [False, True], # Added by Kasia
-            "jet_phi": [False, True],  # Added by Kasia
-            "jet_pt": [False, True]  # Added by Kasia
+            "dz": [False, True]
             }
+    if(args.jet_branches): 
+        xcoarses["deltaEta"] = [False, True]
+        xcoarses["deltaPhi"] = [False, True]
+        xcoarses["deltaR"] = [False, True]
+        xcoarses["jet_eta"] = [False, True]
+        xcoarses["jet_phi"] = [False, True]
+        xcoarses["jet_pt"] = [False, True]
+
     types = objecttype_choices
     breakdowns = {
             "eff":{
