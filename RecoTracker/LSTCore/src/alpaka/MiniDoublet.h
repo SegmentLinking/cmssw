@@ -199,7 +199,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
-                                                     float *  shiftedCoords,
+                                                     float*  shiftedCoords,
                                                      float xLower,
                                                      float yLower,
                                                      float zLower,
@@ -340,7 +340,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Computing new Z position
     absdzprime = alpaka::math::abs(
         acc,
-        moduleSeparation / alpaka::math::sin(acc, angleA + angleB)  * 
+        moduleSeparation / alpaka::math::sin(acc, angleA + angleB) * 
             alpaka::math::cos(
                 acc,
                 angleA));  // module separation sign is for shifting in radial direction for z-axis direction take care of the sign later
