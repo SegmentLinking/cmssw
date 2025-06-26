@@ -23,7 +23,7 @@ namespace lst {
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
 
-  constexpr unsigned int n_max_pixel_segments_per_module = 500000 *10;
+  constexpr unsigned int n_max_pixel_segments_per_module = 500000 * 10;
 
   constexpr unsigned int n_max_pixel_md_per_modules = 2 * n_max_pixel_segments_per_module;
 
