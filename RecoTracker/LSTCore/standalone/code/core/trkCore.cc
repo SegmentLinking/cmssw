@@ -301,6 +301,9 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
 //___________________________________________________________________________________________________________________________________________________________________________________________
 std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::vector<unsigned int> hitidxs,
                                                                            std::vector<unsigned int> hittypes,
+                                                                           std::vector<int> const& trk_simhit_simTrkIdx,
+                                                                           std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+                                                                           std::vector<std::vector<int>> const& trk_pix_simHitIdx,
                                                                            bool verbose,
                                                                            float matchfrac,
                                                                            float *pmatched) {

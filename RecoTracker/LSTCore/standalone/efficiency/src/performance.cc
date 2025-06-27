@@ -55,8 +55,8 @@ int main(int argc, char** argv) {
             /* q     */ charge,
             /* pass  */
             [&](unsigned int isim) {
-              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx")
-              auto& lstEff_tc_type = lstEff.getVI("tc_type")
+              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx");
+              auto& lstEff_tc_type = lstEff.getVI("tc_type");
               return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == pT5 : false;
             },
             /* sel   */ sels[isel]));
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
             /* q     */ charge,
             /* pass  */
             [&](unsigned int isim) {
-              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx")
-              auto& lstEff_tc_type = lstEff.getVI("tc_type")
+              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx");
+              auto& lstEff_tc_type = lstEff.getVI("tc_type");
               return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == pT3 : false;
             },
             /* sel   */ sels[isel]));
@@ -79,8 +79,8 @@ int main(int argc, char** argv) {
             /* q     */ charge,
             /* pass  */
             [&](unsigned int isim) {
-              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx")
-              auto& lstEff_tc_type = lstEff.getVI("tc_type")
+              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx");
+              auto& lstEff_tc_type = lstEff.getVI("tc_type");
               return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == T5 : false;
             },
             /* sel   */ sels[isel]));
@@ -91,8 +91,8 @@ int main(int argc, char** argv) {
             /* q     */ charge,
             /* pass  */
             [&](unsigned int isim) {
-              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx")
-              auto& lstEff_tc_type = lstEff.getVI("tc_type")
+              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx");
+              auto& lstEff_tc_type = lstEff.getVI("tc_type");
               return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == pLS : false;
             },
             /* sel   */ sels[isel]));
@@ -106,7 +106,7 @@ int main(int argc, char** argv) {
               /* q     */ charge,
               /* pass  */
               [&](unsigned int isim) {
-                auto& lstEff_sim_pt5IdxAllFrac = lstEff.getVI("sim_pt5IdxAllFrac");
+                auto& lstEff_sim_pt5IdxAllFrac = lstEff.getVVF("sim_pt5IdxAllFrac");
                 for (size_t i = 0; i < lstEff_sim_pt5IdxAllFrac.at(isim).size(); ++i) {
                   if (lstEff_sim_pt5IdxAllFrac.at(isim).at(i) > 0.75)
                     return true;
@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
                                     /* q     */ charge,
                                     /* pass  */
                                     [&](unsigned int isim) {
-                                      auto& lstEff_sim_t5IdxAllFrac = lstEff.getVI("sim_t5IdxAllFrac");
+                                      auto& lstEff_sim_t5IdxAllFrac = lstEff.getVVF("sim_t5IdxAllFrac");
                                       for (size_t i = 0; i < lstEff_sim_t5IdxAllFrac.at(isim).size(); ++i) {
                                         if (lstEff_sim_t5IdxAllFrac.at(isim).at(i) > 0.75)
                                           return true;
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
               /* q     */ charge,
               /* pass  */
               [&](unsigned int isim) {
-                auto& lstEff_sim_pt3IdxAllFrac = lstEff.getVI("sim_pt3IdxAllFrac");
+                auto& lstEff_sim_pt3IdxAllFrac = lstEff.getVVF("sim_pt3IdxAllFrac");
                 for (size_t i = 0; i < lstEff_sim_pt3IdxAllFrac.at(isim).size(); ++i) {
                   if (lstEff_sim_pt3IdxAllFrac.at(isim).at(i) > 0.75)
                     return true;
@@ -145,19 +145,21 @@ int main(int argc, char** argv) {
               },
               /* sel   */ sels[isel]));
           list_effSetDef.push_back(
-              SimTrackSetDefinition(/* name  */
-                                    TString("pLS_lower_") + selnames[isel],
-                                    /* pdgid */ pdgid,
-                                    /* q     */ charge,
-                                    /* pass  */
-                                    [&](unsigned int isim) {
-                                      for (size_t i = 0; i < lstEff.sim_plsIdxAllFrac().at(isim).size(); ++i) {
-                                        if (lstEff.sim_plsIdxAll().at(isim).at(i) > 0.75)
-                                          return true;
-                                      }
-                                      return false;
-                                    },
-                                    /* sel   */ sels[isel]));
+              SimTrackSetDefinition(
+                /* name  */
+                TString("pLS_lower_") + selnames[isel],
+                /* pdgid */ pdgid,
+                /* q     */ charge,
+                /* pass  */
+                [&](unsigned int isim) {
+                    auto& lstEff_sim_plsIdxAllFrac = lstEff.getVVF("sim_plsIdxAllFrac");
+                    for (size_t i = 0; i < lstEff_sim_plsIdxAllFrac.at(isim).size(); ++i) {
+                    if (lstEff_sim_plsIdxAllFrac.at(isim).at(i) > 0.75)
+                        return true;
+                    }
+                    return false;
+                },
+                /* sel   */ sels[isel]));
         }
       }
     }
