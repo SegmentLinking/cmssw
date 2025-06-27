@@ -449,7 +449,8 @@ void bookEfficiencySet(SimTrackSetDefinition& effset) {
 
   // Moving the standard pT code up here for convenience
   ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_pt");
-  ana.histograms.addVecHistogram(category_name + "_ef_denom_pt", 40, 0.9, 2000, [&, category_name]() { // getPtBounds(0), [&, category_name]() {
+  ana.histograms.addVecHistogram(
+    category_name + "_ef_denom_pt", 40, 0.9, 2000, [&, category_name]() { // getPtBounds(0), [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_pt");
   });
 

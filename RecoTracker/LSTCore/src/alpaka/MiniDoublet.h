@@ -199,7 +199,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      uint16_t upperModuleIndex,
                                                      unsigned int lowerHitIndex,
                                                      unsigned int upperHitIndex,
-                                                     float*  shiftedCoords,
+                                                     float* shiftedCoords,
                                                      float xLower,
                                                      float yLower,
                                                      float zLower,
