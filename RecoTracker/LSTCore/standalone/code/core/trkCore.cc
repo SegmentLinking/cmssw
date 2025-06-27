@@ -290,23 +290,24 @@ std::vector<int> matchedSimTrkIdxs(std::vector<unsigned int> hitidxs,
                                    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
                                    bool verbose,
                                    float matchfrac,
-                                   float *pmatched) {
+                                   float* pmatched) {
   std::vector<int> matched_idxs;
   std::vector<float> matched_idx_fracs;
-  std::tie(matched_idxs, matched_idx_fracs) =
-      matchedSimTrkIdxsAndFracs(hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, verbose, matchfrac, pmatched);
+  std::tie(matched_idxs, matched_idx_fracs) = matchedSimTrkIdxsAndFracs(
+      hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, verbose, matchfrac, pmatched);
   return matched_idxs;
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::vector<unsigned int> hitidxs,
-                                                                           std::vector<unsigned int> hittypes,
-                                                                           std::vector<int> const& trk_simhit_simTrkIdx,
-                                                                           std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
-                                                                           std::vector<std::vector<int>> const& trk_pix_simHitIdx,
-                                                                           bool verbose,
-                                                                           float matchfrac,
-                                                                           float *pmatched) {
+std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(
+    std::vector<unsigned int> hitidxs,
+    std::vector<unsigned int> hittypes,
+    std::vector<int> const& trk_simhit_simTrkIdx,
+    std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    bool verbose,
+    float matchfrac,
+    float* pmatched) {
   if (hitidxs.size() != hittypes.size()) {
     std::cout << "Error: matched_sim_trk_idxs()   hitidxs and hittypes have different lengths" << std::endl;
     std::cout << "hitidxs.size(): " << hitidxs.size() << std::endl;
@@ -411,7 +412,7 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
       [&](std::vector<std::vector<int>>& result,
           std::vector<int> intermediate,
           size_t n,
-          std::vector<std::vector<int>> &va) {
+          std::vector<std::vector<int>>& va) {
         if (va.size() > n) {
           for (auto x : va[n]) {
             std::vector<int> copy_intermediate(intermediate);
@@ -482,7 +483,7 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(std::
   std::vector<int> result;
   std::vector<float> result_frac;
   // Loop over the map using range-based for loop
-  for (const auto &pair : pairs) {
+  for (const auto& pair : pairs) {
     result.push_back(pair.first);
     result_frac.push_back(pair.second);
   }

@@ -144,22 +144,21 @@ int main(int argc, char** argv) {
                 return false;
               },
               /* sel   */ sels[isel]));
-          list_effSetDef.push_back(
-              SimTrackSetDefinition(
-                /* name  */
-                TString("pLS_lower_") + selnames[isel],
-                /* pdgid */ pdgid,
-                /* q     */ charge,
-                /* pass  */
-                [&](unsigned int isim) {
-                    auto& lstEff_sim_plsIdxAllFrac = lstEff.getVVF("sim_plsIdxAllFrac");
-                    for (size_t i = 0; i < lstEff_sim_plsIdxAllFrac.at(isim).size(); ++i) {
-                    if (lstEff_sim_plsIdxAllFrac.at(isim).at(i) > 0.75)
-                        return true;
-                    }
-                    return false;
-                },
-                /* sel   */ sels[isel]));
+          list_effSetDef.push_back(SimTrackSetDefinition(
+              /* name  */
+              TString("pLS_lower_") + selnames[isel],
+              /* pdgid */ pdgid,
+              /* q     */ charge,
+              /* pass  */
+              [&](unsigned int isim) {
+                auto& lstEff_sim_plsIdxAllFrac = lstEff.getVVF("sim_plsIdxAllFrac");
+                for (size_t i = 0; i < lstEff_sim_plsIdxAllFrac.at(isim).size(); ++i) {
+                  if (lstEff_sim_plsIdxAllFrac.at(isim).at(i) > 0.75)
+                    return true;
+                }
+                return false;
+              },
+              /* sel   */ sels[isel]));
         }
       }
     }
