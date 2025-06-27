@@ -15,8 +15,6 @@ void createOutputBranches() {
 void fillOutputBranches(LSTEvent* event) {
   setOutputBranches(event);
   setOptionalOutputBranches(event);
-  if (ana.gnn_ntuple)
-    setGnnNtupleBranches(event);
 
   // Now actually fill the ttree
   ana.tx->fill();
@@ -28,33 +26,17 @@ void fillOutputBranches(LSTEvent* event) {
 //________________________________________________________________________________________________________________________________
 void createRequiredOutputBranches() {
   // Setup output TTree
-  ana.tx->createBranch<std::vector<float>>("sim_pt");
-  ana.tx->createBranch<std::vector<float>>("sim_eta");
-  ana.tx->createBranch<std::vector<float>>("sim_phi");
-  ana.tx->createBranch<std::vector<float>>("sim_pca_dxy");
-  ana.tx->createBranch<std::vector<float>>("sim_pca_dz");
-  ana.tx->createBranch<std::vector<int>>("sim_q");
-  ana.tx->createBranch<std::vector<int>>("sim_event");
-  ana.tx->createBranch<std::vector<int>>("sim_pdgId");
-  ana.tx->createBranch<std::vector<float>>("sim_vx");
-  ana.tx->createBranch<std::vector<float>>("sim_vy");
-  ana.tx->createBranch<std::vector<float>>("sim_vz");
-  ana.tx->createBranch<std::vector<float>>("sim_trkNtupIdx");
-  ana.tx->createBranch<std::vector<int>>("sim_TC_matched");
-  ana.tx->createBranch<std::vector<int>>("sim_TC_matched_mask");
+  createSimTrackContainerBranches();
 
   // Track candidates
-  ana.tx->createBranch<std::vector<float>>("tc_pt");
-  ana.tx->createBranch<std::vector<float>>("tc_eta");
-  ana.tx->createBranch<std::vector<float>>("tc_phi");
-  ana.tx->createBranch<std::vector<int>>("tc_type");
-  ana.tx->createBranch<std::vector<int>>("tc_isFake");
-  ana.tx->createBranch<std::vector<int>>("tc_isDuplicate");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("tc_matched_simIdx");
+  createTrackCandidateBranches();
 }
 
 //________________________________________________________________________________________________________________________________
 void createOptionalOutputBranches() {
+  if (ana.gnn_ntuple)
+    createGnnNtupleBranches();
+
 #ifdef CUT_VALUE_DEBUG
   // Event-wide branches
   // ana.tx->createBranch<float>("evt_dummy");
@@ -67,108 +49,17 @@ void createOptionalOutputBranches() {
   // NOTE: Must sync with main tc branch in length!!
   ana.tx->createBranch<std::vector<float>>("tc_dummy");
 
-  // pT5 branches
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_matched_simIdx");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_hitIdxs");
-  ana.tx->createBranch<std::vector<int>>("sim_pT5_matched");
-  ana.tx->createBranch<std::vector<float>>("pT5_pt");
-  ana.tx->createBranch<std::vector<float>>("pT5_eta");
-  ana.tx->createBranch<std::vector<float>>("pT5_phi");
-  ana.tx->createBranch<std::vector<int>>("pT5_isFake");
-  ana.tx->createBranch<std::vector<float>>("t5_sim_vxy");
-  ana.tx->createBranch<std::vector<float>>("t5_sim_vz");
-  ana.tx->createBranch<std::vector<int>>("pT5_isDuplicate");
-  ana.tx->createBranch<std::vector<int>>("pT5_score");
-  ana.tx->createBranch<std::vector<int>>("pT5_layer_binary");
-  ana.tx->createBranch<std::vector<int>>("pT5_moduleType_binary");
-  ana.tx->createBranch<std::vector<float>>("pT5_matched_pt");
-  ana.tx->createBranch<std::vector<float>>("pT5_rzChiSquared");
-  ana.tx->createBranch<std::vector<float>>("pT5_rPhiChiSquared");
-  ana.tx->createBranch<std::vector<float>>("pT5_rPhiChiSquaredInwards");
+  createMiniDoubletBranches();
+  createLineSegmentBranches();
+  createTripletBranches();
+  createQuintupletBranches();
+  createPixelLineSegmentBranches();
+  createPixelTripletBranches();
+  createPixelQuintupletBranches();
 
-  // pT3 branches
-  ana.tx->createBranch<std::vector<int>>("sim_pT3_matched");
-  ana.tx->createBranch<std::vector<float>>("pT3_pt");
-  ana.tx->createBranch<std::vector<int>>("pT3_isFake");
-  ana.tx->createBranch<std::vector<int>>("pT3_isDuplicate");
-  ana.tx->createBranch<std::vector<float>>("pT3_eta");
-  ana.tx->createBranch<std::vector<float>>("pT3_phi");
-  ana.tx->createBranch<std::vector<float>>("pT3_score");
-  ana.tx->createBranch<std::vector<int>>("pT3_foundDuplicate");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_matched_simIdx");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_hitIdxs");
-  ana.tx->createBranch<std::vector<float>>("pT3_pixelRadius");
-  ana.tx->createBranch<std::vector<float>>("pT3_pixelRadiusError");
-  ana.tx->createBranch<std::vector<std::vector<float>>>("pT3_matched_pt");
-  ana.tx->createBranch<std::vector<float>>("pT3_tripletRadius");
-  ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquared");
-  ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquaredInwards");
-  ana.tx->createBranch<std::vector<float>>("pT3_rzChiSquared");
-  ana.tx->createBranch<std::vector<int>>("pT3_layer_binary");
-  ana.tx->createBranch<std::vector<int>>("pT3_moduleType_binary");
+  createOccupancyBranches();
 
-  // pLS branches
-  ana.tx->createBranch<std::vector<int>>("sim_pLS_matched");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pLS_matched_simIdx");
-  ana.tx->createBranch<std::vector<int>>("pLS_isFake");
-  ana.tx->createBranch<std::vector<int>>("pLS_isDuplicate");
-  ana.tx->createBranch<std::vector<float>>("pLS_ptIn");
-  ana.tx->createBranch<std::vector<float>>("pLS_ptErr");
-  ana.tx->createBranch<std::vector<float>>("pLS_px");
-  ana.tx->createBranch<std::vector<float>>("pLS_py");
-  ana.tx->createBranch<std::vector<float>>("pLS_pz");
-  ana.tx->createBranch<std::vector<float>>("pLS_eta");
-  ana.tx->createBranch<std::vector<bool>>("pLS_isQuad");
-  ana.tx->createBranch<std::vector<float>>("pLS_etaErr");
-  ana.tx->createBranch<std::vector<float>>("pLS_phi");
-  ana.tx->createBranch<std::vector<float>>("pLS_score");
-  ana.tx->createBranch<std::vector<float>>("pLS_circleCenterX");
-  ana.tx->createBranch<std::vector<float>>("pLS_circleCenterY");
-  ana.tx->createBranch<std::vector<float>>("pLS_circleRadius");
-
-  // T5 branches
-  ana.tx->createBranch<std::vector<int>>("sim_T5_matched");
-  ana.tx->createBranch<std::vector<int>>("t5_isFake");
-  ana.tx->createBranch<std::vector<int>>("t5_isDuplicate");
-  ana.tx->createBranch<std::vector<int>>("t5_foundDuplicate");
-  ana.tx->createBranch<std::vector<float>>("t5_pt");
-  ana.tx->createBranch<std::vector<float>>("t5_pMatched");
-  ana.tx->createBranch<std::vector<float>>("t5_eta");
-  ana.tx->createBranch<std::vector<float>>("t5_phi");
-  ana.tx->createBranch<std::vector<float>>("t5_score_rphisum");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("t5_hitIdxs");
-  ana.tx->createBranch<std::vector<std::vector<int>>>("t5_matched_simIdx");
-  ana.tx->createBranch<std::vector<int>>("t5_moduleType_binary");
-  ana.tx->createBranch<std::vector<int>>("t5_layer_binary");
-  ana.tx->createBranch<std::vector<float>>("t5_matched_pt");
-  ana.tx->createBranch<std::vector<float>>("t5_innerRadius");
-  ana.tx->createBranch<std::vector<float>>("t5_outerRadius");
-  ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
-  ana.tx->createBranch<std::vector<float>>("t5_chiSquared");
-  ana.tx->createBranch<std::vector<float>>("t5_rzChiSquared");
-  ana.tx->createBranch<std::vector<int>>("t5_isDupAlgoFlag");
-  ana.tx->createBranch<std::vector<float>>("t5_nonAnchorChiSquared");
-  ana.tx->createBranch<std::vector<float>>("t5_dBeta1");
-  ana.tx->createBranch<std::vector<float>>("t5_dBeta2");
-
-  // Occupancy branches
-  ana.tx->createBranch<std::vector<int>>("module_layers");
-  ana.tx->createBranch<std::vector<int>>("module_subdets");
-  ana.tx->createBranch<std::vector<int>>("module_rings");
-  ana.tx->createBranch<std::vector<int>>("module_rods");
-  ana.tx->createBranch<std::vector<int>>("module_modules");
-  ana.tx->createBranch<std::vector<bool>>("module_isTilted");
-  ana.tx->createBranch<std::vector<float>>("module_eta");
-  ana.tx->createBranch<std::vector<float>>("module_r");
-  ana.tx->createBranch<std::vector<int>>("md_occupancies");
-  ana.tx->createBranch<std::vector<int>>("sg_occupancies");
-  ana.tx->createBranch<std::vector<int>>("t3_occupancies");
-  ana.tx->createBranch<int>("tc_occupancies");
-  ana.tx->createBranch<std::vector<int>>("t5_occupancies");
-  ana.tx->createBranch<int>("pT3_occupancies");
-  ana.tx->createBranch<int>("pT5_occupancies");
-
-  // T5 DNN branches
+  // DNN branches
   createT5DNNBranches();
   createT3DNNBranches();
 
@@ -285,6 +176,313 @@ void createGnnNtupleBranches() {
 
   // TC's LS
   ana.tx->createBranch<std::vector<std::vector<int>>>("tc_lsIdx");
+}
+
+//________________________________________________________________________________________________________________________________
+void createSimTrackContainerBranches() {
+  // Simulated Track Container
+  //
+  //  The container will hold per entry a simulated track in the event. Only the current bunch crossing, and
+  //  primary vertex (hard-scattered) tracks will be saved to reduce the size of the output.
+  //
+  ana.tx->createBranch<std::vector<float>>("sim_pt");       // pt
+  ana.tx->createBranch<std::vector<float>>("sim_eta");      // eta
+  ana.tx->createBranch<std::vector<float>>("sim_phi");      // phi
+  ana.tx->createBranch<std::vector<float>>("sim_pca_dxy");  // dxy of point of closest approach
+  ana.tx->createBranch<std::vector<float>>("sim_pca_dz");   // dz of point of clossest approach
+  ana.tx->createBranch<std::vector<int>>("sim_q");          // charge +1, -1, 0
+  ana.tx->createBranch<std::vector<int>>("sim_pdgId");      // pdgId
+  // production vertex x position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
+  ana.tx->createBranch<std::vector<float>>("sim_vx");
+  // production vertex y position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
+  ana.tx->createBranch<std::vector<float>>("sim_vy");
+  // production vertex z position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
+  ana.tx->createBranch<std::vector<float>>("sim_vz");
+  // production vertex r (sqrt(x**2 + y**2)) position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
+  ana.tx->createBranch<std::vector<float>>("sim_vtxperp");
+  // idx of sim_* in the tracking ntuple (N.B. this may be redundant)
+  ana.tx->createBranch<std::vector<float>>("sim_trkNtupIdx");
+  // idx to the best match (highest nhit match) tc_* container
+  ana.tx->createBranch<std::vector<int>>("sim_tcIdxBest");
+  // match fraction to the best match (highest nhit match) tc_* container
+  ana.tx->createBranch<std::vector<float>>("sim_tcIdxBestFrac");
+  // idx to the best match (highest nhit match and > 75%) tc_* container
+  ana.tx->createBranch<std::vector<int>>("sim_tcIdx");
+  // list of idx to any matches (> 0%) to tc_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_tcIdxAll");
+  // list of match fraction for each match (> 0%) to tc_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_tcIdxAllFrac");
+  // list of idx to matches (> 0%) to md_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_mdIdxAll");
+  // list of match fraction for each match (> 0%) to md_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_mdIdxAllFrac");
+  // list of idx to matches (> 0%) to ls_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_lsIdxAll");
+  // list of match fraction for each match (> 0%) to ls_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_lsIdxAllFrac");
+  // list of idx to matches (> 0%) to t3_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_t3IdxAll");
+  // list of match fraction for each match (> 0%) to t3_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_t3IdxAllFrac");
+  // list of idx to matches (> 0%) to t5_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_t5IdxAll");
+  // list of match fraction for each match (> 0%) to t5_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_t5IdxAllFrac");
+  // list of idx to matches (> 0%) to pls_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_plsIdxAll");
+  // list of match fraction for each match (> 0%) to pls_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_plsIdxAllFrac");
+  // list of idx to matches (> 0%) to pt3_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_pt3IdxAll");
+  // list of match fraction for each match (> 0%) to pt3_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_pt3IdxAllFrac");
+  // list of idx to matches (> 0%) to pt5_* container
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_pt5IdxAll");
+  // list of match fraction for each match (> 0%) to pt5_* container
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_pt5IdxAllFrac");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitX");    // list of simhit's X positions
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitY");    // list of simhit's Y positions
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitZ");    // list of simhit's Z positions
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_simHitDetId");  // list of simhit's detId
+  // list of simhit's layers (N.B. layer is numbered 1 2 3 4 5 6 for barrel, 7 8 9 10 11 for endcaps)
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_simHitLayer");
+  // list of simhit's distance in xy-plane to the expected point based on simhit's z position and helix formed from pt,eta,phi,vx,vy,vz,q of the simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitDistxyHelix");
+  // length of 11 float numbers with min(simHitDistxyHelix) value for each layer. Useful for finding e.g. "sim tracks that traversed barrel detector entirelyand left a reasonable hit in layer 1 2 3 4 5 6 layers."
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitLayerMinDistxyHelix");
+  // length of 11 float numbers with min(simHitDistxyHelix) value for each layer. Useful for finding e.g. "sim tracks that traversed barrel detector entirelyand left a reasonable hit in layer 1 2 3 4 5 6 layers."
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_simHitLayerMinDistxyPrevHit");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_recoHitX");    // list of recohit's X positions
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_recoHitY");    // list of recohit's Y positions
+  ana.tx->createBranch<std::vector<std::vector<float>>>("sim_recoHitZ");    // list of recohit's Z positions
+  ana.tx->createBranch<std::vector<std::vector<int>>>("sim_recoHitDetId");  // list of recohit's detId
+}
+
+//________________________________________________________________________________________________________________________________
+void createTrackCandidateBranches() {
+  // Track Candidates
+  //
+  //  The container will hold per entry a track candidate built by LST in the event.
+  //
+  ana.tx->createBranch<std::vector<float>>("tc_pt");    // pt
+  ana.tx->createBranch<std::vector<float>>("tc_eta");   // eta
+  ana.tx->createBranch<std::vector<float>>("tc_phi");   // phi
+  ana.tx->createBranch<std::vector<int>>("tc_type");    // type = 7 (pT5), 5 (pT3), 4 (T5), 8 (pLS)
+  ana.tx->createBranch<std::vector<int>>("tc_pt5Idx");  // index to the pt5_* if it is the said type, if not set to -999
+  ana.tx->createBranch<std::vector<int>>("tc_pt3Idx");  // index to the pt3_* if it is the said type, if not set to -999
+  ana.tx->createBranch<std::vector<int>>("tc_t5Idx");   // index to the t5_*  if it is the said type, if not set to -999
+  ana.tx->createBranch<std::vector<int>>("tc_plsIdx");  // index to the pls_* if it is the said type, if not set to -999
+  ana.tx->createBranch<std::vector<int>>("tc_isFake");  // 1 if tc is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("tc_isDuplicate");  // 1 if tc is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("tc_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("tc_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("tc_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createMiniDoubletBranches() {
+  // Mini-Doublets (i.e. Two reco hits paired in a single pT-module of Outer Tracker of CMS, a.k.a. MD)
+  //
+  //  The container will hold per entry a mini-doublet built by LST in the event.
+  //
+  ana.tx->createBranch<std::vector<float>>("md_pt");   // pt (computed based on delta phi change)
+  ana.tx->createBranch<std::vector<float>>("md_eta");  // eta (computed based on anchor hit's eta)
+  ana.tx->createBranch<std::vector<float>>("md_phi");  // phi (computed based on anchor hit's phi)
+#ifdef CUT_VALUE_DEBUG
+  ana.tx->createBranch<std::vector<float>>("md_dphi");
+  ana.tx->createBranch<std::vector<float>>("md_dphichange");
+  ana.tx->createBranch<std::vector<float>>("md_dz");
+#endif
+  ana.tx->createBranch<std::vector<float>>("md_anchor_x");  // anchor hit x
+  ana.tx->createBranch<std::vector<float>>("md_anchor_y");  // anchor hit y
+  ana.tx->createBranch<std::vector<float>>("md_anchor_z");  // anchor hit z
+  ana.tx->createBranch<std::vector<float>>("md_other_x");   // other hit x
+  ana.tx->createBranch<std::vector<float>>("md_other_y");   // other hit y
+  ana.tx->createBranch<std::vector<float>>("md_other_z");   // other hit z
+  // type of the module where the mini-doublet sit (type = 1 (PS), 0 (2S))
+  ana.tx->createBranch<std::vector<int>>("md_type");
+  // layer index of the module where the mini-doublet sit (layer = 1 2 3 4 5 6 (barrel) 7 8 9 10 11 (endcap))
+  ana.tx->createBranch<std::vector<int>>("md_layer");
+  // detId = detector unique ID that contains a lot of information that can be parsed later if needed
+  ana.tx->createBranch<std::vector<int>>("md_detId");
+  ana.tx->createBranch<std::vector<int>>("md_isFake");  // 1 if md is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("md_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("md_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("md_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createLineSegmentBranches() {
+  // Line Segments (i.e. Two mini-doublets, a.k.a. LS)
+  //
+  //  The container will hold per entry a line-segment built by LST in the event.
+  //
+  // pt (computed based on radius of the circle formed by three points: (origin), (anchor hit 1), (anchor hit 2))
+  ana.tx->createBranch<std::vector<float>>("ls_pt");
+  ana.tx->createBranch<std::vector<float>>("ls_eta");   // eta (computed based on last anchor hit's eta)
+  ana.tx->createBranch<std::vector<float>>("ls_phi");   // phi (computed based on first anchor hit's phi)
+  ana.tx->createBranch<std::vector<int>>("ls_mdIdx0");  // index to the first MD
+  ana.tx->createBranch<std::vector<int>>("ls_mdIdx1");  // index to the second MD
+  ana.tx->createBranch<std::vector<int>>("ls_isFake");  // 1 if md is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("ls_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+#ifdef CUT_VALUE_DEBUG
+  ana.tx->createBranch<std::vector<float>>("ls_zLos");
+  ana.tx->createBranch<std::vector<float>>("ls_zHis");
+  ana.tx->createBranch<std::vector<float>>("ls_rtLos");
+  ana.tx->createBranch<std::vector<float>>("ls_rtHis");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhis");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiMins");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiMaxs");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChanges");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChangeMins");
+  ana.tx->createBranch<std::vector<float>>("ls_dPhiChangeMaxs");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaInners");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaOuters");
+  ana.tx->createBranch<std::vector<float>>("ls_dAlphaInnerOuters");
+#endif
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("ls_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("ls_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createTripletBranches() {
+  // Triplets (i.e. Three mini-doublets, a.k.a. T3)
+  //
+  //  The container will hold per entry a triplets built by LST in the event.
+  //
+  // pt (computed based on radius of the circle formed by three points: anchor hit 1, 2, 3
+  ana.tx->createBranch<std::vector<float>>("t3_pt");
+  ana.tx->createBranch<std::vector<float>>("t3_eta");        // eta (computed based on last anchor hit's eta)
+  ana.tx->createBranch<std::vector<float>>("t3_phi");        // phi (computed based on first anchor hit's phi)
+  ana.tx->createBranch<std::vector<int>>("t3_lsIdx0");       // index to the first LS
+  ana.tx->createBranch<std::vector<int>>("t3_lsIdx1");       // index to the second LS
+  ana.tx->createBranch<std::vector<int>>("t3_isFake");       // 1 if t3 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("t3_isDuplicate");  // 1 if t3 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("t3_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t3_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("t3_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createQuintupletBranches() {
+  // Quintuplets (i.e. Five mini-doublets, a.k.a. T5)
+  //
+  //  The container will hold per entry a quintuplet built by LST in the event.
+  //
+  // pt (computed based on average of the 4 circles formed by, (1, 2, 3), (2, 3, 4), (3, 4, 5), (1, 3, 5)
+  ana.tx->createBranch<std::vector<float>>("t5_pt");
+  ana.tx->createBranch<std::vector<float>>("t5_eta");        // eta (computed based on last anchor hit's eta)
+  ana.tx->createBranch<std::vector<float>>("t5_phi");        // phi (computed based on first anchor hit's phi)
+  ana.tx->createBranch<std::vector<int>>("t5_t3Idx0");       // index of first T3
+  ana.tx->createBranch<std::vector<int>>("t5_t3Idx1");       // index of second T3
+  ana.tx->createBranch<std::vector<int>>("t5_isFake");       // 1 if t5 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("t5_isDuplicate");  // 1 if t5 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("t5_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t5_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("t5_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createPixelLineSegmentBranches() {
+  // Pixel Line Segments (a.k.a pLS)
+  //
+  //  The container will hold per entry a pixel line segment (built by an external algo, e.g. patatrack) accepted by LST in the event.
+  //
+  // pt (taken from pt of the 3-vector from see_stateTrajGlbPx/Py/Pz)
+  ana.tx->createBranch<std::vector<float>>("pls_pt");
+  // eta (taken from eta of the 3-vector from see_stateTrajGlbPx/Py/Pz)
+  ana.tx->createBranch<std::vector<float>>("pls_eta");
+  // phi (taken from phi of the 3-vector from see_stateTrajGlbPx/Py/Pz)
+  ana.tx->createBranch<std::vector<float>>("pls_phi");
+  ana.tx->createBranch<std::vector<int>>("pls_nhit");         // Number of actual hit: 3 if triplet, 4 if quadruplet
+  ana.tx->createBranch<std::vector<float>>("pls_hit0_x");     // pLS's reco hit0 x
+  ana.tx->createBranch<std::vector<float>>("pls_hit0_y");     // pLS's reco hit0 y
+  ana.tx->createBranch<std::vector<float>>("pls_hit0_z");     // pLS's reco hit0 z
+  ana.tx->createBranch<std::vector<float>>("pls_hit1_x");     // pLS's reco hit1 x
+  ana.tx->createBranch<std::vector<float>>("pls_hit1_y");     // pLS's reco hit1 y
+  ana.tx->createBranch<std::vector<float>>("pls_hit1_z");     // pLS's reco hit1 z
+  ana.tx->createBranch<std::vector<float>>("pls_hit2_x");     // pLS's reco hit2 x
+  ana.tx->createBranch<std::vector<float>>("pls_hit2_y");     // pLS's reco hit2 y
+  ana.tx->createBranch<std::vector<float>>("pls_hit2_z");     // pLS's reco hit2 z
+  ana.tx->createBranch<std::vector<float>>("pls_hit3_x");     // pLS's reco hit3 x (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<float>>("pls_hit3_y");     // pLS's reco hit3 y (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<float>>("pls_hit3_z");     // pLS's reco hit3 z (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<int>>("pls_isFake");       // 1 if pLS is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pls_isDuplicate");  // 1 if pLS is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pls_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pls_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pls_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createPixelTripletBranches() {
+  // pLS + T3 (i.e. an object where a pLS is linked with a T3, a.k.a. pT3)
+  //
+  //  The container will hold per entry a pT3 built by LST in the event.
+  //
+  ana.tx->createBranch<std::vector<float>>("pt3_pt");         // pt (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pt3_eta");        // eta (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pt3_phi");        // phi (taken from the pLS)
+  ana.tx->createBranch<std::vector<int>>("pt3_plsIdx");       // idx to pLS
+  ana.tx->createBranch<std::vector<int>>("pt3_t3Idx");        // idx to T3
+  ana.tx->createBranch<std::vector<int>>("pt3_isFake");       // 1 if pT3 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pt3_isDuplicate");  // 1 if pT3 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pt3_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pt3_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pt3_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createPixelQuintupletBranches() {
+  // pLS + T5 (i.e. an object where a pLS is linked with a T5, a.k.a. pT5)
+  //
+  //  The container will hold per entry a pT5 built by LST in the event.
+  //
+  ana.tx->createBranch<std::vector<float>>("pt5_pt");         // pt (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pt5_eta");        // eta (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pt5_phi");        // phi (taken from the pLS)
+  ana.tx->createBranch<std::vector<int>>("pt5_plsIdx");       // idx to pLS
+  ana.tx->createBranch<std::vector<int>>("pt5_t5Idx");        // idx to T5
+  ana.tx->createBranch<std::vector<int>>("pt5_isFake");       // 1 if pT5 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pt5_isDuplicate");  // 1 if pT5 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pt5_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pt5_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pt5_simIdxAllFrac");
+}
+
+//________________________________________________________________________________________________________________________________
+void createOccupancyBranches() {
+  ana.tx->createBranch<std::vector<int>>("module_layers");
+  ana.tx->createBranch<std::vector<int>>("module_subdets");
+  ana.tx->createBranch<std::vector<int>>("module_rings");
+  ana.tx->createBranch<std::vector<int>>("module_rods");
+  ana.tx->createBranch<std::vector<int>>("module_modules");
+  ana.tx->createBranch<std::vector<bool>>("module_isTilted");
+  ana.tx->createBranch<std::vector<float>>("module_eta");
+  ana.tx->createBranch<std::vector<float>>("module_r");
+  ana.tx->createBranch<std::vector<int>>("md_occupancies");
+  ana.tx->createBranch<std::vector<int>>("sg_occupancies");
+  ana.tx->createBranch<std::vector<int>>("t3_occupancies");
+  ana.tx->createBranch<int>("tc_occupancies");
+  ana.tx->createBranch<std::vector<int>>("t5_occupancies");
+  ana.tx->createBranch<int>("pT3_occupancies");
+  ana.tx->createBranch<int>("pT5_occupancies");
 }
 
 //________________________________________________________________________________________________________________________________

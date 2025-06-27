@@ -21,6 +21,16 @@ void createGnnNtupleBranches();
 void createT5DNNBranches();
 void createT3DNNBranches();
 void createpT3DNNBranches();
+void createSimTrackContainerBranches();
+void createTrackCandidateBranches();
+void createMiniDoubletBranches();
+void createLineSegmentBranches();
+void createTripletBranches();
+void createQuintupletBranches();
+void createPixelLineSegmentBranches();
+void createPixelTripletBranches();
+void createPixelQuintupletBranches();
+void createOccupancyBranches();
 
 void fillOutputBranches(LSTEvent* event);
 void setOutputBranches(LSTEvent* event);
