@@ -1643,7 +1643,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& displacedScore,
                                                                float& fakeScore,
                                                                float& x_5,
-                                                               bool& TightPromptFlag,
                                                                bool& tightDNNFlag,
                                                                bool& tightCutFlag,
                                                                float* error2s) {
@@ -1981,7 +1980,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     displacedScore,
                                                     fakeScore,
                                                     x_5,
-                                                    TightPromptFlag,
                                                     tightDNNFlag,
                                                     tightCutFlag,
                                                     error2s); 
