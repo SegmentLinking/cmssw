@@ -7,63 +7,70 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
 //________________________________________________________________________________________________________________________________
 void createOutputBranches() {
-  createRequiredOutputBranches();
-  createOptionalOutputBranches();
+    createSimTrackContainerBranches();
+    createTrackCandidateBranches();
+    
+    if (ana.gnn_ntuple)
+      createGnnNtupleBranches();
+  
+  #ifdef CUT_VALUE_DEBUG
+    // Event-wide branches
+    // ana.tx->createBranch<float>("evt_dummy");
+  
+    // Sim Track branches
+    // NOTE: Must sync with main tc branch in length!!
+    ana.tx->createBranch<std::vector<float>>("sim_dummy");
+  
+    // Track Candidate branches
+    // NOTE: Must sync with main tc branch in length!!
+    ana.tx->createBranch<std::vector<float>>("tc_dummy");
+  
+    createMiniDoubletBranches();
+    createLineSegmentBranches();
+    createTripletBranches();
+    createQuintupletBranches();
+    createPixelLineSegmentBranches();
+    createPixelTripletBranches();
+    createPixelQuintupletBranches();
+  
+    createOccupancyBranches();
+  
+    // DNN branches
+    createT5DNNBranches();
+    createT3DNNBranches();
+  
+  #endif
 }
 
 //________________________________________________________________________________________________________________________________
 void fillOutputBranches(LSTEvent* event) {
-  setRequiredOutputBranches(event);
-  setOptionalOutputBranches(event);
+    float matchfrac = 0.75;
+    
+    unsigned int n_accepted_simtrk = setSimTrackContainerBranches(event);
+    
+    if (ana.gnn_ntuple)
+      setGnnNtupleBranches(event);
+      
+#ifdef CUT_VALUE_DEBUG
+  setPixelQuintupletOutputBranches(event);
+  setQuintupletOutputBranches(event);
+  setPixelTripletOutputBranches(event);
+  setpLSOutputBranches(event);
+  
+  setOccupancyBranches(event);
+
+  setT3DNNBranches(event);
+  setT5DNNBranches(event);
+  setpT3DNNBranches(event);
+#else
+  setTrackCandidateBranches(event, n_accepted_simtrk, matchfrac);
+#endif
 
   // Now actually fill the ttree
   ana.tx->fill();
 
   // Then clear the branches to default values (e.g. -999, or clear the vectors to empty vectors)
   ana.tx->clear();
-}
-
-//________________________________________________________________________________________________________________________________
-void createRequiredOutputBranches() {
-  // Setup output TTree
-  createSimTrackContainerBranches();
-
-  // Track candidates
-  createTrackCandidateBranches();
-}
-
-//________________________________________________________________________________________________________________________________
-void createOptionalOutputBranches() {
-  if (ana.gnn_ntuple)
-    createGnnNtupleBranches();
-
-#ifdef CUT_VALUE_DEBUG
-  // Event-wide branches
-  // ana.tx->createBranch<float>("evt_dummy");
-
-  // Sim Track branches
-  // NOTE: Must sync with main tc branch in length!!
-  ana.tx->createBranch<std::vector<float>>("sim_dummy");
-
-  // Track Candidate branches
-  // NOTE: Must sync with main tc branch in length!!
-  ana.tx->createBranch<std::vector<float>>("tc_dummy");
-
-  createMiniDoubletBranches();
-  createLineSegmentBranches();
-  createTripletBranches();
-  createQuintupletBranches();
-  createPixelLineSegmentBranches();
-  createPixelTripletBranches();
-  createPixelQuintupletBranches();
-
-  createOccupancyBranches();
-
-  // DNN branches
-  createT5DNNBranches();
-  createT3DNNBranches();
-
-#endif
 }
 
 //________________________________________________________________________________________________________________________________
@@ -268,10 +275,12 @@ void createTrackCandidateBranches() {
   ana.tx->createBranch<std::vector<float>>("tc_eta");   // eta
   ana.tx->createBranch<std::vector<float>>("tc_phi");   // phi
   ana.tx->createBranch<std::vector<int>>("tc_type");    // type = 7 (pT5), 5 (pT3), 4 (T5), 8 (pLS)
+#ifdef CUT_VALUE_DEBUG
   ana.tx->createBranch<std::vector<int>>("tc_pt5Idx");  // index to the pt5_* if it is the said type, if not set to -999
   ana.tx->createBranch<std::vector<int>>("tc_pt3Idx");  // index to the pt3_* if it is the said type, if not set to -999
   ana.tx->createBranch<std::vector<int>>("tc_t5Idx");   // index to the t5_*  if it is the said type, if not set to -999
   ana.tx->createBranch<std::vector<int>>("tc_plsIdx");  // index to the pls_* if it is the said type, if not set to -999
+#endif
   ana.tx->createBranch<std::vector<int>>("tc_isFake");  // 1 if tc is fake 0 other if not
   ana.tx->createBranch<std::vector<int>>("tc_isDuplicate");  // 1 if tc is duplicate 0 other if not
   ana.tx->createBranch<std::vector<int>>("tc_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
@@ -486,28 +495,410 @@ void createOccupancyBranches() {
 }
 
 //________________________________________________________________________________________________________________________________
-void setRequiredOutputBranches(LSTEvent* event) {
-  setSimTrackContainerBranches(event);
-  setTrackCandidateBranches(event);
+unsigned int setSimTrackContainerBranches(LSTEvent* event) {
+    //--------------------------------------------
+    //
+    //
+    // Sim Tracks
+    //
+    //
+    //--------------------------------------------
+    
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_sim_eta = trk.getVF("sim_eta");
+    auto const& trk_sim_phi = trk.getVF("sim_phi");
+    auto const& trk_sim_bunchCrossing = trk.getVI("sim_bunchCrossing");
+    auto const& trk_sim_event = trk.getVI("sim_event");
+    auto const& trk_sim_pca_dxy = trk.getVF("sim_pca_dxy");
+    auto const& trk_sim_pca_dz = trk.getVF("sim_pca_dz");
+    auto const& trk_sim_q = trk.getVI("sim_q");
+    auto const& trk_sim_pdgId = trk.getVI("sim_pdgId");
+    auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
+    auto const& trk_simvtx_x = trk.getVF("simvtx_x");
+    auto const& trk_simvtx_y = trk.getVF("simvtx_y");
+    auto const& trk_simvtx_z = trk.getVF("simvtx_z");
+    auto const& trk_sim_simHitIdx = trk.getVVI("sim_simHitIdx");
+    auto const& trk_simhit_subdet = trk.getVUS("simhit_subdet");
+    auto const& trk_simhit_layer = trk.getVUS("simhit_layer");
+    auto const& trk_simhit_x = trk.getVF("simhit_x");
+    auto const& trk_simhit_y = trk.getVF("simhit_y");
+    auto const& trk_simhit_z = trk.getVF("simhit_z");
+    auto const& trk_simhit_detId = trk.getVU("simhit_detId");
+    auto const& trk_ph2_x = trk.getVF("ph2_x");
+    auto const& trk_ph2_y = trk.getVF("ph2_y");
+    auto const& trk_ph2_z = trk.getVF("ph2_z");
+    auto const& trk_ph2_detId = trk.getVU("ph2_detId");
+  
+    // Total number of simulated tracks with the condition that the simulated track came from a particle produced in the hard scattering and from the current bunch-crossing)
+    // "accepted" here would mean that in the tracking ntuple (sim_bunchCrossing == 0 and sim_event == 0)
+    unsigned int n_accepted_simtrk = 0;
+  
+    // Looping over the simulated tracks in the tracking ntuple
+    for (unsigned int isimtrk = 0; isimtrk < trk_sim_pt.size(); ++isimtrk) {
+      // Skip out-of-time pileup
+      if (trk_sim_bunchCrossing[isimtrk] != 0)
+        continue;
+  
+      // Skip non-hard-scatter
+      if (trk_sim_event[isimtrk] != 0)
+        continue;
+  
+      // Now we have a list of "accepted" tracks (no condition on vtx_z/perp, nor pt, eta etc are applied yet)
+  
+      // Fill the branch with simulated tracks.
+      // N.B. these simulated tracks are looser than MTV denominator
+      ana.tx->pushbackToBranch<float>("sim_pt", trk_sim_pt[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_eta", trk_sim_eta[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_phi", trk_sim_eta[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_pca_dxy", trk_sim_pca_dxy[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_pca_dz", trk_sim_pca_dz[isimtrk]);
+      ana.tx->pushbackToBranch<int>("sim_q", trk_sim_q[isimtrk]);
+      ana.tx->pushbackToBranch<int>("sim_pdgId", trk_sim_pdgId[isimtrk]);
+  
+      // For vertex we need to look it up from simvtx info for the given simtrack
+      // for each simulated track, there is an index that points to the production vertex
+      int vtxidx = trk_sim_parentVtxIdx[isimtrk];
+      ana.tx->pushbackToBranch<float>("sim_vx", trk_simvtx_x[vtxidx]);  // using the index we retrieve xyz position
+      ana.tx->pushbackToBranch<float>("sim_vy", trk_simvtx_y[vtxidx]);
+      ana.tx->pushbackToBranch<float>("sim_vz", trk_simvtx_z[vtxidx]);
+      ana.tx->pushbackToBranch<float>(
+          "sim_vtxperp",
+          sqrt(trk_simvtx_x[vtxidx] * trk_simvtx_x[vtxidx] + trk_simvtx_y[vtxidx] * trk_simvtx_y[vtxidx]));
+  
+      // Retrieve some track parameter information so we can build a helix
+      float pt = trk_sim_pt[isimtrk];
+      float eta = trk_sim_eta[isimtrk];
+      float phi = trk_sim_phi[isimtrk];
+      float vx = trk_simvtx_x[vtxidx];
+      float vy = trk_simvtx_y[vtxidx];
+      float vz = trk_simvtx_z[vtxidx];
+      float charge = trk_sim_q[isimtrk];
+  
+      // Build the helix model. This model is useful to compute some specific expected hits.
+      lst_math::Helix helix(pt, eta, phi, vx, vy, vz, charge);
+  
+      // Information to keep track of so we can save to output
+      std::vector<int> simHitLayer;
+      std::vector<float> simHitDistxyHelix;
+      std::vector<float> simHitX;
+      std::vector<float> simHitY;
+      std::vector<float> simHitZ;
+      std::vector<int> simHitDetId;
+      std::vector<float> recoHitX;
+      std::vector<float> recoHitY;
+      std::vector<float> recoHitZ;
+      std::vector<int> recoHitDetId;
+      std::vector<float> simHitLayerMinDistxyHelix(11, 999);
+  
+      std::vector<std::vector<int>> simHitIdxs(11);
+      float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
+  
+      // Loop over the simhits (truth hits)
+      for (size_t isimhit = 0; isimhit < trk_sim_simHitIdx[isimtrk].size(); ++isimhit) {
+        // Retrieve the actual index to the simhit_* container of the tracking ntuple
+        int isimhitidx = trk_sim_simHitIdx[isimtrk][isimhit];
+  
+        // Following computes the distance of the simhit's actual positionin xy to the "expected" xy position based on simhit's z position.
+        // i.e. Take simhit's z position -> plug them into helix parametric function to obtain the xy position for that given z.
+        // Then compare the computed xy position from the helix to the simhit's actualy xy position.
+        // This is a measure of "how off from the original trajectory the simhits are?"
+        // For example, if the particle got deflected early on due to material, then the xy position distance would be large.
+        float distxyconsistent = distxySimHitConsistentWithHelix(helix, isimhitidx, trk_simhit_x, trk_simhit_y, trk_simhit_z);
+  
+        // Also retrieve some basic information about the simhit's location (layers, isbarrel?, etc.)
+        // subdet == 4 means endcap of the outer tracker, subdet == 5 means barrel of the outer tracker)
+        int subdet = trk_simhit_subdet[isimhitidx];
+        int is_endcap = subdet == 4;
+  
+        // Now compute "logical layer" index
+        // N.B. if a hit is in the inner tracker, layer would be staying at layer = 0
+        int layer = 0;
+        if (subdet == 4 or subdet == 5)  // this is not an outer tracker hit
+          // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+          layer = trk_simhit_layer[isimhitidx] + 6 * (is_endcap);
+  
+        // keep track of isimhits in each layers so we can compute mindistxy from previous hit in previous layer
+        if (subdet == 4 or subdet == 5)
+          simHitIdxs[layer - 1].push_back(isimhitidx);
+  
+        // For this hit, now we push back to the vector that we are keeping track of
+        simHitLayer.push_back(layer);
+        simHitDistxyHelix.push_back(distxyconsistent);
+        simHitX.push_back(trk_simhit_x[isimhitidx]);
+        simHitY.push_back(trk_simhit_y[isimhitidx]);
+        simHitZ.push_back(trk_simhit_z[isimhitidx]);
+        simHitDetId.push_back(trk_simhit_detId[isimhitidx]);
+  
+        // Also retrieve all the reco-hits matched to this simhit and also aggregate them
+        for (size_t irecohit = 0; irecohit < trk_sim_simHitIdx[isimhitidx].size(); ++irecohit) {
+          recoHitX.push_back(trk_ph2_x[trk_sim_simHitIdx[isimhitidx][irecohit]]);
+          recoHitY.push_back(trk_ph2_y[trk_sim_simHitIdx[isimhitidx][irecohit]]);
+          recoHitZ.push_back(trk_ph2_z[trk_sim_simHitIdx[isimhitidx][irecohit]]);
+          recoHitDetId.push_back(trk_ph2_detId[trk_sim_simHitIdx[isimhitidx][irecohit]]);
+        }
+  
+        // If the given simhit that we are dealing with is not in the outer tracker (i.e. layer == 0. see few lines above.)
+        // then, skip this simhit and go to the next hit.
+        if (layer == 0)
+          continue;
+  
+        // If it is a outer tracker hit, then we keep track of out of the 11 layers, what is the minimum "DistxyHelix" (distance to the expected point in the helix in xy)
+        // This variable will have a fixed 11 float numbers, and using this to restrict "at least one hit that is not too far from the expected helix" can be useful to select some interesting denominator tracks.
+        if (distxyconsistent < simHitLayerMinDistxyHelix[layer - 1]) {
+          simHitLayerMinDistxyHelix[layer - 1] = distxyconsistent;
+        }
+      }
+  
+      // TODO: should this be enabled or removed?
+      std::vector<float> simHitLayerMinDistxyHelixPrevHit(11, 999);
+      std::vector<float> simHitLayeriSimHitMinDixtxyHelixPrevHit(11, -999);
+      // // The algorithm will be to start with the main helix from the sim information and get the isimhit with least distxy.
+      // // Then, from that you find the min distxy and repeat
+      // for (int ilogicallayer = 0; ilogicallayer < 11; ++ilogicallayer)
+      // {
+      //     int ilayer = ilogicallayer - 1;
+      //     float prev_pt, prev_eta, prev_phi, prev_vx, prev_vy, prev_vz;
+      //     if (ilayer == 0)
+      //     {
+      //         prev_pt = pt;
+      //         prev_eta = eta;
+      //         prev_phi = phi;
+      //         prev_vx = vx;
+      //         prev_vy = vy;
+      //         prev_vz = vz;
+      //     }
+      //     else
+      //     {
+      //         int isimhitidx = simHitLayeriSimHitMinDixtxyHelixPrevHit[ilayer - 1];
+      //         TVector3 pp(trk.simhit_px()[isimhitidx], trk.simhit_py()[isimhitidx], trk.simhit_pz()[isimhitidx]);
+      //         prev_pt = pp.Pt();
+      //         prev_eta = pp.Eta();
+      //         prev_phi = pp.Phi();
+      //         prev_vx = trk.simhit_x()[isimhitidx];
+      //         prev_vy = trk.simhit_y()[isimhitidx];
+      //         prev_vz = trk.simhit_z()[isimhitidx];
+      //     }
+      //     SDLMath::Helix prev_helix(prev_pt, prev_eta, prev_phi, prev_vx, prev_vy, prev_vz, charge);
+      //     for (int isimhit = 0; isimhit < simHitIdxs[ilayer].size(); ++isimhit)
+      //     {
+      //         int isimhitidx = simHitIdxs[ilayer][isimhit];
+      //         float distxyconsistent = distxySimHitConsistentWithHelix(prev_helix, isimhitidx);
+      //         if (simHitLayerMinDistxyHelixPrevHit[ilayer] > distxyconsistent)
+      //         {
+      //             simHitLayerMinDistxyHelixPrevHit[ilayer] = distxyconsistent;
+      //             simHitLayeriSimHitMinDixtxyHelixPrevHit[ilayer] = isimhitidx;
+      //         }
+      //     }
+      // }
+  
+      // Now we fill the branch
+      ana.tx->pushbackToBranch<std::vector<int>>("sim_simHitLayer", simHitLayer);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitDistxyHelix", simHitDistxyHelix);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitLayerMinDistxyHelix", simHitLayerMinDistxyHelix);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitLayerMinDistxyPrevHit", simHitLayerMinDistxyHelixPrevHit);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitX", simHitX);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitY", simHitY);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_simHitZ", simHitZ);
+      ana.tx->pushbackToBranch<std::vector<int>>("sim_simHitDetId", simHitDetId);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_recoHitX", recoHitX);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_recoHitY", recoHitY);
+      ana.tx->pushbackToBranch<std::vector<float>>("sim_recoHitZ", recoHitZ);
+      ana.tx->pushbackToBranch<std::vector<int>>("sim_recoHitDetId", recoHitDetId);
+  
+      // The trkNtupIdx is the idx in the trackingNtuple
+      ana.tx->pushbackToBranch<float>("sim_trkNtupIdx", isimtrk);
+  
+      // Increase the counter for accepted simtrk
+      n_accepted_simtrk++;
+    }
+    
+    return n_accepted_simtrk;
 }
 
 //________________________________________________________________________________________________________________________________
-void setOptionalOutputBranches(LSTEvent* event) {
-    if (ana.gnn_ntuple)
-      setGnnNtupleBranches(event);
-      
+void setTrackCandidateBranches(LSTEvent* event, unsigned int n_accepted_simtrk,
 #ifdef CUT_VALUE_DEBUG
-  setPixelQuintupletOutputBranches(event);
-  setQuintupletOutputBranches(event);
-  setPixelTripletOutputBranches(event);
-  setpLSOutputBranches(event);
-  
-  setOccupancyBranches(event);
-
-  setT3DNNBranches(event);
-  setT5DNNBranches(event);
-  setpT3DNNBranches(event);
+  std::map<unsigned int, unsigned int> t5_idx_map,
+  std::map<unsigned int, unsigned int> pls_idx_map,
+  std::map<unsigned int, unsigned int> pt3_idx_map,
+  std::map<unsigned int, unsigned int> pt5_idx_map,
 #endif
+    float matchfrac) {
+    //--------------------------------------------
+    //
+    //
+    // Track Candidates
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_ph2_x = trk.getVF("ph2_x");
+    auto const& trk_ph2_y = trk.getVF("ph2_y");
+    auto const& trk_ph2_z = trk.getVF("ph2_z");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto trackCandidates = event->getTrackCandidates();
+    
+    // Following are some vectors to keep track of the information to write to the ntuple
+    // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_tcIdxAll branch is NOT that long
+    // Later in the code, it will restrict to only the ones to write out.
+    // The reason at this stage, the entire tcIdxAll is being tracked is to compute duplicate properly later on
+    // When computing a duplicate object it is important to consider all simulated tracks including pileup tracks
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_tcIdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_tcIdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> tc_simIdxAll;
+    std::vector<std::vector<float>> tc_simIdxAllFrac;
+  
+    // Number of total track candidates created in this event
+    unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
+  
+    // Looping over each track candidate
+    for (unsigned int tc_idx = 0; tc_idx < nTrackCandidates; tc_idx++) {
+      // Compute reco quantities of track candidate based on final object
+      int type, isFake;
+      float pt, eta, phi;
+      std::vector<int> simidx;        // list of all the matched sim idx
+      std::vector<float> simidxfrac;  // list of match fraction for each matched sim idx
+  
+      // The following function reads off and computes the matched sim track indices
+      std::tie(type, pt, eta, phi, isFake, simidx, simidxfrac) = parseTrackCandidateAllMatch(event, tc_idx, trk_ph2_x, trk_ph2_y, trk_ph2_z, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, matchfrac);
+  
+      // Fill some branches for this track candidate
+      ana.tx->pushbackToBranch<float>("tc_pt", pt);
+      ana.tx->pushbackToBranch<float>("tc_eta", eta);
+      ana.tx->pushbackToBranch<float>("tc_phi", phi);
+      ana.tx->pushbackToBranch<int>("tc_type", type);
+#ifdef CUT_VALUE_DEBUG
+      if (type == LSTObjType::pT5) {
+        ana.tx->pushbackToBranch<int>("tc_pt5Idx", pt5_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
+        ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
+      } else if (type == LSTObjType::pT3) {
+        ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_pt3Idx", pt3_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
+        ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
+      } else if (type == LSTObjType::T5) {
+        ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_t5Idx", t5_idx_map[trackCandidates.directObjectIndices()[tc_idx]]);
+        ana.tx->pushbackToBranch<int>("tc_plsIdx", -999);
+      } else if (type == LSTObjType::pLS) {
+        ana.tx->pushbackToBranch<int>("tc_pt5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_pt3Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_t5Idx", -999);
+        ana.tx->pushbackToBranch<int>("tc_plsIdx",
+                                      pls_idx_map[ranges.segmentModuleIndices()[modules.nLowerModules()] +
+                                                  trackCandidates.directObjectIndices()[tc_idx]]);
+      }
+#endif
+  
+      ana.tx->pushbackToBranch<int>("tc_isFake", isFake);
+  
+      // For this tc, keep track of all the simidx that are matched
+      tc_simIdxAll.push_back(simidx);
+      tc_simIdxAllFrac.push_back(simidxfrac);
+  
+      // The book keeping of opposite mapping is done here
+      // For each matched sim idx, we go back and keep track of which tc it is matched to.
+      // Loop over all the matched sim idx
+      for (size_t is = 0; is < simidx.size(); ++is) {
+        // For this matched sim index keep track (sim -> tc) mapping
+        int sim_idx = simidx.at(is);
+        float sim_idx_frac = simidxfrac.at(is);
+        sim_tcIdxAll.at(sim_idx).push_back(tc_idx);
+        sim_tcIdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+      }
+  
+      // Also, among the simidx matches, find the best match (highest fractional match)
+      // N.B. the simidx is already returned sorted by highest number of "nhits" match
+      // So as it loops over, the condition will ensure that the highest fraction with highest nhits will be matched with the priority given to highest fraction
+      int tc_simIdx = -999;
+      float tc_simIdxBestFrac = 0;
+      for (size_t isim = 0; isim < simidx.size(); ++isim) {
+        int thisidx = simidx[isim];
+        float thisfrac = simidxfrac[isim];
+        if (thisfrac > tc_simIdxBestFrac and thisfrac > matchfrac) {
+          tc_simIdxBestFrac = thisfrac;
+          tc_simIdx = thisidx;
+        }
+      }
+  
+      // the best match index will then be saved here
+      ana.tx->pushbackToBranch<int>("tc_simIdx", tc_simIdx);
+    }
+  
+    // Now save the (tc -> simidx) mapping
+    ana.tx->setBranch<std::vector<std::vector<int>>>("tc_simIdxAll", tc_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("tc_simIdxAllFrac", tc_simIdxAllFrac);
+  
+    // Not all (sim->tcIdx) will be saved but only for the sim that is from hard scatter and current bunch crossing
+    // So a restriction up to only "n_accepted_simtrk" done by chopping off the rest
+    // N.B. the reason we can simply take the first "n_accepted_simtrk" is because the tracking ntuple is organized such that those sim tracks show up on the first "n_accepted_simtrk" of tracks.
+    std::vector<std::vector<int>> sim_tcIdxAll_to_write;
+    std::vector<std::vector<float>> sim_tcIdxAllFrac_to_write;
+    std::copy(sim_tcIdxAll.begin(),
+              sim_tcIdxAll.begin() + n_accepted_simtrk,
+              std::back_inserter(
+                  sim_tcIdxAll_to_write));  // this is where the vector is only copying the first "n_accepted_simtrk"
+    std::copy(sim_tcIdxAllFrac.begin(),
+              sim_tcIdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_tcIdxAllFrac_to_write));  // ditto
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_tcIdxAll", sim_tcIdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_tcIdxAllFrac", sim_tcIdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given track candidate is a duplicate
+    std::vector<int> tc_isDuplicate(tc_simIdxAll.size());
+  
+    // Loop over the track candidates
+    for (unsigned int tc_idx = 0; tc_idx < tc_simIdxAll.size(); ++tc_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this track candidate
+      for (unsigned int isim = 0; isim < tc_simIdxAll[tc_idx].size(); ++isim) {
+        int sim_idx = tc_simIdxAll[tc_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_tcIdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_tcIdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      tc_isDuplicate[tc_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("tc_isDuplicate", tc_isDuplicate);
+  
+    // Similarly, the best match for the (sim -> tc is computed)
+    // TODO: Is this redundant? I am not sure if it is guaranteed that sim_tcIdx will have same result with tc_simIdx.
+    // I think it will be, but I have not rigorously checked. I only checked about first few thousands and it was all true. as long as tc->sim was pointing to a sim that is among the n_accepted.
+    // For the most part I think this won't be a problem.
+    for (size_t i = 0; i < sim_tcIdxAll_to_write.size(); ++i) {
+      // bestmatch is not always the first one
+      int bestmatch_idx = -999;
+      float bestmatch_frac = -999;
+      for (size_t jj = 0; jj < sim_tcIdxAll_to_write.at(i).size(); ++jj) {
+        int idx = sim_tcIdxAll_to_write.at(i).at(jj);
+        float frac = sim_tcIdxAllFrac_to_write.at(i).at(jj);
+        if (bestmatch_frac < frac) {
+          bestmatch_idx = idx;
+          bestmatch_frac = frac;
+        }
+      }
+      ana.tx->pushbackToBranch<int>("sim_tcIdxBest", bestmatch_idx);
+      ana.tx->pushbackToBranch<float>("sim_tcIdxBestFrac", bestmatch_frac);
+      if (bestmatch_frac > matchfrac)  // then this is a good match according to MTV
+        ana.tx->pushbackToBranch<int>("sim_tcIdx", bestmatch_idx);
+      else
+        ana.tx->pushbackToBranch<int>("sim_tcIdx", -999);
+    }
 }
 
 //________________________________________________________________________________________________________________________________
@@ -693,7 +1084,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
 
       float percent_matched;
       std::vector<int> simidx = matchedSimTrkIdxs(
-          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, &percent_matched);
+          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false);
 
       ana.tx->pushbackToBranch<int>("t5_isFake", static_cast<int>(simidx.size() == 0));
       ana.tx->pushbackToBranch<float>("t5_pt", pt);
@@ -1380,7 +1771,8 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
     std::vector<float> const& trk_ph2_z,
     std::vector<int> const& trk_simhit_simTrkIdx,
     std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
-    std::vector<std::vector<int>> const& trk_pix_simHitIdx) {
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac) {
   // Get the type of the track candidate
   auto const& trackCandidates = event->getTrackCandidates();
   short type = trackCandidates.trackCandidateType()[idx];
@@ -1405,10 +1797,53 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
 
   // Perform matching
   std::vector<int> simidx =
-      matchedSimTrkIdxs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
+      matchedSimTrkIdxs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac);
   int isFake = simidx.size() == 0;
 
   return {type, pt, eta, phi, isFake, simidx};
+}
+
+//________________________________________________________________________________________________________________________________
+std::tuple<int, float, float, float, int, std::vector<int>, std::vector<float>> parseTrackCandidateAllMatch(
+    LSTEvent* event,
+    unsigned int idx,
+    std::vector<float> const& trk_ph2_x,
+    std::vector<float> const& trk_ph2_y,
+    std::vector<float> const& trk_ph2_z,
+    std::vector<int> const& trk_simhit_simTrkIdx,
+    std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac) {
+  // Get the type of the track candidate
+  auto const& trackCandidates = event->getTrackCandidates();
+  short type = trackCandidates.trackCandidateType()[idx];
+
+  // Compute pt eta phi and hit indices that will be used to figure out whether the TC matched
+  float pt, eta, phi;
+  std::vector<unsigned int> hit_idx, hit_type;
+  switch (type) {
+    case LSTObjType::pT5:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT5(event, idx);
+      break;
+    case LSTObjType::pT3:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parsepT3(event, idx);
+      break;
+    case LSTObjType::T5:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parseT5(event, idx, trk_ph2_x, trk_ph2_y, trk_ph2_z);
+      break;
+    case LSTObjType::pLS:
+      std::tie(pt, eta, phi, hit_idx, hit_type) = parsepLS(event, idx);
+      break;
+  }
+
+  // Perform matching
+  std::vector<int> simidx;
+  std::vector<float> simidxfrac;
+  std::tie(simidx, simidxfrac) =
+      matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac);
+  int isFake = simidx.size() == 0;
+
+  return {type, pt, eta, phi, isFake, simidx, simidxfrac};
 }
 
 //________________________________________________________________________________________________________________________________

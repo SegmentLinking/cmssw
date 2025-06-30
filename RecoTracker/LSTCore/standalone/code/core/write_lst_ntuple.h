@@ -15,8 +15,6 @@ using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
 // Common
 void createOutputBranches();
-void createRequiredOutputBranches();
-void createOptionalOutputBranches();
 void createGnnNtupleBranches();
 void createT5DNNBranches();
 void createT3DNNBranches();
@@ -33,9 +31,16 @@ void createPixelQuintupletBranches();
 void createOccupancyBranches();
 
 void fillOutputBranches(LSTEvent* event);
-void setRequiredOutputBranches(LSTEvent* event);
-void setOptionalOutputBranches(LSTEvent* event);
 void setOccupancyBranches(LSTEvent* event);
+unsigned int setSimTrackContainerBranches(LSTEvent* event);
+void setTrackCandidateBranches(LSTEvent* event, unsigned int n_accepted_tracks,
+#ifdef CUT_VALUE_DEBUG
+  std::map<unsigned int, unsigned int> t5_idx_map,
+  std::map<unsigned int, unsigned int> pls_idx_map,
+  std::map<unsigned int, unsigned int> pt3_idx_map,
+  std::map<unsigned int, unsigned int> pt5_idx_map,
+#endif
+    float matchfrac);
 
 void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
@@ -71,7 +76,18 @@ std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
     std::vector<float> const& trk_ph2_z,
     std::vector<int> const& trk_simhit_simTrkIdx,
     std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
-    std::vector<std::vector<int>> const& trk_pix_simHitIdx);
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac = 0.75);
+std::tuple<int, float, float, float, int, std::vector<int>, std::vector<float>> parseTrackCandidateAllMatch(
+    LSTEvent* event,
+    unsigned int,
+    std::vector<float> const& trk_ph2_x,
+    std::vector<float> const& trk_ph2_y,
+    std::vector<float> const& trk_ph2_z,
+    std::vector<int> const& trk_simhit_simTrkIdx,
+    std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac = 0.75);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(LSTEvent* event,
                                                                                                unsigned int);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT3(LSTEvent* event,
