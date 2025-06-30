@@ -81,9 +81,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        float circleCenterX,
                                                        float circleCenterY) {
     // Using lst_layer numbering convention defined in ModuleMethods.h
-    const int layer1 = modules.lstLayers()[innerInnerLowerModuleIndex];
-    const int layer2 = modules.lstLayers()[middleLowerModuleIndex];
-    const int layer3 = modules.lstLayers()[outerOuterLowerModuleIndex];
+    const short layer1 = modules.lstLayers()[innerInnerLowerModuleIndex];
+    const short layer2 = modules.lstLayers()[middleLowerModuleIndex];
+    const short layer3 = modules.lstLayers()[outerOuterLowerModuleIndex];
 
     //all the values are stored in the unit of cm, in the calculation below we need to be cautious if we want to use the meter unit
     //get r and z
@@ -120,7 +120,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     //get the type of module: 0 is ps, 1 is 2s
-    const int moduleType3 = modules.moduleType()[outerOuterLowerModuleIndex];
+    const bool moduleType3 = modules.moduleType()[outerOuterLowerModuleIndex];
 
     //get the x,y position of each MD
     const float x1 = mds.anchorX()[firstMDIndex] / 100;
@@ -167,7 +167,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float pt = 2 * k2Rinv1GeVf * circleRadius;  //k2Rinv1GeVf is already in cm^(-1)
 
     float cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
-    int charge = -1 * ((int)copysignf(1.0f, cross));
+    short charge = -1 * ((int)copysignf(1.0f, cross));
       
     //get the px and py at the initial point
     float px = 2 * charge * k2Rinv1GeVf * (y_init - y_center) * 100;
@@ -201,8 +201,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
     float drdz = alpaka::math::abs(acc, modules.drdzs()[outerOuterLowerModuleIndex]);
-    short side = modules.sides()[outerOuterLowerModuleIndex];
-    short subdets = modules.subdets()[outerOuterLowerModuleIndex];
+    const short side = modules.sides()[outerOuterLowerModuleIndex];
+    const short subdets = modules.subdets()[outerOuterLowerModuleIndex];
 
     //calculate residual
     if (layer3 <= 6 && ((side == lst::Center) or (drdz < 1))) {  // for barrel
@@ -232,7 +232,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // error, PS layer uncertainty is 0.15cm, 2S uncertainty is 5cm.
     error = moduleType3 == 0 ? 0.15f : 5.0f;
 
-    bool isEndcapOrCenter = (subdets == lst::Endcap) or (side == lst::Center);
+    const bool isEndcapOrCenter = (subdets == lst::Endcap) or (side == lst::Center);
     float projection_missing2 = 1;
     if (drdz < 1)
       projection_missing2 = isEndcapOrCenter
@@ -406,9 +406,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleCenterY,
                                                                    const float ptCut) {
 
-    unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
-    unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
-    unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
+    const unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
+    const unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
+    const unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
 
     const float x1 = mds.anchorX()[firstMDIndex];
     const float x2 = mds.anchorX()[secondMDIndex];
@@ -470,7 +470,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
-      constexpr int maxMatchedPairs = 3000;
+      constexpr uint16_t maxMatchedPairs = 3000;
       auto& innerOuterSgPairs = alpaka::declareSharedVar<int[maxMatchedPairs][2], __COUNTER__>(acc);
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc); // AtomicAdd does not support uint16_t variable
 
