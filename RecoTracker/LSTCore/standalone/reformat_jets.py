@@ -12,13 +12,13 @@ from ROOT import TFile
 from myjets import getLists, createJets, matchArr
 import numpy as np
 
-
 # Load existing tree
 file =  TFile("/data2/segmentlinking/CMSSW_12_2_0_pre2/trackingNtuple_ttbar_PU200.root")
+# file = TFile("trackingNtuple100.root")
 old_tree = file["trackingNtuple"]["tree"]
 
 # Create a new ROOT file to store the new TTree
-new_file = ROOT.TFile("new_tree.root", "RECREATE")
+new_file = ROOT.TFile("new_tree_temp.root", "RECREATE")
 
 # Create a new subdirectory in the new file
 new_directory = new_file.mkdir("trackingNtuple")
@@ -50,8 +50,8 @@ new_tree.Branch("sim_jet_phi", new_leaf_jet_phi)
 new_tree.Branch("sim_jet_pt", new_leaf_jet_pt)
 
 # Loop over entries in the old tree
-for i in range(old_tree.GetEntries()):
-    old_tree.GetEntry(i)
+for ind in range(old_tree.GetEntries()):
+    old_tree.GetEntry(ind)
 
     # Clear the vector to start fresh for this entry
     new_leaf_deltaEta.clear()
@@ -62,7 +62,7 @@ for i in range(old_tree.GetEntries()):
     new_leaf_jet_pt.clear()
 
     # Creates the lists that will fill the leaves
-    pTList, etaList, phiList, massList = getLists(old_tree, pTcut=True)
+    pTList, etaList, phiList, massList = getLists(old_tree, hardSc=True, pTcut=True)
     cluster, jets = createJets(pTList, etaList, phiList, massList)
     
     jetIndex = np.array([])
@@ -86,7 +86,9 @@ for i in range(old_tree.GetEntries()):
             c_phis[k] = const[k].phi()
 
         # Reorder particles within jet (jet clustering does not respect original index)
-        jetIndex = np.append(jetIndex, matchArr(c_pts, c_etas, c_phis, np.array(old_tree.sim_pt), np.array(old_tree.sim_eta), np.array(old_tree.sim_phi), i, j)) # order restored by matching pT
+        jetIndex = np.append(jetIndex, matchArr(c_pts, c_etas, c_phis, 
+                                                np.array(old_tree.sim_pt), np.array(old_tree.sim_eta), np.array(old_tree.sim_phi), 
+                                                ind, j)) # order restored by matching pT
         jetIndex = jetIndex.astype(int)
 
         # Compute the distance to jet
@@ -115,13 +117,6 @@ for i in range(old_tree.GetEntries()):
     re_jet_eta = np.ones(length)*(-999)
     re_jet_phi = np.ones(length)*(-999)
     re_jet_pt = np.ones(length)*(-999)
-
-    # re_eta_diffs = np.zeros(length)
-    # re_phi_diffs = np.zeros(length)
-    # re_deltaRs = np.zeros(length)
-    # re_jet_eta = np.zeros(length)
-    # re_jet_phi = np.zeros(length)
-    # re_jet_pt = np.zeros(length)
 
     for i in range(len(jetIndex)):
         re_eta_diffs[jetIndex[i]] = eta_diffs[i]

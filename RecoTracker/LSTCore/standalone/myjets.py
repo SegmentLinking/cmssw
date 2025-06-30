@@ -19,11 +19,6 @@ def getLists(entry, hardSc = False, pTcut=True):
         pdgidList = entry.sim_pdgId
         evLen = len(pdgidList)
 
-        # pTList = np.zeros(evLen, dtype=np.float64)
-        # etaList = np.zeros(evLen, dtype=np.float64)
-        # phiList = np.zeros(evLen, dtype=np.float64)
-        # massList = np.zeros(evLen, dtype=np.float64)
-
         pTList = np.ones(evLen, dtype=np.float64)*-999
         etaList = np.ones(evLen, dtype=np.float64)*-999
         phiList = np.ones(evLen, dtype=np.float64)*-999
@@ -52,14 +47,6 @@ def getLists(entry, hardSc = False, pTcut=True):
         etaList = etaList[etaList != -999]
         phiList = phiList[phiList != -999]
 
-        # Perform pT cut, optional
-        # if(pTcut!=0):
-        #         maskList = pTList # eh I can probably use maskList = pTList>pTcut
-        #         pTList = pTList[maskList>pTcut]
-        #         etaList = etaList[maskList>pTcut]
-        #         phiList = phiList[maskList>pTcut]
-        #         massList = massList[maskList>pTcut]
-
         return pTList, etaList, phiList, massList
 
 
@@ -75,22 +62,6 @@ def createJets(pTList, etaList, phiList, massList):
         for j in range(length):
                 f=fastjet.PseudoJet(pseudojet_from_pt_eta_phi_m(pTList[j], etaList[j], phiList[j], massList[j]))
                 fjs.append(f)
-
-        # Left over from pyjet implementation
-        # jetInput = np.array([],dtype=np.dtype([('pt', 'f8'), ('eta', 'f8'), 
-        #                                     ('phi', 'f8'), ('M', 'f8')]))
-        # for i in range(length):
-        #         jetInput = np.append(jetInput, np.array([(pTList[i], etaList[i], phiList[i], massList[i])], 
-        #                                               dtype=jetInput.dtype))
-        # Actual jet step
-        # sequence = cluster(jetInput, R=0.4, p=-1) # p=-1 gives anti-kt
-        # jets = sequence.inclusive_jets(ptmin=20)  # list of PseudoJets
-        
-        # FastJet implementation with awkward arrays-- do not use
-        # vector.register_awkward()
-        # awkJetInput = ak.Array(jetInput, with_name="Momentum4D")
-        # cluster = fastjet.ClusterSequence(awkJetInput, jetdef)
-        # jets = cluster.inclusive_jets(min_pt = 20)
 
         cluster = fastjet.ClusterSequence(fjs, jetdef)
         jets = cluster.inclusive_jets(ptmin=20)
@@ -111,8 +82,11 @@ def matchArr(jetArrpT, jetArreta, jetArrphi, treeArrpT, treeArreta, treeArrphi, 
 
         for i in range(len(jetArrpT)):
                 for j in range(len(treeArrpT)):
-                        if(np.abs(jetArrpT[i]-treeArrpT[j])<0.00001 and np.abs(jetArreta[i]-treeArreta[j])<0.00001 and np.abs(np.cos(jetArrphi[i])-np.cos(treeArrphi[j]))<0.00001):
-                                if(indexArr[i]!=-999): continue # print(f"Error: double matched at Event={evnum}, Jet={jetnum} i={i}")
+                        if(np.abs(jetArrpT[i]-treeArrpT[j])<0.00001 and np.abs(jetArreta[i]-treeArreta[j])<0.00001 
+                                and np.abs(np.cos(jetArrphi[i])-np.cos(treeArrphi[j]))<0.00001):
+                                if(indexArr[i]!=-999): 
+                                       print(f"Error: double matched at Event={evnum}, Jet={jetnum} i={i}")
+                                       continue 
                                 indexArr[i] = j
         if(indexArr[i]==-999.0):
                 print(f"Error: Event={evnum}, Jet={jetnum} i={i}, pT = {jetArrpT[i]}, eta = {jetArreta[i]}, phi = {jetArrphi[i]}")
