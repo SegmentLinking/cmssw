@@ -848,6 +848,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
           if (pixelSegments.partOfPT5()[i_pLS])
             continue;  //don't make pT3s for those pixels that are part of pT5
+// #ifdef USE_pT4            
+//           if (pixelSegments.partOfPT4()[i_pLS])
+//             continue; //don't make pT3s for those pixels that are part of pT4 
+// #endif
 
           short layer2_adjustment;
           if (modules.layers()[tripletLowerModuleIndex] == 1) {
@@ -869,7 +873,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             if (triplets.partOfPT5()[outerTripletIndex])
               continue;  //don't create pT3s for T3s accounted in pT5s
-
+// #ifdef USE_pT4            
+//             if (triplets.partOfPT4()[outerTripletIndex])
+//               continue; //don't make pT3s for those pixels that are part of pT4 
+// #endif
             float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY,
                 pixelRadiusError;
             bool success = runPixelTripletDefaultAlgo(acc,
