@@ -49,19 +49,17 @@ void fillOutputBranches(LSTEvent* event) {
     unsigned int n_accepted_simtrk = setSimTrackContainerBranches(event);
     
     if (ana.gnn_ntuple)
-      setGnnNtupleBranches(event);
+      setGnnNtupleBranches(event, matchfrac);
       
 #ifdef CUT_VALUE_DEBUG
-  setPixelQuintupletOutputBranches(event);
-  setQuintupletOutputBranches(event);
-  setPixelTripletOutputBranches(event);
-  setpLSOutputBranches(event);
-  
   setOccupancyBranches(event);
 
-  setT3DNNBranches(event);
+  setT3DNNBranches(event, matchfrac);
   setT5DNNBranches(event);
   setpT3DNNBranches(event);
+  
+  auto const& md_idx_map = setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac);
+  setLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
 #else
   setTrackCandidateBranches(event, n_accepted_simtrk, matchfrac);
 #endif
@@ -524,6 +522,7 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     auto const& trk_simhit_y = trk.getVF("simhit_y");
     auto const& trk_simhit_z = trk.getVF("simhit_z");
     auto const& trk_simhit_detId = trk.getVU("simhit_detId");
+    auto const& trk_simhit_hitIdx = trk.getVVI("simhit_hitIdx");
     auto const& trk_ph2_x = trk.getVF("ph2_x");
     auto const& trk_ph2_y = trk.getVF("ph2_y");
     auto const& trk_ph2_z = trk.getVF("ph2_z");
@@ -630,11 +629,11 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
         simHitDetId.push_back(trk_simhit_detId[isimhitidx]);
   
         // Also retrieve all the reco-hits matched to this simhit and also aggregate them
-        for (size_t irecohit = 0; irecohit < trk_sim_simHitIdx[isimhitidx].size(); ++irecohit) {
-          recoHitX.push_back(trk_ph2_x[trk_sim_simHitIdx[isimhitidx][irecohit]]);
-          recoHitY.push_back(trk_ph2_y[trk_sim_simHitIdx[isimhitidx][irecohit]]);
-          recoHitZ.push_back(trk_ph2_z[trk_sim_simHitIdx[isimhitidx][irecohit]]);
-          recoHitDetId.push_back(trk_ph2_detId[trk_sim_simHitIdx[isimhitidx][irecohit]]);
+        for (size_t irecohit = 0; irecohit < trk_simhit_hitIdx[isimhitidx].size(); ++irecohit) {
+          recoHitX.push_back(trk_ph2_x[trk_simhit_hitIdx[isimhitidx][irecohit]]);
+          recoHitY.push_back(trk_ph2_y[trk_simhit_hitIdx[isimhitidx][irecohit]]);
+          recoHitZ.push_back(trk_ph2_z[trk_simhit_hitIdx[isimhitidx][irecohit]]);
+          recoHitDetId.push_back(trk_ph2_detId[trk_simhit_hitIdx[isimhitidx][irecohit]]);
         }
   
         // If the given simhit that we are dealing with is not in the outer tracker (i.e. layer == 0. see few lines above.)
@@ -713,6 +712,362 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     }
     
     return n_accepted_simtrk;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac) {
+    //--------------------------------------------
+    //
+    //
+    // Mini-Doublets
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_ph2_subdet = trk.getVUS("ph2_subdet");
+    auto const& trk_ph2_layer = trk.getVUS("ph2_layer");
+    auto const& trk_ph2_detId = trk.getVU("ph2_detId");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& hitsBase = event->getInput<HitsBaseSoA>();
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& miniDoublets = event->getMiniDoublets<MiniDoubletsSoA>();
+    auto const& miniDoubletsOccupancy = event->getMiniDoublets<MiniDoubletsOccupancySoA>();
+    
+    // Following are some vectors to keep track of the information to write to the ntuple
+    // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_mdIdxAll branch is NOT that long
+    // Later in the code, it will restrict to only the ones to write out.
+    // The reason at this stage, the entire mdIdxAll is being tracked is to compute duplicate properly later on
+    // When computing a duplicate object it is important to consider all simulated tracks including pileup tracks
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_mdIdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_mdIdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> md_simIdxAll;
+    std::vector<std::vector<float>> md_simIdxAllFrac;
+  
+    // global md index that will be used to keep track of md being outputted to the ntuple
+    // each time a md is written out the following will be counted up
+    unsigned int md_idx = 0;
+  
+    // map to keep track of (GPU mdIdx) -> (md_idx in ntuple output)
+    // There is a specific mdIdx used to navigate the GPU array of mini-doublets
+    std::map<unsigned int, unsigned int> md_idx_map;
+  
+    // First loop over the modules (roughly there are ~13k pair of pt modules)
+    for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
+      // For each pt module pair, we loop over mini-doublets created
+      for (unsigned int iMD = 0; iMD < miniDoubletsOccupancy.nMDs()[idx]; iMD++) {
+        // Compute the specific MD index to access specific spot in the array of GPU memory
+        unsigned int mdIdx = ranges.miniDoubletModuleIndices()[idx] + iMD;
+  
+        // From that gpu memory index "mdIdx" -> output ntuple's md index is mapped
+        // This is useful later when connecting higher level objects to point to specific one in the ntuple
+        md_idx_map[mdIdx] = md_idx;
+  
+        // Access the list of hits in the mini-doublets (there are only two in this case)
+        std::vector<unsigned int> hit_idx, hit_type;
+        std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFromMD(event, mdIdx);
+  
+        // And then compute matching between simtrack and the mini-doublets
+        std::vector<int> simidx;
+        std::vector<float> simidxfrac;
+        std::tie(simidx, simidxfrac) =
+            matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false /*=verbose*/, /*match fraction greater than X% = */ 0);
+  
+        // Obtain the lower and upper hit information to compute some basic property of the mini-doublets
+        unsigned int LowerHitIndex = miniDoublets.anchorHitIndices()[mdIdx];
+        unsigned int UpperHitIndex = miniDoublets.outerHitIndices()[mdIdx];
+        unsigned int hit0 = hitsBase.idxs()[LowerHitIndex];
+        unsigned int hit1 = hitsBase.idxs()[UpperHitIndex];
+        float anchor_x = hitsBase.xs()[LowerHitIndex];
+        float anchor_y = hitsBase.ys()[LowerHitIndex];
+        float anchor_z = hitsBase.zs()[LowerHitIndex];
+        float other_x = hitsBase.xs()[UpperHitIndex];
+        float other_y = hitsBase.ys()[UpperHitIndex];
+        float other_z = hitsBase.zs()[UpperHitIndex];
+  
+        // Construct the anchor hit 3 vector
+        lst_math::Hit anchor_hit(anchor_x, anchor_y, anchor_z, LowerHitIndex);
+  
+        // Pt is computed via dphichange and the eta and phi are computed based on anchor hit
+        float dphichange = miniDoublets.dphichanges()[mdIdx];
+        float dphi = miniDoublets.dphis()[mdIdx];
+        float dz = miniDoublets.dzs()[mdIdx];
+        float k2Rinv1GeVf = (2.99792458e-3 * 3.8) / 2;
+        float pt = anchor_hit.rt() * k2Rinv1GeVf / sin(dphichange);
+        float eta = anchor_hit.eta();
+        float phi = anchor_hit.phi();
+  
+        // Obtain where the actual hit is located in terms of their layer, module, rod, and ring number
+        int subdet = trk_ph2_subdet[hit0];
+        int is_endcap = subdet == 4;
+        // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+        int layer = trk_ph2_layer[hit0] + 6 * (is_endcap);
+        int detId = trk_ph2_detId[hit0];
+        // See https://github.com/SegmentLinking/TrackLooper/blob/158804cab7fd0976264a7bc4cee236f4986328c2/SDL/Module.cc and Module.h
+        int ring = (detId & (15 << 12)) >> 12;
+        int isPS = is_endcap ? (layer <= 2 ? ring <= 10 : ring <= 7) : layer <= 3;
+  
+        // Write out the ntuple
+        ana.tx->pushbackToBranch<float>("md_pt", pt);
+        ana.tx->pushbackToBranch<float>("md_eta", eta);
+        ana.tx->pushbackToBranch<float>("md_phi", phi);
+  #ifdef CUT_VALUE_DEBUG
+        ana.tx->pushbackToBranch<float>("md_dphichange", dphichange);
+        ana.tx->pushbackToBranch<float>("md_dphi", dphi);
+        ana.tx->pushbackToBranch<float>("md_dz", dz);
+  #endif
+        ana.tx->pushbackToBranch<float>("md_anchor_x", anchor_x);
+        ana.tx->pushbackToBranch<float>("md_anchor_y", anchor_y);
+        ana.tx->pushbackToBranch<float>("md_anchor_z", anchor_z);
+        ana.tx->pushbackToBranch<float>("md_other_x", other_x);
+        ana.tx->pushbackToBranch<float>("md_other_y", other_y);
+        ana.tx->pushbackToBranch<float>("md_other_z", other_z);
+        ana.tx->pushbackToBranch<int>("md_type", isPS);
+        ana.tx->pushbackToBranch<int>("md_layer", layer);
+        ana.tx->pushbackToBranch<int>("md_detId", detId);
+  
+        // Compute whether this is a fake
+        bool isfake = true;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          if (simidxfrac[isim] > matchfrac) {
+            isfake = false;
+            break;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("md_isFake", isfake);
+  
+        // For this md, keep track of all the simidx that are matched
+        md_simIdxAll.push_back(simidx);
+        md_simIdxAllFrac.push_back(simidxfrac);
+  
+        // The book keeping of opposite mapping is done here
+        // For each matched sim idx, we go back and keep track of which obj it is matched to.
+        // Loop over all the matched sim idx
+        for (size_t is = 0; is < simidx.size(); ++is) {
+          // For this matched sim index keep track (sim -> md) mapping
+          int sim_idx = simidx.at(is);
+          float sim_idx_frac = simidxfrac.at(is);
+          sim_mdIdxAll.at(sim_idx).push_back(md_idx);
+          sim_mdIdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+        }
+  
+        // Also, among the simidx matches, find the best match (highest fractional match)
+        // N.B. the simidx is already returned sorted by highest number of "nhits" match
+        // So as it loops over, the condition will ensure that the highest fraction with highest nhits will be matched with the priority given to highest fraction
+        int md_simIdx = -999;
+        float md_simIdxBestFrac = 0;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          int thisidx = simidx[isim];
+          float thisfrac = simidxfrac[isim];
+          if (thisfrac > md_simIdxBestFrac and thisfrac > matchfrac) {
+            md_simIdxBestFrac = thisfrac;
+            md_simIdx = thisidx;
+          }
+        }
+  
+        // the best match index will then be saved here
+        ana.tx->pushbackToBranch<int>("md_simIdx", md_simIdx);
+  
+        // Count up the md_idx
+        md_idx++;
+      }
+    }
+  
+    // Now save the (obj -> simidx) mapping
+    ana.tx->setBranch<std::vector<std::vector<int>>>("md_simIdxAll", md_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("md_simIdxAllFrac", md_simIdxAllFrac);
+  
+    // Not all (sim->objIdx) will be saved but only for the sim that is from hard scatter and current bunch crossing
+    // So a restriction up to only "n_accepted_simtrk" done by chopping off the rest
+    // N.B. the reason we can simply take the first "n_accepted_simtrk" is because the tracking ntuple is organized such that those sim tracks show up on the first "n_accepted_simtrk" of tracks.
+    std::vector<std::vector<int>> sim_mdIdxAll_to_write;
+    std::vector<std::vector<float>> sim_mdIdxAllFrac_to_write;
+    std::copy(sim_mdIdxAll.begin(), sim_mdIdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_mdIdxAll_to_write));
+    std::copy(sim_mdIdxAllFrac.begin(),
+              sim_mdIdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_mdIdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_mdIdxAll", sim_mdIdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_mdIdxAllFrac", sim_mdIdxAllFrac_to_write);
+    
+    return md_idx_map;
+}
+
+void setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& md_idx_map) {
+    //--------------------------------------------
+    //
+    //
+    // Line Segments
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& hitsBase = event->getInput<HitsBaseSoA>();
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& segments = event->getSegments<SegmentsSoA>();
+    auto const& segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
+    
+    // Following are some vectors to keep track of the information to write to the ntuple
+    // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_objIdxAll branch is NOT that long
+    // Later in the code, it will restrict to only the ones to write out.
+    // The reason at this stage, the entire objIdxAll is being tracked is to compute duplicate properly later on
+    // When computing a duplicate object it is important to consider all simulated tracks including pileup tracks
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_lsIdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_lsIdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> ls_simIdxAll;
+    std::vector<std::vector<float>> ls_simIdxAllFrac;
+  
+    // global index that will be used to keep track of obj being outputted to the ntuple
+    // each time a obj is written out the following will be counted up
+    unsigned int ls_idx = 0;
+  
+    // map to keep track of (GPU objIdx) -> (obj_idx in ntuple output)
+    // There is a specific objIdx used to navigate the GPU array of mini-doublets
+    std::map<unsigned int, unsigned int> ls_idx_map;
+  
+    // First loop over the modules (roughly there are ~13k pair of pt modules)
+    for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
+      // For each pt module pair, we loop over objects created
+      for (unsigned int iLS = 0; iLS < segmentsOccupancy.nSegments()[idx]; iLS++) {
+        // Compute the specific obj index to access specific spot in the array of GPU memory
+        unsigned int lsIdx = ranges.segmentModuleIndices()[idx] + iLS;
+  
+        // From that gpu memory index "objIdx" -> output ntuple's obj index is mapped
+        // This is useful later when connecting higher level objects to point to specific one in the ntuple
+        ls_idx_map[lsIdx] = ls_idx;
+  
+        // Access the list of hits in the objects (there are only two in this case)
+        std::vector<unsigned int> hit_idx, hit_type;
+        std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFromLS(event, lsIdx);
+  
+        // And then compute matching between simtrack and the objects
+        std::vector<int> simidx;
+        std::vector<float> simidxfrac;
+        std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+        std::vector<unsigned int> mdIdxs = getMDsFromLS(event, lsIdx);
+  
+        // Computing line segment pt estimate (assuming beam spot is at zero)
+        lst_math::Hit hitA(0, 0, 0);
+        lst_math::Hit hitB(hitsBase.xs()[hit_idx[0]], hitsBase.ys()[hit_idx[0]], hitsBase.zs()[hit_idx[0]]);
+        lst_math::Hit hitC(hitsBase.xs()[hit_idx[2]], hitsBase.ys()[hit_idx[2]], hitsBase.zs()[hit_idx[2]]);
+        lst_math::Hit center = lst_math::getCenterFromThreePoints(hitA, hitB, hitC);
+        float pt = lst_math::ptEstimateFromRadius(center.rt());
+        float eta = hitC.eta();
+        float phi = hitB.phi();
+  
+  #ifdef CUT_VALUE_DEBUG
+        float zHi = segments.zHis()[lsIdx];
+        float zLo = segments.zLos()[lsIdx];
+        float rtHi = segments.rtHis()[lsIdx];
+        float rtLo = segments.rtLos()[lsIdx];
+        float dAlphaInner = segments.dAlphaInners()[lsIdx];
+        float dAlphaOuter = segments.dAlphaOuters()[lsIdx];
+        float dAlphaInnerOuter = segments.dAlphaInnerOuters()[lsIdx];
+  #endif
+        float dPhi = segments.dPhis()[lsIdx];
+        float dPhiMin = segments.dPhiMins()[lsIdx];
+        float dPhiMax = segments.dPhiMaxs()[lsIdx];
+        float dPhiChange = segments.dPhiChanges()[lsIdx];
+        float dPhiChangeMin = segments.dPhiChangeMins()[lsIdx];
+        float dPhiChangeMax = segments.dPhiChangeMaxs()[lsIdx];
+  
+        // Write out the ntuple
+        ana.tx->pushbackToBranch<float>("ls_pt", pt);
+        ana.tx->pushbackToBranch<float>("ls_eta", eta);
+        ana.tx->pushbackToBranch<float>("ls_phi", phi);
+  #ifdef CUT_VALUE_DEBUG
+        ana.tx->pushbackToBranch<float>("ls_zHis", zHi);
+        ana.tx->pushbackToBranch<float>("ls_zLos", zLo);
+        ana.tx->pushbackToBranch<float>("ls_rtHis", rtHi);
+        ana.tx->pushbackToBranch<float>("ls_rtLos", rtLo);
+        ana.tx->pushbackToBranch<float>("ls_dPhis", dPhi);
+        ana.tx->pushbackToBranch<float>("ls_dPhiMins", dPhiMin);
+        ana.tx->pushbackToBranch<float>("ls_dPhiMaxs", dPhiMax);
+        ana.tx->pushbackToBranch<float>("ls_dPhiChanges", dPhiChange);
+        ana.tx->pushbackToBranch<float>("ls_dPhiChangeMins", dPhiChangeMin);
+        ana.tx->pushbackToBranch<float>("ls_dPhiChangeMaxs", dPhiChangeMax);
+        ana.tx->pushbackToBranch<float>("ls_dAlphaInners", dAlphaInner);
+        ana.tx->pushbackToBranch<float>("ls_dAlphaOuters", dAlphaOuter);
+        ana.tx->pushbackToBranch<float>("ls_dAlphaInnerOuters", dAlphaInnerOuter);
+  
+  #endif
+        ana.tx->pushbackToBranch<int>("ls_mdIdx0", md_idx_map.at(mdIdxs[0]));
+        ana.tx->pushbackToBranch<int>("ls_mdIdx1", md_idx_map.at(mdIdxs[1]));
+  
+        // Compute whether this is a fake
+        bool isfake = true;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          if (simidxfrac[isim] > matchfrac) {
+            isfake = false;
+            break;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("ls_isFake", isfake);
+  
+        // For this obj, keep track of all the simidx that are matched
+        ls_simIdxAll.push_back(simidx);
+        ls_simIdxAllFrac.push_back(simidxfrac);
+  
+        // The book keeping of opposite mapping is done here
+        // For each matched sim idx, we go back and keep track of which obj it is matched to.
+        // Loop over all the matched sim idx
+        for (size_t is = 0; is < simidx.size(); ++is) {
+          int sim_idx = simidx.at(is);
+          float sim_idx_frac = simidxfrac.at(is);
+          if (sim_idx < n_total_simtrk) {
+            sim_lsIdxAll.at(sim_idx).push_back(ls_idx);
+            sim_lsIdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+          }
+        }
+  
+        // Also, among the simidx matches, find the best match (highest fractional match)
+        // N.B. the simidx is already returned sorted by highest number of "nhits" match
+        // So as it loops over, the condition will ensure that the highest fraction with highest nhits will be matched with the priority given to highest fraction
+        int ls_simIdx = -999;
+        float ls_simIdxBestFrac = 0;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          int thisidx = simidx[isim];
+          float thisfrac = simidxfrac[isim];
+          if (thisfrac > ls_simIdxBestFrac and thisfrac > matchfrac) {
+            ls_simIdxBestFrac = thisfrac;
+            ls_simIdx = thisidx;
+          }
+        }
+  
+        // the best match index will then be saved here
+        ana.tx->pushbackToBranch<int>("ls_simIdx", ls_simIdx);
+  
+        // Count up the index
+        ls_idx++;
+      }
+    }
+  
+    // Now save the (obj -> simidx) mapping
+    ana.tx->setBranch<std::vector<std::vector<int>>>("ls_simIdxAll", ls_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("ls_simIdxAllFrac", ls_simIdxAllFrac);
+  
+    // Not all (sim->objIdx) will be saved but only for the sim that is from hard scatter and current bunch crossing
+    // So a restriction up to only "n_accepted_simtrk" done by chopping off the rest
+    // N.B. the reason we can simply take the first "n_accepted_simtrk" is because the tracking ntuple is organized such that those sim tracks show up on the first "n_accepted_simtrk" of tracks.
+    std::vector<std::vector<int>> sim_lsIdxAll_to_write;
+    std::vector<std::vector<float>> sim_lsIdxAllFrac_to_write;
+    std::copy(sim_lsIdxAll.begin(), sim_lsIdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_lsIdxAll_to_write));
+    std::copy(sim_lsIdxAllFrac.begin(),
+              sim_lsIdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_lsIdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_lsIdxAll", sim_lsIdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_lsIdxAllFrac", sim_lsIdxAllFrac_to_write);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1243,16 +1598,16 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3) {
 
 //________________________________________________________________________________________________________________________________
 void fillT3DNNBranches(LSTEvent* event, unsigned int iT3) {
-  auto hitsBase = event->getInput<HitsBaseSoA>();
-  auto hitsExtended = event->getHits<HitsExtendedSoA>();
-  auto modules = event->getModules<ModulesSoA>();
+    auto const& trk_ph2_subdet = trk.getVUS("ph2_subdet");
+    auto const& trk_ph2_layer = trk.getVUS("ph2_layer");
+    auto const& trk_ph2_detId = trk.getVU("ph2_detId");
+    
+  auto const& hitsBase = event->getInput<HitsBaseSoA>();
+  auto const& hitsExtended = event->getHits<HitsExtendedSoA>();
+  auto const& modules = event->getModules<ModulesSoA>();
 
   std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
   std::vector<lst_math::Hit> hitObjects;
-
-  auto const& trk_ph2_subdet = trk.getVUS("ph2_subdet");
-  auto const& trk_ph2_layer = trk.getVUS("ph2_layer");
-  auto const& trk_ph2_detId = trk.getVU("ph2_detId");
 
   for (int i = 0; i < hitIdx.size(); ++i) {
     unsigned int hit = hitIdx[i];
@@ -1347,19 +1702,19 @@ void setpT3DNNBranches(LSTEvent* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setT3DNNBranches(LSTEvent* event) {
-  auto const triplets = event->getTriplets<TripletsSoA>();
-  auto const tripletsOccupancy = event->getTriplets<TripletsOccupancySoA>();
-  auto modules = event->getModules<ModulesSoA>();
-  auto ranges = event->getRanges();
-
-  auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
-  auto const& trk_simvtx_x = trk.getVF("simvtx_x");
-  auto const& trk_simvtx_y = trk.getVF("simvtx_y");
-  auto const& trk_simvtx_z = trk.getVF("simvtx_z");
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+void setT3DNNBranches(LSTEvent* event, float matchfrac) {
+    auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
+    auto const& trk_simvtx_x = trk.getVF("simvtx_x");
+    auto const& trk_simvtx_y = trk.getVF("simvtx_y");
+    auto const& trk_simvtx_z = trk.getVF("simvtx_z");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+  auto const& triplets = event->getTriplets<TripletsSoA>();
+  auto const& tripletsOccupancy = event->getTriplets<TripletsOccupancySoA>();
+  auto const& modules = event->getModules<ModulesSoA>();
+  auto const& ranges = event->getRanges();
 
   for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < modules.nLowerModules(); ++lowerModuleIdx) {
     int nTriplets = tripletsOccupancy.nTriplets()[lowerModuleIdx];
@@ -1380,7 +1735,7 @@ void setT3DNNBranches(LSTEvent* event) {
       // Get matching information with percent matched
       float percent_matched;
       std::vector<int> simidx = matchedSimTrkIdxs(
-          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, &percent_matched);
+          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac, &percent_matched);
 
       // Fill the branches with T3-specific data
       ana.tx->pushbackToBranch<float>("t3_betaIn", triplets.betaIn()[tripletIndex]);
@@ -1479,13 +1834,29 @@ void setT5DNNBranches(LSTEvent* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setGnnNtupleBranches(LSTEvent* event) {
-  // Get relevant information
-  SegmentsOccupancyConst segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
-  MiniDoubletsOccupancyConst miniDoublets = event->getMiniDoublets<MiniDoubletsOccupancySoA>();
-  auto hitsBase = event->getInput<HitsBaseSoA>();
-  auto modules = event->getModules<ModulesSoA>();
-  auto ranges = event->getRanges();
+void setGnnNtupleBranches(LSTEvent* event, float matchfrac) {
+    auto const& trk_sim_bunchCrossing = trk.getVI("sim_bunchCrossing");
+    auto const& trk_sim_event = trk.getVI("sim_event");
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_sim_eta = trk.getVF("sim_eta");
+    auto const& trk_sim_phi = trk.getVF("sim_phi");
+    auto const& trk_sim_pca_dxy = trk.getVF("sim_pca_dxy");
+    auto const& trk_sim_pca_dz = trk.getVF("sim_pca_dz");
+    auto const& trk_sim_q = trk.getVI("sim_q");
+    auto const& trk_sim_pdgId = trk.getVI("sim_pdgId");
+    auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
+    auto const& trk_simvtx_x = trk.getVF("simvtx_x");
+    auto const& trk_simvtx_y = trk.getVF("simvtx_y");
+    auto const& trk_simvtx_z = trk.getVF("simvtx_z");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+  auto const& segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
+  auto const& miniDoublets = event->getMiniDoublets<MiniDoubletsOccupancySoA>();
+  auto const& hitsBase = event->getInput<HitsBaseSoA>();
+  auto const& modules = event->getModules<ModulesSoA>();
+  auto const& ranges = event->getRanges();
   auto const& trackCandidates = event->getTrackCandidates();
 
   std::set<unsigned int> mds_used_in_sg;
@@ -1500,10 +1871,6 @@ void setGnnNtupleBranches(LSTEvent* event) {
     nTotalLS += segmentsOccupancy.nSegments()[idx];
   }
 
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-
   std::set<unsigned int> lss_used_in_true_tc;
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
@@ -1512,7 +1879,7 @@ void setGnnNtupleBranches(LSTEvent* event) {
     std::vector<unsigned int> hittypes;
     std::tie(hitidxs, hittypes) = getHitIdxsAndHitTypesFromTC(event, idx);
     std::vector<int> simidxs =
-        matchedSimTrkIdxs(hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
+        matchedSimTrkIdxs(hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac);
     if (simidxs.size() == 0)
       continue;
 
@@ -1528,20 +1895,6 @@ void setGnnNtupleBranches(LSTEvent* event) {
 
   // std::cout <<  " nTotalMD: " << nTotalMD <<  std::endl;
   // std::cout <<  " nTotalLS: " << nTotalLS <<  std::endl;
-
-  auto const& trk_sim_bunchCrossing = trk.getVI("sim_bunchCrossing");
-  auto const& trk_sim_event = trk.getVI("sim_event");
-  auto const& trk_sim_pt = trk.getVF("sim_pt");
-  auto const& trk_sim_eta = trk.getVF("sim_eta");
-  auto const& trk_sim_phi = trk.getVF("sim_phi");
-  auto const& trk_sim_pca_dxy = trk.getVF("sim_pca_dxy");
-  auto const& trk_sim_pca_dz = trk.getVF("sim_pca_dz");
-  auto const& trk_sim_q = trk.getVI("sim_q");
-  auto const& trk_sim_pdgId = trk.getVI("sim_pdgId");
-  auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
-  auto const& trk_simvtx_x = trk.getVF("simvtx_x");
-  auto const& trk_simvtx_y = trk.getVF("simvtx_y");
-  auto const& trk_simvtx_z = trk.getVF("simvtx_z");
 
   // Loop over modules (lower ones where the MDs are saved)
   for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
@@ -1624,7 +1977,7 @@ void setGnnNtupleBranches(LSTEvent* event) {
       std::vector<unsigned int> hittypes;
       std::tie(hitidxs, hittypes) = getHitIdxsAndHitTypesFromLS(event, sgIdx);
       std::vector<int> simidxs =
-          matchedSimTrkIdxs(hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
+          matchedSimTrkIdxs(hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac);
 
       ana.tx->pushbackToBranch<int>("LS_isFake", simidxs.size() == 0);
       ana.tx->pushbackToBranch<float>("LS_sim_pt", simidxs.size() > 0 ? trk_sim_pt[simidxs[0]] : -999);
