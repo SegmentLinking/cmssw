@@ -33,9 +33,10 @@ void createPixelQuintupletBranches();
 void createOccupancyBranches();
 
 void fillOutputBranches(LSTEvent* event);
-void setOutputBranches(LSTEvent* event);
+void setRequiredOutputBranches(LSTEvent* event);
 void setOptionalOutputBranches(LSTEvent* event);
 void setOccupancyBranches(LSTEvent* event);
+
 void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
 void setPixelTripletOutputBranches(LSTEvent* event);

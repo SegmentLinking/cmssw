@@ -13,7 +13,7 @@ void createOutputBranches() {
 
 //________________________________________________________________________________________________________________________________
 void fillOutputBranches(LSTEvent* event) {
-  setOutputBranches(event);
+  setRequiredOutputBranches(event);
   setOptionalOutputBranches(event);
 
   // Now actually fill the ttree
@@ -399,31 +399,31 @@ void createPixelLineSegmentBranches() {
   //  The container will hold per entry a pixel line segment (built by an external algo, e.g. patatrack) accepted by LST in the event.
   //
   // pt (taken from pt of the 3-vector from see_stateTrajGlbPx/Py/Pz)
-  ana.tx->createBranch<std::vector<float>>("pls_pt");
+  ana.tx->createBranch<std::vector<float>>("pLS_pt");
   // eta (taken from eta of the 3-vector from see_stateTrajGlbPx/Py/Pz)
-  ana.tx->createBranch<std::vector<float>>("pls_eta");
+  ana.tx->createBranch<std::vector<float>>("pLS_eta");
   // phi (taken from phi of the 3-vector from see_stateTrajGlbPx/Py/Pz)
-  ana.tx->createBranch<std::vector<float>>("pls_phi");
-  ana.tx->createBranch<std::vector<int>>("pls_nhit");         // Number of actual hit: 3 if triplet, 4 if quadruplet
-  ana.tx->createBranch<std::vector<float>>("pls_hit0_x");     // pLS's reco hit0 x
-  ana.tx->createBranch<std::vector<float>>("pls_hit0_y");     // pLS's reco hit0 y
-  ana.tx->createBranch<std::vector<float>>("pls_hit0_z");     // pLS's reco hit0 z
-  ana.tx->createBranch<std::vector<float>>("pls_hit1_x");     // pLS's reco hit1 x
-  ana.tx->createBranch<std::vector<float>>("pls_hit1_y");     // pLS's reco hit1 y
-  ana.tx->createBranch<std::vector<float>>("pls_hit1_z");     // pLS's reco hit1 z
-  ana.tx->createBranch<std::vector<float>>("pls_hit2_x");     // pLS's reco hit2 x
-  ana.tx->createBranch<std::vector<float>>("pls_hit2_y");     // pLS's reco hit2 y
-  ana.tx->createBranch<std::vector<float>>("pls_hit2_z");     // pLS's reco hit2 z
-  ana.tx->createBranch<std::vector<float>>("pls_hit3_x");     // pLS's reco hit3 x (if triplet, this is set to -999)
-  ana.tx->createBranch<std::vector<float>>("pls_hit3_y");     // pLS's reco hit3 y (if triplet, this is set to -999)
-  ana.tx->createBranch<std::vector<float>>("pls_hit3_z");     // pLS's reco hit3 z (if triplet, this is set to -999)
-  ana.tx->createBranch<std::vector<int>>("pls_isFake");       // 1 if pLS is fake 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pls_isDuplicate");  // 1 if pLS is duplicate 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pls_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  ana.tx->createBranch<std::vector<float>>("pLS_phi");
+  ana.tx->createBranch<std::vector<int>>("pLS_nhit");         // Number of actual hit: 3 if triplet, 4 if quadruplet
+  ana.tx->createBranch<std::vector<float>>("pLS_hit0_x");     // pLS's reco hit0 x
+  ana.tx->createBranch<std::vector<float>>("pLS_hit0_y");     // pLS's reco hit0 y
+  ana.tx->createBranch<std::vector<float>>("pLS_hit0_z");     // pLS's reco hit0 z
+  ana.tx->createBranch<std::vector<float>>("pLS_hit1_x");     // pLS's reco hit1 x
+  ana.tx->createBranch<std::vector<float>>("pLS_hit1_y");     // pLS's reco hit1 y
+  ana.tx->createBranch<std::vector<float>>("pLS_hit1_z");     // pLS's reco hit1 z
+  ana.tx->createBranch<std::vector<float>>("pLS_hit2_x");     // pLS's reco hit2 x
+  ana.tx->createBranch<std::vector<float>>("pLS_hit2_y");     // pLS's reco hit2 y
+  ana.tx->createBranch<std::vector<float>>("pLS_hit2_z");     // pLS's reco hit2 z
+  ana.tx->createBranch<std::vector<float>>("pLS_hit3_x");     // pLS's reco hit3 x (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<float>>("pLS_hit3_y");     // pLS's reco hit3 y (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<float>>("pLS_hit3_z");     // pLS's reco hit3 z (if triplet, this is set to -999)
+  ana.tx->createBranch<std::vector<int>>("pLS_isFake");       // 1 if pLS is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pLS_isDuplicate");  // 1 if pLS is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pLS_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pls_simIdxAll");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pLS_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<float>>>("pls_simIdxAllFrac");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pLS_simIdxAllFrac");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -432,18 +432,18 @@ void createPixelTripletBranches() {
   //
   //  The container will hold per entry a pT3 built by LST in the event.
   //
-  ana.tx->createBranch<std::vector<float>>("pt3_pt");         // pt (taken from the pLS)
-  ana.tx->createBranch<std::vector<float>>("pt3_eta");        // eta (taken from the pLS)
-  ana.tx->createBranch<std::vector<float>>("pt3_phi");        // phi (taken from the pLS)
-  ana.tx->createBranch<std::vector<int>>("pt3_plsIdx");       // idx to pLS
-  ana.tx->createBranch<std::vector<int>>("pt3_t3Idx");        // idx to T3
-  ana.tx->createBranch<std::vector<int>>("pt3_isFake");       // 1 if pT3 is fake 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pt3_isDuplicate");  // 1 if pT3 is duplicate 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pt3_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  ana.tx->createBranch<std::vector<float>>("pT3_pt");         // pt (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pT3_eta");        // eta (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pT3_phi");        // phi (taken from the pLS)
+  ana.tx->createBranch<std::vector<int>>("pT3_plsIdx");       // idx to pLS
+  ana.tx->createBranch<std::vector<int>>("pT3_t3Idx");        // idx to T3
+  ana.tx->createBranch<std::vector<int>>("pT3_isFake");       // 1 if pT3 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pT3_isDuplicate");  // 1 if pT3 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pT3_simIdx");       // idx of best matched (highest nhit and > 75%) simulated track
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pt3_simIdxAll");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<float>>>("pt3_simIdxAllFrac");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pT3_simIdxAllFrac");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -452,18 +452,18 @@ void createPixelQuintupletBranches() {
   //
   //  The container will hold per entry a pT5 built by LST in the event.
   //
-  ana.tx->createBranch<std::vector<float>>("pt5_pt");         // pt (taken from the pLS)
-  ana.tx->createBranch<std::vector<float>>("pt5_eta");        // eta (taken from the pLS)
-  ana.tx->createBranch<std::vector<float>>("pt5_phi");        // phi (taken from the pLS)
-  ana.tx->createBranch<std::vector<int>>("pt5_plsIdx");       // idx to pLS
-  ana.tx->createBranch<std::vector<int>>("pt5_t5Idx");        // idx to T5
-  ana.tx->createBranch<std::vector<int>>("pt5_isFake");       // 1 if pT5 is fake 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pt5_isDuplicate");  // 1 if pT5 is duplicate 0 other if not
-  ana.tx->createBranch<std::vector<int>>("pt5_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  ana.tx->createBranch<std::vector<float>>("pT5_pt");         // pt (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pT5_eta");        // eta (taken from the pLS)
+  ana.tx->createBranch<std::vector<float>>("pT5_phi");        // phi (taken from the pLS)
+  ana.tx->createBranch<std::vector<int>>("pT5_plsIdx");       // idx to pLS
+  ana.tx->createBranch<std::vector<int>>("pT5_t5Idx");        // idx to T5
+  ana.tx->createBranch<std::vector<int>>("pT5_isFake");       // 1 if pT5 is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pT5_isDuplicate");  // 1 if pT5 is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("pT5_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<int>>>("pt5_simIdxAll");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
-  ana.tx->createBranch<std::vector<std::vector<float>>>("pt5_simIdxAllFrac");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("pT5_simIdxAllFrac");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -486,133 +486,27 @@ void createOccupancyBranches() {
 }
 
 //________________________________________________________________________________________________________________________________
-void setOutputBranches(LSTEvent* event) {
-  // ============ Sim tracks =============
-  int n_accepted_simtrk = 0;
-  auto const& trk_sim_bunchCrossing = trk.getVI("sim_bunchCrossing");
-  auto const& trk_sim_event = trk.getVI("sim_event");
-  auto const& trk_sim_pt = trk.getVF("sim_pt");
-  auto const& trk_sim_eta = trk.getVF("sim_eta");
-  auto const& trk_sim_phi = trk.getVF("sim_phi");
-  auto const& trk_sim_pca_dxy = trk.getVF("sim_pca_dxy");
-  auto const& trk_sim_pca_dz = trk.getVF("sim_pca_dz");
-  auto const& trk_sim_q = trk.getVI("sim_q");
-  auto const& trk_sim_pdgId = trk.getVI("sim_pdgId");
-  auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
-  auto const& trk_simvtx_x = trk.getVF("simvtx_x");
-  auto const& trk_simvtx_y = trk.getVF("simvtx_y");
-  auto const& trk_simvtx_z = trk.getVF("simvtx_z");
-  auto const& trk_ph2_x = trk.getVF("ph2_x");
-  auto const& trk_ph2_y = trk.getVF("ph2_y");
-  auto const& trk_ph2_z = trk.getVF("ph2_z");
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-  for (unsigned int isimtrk = 0; isimtrk < trk_sim_pt.size(); ++isimtrk) {
-    // Skip out-of-time pileup
-    if (trk_sim_bunchCrossing[isimtrk] != 0)
-      continue;
-
-    // Skip non-hard-scatter
-    if (trk_sim_event[isimtrk] != 0)
-      continue;
-
-    ana.tx->pushbackToBranch<float>("sim_pt", trk_sim_pt[isimtrk]);
-    ana.tx->pushbackToBranch<float>("sim_eta", trk_sim_eta[isimtrk]);
-    ana.tx->pushbackToBranch<float>("sim_phi", trk_sim_phi[isimtrk]);
-    ana.tx->pushbackToBranch<float>("sim_pca_dxy", trk_sim_pca_dxy[isimtrk]);
-    ana.tx->pushbackToBranch<float>("sim_pca_dz", trk_sim_pca_dz[isimtrk]);
-    ana.tx->pushbackToBranch<int>("sim_q", trk_sim_q[isimtrk]);
-    ana.tx->pushbackToBranch<int>("sim_event", trk_sim_event[isimtrk]);
-    ana.tx->pushbackToBranch<int>("sim_pdgId", trk_sim_pdgId[isimtrk]);
-
-    // For vertex we need to look it up from simvtx info
-    int vtxidx = trk_sim_parentVtxIdx[isimtrk];
-    ana.tx->pushbackToBranch<float>("sim_vx", trk_simvtx_x[vtxidx]);
-    ana.tx->pushbackToBranch<float>("sim_vy", trk_simvtx_y[vtxidx]);
-    ana.tx->pushbackToBranch<float>("sim_vz", trk_simvtx_z[vtxidx]);
-
-    // The trkNtupIdx is the idx in the trackingNtuple
-    ana.tx->pushbackToBranch<float>("sim_trkNtupIdx", isimtrk);
-
-    // Increase the counter for accepted simtrk
-    n_accepted_simtrk++;
-  }
-
-  // Intermediate variables to keep track of matched track candidates for a given sim track
-  std::vector<int> sim_TC_matched(n_accepted_simtrk);
-  std::vector<int> sim_TC_matched_mask(n_accepted_simtrk);
-  std::vector<int> sim_TC_matched_for_duplicate(trk_sim_pt.size());
-
-  // Intermediate variables to keep track of matched sim tracks for a given track candidate
-  std::vector<std::vector<int>> tc_matched_simIdx;
-
-  // ============ Track candidates =============
-  auto const& trackCandidates = event->getTrackCandidates();
-  unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
-  for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
-    // Compute reco quantities of track candidate based on final object
-    int type, isFake;
-    float pt, eta, phi;
-    std::vector<int> simidx;
-    std::tie(type, pt, eta, phi, isFake, simidx) = parseTrackCandidate(
-        event, idx, trk_ph2_x, trk_ph2_y, trk_ph2_z, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
-    ana.tx->pushbackToBranch<float>("tc_pt", pt);
-    ana.tx->pushbackToBranch<float>("tc_eta", eta);
-    ana.tx->pushbackToBranch<float>("tc_phi", phi);
-    ana.tx->pushbackToBranch<int>("tc_type", type);
-    ana.tx->pushbackToBranch<int>("tc_isFake", isFake);
-    tc_matched_simIdx.push_back(simidx);
-
-    // Loop over matched sim idx and increase counter of TC_matched
-    for (auto& idx : simidx) {
-      // NOTE Important to note that the idx of the std::vector<> is same
-      // as the tracking-ntuple's sim track idx ONLY because event==0 and bunchCrossing==0 condition is applied!!
-      // Also do not try to access beyond the event and bunchCrossing
-      if (idx < n_accepted_simtrk) {
-        sim_TC_matched.at(idx) += 1;
-        sim_TC_matched_mask.at(idx) |= (1 << type);
-      }
-      sim_TC_matched_for_duplicate.at(idx) += 1;
-    }
-  }
-
-  // Using the intermedaite variables to compute whether a given track candidate is a duplicate
-  std::vector<int> tc_isDuplicate(tc_matched_simIdx.size());
-  // Loop over the track candidates
-  for (unsigned int i = 0; i < tc_matched_simIdx.size(); ++i) {
-    bool isDuplicate = false;
-    // Loop over the sim idx matched to this track candidate
-    for (unsigned int isim = 0; isim < tc_matched_simIdx[i].size(); ++isim) {
-      // Using the sim_TC_matched to see whether this track candidate is matched to a sim track that is matched to more than one
-      int simidx = tc_matched_simIdx[i][isim];
-      if (sim_TC_matched_for_duplicate[simidx] > 1) {
-        isDuplicate = true;
-      }
-    }
-    tc_isDuplicate[i] = isDuplicate;
-  }
-
-  // Now set the last remaining branches
-  ana.tx->setBranch<std::vector<int>>("sim_TC_matched", sim_TC_matched);
-  ana.tx->setBranch<std::vector<int>>("sim_TC_matched_mask", sim_TC_matched_mask);
-  ana.tx->setBranch<std::vector<std::vector<int>>>("tc_matched_simIdx", tc_matched_simIdx);
-  ana.tx->setBranch<std::vector<int>>("tc_isDuplicate", tc_isDuplicate);
+void setRequiredOutputBranches(LSTEvent* event) {
+  setSimTrackContainerBranches(event);
+  setTrackCandidateBranches(event);
 }
 
 //________________________________________________________________________________________________________________________________
 void setOptionalOutputBranches(LSTEvent* event) {
+    if (ana.gnn_ntuple)
+      setGnnNtupleBranches(event);
+      
 #ifdef CUT_VALUE_DEBUG
-
   setPixelQuintupletOutputBranches(event);
   setQuintupletOutputBranches(event);
   setPixelTripletOutputBranches(event);
+  setpLSOutputBranches(event);
+  
   setOccupancyBranches(event);
+
   setT3DNNBranches(event);
   setT5DNNBranches(event);
   setpT3DNNBranches(event);
-  setpLSOutputBranches(event);
-
 #endif
 }
 
