@@ -86,6 +86,7 @@ std::vector<unsigned int> getHitsFromTC(LSTEvent* event, unsigned int TC);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(LSTEvent* event,
                                                                                              unsigned int TC);
 
+#if (defined(USE_T4) || defined(USE_pT4))                                                                                            
 // ----* T4 *----
 std::vector<unsigned int> getT3sFromT4(LSTEvent* event, unsigned int T4);
 std::vector<unsigned int> getLSsFromT4(LSTEvent* event, unsigned int T4);
@@ -96,7 +97,8 @@ std::vector<unsigned int> getHitTypesFromT4(LSTEvent* event, unsigned int T4);
 std::vector<unsigned int> getModuleIdxsFromT4(LSTEvent* event, unsigned int T4);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT4(LSTEvent* event,
                                                                                              unsigned T4);
-
+#endif 
+#ifdef USE_pT4
 // ----* pT4 *----
 unsigned int getPixelLSFrompT4(LSTEvent* event, unsigned int pT4);
 unsigned int getT4FrompT4(LSTEvent* event, unsigned int pT4);
@@ -110,5 +112,7 @@ std::vector<unsigned int> getHitIdxsFrompT4(LSTEvent* event, unsigned int pT4);
 std::vector<unsigned int> getHitTypesFrompT4(LSTEvent* event, unsigned int pT4);
 std::vector<unsigned int> getModuleIdxsFrompT4(LSTEvent* event, unsigned int pT4);
 std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT4(LSTEvent* event,
-                                                                                              unsigned pT5);
+                                                                                              unsigned pT4);
+#endif
+                                                                                             
 #endif

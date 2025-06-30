@@ -63,10 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     triplets.hitIndices()[tripletIndex][4] = mds.anchorHitIndices()[thirdMDIndex];
     triplets.hitIndices()[tripletIndex][5] = mds.outerHitIndices()[thirdMDIndex];
 
-    tripletsInGPU.charge[tripletIndex] = charge;
-    tripletsInGPU.fakeScore[tripletIndex] = t3Scores[0];
-    tripletsInGPU.promptScore[tripletIndex] = t3Scores[1];
-    tripletsInGPU.displacedScore[tripletIndex] = t3Scores[2];
+    triplets.charge()[tripletIndex] = charge;
 #ifdef CUT_VALUE_DEBUG
     triplets.zOut()[tripletIndex] = zOut;
     triplets.rtOut()[tripletIndex] = rtOut;
@@ -107,38 +104,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float z2 = mds.anchorZ()[secondMDIndex] / 100;
     const float z3 = mds.anchorZ()[thirdMDIndex] / 100;
 
-    //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
-    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
-
-    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
-    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
-
-    //determine the charge
-    // int charge = 0;
-    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
-      charge = -1;
-    else
-      charge = 1;
-
-    //get the x,y position of each MD
-    const float x1 = mdsInGPU.anchorX[firstMDIndex] / 100;
-    const float x2 = mdsInGPU.anchorX[secondMDIndex] / 100;
-    const float x3 = mdsInGPU.anchorX[thirdMDIndex] / 100;
-
-    const float y1 = mdsInGPU.anchorY[firstMDIndex] / 100;
-    const float y2 = mdsInGPU.anchorY[secondMDIndex] / 100;
-    const float y3 = mdsInGPU.anchorY[thirdMDIndex] / 100;
-
-    //determine the charge
-    // int charge = 0;
-    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
-      charge = -1;
-    else
-      charge = 1;
-
     //use linear approximation for regions 9 and 20-24 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
     float residual = alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
 
@@ -174,6 +139,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float y1 = mds.anchorY()[firstMDIndex] / 100;
     const float y2 = mds.anchorY()[secondMDIndex] / 100;
     const float y3 = mds.anchorY()[thirdMDIndex] / 100;
+
+    //determine the charge
+    if ((x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0)
+      charge = -1;
+    else
+      charge = 1;
 
     //set initial and target points
     float x_init = x2;
@@ -685,8 +656,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleCenterX,
                                                                    float& circleCenterY,
                                                                    const float ptCut,
-                                                                   int& charge,
-                                                                   float (&t3Scores)[dnn::t3dnn::kOutputFeatures]) {
+                                                                   float (&t3Scores)[dnn::t3dnn::kOutputFeatures],
+                                                                   int& charge) {
     unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
     unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];

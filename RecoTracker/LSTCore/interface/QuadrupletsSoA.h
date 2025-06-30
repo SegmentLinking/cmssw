@@ -22,6 +22,7 @@ namespace lst {
                       SOA_COLUMN(char, isDup),         // duplicate flag
                       SOA_COLUMN(bool, tightCutFlag),  // tight pass to be a TC
                       SOA_COLUMN(bool, partOfPT4),
+                      SOA_COLUMN(bool, partOfTC),
                       SOA_COLUMN(float, regressionRadius),
                       SOA_COLUMN(float, nonAnchorRegressionRadius),
                       SOA_COLUMN(float, regressionG),
@@ -33,9 +34,9 @@ namespace lst {
                       SOA_COLUMN(float, promptscore_t4dnn),
                       SOA_COLUMN(float, displacedscore_t4dnn),
                       SOA_COLUMN(float, fakescore_t4dnn),
-                      SOA_COLUMN(float, uncertainty),
+                      // SOA_COLUMN(float, uncertainty),
                       SOA_COLUMN(bool, tightDNNFlag),
-                      SOA_COLUMN(bool, TightCutFlag),
+                      SOA_COLUMN(int, layer),
 //
                       SOA_COLUMN(float, dBeta));
 

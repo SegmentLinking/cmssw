@@ -99,6 +99,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       HOST_DEVICE_CONSTANT float kWpHigh = 0.0473f;
     }  // namespace pt3dnn
 
+    namespace t4dnn {
+      HOST_DEVICE_CONSTANT float kZ_max = 267.2349854f;
+      HOST_DEVICE_CONSTANT float kR_max = 110.1099396f;
+      HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
+
+      HOST_DEVICE_CONSTANT float kWp_prompt[kPtBins][kEtaBins] = {
+        {0.6398, 0.6448, 0.6586, 0.6875, 0.6146, 0.6181, 0.6515, 0.6528, 0.6872, 0.6870}, //85% low pt, w/ radii, t3 scores
+        {0.2145, 0.2547, 0.2754, 0.2830, 0.2413, 0.2249, 0.3232, 0.3532, 0.3180, 0.2721}}; //90% high pt, w/ radii, t3 scores
+      HOST_DEVICE_CONSTANT float kWp_displaced[kPtBins][kEtaBins] = {
+        {0.4056, 0.4600, 0.4429, 0.4547, 0.3771, 0.3657, 0.3660, 0.3992, 0.4521, 0.4764}, //75% low pt, w/ radii, t3 scores
+        {0.4893, 0.4653, 0.4464, 0.4310, 0.3706, 0.3340, 0.3140, 0.2800, 0.3107, 0.3028}}; //85% high pt, w/ radii, t3 scores
+    }  // namespace t4dnn
+
+    namespace pt4dnn {
+      HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
+      HOST_DEVICE_CONSTANT float kWp[kEtaBins] = 
+          {0.8497, 0.8674, 0.8501, 0.8416, 0.7457, 0.7593, 0.7884, 0.7622, 0.658, 0.5348}; //98% retention
+    }  // namespace pt4dnn
+
   }  // namespace dnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

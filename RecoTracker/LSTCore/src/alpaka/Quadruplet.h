@@ -44,9 +44,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float regressionF,
                                                             float regressionRadius,
                                                             float nonAnchorRegressionRadius,
-                                                            bool TightPromptFlag,
                                                             bool tightDNNFlag,
-                                                            bool TightCutFlag,
+                                                            bool tightCutFlag,
                                                             float* error2s) {
     quadruplets.tripletIndices()[quadrupletIndex][0] = innerTripletIndex;
     quadruplets.tripletIndices()[quadrupletIndex][1] = outerTripletIndex;
@@ -88,14 +87,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quadruplets.regressionG()[quadrupletIndex] = regressionG;
     quadruplets.regressionF()[quadrupletIndex] = regressionF;
 
-    quadruplets.TightPromptFlag()[quadrupletIndex] = TightPromptFlag;
     quadruplets.tightDNNFlag()[quadrupletIndex] = tightDNNFlag;
-    quadruplets.TightCutFlag()[quadrupletIndex] = TightCutFlag;
+    quadruplets.tightCutFlag()[quadrupletIndex] = tightCutFlag;
 
-    quadruplets.uncertainty()[quadrupletIndex][0] = error2s[0];
-    quadruplets.uncertainty()[quadrupletIndex][1] = error2s[1];
-    quadruplets.uncertainty()[quadrupletIndex][2] = error2s[2];
-    quadruplets.uncertainty()[quadrupletIndex][3] = error2s[3];
+    // quadruplets.uncertainty()[quadrupletIndex][0] = error2s[0];
+    // quadruplets.uncertainty()[quadrupletIndex][1] = error2s[1];
+    // quadruplets.uncertainty()[quadrupletIndex][2] = error2s[2];
+    // quadruplets.uncertainty()[quadrupletIndex][3] = error2s[3];
 
   };
 
@@ -117,7 +115,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float g,
                                                          float f,
                                                          int charge,
-                                                         bool& TightCutFlag) {
+                                                         bool& tightCutFlag) {
     //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
     const float rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
     const float rt2 = mds.anchorRt()[secondMDIndex] / 100;
@@ -363,7 +361,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if (rzChiSquared < 2.595f) //95% displaced retention, add uncert
       // if (rzChiSquared < 4.24f) //95% displaced retention, add radii
       if (rzChiSquared < 9.666f) //95% retention, add radii and t3 scores
-        TightCutFlag = true;
+        tightCutFlag = true;
       // return rzChiSquared < 3.693f; //full T3s, 99%, add uncert to DNN
       // return rzChiSquared < 9.666f; //99% add reg radii to dnn
       return rzChiSquared < 14.064f; //99% add reg radii and t3 scores to dnn
@@ -378,7 +376,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if (rzChiSquared < 19.360f) //95% displaced retention, add uncert
       // if (rzChiSquared < 19.239f) //95% displaced retention, add radii
       if (rzChiSquared < 19.283f) //95% displaced retention, add radii and t3 scores
-        TightCutFlag = true;
+        tightCutFlag = true;
       // return rzChiSquared < 28.056f; //full t3s, multi dnn 99%
       // return rzChiSquared < 28.772f; //full t3s, multi dnn add uncert to dnn 99%
       // return rzChiSquared < 28.574f; //99% add reg radii to dnn
@@ -389,7 +387,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if (rzChiSquared < 6.295f) //95% displaced retention, add uncert
       // if (rzChiSquared < 6.295f) //95% displaced retention, add radii
       if (rzChiSquared < 6.298f) //95% displaced retention, add radii and t3 scores
-        TightCutFlag = true;
+        tightCutFlag = true;
       // return rzChiSquared < 8.968f; //full t3s, multi dnn 99%
       // return rzChiSquared < 8.971f; //full t3s, multi dnn add uncert to dnn 99%
       // return rzChiSquared < 8.999f; //99% add reg radii to dnn
@@ -400,7 +398,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if (rzChiSquared < 3.886f) //95% displaced retention, add uncert
       // if (rzChiSquared < 3.871f) //95% displaced retention, add radii
       if (rzChiSquared < 3.879f) //95% displaced retention, add radii and t3 scores
-        TightCutFlag = true;
+        tightCutFlag = true;
       // return rzChiSquared < 5.032f; //full t3s, multi dnn 99%
       // return rzChiSquared < 5.160f; //full t3s, multi dnn add uncert to dnn 99%
       // return rzChiSquared < 5.091f; //99% add reg radii to dnn
@@ -412,7 +410,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 18.714f) //95% displaced retention, add uncert
         // if (rzChiSquared < 18.414f) //95% displaced retention, add radii
         if (rzChiSquared < 18.516f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 29.292f; //full t3s, multi dnn 99%
         // return rzChiSquared < 29.924f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 29.755f; //99% add reg radii to dnn
@@ -424,7 +422,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 6.467f) //95% displaced retention, add uncert
         // if (rzChiSquared < 6.418f) //95% displaced retention, add radii
         if (rzChiSquared < 6.378f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 9.359f; //full t3s, multi dnn 99%
         // return rzChiSquared < 9.357f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 9.359f; //99% add reg radii to dnn
@@ -436,7 +434,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 3.412f) //95% displaced retention, add uncert
         // if (rzChiSquared < 3.474f) //95% displaced retention, add radii
         if (rzChiSquared < 3.493f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 4.190f; //full t3s, multi dnn 99%
         // return rzChiSquared < 4.347f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 4.382f; //99% add reg radii to dnn
@@ -449,7 +447,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 13.366f) //95% displaced retention, add uncert
         // if (rzChiSquared < 13.499f) //95% displaced retention, add radii
         if (rzChiSquared < 13.252f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 23.235f; //full t3s, multi dnn 99%
         // return rzChiSquared < 23.585f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 23.296f; //99% add reg radii to dnn
@@ -461,7 +459,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 17.074f) //95% displaced retention, add uncert
         // if (rzChiSquared < 17.276f) //95% displaced retention, add radii
         if (rzChiSquared < 16.956f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 29.561f; //full t3s, multi dnn 99%
         // return rzChiSquared < 28.862f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 29.243f; //99% add reg radii to dnn
@@ -472,7 +470,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 10.887f) //95% displaced retention, add uncert
         // if (rzChiSquared <10.887f) //95% displaced retention, add radii
         if (rzChiSquared < 10.924f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 18.687f; //full t3s, multi dnn 99%
         // return rzChiSquared < 19.136f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 18.74f; //99% add reg radii to dnn
@@ -485,7 +483,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 18.039f) //95% displaced retention, add uncert
         // if (rzChiSquared < 18.263f) //95% displaced retention, add radii
         if (rzChiSquared < 18.263f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 30.072f; //full t3s, multi dnn 99%
         // return rzChiSquared < 28.911f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 29.803f; //99% add reg radii to dnn
@@ -496,7 +494,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 8.418f) //95% displaced retention, add uncert
         // if (rzChiSquared < 8.384f) //95% displaced retention, add radii
         if (rzChiSquared < 8.384f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 12.88f; //full t3s, multi dnn 99%
         // return rzChiSquared < 12.797f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 12.664f; //99% add reg radii to dnn
@@ -509,7 +507,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 18.850f) //95% displaced retention, add uncert
         // if (rzChiSquared < 18.856f) //95% displaced retention, add radii
         if (rzChiSquared < 18.741f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 27.908f; //full t3s, multi dnn 99%GeV
         // return rzChiSquared < 28.349f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 28.224f; //99% add reg radii to dnn
@@ -526,7 +524,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 4.438f) //95% displaced retention, add uncert
           // if (rzChiSquared < 4.396f) //95% displaced retention, add radii
           if (rzChiSquared < 4.376f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 5.419f; //full t3s, multi dnn 99%
           // return rzChiSquared < 5.423f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 5.292f; //99% add reg radii to dnn
@@ -538,7 +536,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 4.119f) //95% displaced retention, add uncert
           // if (rzChiSquared < 4.072f) //95% displaced retention, add radii
           if (rzChiSquared < 4.196f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 4.949f; //full t3s, multi dnn 99%
           // return rzChiSquared < 5.285f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 5.233f; //99% add reg radii to dnn
@@ -553,7 +551,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 11.935f) //95% displaced retention, add uncert
           // if (rzChiSquared < 11.934f) //95% displaced retention, add radii
           if (rzChiSquared < 11.934f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 20.491f; //full t3s, multi dnn 99%
           // return rzChiSquared < 20.491f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 20.491f; //99% add reg radii to dnn
@@ -565,7 +563,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 9.672f) //95% displaced retention, add uncert
           // if (rzChiSquared < 9.545f) //95% displaced retention, add radii
           if (rzChiSquared < 9.518f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 14.355f; //full t3s, multi dnn 99%
           // return rzChiSquared < 14.527f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 14.477f; //99% add reg radii to dnn
@@ -578,7 +576,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 4.230f) //95% displaced retention, add uncert
         // if (rzChiSquared < 4.201f) //95% displaced retention, add radii
         if (rzChiSquared < 4.269f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 5.160f; //full t3s, multi dnn 99%
         // return rzChiSquared < 5.306f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 5.157f; //99% add reg radii to dnn
@@ -590,7 +588,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // if (rzChiSquared < 22.481f) //95% displaced retention, add uncert
       // if (rzChiSquared < 22.5f) //95% displaced retention, add radii
       if (rzChiSquared < 22.481f) //95% displaced retention, add radii and t3 scores
-        TightCutFlag = true;
+        tightCutFlag = true;
       // return rzChiSquared < 35.778f; //full t3s, multi dnn 99%
       // return rzChiSquared < 35.844f; //full t3s, multi dnn add uncert to dnn 99%
       // return rzChiSquared < 35.778f; //99% add reg radii to dnn
@@ -603,7 +601,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 7.129f) //95% displaced retention, add uncert
         // if (rzChiSquared < 7.086f) //95% displaced retention, add radii
         if (rzChiSquared < 7.06f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 10.899f; //full t3s, multi dnn 99%
         // return rzChiSquared < 11.166f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 11.011f; //99% add reg radii to dnn
@@ -615,7 +613,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // if (rzChiSquared < 3.311f) //95% displaced retention, add uncert
         // if (rzChiSquared < 3.37f) //95% displaced retention, add radii
         if (rzChiSquared < 3.343f) //95% displaced retention, add radii and t3 scores
-          TightCutFlag = true;
+          tightCutFlag = true;
         // return rzChiSquared < 3.876f; //full t3s, multi dnn 99%
         // return rzChiSquared < 3.868f; //full t3s, multi dnn add uncert to dnn 99%
         // return rzChiSquared < 4.159f; //99% add reg radii to dnn
@@ -630,7 +628,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 57.321f) //95% displaced retention, add uncert
           // if (rzChiSquared < 57.047f) //95% displaced retention, add radii
           if (rzChiSquared < 56.716f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 75.304f; //full t3s, multi dnn 99%
           // return rzChiSquared < 77.495f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 78.026f; //99% add reg radii to dnn
@@ -642,7 +640,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 17.851f) //95% displaced retention
           // if (rzChiSquared < 18.597f) //95% displaced retention, add radii
           if (rzChiSquared < 17.68f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 24.917f; //full t3s, multi dnn 99%
           // return rzChiSquared < 26.821f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 27.695f; //99% add reg radii to dnn
@@ -654,7 +652,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 36.715f) //95% displaced retention, add uncert to dnn
           // if (rzChiSquared < 35.939f) //95% displaced retention, add radii
           if (rzChiSquared < 36.004f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 44.968f; //full t3s, multi dnn 99%
           // return rzChiSquared < 46.854f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 46.246f; //99% add reg radii to dnn
@@ -667,7 +665,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 3.971f) //95% displaced retention, add uncert (with and without)
           // if (rzChiSquared < 3.971f) //95% displaced retention, add radii
           if (rzChiSquared < 3.971f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return true; // leftover T3s, full T3s
           // return rzChiSquared < 6.822f; //full t3s, multi dnn 99%
           return rzChiSquared < 6.017f; //99% add reg radii and t3 scores to dnn
@@ -678,7 +676,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // if (rzChiSquared < 3.494f) //95% displaced retention, add uncert
           // if (rzChiSquared < 3.569f) //95% displaced retention, add radii
           if (rzChiSquared < 3.571f) //95% displaced retention, add radii and t3 scores
-            TightCutFlag = true;
+            tightCutFlag = true;
           // return rzChiSquared < 4.342f; //full t3s, multi dnn 99%
             // return rzChiSquared < 4.363f; //full t3s, multi dnn add uncert to dnn 99%
           // return rzChiSquared < 4.418f; //99% add reg radii to dnn
@@ -1068,8 +1066,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float alpha_InLo = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
     float alpha_OutLo = __H2F(segments.dPhiChanges()[outerSegmentIndex]);
 
-    bool isEC_lastLayer = modules.subdets[outerOuterLowerModuleIndex] == Endcap and
-                          modules.moduleType[outerOuterLowerModuleIndex] == TwoS;
+    bool isEC_lastLayer = modules.subdets()[outerOuterLowerModuleIndex] == Endcap and
+                          modules.moduleType()[outerOuterLowerModuleIndex] == TwoS;
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
 
@@ -1647,7 +1645,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& x_5,
                                                                bool& TightPromptFlag,
                                                                bool& tightDNNFlag,
-                                                               bool& TightCutFlag,
+                                                               bool& tightCutFlag,
                                                                float* error2s) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
@@ -1690,10 +1688,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float y3 = mds.anchorY()[thirdMDIndex];
     float y4 = mds.anchorY()[fourthMDIndex];
 
-    float inner_circleCenterX = triplets.circleCenterX()[innerTripletIndex];
-    float inner_circleCenterY = triplets.circleCenterY()[innerTripletIndex];
-    float innerRadius = triplets.circleRadius()[innerTripletIndex];
-    float outerRadius = triplets.circleRadius()[outerTripletIndex];
+    float inner_circleCenterX = triplets.centerX()[innerTripletIndex];
+    float inner_circleCenterY = triplets.centerY()[innerTripletIndex];
+    float innerRadius = triplets.radius()[innerTripletIndex];
+    float outerRadius = triplets.radius()[outerTripletIndex];
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
     float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
 
@@ -1829,7 +1827,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               promptScore,
                                               displacedScore,
                                               fakeScore,
-                                              TightPromptFlag,
                                               tightDNNFlag,
                                               error2s,
                                               regressionRadius,
@@ -1882,7 +1879,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                               inner_circleCenterX, 
                               inner_circleCenterY, 
                               innerT3charge,
-                              TightCutFlag))
+                              tightCutFlag))
     return false; 
 
     
@@ -1902,14 +1899,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct CreateQuadruplets {
-    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+    ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOccupancy,
                                   Quadruplets quadruplets,
-                                  QuadrupletsOccupancy quadrupletOccupancy,
+                                  QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint16_t nEligibleT4Modules, 
                                   const float ptCut) const {
@@ -1951,13 +1948,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             //   continue;  //don't create T4s for T3s accounted in T5s
             uint16_t lowerModule3 = triplets.lowerModuleIndices()[outerTripletIndex][1];
             uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][2];
-            float innerRadius = triplets.circleRadius()[innerTripletIndex];
-            float outerRadius = triplets.circleRadius()[outerTripletIndex];  
+            float innerRadius = triplets.radius()[innerTripletIndex];
+            float outerRadius = triplets.radius()[outerTripletIndex];  
             float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
             float error2s[4]; 
-            bool TightPromptFlag = false;
             bool tightDNNFlag = false;
-            bool TightCutFlag = false;
+            bool tightCutFlag = false;
       
             float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
 
@@ -1987,13 +1983,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     x_5,
                                                     TightPromptFlag,
                                                     tightDNNFlag,
-                                                    TightCutFlag,
-                                                    error2s);
-            // bool success = true;
-
+                                                    tightCutFlag,
+                                                    error2s); 
             if (success) {
-              int totOccupancyQuadruplets =
-                  alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
+              int totOccupancyQuadruplets = alpaka::atomicAdd(
+                  acc, &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
               if (totOccupancyQuadruplets >= ranges.quadrupletModuleOccupancy()[lowerModule1]) {
 #ifdef WARNINGS
                 printf("Quadruplet excess alert! Module index = %d, Occupancy = %d\n",
@@ -2001,8 +1995,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                        totOccupancyQuadruplets);
 #endif
               } else {
-                int quadrupletModuleIndex =
-                    alpaka::atomicOp<alpaka::AtomicAdd>(acc, &quadrupletsOccupancy.nQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
+                int quadrupletModuleIndex = alpaka::atomicAdd(
+                    acc, &quadrupletsOccupancy.nQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
                 //this if statement should never get executed!
                 if (ranges.quadrupletModuleIndices()[lowerModule1] == -1) {
 #ifdef WARNINGS
@@ -2014,7 +2008,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   float phi =
                       mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
                   float eta =
-                      mdsInGPU.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
+                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
                   
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuadrupletToMemory(triplets,
@@ -2042,9 +2036,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         regressionF,
                                         regressionRadius,
                                         nonAnchorRegressionRadius,
-                                        TightPromptFlag,
                                         tightDNNFlag,
-                                        TightCutFlag,
+                                        tightCutFlag,
                                         error2s);
 
                   // triplets.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
@@ -2059,7 +2052,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct CreateEligibleModulesListForQuadruplets {
-    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
                                   TripletsOccupancyConst tripletsOccupancy,
                                   ObjectRanges ranges,
@@ -2138,23 +2131,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         // Cap occupancy at minimum of dynamic count and matrix value
         int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
-        if (dynamic_count > matrix_cap){
-          printf("dynamic count: %d, matrix_cap: %d\n", dynamic_count, matrix_cap);
-        }
+        // if (dynamic_count > matrix_cap){
+        //   printf("dynamic count: %d, matrix_cap: %d\n", dynamic_count, matrix_cap);
+        // }
 
         int nEligibleT4Modules = alpaka::atomicAdd(acc, &nEligibleT4Modulesx, 1, alpaka::hierarchy::Threads{});
-        int nTotQ = alpaka::atomicOp<alpaka::AtomicAdd>(acc, &nTotalQuadrupletsx, occupancy, alpaka::hierarchy::Threads{});
+        int nTotQ = alpaka::atomicAdd(acc, &nTotalQuadrupletsx, occupancy, alpaka::hierarchy::Threads{});
 
         ranges.quadrupletModuleIndices()[i] = nTotQ;
+        // printf("in create elig mod list: ranges.quadrupletModuleIndices()[%d] = %d\n", i, ranges.quadrupletModuleIndices()[i]);
         ranges.indicesOfEligibleT4Modules()[nEligibleT4Modules] = i;
         ranges.quadrupletModuleOccupancy()[i] = occupancy;
       }
 
       // Wait for all threads to finish before reporting final values
       alpaka::syncBlockThreads(acc);
-      if (ms::alpakatools::once_per_block(acc)) {
+      if (cms::alpakatools::once_per_block(acc)) {
         ranges.nEligibleT4Modules() = static_cast<uint16_t>(nEligibleT4Modulesx);
-        *ranges.nTotalQuads() = static_cast<unsigned int>(nTotalQuadrupletsx);
+        ranges.nTotalQuads() = static_cast<unsigned int>(nTotalQuadrupletsx);
       }
     }
   };
@@ -2174,7 +2168,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         } else {
           ranges.quadrupletRanges()[i][0] = ranges.quadrupletModuleIndices()[i];
           ranges.quadrupletRanges()[i][1] =
-              range.quadrupletModuleIndices()[i] + quadrupletsInGPU.nQuadruplets()[i] - 1;
+              ranges.quadrupletModuleIndices()[i] + quadrupletsOccupancy.nQuadruplets()[i] - 1;
         }
       }
     }

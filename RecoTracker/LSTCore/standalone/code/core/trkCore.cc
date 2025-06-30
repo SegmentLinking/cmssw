@@ -249,12 +249,13 @@ float runPixelQuintuplet(LSTEvent* event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runQuadruplet(lst::Event<Acc3D> *event) {
+float runQuadruplet(LSTEvent* event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Quadruplet start" << std::endl;
   my_timer.Start();
   event->createQuadruplets();
+  event->wait();  // device side event calls are asynchronous: wait to measure time or print
   float t4_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)
     std::cout << "Reco Quadruplet processing time: " << t4_elapsed << " secs" << std::endl;
@@ -294,12 +295,13 @@ float runQuadruplet(lst::Event<Acc3D> *event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runPixelQuadruplet(lst::Event<Acc3D> *event) {
+float runPixelQuadruplet(LSTEvent* event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Quadruplet start" << std::endl;
   my_timer.Start();
   event->createPixelQuadruplets();
+  event->wait();  // device side event calls are asynchronous: wait to measure time or print
   float pt4_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Quadruplet processing time: " << pt4_elapsed << " secs" << std::endl;

@@ -12,9 +12,7 @@
 #include "pT3NeuralNetworkWeights.h"
 #include "T5EmbedNetworkWeights.h"
 #include "pLSEmbedNetworkWeights.h"
-#include "NeuralNetworkWeights.h"
-#include "MiniDoublet.h"
-#include "Hit.h"
+#include "T4NeuralNetworkWeights.h"
 #include "pT4NeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -432,609 +430,325 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   }  // namespace plsembdnn
 
-}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
+  namespace t4dnn {
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
+                                                    MiniDoubletsConst mds,
+                                                    ModulesConst modules,
+                                                    const unsigned int mdIndex1,
+                                                    const unsigned int mdIndex2,
+                                                    const unsigned int mdIndex3,
+                                                    const unsigned int mdIndex4,
+                                                    uint16_t lowerModuleIndex1,
+                                                    uint16_t lowerModuleIndex2,
+                                                    uint16_t lowerModuleIndex3,
+                                                    uint16_t lowerModuleIndex4,
+                                                    const float innerRadius,
+                                                    const float outerRadius,
+                                                    float& promptScore,
+                                                    float& displacedScore,
+                                                    float& fakeScore,
+                                                    bool& tightDNNFlag,
+                                                    float* errors,
+                                                    const float regressionRadius,
+                                                    const float nonAnchorRegressionRadius,
+                                                    float fakeScore1,
+                                                    float promptScore1,
+                                                    float displacedScore1,
+                                                    float fakeScore2,
+                                                    float promptScore2,
+                                                    float displacedScore2) {
+      // Constants
+      // constexpr unsigned int kinputFeatures = 19; //no additional
+      constexpr unsigned int kinputFeatures = 27;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
+      // constexpr unsigned int kinputFeatures = 31;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
+      constexpr unsigned int khiddenFeatures = 32;
+      // constexpr unsigned int khiddenFeatures = 64;
+      constexpr unsigned int koutputFeatures = 3;
 
-namespace lst::t4dnn {
-  template <int FEATURES, typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void softmax_activation(TAcc const& acc, float (&input)[FEATURES]) {
-    float sum = 0.f;
-    // Compute exp and sum
-#pragma unroll FEATURES
-    for (unsigned int i = 0; i < FEATURES; ++i) {
-      input[i] = alpaka::math::exp(acc, input[i]);
-      sum += input[i];
-    }
+      const int layer1 = modules.lstLayers()[lowerModuleIndex1];
+      const int layer2 = modules.lstLayers()[lowerModuleIndex2];
+      const int layer3 = modules.lstLayers()[lowerModuleIndex3];
+      const int layer4 = modules.lstLayers()[lowerModuleIndex4];
 
-    // Normalize
-#pragma unroll FEATURES
-    for (unsigned int i = 0; i < FEATURES; ++i) {
-      input[i] /= sum;
-    }
-  }
+      float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
+      float eta2 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
+      float eta3 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex3]);  // inner T3 anchor hit 3 eta (t3_4_eta)
+      float eta4 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex4]);  // outer T3 anchor hit 4 eta (t3_2_eta)
 
-  template <int FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
-#pragma unroll FEATURES
-    for (unsigned int col = 0; col < FEATURES; ++col) {
-      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
-    }
-  }
+      float phi1 = mds.anchorPhi()[mdIndex1];  // inner T3 anchor hit 1 phi
+      float phi2 = mds.anchorPhi()[mdIndex2];  // inner T3 anchor hit 2 phi
+      float phi3 = mds.anchorPhi()[mdIndex3];  // inner T3 anchor hit 3 phi
+      float phi4 = mds.anchorPhi()[mdIndex4];  // outer T3 anchor hit 4 phi
 
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
-    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
-  }
+      float z1 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex1]);  // inner T3 anchor hit 1 z (t3_0_z)
+      float z2 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex2]);  // inner T3 anchor hit 2 z (t3_2_z)
+      float z3 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex3]);  // inner T3 anchor hit 3 z (t3_4_z)
+      float z4 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex4]);  // outer T3 anchor hit 4 z (t3_2_z)
 
-  template <int IN_FEATURES, int OUT_FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
-                                                   float (&output)[OUT_FEATURES],
-                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
-                                                   const float (&biases)[OUT_FEATURES]) {
-#pragma unroll OUT_FEATURES
-    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
-      output[i] = biases[i];
-#pragma unroll IN_FEATURES
-      for (int j = 0; j < IN_FEATURES; ++j) {
-        output[i] += input[j] * weights[j][i];
-      }
-    }
-  }
+      float r1 = mds.anchorRt()[mdIndex1];  // inner T3 anchor hit 1 r (t3_0_r)
+      float r2 = mds.anchorRt()[mdIndex2];  // inner T3 anchor hit 2 r (t3_2_r)
+      float r3 = mds.anchorRt()[mdIndex3];  // inner T3 anchor hit 3 r (t3_4_r)
+      float r4 = mds.anchorRt()[mdIndex4];  // outer T3 anchor hit 4 r (t3_2_r)
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float delta_phi(const float phi1, const float phi2) {
-    float delta = phi1 - phi2;
-    // Adjust delta to be within the range [-M_PI, M_PI]
-    if (delta > kPi) {
-      delta -= 2 * kPi;
-    } else if (delta < -kPi) {
-      delta += 2 * kPi;
-    }
-    return delta;
-  }
+      // Build the input feature vector using pairwise differences after the first hit
+      float x[kinputFeatures] = {
+          eta1 / dnn::t4dnn::kEta_norm,  // inner T3: First hit eta normalized
+          alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,  // inner T3: First hit phi normalized
+          z1 / dnn::t4dnn::kZ_max,       // inner T3: First hit z normalized
+          r1 / dnn::t4dnn::kR_max,       // inner T3: First hit r normalized
 
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
-                                                   lst::MiniDoublets const& mdsInGPU,
-                                                   lst::Modules const& modulesInGPU,
-                                                   const unsigned int mdIndex1,
-                                                   const unsigned int mdIndex2,
-                                                   const unsigned int mdIndex3,
-                                                   const unsigned int mdIndex4,
-                                                   uint16_t lowerModuleIndex1,
-                                                   uint16_t lowerModuleIndex2,
-                                                   uint16_t lowerModuleIndex3,
-                                                   uint16_t lowerModuleIndex4,
-                                                   const float innerRadius,
-                                                   const float outerRadius,
-                                                   float& promptScore,
-                                                   float& displacedScore,
-                                                   float& fakeScore,
-                                                   bool& TightPromptFlag,
-                                                   bool& tightDNNFlag,
-                                                   float* errors,
-                                                   const float regressionRadius,
-                                                   const float nonAnchorRegressionRadius,
-                                                   float fakeScore1,
-                                                   float promptScore1,
-                                                   float displacedScore1,
-                                                   float fakeScore2,
-                                                   float promptScore2,
-                                                   float displacedScore2) {
-    // Constants
-    // constexpr unsigned int kinputFeatures = 19; //no additional
-    constexpr unsigned int kinputFeatures = 27;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
-    // constexpr unsigned int kinputFeatures = 31;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
-    constexpr unsigned int khiddenFeatures = 32;
-    // constexpr unsigned int khiddenFeatures = 64;
-    constexpr unsigned int koutputFeatures = 3;
+          eta2 - eta1,         // inner T3: Difference in eta between hit 2 and 1
+          cms::alpakatools::deltaPhi(acc, phi2, phi1) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 2 and 1
+          (z2 - z1) / dnn::t4dnn::kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
+          (r2 - r1) / dnn::t4dnn::kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
 
-    const int layer1 = modulesInGPU.lstLayers[lowerModuleIndex1];
-    const int layer2 = modulesInGPU.lstLayers[lowerModuleIndex2];
-    const int layer3 = modulesInGPU.lstLayers[lowerModuleIndex3];
-    const int layer4 = modulesInGPU.lstLayers[lowerModuleIndex4];
+          eta3 - eta2,         // inner T3: Difference in eta between hit 3 and 2
+          cms::alpakatools::deltaPhi(acc, phi3, phi2) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 3 and 2
+          (z3 - z2) / dnn::t4dnn::kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
+          (r3 - r2) / dnn::t4dnn::kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
 
-    float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta (t3_0_eta)
-    float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta (t3_2_eta)
-    float eta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex3]);  // inner T3 anchor hit 3 eta (t3_4_eta)
-    float eta4 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex4]);  // outer T3 anchor hit 4 eta (t3_2_eta)
+          eta4 - eta3,         // outer T3: Difference in eta between hit 4 and 3
+          cms::alpakatools::deltaPhi(acc, phi4, phi3) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 4 and 3
+          (z4 - z3) / dnn::t4dnn::kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
+          (r4 - r3) / dnn::t4dnn::kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
 
-    float phi1 = mdsInGPU.anchorPhi[mdIndex1];  // inner T3 anchor hit 1 phi
-    float phi2 = mdsInGPU.anchorPhi[mdIndex2];  // inner T3 anchor hit 2 phi
-    float phi3 = mdsInGPU.anchorPhi[mdIndex3];  // inner T3 anchor hit 3 phi
-    float phi4 = mdsInGPU.anchorPhi[mdIndex4];  // outer T3 anchor hit 4 phi
+          alpaka::math::log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
+          alpaka::math::log10(acc, outerRadius),    // T5 outer radius (t5_outerRadius)
+          alpaka::math::log10(acc, innerRadius/outerRadius),    // radius ratio
+          alpaka::math::log10(acc, regressionRadius), 
+          alpaka::math::log10(acc, nonAnchorRegressionRadius),
+          fakeScore1,
+          promptScore1,
+          displacedScore1,
+          (fakeScore2- fakeScore1),
+          (promptScore2 - promptScore1),
+          (displacedScore2 - displacedScore1),
+          // errors[0],
+          // errors[1],
+          // errors[2],
+          // errors[3]
+      };
 
-    float z1 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex1]);  // inner T3 anchor hit 1 z (t3_0_z)
-    float z2 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex2]);  // inner T3 anchor hit 2 z (t3_2_z)
-    float z3 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex3]);  // inner T3 anchor hit 3 z (t3_4_z)
-    float z4 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex4]);  // outer T3 anchor hit 4 z (t3_2_z)
+      float x_1[khiddenFeatures];  // Layer 1 output
+      float x_2[khiddenFeatures];  // Layer 2 output
+      // float x_4[khiddenFeatures];
+      // float x_5[khiddenFeatures];
+      float x_3[koutputFeatures];  // Layer 3 output (3 classes) multi-class version
+      // float x_3[1];                // Layer 3 linear output
 
-    float r1 = mdsInGPU.anchorRt[mdIndex1];  // inner T3 anchor hit 1 r (t3_0_r)
-    float r2 = mdsInGPU.anchorRt[mdIndex2];  // inner T3 anchor hit 2 r (t3_2_r)
-    float r3 = mdsInGPU.anchorRt[mdIndex3];  // inner T3 anchor hit 3 r (t3_4_r)
-    float r4 = mdsInGPU.anchorRt[mdIndex4];  // outer T3 anchor hit 4 r (t3_2_r)
+      // Layer 1: Linear + Relu
+      linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, dnn::t4dnn::wgtT_layer1, dnn::t4dnn::bias_layer1);
+      relu_activation<khiddenFeatures>(x_1);
 
-    // Build the input feature vector using pairwise differences after the first hit
-    float x[kinputFeatures] = {
-        eta1 / kEta_norm,  // inner T3: First hit eta normalized
-        alpaka::math::abs(acc, phi1) / kPhi_norm,  // inner T3: First hit phi normalized
-        z1 / kZ_max,       // inner T3: First hit z normalized
-        r1 / kR_max,       // inner T3: First hit r normalized
+      // Layer 2: Linear + Relu
+      linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, dnn::t4dnn::wgtT_layer2, dnn::t4dnn::bias_layer2);
+      relu_activation<khiddenFeatures>(x_2);
 
-        eta2 - eta1,         // inner T3: Difference in eta between hit 2 and 1
-        delta_phi(phi2, phi1) / kPhi_norm,         // inner T3: Difference in phi between hit 2 and 1
-        (z2 - z1) / kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
-        (r2 - r1) / kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
+      // linear_layer<khiddenFeatures, khiddenFeatures>(x_2, x_4, wgtT_layer2, bias_layer2);
+      // relu_activation<khiddenFeatures>(x_4);
 
-        eta3 - eta2,         // inner T3: Difference in eta between hit 3 and 2
-        delta_phi(phi3, phi2) / kPhi_norm,         // inner T3: Difference in phi between hit 3 and 2
-        (z3 - z2) / kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
-        (r3 - r2) / kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
+      // linear_layer<khiddenFeatures, khiddenFeatures>(x_4, x_5, wgtT_layer2, bias_layer2);
+      // relu_activation<khiddenFeatures>(x_5);
 
-        eta4 - eta3,         // outer T3: Difference in eta between hit 4 and 3
-        delta_phi(phi4, phi3) / kPhi_norm,         // inner T3: Difference in phi between hit 4 and 3
-        (z4 - z3) / kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
-        (r4 - r3) / kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
+      // // Layer 3: Linear + Sigmoid
+      // linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
+      // x_5 = sigmoid_activation(acc, x_3[0]);
 
-        alpaka::math::log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
-        alpaka::math::log10(acc, outerRadius),    // T5 outer radius (t5_outerRadius)
-        alpaka::math::log10(acc, innerRadius/outerRadius),    // radius ratio
-        alpaka::math::log10(acc, regressionRadius), 
-        alpaka::math::log10(acc, nonAnchorRegressionRadius),
-        fakeScore1,
-        promptScore1,
-        displacedScore1,
-        (fakeScore2- fakeScore1),
-        (promptScore2 - promptScore1),
-        (displacedScore2 - displacedScore1),
-        // errors[0],
-        // errors[1],
-        // errors[2],
-        // errors[3]
-    };
+      // Layer 3: Linear + Softmax multi-class version
+      linear_layer<khiddenFeatures, koutputFeatures>(x_2, x_3, dnn::t4dnn::wgtT_output_layer, dnn::t4dnn::bias_output_layer);
+      // linear_layer<khiddenFeatures, koutputFeatures>(x_5, x_3, wgtT_output_layer, bias_output_layer);
+      softmax_activation<koutputFeatures>(acc, x_3);
 
-    float x_1[khiddenFeatures];  // Layer 1 output
-    float x_2[khiddenFeatures];  // Layer 2 output
-    // float x_4[khiddenFeatures];
-    // float x_5[khiddenFeatures];
-    float x_3[koutputFeatures];  // Layer 3 output (3 classes) multi-class version
-    // float x_3[1];                // Layer 3 linear output
+      // Get the bin index based on abs(eta) of first hit and t4_pt
+      float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf; //t4 pt is average
 
-    // Layer 1: Linear + Relu
-    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, wgtT_layer1, bias_layer1);
-    relu_activation<khiddenFeatures>(x_1);
+      uint8_t pt_index = (t4_pt > 5);
+      uint8_t bin_index = (eta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
 
-    // Layer 2: Linear + Relu
-    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, wgtT_layer2, bias_layer2);
-    relu_activation<khiddenFeatures>(x_2);
+      promptScore = x_3[1];
+      displacedScore = x_3[2];
+      fakeScore = x_3[0];
 
-    // linear_layer<khiddenFeatures, khiddenFeatures>(x_2, x_4, wgtT_layer2, bias_layer2);
-    // relu_activation<khiddenFeatures>(x_4);
-
-    // linear_layer<khiddenFeatures, khiddenFeatures>(x_4, x_5, wgtT_layer2, bias_layer2);
-    // relu_activation<khiddenFeatures>(x_5);
-
-    // // Layer 3: Linear + Sigmoid
-    // linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-    // x_5 = sigmoid_activation(acc, x_3[0]);
-
-    // Layer 3: Linear + Softmax multi-class version
-    linear_layer<khiddenFeatures, koutputFeatures>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-    // linear_layer<khiddenFeatures, koutputFeatures>(x_5, x_3, wgtT_output_layer, bias_output_layer);
-    softmax_activation<koutputFeatures>(acc, x_3);
-
-    // Get the bin index based on abs(eta) of first hit and t4_pt
-    float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf; //t4 pt is average
-
-    uint8_t pt_index = (t4_pt > 5);
-    uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
-
-    promptScore = x_3[1];
-    displacedScore = x_3[2];
-    fakeScore = x_3[0];
-
-    tightDNNFlag = false;
-    if (layer1 == 1){ //barrel 1
-      if (layer2==2) { 
-        if (layer3 == 3) {
-          if (layer4 == 4) {//reg 6 
-            // if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.077f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f) //70
+      tightDNNFlag = false;
+      if (layer1 == 1){ //barrel 1
+        if (layer2==2) { 
+          if (layer3 == 3) {
+            if (layer4 == 4) {//reg 6 
+              // if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.077f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f) //70
+                tightDNNFlag = true;
+            }
+            else if (layer4 == 7) { //reg 7
+              // if ((x_3[2] < 0.374f or x_3[2] > 0.741) and x_3[0]<0.076f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f) //70
+                tightDNNFlag = true;
+            }
+            else if (layer4 == 13) { //reg 8
+              // if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.103f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f) //70% add radii and t3 score
+                tightDNNFlag = true;
+            }
+          }
+          else if (layer3==7) {
+            if (layer4 == 8) { //reg 9
+              // if ((x_3[2] < 0.883f or x_3[2] > 0.924f) and x_3[0]<0.049f) //90% add radii and t3 score
+              if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            }
+          }
+        } else if (layer2 == 7) {
+          if (layer3 == 8) {
+            if (layer4 == 9) { //reg 11
+              // if ((x_3[2] < 0.308f or x_3[2] > 0.780f) and x_3[0]<0.025f) //90% add radii and t3 score
+              if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            }
+          }
+        }
+      } else if (layer1 == 2) { //barrel 2
+        if (layer2 == 3) {
+          if (layer3 == 4) {
+            if (layer4 == 5) { //reg 13
+              // if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.166f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            } else if (layer4 == 12) { //reg 14
+              // if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.233f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            }
+          } else if (layer3 == 7) {
+            if (layer4 == 13) { //reg 16
+              // if ((x_3[2] < 0.842f or x_3[2] > 0.909f) and x_3[0]<0.057f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            }
+          } else if (layer3 == 12) { //reg 17
+            // if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.280f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+          }
+        } else if (layer2 == 7) {
+          if (layer3 == 8) { //reg 19
+            // if ((x_3[2] < 0.582f or x_3[2] > 0.852f) and x_3[0]<0.044f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+          } else if (layer3 == 13) { //reg 20
+            // if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.261f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039) //70% add radii and t3 score
+                  tightDNNFlag = true;
+          }
+        }
+      } else if (layer1 == 3) { //barrel 3
+        if (layer2 == 4) {
+          if (layer3 == 5) {
+            if (layer4 == 6) { //reg 21
+              // if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.276f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            } else if (layer4 == 12) { //reg 25
+              // if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.376f) //90/85% add radii and t3 score
+              if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+            }
+          } else if (layer3 == 12) { //reg 24
+            // if ((x_3[2] < 0.293f or x_3[2] > 0.492f) and x_3[0]<0.44f) //90% add radii and t3 score
+            if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f) //70% add radii and t3 score
+                  tightDNNFlag = true;
+          }
+        } else if (layer2 == 7) { //reg 23
+          // if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.159f) //90/85% add radii and t3 score
+          if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054) //70% add radii and t3 score
+                  tightDNNFlag = true;
+        }
+      } else if (layer1 == 7) { //endcap 1
+        if (layer2 == 8) {
+          if (layer3 == 9) {
+            if (layer4 ==10) { //reg 0
+              // if ((x_3[2] < 0.405f or x_3[2] > 0.871f) and x_3[0]<0.012f) //90% add radii and t3 score
+              if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f) //70% add radii and t3 score
+                tightDNNFlag = true;
+            } else if (layer4 == 15) { //reg 1
+              // if ((x_3[2] < 0.438f or x_3[2] > 0.825f) and x_3[0]<0.045f) //90% add radii and t3 score
+              if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f) //70% add radii and t3 score
+                tightDNNFlag = true;
+            }
+          } else if (layer3 == 14) { //reg 2
+            // if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.134f) //90% add radii and t3 score
+            if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f) //70% add radii and t3 score
               tightDNNFlag = true;
           }
-          else if (layer4 == 7) { //reg 7
-            // if ((x_3[2] < 0.374f or x_3[2] > 0.741) and x_3[0]<0.076f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f) //70
+        }
+      } else { //endcap 2
+        if (layer2 == 9) {
+          if (layer3 == 10) {
+            if (layer4 == 11) { //reg 3
+              // if ((x_3[2] < 0.793f or x_3[2] > 0.866f) and x_3[0]<0.021f) //90% add radii and t3 score
+              if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f) //70% add radii and t3 score
+                tightDNNFlag = true;
+            } else if (layer4 == 16) { //reg 4
+              // if ((x_3[2] < 0.281f or x_3[2] > 0.805f) and x_3[0]<0.060f) //90/95% add radii and t3 score
+              if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f) //70% add radii and t3 score
+                tightDNNFlag = true;
+            }
+          } else { //reg 5
+            // if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.168f) //90/85% add radii and t3 score
+            if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f) //70% add radii and t3 score
               tightDNNFlag = true;
           }
-          else if (layer4 == 13) { //reg 8
-            // if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.103f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f) //70% add radii and t3 score
-              tightDNNFlag = true;
-          }
-        }
-        else if (layer3==7) {
-          if (layer4 == 8) { //reg 9
-            // if ((x_3[2] < 0.883f or x_3[2] > 0.924f) and x_3[0]<0.049f) //90% add radii and t3 score
-            if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          }
-        }
-      } else if (layer2 == 7) {
-        if (layer3 == 8) {
-          if (layer4 == 9) { //reg 11
-            // if ((x_3[2] < 0.308f or x_3[2] > 0.780f) and x_3[0]<0.025f) //90% add radii and t3 score
-            if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          }
         }
       }
-    } else if (layer1 == 2) { //barrel 2
-      if (layer2 == 3) {
-        if (layer3 == 4) {
-          if (layer4 == 5) { //reg 13
-            // if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.166f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          } else if (layer4 == 12) { //reg 14
-            // if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.233f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          }
-        } else if (layer3 == 7) {
-          if (layer4 == 13) { //reg 16
-            // if ((x_3[2] < 0.842f or x_3[2] > 0.909f) and x_3[0]<0.057f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          }
-        } else if (layer3 == 12) { //reg 17
-          // if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.280f) //90/85% add radii and t3 score
-          if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f) //70% add radii and t3 score
-                tightDNNFlag = true;
-        }
-      } else if (layer2 == 7) {
-        if (layer3 == 8) { //reg 19
-          // if ((x_3[2] < 0.582f or x_3[2] > 0.852f) and x_3[0]<0.044f) //90/85% add radii and t3 score
-          if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f) //70% add radii and t3 score
-                tightDNNFlag = true;
-        } else if (layer3 == 13) { //reg 20
-          // if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.261f) //90/85% add radii and t3 score
-          if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039) //70% add radii and t3 score
-                tightDNNFlag = true;
-        }
-      }
-    } else if (layer1 == 3) { //barrel 3
-      if (layer2 == 4) {
-        if (layer3 == 5) {
-          if (layer4 == 6) { //reg 21
-            // if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.276f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          } else if (layer4 == 12) { //reg 25
-            // if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.376f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f) //70% add radii and t3 score
-                tightDNNFlag = true;
-          }
-        } else if (layer3 == 12) { //reg 24
-          // if ((x_3[2] < 0.293f or x_3[2] > 0.492f) and x_3[0]<0.44f) //90% add radii and t3 score
-          if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f) //70% add radii and t3 score
-                tightDNNFlag = true;
-        }
-      } else if (layer2 == 7) { //reg 23
-        // if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.159f) //90/85% add radii and t3 score
-        if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054) //70% add radii and t3 score
-                tightDNNFlag = true;
-      }
-    } else if (layer1 == 7) { //endcap 1
-      if (layer2 == 8) {
-        if (layer3 == 9) {
-          if (layer4 ==10) { //reg 0
-            // if ((x_3[2] < 0.405f or x_3[2] > 0.871f) and x_3[0]<0.012f) //90% add radii and t3 score
-            if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f) //70% add radii and t3 score
-              tightDNNFlag = true;
-          } else if (layer4 == 15) { //reg 1
-            // if ((x_3[2] < 0.438f or x_3[2] > 0.825f) and x_3[0]<0.045f) //90% add radii and t3 score
-            if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f) //70% add radii and t3 score
-              tightDNNFlag = true;
-          }
-        } else if (layer3 == 14) { //reg 2
-          // if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.134f) //90% add radii and t3 score
-          if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f) //70% add radii and t3 score
-            tightDNNFlag = true;
-        }
-      }
-    } else { //endcap 2
-      if (layer2 == 9) {
-        if (layer3 == 10) {
-          if (layer4 == 11) { //reg 3
-            // if ((x_3[2] < 0.793f or x_3[2] > 0.866f) and x_3[0]<0.021f) //90% add radii and t3 score
-            if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f) //70% add radii and t3 score
-              tightDNNFlag = true;
-          } else if (layer4 == 16) { //reg 4
-            // if ((x_3[2] < 0.281f or x_3[2] > 0.805f) and x_3[0]<0.060f) //90/95% add radii and t3 score
-            if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f) //70% add radii and t3 score
-              tightDNNFlag = true;
-          }
-        } else { //reg 5
-          // if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.168f) //90/85% add radii and t3 score
-          if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f) //70% add radii and t3 score
-            tightDNNFlag = true;
-        }
-      }
-    }
 
-    return x_3[1] > kWp_prompt[pt_index][bin_index] || x_3[2] > kWp_displaced[pt_index][bin_index];
-  } 
+      return x_3[1] > dnn::t4dnn::kWp_prompt[pt_index][bin_index] || x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
+    } 
 
-}  //namespace lst::t4dnn
-//#endif
-namespace lst::t3dnn {
-  template <int FEATURES, typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void softmax_activation(TAcc const& acc, float (&input)[FEATURES]) {
-    float sum = 0.f;
-    // Compute exp and sum
-#pragma unroll FEATURES
-    for (unsigned int i = 0; i < FEATURES; ++i) {
-      input[i] = alpaka::math::exp(acc, input[i]);
-      sum += input[i];
-    }
+  }  //namespace t4dnn
 
-    // Normalize
-#pragma unroll FEATURES
-    for (unsigned int i = 0; i < FEATURES; ++i) {
-      input[i] /= sum;
-    }
-  }
-
-  template <int FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
-#pragma unroll FEATURES
-    for (unsigned int col = 0; col < FEATURES; ++col) {
-      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
-    }
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
-    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
-  }
-
-  template <int IN_FEATURES, int OUT_FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
-                                                   float (&output)[OUT_FEATURES],
-                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
-                                                   const float (&biases)[OUT_FEATURES]) {
-#pragma unroll OUT_FEATURES
-    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
-      output[i] = biases[i];
-#pragma unroll IN_FEATURES
-      for (int j = 0; j < IN_FEATURES; ++j) {
-        output[i] += input[j] * weights[j][i];
-      }
-    }
-  }
-
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float delta_phi(const float phi1, const float phi2) {
-    float delta = phi1 - phi2;
-    // Adjust delta to be within the range [-M_PI, M_PI]
-    if (delta > kPi) {
-      delta -= 2 * kPi;
-    } else if (delta < -kPi) {
-      delta += 2 * kPi;
-    }
-    return delta;
-  }
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
-                                                   lst::MiniDoublets const& mdsInGPU,
-                                                   const unsigned int mdIndex1,
-                                                   const unsigned int mdIndex2,
-                                                   const unsigned int mdIndex3,
-                                                   const float radius,
-                                                   const float betaIn,
-                                                   float (&output) [3]) {
-    // Constants for T3 DNN
-    constexpr unsigned int kinputFeatures = 14;
-    constexpr unsigned int khiddenFeatures = 32;
-    constexpr unsigned int koutputFeatures = 3;
-    // Extract hit information
-    float eta1 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex1]);  // inner T3 anchor hit 1 eta
-    float eta2 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex2]);  // inner T3 anchor hit 2 eta
-    float eta3 = alpaka::math::abs(acc, mdsInGPU.anchorEta[mdIndex3]);  // inner T3 anchor hit 3 eta
-    float phi1 = mdsInGPU.anchorPhi[mdIndex1];  // inner T3 anchor hit 1 phi
-    float phi2 = mdsInGPU.anchorPhi[mdIndex2];  // inner T3 anchor hit 2 phi
-    float phi3 = mdsInGPU.anchorPhi[mdIndex3];  // inner T3 anchor hit 3 phi
-    float z1 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex1]);  // inner T3 anchor hit 1 z
-    float z2 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex2]);  // inner T3 anchor hit 2 z
-    float z3 = alpaka::math::abs(acc, mdsInGPU.anchorZ[mdIndex3]);  // inner T3 anchor hit 3 z
-    float r1 = mdsInGPU.anchorRt[mdIndex1];  // inner T3 anchor hit 1 r
-    float r2 = mdsInGPU.anchorRt[mdIndex2];  // inner T3 anchor hit 2 r
-    float r3 = mdsInGPU.anchorRt[mdIndex3];  // inner T3 anchor hit 3 r
-    // Build input feature vector matching training order
-    float x[kinputFeatures] = {
-        eta1 / kEta_norm,                          // First hit eta normalized
-        alpaka::math::abs(acc, phi1) / kPhi_norm,  // First hit phi normalized
-        z1 / kZ_max,                               // First hit z normalized
-        r1 / kR_max,                               // First hit r normalized
-        eta2 - eta1,                             // Difference in eta between hit 2 and 1
-        delta_phi(phi2, phi1) / kPhi_norm,  // Difference in phi between hit 2 and 1
-        (z2 - z1) / kZ_max,                      // Difference in z between hit 2 and 1 normalized
-        (r2 - r1) / kR_max,                      // Difference in r between hit 2 and 1 normalized
-        eta3 - eta2,                             // Difference in eta between hit 3 and 2
-        delta_phi(phi3, phi2) / kPhi_norm,  // Difference in phi between hit 3 and 2
-        (z3 - z2) / kZ_max,                      // Difference in z between hit 3 and 2 normalized
-        (r3 - r2) / kR_max,                      // Difference in r between hit 3 and 2 normalized
-        alpaka::math::log10(acc, radius),  // T3's circle radius
-        betaIn                             // Beta angle of inner segment
-    };
-    float x_1[khiddenFeatures];  // Layer 1 output
-    float x_2[khiddenFeatures];  // Layer 2 output
-    // Layer 1: Linear + Relu
-    linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, t3dnn::wgtT_layer1, t3dnn::bias_layer1);
-    relu_activation<khiddenFeatures>(x_1);
-    // Layer 2: Linear + Relu
-    linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, t3dnn::wgtT_layer2, t3dnn::bias_layer2);
-    relu_activation<khiddenFeatures>(x_2);
-    // Layer 3: Linear + Softmax
-    linear_layer<khiddenFeatures, koutputFeatures>(x_2, output, t3dnn::wgtT_output_layer, t3dnn::bias_output_layer);
-    softmax_activation<koutputFeatures>(acc, output);
-    // Get pt and eta bin indices
-    float t3_pt = radius * lst::k2Rinv1GeVf * 2;
-    uint8_t pt_index = (t3_pt > 5);
-    uint8_t bin_index = (eta1 > 2.5f) ? (kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
-
-    return output[1] > kWp_prompt[pt_index][bin_index] || 
-           output[2] > kWp_displaced[pt_index][bin_index];
-  }
-}  // namespace lst::t3dnn
-//#ifdef USE_T4_PT4
-namespace lst::pt4dnn {
-  template <int FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
-#pragma unroll FEATURES
-    for (unsigned int col = 0; col < FEATURES; ++col) {
-      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
-    }
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
-    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
-  }
-
-  template <int IN_FEATURES, int OUT_FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
-                                                   float (&output)[OUT_FEATURES],
-                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
-                                                   const float (&biases)[OUT_FEATURES]) {
-#pragma unroll OUT_FEATURES
-    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
-      output[i] = biases[i];
-#pragma unroll IN_FEATURES
-      for (int j = 0; j < IN_FEATURES; ++j) {
-        output[i] += input[j] * weights[j][i];
-      }
-    }
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
-                                                   const float t4InnerRadius,
-                                                   const float pLS_pt,
-                                                   const float pt4_rPhiChiSquared,
-                                                   const float pt4_quad_rad,
-                                                   const float pt4_pix_rad,
-                                                   const float pt4_pixRadError,
-                                                   const float pt4_rzChiSquared,
-                                                   const float pt4_eta) {
-    constexpr unsigned int kinputFeatures = 6;
-    float x[kinputFeatures] = {alpaka::math::log10(acc, pt4_rPhiChiSquared),
-                               alpaka::math::log10(acc, pt4_quad_rad),
-                               alpaka::math::log10(acc, pt4_pix_rad),
-                               alpaka::math::log10(acc, pt4_pixRadError),
-                               alpaka::math::log10(acc, (pt4_rzChiSquared < 0.f) ? 1e-3f : pt4_rzChiSquared),
-                               alpaka::math::abs(acc, pt4_eta) / kEta_norm};
-
-    constexpr unsigned int khiddenFeatures = 32;
-    constexpr unsigned int koutputFeatures = 1;
-    float x1[khiddenFeatures];
-    float x2[khiddenFeatures];
-    float x3[koutputFeatures];
-
-    linear_layer<kinputFeatures, khiddenFeatures>(x, x1, wgtT_layer1, bias_layer1);
-    relu_activation<khiddenFeatures>(x1);
-
-    linear_layer<khiddenFeatures, khiddenFeatures>(x1, x2, wgtT_layer2, bias_layer2);
-    relu_activation<khiddenFeatures>(x2);
-
-    linear_layer<khiddenFeatures, koutputFeatures>(
-        x2, x3, wgtT_output_layer, bias_output_layer);
-    float output = sigmoid_activation(acc, x3[0]);
-
-    uint8_t bin_index = (alpaka::math::abs(acc, pt4_eta) > kEta_norm)
-                            ? (kEtaBins - 1)
-                            : static_cast<unsigned int>(alpaka::math::abs(acc, pt4_eta) / 0.25f);
-
-    return output > kWp[bin_index];
-    // float pt4_pt =(t4InnerRadius*lst::k2Rinv1GeVf * 2 + pLS_pt)/2;
-    // uint8_t pt_index = (pt4_pt > 5);
-    // return output > kWp[pt_index][bin_index];
-  }
-
-}  // namespace pt4dnn
-//#endif
-
-namespace lst::pt3dnn {
-  template <int FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void relu_activation(float (&input)[FEATURES]) {
-#pragma unroll FEATURES
-    for (unsigned int col = 0; col < FEATURES; ++col) {
-      input[col] = (input[col] > 0.f) ? input[col] : 0.f;
-    }
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float sigmoid_activation(TAcc const& acc, const float x) {
-    return alpaka::math::exp(acc, x) / (alpaka::math::exp(acc, x) + 1.f);
-  }
-
-  template <int IN_FEATURES, int OUT_FEATURES>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void linear_layer(const float (&input)[IN_FEATURES],
-                                                   float (&output)[OUT_FEATURES],
-                                                   const float (&weights)[IN_FEATURES][OUT_FEATURES],
-                                                   const float (&biases)[OUT_FEATURES]) {
-#pragma unroll OUT_FEATURES
-    for (unsigned int i = 0; i < OUT_FEATURES; ++i) {
-      output[i] = biases[i];
-#pragma unroll IN_FEATURES
-      for (int j = 0; j < IN_FEATURES; ++j) {
-        output[i] += input[j] * weights[j][i];
-      }
-    }
-  }
+  namespace pt4dnn {
 
     template <typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
-                                                     const float rPhiChiSquared,
-                                                     const float tripletRadius,
-                                                     const float pixelRadius,
-                                                     const float pixRadiusError,
-                                                     const float rzChiSquared,
-                                                     const float pixelEta,
-                                                     const float pixelPt) {
-      constexpr unsigned int kInputFeatures = 6;
-      constexpr unsigned int kHiddenFeatures = 32;
-      constexpr unsigned int kOutputFeatures = 1;
+                                                    const float t4InnerRadius,
+                                                    const float pLS_pt,
+                                                    const float pt4_rPhiChiSquared,
+                                                    const float pt4_quad_rad,
+                                                    const float pt4_pix_rad,
+                                                    const float pt4_pixRadError,
+                                                    const float pt4_rzChiSquared,
+                                                    const float pt4_eta) {
+      constexpr unsigned int kinputFeatures = 6;
+      float x[kinputFeatures] = {alpaka::math::log10(acc, pt4_rPhiChiSquared),
+                                alpaka::math::log10(acc, pt4_quad_rad),
+                                alpaka::math::log10(acc, pt4_pix_rad),
+                                alpaka::math::log10(acc, pt4_pixRadError),
+                                alpaka::math::log10(acc, (pt4_rzChiSquared < 0.f) ? 1e-3f : pt4_rzChiSquared),
+                                alpaka::math::abs(acc, pt4_eta) / dnn::pt4dnn::kEta_norm};
 
-      float x[kInputFeatures] = {alpaka::math::log10(acc, rPhiChiSquared),
-                                 alpaka::math::log10(acc, tripletRadius),
-                                 alpaka::math::log10(acc, pixelRadius),
-                                 alpaka::math::log10(acc, pixRadiusError),
-                                 alpaka::math::log10(acc, rzChiSquared),
-                                 alpaka::math::abs(acc, pixelEta) / lst::t3dnn::kEta_norm};
+      constexpr unsigned int khiddenFeatures = 32;
+      constexpr unsigned int koutputFeatures = 1;
+      float x1[khiddenFeatures];
+      float x2[khiddenFeatures];
+      float x3[koutputFeatures];
 
-      float x1[kHiddenFeatures];
-      float x2[kHiddenFeatures];
-      float x3[kOutputFeatures];
+      linear_layer<kinputFeatures, khiddenFeatures>(x, x1, dnn::pt4dnn::wgtT_layer1, dnn::pt4dnn::bias_layer1);
+      relu_activation<khiddenFeatures>(x1);
 
-      linear_layer<kInputFeatures, kHiddenFeatures>(x, x1, lst::pt3dnn::wgtT_layer1, lst::pt3dnn::bias_layer1);
-      relu_activation<kHiddenFeatures>(x1);
+      linear_layer<khiddenFeatures, khiddenFeatures>(x1, x2, dnn::pt4dnn::wgtT_layer2, dnn::pt4dnn::bias_layer2);
+      relu_activation<khiddenFeatures>(x2);
 
-      linear_layer<kHiddenFeatures, kHiddenFeatures>(x1, x2, lst::pt3dnn::wgtT_layer2, lst::pt3dnn::bias_layer2);
-      relu_activation<kHiddenFeatures>(x2);
-
-      linear_layer<kHiddenFeatures, kOutputFeatures>(
-          x2, x3, lst::pt3dnn::wgtT_output_layer, lst::pt3dnn::bias_output_layer);
+      linear_layer<khiddenFeatures, koutputFeatures>(
+          x2, x3, dnn::pt4dnn::wgtT_output_layer, dnn::pt4dnn::bias_output_layer);
       float output = sigmoid_activation(acc, x3[0]);
 
-      uint8_t bin_index = (alpaka::math::abs(acc, pixelEta) > 2.5f)
-                              ? (lst::pt3dnn::kEtaBins - 1)
-                              : static_cast<unsigned int>(alpaka::math::abs(acc, pixelEta) / lst::pt3dnn::kEtaSize);
+      uint8_t bin_index = (alpaka::math::abs(acc, pt4_eta) > dnn::pt4dnn::kEta_norm)
+                              ? (dnn::kEtaBins - 1)
+                              : static_cast<unsigned int>(alpaka::math::abs(acc, pt4_eta) / 0.25f);
 
-      if (pixelPt > 5.0f)
-        return output > lst::pt3dnn::kWpHigh;
-
-      return output > lst::pt3dnn::kWp[bin_index];
+      return output > dnn::pt4dnn::kWp[bin_index];
     }
 
-  }  // namespace pt3dnn
+  }  // namespace pt4dnn
 
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 #endif

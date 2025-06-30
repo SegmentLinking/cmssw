@@ -18,6 +18,7 @@ namespace lst {
                       SOA_COLUMN(float, rPhiChiSquaredInwards),                     // chi2 from T4 to pLS
                       SOA_COLUMN(float, rzChiSquared),
                       SOA_COLUMN(FPX, pixelRadius),       // pLS pt converted
+                      SOA_COLUMN(FPX, pixelRadiusError),
                       SOA_COLUMN(FPX, quadrupletRadius),  // T4 circle
                       SOA_COLUMN(FPX, eta),
                       SOA_COLUMN(FPX, phi),

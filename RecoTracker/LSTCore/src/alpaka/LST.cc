@@ -24,6 +24,10 @@ namespace {
       maxNHits = Params_T5::kHits;
     else if (trackCandidateType == LSTObjType::pLS)
       maxNHits = Params_pLS::kHits;
+    else if (trackCandidateType == LSTObjType::T4)
+      maxNHits = Params_T4::kHits;
+    else if (trackCandidateType == LSTObjType::pT4)
+      maxNHits = Params_pT4::kHits;
 
     for (unsigned int i = 0; i < maxNHits; i++) {
       unsigned int hitIdxDev = tcHitIndices[i];
@@ -166,6 +170,29 @@ void LST::run(Queue& queue,
     printf("# of Pixel T3s produced: %d\n", event.getNumberOfPixelTriplets());
   }
 
+  event.createQuadruplets();
+  if (verbose) {
+    alpaka::wait(queue);  // event calls are asynchronous: wait before printing
+    printf("# of Quadruplets produced: %d\n", event.getNumberOfQuadruplets());
+    printf("# of Quadruplets produced layer 1-2-3-4: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(0));
+    printf("# of Quadruplets produced layer 2: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(1));
+    printf("# of Quadruplets produced layer 3: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(2));
+    printf("# of Quadruplets produced layer 4: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(3));
+    printf("# of Quadruplets produced layer 5: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(4));
+    printf("# of Quadruplets produced layer 6: %d\n", event.getNumberOfQuadrupletsByLayerBarrel(5));
+    printf("# of Quadruplets produced endcap layer 1: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(0));
+    printf("# of Quadruplets produced endcap layer 2: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(1));
+    printf("# of Quadruplets produced endcap layer 3: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(2));
+    printf("# of Quadruplets produced endcap layer 4: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(3));
+    printf("# of Quadruplets produced endcap layer 5: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(4));
+  }
+
+  event.createPixelQuadruplets();
+  if (verbose) {
+    alpaka::wait(queue);  // event calls are asynchronous: wait before printing
+    printf("# of Pixel T4s produced: %d\n", event.getNumberOfPixelQuadruplets());
+  }
+
   event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
@@ -175,6 +202,8 @@ void LST::run(Queue& queue,
     printf("        # of pT3 TrackCandidates produced: %d\n", event.getNumberOfPT3TrackCandidates());
     printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
+    printf("        # of T4 TrackCandidates produced: %d\n", event.getNumberOfT4TrackCandidates());
+    printf("        # of pT4 TrackCandidates produced: %d\n", event.getNumberOfPT4TrackCandidates());
   }
 
   getOutput(event);

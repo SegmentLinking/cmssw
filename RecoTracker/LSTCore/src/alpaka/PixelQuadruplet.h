@@ -36,7 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  float centerX,
                                                                  float centerY,
                                                                  float pt) {
-    pixelQuadruplets.pixelIndices()[pixelQuadrupletIndex] = pixelIndex;
+    pixelQuadruplets.pixelSegmentIndices()[pixelQuadrupletIndex] = pixelIndex;
     pixelQuadruplets.quadrupletIndices()[pixelQuadrupletIndex] = t4Index;
     pixelQuadruplets.isDup()[pixelQuadrupletIndex] = false;
     pixelQuadruplets.score()[pixelQuadrupletIndex] = __F2H(score);
@@ -63,8 +63,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelQuadruplets.lowerModuleIndices()[pixelQuadrupletIndex][4] = quadruplets.lowerModuleIndices()[t4Index][2];
     pixelQuadruplets.lowerModuleIndices()[pixelQuadrupletIndex][5] = quadruplets.lowerModuleIndices()[t4Index][3];
 
-    unsigned int pixelInnerMD = segments.mdIndices()()[pixelIndex][0];
-    unsigned int pixelOuterMD = segments.mdIndices()()[pixelIndex][1];
+    unsigned int pixelInnerMD = segments.mdIndices()[pixelIndex][0];
+    unsigned int pixelOuterMD = segments.mdIndices()[pixelIndex][1];
 
     pixelQuadruplets.hitIndices()[pixelQuadrupletIndex][0] = mds.anchorHitIndices()[pixelInnerMD];
     pixelQuadruplets.hitIndices()[pixelQuadrupletIndex][1] = mds.outerHitIndices()[pixelInnerMD];
@@ -386,170 +386,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelQuadrupletDefaultAlgo(TAcc const& acc,
-                                                                    ModulesConst modules,
-                                                                    ObjectRangesConst ranges,
-                                                                    MiniDoubletsConst mds,
-                                                                    SegmentsConst segments,
-                                                                    PixelSeedsConst pixelSeeds,
-                                                                    PixelSegmentsConst pixelSegments,
-                                                                    TripletsConst triplets,
-                                                                    QuadrupletsConst quadruplets,
-                                                                    unsigned int pixelSegmentIndex,
-                                                                    unsigned int quadrupletIndex,
-                                                                    float& rzChiSquared,
-                                                                    float& rPhiChiSquared,
-                                                                    float& rPhiChiSquaredInwards,
-                                                                    float& pixelRadius,
-                                                                    float& pixelRadiusError,
-                                                                    float& quadrupletRadius,
-                                                                    float& centerX,
-                                                                    float& centerY,
-                                                                    unsigned int pixelSegmentArrayIndex,
-                                                                    const float ptCut) {
-    unsigned int t4InnerT3Index = quadruplets.tripletIndices()[quadrupletIndex][0];
-    unsigned int t4OuterT3Index = quadruplets.tripletIndices()[quadrupletIndex][1];
-
-    float pixelRadiusTemp, tripletRadius, rPhiChiSquaredTemp, rzChiSquaredTemp, rPhiChiSquaredInwardsTemp, centerXTemp,
-        centerYTemp, pixelRadiusErrorTemp;
-    
-    if (not runPixelTripletDefaultAlgo(acc,
-                                       modules,
-                                       ranges,
-                                       mds,
-                                       segments,
-                                       pixelSeeds,
-                                       pixelSegments,
-                                       triplets,
-                                       pixelSegmentIndex,
-                                       t4InnerT3Index,
-                                       pixelRadiusTemp,
-                                       tripletRadius,
-                                       centerXTemp,
-                                       centerYTemp,
-                                       rzChiSquaredTemp,
-                                       rPhiChiSquaredTemp,
-                                       rPhiChiSquaredInwardsTemp,
-                                       pixelRadiusErrorTemp,
-                                       ptCut,
-                                       true,
-                                       false))
-      return false;
-    
-    unsigned int firstSegmentIndex = triplets.segmentIndices()[t4InnerT3Index][0];
-    unsigned int secondSegmentIndex = triplets.segmentIndices()[t4InnerT3Index][1];
-    unsigned int thirdSegmentIndex = triplets.segmentIndices()[t4OuterT3Index][1];
-
-    unsigned int pixelInnerMDIndex = segments.mdIndices()[pixelSegmentIndex][0];
-    unsigned int pixelOuterMDIndex = segments.mdIndices()[pixelSegmentIndex][1];
-    unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
-    unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
-    unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
-    unsigned int fourthMDIndex = segments.mdIndices()[thirdSegmentIndex][1];
-
-    uint16_t lowerModuleIndex1 = quadruplets.lowerModuleIndices()[quadrupletIndex][0];
-    uint16_t lowerModuleIndex2 = quadruplets.lowerModuleIndices()[quadrupletIndex][1];
-    uint16_t lowerModuleIndex3 = quadruplets.lowerModuleIndices()[quadrupletIndex][2];
-    uint16_t lowerModuleIndex4 = quadruplets.lowerModuleIndices()[quadrupletIndex][3];
-
-    uint16_t lowerModuleIndices[Params_T4::kLayers] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
-
-    float rtPix[Params_pLS::kLayers] = {mds.anchorRt()[pixelInnerMDIndex], mds.anchorRt()[pixelOuterMDIndex]};
-    float xPix[Params_pLS::kLayers] = {mds.anchorX()[pixelInnerMDIndex], mds.anchorX()[pixelOuterMDIndex]};
-    float yPix[Params_pLS::kLayers] = {mds.anchorY()[pixelInnerMDIndex], mds.anchorY()[pixelOuterMDIndex]};
-    float zPix[Params_pLS::kLayers] = {mds.anchorZ()()[pixelInnerMDIndex], mds.anchorZ()[pixelOuterMDIndex]};
-
-    float zs[Params_T4::kLayers] = {mds.anchorZ()[firstMDIndex],
-                                    mds.anchorZ()[secondMDIndex],
-                                    mds.anchorZ()[thirdMDIndex],
-                                    mds.anchorZ()[fourthMDIndex]};
-    float rts[Params_T4::kLayers] = {mds.anchorRt()[firstMDIndex],
-                                     mds.anchorRt()[secondMDIndex],
-                                     mds.anchorRt()[thirdMDIndex],
-                                     mds.anchorRt()[fourthMDIndex]};
-
-    float pixelSegmentPt = segments.ptIn()[pixelSegmentArrayIndex];
-    float pixelSegmentPx = segments.px()[pixelSegmentArrayIndex];
-    float pixelSegmentPy = segments.py()[pixelSegmentArrayIndex];
-    float pixelSegmentPz = segments.pz()[pixelSegmentArrayIndex];
-    int pixelSegmentCharge = segments.charge()[pixelSegmentArrayIndex];
-
-    float pixelSegmentPtError = segments.ptErr()[pixelSegmentArrayIndex];
-    pixelRadiusError = pixelSegmentPtError * kR1GeVf;
-
-    rzChiSquared = 0;
-
-    //get the appropriate centers
-    pixelRadius = segments.circleRadius()[pixelSegmentArrayIndex];
-
-    rzChiSquared = computePT4RZChiSquared(acc,
-                                              modules,
-                                              lowerModuleIndices,
-                                              rtPix,
-                                              xPix,
-                                              yPix,
-                                              zPix,
-                                              rts,
-                                              zs,
-                                              pixelSegmentPt,
-                                              pixelSegmentPx,
-                                              pixelSegmentPy,
-                                              pixelSegmentPz,
-                                              pixelSegmentCharge);
-    if (not passPT4RZChiSquaredCuts(modules,
-                                      lowerModuleIndex1,
-                                      lowerModuleIndex2,
-                                      lowerModuleIndex3,
-                                      lowerModuleIndex4,
-                                      rzChiSquared))
-        return false;
-
-    //outer T4
-    float xs[Params_T4::kLayers] = {mds.anchorX()[firstMDIndex],
-                                    mds.anchorX()[secondMDIndex],
-                                    mds.anchorX()[thirdMDIndex],
-                                    mds.anchorX()[fourthMDIndex]};
-    float ys[Params_T4::kLayers] = {mds.anchorY()[firstMDIndex],
-                                    mds.anchorY()[secondMDIndex],
-                                    mds.anchorY()[thirdMDIndex],
-                                    mds.anchorY()[fourthMDIndex]};
-
-    // //get the appropriate centers
-    centerX = segments.circleCenterX()[pixelSegmentArrayIndex];
-    centerY = segments.circleCenterY()[pixelSegmentArrayIndex];
-
-    float T4CenterX = quadruplets.regressionG()[quadrupletIndex];
-    float T4CenterY = quadruplets.regressionF()[quadrupletIndex];
-    quadrupletRadius = quadruplets.regressionRadius()[quadrupletIndex];
-    float quadrupletEta = quadruplets.eta()[quadrupletIndex];
-
-    rPhiChiSquared =
-        computePT4RPhiChiSquared(acc, modules, lowerModuleIndices, centerX, centerY, pixelRadius, xs, ys);
-
-    rPhiChiSquaredInwards = computePT4RPhiChiSquaredInwards(T4CenterX, T4CenterY, quadrupletRadius, xPix, yPix);
-
-    float T4InnerRadius = quadruplets.innerRadius()[quadrupletIndex];
-    
-    bool inference = lst::pt4dnn::runInference(acc,
-                                              T4InnerRadius,
-                                              pixelSegmentPt,
-                                              rPhiChiSquared,
-                                              quadrupletRadius,
-                                              pixelRadius,
-                                              pixelRadiusError,
-                                              rzChiSquared,
-                                              quadrupletEta);
-    if (!inference)
-      return false;
-    //trusting the T4 regression center to also be a good estimate..
-    centerX = (centerX + T4CenterX) / 2;
-    centerY = (centerY + T4CenterY) / 2;
-
-    return true;
-  };
-
-  template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computePT4RZChiSquared(TAcc const& acc,
                                                               ModulesConst modules,
                                                               const uint16_t* lowerModuleIndices,
@@ -636,6 +472,170 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return RMSE;
   };
 
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelQuadrupletDefaultAlgo(TAcc const& acc,
+                                                                    ModulesConst modules,
+                                                                    ObjectRangesConst ranges,
+                                                                    MiniDoubletsConst mds,
+                                                                    SegmentsConst segments,
+                                                                    PixelSeedsConst pixelSeeds,
+                                                                    PixelSegmentsConst pixelSegments,
+                                                                    TripletsConst triplets,
+                                                                    QuadrupletsConst quadruplets,
+                                                                    unsigned int pixelSegmentIndex,
+                                                                    unsigned int quadrupletIndex,
+                                                                    float& rzChiSquared,
+                                                                    float& rPhiChiSquared,
+                                                                    float& rPhiChiSquaredInwards,
+                                                                    float& pixelRadius,
+                                                                    float& pixelRadiusError,
+                                                                    float& quadrupletRadius,
+                                                                    float& centerX,
+                                                                    float& centerY,
+                                                                    unsigned int pixelSegmentArrayIndex,
+                                                                    const float ptCut) {
+    unsigned int t4InnerT3Index = quadruplets.tripletIndices()[quadrupletIndex][0];
+    unsigned int t4OuterT3Index = quadruplets.tripletIndices()[quadrupletIndex][1];
+
+    float pixelRadiusTemp, tripletRadius, rPhiChiSquaredTemp, rzChiSquaredTemp, rPhiChiSquaredInwardsTemp, centerXTemp,
+        centerYTemp, pixelRadiusErrorTemp;
+    
+    if (not runPixelTripletDefaultAlgo(acc,
+                                       modules,
+                                       ranges,
+                                       mds,
+                                       segments,
+                                       pixelSeeds,
+                                       pixelSegments,
+                                       triplets,
+                                       pixelSegmentIndex,
+                                       t4InnerT3Index,
+                                       pixelRadiusTemp,
+                                       tripletRadius,
+                                       centerXTemp,
+                                       centerYTemp,
+                                       rzChiSquaredTemp,
+                                       rPhiChiSquaredTemp,
+                                       rPhiChiSquaredInwardsTemp,
+                                       pixelRadiusErrorTemp,
+                                       ptCut,
+                                       true,
+                                       false))
+      return false;
+    
+    unsigned int firstSegmentIndex = triplets.segmentIndices()[t4InnerT3Index][0];
+    unsigned int secondSegmentIndex = triplets.segmentIndices()[t4InnerT3Index][1];
+    unsigned int thirdSegmentIndex = triplets.segmentIndices()[t4OuterT3Index][1];
+
+    unsigned int pixelInnerMDIndex = segments.mdIndices()[pixelSegmentIndex][0];
+    unsigned int pixelOuterMDIndex = segments.mdIndices()[pixelSegmentIndex][1];
+    unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
+    unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
+    unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
+    unsigned int fourthMDIndex = segments.mdIndices()[thirdSegmentIndex][1];
+
+    uint16_t lowerModuleIndex1 = quadruplets.lowerModuleIndices()[quadrupletIndex][0];
+    uint16_t lowerModuleIndex2 = quadruplets.lowerModuleIndices()[quadrupletIndex][1];
+    uint16_t lowerModuleIndex3 = quadruplets.lowerModuleIndices()[quadrupletIndex][2];
+    uint16_t lowerModuleIndex4 = quadruplets.lowerModuleIndices()[quadrupletIndex][3];
+
+    uint16_t lowerModuleIndices[Params_T4::kLayers] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
+
+    float rtPix[Params_pLS::kLayers] = {mds.anchorRt()[pixelInnerMDIndex], mds.anchorRt()[pixelOuterMDIndex]};
+    float xPix[Params_pLS::kLayers] = {mds.anchorX()[pixelInnerMDIndex], mds.anchorX()[pixelOuterMDIndex]};
+    float yPix[Params_pLS::kLayers] = {mds.anchorY()[pixelInnerMDIndex], mds.anchorY()[pixelOuterMDIndex]};
+    float zPix[Params_pLS::kLayers] = {mds.anchorZ()[pixelInnerMDIndex], mds.anchorZ()[pixelOuterMDIndex]};
+
+    float zs[Params_T4::kLayers] = {mds.anchorZ()[firstMDIndex],
+                                    mds.anchorZ()[secondMDIndex],
+                                    mds.anchorZ()[thirdMDIndex],
+                                    mds.anchorZ()[fourthMDIndex]};
+    float rts[Params_T4::kLayers] = {mds.anchorRt()[firstMDIndex],
+                                     mds.anchorRt()[secondMDIndex],
+                                     mds.anchorRt()[thirdMDIndex],
+                                     mds.anchorRt()[fourthMDIndex]};
+
+    float pixelSegmentPt = pixelSeeds.ptIn()[pixelSegmentArrayIndex];
+    float pixelSegmentPx = pixelSeeds.px()[pixelSegmentArrayIndex];
+    float pixelSegmentPy = pixelSeeds.py()[pixelSegmentArrayIndex];
+    float pixelSegmentPz = pixelSeeds.pz()[pixelSegmentArrayIndex];
+    int pixelSegmentCharge = pixelSeeds.charge()[pixelSegmentArrayIndex];
+
+    float pixelSegmentPtError = pixelSeeds.ptErr()[pixelSegmentArrayIndex];
+    pixelRadiusError = pixelSegmentPtError * kR1GeVf;
+
+    rzChiSquared = 0;
+
+    //get the appropriate centers
+    pixelRadius = pixelSegmentPt * kR1GeVf;
+
+    rzChiSquared = computePT4RZChiSquared(acc,
+                                              modules,
+                                              lowerModuleIndices,
+                                              rtPix,
+                                              xPix,
+                                              yPix,
+                                              zPix,
+                                              rts,
+                                              zs,
+                                              pixelSegmentPt,
+                                              pixelSegmentPx,
+                                              pixelSegmentPy,
+                                              pixelSegmentPz,
+                                              pixelSegmentCharge);
+    if (not passPT4RZChiSquaredCuts(modules,
+                                      lowerModuleIndex1,
+                                      lowerModuleIndex2,
+                                      lowerModuleIndex3,
+                                      lowerModuleIndex4,
+                                      rzChiSquared))
+        return false;
+
+    //outer T4
+    float xs[Params_T4::kLayers] = {mds.anchorX()[firstMDIndex],
+                                    mds.anchorX()[secondMDIndex],
+                                    mds.anchorX()[thirdMDIndex],
+                                    mds.anchorX()[fourthMDIndex]};
+    float ys[Params_T4::kLayers] = {mds.anchorY()[firstMDIndex],
+                                    mds.anchorY()[secondMDIndex],
+                                    mds.anchorY()[thirdMDIndex],
+                                    mds.anchorY()[fourthMDIndex]};
+
+    // //get the appropriate centers
+    centerX = pixelSegments.circleCenterX()[pixelSegmentArrayIndex];
+    centerY = pixelSegments.circleCenterY()[pixelSegmentArrayIndex];
+
+    float T4CenterX = quadruplets.regressionG()[quadrupletIndex];
+    float T4CenterY = quadruplets.regressionF()[quadrupletIndex];
+    quadrupletRadius = quadruplets.regressionRadius()[quadrupletIndex];
+    float quadrupletEta = quadruplets.eta()[quadrupletIndex];
+
+    rPhiChiSquared =
+        computePT4RPhiChiSquared(acc, modules, lowerModuleIndices, centerX, centerY, pixelRadius, xs, ys);
+
+    rPhiChiSquaredInwards = computePT4RPhiChiSquaredInwards(T4CenterX, T4CenterY, quadrupletRadius, xPix, yPix);
+
+    float T4InnerRadius = quadruplets.innerRadius()[quadrupletIndex];
+    
+    bool inference = lst::pt4dnn::runInference(acc,
+                                              T4InnerRadius,
+                                              pixelSegmentPt,
+                                              rPhiChiSquared,
+                                              quadrupletRadius,
+                                              pixelRadius,
+                                              pixelRadiusError,
+                                              rzChiSquared,
+                                              quadrupletEta);
+    if (!inference)
+      return false;
+    //trusting the T4 regression center to also be a good estimate..
+    centerX = (centerX + T4CenterX) / 2;
+    centerY = (centerY + T4CenterY) / 2;
+
+    return true;
+  };
+
   struct CreatePixelQuadrupletsFromMap {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -644,8 +644,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsConst segments,
                                   PixelSeedsConst pixelSeeds,
                                   PixelSegments pixelSegments,
-                                  TripletsConst triplets,
-                                  QuadrupletsConst quadruplets,
+                                  Triplets triplets,
+                                  Quadruplets quadruplets,
                                   QuadrupletsOccupancyConst quadrupletsOccupancy,
                                   PixelQuadruplets pixelQuadruplets,
                                   unsigned int* connectedPixelSize,
@@ -658,13 +658,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         for (unsigned int iLSModule :
              cms::alpakatools::uniform_elements_y(acc, connectedPixelIndex[i_pLS], iLSModule_max)) {
           //these are actual module indices
-          uint16_t quadrupletLowerModuleIndex = modules.connectedPixels()[iLSModule];
-          if (quadrupletLowerModuleIndex >= *modules.nLowerModules())
+          uint16_t quadrupletLowerModuleIndex = modulesPixel.connectedPixels()[iLSModule];
+          if (quadrupletLowerModuleIndex >= modules.nLowerModules())
             continue;
           if (modules.moduleType()[quadrupletLowerModuleIndex] == TwoS)
             continue;
-          uint16_t pixelModuleIndex = *modules.nLowerModules();
-          if (segments.isDup()[i_pLS])
+          uint16_t pixelModuleIndex = modules.nLowerModules();
+          if (pixelSegments.isDup()[i_pLS])
             continue;
           unsigned int nOuterQuadruplets = quadrupletsOccupancy.nQuadruplets()[quadrupletLowerModuleIndex];
 
@@ -705,17 +705,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          static_cast<unsigned int>(i_pLS),
                                                          ptCut);
             if (success) {
-              unsigned int totOccupancyPixelQuadruplets =
-                  alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuadruplets.totOccupancyPixelQuadruplets(), 1u, alpaka::hierarchy::Threads{});
+              unsigned int totOccupancyPixelQuadruplets = alpaka::atomicAdd(
+                acc, &pixelQuadruplets.totOccupancyPixelQuadruplets(), 1u, alpaka::hierarchy::Threads{});
               if (totOccupancyPixelQuadruplets >= n_max_pixel_quadruplets) {
 #ifdef WARNINGS
                 printf("Pixel Quadruplet excess alert!\n");
 #endif
               } else {
                 unsigned int pixelQuadrupletIndex =
-                    alpaka::atomicOp<alpaka::AtomicAdd>(acc, pixelQuadruplets.nPixelQuadruplets(), 1u, alpaka::hierarchy::Threads{});
-                // float eta = __H2F(quadruplets.eta[quadrupletIndex]);
-                // float phi = __H2F(quadruplets.phi[quadrupletIndex]);
+                    alpaka::atomicAdd(acc, &pixelQuadruplets.nPixelQuadruplets(), 1u, alpaka::hierarchy::Threads{});
+                if (pixelQuadrupletIndex >= n_max_pixel_quadruplets) {
+                    printf("[ERROR] pixelQuadrupletIndex (%u) >= n_max_pixel_quadruplets (%u)\n", pixelQuadrupletIndex, n_max_pixel_quadruplets);
+                    continue;
+                }
+                if (quadrupletIndex >= ranges.nTotalQuads()) {
+                    printf("[ERROR] quadrupletIndex (%u) >= ranges.nTotalQuads() (%u) \n", quadrupletIndex, ranges.nTotalQuads());
+                    continue;
+                }
+
                 int layer = modules.layers()[quadrupletLowerModuleIndex];
                 short layer2_adjustment;
                 if (layer == 1) {
@@ -730,7 +737,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 float eta =
                       mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][0]][layer2_adjustment]]; //layer 2
 
-                float pt =  (__H2F(quadruplets.innerRadius()[quadrupletIndex]) * k2Rinv1GeVf * 2 + segments.ptIn()[i_pLS]) / 2; 
+                float pt =  (__H2F(quadruplets.innerRadius()[quadrupletIndex]) * k2Rinv1GeVf * 2 + pixelSeeds.ptIn()[i_pLS]) / 2; 
 
                 addPixelQuadrupletToMemory(modules,
                                            mds,
@@ -755,7 +762,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
                 triplets.partOfPT4()[quadruplets.tripletIndices()[quadrupletIndex][0]] = true;
                 triplets.partOfPT4()[quadruplets.tripletIndices()[quadrupletIndex][1]] = true;
-                segments.partOfPT4()[i_pLS] = true;
+                pixelSegments.partOfPT4()[i_pLS] = true;
                 quadruplets.partOfPT4()[quadrupletIndex] = true;
                 
               }  // tot occupancy

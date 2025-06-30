@@ -1899,13 +1899,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Cap occupancy at minimum of dynamic count and matrix value
         int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
 
-        // Get matrix-based cap (use dynamic_count as fallback)
-        int matrix_cap =
-            (category_number != -1 && eta_number != -1) ? occupancy_matrix[category_number][eta_number] : 0;
-
-        // Cap occupancy at minimum of dynamic count and matrix value
-        int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
-
         int nEligibleT5Modules = alpaka::atomicAdd(acc, &nEligibleT5Modulesx, 1, alpaka::hierarchy::Threads{});
         int nTotQ = alpaka::atomicAdd(acc, &nTotalQuintupletsx, occupancy, alpaka::hierarchy::Threads{});
 
