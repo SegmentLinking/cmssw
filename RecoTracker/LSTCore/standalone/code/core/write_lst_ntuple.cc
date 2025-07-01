@@ -440,7 +440,6 @@ void setOutputBranches(LSTEvent* event) {
   // ============ Track candidates =============
   auto const& trackCandidates = event->getTrackCandidates();
   unsigned int nTrackCandidates = trackCandidates.nTrackCandidates();
-  // printf("nTrackCandidates:%u \n", nTrackCandidates);
   for (unsigned int idx = 0; idx < nTrackCandidates; idx++) {
     // Compute reco quantities of track candidate based on final object
     int type, isFake;
@@ -448,8 +447,6 @@ void setOutputBranches(LSTEvent* event) {
     std::vector<int> simidx;
     std::tie(type, pt, eta, phi, isFake, simidx) = parseTrackCandidate(
         event, idx, trk_ph2_x, trk_ph2_y, trk_ph2_z, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
-    if (type == 7)
-      // printf("pT3 track cand\n");
     ana.tx->pushbackToBranch<float>("tc_pt", pt);
     ana.tx->pushbackToBranch<float>("tc_eta", eta);
     ana.tx->pushbackToBranch<float>("tc_phi", phi);

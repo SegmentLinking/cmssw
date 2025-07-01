@@ -610,14 +610,9 @@ std::vector<unsigned int> getHitsFrompT4(LSTEvent* event, unsigned int pT4) {
   unsigned int pLS = getPixelLSFrompT4(event, pT4);
   unsigned int T4 = getT4FrompT4(event, pT4);
   auto pixelQuadruplets = event->getPixelQuadruplets();
-  // std::cerr << "[DEBUG] getHitsFrompT4: pT4=" << pT4 << ", nPixelQuadruplets=" << pixelQuadruplets.nPixelQuadruplets() << std::endl;
-
   auto T4s = event->getQuadruplets<QuadrupletsOccupancySoA>();
-  // std::cerr << "[DEBUG] getHitsFrompT4: T4 inex=" << T4 << ", nT4=" << T4s.nQuadruplets()[0] << std::endl;
-  
   std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
   std::vector<unsigned int> outerTrackerHits = getHitsFromT4(event, T4);
-  // std::cerr << "[DEBUG] getHitsFrompT4: pixelHits.size()=" << pixelHits.size() << ", outerTrackerHits.size()=" << outerTrackerHits.size() << std::endl;
   pixelHits.insert(pixelHits.end(), outerTrackerHits.begin(), outerTrackerHits.end());
   return pixelHits;
 }
