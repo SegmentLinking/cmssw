@@ -38,6 +38,7 @@ void createOutputBranches() {
     // DNN branches
     createT5DNNBranches();
     createT3DNNBranches();
+    createpT3DNNBranches();
   
   #endif
 }
@@ -62,11 +63,11 @@ void fillOutputBranches(LSTEvent* event) {
   auto const ls_idx_map = setLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
   auto const t3_idx_map = setTripletBranches(event, n_accepted_simtrk, matchfrac, ls_idx_map);
   auto const t5_idx_map = setQuintupletBranches(event, n_accepted_simtrk, matchfrac, t3_idx_map);
-  auto const pls_idx_map = setPixelLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
+  auto const pls_idx_map = setPixelLineSegmentBranches(event, n_accepted_simtrk, matchfrac);
   auto const pt3_idx_map = setPixelTripletBranches(event, n_accepted_simtrk, matchfrac, pls_idx_map, t3_idx_map);
   auto const pt5_idx_map = setPixelQuintupletBranches(event, n_accepted_simtrk, matchfrac, pls_idx_map, t5_idx_map);
   
-  setTrackBranches(event, n_accepted_simtrk, t5_idx_map, pls_idx_map, pt3_idx_map, pt5_idx_map, matchfrac);
+  setTrackCandidateBranches(event, n_accepted_simtrk, t5_idx_map, pls_idx_map, pt3_idx_map, pt5_idx_map, matchfrac);
 #else
   setTrackCandidateBranches(event, n_accepted_simtrk, matchfrac);
 #endif
@@ -109,6 +110,16 @@ void createT5DNNBranches() {
       }
     }
   }
+}
+
+//________________________________________________________________________________________________________________________________
+void createpT3DNNBranches() {
+      ana.tx->createBranch<std::vector<float>>("pT3_pixelRadius");
+      ana.tx->createBranch<std::vector<float>>("pT3_pixelRadiusError");
+      ana.tx->createBranch<std::vector<float>>("pT3_tripletRadius");
+      ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquared");
+      ana.tx->createBranch<std::vector<float>>("pT3_rPhiChiSquaredInwards");
+      ana.tx->createBranch<std::vector<float>>("pT3_rzChiSquared");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1375,24 +1386,24 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
         std::vector<float> simidxfrac;
         std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
         int seedIdx = pixelSeeds.seedIdx()[ipLS];
-        ana.tx->pushbackToBranch<float>("pls_pt", trk_see_pt[seedIdx]);
-        ana.tx->pushbackToBranch<float>("pls_eta", trk_see_eta[seedIdx]);
-        ana.tx->pushbackToBranch<float>("pls_phi", trk_see_phi[seedIdx]);
-        ana.tx->pushbackToBranch<int>("pls_nhit", hit_idx.size());
+        ana.tx->pushbackToBranch<float>("pLS_pt", trk_see_pt[seedIdx]);
+        ana.tx->pushbackToBranch<float>("pLS_eta", trk_see_eta[seedIdx]);
+        ana.tx->pushbackToBranch<float>("pLS_phi", trk_see_phi[seedIdx]);
+        ana.tx->pushbackToBranch<int>("pLS_nhit", hit_idx.size());
         for (size_t ihit = 0; ihit < trk_see_hitIdx[seedIdx].size(); ++ihit) {
           int hitidx = trk_see_hitIdx[seedIdx][ihit];
           int hittype = trk_see_hitType[seedIdx][ihit];
           int x = trk_pix_x[hitidx];
           int y = trk_pix_x[hitidx];
           int z = trk_pix_x[hitidx];
-          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_x", ihit), x);
-          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_y", ihit), y);
-          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_z", ihit), z);
+          ana.tx->pushbackToBranch<float>(TString::Format("pLS_hit%d_x", ihit), x);
+          ana.tx->pushbackToBranch<float>(TString::Format("pLS_hit%d_y", ihit), y);
+          ana.tx->pushbackToBranch<float>(TString::Format("pLS_hit%d_z", ihit), z);
         }
         if (trk_see_hitIdx[seedIdx].size() == 3) {
-          ana.tx->pushbackToBranch<float>("pls_hit3_x", -999);
-          ana.tx->pushbackToBranch<float>("pls_hit3_y", -999);
-          ana.tx->pushbackToBranch<float>("pls_hit3_z", -999);
+          ana.tx->pushbackToBranch<float>("pLS_hit3_x", -999);
+          ana.tx->pushbackToBranch<float>("pLS_hit3_y", -999);
+          ana.tx->pushbackToBranch<float>("pLS_hit3_z", -999);
         }
         bool isfake = true;
         for (size_t isim = 0; isim < simidx.size(); ++isim) {
@@ -1401,7 +1412,7 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
             break;
           }
         }
-        ana.tx->pushbackToBranch<int>("pls_isFake", isfake);
+        ana.tx->pushbackToBranch<int>("pLS_isFake", isfake);
         pls_simIdxAll.push_back(simidx);
         pls_simIdxAllFrac.push_back(simidxfrac);
         for (size_t is = 0; is < simidx.size(); ++is) {
@@ -1422,13 +1433,13 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
             pls_simIdx = thisidx;
           }
         }
-        ana.tx->pushbackToBranch<int>("pls_simIdx", pls_simIdx);
+        ana.tx->pushbackToBranch<int>("pLS_simIdx", pls_simIdx);
         // count global
         pls_idx++;
       }
     }
-    ana.tx->setBranch<std::vector<std::vector<int>>>("pls_simIdxAll", pls_simIdxAll);
-    ana.tx->setBranch<std::vector<std::vector<float>>>("pls_simIdxAllFrac", pls_simIdxAllFrac);
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pLS_simIdxAll", pls_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pLS_simIdxAllFrac", pls_simIdxAllFrac);
     std::vector<std::vector<int>> sim_plsIdxAll_to_write;
     std::vector<std::vector<float>> sim_plsIdxAllFrac_to_write;
     std::copy(
@@ -1460,7 +1471,7 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
       }
       pls_isDuplicate[pls_idx] = isDuplicate;
     }
-    ana.tx->setBranch<std::vector<int>>("pls_isDuplicate", pls_isDuplicate);
+    ana.tx->setBranch<std::vector<int>>("pLS_isDuplicate", pls_isDuplicate);
     
     return pls_idx_map;
 }
@@ -1511,13 +1522,13 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, un
       float pt = pixelSeeds.ptIn()[ipLS];
       float eta = pixelSeeds.eta()[ipLS];
       float phi = pixelSeeds.phi()[ipLS];
-      ana.tx->pushbackToBranch<float>("pt3_pt", pt);
-      ana.tx->pushbackToBranch<float>("pt3_eta", eta);
-      ana.tx->pushbackToBranch<float>("pt3_phi", phi);
-      ana.tx->pushbackToBranch<int>("pt3_plsIdx", pls_idx);
+      ana.tx->pushbackToBranch<float>("pT3_pt", pt);
+      ana.tx->pushbackToBranch<float>("pT3_eta", eta);
+      ana.tx->pushbackToBranch<float>("pT3_phi", phi);
+      ana.tx->pushbackToBranch<int>("pT3_plsIdx", pls_idx);
       unsigned int t3Idx = getT3FrompT3(event, ipT3);
       unsigned int t3_idx = t3_idx_map.at(t3Idx);
-      ana.tx->pushbackToBranch<int>("pt3_t3Idx", t3_idx);
+      ana.tx->pushbackToBranch<int>("pT3_t3Idx", t3_idx);
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         if (simidxfrac[isim] > matchfrac) {
@@ -1525,7 +1536,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, un
           break;
         }
       }
-      ana.tx->pushbackToBranch<int>("pt3_isFake", isfake);
+      ana.tx->pushbackToBranch<int>("pT3_isFake", isfake);
       pt3_simIdxAll.push_back(simidx);
       pt3_simIdxAllFrac.push_back(simidxfrac);
       for (size_t is = 0; is < simidx.size(); ++is) {
@@ -1546,12 +1557,12 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, un
           pt3_simIdx = thisidx;
         }
       }
-      ana.tx->pushbackToBranch<int>("pt3_simIdx", pt3_simIdx);
+      ana.tx->pushbackToBranch<int>("pT3_simIdx", pt3_simIdx);
       // count global
       pt3_idx++;
     }
-    ana.tx->setBranch<std::vector<std::vector<int>>>("pt3_simIdxAll", pt3_simIdxAll);
-    ana.tx->setBranch<std::vector<std::vector<float>>>("pt3_simIdxAllFrac", pt3_simIdxAllFrac);
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pT3_simIdxAll", pt3_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pT3_simIdxAllFrac", pt3_simIdxAllFrac);
     std::vector<std::vector<int>> sim_pt3IdxAll_to_write;
     std::vector<std::vector<float>> sim_pt3IdxAllFrac_to_write;
     std::copy(
@@ -1583,7 +1594,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, un
       }
       pt3_isDuplicate[pt3_idx] = isDuplicate;
     }
-    ana.tx->setBranch<std::vector<int>>("pt3_isDuplicate", pt3_isDuplicate);
+    ana.tx->setBranch<std::vector<int>>("pT3_isDuplicate", pt3_isDuplicate);
     
     return pt3_idx_map;
 }
@@ -1634,13 +1645,13 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
       float pt = pixelSeeds.ptIn()[ipLS];
       float eta = pixelSeeds.eta()[ipLS];
       float phi = pixelSeeds.phi()[ipLS];
-      ana.tx->pushbackToBranch<float>("pt5_pt", pt);
-      ana.tx->pushbackToBranch<float>("pt5_eta", eta);
-      ana.tx->pushbackToBranch<float>("pt5_phi", phi);
-      ana.tx->pushbackToBranch<int>("pt5_plsIdx", pls_idx);
+      ana.tx->pushbackToBranch<float>("pT5_pt", pt);
+      ana.tx->pushbackToBranch<float>("pT5_eta", eta);
+      ana.tx->pushbackToBranch<float>("pT5_phi", phi);
+      ana.tx->pushbackToBranch<int>("pT5_plsIdx", pls_idx);
       unsigned int t5Idx = getT5FrompT5(event, ipT5);
       unsigned int t5_idx = t5_idx_map.at(t5Idx);
-      ana.tx->pushbackToBranch<int>("pt5_t5Idx", t5_idx);
+      ana.tx->pushbackToBranch<int>("pT5_t5Idx", t5_idx);
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         if (simidxfrac[isim] > matchfrac) {
@@ -1648,7 +1659,7 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
           break;
         }
       }
-      ana.tx->pushbackToBranch<int>("pt5_isFake", isfake);
+      ana.tx->pushbackToBranch<int>("pT5_isFake", isfake);
       pt5_simIdxAll.push_back(simidx);
       pt5_simIdxAllFrac.push_back(simidxfrac);
       for (size_t is = 0; is < simidx.size(); ++is) {
@@ -1669,12 +1680,12 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
           pt5_simIdx = thisidx;
         }
       }
-      ana.tx->pushbackToBranch<int>("pt5_simIdx", pt5_simIdx);
+      ana.tx->pushbackToBranch<int>("pT5_simIdx", pt5_simIdx);
       // count global
       pt5_idx++;
     }
-    ana.tx->setBranch<std::vector<std::vector<int>>>("pt5_simIdxAll", pt5_simIdxAll);
-    ana.tx->setBranch<std::vector<std::vector<float>>>("pt5_simIdxAllFrac", pt5_simIdxAllFrac);
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pT5_simIdxAll", pt5_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pT5_simIdxAllFrac", pt5_simIdxAllFrac);
     std::vector<std::vector<int>> sim_pt5IdxAll_to_write;
     std::vector<std::vector<float>> sim_pt5IdxAllFrac_to_write;
     std::copy(
@@ -1706,7 +1717,7 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
       }
       pt5_isDuplicate[pt5_idx] = isDuplicate;
     }
-    ana.tx->setBranch<std::vector<int>>("pt5_isDuplicate", pt5_isDuplicate);
+    ana.tx->setBranch<std::vector<int>>("pT5_isDuplicate", pt5_isDuplicate);
     
     return pt5_idx_map;
 }
@@ -1736,7 +1747,9 @@ void setTrackCandidateBranches(LSTEvent* event, unsigned int n_accepted_simtrk,
     auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
     auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
     
-    auto trackCandidates = event->getTrackCandidates();
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& trackCandidates = event->getTrackCandidates();
     
     // Following are some vectors to keep track of the information to write to the ntuple
     // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_tcIdxAll branch is NOT that long
