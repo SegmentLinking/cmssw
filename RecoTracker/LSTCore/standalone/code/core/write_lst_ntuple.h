@@ -33,23 +33,45 @@ void createOccupancyBranches();
 void fillOutputBranches(LSTEvent* event);
 void setOccupancyBranches(LSTEvent* event);
 unsigned int setSimTrackContainerBranches(LSTEvent* event);
-void setTrackCandidateBranches(LSTEvent* event, unsigned int n_accepted_tracks,
+void setTrackCandidateBranches(LSTEvent* event,
+                               unsigned int n_accepted_tracks,
 #ifdef CUT_VALUE_DEBUG
-  std::map<unsigned int, unsigned int> t5_idx_map,
-  std::map<unsigned int, unsigned int> pls_idx_map,
-  std::map<unsigned int, unsigned int> pt3_idx_map,
-  std::map<unsigned int, unsigned int> pt5_idx_map,
+                               std::map<unsigned int, unsigned int> t5_idx_map,
+                               std::map<unsigned int, unsigned int> pls_idx_map,
+                               std::map<unsigned int, unsigned int> pt3_idx_map,
+                               std::map<unsigned int, unsigned int> pt5_idx_map,
 #endif
-    float matchfrac);
-std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac);
-std::map<unsigned int, unsigned int> setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& md_idx_map);
-std::map<unsigned int, unsigned int> setTripletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& ls_idx_map);
-std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& t3_idx_map);
-std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac);
-std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& pls_idx_map, std::map<unsigned int, unsigned int> const& t3_idx_map);
-std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& pls_idx_map, std::map<unsigned int, unsigned int> const& t5_idx_map);
+                               float matchfrac);
+std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
+                                                            unsigned int n_accepted_simtrk,
+                                                            float matchfrac);
+std::map<unsigned int, unsigned int> setLineSegmentBranches(LSTEvent* event,
+                                                            unsigned int n_accepted_simtrk,
+                                                            float matchfrac,
+                                                            std::map<unsigned int, unsigned int> const& md_idx_map);
+std::map<unsigned int, unsigned int> setTripletBranches(LSTEvent* event,
+                                                        unsigned int n_accepted_simtrk,
+                                                        float matchfrac,
+                                                        std::map<unsigned int, unsigned int> const& ls_idx_map);
+std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
+                                                           unsigned int n_accepted_simtrk,
+                                                           float matchfrac,
+                                                           std::map<unsigned int, unsigned int> const& t3_idx_map);
+std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event,
+                                                                 unsigned int n_accepted_simtrk,
+                                                                 float matchfrac);
+std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event,
+                                                             unsigned int n_accepted_simtrk,
+                                                             float matchfrac,
+                                                             std::map<unsigned int, unsigned int> const& pls_idx_map,
+                                                             std::map<unsigned int, unsigned int> const& t3_idx_map);
+std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
+                                                                unsigned int n_accepted_simtrk,
+                                                                float matchfrac,
+                                                                std::map<unsigned int, unsigned int> const& pls_idx_map,
+                                                                std::map<unsigned int, unsigned int> const& t5_idx_map);
 
-void setGnnNtupleBranches(LSTEvent* event, float matchfrac=0.75);
+void setGnnNtupleBranches(LSTEvent* event, float matchfrac = 0.75);
 void setGnnNtupleMiniDoublet(LSTEvent* event,
                              unsigned int MD,
                              std::vector<int> const& trk_sim_q,
@@ -68,7 +90,7 @@ void fillT5DNNBranches(LSTEvent* event, unsigned int T3);
 void fillT3DNNBranches(LSTEvent* event, unsigned int iT3);
 void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3);
 void setT5DNNBranches(LSTEvent* event);
-void setT3DNNBranches(LSTEvent* event, float matchfrac=0.75);
+void setT3DNNBranches(LSTEvent* event, float matchfrac = 0.75);
 void setpT3DNNBranches(LSTEvent* event);
 
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
