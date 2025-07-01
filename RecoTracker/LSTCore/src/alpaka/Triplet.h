@@ -465,13 +465,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   Triplets triplets,
                                   TripletsOccupancy tripletsOccupancy,
-                                  ObjectRangesConst ranges,
+                                  ObjectRanges ranges,
                                   uint16_t* index_gpu,
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
       constexpr uint16_t maxMatchedPairs = 3000;
-      auto& innerOuterSgPairs = alpaka::declareSharedVar<int[maxMatchedPairs][2], __COUNTER__>(acc);
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc); // AtomicAdd does not support uint16_t variable
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
@@ -547,8 +546,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
 
             if (mIdx < maxMatchedPairs) {
-              innerOuterSgPairs[mIdx][0] = innerSegmentIndex;  // inner segment index
-              innerOuterSgPairs[mIdx][1] = outerSegmentIndex;
+              ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][0] = innerSegmentIndex;
+              ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][1] = outerSegmentIndex;
             }
           }
         }
@@ -562,8 +561,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Step 2: Parallel processing of segment pairs
         for (int i = flatThreadIdxXY; i < matchCount; i += flatThreadExtent) {
           
-          int innerSegmentIndex = innerOuterSgPairs[i][0];
-          int outerSegmentIndex = innerOuterSgPairs[i][1];
+          int innerSegmentIndex = ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][i][0];
+          int outerSegmentIndex = ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][i][1];
+          //int innerSegmentIndex = innerOuterSgPairs[i][0];
+          //int outerSegmentIndex = innerOuterSgPairs[i][1];
           
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
           uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
@@ -632,7 +633,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
     }
   };
+/*
+  struct SegmentPairsListForTriplets {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ModulesConst modules,
+                                  ObjectRanges ranges,
+                                  SegmentsConst segments,
+                                  Triplets triplets,
+                                  SegmentsOccupancyConst segmentsOccupancy,
+                                  const float ptCut) const {
 
+                                  
+                                  }
+                                }
+  */
   struct CreateTripletArrayRanges {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
