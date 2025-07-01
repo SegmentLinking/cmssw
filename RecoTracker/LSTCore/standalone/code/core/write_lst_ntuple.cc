@@ -58,8 +58,15 @@ void fillOutputBranches(LSTEvent* event) {
   setT5DNNBranches(event);
   setpT3DNNBranches(event);
   
-  auto const& md_idx_map = setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac);
-  setLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
+  auto const md_idx_map = setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac);
+  auto const ls_idx_map = setLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
+  auto const t3_idx_map = setTripletBranches(event, n_accepted_simtrk, matchfrac, ls_idx_map);
+  auto const t5_idx_map = setQuintupletBranches(event, n_accepted_simtrk, matchfrac, t3_idx_map);
+  auto const pls_idx_map = setPixelLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map);
+  auto const pt3_idx_map = setPixelTripletBranches(event, n_accepted_simtrk, matchfrac, pls_idx_map, t3_idx_map);
+  auto const pt5_idx_map = setPixelQuintupletBranches(event, n_accepted_simtrk, matchfrac, pls_idx_map, t5_idx_map);
+  
+  setTrackBranches(event, n_accepted_simtrk, t5_idx_map, pls_idx_map, pt3_idx_map, pt5_idx_map, matchfrac);
 #else
   setTrackCandidateBranches(event, n_accepted_simtrk, matchfrac);
 #endif
@@ -897,7 +904,8 @@ std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event, uns
     return md_idx_map;
 }
 
-void setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& md_idx_map) {
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& md_idx_map) {
     //--------------------------------------------
     //
     //
@@ -974,13 +982,13 @@ void setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, flo
         float dAlphaInner = segments.dAlphaInners()[lsIdx];
         float dAlphaOuter = segments.dAlphaOuters()[lsIdx];
         float dAlphaInnerOuter = segments.dAlphaInnerOuters()[lsIdx];
-  #endif
         float dPhi = segments.dPhis()[lsIdx];
         float dPhiMin = segments.dPhiMins()[lsIdx];
         float dPhiMax = segments.dPhiMaxs()[lsIdx];
         float dPhiChange = segments.dPhiChanges()[lsIdx];
         float dPhiChangeMin = segments.dPhiChangeMins()[lsIdx];
         float dPhiChangeMax = segments.dPhiChangeMaxs()[lsIdx];
+  #endif
   
         // Write out the ntuple
         ana.tx->pushbackToBranch<float>("ls_pt", pt);
@@ -1068,6 +1076,639 @@ void setLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, flo
               std::back_inserter(sim_lsIdxAllFrac_to_write));
     ana.tx->setBranch<std::vector<std::vector<int>>>("sim_lsIdxAll", sim_lsIdxAll_to_write);
     ana.tx->setBranch<std::vector<std::vector<float>>>("sim_lsIdxAllFrac", sim_lsIdxAllFrac_to_write);
+    
+    return ls_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setTripletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& ls_idx_map) {
+    //--------------------------------------------
+    //
+    //
+    // Triplet
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& hitsBase = event->getInput<HitsBaseSoA>();
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& triplets = event->getTriplets<TripletsSoA>();
+    auto const& tripletOccupancies = event->getTriplets<TripletsOccupancySoA>();
+    
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_t3IdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_t3IdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> t3_simIdxAll;
+    std::vector<std::vector<float>> t3_simIdxAllFrac;
+    // Then obtain the lower module index
+    unsigned int t3_idx = 0;  // global t3 index that will be used to keep track of t3 being outputted to the ntuple
+    // map to keep track of (GPU t3Idx) -> (t3_idx in ntuple output)
+    std::map<unsigned int, unsigned int> t3_idx_map;
+    // printT3s(event);
+    for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
+      unsigned int nmods = modules.nLowerModules();
+      for (unsigned int iT3 = 0; iT3 < tripletOccupancies.nTriplets()[idx]; iT3++) {
+        unsigned int t3Idx = ranges.tripletModuleIndices()[idx] + iT3;
+        t3_idx_map[t3Idx] = t3_idx;
+        std::vector<unsigned int> hit_idx, hit_type;
+        std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFromT3(event, t3Idx);
+        std::vector<int> simidx;
+        std::vector<float> simidxfrac;
+        std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+        std::vector<unsigned int> lsIdxs = getLSsFromT3(event, t3Idx);
+        ana.tx->pushbackToBranch<int>("t3_lsIdx0", ls_idx_map.at(lsIdxs[0]));
+        ana.tx->pushbackToBranch<int>("t3_lsIdx1", ls_idx_map.at(lsIdxs[1]));
+        // Computing line segment pt estimate (assuming beam spot is at zero)
+        lst_math::Hit hitA(hitsBase.xs()[hit_idx[0]], hitsBase.ys()[hit_idx[0]], hitsBase.zs()[hit_idx[0]]);
+        lst_math::Hit hitC(hitsBase.xs()[hit_idx[4]], hitsBase.ys()[hit_idx[4]], hitsBase.zs()[hit_idx[4]]);
+        float pt = __H2F(triplets.radius()[t3Idx]) * k2Rinv1GeVf * 2;
+        float eta = hitC.eta();
+        float phi = hitA.phi();
+        ana.tx->pushbackToBranch<float>("t3_pt", pt);
+        ana.tx->pushbackToBranch<float>("t3_eta", eta);
+        ana.tx->pushbackToBranch<float>("t3_phi", phi);
+        bool isfake = true;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          if (simidxfrac[isim] > matchfrac) {
+            isfake = false;
+            break;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("t3_isFake", isfake);
+        t3_simIdxAll.push_back(simidx);
+        t3_simIdxAllFrac.push_back(simidxfrac);
+        for (size_t is = 0; is < simidx.size(); ++is) {
+          int sim_idx = simidx.at(is);
+          float sim_idx_frac = simidxfrac.at(is);
+          if (sim_idx < n_total_simtrk) {
+            sim_t3IdxAll.at(sim_idx).push_back(t3_idx);
+            sim_t3IdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+          }
+        }
+        int t3_simIdx = -999;
+        float t3_simIdxBestFrac = 0;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          int thisidx = simidx[isim];
+          float thisfrac = simidxfrac[isim];
+          if (thisfrac > t3_simIdxBestFrac and thisfrac > matchfrac) {
+            t3_simIdxBestFrac = thisfrac;
+            t3_simIdx = thisidx;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("t3_simIdx", t3_simIdx);
+        // count global
+        t3_idx++;
+      }
+    }
+    ana.tx->setBranch<std::vector<std::vector<int>>>("t3_simIdxAll", t3_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("t3_simIdxAllFrac", t3_simIdxAllFrac);
+    std::vector<std::vector<int>> sim_t3IdxAll_to_write;
+    std::vector<std::vector<float>> sim_t3IdxAllFrac_to_write;
+    std::copy(sim_t3IdxAll.begin(), sim_t3IdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_t3IdxAll_to_write));
+    std::copy(sim_t3IdxAllFrac.begin(),
+              sim_t3IdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_t3IdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_t3IdxAll", sim_t3IdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_t3IdxAllFrac", sim_t3IdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given object is a duplicate
+    std::vector<int> t3_isDuplicate(t3_simIdxAll.size());
+  
+    // Loop over the objects
+    for (unsigned int t3_idx = 0; t3_idx < t3_simIdxAll.size(); ++t3_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this object
+      for (unsigned int isim = 0; isim < t3_simIdxAll[t3_idx].size(); ++isim) {
+        int sim_idx = t3_simIdxAll[t3_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_t3IdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_t3IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      t3_isDuplicate[t3_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("t3_isDuplicate", t3_isDuplicate);
+    
+    return t3_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& t3_idx_map) {
+    //--------------------------------------------
+    //
+    //
+    // Quintuplet
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& hitsBase = event->getInput<HitsBaseSoA>();
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& quintuplets = event->getQuintuplets<QuintupletsSoA>();
+    auto const& quintupletOccupancies = event->getQuintuplets<QuintupletsOccupancySoA>();
+    
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_t5IdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_t5IdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> t5_simIdxAll;
+    std::vector<std::vector<float>> t5_simIdxAllFrac;
+    // Then obtain the lower module index
+    unsigned int t5_idx = 0;  // global t5 index that will be used to keep track of t5 being outputted to the ntuple
+    // map to keep track of (GPU t5Idx) -> (t5_idx in ntuple output)
+    std::map<unsigned int, unsigned int> t5_idx_map;
+    // printT3s(event);
+    for (unsigned int idx = 0; idx < modules.nLowerModules(); ++idx) {
+      unsigned int nmods = modules.nLowerModules();
+      for (unsigned int iT5 = 0; iT5 < quintupletOccupancies.nQuintuplets()[idx]; iT5++) {
+        unsigned int t5Idx = ranges.quintupletModuleIndices()[idx] + iT5;
+        t5_idx_map[t5Idx] = t5_idx;
+        std::vector<unsigned int> hit_idx, hit_type;
+        std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFromT5(event, t5Idx);
+        std::vector<int> simidx;
+        std::vector<float> simidxfrac;
+        std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+        std::vector<unsigned int> t3Idxs = getT3sFromT5(event, t5Idx);
+        ana.tx->pushbackToBranch<int>("t5_t3Idx0", t3_idx_map.at(t3Idxs[0]));
+        ana.tx->pushbackToBranch<int>("t5_t3Idx1", t3_idx_map.at(t3Idxs[1]));
+        lst_math::Hit hitA(hitsBase.xs()[hit_idx[0]], hitsBase.ys()[hit_idx[0]], hitsBase.zs()[hit_idx[0]]);
+        lst_math::Hit hitE(hitsBase.xs()[hit_idx[8]], hitsBase.ys()[hit_idx[8]], hitsBase.zs()[hit_idx[8]]);
+        float pt = __H2F(quintuplets.innerRadius()[t5Idx]) * k2Rinv1GeVf * 2;
+        float eta = hitE.eta();
+        float phi = hitA.phi();
+        ana.tx->pushbackToBranch<float>("t5_pt", pt);
+        ana.tx->pushbackToBranch<float>("t5_eta", eta);
+        ana.tx->pushbackToBranch<float>("t5_phi", phi);
+        bool isfake = true;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          if (simidxfrac[isim] > matchfrac) {
+            isfake = false;
+            break;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("t5_isFake", isfake);
+        t5_simIdxAll.push_back(simidx);
+        t5_simIdxAllFrac.push_back(simidxfrac);
+        for (size_t is = 0; is < simidx.size(); ++is) {
+          int sim_idx = simidx.at(is);
+          float sim_idx_frac = simidxfrac.at(is);
+          if (sim_idx < n_total_simtrk) {
+            sim_t5IdxAll.at(sim_idx).push_back(t5_idx);
+            sim_t5IdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+          }
+        }
+        int t5_simIdx = -999;
+        float t5_simIdxBestFrac = 0;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          int thisidx = simidx[isim];
+          float thisfrac = simidxfrac[isim];
+          if (thisfrac > t5_simIdxBestFrac and thisfrac > matchfrac) {
+            t5_simIdxBestFrac = thisfrac;
+            t5_simIdx = thisidx;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("t5_simIdx", t5_simIdx);
+        // count global
+        t5_idx++;
+      }
+    }
+    ana.tx->setBranch<std::vector<std::vector<int>>>("t5_simIdxAll", t5_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("t5_simIdxAllFrac", t5_simIdxAllFrac);
+    std::vector<std::vector<int>> sim_t5IdxAll_to_write;
+    std::vector<std::vector<float>> sim_t5IdxAllFrac_to_write;
+    std::copy(sim_t5IdxAll.begin(), sim_t5IdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_t5IdxAll_to_write));
+    std::copy(sim_t5IdxAllFrac.begin(),
+              sim_t5IdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_t5IdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_t5IdxAll", sim_t5IdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_t5IdxAllFrac", sim_t5IdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given object is a duplicate
+    std::vector<int> t5_isDuplicate(t5_simIdxAll.size());
+    // Loop over the objects
+    for (unsigned int t5_idx = 0; t5_idx < t5_simIdxAll.size(); ++t5_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this object
+      for (unsigned int isim = 0; isim < t5_simIdxAll[t5_idx].size(); ++isim) {
+        int sim_idx = t5_simIdxAll[t5_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_t5IdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_t5IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      t5_isDuplicate[t5_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("t5_isDuplicate", t5_isDuplicate);
+    
+    return t5_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac) {
+    //--------------------------------------------
+    //
+    //
+    // pLS
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_see_pt = trk.getVF("see_pt");
+    auto const& trk_see_eta = trk.getVF("see_eta");
+    auto const& trk_see_phi = trk.getVF("see_phi");
+    auto const& trk_see_hitIdx = trk.getVVI("see_hitIdx");
+    auto const& trk_see_hitType = trk.getVVI("see_hitType");
+    auto const& trk_pix_x = trk.getVF("pix_x");
+    auto const& trk_pix_y = trk.getVF("pix_y");
+    auto const& trk_pix_z = trk.getVF("pix_z");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& pixelSeeds = event->getInput<PixelSeedsSoA>();
+    auto const& segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
+    
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_plsIdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_plsIdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> pls_simIdxAll;
+    std::vector<std::vector<float>> pls_simIdxAllFrac;
+    // Then obtain the lower module index
+    unsigned int pls_idx = 0;  // global pls index that will be used to keep track of pls being outputted to the ntuple
+    // map to keep track of (GPU plsIdx) -> (pls_idx in ntuple output)
+    std::map<unsigned int, unsigned int> pls_idx_map;
+    // printT3s(event);
+    for (unsigned int idx = modules.nLowerModules(); idx <= modules.nLowerModules(); ++idx) {
+      unsigned int nmods = modules.nLowerModules();
+      for (unsigned int ipLS = 0; ipLS < segmentsOccupancy.nSegments()[idx]; ipLS++) {
+        unsigned int plsIdx = ranges.segmentModuleIndices()[idx] + ipLS;
+        pls_idx_map[plsIdx] = pls_idx;
+        std::vector<unsigned int> hit_idx, hit_type;
+        std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFrompLS(event, ipLS);
+        std::vector<int> simidx;
+        std::vector<float> simidxfrac;
+        std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+        int seedIdx = pixelSeeds.seedIdx()[ipLS];
+        ana.tx->pushbackToBranch<float>("pls_pt", trk_see_pt[seedIdx]);
+        ana.tx->pushbackToBranch<float>("pls_eta", trk_see_eta[seedIdx]);
+        ana.tx->pushbackToBranch<float>("pls_phi", trk_see_phi[seedIdx]);
+        ana.tx->pushbackToBranch<int>("pls_nhit", hit_idx.size());
+        for (size_t ihit = 0; ihit < trk_see_hitIdx[seedIdx].size(); ++ihit) {
+          int hitidx = trk_see_hitIdx[seedIdx][ihit];
+          int hittype = trk_see_hitType[seedIdx][ihit];
+          int x = trk_pix_x[hitidx];
+          int y = trk_pix_x[hitidx];
+          int z = trk_pix_x[hitidx];
+          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_x", ihit), x);
+          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_y", ihit), y);
+          ana.tx->pushbackToBranch<float>(TString::Format("pls_hit%d_z", ihit), z);
+        }
+        if (trk_see_hitIdx[seedIdx].size() == 3) {
+          ana.tx->pushbackToBranch<float>("pls_hit3_x", -999);
+          ana.tx->pushbackToBranch<float>("pls_hit3_y", -999);
+          ana.tx->pushbackToBranch<float>("pls_hit3_z", -999);
+        }
+        bool isfake = true;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          if (simidxfrac[isim] > matchfrac) {
+            isfake = false;
+            break;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("pls_isFake", isfake);
+        pls_simIdxAll.push_back(simidx);
+        pls_simIdxAllFrac.push_back(simidxfrac);
+        for (size_t is = 0; is < simidx.size(); ++is) {
+          int sim_idx = simidx.at(is);
+          float sim_idx_frac = simidxfrac.at(is);
+          if (sim_idx < n_total_simtrk) {
+            sim_plsIdxAll.at(sim_idx).push_back(pls_idx);
+            sim_plsIdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+          }
+        }
+        int pls_simIdx = -999;
+        float pls_simIdxBestFrac = 0;
+        for (size_t isim = 0; isim < simidx.size(); ++isim) {
+          int thisidx = simidx[isim];
+          float thisfrac = simidxfrac[isim];
+          if (thisfrac > pls_simIdxBestFrac and thisfrac > matchfrac) {
+            pls_simIdxBestFrac = thisfrac;
+            pls_simIdx = thisidx;
+          }
+        }
+        ana.tx->pushbackToBranch<int>("pls_simIdx", pls_simIdx);
+        // count global
+        pls_idx++;
+      }
+    }
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pls_simIdxAll", pls_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pls_simIdxAllFrac", pls_simIdxAllFrac);
+    std::vector<std::vector<int>> sim_plsIdxAll_to_write;
+    std::vector<std::vector<float>> sim_plsIdxAllFrac_to_write;
+    std::copy(
+        sim_plsIdxAll.begin(), sim_plsIdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_plsIdxAll_to_write));
+    std::copy(sim_plsIdxAllFrac.begin(),
+              sim_plsIdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_plsIdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_plsIdxAll", sim_plsIdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_plsIdxAllFrac", sim_plsIdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given object is a duplicate
+    std::vector<int> pls_isDuplicate(pls_simIdxAll.size());
+    // Loop over the objects
+    for (unsigned int pls_idx = 0; pls_idx < pls_simIdxAll.size(); ++pls_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this object
+      for (unsigned int isim = 0; isim < pls_simIdxAll[pls_idx].size(); ++isim) {
+        int sim_idx = pls_simIdxAll[pls_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_plsIdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_plsIdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      pls_isDuplicate[pls_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("pls_isDuplicate", pls_isDuplicate);
+    
+    return pls_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& pls_idx_map, std::map<unsigned int, unsigned int> const& t3_idx_map) {
+    //--------------------------------------------
+    //
+    //
+    // pT3
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& pixelSeeds = event->getInput<PixelSeedsSoA>();
+    auto const& pixelTriplets = event->getPixelTriplets();
+    
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_pt3IdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_pt3IdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> pt3_simIdxAll;
+    std::vector<std::vector<float>> pt3_simIdxAllFrac;
+    // Then obtain the lower module index
+    unsigned int pt3_idx = 0;  // global pt3 index that will be used to keep track of pt3 being outputted to the ntuple
+    // map to keep track of (GPU pt3Idx) -> (pt3_idx in ntuple output)
+    std::map<unsigned int, unsigned int> pt3_idx_map;
+    // printT3s(event);
+    unsigned int nPixelTriplets = pixelTriplets.nPixelTriplets();
+    for (unsigned int ipT3 = 0; ipT3 < nPixelTriplets; ipT3++) {
+      unsigned int pt3Idx = ipT3;
+      pt3_idx_map[pt3Idx] = pt3_idx;
+      std::vector<unsigned int> hit_idx, hit_type;
+      std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFrompT3(event, ipT3);
+      std::vector<int> simidx;
+      std::vector<float> simidxfrac;
+      std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+      // // Computing line segment pt estimate (assuming beam spot is at zero)
+      unsigned int ipLS = getPixelLSFrompT3(event, ipT3);
+      unsigned int plsIdx = ranges.segmentModuleIndices()[modules.nLowerModules()] + ipLS;
+      unsigned int pls_idx = pls_idx_map.at(plsIdx);
+      float pt = pixelSeeds.ptIn()[ipLS];
+      float eta = pixelSeeds.eta()[ipLS];
+      float phi = pixelSeeds.phi()[ipLS];
+      ana.tx->pushbackToBranch<float>("pt3_pt", pt);
+      ana.tx->pushbackToBranch<float>("pt3_eta", eta);
+      ana.tx->pushbackToBranch<float>("pt3_phi", phi);
+      ana.tx->pushbackToBranch<int>("pt3_plsIdx", pls_idx);
+      unsigned int t3Idx = getT3FrompT3(event, ipT3);
+      unsigned int t3_idx = t3_idx_map.at(t3Idx);
+      ana.tx->pushbackToBranch<int>("pt3_t3Idx", t3_idx);
+      bool isfake = true;
+      for (size_t isim = 0; isim < simidx.size(); ++isim) {
+        if (simidxfrac[isim] > matchfrac) {
+          isfake = false;
+          break;
+        }
+      }
+      ana.tx->pushbackToBranch<int>("pt3_isFake", isfake);
+      pt3_simIdxAll.push_back(simidx);
+      pt3_simIdxAllFrac.push_back(simidxfrac);
+      for (size_t is = 0; is < simidx.size(); ++is) {
+        int sim_idx = simidx.at(is);
+        float sim_idx_frac = simidxfrac.at(is);
+        if (sim_idx < n_total_simtrk) {
+          sim_pt3IdxAll.at(sim_idx).push_back(pt3_idx);
+          sim_pt3IdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+        }
+      }
+      int pt3_simIdx = -999;
+      float pt3_simIdxBestFrac = 0;
+      for (size_t isim = 0; isim < simidx.size(); ++isim) {
+        int thisidx = simidx[isim];
+        float thisfrac = simidxfrac[isim];
+        if (thisfrac > pt3_simIdxBestFrac and thisfrac > matchfrac) {
+          pt3_simIdxBestFrac = thisfrac;
+          pt3_simIdx = thisidx;
+        }
+      }
+      ana.tx->pushbackToBranch<int>("pt3_simIdx", pt3_simIdx);
+      // count global
+      pt3_idx++;
+    }
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pt3_simIdxAll", pt3_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pt3_simIdxAllFrac", pt3_simIdxAllFrac);
+    std::vector<std::vector<int>> sim_pt3IdxAll_to_write;
+    std::vector<std::vector<float>> sim_pt3IdxAllFrac_to_write;
+    std::copy(
+        sim_pt3IdxAll.begin(), sim_pt3IdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_pt3IdxAll_to_write));
+    std::copy(sim_pt3IdxAllFrac.begin(),
+              sim_pt3IdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_pt3IdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_pt3IdxAll", sim_pt3IdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_pt3IdxAllFrac", sim_pt3IdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given object is a duplicate
+    std::vector<int> pt3_isDuplicate(pt3_simIdxAll.size());
+    // Loop over the objects
+    for (unsigned int pt3_idx = 0; pt3_idx < pt3_simIdxAll.size(); ++pt3_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this object
+      for (unsigned int isim = 0; isim < pt3_simIdxAll[pt3_idx].size(); ++isim) {
+        int sim_idx = pt3_simIdxAll[pt3_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_pt3IdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_pt3IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      pt3_isDuplicate[pt3_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("pt3_isDuplicate", pt3_isDuplicate);
+    
+    return pt3_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event, unsigned int n_accepted_simtrk, float matchfrac, std::map<unsigned int, unsigned int> const& pls_idx_map, std::map<unsigned int, unsigned int> const& t5_idx_map) {
+    //--------------------------------------------
+    //
+    //
+    // pT5
+    //
+    //
+    //--------------------------------------------
+  
+    auto const& trk_sim_pt = trk.getVF("sim_pt");
+    auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+    auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+    auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+    
+    auto const& ranges = event->getRanges();
+    auto const& modules = event->getModules<ModulesSoA>();
+    auto const& pixelSeeds = event->getInput<PixelSeedsSoA>();
+    auto const& pixelQuintuplets = event->getPixelQuintuplets();
+    
+    int n_total_simtrk = trk_sim_pt.size();
+    std::vector<std::vector<int>> sim_pt5IdxAll(n_total_simtrk);
+    std::vector<std::vector<float>> sim_pt5IdxAllFrac(n_total_simtrk);
+    std::vector<std::vector<int>> pt5_simIdxAll;
+    std::vector<std::vector<float>> pt5_simIdxAllFrac;
+    // Then obtain the lower module index
+    unsigned int pt5_idx = 0;  // global pt5 index that will be used to keep track of pt5 being outputted to the ntuple
+    // map to keep track of (GPU pt5Idx) -> (pt5_idx in ntuple output)
+    std::map<unsigned int, unsigned int> pt5_idx_map;
+    // printT5s(event);
+    unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
+    for (unsigned int ipT5 = 0; ipT5 < nPixelQuintuplets; ipT5++) {
+      unsigned int pt5Idx = ipT5;
+      pt5_idx_map[pt5Idx] = pt5_idx;
+      std::vector<unsigned int> hit_idx, hit_type;
+      std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFrompT5(event, ipT5);
+      std::vector<int> simidx;
+      std::vector<float> simidxfrac;
+      std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+      // // Computing line segment pt estimate (assuming beam spot is at zero)
+      unsigned int ipLS = getPixelLSFrompT5(event, ipT5);
+      unsigned int plsIdx = ranges.segmentModuleIndices()[modules.nLowerModules()] + ipLS;
+      unsigned int pls_idx = pls_idx_map.at(plsIdx);
+      float pt = pixelSeeds.ptIn()[ipLS];
+      float eta = pixelSeeds.eta()[ipLS];
+      float phi = pixelSeeds.phi()[ipLS];
+      ana.tx->pushbackToBranch<float>("pt5_pt", pt);
+      ana.tx->pushbackToBranch<float>("pt5_eta", eta);
+      ana.tx->pushbackToBranch<float>("pt5_phi", phi);
+      ana.tx->pushbackToBranch<int>("pt5_plsIdx", pls_idx);
+      unsigned int t5Idx = getT5FrompT5(event, ipT5);
+      unsigned int t5_idx = t5_idx_map.at(t5Idx);
+      ana.tx->pushbackToBranch<int>("pt5_t5Idx", t5_idx);
+      bool isfake = true;
+      for (size_t isim = 0; isim < simidx.size(); ++isim) {
+        if (simidxfrac[isim] > matchfrac) {
+          isfake = false;
+          break;
+        }
+      }
+      ana.tx->pushbackToBranch<int>("pt5_isFake", isfake);
+      pt5_simIdxAll.push_back(simidx);
+      pt5_simIdxAllFrac.push_back(simidxfrac);
+      for (size_t is = 0; is < simidx.size(); ++is) {
+        int sim_idx = simidx.at(is);
+        float sim_idx_frac = simidxfrac.at(is);
+        if (sim_idx < n_total_simtrk) {
+          sim_pt5IdxAll.at(sim_idx).push_back(pt5_idx);
+          sim_pt5IdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+        }
+      }
+      int pt5_simIdx = -999;
+      float pt5_simIdxBestFrac = 0;
+      for (size_t isim = 0; isim < simidx.size(); ++isim) {
+        int thisidx = simidx[isim];
+        float thisfrac = simidxfrac[isim];
+        if (thisfrac > pt5_simIdxBestFrac and thisfrac > matchfrac) {
+          pt5_simIdxBestFrac = thisfrac;
+          pt5_simIdx = thisidx;
+        }
+      }
+      ana.tx->pushbackToBranch<int>("pt5_simIdx", pt5_simIdx);
+      // count global
+      pt5_idx++;
+    }
+    ana.tx->setBranch<std::vector<std::vector<int>>>("pt5_simIdxAll", pt5_simIdxAll);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("pt5_simIdxAllFrac", pt5_simIdxAllFrac);
+    std::vector<std::vector<int>> sim_pt5IdxAll_to_write;
+    std::vector<std::vector<float>> sim_pt5IdxAllFrac_to_write;
+    std::copy(
+        sim_pt5IdxAll.begin(), sim_pt5IdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_pt5IdxAll_to_write));
+    std::copy(sim_pt5IdxAllFrac.begin(),
+              sim_pt5IdxAllFrac.begin() + n_accepted_simtrk,
+              std::back_inserter(sim_pt5IdxAllFrac_to_write));
+    ana.tx->setBranch<std::vector<std::vector<int>>>("sim_pt5IdxAll", sim_pt5IdxAll_to_write);
+    ana.tx->setBranch<std::vector<std::vector<float>>>("sim_pt5IdxAllFrac", sim_pt5IdxAllFrac_to_write);
+  
+    // Using the intermedaite variables to compute whether a given object is a duplicate
+    std::vector<int> pt5_isDuplicate(pt5_simIdxAll.size());
+    // Loop over the objects
+    for (unsigned int pt5_idx = 0; pt5_idx < pt5_simIdxAll.size(); ++pt5_idx) {
+      bool isDuplicate = false;
+      // Loop over the sim idx matched to this object
+      for (unsigned int isim = 0; isim < pt5_simIdxAll[pt5_idx].size(); ++isim) {
+        int sim_idx = pt5_simIdxAll[pt5_idx][isim];
+        int n_sim_matched = 0;
+        for (size_t ism = 0; ism < sim_pt5IdxAll.at(sim_idx).size(); ++ism) {
+          if (sim_pt5IdxAllFrac.at(sim_idx).at(ism) > matchfrac) {
+            n_sim_matched += 1;
+            if (n_sim_matched > 1) {
+              isDuplicate = true;
+              break;
+            }
+          }
+        }
+      }
+      pt5_isDuplicate[pt5_idx] = isDuplicate;
+    }
+    ana.tx->setBranch<std::vector<int>>("pt5_isDuplicate", pt5_isDuplicate);
+    
+    return pt5_idx_map;
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1316,257 +1957,6 @@ void setOccupancyBranches(LSTEvent* event) {
   ana.tx->setBranch<int>("pT3_occupancies", pixelTriplets.totOccupancyPixelTriplets());
   ana.tx->setBranch<std::vector<int>>("t5_occupancies", quintupletOccupancy);
   ana.tx->setBranch<int>("pT5_occupancies", pixelQuintuplets.totOccupancyPixelQuintuplets());
-}
-
-//________________________________________________________________________________________________________________________________
-void setPixelQuintupletOutputBranches(LSTEvent* event) {
-  // ============ pT5 =============
-  auto const pixelQuintuplets = event->getPixelQuintuplets();
-  auto const quintuplets = event->getQuintuplets<QuintupletsSoA>();
-  auto const pixelSeeds = event->getInput<PixelSeedsSoA>();
-  auto modules = event->getModules<ModulesSoA>();
-  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
-
-  unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
-  std::vector<int> sim_pT5_matched(n_accepted_simtrk);
-  std::vector<std::vector<int>> pT5_matched_simIdx;
-
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-
-  for (unsigned int pT5 = 0; pT5 < nPixelQuintuplets; pT5++) {
-    unsigned int T5Index = getT5FrompT5(event, pT5);
-    unsigned int pLSIndex = getPixelLSFrompT5(event, pT5);
-    float pt = (__H2F(quintuplets.innerRadius()[T5Index]) * k2Rinv1GeVf * 2 + pixelSeeds.ptIn()[pLSIndex]) / 2;
-    float eta = pixelSeeds.eta()[pLSIndex];
-    float phi = pixelSeeds.phi()[pLSIndex];
-
-    std::vector<unsigned int> hit_idx = getHitIdxsFrompT5(event, pT5);
-    std::vector<unsigned int> module_idx = getModuleIdxsFrompT5(event, pT5);
-    std::vector<unsigned int> hit_type = getHitTypesFrompT5(event, pT5);
-
-    int layer_binary = 1;
-    int moduleType_binary = 0;
-    for (size_t i = 0; i < module_idx.size(); i += 2) {
-      layer_binary |= (1 << (modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4)));
-      moduleType_binary |= (modules.moduleType()[module_idx[i]] << i);
-    }
-    std::vector<int> simidx =
-        matchedSimTrkIdxs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
-    ana.tx->pushbackToBranch<int>("pT5_isFake", static_cast<int>(simidx.size() == 0));
-    ana.tx->pushbackToBranch<float>("pT5_pt", pt);
-    ana.tx->pushbackToBranch<float>("pT5_eta", eta);
-    ana.tx->pushbackToBranch<float>("pT5_phi", phi);
-    ana.tx->pushbackToBranch<int>("pT5_layer_binary", layer_binary);
-    ana.tx->pushbackToBranch<int>("pT5_moduleType_binary", moduleType_binary);
-    ana.tx->pushbackToBranch<float>("pT5_rzChiSquared", pixelQuintuplets.rzChiSquared()[pT5]);
-
-    pT5_matched_simIdx.push_back(simidx);
-
-    // Loop over matched sim idx and increase counter of pT5_matched
-    for (auto& idx : simidx) {
-      // NOTE Important to note that the idx of the std::vector<> is same
-      // as the tracking-ntuple's sim track idx ONLY because event==0 and bunchCrossing==0 condition is applied!!
-      // Also do not try to access beyond the event and bunchCrossing
-      if (idx < n_accepted_simtrk) {
-        sim_pT5_matched.at(idx) += 1;
-      }
-    }
-  }
-
-  // Using the intermedaite variables to compute whether a given track candidate is a duplicate
-  std::vector<int> pT5_isDuplicate(pT5_matched_simIdx.size());
-  // Loop over the track candidates
-  for (unsigned int i = 0; i < pT5_matched_simIdx.size(); ++i) {
-    bool isDuplicate = false;
-    // Loop over the sim idx matched to this track candidate
-    for (unsigned int isim = 0; isim < pT5_matched_simIdx[i].size(); ++isim) {
-      // Using the sim_pT5_matched to see whether this track candidate is matched to a sim track that is matched to more than one
-      int simidx = pT5_matched_simIdx[i][isim];
-      if (simidx < n_accepted_simtrk) {
-        if (sim_pT5_matched[simidx] > 1) {
-          isDuplicate = true;
-        }
-      }
-    }
-    pT5_isDuplicate[i] = isDuplicate;
-  }
-
-  // Now set the last remaining branches
-  ana.tx->setBranch<std::vector<int>>("sim_pT5_matched", sim_pT5_matched);
-  ana.tx->setBranch<std::vector<std::vector<int>>>("pT5_matched_simIdx", pT5_matched_simIdx);
-  ana.tx->setBranch<std::vector<int>>("pT5_isDuplicate", pT5_isDuplicate);
-}
-
-//________________________________________________________________________________________________________________________________
-void setQuintupletOutputBranches(LSTEvent* event) {
-  auto const quintuplets = event->getQuintuplets<QuintupletsSoA>();
-  auto const quintupletsOccupancy = event->getQuintuplets<QuintupletsOccupancySoA>();
-  auto ranges = event->getRanges();
-  auto modules = event->getModules<ModulesSoA>();
-  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
-
-  std::vector<int> sim_t5_matched(n_accepted_simtrk);
-  std::vector<std::vector<int>> t5_matched_simIdx;
-
-  auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
-  auto const& trk_simvtx_x = trk.getVF("simvtx_x");
-  auto const& trk_simvtx_y = trk.getVF("simvtx_y");
-  auto const& trk_simvtx_z = trk.getVF("simvtx_z");
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-
-  for (unsigned int lowerModuleIdx = 0; lowerModuleIdx < modules.nLowerModules(); ++lowerModuleIdx) {
-    int nQuintuplets = quintupletsOccupancy.nQuintuplets()[lowerModuleIdx];
-    for (unsigned int idx = 0; idx < nQuintuplets; idx++) {
-      unsigned int quintupletIndex = ranges.quintupletModuleIndices()[lowerModuleIdx] + idx;
-      float pt = __H2F(quintuplets.innerRadius()[quintupletIndex]) * k2Rinv1GeVf * 2;
-      float eta = __H2F(quintuplets.eta()[quintupletIndex]);
-      float phi = __H2F(quintuplets.phi()[quintupletIndex]);
-
-      std::vector<unsigned int> hit_idx = getHitIdxsFromT5(event, quintupletIndex);
-      std::vector<unsigned int> hit_type = getHitTypesFromT5(event, quintupletIndex);
-      std::vector<unsigned int> module_idx = getModuleIdxsFromT5(event, quintupletIndex);
-
-      int layer_binary = 0;
-      int moduleType_binary = 0;
-      for (size_t i = 0; i < module_idx.size(); i += 2) {
-        layer_binary |= (1 << (modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4)));
-        moduleType_binary |= (modules.moduleType()[module_idx[i]] << i);
-      }
-
-      float percent_matched;
-      std::vector<int> simidx = matchedSimTrkIdxs(
-          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false);
-
-      ana.tx->pushbackToBranch<int>("t5_isFake", static_cast<int>(simidx.size() == 0));
-      ana.tx->pushbackToBranch<float>("t5_pt", pt);
-      ana.tx->pushbackToBranch<float>("t5_pMatched", percent_matched);
-      ana.tx->pushbackToBranch<float>("t5_eta", eta);
-      ana.tx->pushbackToBranch<float>("t5_phi", phi);
-      ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets.innerRadius()[quintupletIndex]));
-      ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets.bridgeRadius()[quintupletIndex]));
-      ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets.outerRadius()[quintupletIndex]));
-      ana.tx->pushbackToBranch<int>("t5_isDupAlgoFlag", quintuplets.isDup()[quintupletIndex]);
-      ana.tx->pushbackToBranch<float>("t5_chiSquared", quintuplets.chiSquared()[quintupletIndex]);
-      ana.tx->pushbackToBranch<float>("t5_rzChiSquared", quintuplets.rzChiSquared()[quintupletIndex]);
-      ana.tx->pushbackToBranch<float>("t5_nonAnchorChiSquared", quintuplets.nonAnchorChiSquared()[quintupletIndex]);
-      ana.tx->pushbackToBranch<float>("t5_dBeta1", quintuplets.dBeta1()[quintupletIndex]);
-      ana.tx->pushbackToBranch<float>("t5_dBeta2", quintuplets.dBeta2()[quintupletIndex]);
-      ana.tx->pushbackToBranch<int>("t5_layer_binary", layer_binary);
-      ana.tx->pushbackToBranch<int>("t5_moduleType_binary", moduleType_binary);
-
-      t5_matched_simIdx.push_back(simidx);
-
-      for (auto& simtrk : simidx) {
-        if (simtrk < n_accepted_simtrk) {
-          sim_t5_matched.at(simtrk) += 1;
-        }
-      }
-
-      // Avoid fakes when calculating the vertex distance, set default to 0.0.
-      if (simidx.size() == 0) {
-        ana.tx->pushbackToBranch<float>("t5_sim_vxy", 0.0);
-        ana.tx->pushbackToBranch<float>("t5_sim_vz", 0.0);
-        continue;
-      }
-
-      int vtxidx = trk_sim_parentVtxIdx[simidx[0]];
-      float vtx_x = trk_simvtx_x[vtxidx];
-      float vtx_y = trk_simvtx_y[vtxidx];
-      float vtx_z = trk_simvtx_z[vtxidx];
-
-      ana.tx->pushbackToBranch<float>("t5_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
-      ana.tx->pushbackToBranch<float>("t5_sim_vz", vtx_z);
-    }
-  }
-
-  std::vector<int> t5_isDuplicate(t5_matched_simIdx.size());
-  for (unsigned int i = 0; i < t5_matched_simIdx.size(); i++) {
-    bool isDuplicate = false;
-    for (unsigned int isim = 0; isim < t5_matched_simIdx[i].size(); isim++) {
-      int simidx = t5_matched_simIdx[i][isim];
-      if (simidx < n_accepted_simtrk) {
-        if (sim_t5_matched[simidx] > 1) {
-          isDuplicate = true;
-        }
-      }
-    }
-    t5_isDuplicate[i] = isDuplicate;
-  }
-  ana.tx->setBranch<std::vector<int>>("sim_T5_matched", sim_t5_matched);
-  ana.tx->setBranch<std::vector<std::vector<int>>>("t5_matched_simIdx", t5_matched_simIdx);
-  ana.tx->setBranch<std::vector<int>>("t5_isDuplicate", t5_isDuplicate);
-}
-
-//________________________________________________________________________________________________________________________________
-void setPixelTripletOutputBranches(LSTEvent* event) {
-  auto const pixelTriplets = event->getPixelTriplets();
-  auto modules = event->getModules<ModulesSoA>();
-  PixelSeedsConst pixelSeeds = event->getInput<PixelSeedsSoA>();
-  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
-
-  unsigned int nPixelTriplets = pixelTriplets.nPixelTriplets();
-  std::vector<int> sim_pT3_matched(n_accepted_simtrk);
-  std::vector<std::vector<int>> pT3_matched_simIdx;
-
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-
-  for (unsigned int pT3 = 0; pT3 < nPixelTriplets; pT3++) {
-    unsigned int T3Index = getT3FrompT3(event, pT3);
-    unsigned int pLSIndex = getPixelLSFrompT3(event, pT3);
-    const float pt = pixelSeeds.ptIn()[pLSIndex];
-
-    float eta = pixelSeeds.eta()[pLSIndex];
-    float phi = pixelSeeds.phi()[pLSIndex];
-    std::vector<unsigned int> hit_idx = getHitIdxsFrompT3(event, pT3);
-    std::vector<unsigned int> hit_type = getHitTypesFrompT3(event, pT3);
-
-    std::vector<int> simidx =
-        matchedSimTrkIdxs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
-    std::vector<unsigned int> module_idx = getModuleIdxsFrompT3(event, pT3);
-    int layer_binary = 1;
-    int moduleType_binary = 0;
-    for (size_t i = 0; i < module_idx.size(); i += 2) {
-      layer_binary |= (1 << (modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4)));
-      moduleType_binary |= (modules.moduleType()[module_idx[i]] << i);
-    }
-    ana.tx->pushbackToBranch<int>("pT3_isFake", static_cast<int>(simidx.size() == 0));
-    ana.tx->pushbackToBranch<float>("pT3_pt", pt);
-    ana.tx->pushbackToBranch<float>("pT3_eta", eta);
-    ana.tx->pushbackToBranch<float>("pT3_phi", phi);
-    ana.tx->pushbackToBranch<int>("pT3_layer_binary", layer_binary);
-    ana.tx->pushbackToBranch<int>("pT3_moduleType_binary", moduleType_binary);
-
-    pT3_matched_simIdx.push_back(simidx);
-
-    for (auto& idx : simidx) {
-      if (idx < n_accepted_simtrk) {
-        sim_pT3_matched.at(idx) += 1;
-      }
-    }
-  }
-
-  std::vector<int> pT3_isDuplicate(pT3_matched_simIdx.size());
-  for (unsigned int i = 0; i < pT3_matched_simIdx.size(); i++) {
-    bool isDuplicate = true;
-    for (unsigned int isim = 0; isim < pT3_matched_simIdx[i].size(); isim++) {
-      int simidx = pT3_matched_simIdx[i][isim];
-      if (simidx < n_accepted_simtrk) {
-        if (sim_pT3_matched[simidx] > 1) {
-          isDuplicate = true;
-        }
-      }
-    }
-    pT3_isDuplicate[i] = isDuplicate;
-  }
-  ana.tx->setBranch<std::vector<int>>("sim_pT3_matched", sim_pT3_matched);
-  ana.tx->setBranch<std::vector<std::vector<int>>>("pT3_matched_simIdx", pT3_matched_simIdx);
-  ana.tx->setBranch<std::vector<int>>("pT3_isDuplicate", pT3_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
@@ -2403,84 +2793,6 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
   std::vector<unsigned int> hit_type = getPixelHitTypesFrompLS(event, pLS);
 
   return {pt, eta, phi, hit_idx, hit_type};
-}
-
-void setpLSOutputBranches(LSTEvent* event) {
-  auto const& pixelSegments = event->getPixelSegments();
-  auto const& pixelSeeds = event->getInput<PixelSeedsSoA>();
-  int n_accepted_simtrk = ana.tx->getBranch<std::vector<int>>("sim_TC_matched").size();
-
-  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
-  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
-  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
-
-  unsigned int n_pLS = pixelSegments.metadata().size();
-  std::vector<int> sim_pLS_matched(n_accepted_simtrk, 0);
-  std::vector<std::vector<int>> pLS_matched_simIdx;
-
-  for (unsigned int i_pLS = 0; i_pLS < n_pLS; ++i_pLS) {
-    // Get pLS properties
-    float pt = pixelSeeds.ptIn()[i_pLS];
-    float px = pixelSeeds.px()[i_pLS];
-    float py = pixelSeeds.py()[i_pLS];
-    float pz = pixelSeeds.pz()[i_pLS];
-    bool isQuad = static_cast<bool>(pixelSeeds.isQuad()[i_pLS]);
-    float ptErr = pixelSeeds.ptErr()[i_pLS];
-    float eta = pixelSeeds.eta()[i_pLS];
-    float etaErr = pixelSeeds.etaErr()[i_pLS];
-    float phi = pixelSeeds.phi()[i_pLS];
-    float score = pixelSegments.score()[i_pLS];
-    float centerX = pixelSegments.circleCenterX()[i_pLS];
-    float centerY = pixelSegments.circleCenterY()[i_pLS];
-    float radius = pixelSegments.circleRadius()[i_pLS];
-
-    // Get hits from pLS
-    std::vector<unsigned int> hit_idx = getPixelHitIdxsFrompLS(event, i_pLS);
-    std::vector<unsigned int> hit_type = getPixelHitTypesFrompLS(event, i_pLS);
-
-    // Match to sim tracks
-    std::vector<int> simidx =
-        matchedSimTrkIdxs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
-    bool isFake = simidx.empty();
-
-    // Fill branches
-    ana.tx->pushbackToBranch<float>("pLS_ptIn", pt);
-    ana.tx->pushbackToBranch<float>("pLS_ptErr", ptErr);
-    ana.tx->pushbackToBranch<float>("pLS_px", px);
-    ana.tx->pushbackToBranch<float>("pLS_py", py);
-    ana.tx->pushbackToBranch<float>("pLS_pz", pz);
-    ana.tx->pushbackToBranch<float>("pLS_eta", eta);
-    ana.tx->pushbackToBranch<float>("pLS_etaErr", etaErr);
-    ana.tx->pushbackToBranch<float>("pLS_phi", phi);
-    ana.tx->pushbackToBranch<float>("pLS_score", score);
-    ana.tx->pushbackToBranch<float>("pLS_circleCenterX", centerX);
-    ana.tx->pushbackToBranch<float>("pLS_circleCenterY", centerY);
-    ana.tx->pushbackToBranch<float>("pLS_circleRadius", radius);
-    ana.tx->pushbackToBranch<bool>("pLS_isQuad", isQuad);
-    ana.tx->pushbackToBranch<int>("pLS_isFake", isFake);
-    pLS_matched_simIdx.push_back(simidx);
-
-    // Count matches
-    for (auto& idx : simidx) {
-      if (idx < n_accepted_simtrk) {
-        sim_pLS_matched[idx]++;
-      }
-    }
-  }
-
-  std::vector<int> pLS_isDuplicate(pLS_matched_simIdx.size(), 0);
-  for (size_t i = 0; i < pLS_matched_simIdx.size(); ++i) {
-    for (int simidx : pLS_matched_simIdx[i]) {
-      if (simidx < n_accepted_simtrk && sim_pLS_matched[simidx] > 1) {
-        pLS_isDuplicate[i] = 1;
-        break;
-      }
-    }
-  }
-
-  ana.tx->setBranch<std::vector<int>>("sim_pLS_matched", sim_pLS_matched);
-  ana.tx->setBranch<std::vector<std::vector<int>>>("pLS_matched_simIdx", pLS_matched_simIdx);
-  ana.tx->setBranch<std::vector<int>>("pLS_isDuplicate", pLS_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________
