@@ -837,18 +837,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {543 * 70, 235 * 70, 88 * 70, 46 * 70},  // category 0
-          {755 * 70, 347 * 70, 0, 0},              // category 1
-          {0, 0, 0, 0},                            // category 2
-          {0, 38 * 70, 46 * 70, 39 * 70}           // category 3
+          {543, 235, 88, 46},  // category 0
+          {755, 347, 0, 0},    // category 1
+          {0, 0, 0, 0},        // category 2
+          {0, 38, 46, 39}      // category 3
       };
 
       // Occupancy matrix for 0.6 GeV pT Cut, 99.9%
       constexpr int p06_occupancy_matrix[4][4] = {
-          {1146 * 70, 544 * 70, 216 * 70, 83 * 70},  // category 0
-          {1032 * 70, 275 * 70, 0, 0},               // category 1
-          {0, 0, 0, 0},                              // category 2
-          {0, 115 * 70, 110 * 70, 76 * 70}           // category 3
+          {1146, 544, 216, 83},  // category 0
+          {1032, 275, 0, 0},     // category 1
+          {0, 0, 0, 0},          // category 2
+          {0, 115, 110, 76}      // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut

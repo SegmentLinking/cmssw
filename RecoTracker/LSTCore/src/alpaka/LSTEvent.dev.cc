@@ -439,16 +439,16 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
     alpaka::memset(queue_, buf, 0u);
   }
 
-  // auto const crossCleanpT3_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {64, 16});
+  auto const crossCleanpT3_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {64, 16});
 
-  // alpaka::exec<Acc2D>(queue_,
-  //                     crossCleanpT3_workDiv,
-  //                     CrossCleanpT3{},
-  //                     modules_.const_view<ModulesSoA>(),
-  //                     rangesDC_->const_view(),
-  //                     pixelTripletsDC_->view(),
-  //                     lstInputDC_->const_view<PixelSeedsSoA>(),
-  //                     pixelQuintupletsDC_->const_view());
+  alpaka::exec<Acc2D>(queue_,
+                      crossCleanpT3_workDiv,
+                      CrossCleanpT3{},
+                      modules_.const_view<ModulesSoA>(),
+                      rangesDC_->const_view(),
+                      pixelTripletsDC_->view(),
+                      lstInputDC_->const_view<PixelSeedsSoA>(),
+                      pixelQuintupletsDC_->const_view());
 
   auto const addpT3asTrackCandidates_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 512);
 
@@ -467,33 +467,33 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   auto nEligibleModules_buf_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nEligibleT5Modules());
   alpaka::memcpy(queue_, nEligibleModules_buf_h, nEligibleModules_buf_d);
   alpaka::wait(queue_);  // wait to get the value before using
-  // auto const nEligibleModules = *nEligibleModules_buf_h.data();
+  auto const nEligibleModules = *nEligibleModules_buf_h.data();
 
-  // constexpr int threadsPerBlockY = 16;
-  // constexpr int threadsPerBlockX = 32;
-  // auto const removeDupQuintupletsBeforeTC_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
-  //     {std::max(nEligibleModules / threadsPerBlockY, 1), std::max(nEligibleModules / threadsPerBlockX, 1)}, {16, 32});
+  constexpr int threadsPerBlockY = 16;
+  constexpr int threadsPerBlockX = 32;
+  auto const removeDupQuintupletsBeforeTC_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
+      {std::max(nEligibleModules / threadsPerBlockY, 1), std::max(nEligibleModules / threadsPerBlockX, 1)}, {16, 32});
 
-  // alpaka::exec<Acc2D>(queue_,
-  //                     removeDupQuintupletsBeforeTC_workDiv,
-  //                     RemoveDupQuintupletsBeforeTC{},
-  //                     quintupletsDC_->view<QuintupletsSoA>(),
-  //                     quintupletsDC_->view<QuintupletsOccupancySoA>(),
-  //                     rangesDC_->const_view());
+  alpaka::exec<Acc2D>(queue_,
+                      removeDupQuintupletsBeforeTC_workDiv,
+                      RemoveDupQuintupletsBeforeTC{},
+                      quintupletsDC_->view<QuintupletsSoA>(),
+                      quintupletsDC_->view<QuintupletsOccupancySoA>(),
+                      rangesDC_->const_view());
 
-  // constexpr int threadsPerBlock = 32;
-  // auto const crossCleanT5_workDiv = cms::alpakatools::make_workdiv<Acc3D>(
-  //     {(nLowerModules_ / threadsPerBlock) + 1, 1, max_blocks}, {threadsPerBlock, 1, threadsPerBlock});
+  constexpr int threadsPerBlock = 32;
+  auto const crossCleanT5_workDiv = cms::alpakatools::make_workdiv<Acc3D>(
+      {(nLowerModules_ / threadsPerBlock) + 1, 1, max_blocks}, {threadsPerBlock, 1, threadsPerBlock});
 
-  // alpaka::exec<Acc3D>(queue_,
-  //                     crossCleanT5_workDiv,
-  //                     CrossCleanT5{},
-  //                     modules_.const_view<ModulesSoA>(),
-  //                     quintupletsDC_->view<QuintupletsSoA>(),
-  //                     quintupletsDC_->const_view<QuintupletsOccupancySoA>(),
-  //                     pixelQuintupletsDC_->const_view(),
-  //                     pixelTripletsDC_->const_view(),
-  //                     rangesDC_->const_view());
+  alpaka::exec<Acc3D>(queue_,
+                      crossCleanT5_workDiv,
+                      CrossCleanT5{},
+                      modules_.const_view<ModulesSoA>(),
+                      quintupletsDC_->view<QuintupletsSoA>(),
+                      quintupletsDC_->const_view<QuintupletsOccupancySoA>(),
+                      pixelQuintupletsDC_->const_view(),
+                      pixelTripletsDC_->const_view(),
+                      rangesDC_->const_view());
 
   auto const addT5asTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc2D>({8, 10}, {8, 128});
 
@@ -519,22 +519,22 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                         true);
   }
 
-  // auto const crossCleanpLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {32, 16});
+  auto const crossCleanpLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {32, 16});
 
-  // alpaka::exec<Acc2D>(queue_,
-  //                     crossCleanpLS_workDiv,
-  //                     CrossCleanpLS{},
-  //                     modules_.const_view<ModulesSoA>(),
-  //                     rangesDC_->const_view(),
-  //                     pixelTripletsDC_->const_view(),
-  //                     trackCandidatesDC_->view(),
-  //                     segmentsDC_->const_view<SegmentsSoA>(),
-  //                     segmentsDC_->const_view<SegmentsOccupancySoA>(),
-  //                     lstInputDC_->const_view<PixelSeedsSoA>(),
-  //                     pixelSegmentsDC_->view(),
-  //                     miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
-  //                     lstInputDC_->const_view<HitsBaseSoA>(),
-  //                     quintupletsDC_->const_view<QuintupletsSoA>());
+  alpaka::exec<Acc2D>(queue_,
+                      crossCleanpLS_workDiv,
+                      CrossCleanpLS{},
+                      modules_.const_view<ModulesSoA>(),
+                      rangesDC_->const_view(),
+                      pixelTripletsDC_->const_view(),
+                      trackCandidatesDC_->view(),
+                      segmentsDC_->const_view<SegmentsSoA>(),
+                      segmentsDC_->const_view<SegmentsOccupancySoA>(),
+                      lstInputDC_->const_view<PixelSeedsSoA>(),
+                      pixelSegmentsDC_->view(),
+                      miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
+                      lstInputDC_->const_view<HitsBaseSoA>(),
+                      quintupletsDC_->const_view<QuintupletsSoA>());
 
   auto const addpLSasTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 384);
 
@@ -700,10 +700,10 @@ void LSTEvent::createPixelTriplets() {
 
   //pT3s can be cleaned here because they're not used in making pT5s!
   //seems like more blocks lead to conflicting writes
-  // auto const removeDupPixelTripletsFromMap_workDiv = cms::alpakatools::make_workdiv<Acc2D>({40, 1}, {16, 16});
+  auto const removeDupPixelTripletsFromMap_workDiv = cms::alpakatools::make_workdiv<Acc2D>({40, 1}, {16, 16});
 
-  // alpaka::exec<Acc2D>(
-  //     queue_, removeDupPixelTripletsFromMap_workDiv, RemoveDupPixelTripletsFromMap{}, pixelTripletsDC_->view());
+  alpaka::exec<Acc2D>(
+      queue_, removeDupPixelTripletsFromMap_workDiv, RemoveDupPixelTripletsFromMap{}, pixelTripletsDC_->view());
 }
 
 void LSTEvent::createQuintuplets() {
@@ -768,16 +768,16 @@ void LSTEvent::createQuintuplets() {
                       nEligibleT5Modules,
                       ptCut_);
 
-  // auto const removeDupQuintupletsAfterBuild_workDiv =
-  //     cms::alpakatools::make_workdiv<Acc3D>({max_blocks, 1, 1}, {1, 16, 16});
+  auto const removeDupQuintupletsAfterBuild_workDiv =
+      cms::alpakatools::make_workdiv<Acc3D>({max_blocks, 1, 1}, {1, 16, 16});
 
-  // alpaka::exec<Acc3D>(queue_,
-  //                     removeDupQuintupletsAfterBuild_workDiv,
-  //                     RemoveDupQuintupletsAfterBuild{},
-  //                     modules_.const_view<ModulesSoA>(),
-  //                     quintupletsDC_->view<QuintupletsSoA>(),
-  //                     quintupletsDC_->const_view<QuintupletsOccupancySoA>(),
-  //                     rangesDC_->const_view());
+  alpaka::exec<Acc3D>(queue_,
+                      removeDupQuintupletsAfterBuild_workDiv,
+                      RemoveDupQuintupletsAfterBuild{},
+                      modules_.const_view<ModulesSoA>(),
+                      quintupletsDC_->view<QuintupletsSoA>(),
+                      quintupletsDC_->const_view<QuintupletsOccupancySoA>(),
+                      rangesDC_->const_view());
 
   auto const addQuintupletRangesToEventExplicit_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
@@ -921,13 +921,13 @@ void LSTEvent::createPixelQuintuplets() {
                       rangesDC_->const_view(),
                       ptCut_);
 
-  // auto const removeDupPixelQuintupletsFromMap_workDiv =
-  //     cms::alpakatools::make_workdiv<Acc2D>({max_blocks, 1}, {16, 16});
+  auto const removeDupPixelQuintupletsFromMap_workDiv =
+      cms::alpakatools::make_workdiv<Acc2D>({max_blocks, 1}, {16, 16});
 
-  // alpaka::exec<Acc2D>(queue_,
-  //                     removeDupPixelQuintupletsFromMap_workDiv,
-  //                     RemoveDupPixelQuintupletsFromMap{},
-  //                     pixelQuintupletsDC_->view());
+  alpaka::exec<Acc2D>(queue_,
+                      removeDupPixelQuintupletsFromMap_workDiv,
+                      RemoveDupPixelQuintupletsFromMap{},
+                      pixelQuintupletsDC_->view());
 
   auto const addpT5asTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 256);
 
