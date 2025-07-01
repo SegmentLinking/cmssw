@@ -854,7 +854,7 @@ void fillEfficiencySet(int isimtrk,
         ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_phi", phi);
       else
         ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_phi", phi);
-    
+
       // vs. deltaEta plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaEta", deltaEta);
       if (pass)

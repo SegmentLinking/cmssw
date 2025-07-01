@@ -850,7 +850,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           {0, 0, 0, 0},                              // category 2
           {0, 115 * 70, 110 * 70, 76 * 70}           // category 3
       };
-      
+
       // Select the appropriate occupancy matrix based on ptCut
       const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
