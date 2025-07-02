@@ -493,17 +493,17 @@ def draw_label(params):
         etacutstr = "not x-reg"
     if "eff" in output_name:
         if "_pt" in output_name:
-            fiducial_label = "{etacutstr}, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 10 cm".format(etacutstr=etacutstr)
+            fiducial_label = "{etacutstr}, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 2.5 cm".format(etacutstr=etacutstr)
         elif "_eta" in output_name:
-            fiducial_label = "p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 10 cm".format(pt=ptcut)
+            fiducial_label = "p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 2.5 cm".format(pt=ptcut)
         elif "_dz" in output_name:
-            fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{xy}}| < 10 cm".format(pt=ptcut, etacutstr=etacutstr)
+            fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{xy}}| < 2.5 cm".format(pt=ptcut, etacutstr=etacutstr)
         elif "_dxy" in output_name:
             fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm".format(pt=ptcut, etacutstr=etacutstr)
         elif "_vxy" in output_name:
             fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm".format(pt=ptcut, etacutstr=etacutstr)
         else:
-            fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 10 cm".format(pt=ptcut, etacutstr=etacutstr)
+            fiducial_label = "{etacutstr}, p_{{T}} > {pt} GeV, |Vtx_{{z}}| < 30 cm, |Vtx_{{xy}}| < 2.5 cm".format(pt=ptcut, etacutstr=etacutstr)
         particleselection = ((", Particle:" + pdgidstr) if pdgidstr else "" ) + ((", Charge:" + chargestr) if chargestr else "" )
         fiducial_label += particleselection
     # If fake rate or duplicate rate plot follow the following fiducial label rule
