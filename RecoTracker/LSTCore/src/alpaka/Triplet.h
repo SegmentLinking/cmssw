@@ -550,12 +550,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             // Match inner Sg and Outer Sg
             int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
 
-              //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][0] = innerSegmentIndex;
-              //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][1] = outerSegmentIndex;
-              unsigned int tripletIndex =
-                  ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + mIdx;
-              triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
-              triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
+            unsigned int tripletIndex =
+                ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + mIdx;
+            triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
+            triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
               
           }
         }
@@ -568,10 +566,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Step 2: Parallel processing of segment pairs
         for (int i = flatThreadIdxXY; i < matchCount; i += flatThreadExtent) {
           
-          //int innerSegmentIndex = ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][i][0];
-          //int outerSegmentIndex = ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][i][1];
-          //int innerSegmentIndex = innerOuterSgPairs[i][0];
-          //int outerSegmentIndex = innerOuterSgPairs[i][1];
           unsigned int tripletIndex =
                   ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + i;
           unsigned int innerSegmentIndex = triplets.PreAllocatedSegmentIndices()[tripletIndex][0];
