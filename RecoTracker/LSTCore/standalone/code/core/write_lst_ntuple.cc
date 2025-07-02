@@ -313,6 +313,14 @@ void createT4DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t4_t3_pt");
   ana.tx->createBranch<std::vector<float>>("t4_t3_eta");
   ana.tx->createBranch<std::vector<float>>("t4_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_fakeScore1");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_promptScore1");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_displacedScore1");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_fakeScore2");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_promptScore2");
+  ana.tx->createBranch<std::vector<float>>("t4_t3_displacedScore2");
+  ana.tx->createBranch<std::vector<float>>("t4_regressionRadius");
+  ana.tx->createBranch<std::vector<float>>("t4_nonAnchorRegressionRadius");
 
   // Hit-specific branches
   std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
