@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_src_alpaka_Quintuplet_h
-#define RecoTracker_LSTCore_src_alpaka_Quintuplet_h
+#ifndef RecoTracker_LSTCore_src_alpaka_Quadruplet_h
+#define RecoTracker_LSTCore_src_alpaka_Quadruplet_h
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/isFinite.h"
@@ -9,7 +9,7 @@
 #include "RecoTracker/LSTCore/interface/MiniDoubletsSoA.h"
 #include "RecoTracker/LSTCore/interface/SegmentsSoA.h"
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
-#include "RecoTracker/LSTCore/interface/QuintupletsSoA.h"
+#include "RecoTracker/LSTCore/interface/QuadrupletsSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/ModulesSoA.h"
 #include "RecoTracker/LSTCore/interface/EndcapGeometry.h"
@@ -19,129 +19,125 @@
 #include "NeuralNetwork.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuintupletToMemory(TripletsConst triplets,
-                                                            Quintuplets quintuplets,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuadrupletToMemory(TripletsConst triplets,
+                                                            Quadruplets quadruplets,
                                                             unsigned int innerTripletIndex,
                                                             unsigned int outerTripletIndex,
                                                             uint16_t lowerModule1,
                                                             uint16_t lowerModule2,
                                                             uint16_t lowerModule3,
                                                             uint16_t lowerModule4,
-                                                            uint16_t lowerModule5,
                                                             float innerRadius,
-                                                            float bridgeRadius,
                                                             float outerRadius,
-                                                            float regressionCenterX,
-                                                            float regressionCenterY,
-                                                            float regressionRadius,
-                                                            float rzChiSquared,
-                                                            float rPhiChiSquared,
-                                                            float nonAnchorChiSquared,
-                                                            float dBeta1,
-                                                            float dBeta2,
                                                             float pt,
                                                             float eta,
                                                             float phi,
                                                             float scores,
                                                             uint8_t layer,
-                                                            unsigned int quintupletIndex,
-                                                            const float (&t5Embed)[Params_T5::kEmbed],
-                                                            bool tightCutFlag) {
-    quintuplets.tripletIndices()[quintupletIndex][0] = innerTripletIndex;
-    quintuplets.tripletIndices()[quintupletIndex][1] = outerTripletIndex;
+                                                            unsigned int quadrupletIndex,
+                                                            float rzChiSquared,
+                                                            float dBeta,
+                                                            float promptScore,
+                                                            float displacedScore,
+                                                            float fakeScore,
+                                                            float regressionG,
+                                                            float regressionF,
+                                                            float regressionRadius,
+                                                            float nonAnchorRegressionRadius,
+                                                            bool tightDNNFlag,
+                                                            bool tightCutFlag,
+                                                            float* error2s) {
+    quadruplets.tripletIndices()[quadrupletIndex][0] = innerTripletIndex;
+    quadruplets.tripletIndices()[quadrupletIndex][1] = outerTripletIndex;
 
-    quintuplets.lowerModuleIndices()[quintupletIndex][0] = lowerModule1;
-    quintuplets.lowerModuleIndices()[quintupletIndex][1] = lowerModule2;
-    quintuplets.lowerModuleIndices()[quintupletIndex][2] = lowerModule3;
-    quintuplets.lowerModuleIndices()[quintupletIndex][3] = lowerModule4;
-    quintuplets.lowerModuleIndices()[quintupletIndex][4] = lowerModule5;
-    quintuplets.innerRadius()[quintupletIndex] = __F2H(innerRadius);
-    quintuplets.outerRadius()[quintupletIndex] = __F2H(outerRadius);
-    quintuplets.pt()[quintupletIndex] = __F2H(pt);
-    quintuplets.eta()[quintupletIndex] = __F2H(eta);
-    quintuplets.phi()[quintupletIndex] = __F2H(phi);
-    quintuplets.score_rphisum()[quintupletIndex] = __F2H(scores);
-    quintuplets.isDup()[quintupletIndex] = 0;
-    quintuplets.tightCutFlag()[quintupletIndex] = tightCutFlag;
-    quintuplets.regressionRadius()[quintupletIndex] = regressionRadius;
-    quintuplets.regressionCenterX()[quintupletIndex] = regressionCenterX;
-    quintuplets.regressionCenterY()[quintupletIndex] = regressionCenterY;
-    quintuplets.logicalLayers()[quintupletIndex][0] = triplets.logicalLayers()[innerTripletIndex][0];
-    quintuplets.logicalLayers()[quintupletIndex][1] = triplets.logicalLayers()[innerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][2] = triplets.logicalLayers()[innerTripletIndex][2];
-    quintuplets.logicalLayers()[quintupletIndex][3] = triplets.logicalLayers()[outerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][4] = triplets.logicalLayers()[outerTripletIndex][2];
+    quadruplets.lowerModuleIndices()[quadrupletIndex][0] = lowerModule1;
+    quadruplets.lowerModuleIndices()[quadrupletIndex][1] = lowerModule2;
+    quadruplets.lowerModuleIndices()[quadrupletIndex][2] = lowerModule3;
+    quadruplets.lowerModuleIndices()[quadrupletIndex][3] = lowerModule4;
+    quadruplets.innerRadius()[quadrupletIndex] = __F2H(innerRadius);
+    quadruplets.outerRadius()[quadrupletIndex] = __F2H(outerRadius);
+    quadruplets.pt()[quadrupletIndex] = __F2H(pt);
+    quadruplets.eta()[quadrupletIndex] = __F2H(eta);
+    quadruplets.phi()[quadrupletIndex] = __F2H(phi);
+    quadruplets.score_rphisum()[quadrupletIndex] = __F2H(scores);
+    quadruplets.layer()[quadrupletIndex] = layer;
+    quadruplets.isDup()[quadrupletIndex] = 0;
+    quadruplets.logicalLayers()[quadrupletIndex][0] = triplets.logicalLayers()[innerTripletIndex][0];
+    quadruplets.logicalLayers()[quadrupletIndex][1] = triplets.logicalLayers()[innerTripletIndex][1];
+    quadruplets.logicalLayers()[quadrupletIndex][2] = triplets.logicalLayers()[innerTripletIndex][2];
+    quadruplets.logicalLayers()[quadrupletIndex][3] = triplets.logicalLayers()[outerTripletIndex][2];
 
-    quintuplets.hitIndices()[quintupletIndex][0] = triplets.hitIndices()[innerTripletIndex][0];
-    quintuplets.hitIndices()[quintupletIndex][1] = triplets.hitIndices()[innerTripletIndex][1];
-    quintuplets.hitIndices()[quintupletIndex][2] = triplets.hitIndices()[innerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][3] = triplets.hitIndices()[innerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][4] = triplets.hitIndices()[innerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
-    quintuplets.hitIndices()[quintupletIndex][6] = triplets.hitIndices()[outerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][7] = triplets.hitIndices()[outerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][8] = triplets.hitIndices()[outerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][9] = triplets.hitIndices()[outerTripletIndex][5];
-    quintuplets.bridgeRadius()[quintupletIndex] = bridgeRadius;
-    quintuplets.rzChiSquared()[quintupletIndex] = rzChiSquared;
-    quintuplets.chiSquared()[quintupletIndex] = rPhiChiSquared;
-    quintuplets.nonAnchorChiSquared()[quintupletIndex] = nonAnchorChiSquared;
-    quintuplets.dBeta1()[quintupletIndex] = dBeta1;
-    quintuplets.dBeta2()[quintupletIndex] = dBeta2;
+    quadruplets.hitIndices()[quadrupletIndex][0] = triplets.hitIndices()[innerTripletIndex][0];
+    quadruplets.hitIndices()[quadrupletIndex][1] = triplets.hitIndices()[innerTripletIndex][1];
+    quadruplets.hitIndices()[quadrupletIndex][2] = triplets.hitIndices()[innerTripletIndex][2];
+    quadruplets.hitIndices()[quadrupletIndex][3] = triplets.hitIndices()[innerTripletIndex][3];
+    quadruplets.hitIndices()[quadrupletIndex][4] = triplets.hitIndices()[innerTripletIndex][4];
+    quadruplets.hitIndices()[quadrupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
+    quadruplets.hitIndices()[quadrupletIndex][6] = triplets.hitIndices()[outerTripletIndex][4];
+    quadruplets.hitIndices()[quadrupletIndex][7] = triplets.hitIndices()[outerTripletIndex][5];
+    
+    quadruplets.rzChiSquared()[quadrupletIndex] = rzChiSquared;
+    quadruplets.dBeta()[quadrupletIndex] = dBeta;
+    quadruplets.promptscore_t4dnn()[quadrupletIndex] = promptScore;
+    quadruplets.displacedscore_t4dnn()[quadrupletIndex] = displacedScore;
+    quadruplets.fakescore_t4dnn()[quadrupletIndex] = fakeScore;
 
-    CMS_UNROLL_LOOP
-    for (unsigned int i = 0; i < Params_T5::kEmbed; ++i) {
-      quintuplets.t5Embed()[quintupletIndex][i] = t5Embed[i];
-    }
-  }
+    quadruplets.regressionRadius()[quadrupletIndex] = regressionRadius;
+    quadruplets.nonAnchorRegressionRadius()[quadrupletIndex] = nonAnchorRegressionRadius;
+    quadruplets.regressionG()[quadrupletIndex] = regressionG;
+    quadruplets.regressionF()[quadrupletIndex] = regressionF;
 
-  //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
+    quadruplets.tightDNNFlag()[quadrupletIndex] = tightDNNFlag;
+    quadruplets.tightCutFlag()[quadrupletIndex] = tightCutFlag;
+
+    // quadruplets.uncertainty()[quadrupletIndex][0] = error2s[0];
+    // quadruplets.uncertainty()[quadrupletIndex][1] = error2s[1];
+    // quadruplets.uncertainty()[quadrupletIndex][2] = error2s[2];
+    // quadruplets.uncertainty()[quadrupletIndex][3] = error2s[3];
+
+  };
+
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passT5RZConstraint(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passT4RZConstraint(TAcc const& acc,
                                                          ModulesConst modules,
                                                          MiniDoubletsConst mds,
                                                          unsigned int firstMDIndex,
                                                          unsigned int secondMDIndex,
                                                          unsigned int thirdMDIndex,
                                                          unsigned int fourthMDIndex,
-                                                         unsigned int fifthMDIndex,
                                                          uint16_t lowerModuleIndex1,
                                                          uint16_t lowerModuleIndex2,
                                                          uint16_t lowerModuleIndex3,
                                                          uint16_t lowerModuleIndex4,
-                                                         uint16_t lowerModuleIndex5,
                                                          float& rzChiSquared,
                                                          float inner_pt,
                                                          float innerRadius,
                                                          float g,
                                                          float f,
+                                                         int charge,
                                                          bool& tightCutFlag) {
     //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
     const float rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
     const float rt2 = mds.anchorRt()[secondMDIndex] / 100;
     const float rt3 = mds.anchorRt()[thirdMDIndex] / 100;
     const float rt4 = mds.anchorRt()[fourthMDIndex] / 100;
-    const float rt5 = mds.anchorRt()[fifthMDIndex] / 100;
 
     const float z1 = mds.anchorZ()[firstMDIndex] / 100;
     const float z2 = mds.anchorZ()[secondMDIndex] / 100;
     const float z3 = mds.anchorZ()[thirdMDIndex] / 100;
     const float z4 = mds.anchorZ()[fourthMDIndex] / 100;
-    const float z5 = mds.anchorZ()[fifthMDIndex] / 100;
 
     // Using lst_layer numbering convention defined in ModuleMethods.h
     const int layer1 = modules.lstLayers()[lowerModuleIndex1];
     const int layer2 = modules.lstLayers()[lowerModuleIndex2];
     const int layer3 = modules.lstLayers()[lowerModuleIndex3];
     const int layer4 = modules.lstLayers()[lowerModuleIndex4];
-    const int layer5 = modules.lstLayers()[lowerModuleIndex5];
 
     //slope computed using the internal T3s
     const int moduleType1 = modules.moduleType()[lowerModuleIndex1];  //0 is ps, 1 is 2s
     const int moduleType2 = modules.moduleType()[lowerModuleIndex2];
     const int moduleType3 = modules.moduleType()[lowerModuleIndex3];
     const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
-    const int moduleType5 = modules.moduleType()[lowerModuleIndex5];
 
     const float x1 = mds.anchorX()[firstMDIndex] / 100;
     const float x2 = mds.anchorX()[secondMDIndex] / 100;
@@ -158,7 +154,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float x_init = mds.anchorX()[thirdMDIndex] / 100;
     float y_init = mds.anchorY()[thirdMDIndex] / 100;
     float z_init = mds.anchorZ()[thirdMDIndex] / 100;
-    float rt_init = mds.anchorRt()[thirdMDIndex] / 100;  //use the second MD as initial point
+    float rt_init = mds.anchorRt()[thirdMDIndex] / 100;  //use the third MD as initial point
 
     if (moduleType3 == 1)  // 1: if MD3 is in 2s layer
     {
@@ -168,41 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       rt_init = mds.anchorRt()[secondMDIndex] / 100;
     }
 
-    // start from a circle of inner T3.
-    // to determine the charge
-    int charge = 0;
-    float slope3c = (y3 - y_center) / (x3 - x_center);
-    float slope1c = (y1 - y_center) / (x1 - x_center);
-    // these 4 "if"s basically separate the x-y plane into 4 quarters. It determines geometrically how a circle and line slope goes and their positions, and we can get the charges correspondingly.
-    if ((y3 - y_center) > 0 && (y1 - y_center) > 0) {
-      if (slope1c > 0 && slope3c < 0)
-        charge = -1;  // on x axis of a quarter, 3 hits go anti-clockwise
-      else if (slope1c < 0 && slope3c > 0)
-        charge = 1;  // on x axis of a quarter, 3 hits go clockwise
-      else if (slope3c > slope1c)
-        charge = -1;
-      else if (slope3c < slope1c)
-        charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) < 0) {
-      if (slope1c < 0 && slope3c > 0)
-        charge = 1;
-      else if (slope1c > 0 && slope3c < 0)
-        charge = -1;
-      else if (slope3c > slope1c)
-        charge = -1;
-      else if (slope3c < slope1c)
-        charge = 1;
-    } else if ((y3 - y_center) < 0 && (y1 - y_center) > 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
-        charge = 1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
-        charge = -1;
-    } else if ((y3 - y_center) > 0 && (y1 - y_center) < 0) {
-      if ((x3 - x_center) > 0 && (x1 - x_center) > 0)
-        charge = -1;
-      else if ((x3 - x_center) < 0 && (x1 - x_center) < 0)
-        charge = 1;
-    }
+    //charge is determined in T3 and requiring both T3s to have the same charge
 
     float pseudo_phi = alpaka::math::atan(
         acc, (y_init - y_center) / (x_init - x_center));  //actually represent pi/2-phi, wrt helix axis z
@@ -240,7 +202,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
     }
 
-    // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
+    // But if the initial T4 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
     if (moduleType3 == 0) {  // 0 is ps
       if (x4 < x3 && x3 < x2)
         Px = -alpaka::math::abs(acc, Px);
@@ -278,7 +240,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float zsi, rtsi;
     int layeri, moduleTypei;
     rzChiSquared = 0;
-    for (size_t i = 2; i < 6; i++) {
+    for (size_t i = 2; i < 5; i++) {
       if (i == 2) {
         zsi = z2;
         rtsi = rt2;
@@ -294,12 +256,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         rtsi = rt4;
         layeri = layer4;
         moduleTypei = moduleType4;
-      } else if (i == 5) {
-        zsi = z5;
-        rtsi = rt5;
-        layeri = layer5;
-        moduleTypei = moduleType5;
-      }
+      } 
 
       if (moduleType3 == 0) {  //0: ps
         if (i == 3)
@@ -309,7 +266,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           continue;
       }
 
-      // calculation is copied from PixelTriplet.h computePT3RZChiSquared
+      // calculation is copied from PixelTriplet.cc computePT3RZChiSquared
       float diffr = 0, diffz = 0;
 
       float rou = a / p;
@@ -334,9 +291,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         float solz2 = alpaka::math::asin(acc, sol2) / rou * Pz / p + z_init;
         float diffz1 = (solz1 - zsi) * 100;
         float diffz2 = (solz2 - zsi) * 100;
-        if (edm::isNotFinite(diffz1))
+        // Alpaka : Needs to be moved over
+        if (alpaka::math::isnan(acc, diffz1))
           diffz = diffz2;
-        else if (edm::isNotFinite(diffz2))
+        else if (alpaka::math::isnan(acc, diffz2))
           diffz = diffz1;
         else {
           diffz = (alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2;
@@ -369,8 +327,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         residual = (layeri <= 6 && ((side == Center) or (drdz < 1))) ? diffz : diffr;
         float projection_missing2 = 1.f;
         if (drdz < 1)
-          projection_missing2 =
-              ((subdets == Endcap) or (side == Center)) ? 1.f : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+          projection_missing2 = ((subdets == Endcap) or (side == Center))
+                                    ? 1.f
+                                    : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
         if (drdz > 1)
           projection_missing2 = ((subdets == Endcap) or (side == Center))
                                     ? 1.f
@@ -380,7 +339,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       rzChiSquared += 12 * (residual * residual) / error2;
     }
     // for set rzchi2 cut
-    // if the 5 points are linear, helix calculation gives nan
+    // if the 4 points are linear, helix calculation gives nan
     if (inner_pt > 100 || edm::isNotFinite(rzChiSquared)) {
       float slope;
       if (moduleType1 == 0 and moduleType2 == 0 and moduleType3 == 1)  //PSPS2S
@@ -390,161 +349,346 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         slope = (z3 - z1) / (rt3 - rt1);
       }
       float residual4_linear = (layer4 <= 6) ? ((z4 - z1) - slope * (rt4 - rt1)) : ((rt4 - rt1) - (z4 - z1) / slope);
-      float residual5_linear = (layer4 <= 6) ? ((z5 - z1) - slope * (rt5 - rt1)) : ((rt5 - rt1) - (z5 - z1) / slope);
 
       // creating a chi squared type quantity
       // 0-> PS, 1->2S
       residual4_linear = (moduleType4 == 0) ? residual4_linear / kPixelPSZpitch : residual4_linear / kStrip2SZpitch;
-      residual5_linear = (moduleType5 == 0) ? residual5_linear / kPixelPSZpitch : residual5_linear / kStrip2SZpitch;
       residual4_linear = residual4_linear * 100;
-      residual5_linear = residual5_linear * 100;
 
-      rzChiSquared = 12 * (residual4_linear * residual4_linear + residual5_linear * residual5_linear);
-      return rzChiSquared < 4.677f;
+      rzChiSquared = 12 * (residual4_linear * residual4_linear);
+      // return rzChiSquared < 10.683f; //full T3s 99%
+      // return rzChiSquared < 12.293f; //full T3s 99%, pT>=10GeV
+      // if (rzChiSquared < 2.595f) //95% displaced retention, add uncert
+      // if (rzChiSquared < 4.24f) //95% displaced retention, add radii
+      if (rzChiSquared < 9.666f) //95% retention, add radii and t3 scores
+        tightCutFlag = true;
+      // return rzChiSquared < 3.693f; //full T3s, 99%, add uncert to DNN
+      // return rzChiSquared < 9.666f; //99% add reg radii to dnn
+      return rzChiSquared < 14.064f; //99% add reg radii and t3 scores to dnn
+      // return true;
     }
-
-    // when building T5, apply 99% chi2 cuts as default, and add to pT5 collection. But when adding T5 to TC collections, apply 95% cut to reduce the fake rate
-    tightCutFlag = false;
+    // return true;
     // The category numbers are related to module regions and layers, decoding of the region numbers can be found here in slide 2 table. https://github.com/SegmentLinking/TrackLooper/files/11420927/part.2.pdf
     // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T5 built with Endcap 1,2,3,4,5 ps modules
-    if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10 and layer5 == 11)  //0
+    if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10)  //0
     {
-      if (rzChiSquared < 94.470f)
+      // if (rzChiSquared < 19.246f) //95% displaced retention
+      // if (rzChiSquared < 19.360f) //95% displaced retention, add uncert
+      // if (rzChiSquared < 19.239f) //95% displaced retention, add radii
+      if (rzChiSquared < 19.283f) //95% displaced retention, add radii and t3 scores
         tightCutFlag = true;
-      return true;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10 and layer5 == 16)  //1
+      // return rzChiSquared < 28.056f; //full t3s, multi dnn 99%
+      // return rzChiSquared < 28.772f; //full t3s, multi dnn add uncert to dnn 99%
+      // return rzChiSquared < 28.574f; //99% add reg radii to dnn
+      return rzChiSquared < 28.459f; //99% add reg radii and t3 scores to dnn
+    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15)  //1
     {
-      if (rzChiSquared < 22.099f)
+      // if (rzChiSquared < 6.274f) //95% displaced retention
+      // if (rzChiSquared < 6.295f) //95% displaced retention, add uncert
+      // if (rzChiSquared < 6.295f) //95% displaced retention, add radii
+      if (rzChiSquared < 6.298f) //95% displaced retention, add radii and t3 scores
         tightCutFlag = true;
-      return rzChiSquared < 37.956f;
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15 and layer5 == 16)  //2
+      // return rzChiSquared < 8.968f; //full t3s, multi dnn 99%
+      // return rzChiSquared < 8.971f; //full t3s, multi dnn add uncert to dnn 99%
+      // return rzChiSquared < 8.999f; //99% add reg radii to dnn
+      return rzChiSquared < 8.968f; //99% add reg radii and t3 scores to dnn
+    } else if (layer1 == 7 and layer2 == 8 and layer3 == 14 and layer4 == 15)  //2
     {
-      if (rzChiSquared < 7.992f)
+      // if (rzChiSquared < 3.824f) //95% displaced retention
+      // if (rzChiSquared < 3.886f) //95% displaced retention, add uncert
+      // if (rzChiSquared < 3.871f) //95% displaced retention, add radii
+      if (rzChiSquared < 3.879f) //95% displaced retention, add radii and t3 scores
         tightCutFlag = true;
-      return rzChiSquared < 11.622f;
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8 and layer4 == 9) {
-      if (layer5 == 10)  //3
+      // return rzChiSquared < 5.032f; //full t3s, multi dnn 99%
+      // return rzChiSquared < 5.160f; //full t3s, multi dnn add uncert to dnn 99%
+      // return rzChiSquared < 5.091f; //99% add reg radii to dnn
+      return rzChiSquared < 5.158f; //99% add reg radii and t3 scores to dnn
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
+      if (layer4 == 11)  //3
       {
-        if (rzChiSquared < 111.390f)
+        // if (rzChiSquared < 18.572f) //95% displaced retention
+        // if (rzChiSquared < 18.714f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 18.414f) //95% displaced retention, add radii
+        if (rzChiSquared < 18.516f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return true;
+        // return rzChiSquared < 29.292f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 29.924f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 29.755f; //99% add reg radii to dnn
+        return rzChiSquared < 29.270f; //99% add reg radii and t3 scores to dnn
       }
-      if (layer5 == 15)  //4
+      if (layer4 == 16)  //4
       {
-        if (rzChiSquared < 18.351f)
+        // if (rzChiSquared < 6.362f) //95% displaced retention
+        // if (rzChiSquared < 6.467f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 6.418f) //95% displaced retention, add radii
+        if (rzChiSquared < 6.378f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return rzChiSquared < 37.941f;
+        // return rzChiSquared < 9.359f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 9.357f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 9.359f; //99% add reg radii to dnn
+        return rzChiSquared < 9.310f; //99% add reg radii and t3 scores to dnn
+      }
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
+    { 
+        // if (rzChiSquared < 3.379f) //95% displaced retention
+        // if (rzChiSquared < 3.412f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 3.474f) //95% displaced retention, add radii
+        if (rzChiSquared < 3.493f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 4.190f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 4.347f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 4.382f; //99% add reg radii to dnn
+        return rzChiSquared < 4.328f; //99% add reg radii and t3 scores to dnn
+    }
+    else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
+      if (layer4 == 4)  //6
+      {
+        // if (rzChiSquared < 13.331f) //95% displaced retention
+        // if (rzChiSquared < 13.366f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 13.499f) //95% displaced retention, add radii
+        if (rzChiSquared < 13.252f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 23.235f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 23.585f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 23.296f; //99% add reg radii to dnn
+        return rzChiSquared < 23.138f; //99% add reg radii and t3 scores to dnn
+      }
+      else if (layer4 == 7)  //7
+      {
+        // if (rzChiSquared < 17.074f) //95% displaced retention
+        // if (rzChiSquared < 17.074f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 17.276f) //95% displaced retention, add radii
+        if (rzChiSquared < 16.956f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 29.561f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 28.862f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 29.243f; //99% add reg radii to dnn
+        return rzChiSquared < 29.561f; //99% add reg radii and t3 scores to dnn
+      } else if (layer4 == 12)  //8
+      {
+        // if (rzChiSquared < 10.879f) //95% displaced retention
+        // if (rzChiSquared < 10.887f) //95% displaced retention, add uncert
+        // if (rzChiSquared <10.887f) //95% displaced retention, add radii
+        if (rzChiSquared < 10.924f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 18.687f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 19.136f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 18.74f; //99% add reg radii to dnn
+        return rzChiSquared < 18.905f; //99% add reg radii and t3 scores to dnn
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 9)  //5
+      if (layer4 == 8)  //9
       {
-        if (rzChiSquared < 116.148f)
+        // if (rzChiSquared < 18.237f) //95% displaced retention
+        // if (rzChiSquared < 18.039f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 18.263f) //95% displaced retention, add radii
+        if (rzChiSquared < 18.263f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return true;
+        // return rzChiSquared < 30.072f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 28.911f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 29.803f; //99% add reg radii to dnn
+        return rzChiSquared < 29.534f; //99% add reg radii and t3 scores to dnn
+      } else if (layer4 == 13)  //10
+      {
+        // if (rzChiSquared < 8.467f) //95% displaced retention
+        // if (rzChiSquared < 8.418f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 8.384f) //95% displaced retention, add radii
+        if (rzChiSquared < 8.384f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 12.88f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 12.797f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 12.664f; //99% add reg radii to dnn
+        return rzChiSquared < 12.608f; //99% add reg radii and t3 scores to dnn
+      } 
+    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
+      if (layer4 == 9) //11
+      {
+        // if (rzChiSquared < 18.778f) //95% displaced retention
+        // if (rzChiSquared < 18.850f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 18.856f) //95% displaced retention, add radii
+        if (rzChiSquared < 18.741f) //95% displaced retention, add radii and t3 scores
+          tightCutFlag = true;
+        // return rzChiSquared < 27.908f; //full t3s, multi dnn 99%GeV
+        // return rzChiSquared < 28.349f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 28.224f; //99% add reg radii to dnn
+        return rzChiSquared < 28.270f; //99% add reg radii and t3 scores to dnn
+      } else if (layer4 == 14)  //12
+      {
+        return true; // leftover T3s, //full T3s 99%
+      } 
+    } else if (layer1 == 2 and layer2 ==3) {
+      if (layer3 == 4) {
+        if (layer4 == 5)  //13
+        {
+          // if (rzChiSquared < 4.426f) //95% displaced retention
+          // if (rzChiSquared < 4.438f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 4.396f) //95% displaced retention, add radii
+          if (rzChiSquared < 4.376f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 5.419f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 5.423f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 5.292f; //99% add reg radii to dnn
+          return rzChiSquared < 5.430f; //99% add reg radii and t3 scores to dnn
+        }
+        else if (layer4 == 12) //14
+        { 
+          // if (rzChiSquared <4.07f) //95% displaced retention
+          // if (rzChiSquared < 4.119f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 4.072f) //95% displaced retention, add radii
+          if (rzChiSquared < 4.196f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 4.949f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 5.285f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 5.233f; //99% add reg radii to dnn
+          return rzChiSquared < 5.176f; //99% add reg radii and t3 scores to dnn
+        }
       }
-      if (layer4 == 8 and layer5 == 14)  //6
-      {
-        if (rzChiSquared < 19.352f)
-          tightCutFlag = true;
-        return rzChiSquared < 52.561f;
-      } else if (layer4 == 13 and layer5 == 14)  //7
-      {
-        if (rzChiSquared < 10.392f)
-          tightCutFlag = true;
-        return rzChiSquared < 13.76f;
+      else if (layer3 == 7) {
+        if (layer4 == 8) // 15
+        { 
+          // return true; // leftover T3s, //full T3s 99%
+          // if (rzChiSquared < 11.934f) //95% displaced retention
+          // if (rzChiSquared < 11.935f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 11.934f) //95% displaced retention, add radii
+          if (rzChiSquared < 11.934f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 20.491f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 20.491f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 20.491f; //99% add reg radii to dnn
+          return rzChiSquared < 20.491f; //99% add reg radii and t3 scores to dnn
+        }
+        else if (layer4 == 13) //16
+        { 
+          // if (rzChiSquared < 9.671f) //95% displaced retention
+          // if (rzChiSquared < 9.672f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 9.545f) //95% displaced retention, add radii
+          if (rzChiSquared < 9.518f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 14.355f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 14.527f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 14.477f; //99% add reg radii to dnn
+          return rzChiSquared < 14.100f; //99% add reg radii and t3 scores to dnn
+        }
       }
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 7 and layer5 == 8)  //8
-      {
-        if (rzChiSquared < 27.824f)
+      else if (layer3 == 12 and layer4 == 13) //17
+      { 
+        // if (rzChiSquared < 4.107f) //95% displaced retention
+        // if (rzChiSquared < 4.230f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 4.201f) //95% displaced retention, add radii
+        if (rzChiSquared < 4.269f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return rzChiSquared < 44.247f;
-      } else if (layer4 == 7 and layer5 == 13)  //9
-      {
-        if (rzChiSquared < 18.145f)
-          tightCutFlag = true;
-        return rzChiSquared < 33.752f;
-      } else if (layer4 == 12 and layer5 == 13)  //10
-      {
-        if (rzChiSquared < 13.308f)
-          tightCutFlag = true;
-        return rzChiSquared < 21.213f;
-      } else if (layer4 == 4 and layer5 == 5)  //11
-      {
-        if (rzChiSquared < 15.627f)
-          tightCutFlag = true;
-        return rzChiSquared < 29.035f;
-      } else if (layer4 == 4 and layer5 == 12)  //12
-      {
-        if (rzChiSquared < 14.64f)
-          tightCutFlag = true;
-        return rzChiSquared < 23.037f;
+        // return rzChiSquared < 5.160f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 5.306f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 5.157f; //99% add reg radii to dnn
+        return rzChiSquared < 5.499f; //99% add reg radii and t3 scores to dnn
       }
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9 and layer5 == 15)  //14
-      {
-        if (rzChiSquared < 24.662f)
+    } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
+    { 
+      // if (rzChiSquared < 22.416f) //95% displaced retention
+      // if (rzChiSquared < 22.481f) //95% displaced retention, add uncert
+      // if (rzChiSquared < 22.5f) //95% displaced retention, add radii
+      if (rzChiSquared < 22.481f) //95% displaced retention, add radii and t3 scores
+        tightCutFlag = true;
+      // return rzChiSquared < 35.778f; //full t3s, multi dnn 99%
+      // return rzChiSquared < 35.844f; //full t3s, multi dnn add uncert to dnn 99%
+      // return rzChiSquared < 35.778f; //99% add reg radii to dnn
+      return rzChiSquared < 36.038f; //99% add reg radii and t3 scores to dnn
+    } else if (layer1 == 2 and layer2 == 7)
+    {
+      if (layer3 == 8 and layer4 == 14) //19
+      { 
+        // if (rzChiSquared < 7.129f) //95% displaced retention
+        // if (rzChiSquared < 7.129f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 7.086f) //95% displaced retention, add radii
+        if (rzChiSquared < 7.06f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return rzChiSquared < 41.036f;
-      } else if (layer4 == 14 and layer5 == 15)  //15
-      {
-        if (rzChiSquared < 8.866f)
-          tightCutFlag = true;
-        return rzChiSquared < 14.092f;
+        // return rzChiSquared < 10.899f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 11.166f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 11.011f; //99% add reg radii to dnn
+        return rzChiSquared < 10.991f; //99% add reg radii and t3 scores to dnn
       }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 7) {
-      if (layer4 == 8 and layer5 == 14)  //16
-      {
-        if (rzChiSquared < 23.730f)
+      else if (layer3 == 13 and layer4 == 14) //20
+      { 
+        // if (rzChiSquared < 3.217f) //95% displaced retention
+        // if (rzChiSquared < 3.311f) //95% displaced retention, add uncert
+        // if (rzChiSquared < 3.37f) //95% displaced retention, add radii
+        if (rzChiSquared < 3.343f) //95% displaced retention, add radii and t3 scores
           tightCutFlag = true;
-        return rzChiSquared < 23.748f;
+        // return rzChiSquared < 3.876f; //full t3s, multi dnn 99%
+        // return rzChiSquared < 3.868f; //full t3s, multi dnn add uncert to dnn 99%
+        // return rzChiSquared < 4.159f; //99% add reg radii to dnn
+        return rzChiSquared < 4.144f; //99% add reg radii and t3 scores to dnn
       }
-      if (layer4 == 13 and layer5 == 14)  //17
-      {
-        if (rzChiSquared < 10.772f)
-          tightCutFlag = true;
-        return rzChiSquared < 17.945f;
+    } else if (layer1 == 3)
+    {
+      if (layer2 == 4){
+        if (layer3 == 5 and layer4 == 6 ) //21
+        { 
+          // if (rzChiSquared < 56.658f) //95% displaced retention
+          // if (rzChiSquared < 57.321f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 57.047f) //95% displaced retention, add radii
+          if (rzChiSquared < 56.716f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 75.304f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 77.495f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 78.026f; //99% add reg radii to dnn
+          return rzChiSquared < 76.861f; //99% add reg radii and t3 scores to dnn
+        }
+        else if (layer3 == 12 and layer4 == 13) //24
+        {
+          // if (rzChiSquared < 16.991f) //95% displaced retention
+          // if (rzChiSquared < 17.851f) //95% displaced retention
+          // if (rzChiSquared < 18.597f) //95% displaced retention, add radii
+          if (rzChiSquared < 17.68f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 24.917f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 26.821f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 27.695f; //99% add reg radii to dnn
+          return rzChiSquared < 27.034f; //99% add reg radii and t3 scores to dnn
+        }
+        else if (layer3 == 5 and layer4 == 12) //25
+        {
+          // if (rzChiSquared < 35.097f) //95% displaced retention
+          // if (rzChiSquared < 36.715f) //95% displaced retention, add uncert to dnn
+          // if (rzChiSquared < 35.939f) //95% displaced retention, add radii
+          if (rzChiSquared < 36.004f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 44.968f; //full t3s, multi dnn 99%
+          // return rzChiSquared < 46.854f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 46.246f; //99% add reg radii to dnn
+          return rzChiSquared < 48.511f; //99% add reg radii and t3 scores to dnn
+        }
       }
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 5 and layer5 == 6)  //18
-      {
-        if (rzChiSquared < 6.065f)
-          tightCutFlag = true;
-        return rzChiSquared < 8.803f;
-      } else if (layer4 == 5 and layer5 == 12)  //19
-      {
-        if (rzChiSquared < 5.693f)
-          tightCutFlag = true;
-        return rzChiSquared < 7.930f;
-      }
-
-      else if (layer4 == 12 and layer5 == 13)  //20
-      {
-        if (rzChiSquared < 5.473f)
-          tightCutFlag = true;
-        return rzChiSquared < 7.626f;
+      else if (layer2 == 7) {
+        if (layer3 == 8 and layer4 == 14) //22
+        {
+          // if (rzChiSquared < 3.971f) //95% displaced retention, add uncert (with and without)
+          // if (rzChiSquared < 3.971f) //95% displaced retention, add radii
+          if (rzChiSquared < 3.971f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return true; // leftover T3s, full T3s
+          // return rzChiSquared < 6.822f; //full t3s, multi dnn 99%
+          return rzChiSquared < 6.017f; //99% add reg radii and t3 scores to dnn
+        }
+        else if (layer3 == 13 and layer4 == 14) //23
+        {
+          // if (rzChiSquared < 3.53f) //95% displaced retention
+          // if (rzChiSquared < 3.494f) //95% displaced retention, add uncert
+          // if (rzChiSquared < 3.569f) //95% displaced retention, add radii
+          if (rzChiSquared < 3.571f) //95% displaced retention, add radii and t3 scores
+            tightCutFlag = true;
+          // return rzChiSquared < 4.342f; //full t3s, multi dnn 99%
+            // return rzChiSquared < 4.363f; //full t3s, multi dnn add uncert to dnn 99%
+          // return rzChiSquared < 4.418f; //99% add reg radii to dnn
+          return rzChiSquared < 4.415f; //99% add reg radii and t3 scores to dnn
+        }
       }
     }
     return true;
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool T5HasCommonMiniDoublet(TripletsConst triplets,
-                                                             SegmentsConst segments,
-                                                             unsigned int innerTripletIndex,
-                                                             unsigned int outerTripletIndex) {
-    unsigned int innerOuterSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
-    unsigned int outerInnerSegmentIndex = triplets.segmentIndices()[outerTripletIndex][0];
-    unsigned int innerOuterOuterMiniDoubletIndex =
-        segments.mdIndices()[innerOuterSegmentIndex][1];  //inner triplet outer segment outer MD index
-    unsigned int outerInnerInnerMiniDoubletIndex =
-        segments.mdIndices()[outerInnerSegmentIndex][0];  //outer triplet inner segment inner MD index
-
-    return (innerOuterOuterMiniDoubletIndex == outerInnerInnerMiniDoubletIndex);
-  }
-
-  template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegression(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegressionT4(TAcc const& acc,
                                                                  ModulesConst modules,
                                                                  const uint16_t* lowerModuleIndices,
                                                                  float* delta1,
@@ -554,13 +698,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  unsigned int nPoints = 5,
                                                                  bool anchorHits = true) {
     /*
-    Bool anchorHits required to deal with a weird edge case wherein 
-    the hits ultimately used in the regression are anchor hits, but the
-    lower modules need not all be Pixel Modules (in case of PS). Similarly,
-    when we compute the chi squared for the non-anchor hits, the "partner module"
-    need not always be a PS strip module, but all non-anchor hits sit on strip 
-    modules.
-    */
+        Bool anchorHits required to deal with a weird edge case wherein 
+        the hits ultimately used in the regression are anchor hits, but the
+        lower modules need not all be Pixel Modules (in case of PS). Similarly,
+        when we compute the chi squared for the non-anchor hits, the "partner module"
+        need not always be a PS strip module, but all non-anchor hits sit on strip 
+        modules.
+        */
 
     ModuleType moduleType;
     short moduleSubdet, moduleSide;
@@ -604,10 +748,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         isFlat[i] = false;
 
         /*
-        despite the type of the module layer of the lower module index,
-        all anchor hits are on the pixel side and all non-anchor hits are
-        on the strip side!
-        */
+                despite the type of the module layer of the lower module index,
+                all anchor hits are on the pixel side and all non-anchor hits are
+                on the strip side!
+                */
         if (anchorHits) {
           delta2[i] = inv2;
         } else {
@@ -628,10 +772,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
       }
     }
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusUsingRegression(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusUsingRegressionT4(TAcc const& acc,
                                                                     unsigned int nPoints,
                                                                     float* xs,
                                                                     float* ys,
@@ -727,10 +871,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - twoG * xs[i] - twoF * ys[i] + c) / sigmas2[i];
     }
     return radius;
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeChiSquared(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeT4ChiSquared(TAcc const& acc,
                                                          unsigned int nPoints,
                                                          float* xs,
                                                          float* ys,
@@ -774,23 +918,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     (xs[i] * xs[i] + ys[i] * ys[i] - 2 * g * xs[i] - 2 * f * ys[i] + c) / sigma2;
     }
     return chiSquared;
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterations(TAcc const& acc,
-                                                             float& betaIn,
-                                                             float& betaOut,
-                                                             float betaAv,
-                                                             float& pt_beta,
-                                                             float sdIn_dr,
-                                                             float sdOut_dr,
-                                                             float dr,
-                                                             float lIn) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void runDeltaBetaIterationsT4(TAcc const& acc,
+                                                               float& betaIn,
+                                                               float& betaOut,
+                                                               float betaAv,
+                                                               float& pt_beta,
+                                                               float sdIn_dr,
+                                                               float sdOut_dr,
+                                                               float dr,
+                                                               float lIn) {
     if (lIn == 0) {
       betaOut += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc,
+              alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaOut);
       return;
     }
@@ -801,19 +946,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                             8.f * kPt_betaMax)))  //and the pt_beta is well-defined; less strict for endcap-endcap
     {
       const float betaInUpd =
-          betaIn +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-              betaIn);  //FIXME: need a faster version
+          betaIn + alpaka::math::copysign(
+                       acc,
+                       alpaka::math::asin(
+                           acc,
+                           alpaka::math::min(
+                               acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+                       betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
-          betaOut +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-              betaOut);  //FIXME: need a faster version
+          betaOut + alpaka::math::copysign(
+                        acc,
+                        alpaka::math::asin(
+                            acc,
+                            alpaka::math::min(
+                                acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+                        betaOut);  //FIXME: need a faster version
       betaAv = 0.5f * (betaInUpd + betaOutUpd);
 
       //1st update
@@ -838,19 +985,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float pt_betaIn = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaIn);
 
       const float betaInUpd =
-          betaIn +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
-              betaIn);  //FIXME: need a faster version
+          betaIn + alpaka::math::copysign(
+                       acc,
+                       alpaka::math::asin(
+                           acc,
+                           alpaka::math::min(
+                               acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
+                       betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
           betaOut +
           alpaka::math::copysign(
               acc,
               alpaka::math::asin(
                   acc,
-                  alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
+                  alpaka::math::min(
+                      acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
               betaIn);  //FIXME: need a faster version
       betaAv = (alpaka::math::abs(acc, betaOut) > 0.2f * alpaka::math::abs(acc, betaIn))
                    ? (0.5f * (betaInUpd + betaOutUpd))
@@ -861,22 +1010,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       betaIn += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc,
+              alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaIn);  //FIXME: need a faster version
       betaOut += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc,
+              alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaIn);  //FIXME: need a faster version
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
       //2nd update
       pt_beta = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);  //get a better pt estimate
     }
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletdBetaCutBBBB(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletdBetaCutBBBB(TAcc const& acc,
                                                                 ModulesConst modules,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
@@ -1001,7 +1152,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float sdOut_d = mds.anchorRt()[fourthMDIndex] - mds.anchorRt()[thirdMDIndex];
 
     runDeltaBetaIterations(acc, betaIn, betaOut, betaAv, pt_beta, rt_InSeg, sdOut_dr, drt_tl_axis, lIn);
-
+    
     const float betaInMMSF = (alpaka::math::abs(acc, betaInRHmin + betaInRHmax) > 0)
                                  ? (2.f * betaIn / alpaka::math::abs(acc, betaInRHmin + betaInRHmax))
                                  : 0.f;  //mean value of min,max is the old betaIn
@@ -1017,14 +1168,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confimm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
-    const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_InLo),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_OutLo),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaInAbsReg = alpaka::math::max(
+        acc,
+        alpaka::math::abs(acc, alpha_InLo),
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc,
+        alpaka::math::abs(acc, alpha_OutLo),
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1045,17 +1196,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dBetaRes = 0.02f / alpaka::math::min(acc, sdOut_d, drt_InSeg);
     float dBetaCut2 =
-        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaROut2 +
+        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaROut2 + 
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
 
     dBeta = betaIn - betaOut;
     return dBeta * dBeta <= dBetaCut2;
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletdBetaCutBBEE(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletdBetaCutBBEE(TAcc const& acc,
                                                                 ModulesConst modules,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
@@ -1221,7 +1372,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletdBetaCutEEEE(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletdBetaCutEEEE(TAcc const& acc,
                                                                 ModulesConst modules,
                                                                 MiniDoubletsConst mds,
                                                                 SegmentsConst segments,
@@ -1351,7 +1502,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletdBetaAlgoSelector(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletdBetaAlgoSelector(TAcc const& acc,
                                                                      ModulesConst modules,
                                                                      MiniDoubletsConst mds,
                                                                      SegmentsConst segments,
@@ -1374,7 +1525,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (innerInnerLowerModuleSubdet == Barrel and innerOuterLowerModuleSubdet == Barrel and
         outerInnerLowerModuleSubdet == Barrel and outerOuterLowerModuleSubdet == Barrel) {
-      return runQuintupletdBetaCutBBBB(acc,
+      return runQuadrupletdBetaCutBBBB(acc,
                                        modules,
                                        mds,
                                        segments,
@@ -1392,7 +1543,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == Barrel and innerOuterLowerModuleSubdet == Barrel and
                outerInnerLowerModuleSubdet == Endcap and outerOuterLowerModuleSubdet == Endcap) {
-      return runQuintupletdBetaCutBBEE(acc,
+      return runQuadrupletdBetaCutBBEE(acc,
                                        modules,
                                        mds,
                                        segments,
@@ -1410,7 +1561,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == Barrel and innerOuterLowerModuleSubdet == Barrel and
                outerInnerLowerModuleSubdet == Barrel and outerOuterLowerModuleSubdet == Endcap) {
-      return runQuintupletdBetaCutBBBB(acc,
+      return runQuadrupletdBetaCutBBBB(acc,
                                        modules,
                                        mds,
                                        segments,
@@ -1428,7 +1579,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == Barrel and innerOuterLowerModuleSubdet == Endcap and
                outerInnerLowerModuleSubdet == Endcap and outerOuterLowerModuleSubdet == Endcap) {
-      return runQuintupletdBetaCutBBEE(acc,
+      return runQuadrupletdBetaCutBBEE(acc,
                                        modules,
                                        mds,
                                        segments,
@@ -1446,7 +1597,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        ptCut);
     } else if (innerInnerLowerModuleSubdet == Endcap and innerOuterLowerModuleSubdet == Endcap and
                outerInnerLowerModuleSubdet == Endcap and outerOuterLowerModuleSubdet == Endcap) {
-      return runQuintupletdBetaCutEEEE(acc,
+      return runQuadrupletdBetaCutEEEE(acc,
                                        modules,
                                        mds,
                                        segments,
@@ -1465,10 +1616,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     return false;
-  }
+  };
 
   template <typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuintupletDefaultAlgo(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runQuadrupletDefaultAlgo(TAcc const& acc,
                                                                ModulesConst modules,
                                                                MiniDoubletsConst mds,
                                                                SegmentsConst segments,
@@ -1477,75 +1628,221 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                uint16_t lowerModuleIndex2,
                                                                uint16_t lowerModuleIndex3,
                                                                uint16_t lowerModuleIndex4,
-                                                               uint16_t lowerModuleIndex5,
                                                                unsigned int innerTripletIndex,
                                                                unsigned int outerTripletIndex,
-                                                               float& innerRadius,
-                                                               float& outerRadius,
-                                                               float& bridgeRadius,
-                                                               float& regressionCenterX,
-                                                               float& regressionCenterY,
+                                                               float& regressionG,
+                                                               float& regressionF,
                                                                float& regressionRadius,
-                                                               float& rzChiSquared,
+                                                               float& nonAnchorRegressionRadius,
                                                                float& chiSquared,
+                                                               const float ptCut,
+                                                               float& rzChiSquared,
                                                                float& nonAnchorChiSquared,
-                                                               float& dBeta1,
-                                                               float& dBeta2,
+                                                               float& dBeta,
+                                                               float& promptScore,
+                                                               float& displacedScore,
+                                                               float& fakeScore,
+                                                               float& x_5,
+                                                               bool& tightDNNFlag,
                                                                bool& tightCutFlag,
-                                                               float (&t5Embed)[Params_T5::kEmbed],
-                                                               const float ptCut) {
+                                                               float* error2s) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
-    unsigned int thirdSegmentIndex = triplets.segmentIndices()[outerTripletIndex][0];
+    unsigned int thirdSegmentIndex = triplets.segmentIndices()[outerTripletIndex][0]; //second and third segments are the same here
     unsigned int fourthSegmentIndex = triplets.segmentIndices()[outerTripletIndex][1];
 
+    unsigned int innerOuterInnerMiniDoubletIndex =
+        segments.mdIndices()[secondSegmentIndex][0];  //inner triplet outer segment inner MD index
     unsigned int innerOuterOuterMiniDoubletIndex =
         segments.mdIndices()[secondSegmentIndex][1];  //inner triplet outer segment outer MD index
     unsigned int outerInnerInnerMiniDoubletIndex =
         segments.mdIndices()[thirdSegmentIndex][0];  //outer triplet inner segment inner MD index
+    unsigned int outerOuterInnerMiniDoubletIndex =
+        segments.mdIndices()[thirdSegmentIndex][1];  //outer triplet outer segment inner MD index
 
-    //this cut reduces the number of candidates by a factor of 3, i.e., 2 out of 3 warps can end right here!
-    if (innerOuterOuterMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
+    //check if the 2 T3s have a common LS
+    if (innerOuterInnerMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
+      return false;
+    if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
+      return false; 
+    
+    // require both T3s to have the same charge
+    int innerT3charge = triplets.charge()[innerTripletIndex];
+    int outerT3charge = triplets.charge()[outerTripletIndex];
+    if (innerT3charge != outerT3charge)
       return false;
 
     unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
     unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
-    unsigned int fourthMDIndex = segments.mdIndices()[thirdSegmentIndex][1];
-    unsigned int fifthMDIndex = segments.mdIndices()[fourthSegmentIndex][1];
+    unsigned int fourthMDIndex = segments.mdIndices()[fourthSegmentIndex][1]; 
 
     float x1 = mds.anchorX()[firstMDIndex];
     float x2 = mds.anchorX()[secondMDIndex];
     float x3 = mds.anchorX()[thirdMDIndex];
     float x4 = mds.anchorX()[fourthMDIndex];
-    float x5 = mds.anchorX()[fifthMDIndex];
 
     float y1 = mds.anchorY()[firstMDIndex];
     float y2 = mds.anchorY()[secondMDIndex];
     float y3 = mds.anchorY()[thirdMDIndex];
     float y4 = mds.anchorY()[fourthMDIndex];
-    float y5 = mds.anchorY()[fifthMDIndex];
 
-    float g, f;
-    outerRadius = triplets.radius()[outerTripletIndex];
-    std::tie(bridgeRadius, g, f) = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4);
-    innerRadius = triplets.radius()[innerTripletIndex];
+    float inner_circleCenterX = triplets.centerX()[innerTripletIndex];
+    float inner_circleCenterY = triplets.centerY()[innerTripletIndex];
+    float innerRadius = triplets.radius()[innerTripletIndex];
+    float outerRadius = triplets.radius()[outerTripletIndex];
+    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
+    float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
 
-    bool inference = lst::t5dnn::runInference(acc,
+    const int moduleType1 = modules.moduleType()[lowerModuleIndex1];  //0 is ps, 1 is 2s
+    const int moduleType2 = modules.moduleType()[lowerModuleIndex2];
+    const int moduleType3 = modules.moduleType()[lowerModuleIndex3];
+    const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
+    
+    for (size_t i = 0; i < 4; i++) {
+      float error2;
+      int moduleTypei;
+      if (i == 0) {
+        moduleTypei = moduleType1;
+      } else if (i == 1) {
+        moduleTypei = moduleType2;
+      } else if (i == 2) {
+        moduleTypei = moduleType3;
+      } else if (i == 3) {
+        moduleTypei = moduleType4;
+      } 
+      if (moduleTypei == 0) {
+        error2 = kPixelPSZpitch * kPixelPSZpitch;
+      } else  //2S modules
+      {
+        error2 = kStrip2SZpitch * kStrip2SZpitch;
+      }
+
+      //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
+      float drdz;
+      short side, subdets;
+      if (i == 0) {
+        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex1]);
+        side = modules.sides()[lowerModuleIndex1];
+        subdets = modules.subdets()[lowerModuleIndex1];
+      }
+      if (i == 1) {
+        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex2]);
+        side = modules.sides()[lowerModuleIndex2];
+        subdets = modules.subdets()[lowerModuleIndex2];
+      }
+      if (i == 2) {
+        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex3]);
+        side = modules.sides()[lowerModuleIndex3];
+        subdets = modules.subdets()[lowerModuleIndex3];
+      }
+      if (i==0 || i == 1 || i == 2) {
+        float projection_missing2 = 1.f;
+        if (drdz < 1)
+          projection_missing2 = ((subdets == Endcap) or (side == Center))
+                                    ? 1.f
+                                    : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+        if (drdz > 1)
+          projection_missing2 = ((subdets == Endcap) or (side == Center))
+                                    ? 1.f
+                                    : (drdz * drdz) / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
+        error2 = error2 * projection_missing2;
+      }  
+      error2s[i] = error2;
+    }
+    
+    // 4 categories for sigmas
+    float sigmas2[4], delta1[4], delta2[4], slopes[4];
+    bool isFlat[4];
+
+    float xVec[] = {x1, x2, x3, x4};
+    float yVec[] = {y1, y2, y3, y4};
+
+    const uint16_t lowerModuleIndices[] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
+
+    computeSigmasForRegressionT4(acc, modules, lowerModuleIndices, delta1, delta2, slopes, isFlat);
+    regressionRadius = computeRadiusUsingRegressionT4(acc,
+                                                    Params_T4::kLayers,
+                                                    xVec,
+                                                    yVec,
+                                                    delta1,
+                                                    delta2,
+                                                    slopes,
+                                                    isFlat,
+                                                    regressionG,
+                                                    regressionF,
+                                                    sigmas2,
+                                                    chiSquared);
+
+    //compute the other chisquared
+    //non anchor is always shifted for tilted and endcap!
+    float nonAnchorDelta1[Params_T4::kLayers], nonAnchorDelta2[Params_T4::kLayers], nonAnchorSlopes[Params_T4::kLayers];
+    float nonAnchorxs[] = {mds.outerX()[firstMDIndex],
+                           mds.outerX()[secondMDIndex],
+                           mds.outerX()[thirdMDIndex],
+                           mds.outerX()[fourthMDIndex]};
+    float nonAnchorys[] = {mds.outerY()[firstMDIndex],
+                           mds.outerY()[secondMDIndex],
+                           mds.outerY()[thirdMDIndex],
+                           mds.outerY()[fourthMDIndex]};
+
+    computeSigmasForRegressionT4(acc,
+                               modules,
+                               lowerModuleIndices,
+                               nonAnchorDelta1,
+                               nonAnchorDelta2,
+                               nonAnchorSlopes,
+                               isFlat,
+                               Params_T4::kLayers,
+                               false);
+    
+    nonAnchorRegressionRadius = computeRadiusUsingRegressionT4(acc,
+                                                    Params_T4::kLayers,
+                                                    nonAnchorxs,
+                                                    nonAnchorys,
+                                                    nonAnchorDelta1,
+                                                    nonAnchorDelta2,
+                                                    nonAnchorSlopes,
+                                                    isFlat,
+                                                    regressionG,
+                                                    regressionF,
+                                                    sigmas2,
+                                                    chiSquared);                           
+
+    bool inference = lst::t4dnn::runInference(acc,
                                               mds,
+                                              modules,
                                               firstMDIndex,
                                               secondMDIndex,
                                               thirdMDIndex,
                                               fourthMDIndex,
-                                              fifthMDIndex,
+                                              lowerModuleIndex1,
+                                              lowerModuleIndex2,
+                                              lowerModuleIndex3,
+                                              lowerModuleIndex4,
                                               innerRadius,
                                               outerRadius,
-                                              bridgeRadius);
-    tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
-    if (!inference)                             // T5-building cut
+                                              promptScore,
+                                              displacedScore,
+                                              fakeScore,
+                                              tightDNNFlag,
+                                              error2s,
+                                              regressionRadius,
+                                              nonAnchorRegressionRadius,
+                                              triplets.fakeScore()[innerTripletIndex],
+                                              triplets.promptScore()[innerTripletIndex],
+                                              triplets.displacedScore()[innerTripletIndex],
+                                              triplets.fakeScore()[outerTripletIndex],
+                                              triplets.promptScore()[outerTripletIndex],
+                                              triplets.displacedScore()[outerTripletIndex]);
+
+    if (!inference)
       return false;
 
-    if (not runQuintupletdBetaAlgoSelector(acc,
+    //run Beta Selector for high pT T4s
+    if (pt >10) {
+      if (not runQuadrupletdBetaAlgoSelector(acc,
                                            modules,
                                            mds,
                                            segments,
@@ -1559,175 +1856,107 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                            secondMDIndex,
                                            thirdMDIndex,
                                            fourthMDIndex,
-                                           dBeta1,
+                                           dBeta,
                                            ptCut))
       return false;
+    }
+    
+    if (not passT4RZConstraint(acc,
+                              modules,
+                              mds,
+                              firstMDIndex, 
+                              secondMDIndex, 
+                              thirdMDIndex, 
+                              fourthMDIndex, 
+                              lowerModuleIndex1, 
+                              lowerModuleIndex2, 
+                              lowerModuleIndex3, 
+                              lowerModuleIndex4, 
+                              rzChiSquared, 
+                              inner_pt, 
+                              innerRadius, 
+                              inner_circleCenterX, 
+                              inner_circleCenterY, 
+                              innerT3charge,
+                              tightCutFlag))
+    return false; 
 
-    if (not runQuintupletdBetaAlgoSelector(acc,
-                                           modules,
-                                           mds,
-                                           segments,
-                                           lowerModuleIndex1,
-                                           lowerModuleIndex2,
-                                           lowerModuleIndex4,
-                                           lowerModuleIndex5,
-                                           firstSegmentIndex,
-                                           fourthSegmentIndex,
-                                           firstMDIndex,
-                                           secondMDIndex,
-                                           fourthMDIndex,
-                                           fifthMDIndex,
-                                           dBeta2,
-                                           ptCut))
-      return false;
-
-    g = triplets.centerX()[innerTripletIndex];
-    f = triplets.centerY()[innerTripletIndex];
-
-    float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
-
-    if (not passT5RZConstraint(acc,
-                               modules,
-                               mds,
-                               firstMDIndex,
-                               secondMDIndex,
-                               thirdMDIndex,
-                               fourthMDIndex,
-                               fifthMDIndex,
-                               lowerModuleIndex1,
-                               lowerModuleIndex2,
-                               lowerModuleIndex3,
-                               lowerModuleIndex4,
-                               lowerModuleIndex5,
-                               rzChiSquared,
-                               inner_pt,
-                               innerRadius,
-                               g,
-                               f,
-                               tightCutFlag))
-      return false;
-
-    lst::t5embdnn::runEmbed(acc,
-                            mds,
-                            firstMDIndex,
-                            secondMDIndex,
-                            thirdMDIndex,
-                            fourthMDIndex,
-                            fifthMDIndex,
-                            innerRadius,
-                            outerRadius,
-                            bridgeRadius,
-                            triplets.fakeScore()[innerTripletIndex],
-                            triplets.promptScore()[innerTripletIndex],
-                            triplets.displacedScore()[innerTripletIndex],
-                            triplets.fakeScore()[outerTripletIndex],
-                            triplets.promptScore()[outerTripletIndex],
-                            triplets.displacedScore()[outerTripletIndex],
-                            t5Embed);
-
-    // 5 categories for sigmas
-    float sigmas2[5], delta1[5], delta2[5], slopes[5];
-    bool isFlat[5];
-
-    float xVec[] = {x1, x2, x3, x4, x5};
-    float yVec[] = {y1, y2, y3, y4, y5};
-    const uint16_t lowerModuleIndices[] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
-
-    computeSigmasForRegression(acc, modules, lowerModuleIndices, delta1, delta2, slopes, isFlat);
-    regressionRadius = computeRadiusUsingRegression(acc,
-                                                    Params_T5::kLayers,
-                                                    xVec,
-                                                    yVec,
-                                                    delta1,
-                                                    delta2,
-                                                    slopes,
-                                                    isFlat,
-                                                    regressionCenterX,
-                                                    regressionCenterY,
-                                                    sigmas2,
-                                                    chiSquared);
-
-    //compute the other chisquared
-    //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[Params_T5::kLayers], nonAnchorDelta2[Params_T5::kLayers], nonAnchorSlopes[Params_T5::kLayers];
-    float nonAnchorxs[] = {mds.outerX()[firstMDIndex],
-                           mds.outerX()[secondMDIndex],
-                           mds.outerX()[thirdMDIndex],
-                           mds.outerX()[fourthMDIndex],
-                           mds.outerX()[fifthMDIndex]};
-    float nonAnchorys[] = {mds.outerY()[firstMDIndex],
-                           mds.outerY()[secondMDIndex],
-                           mds.outerY()[thirdMDIndex],
-                           mds.outerY()[fourthMDIndex],
-                           mds.outerY()[fifthMDIndex]};
-
-    computeSigmasForRegression(acc,
-                               modules,
-                               lowerModuleIndices,
-                               nonAnchorDelta1,
-                               nonAnchorDelta2,
-                               nonAnchorSlopes,
-                               isFlat,
-                               Params_T5::kLayers,
-                               false);
-    nonAnchorChiSquared = computeChiSquared(acc,
-                                            Params_T5::kLayers,
+    
+    nonAnchorChiSquared = computeT4ChiSquared(acc,
+                                            Params_T4::kLayers,
                                             nonAnchorxs,
                                             nonAnchorys,
                                             nonAnchorDelta1,
                                             nonAnchorDelta2,
                                             nonAnchorSlopes,
                                             isFlat,
-                                            regressionCenterX,
-                                            regressionCenterY,
-                                            regressionRadius);
-    return true;
-  }
+                                            regressionG,
+                                            regressionF,
+                                            regressionRadius); 
 
-  struct CreateQuintuplets {
+    return true;
+  };
+
+  struct CreateQuadruplets {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOccupancy,
-                                  Quintuplets quintuplets,
-                                  QuintupletsOccupancy quintupletsOccupancy,
+                                  Quadruplets quadruplets,
+                                  QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
-                                  uint16_t nEligibleT5Modules,
+                                  uint16_t nEligibleT4Modules, 
                                   const float ptCut) const {
-      for (int iter : cms::alpakatools::uniform_elements_z(acc, nEligibleT5Modules)) {
-        uint16_t lowerModule1 = ranges.indicesOfEligibleT5Modules()[iter];
+      for (int iter : cms::alpakatools::uniform_elements_z(acc, nEligibleT4Modules)) {
+        uint16_t lowerModule1 = ranges.indicesOfEligibleT4Modules()[iter];
         short layer2_adjustment;
+        short md_adjustment;
         int layer = modules.layers()[lowerModule1];
         if (layer == 1) {
           layer2_adjustment = 1;
-        }  // get upper segment to be in second layer
-        else if (layer == 2) {
-          layer2_adjustment = 0;
-        }  // get lower segment to be in second layer
+          md_adjustment = 1;
+        }  // get upper segment to be in third layer
+        else if (layer ==2) {
+          layer2_adjustment = 1; 
+          md_adjustment = 0;
+        }  // get lower segment to be in third layer
         else {
-          continue;
+          layer2_adjustment = 0; 
+          md_adjustment = 0;
         }
         unsigned int nInnerTriplets = tripletsOccupancy.nTriplets()[lowerModule1];
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           unsigned int innerTripletIndex = ranges.tripletModuleIndices()[lowerModule1] + innerTripletArrayIndex;
+          // if (triplets.partOfPT5[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in pT5s
+          // if (triplets.partOfPT3[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in pT3s
+          // if (triplets.partOfT5[innerTripletIndex])
+          //     continue;  //don't create T4s for T3s accounted in T5s
           uint16_t lowerModule2 = triplets.lowerModuleIndices()[innerTripletIndex][1];
-          uint16_t lowerModule3 = triplets.lowerModuleIndices()[innerTripletIndex][2];
-          unsigned int nOuterTriplets = tripletsOccupancy.nTriplets()[lowerModule3];
+          unsigned int nOuterTriplets = tripletsOccupancy.nTriplets()[lowerModule2];
           for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
-            unsigned int outerTripletIndex = ranges.tripletModuleIndices()[lowerModule3] + outerTripletArrayIndex;
-            uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][1];
-            uint16_t lowerModule5 = triplets.lowerModuleIndices()[outerTripletIndex][2];
-
-            float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
-                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
-
-            float t5Embed[Params_T5::kEmbed] = {0.f};
-
+            unsigned int outerTripletIndex = ranges.tripletModuleIndices()[lowerModule2] + outerTripletArrayIndex;
+            // if (triplets.partOfPT5[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in pT5s
+            // if (triplets.partOfPT3[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in pT3s
+            // if (triplets.partOfT5[outerTripletIndex])
+            //   continue;  //don't create T4s for T3s accounted in T5s
+            uint16_t lowerModule3 = triplets.lowerModuleIndices()[outerTripletIndex][1];
+            uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][2];
+            float innerRadius = triplets.radius()[innerTripletIndex];
+            float outerRadius = triplets.radius()[outerTripletIndex];  
+            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
+            float error2s[4]; 
+            bool tightDNNFlag = false;
             bool tightCutFlag = false;
-            bool success = runQuintupletDefaultAlgo(acc,
+      
+            float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+
+            bool success = runQuadrupletDefaultAlgo(acc,
                                                     modules,
                                                     mds,
                                                     segments,
@@ -1736,80 +1965,81 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     lowerModule2,
                                                     lowerModule3,
                                                     lowerModule4,
-                                                    lowerModule5,
                                                     innerTripletIndex,
                                                     outerTripletIndex,
-                                                    innerRadius,
-                                                    outerRadius,
-                                                    bridgeRadius,
-                                                    regressionCenterX,
-                                                    regressionCenterY,
+                                                    regressionG,
+                                                    regressionF,
                                                     regressionRadius,
-                                                    rzChiSquared,
+                                                    nonAnchorRegressionRadius,
                                                     chiSquared,
+                                                    ptCut,
+                                                    rzChiSquared,
                                                     nonAnchorChiSquared,
-                                                    dBeta1,
-                                                    dBeta2,
+                                                    dBeta,
+                                                    promptScore,
+                                                    displacedScore,
+                                                    fakeScore,
+                                                    x_5,
+                                                    tightDNNFlag,
                                                     tightCutFlag,
-                                                    t5Embed,
-                                                    ptCut);
-
+                                                    error2s); 
             if (success) {
-              int totOccupancyQuintuplets = alpaka::atomicAdd(
-                  acc, &quintupletsOccupancy.totOccupancyQuintuplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
-              if (totOccupancyQuintuplets >= ranges.quintupletModuleOccupancy()[lowerModule1]) {
+              int totOccupancyQuadruplets = alpaka::atomicAdd(
+                  acc, &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
+              if (totOccupancyQuadruplets >= ranges.quadrupletModuleOccupancy()[lowerModule1]) {
 #ifdef WARNINGS
-                printf("Quintuplet excess alert! Module index = %d, Occupancy = %d\n",
+                printf("Quadruplet excess alert! Module index = %d, Occupancy = %d\n",
                        lowerModule1,
-                       totOccupancyQuintuplets);
+                       totOccupancyQuadruplets);
 #endif
               } else {
-                int quintupletModuleIndex = alpaka::atomicAdd(
-                    acc, &quintupletsOccupancy.nQuintuplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
+                int quadrupletModuleIndex = alpaka::atomicAdd(
+                    acc, &quadrupletsOccupancy.nQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
                 //this if statement should never get executed!
-                if (ranges.quintupletModuleIndices()[lowerModule1] == -1) {
+                if (ranges.quadrupletModuleIndices()[lowerModule1] == -1) {
 #ifdef WARNINGS
-                  printf("Quintuplets : no memory for module at module index = %d\n", lowerModule1);
+                  printf("Quadruplets : no memory for module at module index = %d\n", lowerModule1);
 #endif
                 } else {
-                  unsigned int quintupletIndex = ranges.quintupletModuleIndices()[lowerModule1] + quintupletModuleIndex;
-                  float phi = mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][0]]
-                                                                  [layer2_adjustment]];
-                  float eta = mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][0]]
-                                                                  [layer2_adjustment]];
-                  float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+                  unsigned int quadrupletIndex =
+                      ranges.quadrupletModuleIndices()[lowerModule1] + quadrupletModuleIndex;
+                  float phi =
+                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
+                  float eta =
+                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
+                  
                   float scores = chiSquared + nonAnchorChiSquared;
-                  addQuintupletToMemory(triplets,
-                                        quintuplets,
+                  addQuadrupletToMemory(triplets,
+                                        quadruplets,
                                         innerTripletIndex,
                                         outerTripletIndex,
                                         lowerModule1,
                                         lowerModule2,
                                         lowerModule3,
                                         lowerModule4,
-                                        lowerModule5,
                                         innerRadius,
-                                        bridgeRadius,
                                         outerRadius,
-                                        regressionCenterX,
-                                        regressionCenterY,
-                                        regressionRadius,
-                                        rzChiSquared,
-                                        chiSquared,
-                                        nonAnchorChiSquared,
-                                        dBeta1,
-                                        dBeta2,
                                         pt,
                                         eta,
                                         phi,
                                         scores,
                                         layer,
-                                        quintupletIndex,
-                                        t5Embed,
-                                        tightCutFlag);
+                                        quadrupletIndex,
+                                        rzChiSquared,
+                                        dBeta,
+                                        promptScore,
+                                        displacedScore,
+                                        fakeScore,
+                                        regressionG,
+                                        regressionF,
+                                        regressionRadius,
+                                        nonAnchorRegressionRadius,
+                                        tightDNNFlag,
+                                        tightCutFlag,
+                                        error2s);
 
-                  triplets.partOfT5()[quintuplets.tripletIndices()[quintupletIndex][0]] = true;
-                  triplets.partOfT5()[quintuplets.tripletIndices()[quintupletIndex][1]] = true;
+                  // triplets.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
+                  // triplets.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;
                 }
               }
             }
@@ -1819,7 +2049,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  struct CreateEligibleModulesListForQuintuplets {
+  struct CreateEligibleModulesListForQuadruplets {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
                                   TripletsOccupancyConst tripletsOccupancy,
@@ -1830,36 +2060,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
 
       // Initialize variables in shared memory and set to 0
-      int& nEligibleT5Modulesx = alpaka::declareSharedVar<int, __COUNTER__>(acc);
-      int& nTotalQuintupletsx = alpaka::declareSharedVar<int, __COUNTER__>(acc);
+      int& nEligibleT4Modulesx = alpaka::declareSharedVar<int, __COUNTER__>(acc);
+      int& nTotalQuadrupletsx = alpaka::declareSharedVar<int, __COUNTER__>(acc);
       if (cms::alpakatools::once_per_block(acc)) {
-        nTotalQuintupletsx = 0;
-        nEligibleT5Modulesx = 0;
+        nTotalQuadrupletsx = 0;
+        nEligibleT4Modulesx = 0;
       }
       alpaka::syncBlockThreads(acc);
 
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
-          {336, 414, 231, 146},  // category 0
-          {0, 0, 0, 0},          // category 1
-          {0, 0, 0, 0},          // category 2
-          {0, 0, 191, 106}       // category 3
+          {500000, 500000, 500000, 500000},  // category 0
+          {500000, 500000, 500000, 500000},          // category 1
+          {500000, 500000, 500000, 500000},          // category 2
+          {500000, 500000, 500000, 500000}       // category 3
       };
 
-      // Occupancy matrix for 0.6 GeV pT Cut, 99.99%
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99% //FIXME -recalculate 
       constexpr int p06_occupancy_matrix[4][4] = {
-          {325, 237, 217, 176},  // category 0
-          {0, 0, 0, 0},          // category 1
-          {0, 0, 0, 0},          // category 2
-          {0, 0, 129, 180}       // category 3
+          {1500000, 1500000, 1500000, 1500000},  // category 0
+          {1500000, 1500000, 1500000, 1500000},          // category 1
+          {1500000, 1500000, 1500000, 1500000},          // category 2
+          {1500000, 1500000, 1500000, 1500000}       // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut
       const auto& occupancy_matrix = (ptCut < 0.8f) ? p06_occupancy_matrix : p08_occupancy_matrix;
 
       for (int i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
-        // Condition for a quintuple to exist for a module
-        // TCs don't exist for layers 5 and 6 barrel, and layers 2,3,4,5 endcap
+        // Condition for a quadruple to exist for a module
+        // T4s don't exist for layers 4, 5, 6 barrel, and layers 3,4,5 endcap
         short module_rings = modules.rings()[i];
         short module_layers = modules.layers()[i];
         short module_subdets = modules.subdets()[i];
@@ -1867,9 +2097,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         if (tripletsOccupancy.nTriplets()[i] == 0)
           continue;
-        if (module_subdets == Barrel && module_layers >= 3)
+        if (module_subdets == Barrel and module_layers > 3)
           continue;
-        if (module_subdets == Endcap && module_layers > 1)
+        if (module_subdets == Endcap and module_layers > 2)
           continue;
 
         int dynamic_count = 0;
@@ -1881,7 +2111,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Loop over all triplets that live in module i
         for (int t = 0; t < nTriplets_i; t++) {
           int tripletIndex = firstTripletIdx + t;
-          uint16_t outerModule = triplets.lowerModuleIndices()[tripletIndex][2];
+          uint16_t outerModule = triplets.lowerModuleIndices()[tripletIndex][1];
           dynamic_count += tripletsOccupancy.nTriplets()[outerModule];
         }
 
@@ -1896,42 +2126,47 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Get matrix-based cap (use dynamic_count as fallback)
         int matrix_cap =
             (category_number != -1 && eta_number != -1) ? occupancy_matrix[category_number][eta_number] : 0;
+
         // Cap occupancy at minimum of dynamic count and matrix value
         int occupancy = alpaka::math::min(acc, dynamic_count, matrix_cap);
+        // if (dynamic_count > matrix_cap){
+        //   printf("dynamic count: %d, matrix_cap: %d\n", dynamic_count, matrix_cap);
+        // }
 
-        int nEligibleT5Modules = alpaka::atomicAdd(acc, &nEligibleT5Modulesx, 1, alpaka::hierarchy::Threads{});
-        int nTotQ = alpaka::atomicAdd(acc, &nTotalQuintupletsx, occupancy, alpaka::hierarchy::Threads{});
+        int nEligibleT4Modules = alpaka::atomicAdd(acc, &nEligibleT4Modulesx, 1, alpaka::hierarchy::Threads{});
+        int nTotQ = alpaka::atomicAdd(acc, &nTotalQuadrupletsx, occupancy, alpaka::hierarchy::Threads{});
 
-        ranges.quintupletModuleIndices()[i] = nTotQ;
-        ranges.indicesOfEligibleT5Modules()[nEligibleT5Modules] = i;
-        ranges.quintupletModuleOccupancy()[i] = occupancy;
+        ranges.quadrupletModuleIndices()[i] = nTotQ;
+        // printf("in create elig mod list: ranges.quadrupletModuleIndices()[%d] = %d\n", i, ranges.quadrupletModuleIndices()[i]);
+        ranges.indicesOfEligibleT4Modules()[nEligibleT4Modules] = i;
+        ranges.quadrupletModuleOccupancy()[i] = occupancy;
       }
 
       // Wait for all threads to finish before reporting final values
       alpaka::syncBlockThreads(acc);
       if (cms::alpakatools::once_per_block(acc)) {
-        ranges.nEligibleT5Modules() = static_cast<uint16_t>(nEligibleT5Modulesx);
-        ranges.nTotalQuints() = static_cast<unsigned int>(nTotalQuintupletsx);
+        ranges.nEligibleT4Modules() = static_cast<uint16_t>(nEligibleT4Modulesx);
+        ranges.nTotalQuads() = static_cast<unsigned int>(nTotalQuadrupletsx);
       }
     }
   };
 
-  struct AddQuintupletRangesToEventExplicit {
+  struct AddQuadrupletRangesToEventExplicit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
-                                  QuintupletsOccupancyConst quintupletsOccupancy,
+                                  QuadrupletsOccupancyConst quadrupletsOccupancy,
                                   ObjectRanges ranges) const {
       // implementation is 1D with a single block
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
 
       for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
-        if (quintupletsOccupancy.nQuintuplets()[i] == 0 or ranges.quintupletModuleIndices()[i] == -1) {
-          ranges.quintupletRanges()[i][0] = -1;
-          ranges.quintupletRanges()[i][1] = -1;
+        if (quadrupletsOccupancy.nQuadruplets()[i] == 0 or ranges.quadrupletModuleIndices()[i] == -1) {
+          ranges.quadrupletRanges()[i][0] = -1;
+          ranges.quadrupletRanges()[i][1] = -1;
         } else {
-          ranges.quintupletRanges()[i][0] = ranges.quintupletModuleIndices()[i];
-          ranges.quintupletRanges()[i][1] =
-              ranges.quintupletModuleIndices()[i] + quintupletsOccupancy.nQuintuplets()[i] - 1;
+          ranges.quadrupletRanges()[i][0] = ranges.quadrupletModuleIndices()[i];
+          ranges.quadrupletRanges()[i][1] =
+              ranges.quadrupletModuleIndices()[i] + quadrupletsOccupancy.nQuadruplets()[i] - 1;
         }
       }
     }
