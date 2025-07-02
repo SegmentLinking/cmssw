@@ -7,8 +7,6 @@
 #include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace lst {
-  //using ArrayU32x3000x2 = std::array<std::array<unsigned int, 2>, 3000>;
-  using ArrayU32x3000x2 = edm::StdArray<edm::StdArray<unsigned int, 2>, 3000>;
 
   GENERATE_SOA_LAYOUT(ObjectRangesSoALayout,
                       SOA_COLUMN(ArrayIx2, mdRanges),
@@ -21,7 +19,6 @@ namespace lst {
                       SOA_COLUMN(int, segmentModuleOccupancy),
                       SOA_COLUMN(int, tripletModuleIndices),
                       SOA_COLUMN(int, tripletModuleOccupancy),
-                      SOA_COLUMN(ArrayU32x3000x2, tripletPreselInnerOuterSgPairs),
                       SOA_COLUMN(int, quintupletModuleIndices),
                       SOA_COLUMN(int, quintupletModuleOccupancy),
                       SOA_COLUMN(uint16_t, indicesOfEligibleT5Modules),
