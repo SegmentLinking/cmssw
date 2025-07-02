@@ -550,8 +550,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][1] = outerSegmentIndex;
               unsigned int tripletIndex =
                   ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + mIdx;
-              triplets.segmentIndices()[tripletIndex][0] = innerSegmentIndex;
-              triplets.segmentIndices()[tripletIndex][1] = outerSegmentIndex;
+              triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
+              triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
               
             }
           }
@@ -572,8 +572,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           //int outerSegmentIndex = innerOuterSgPairs[i][1];
           unsigned int tripletIndex =
                   ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + i;
-          unsigned int innerSegmentIndex = triplets.segmentIndices()[tripletIndex][0];
-          unsigned int outerSegmentIndex = triplets.segmentIndices()[tripletIndex][1];
+          unsigned int innerSegmentIndex = triplets.PreAllocatedSegmentIndices()[tripletIndex][0];
+          unsigned int outerSegmentIndex = triplets.PreAllocatedSegmentIndices()[tripletIndex][1];
           
           uint16_t middleLowerModuleIndex = segments.outerLowerModuleIndices()[innerSegmentIndex];
           uint16_t outerOuterLowerModuleIndex = segments.outerLowerModuleIndices()[outerSegmentIndex];
