@@ -470,7 +470,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
-      constexpr uint16_t maxMatchedPairs = 3000;
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc); // AtomicAdd does not support uint16_t variable
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
@@ -545,7 +544,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             // Match inner Sg and Outer Sg
             int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
 
-            if (mIdx < maxMatchedPairs) {
               //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][0] = innerSegmentIndex;
               //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][1] = outerSegmentIndex;
               unsigned int tripletIndex =
@@ -553,13 +551,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
               triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
               
-            }
           }
         }
 
-        
         alpaka::syncBlockThreads(acc);
-        if (!(matchCount<maxMatchedPairs) || matchCount==0){
+        if (matchCount==0){
           continue;
         }
 
