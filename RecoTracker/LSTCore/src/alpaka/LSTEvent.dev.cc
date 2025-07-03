@@ -413,7 +413,7 @@ void LSTEvent::createTriplets() {
                       segmentsDC_->const_view<SegmentsOccupancySoA>(),
                       tripletsDC_->view<TripletsSoA>(),
                       tripletsDC_->view<TripletsOccupancySoA>(),
-                      rangesDC_->const_view(),
+                      rangesDC_->view(),
                       index_gpu_buf.data(),
                       nonZeroModules,
                       ptCut_);
