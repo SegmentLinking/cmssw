@@ -9,7 +9,7 @@ from math import sqrt
 
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate"]
-variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy"]
+variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"] # Last six added by Kasia
 objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
@@ -36,6 +36,7 @@ parser.add_argument('--pt_cut'      ,        dest='pt_cut'      , type=float    
 parser.add_argument('--eta_cut'     ,        dest='eta_cut'     , type=float          , default=4.5, help='pseudorapidity cut [DEFAULT=4.5]')
 parser.add_argument('--compare'     , '-C' , dest='compare'     , action="store_true" , help='plot comparisons of input files')
 parser.add_argument('--comp_labels' , '-L' , dest='comp_labels' , type=str            , help='comma separated legend labels for comparison plots (e.g. reference,pT5_update')
+parser.add_argument('--jet_branches' , '-j', dest='jet_branches', action="store_true" , help='Accounts for specific jet branches in input root file for testing')
 
 
 #______________________________________________________________________________________________________
@@ -413,6 +414,18 @@ def get_chargestr(charge):
 def set_label(eff, output_name, raw_number):
     if "phi" in output_name:
         title = "#phi"
+    elif "_deltaEta" in output_name: # Added by Kasia
+        title = "#eta diffs"
+    elif "_deltaPhi" in output_name: # Added by Kasia
+        title = "#phi diffs"
+    elif "_deltaR" in output_name: # Added by Kasia
+        title = "#Delta R"
+    elif "_jet_eta" in output_name: # Added by Kasia
+        title = "jet #eta"
+    elif "_jet_phi" in output_name: # Added by Kasia
+        title = "jet #phi"
+    elif "_jet_pt" in output_name: # Added by Kasia
+        title = "jet pT"
     elif "_dz" in output_name:
         title = "z [cm]"
     elif "_dxy" in output_name:
@@ -530,6 +543,9 @@ def draw_plot(effs, nums, dens, params):
     # Set logx
     if "_pt" in output_name:
         c1.SetLogx()
+    
+    # if "_deltaR" in output_name: # Added by Kasia
+    #     c1.SetLogx()
 
     # Set title
     # print(output_name)
@@ -644,11 +660,13 @@ def plot_standard_performance_plots(args):
     # Efficiency plots
     metrics = metric_choices
     yzooms = [False, True]
+
     variables = {
             "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy"],
             "fakerate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             "duplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             }
+    if (args.jet_branches): variables["eff"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
     sels = {
             "eff": ["base", "loweta"],
             "fakerate": ["none"],
@@ -662,8 +680,16 @@ def plot_standard_performance_plots(args):
             "phi": [False, True],
             "dxy": [False, True],
             "vxy": [False, True],
-            "dz": [False, True],
+            "dz": [False, True]
             }
+    if (args.jet_branches): 
+        xcoarses["deltaEta"] = [False, True]
+        xcoarses["deltaPhi"] = [False, True]
+        xcoarses["deltaR"] = [False, True]
+        xcoarses["jet_eta"] = [False, True]
+        xcoarses["jet_phi"] = [False, True]
+        xcoarses["jet_pt"] = [False, True]
+
     types = objecttype_choices
     breakdowns = {
             "eff":{
