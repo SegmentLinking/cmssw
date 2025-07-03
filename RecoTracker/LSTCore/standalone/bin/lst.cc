@@ -103,7 +103,8 @@ int main(int argc, char **argv) {
   else if (ana.input_raw_string.EqualTo("PU200RelVal"))
     ana.input_file_list_tstring = TString::Format(
         "%s/RelValTTbar_14TeV_CMSSW_12_5_0_pre3/",
-        (TrackingNtupleDir.Replace(31, 1, "5").Replace(38, 1, "3"))
+        // (TrackingNtupleDir.Replace(31, 1, "5").Replace(38, 1, "3"))
+        TrackingNtupleDir
             .Data());  // RelVal files under CMSSW_12_5_0_pre3 directory, not CMSSW_12_2_0_pre2 as is the case for the rest of the samples
   else if (ana.input_raw_string.EqualTo("cube5"))
     ana.input_file_list_tstring =

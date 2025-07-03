@@ -554,7 +554,8 @@ def draw_plot(effs, nums, dens, params):
         set_label(eff, output_name, raw_number=False)
 
     nleg = len(legend_labels)
-    legend = r.TLegend(0.15,0.75-nleg*0.04,0.25,0.75)
+    # legend = r.TLegend(0.15,0.75-nleg*0.04,0.25,0.75)
+    legend = r.TLegend(0.15,0.75-nleg*0.04,0.35,0.75)
     for i, label in enumerate(legend_labels):
         legend.AddEntry(effs[i], label)
     legend.Draw("same")
@@ -581,6 +582,8 @@ def draw_plot(effs, nums, dens, params):
             effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
         elif "duplrate" in output_name:
             effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
+            if "etacoarsezoom" in output_name:
+                effs[0].GetYaxis().SetRangeUser(0, 0.025)
         else:
             effs[0].GetYaxis().SetRangeUser(0.6, 1.02)
 
