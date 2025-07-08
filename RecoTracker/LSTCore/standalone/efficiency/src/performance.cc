@@ -575,13 +575,11 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_phi");
-  // ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_deltaR"); // Added by Kasia
 
   // Numerator tracks' quantities
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_phi");
-  // ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_deltaR"); // Added by Kasia
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_dr_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -599,9 +597,6 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.histograms.addVecHistogram(category_name + "_dr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_phi");
   });
-  // ana.histograms.addVecHistogram(category_name + "_dr_denom_deltaR", 50 , 0  , 0.1  , [&, category_name]() {
-  //   return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_deltaR");
-  // });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_pt", getPtBounds(0), [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
@@ -617,9 +612,6 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.histograms.addVecHistogram(category_name + "_dr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_phi");
   });
-  // ana.histograms.addVecHistogram(category_name + "_dr_numer_deltaR", 50 , 0  , 0.1  , [&, category_name]() {
-  //   return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_deltaR");
-  // });
 }
 
 //__________________________________________________________________________________________________________________________________________________________________________
@@ -799,11 +791,11 @@ void fillEfficiencySet(int isimtrk,
   // https://github.com/cms-sw/cmssw/blob/7cbdb18ec6d11d5fd17ca66c1153f0f4e869b6b0/SimTracker/Common/python/trackingParticleSelector_cfi.py
   // https://github.com/cms-sw/cmssw/blob/7cbdb18ec6d11d5fd17ca66c1153f0f4e869b6b0/SimTracker/Common/interface/TrackingParticleSelector.h#L122-L124
   const float vtx_z_thresh = 30;
-  const float vtx_perp_thresh = 10;
+  const float vtx_perp_thresh = 2.5;
 
   if (pt > 0 && jet_eta < 140 && jet_eta > -140 && (jet_eta > -999 && deltaEta > -999)) {
     // N minus eta cut
-    if (pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+    if (pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
       // vs. eta plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_eta", eta);
       if (pass)
@@ -813,7 +805,7 @@ void fillEfficiencySet(int isimtrk,
     }
 
     // N minus pt cut
-    if (abs(eta) < ana.eta_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+    if (std::abs(eta) < ana.eta_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
       // vs. pt plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_pt", pt);
       if (pass)
@@ -823,7 +815,7 @@ void fillEfficiencySet(int isimtrk,
     }
 
     // N minus dxy cut
-    if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh) {
+    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh) {
       // vs. dxy plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dxy", dxy);
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_vxy", vtx_perp);
@@ -837,7 +829,7 @@ void fillEfficiencySet(int isimtrk,
     }
 
     // N minus dz cut
-    if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_perp) < vtx_perp_thresh) {
+    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_perp) < vtx_perp_thresh) {
       // vs. dz plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dz", dz);
       if (pass)
@@ -847,7 +839,8 @@ void fillEfficiencySet(int isimtrk,
     }
 
     // All phase-space cuts
-    if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and
+        std::abs(vtx_perp) < vtx_perp_thresh) {
       // vs. Phi plot
       ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_phi", phi);
       if (pass)
@@ -947,10 +940,10 @@ void fillEfficiencySet(int isimtrk,
   // https://github.com/cms-sw/cmssw/blob/7cbdb18ec6d11d5fd17ca66c1153f0f4e869b6b0/SimTracker/Common/python/trackingParticleSelector_cfi.py
   // https://github.com/cms-sw/cmssw/blob/7cbdb18ec6d11d5fd17ca66c1153f0f4e869b6b0/SimTracker/Common/interface/TrackingParticleSelector.h#L122-L124
   const float vtx_z_thresh = 30;
-  const float vtx_perp_thresh = 10;
+  const float vtx_perp_thresh = 2.5;
 
   // N minus eta cut
-  if (pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+  if (pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
     // vs. eta plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_eta", eta);
     if (pass)
@@ -960,7 +953,7 @@ void fillEfficiencySet(int isimtrk,
   }
 
   // N minus pt cut
-  if (abs(eta) < ana.eta_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+  if (std::abs(eta) < ana.eta_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
     // vs. pt plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_pt", pt);
     if (pass)
@@ -970,7 +963,7 @@ void fillEfficiencySet(int isimtrk,
   }
 
   // N minus dxy cut
-  if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh) {
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh) {
     // vs. dxy plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dxy", dxy);
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_vxy", vtx_perp);
@@ -984,7 +977,7 @@ void fillEfficiencySet(int isimtrk,
   }
 
   // N minus dz cut
-  if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_perp) < vtx_perp_thresh) {
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_perp) < vtx_perp_thresh) {
     // vs. dz plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dz", dz);
     if (pass)
@@ -994,7 +987,8 @@ void fillEfficiencySet(int isimtrk,
   }
 
   // All phase-space cuts
-  if (abs(eta) < ana.eta_cut and pt > ana.pt_cut and abs(vtx_z) < vtx_z_thresh and abs(vtx_perp) < vtx_perp_thresh) {
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and
+      std::abs(vtx_perp) < vtx_perp_thresh) {
     // vs. Phi plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_phi", phi);
     if (pass)

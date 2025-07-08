@@ -9,7 +9,7 @@ from math import sqrt
 
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate"]
-variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"] # Last six added by Kasia
+variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
 objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
@@ -414,17 +414,17 @@ def get_chargestr(charge):
 def set_label(eff, output_name, raw_number):
     if "phi" in output_name:
         title = "#phi"
-    elif "_deltaEta" in output_name: # Added by Kasia
+    elif "_deltaEta" in output_name:
         title = "#eta diffs"
-    elif "_deltaPhi" in output_name: # Added by Kasia
+    elif "_deltaPhi" in output_name:
         title = "#phi diffs"
-    elif "_deltaR" in output_name: # Added by Kasia
+    elif "_deltaR" in output_name:
         title = "#Delta R"
-    elif "_jet_eta" in output_name: # Added by Kasia
+    elif "_jet_eta" in output_name:
         title = "jet #eta"
-    elif "_jet_phi" in output_name: # Added by Kasia
+    elif "_jet_phi" in output_name:
         title = "jet #phi"
-    elif "_jet_pt" in output_name: # Added by Kasia
+    elif "_jet_pt" in output_name:
         title = "jet pT"
     elif "_dz" in output_name:
         title = "z [cm]"
@@ -543,13 +543,8 @@ def draw_plot(effs, nums, dens, params):
     # Set logx
     if "_pt" in output_name:
         c1.SetLogx()
-    
-    # if "_deltaR" in output_name: # Added by Kasia
-    #     c1.SetLogx()
 
     # Set title
-    # print(output_name)
-    # print(parse_plot_name(output_name))
     effs[0].SetTitle(parse_plot_name(output_name))
 
     # Draw the efficiency graphs
