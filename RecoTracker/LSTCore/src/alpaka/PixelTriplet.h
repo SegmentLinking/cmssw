@@ -787,16 +787,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     centerX = 0;
     centerY = 0;
 
-    if (runDNN and !lst::pt3dnn::runInference(acc,
-                                              rPhiChiSquared,
-                                              tripletRadius,
-                                              pixelRadius,
-                                              pixelRadiusError,
-                                              rzChiSquared,
-                                              pixelSeeds.eta()[pixelSegmentArrayIndex],
-                                              pixelSegmentPt)) {
-      return false;
-    }
+    // if (runDNN and !lst::pt3dnn::runInference(acc,
+    //                                           rPhiChiSquared,
+    //                                           tripletRadius,
+    //                                           pixelRadius,
+    //                                           pixelRadiusError,
+    //                                           rzChiSquared,
+    //                                           pixelSeeds.eta()[pixelSegmentArrayIndex],
+    //                                           pixelSegmentPt)) {
+    //   return false;
+    // }
 
     return true;
   }

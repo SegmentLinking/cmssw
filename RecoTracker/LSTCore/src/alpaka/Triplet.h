@@ -702,10 +702,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    ptCut))
       return false;
 
-    bool inference =
-        lst::t3dnn::runInference(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);
-    if (!inference)  // T3-building cut
-      return false;
+    // bool inference =
+    //     lst::t3dnn::runInference(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);
+    // if (!inference)  // T3-building cut
+    //   return false;
 
     return true;
   }
