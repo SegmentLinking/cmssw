@@ -45,8 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float regressionRadius,
                                                             float nonAnchorRegressionRadius,
                                                             bool tightDNNFlag,
-                                                            bool tightCutFlag,
-                                                            float* error2s) {
+                                                            bool tightCutFlag) {
     quadruplets.tripletIndices()[quadrupletIndex][0] = innerTripletIndex;
     quadruplets.tripletIndices()[quadrupletIndex][1] = outerTripletIndex;
 
@@ -89,12 +88,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     quadruplets.tightDNNFlag()[quadrupletIndex] = tightDNNFlag;
     quadruplets.tightCutFlag()[quadrupletIndex] = tightCutFlag;
-
-    // quadruplets.uncertainty()[quadrupletIndex][0] = error2s[0];
-    // quadruplets.uncertainty()[quadrupletIndex][1] = error2s[1];
-    // quadruplets.uncertainty()[quadrupletIndex][2] = error2s[2];
-    // quadruplets.uncertainty()[quadrupletIndex][3] = error2s[3];
-
   };
 
   template <typename TAcc>
@@ -356,331 +349,175 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       residual4_linear = residual4_linear * 100;
 
       rzChiSquared = 12 * (residual4_linear * residual4_linear);
-      // return rzChiSquared < 10.683f; //full T3s 99%
-      // return rzChiSquared < 12.293f; //full T3s 99%, pT>=10GeV
-      // if (rzChiSquared < 2.595f) //95% displaced retention, add uncert
-      // if (rzChiSquared < 4.24f) //95% displaced retention, add radii
       if (rzChiSquared < 9.666f) //95% retention, add radii and t3 scores
         tightCutFlag = true;
-      // return rzChiSquared < 3.693f; //full T3s, 99%, add uncert to DNN
-      // return rzChiSquared < 9.666f; //99% add reg radii to dnn
       return rzChiSquared < 14.064f; //99% add reg radii and t3 scores to dnn
-      // return true;
     }
-    // return true;
     // The category numbers are related to module regions and layers, decoding of the region numbers can be found here in slide 2 table. https://github.com/SegmentLinking/TrackLooper/files/11420927/part.2.pdf
-    // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T5 built with Endcap 1,2,3,4,5 ps modules
+    // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T4 built with Endcap 1,2,3,4 ps modules
+    // All 99% retention cuts. The tight cut flags are set at 95% displaced track retention
     if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 10)  //0
     {
-      // if (rzChiSquared < 19.246f) //95% displaced retention
-      // if (rzChiSquared < 19.360f) //95% displaced retention, add uncert
-      // if (rzChiSquared < 19.239f) //95% displaced retention, add radii
-      if (rzChiSquared < 19.283f) //95% displaced retention, add radii and t3 scores
+      if (rzChiSquared < 19.283f)
         tightCutFlag = true;
-      // return rzChiSquared < 28.056f; //full t3s, multi dnn 99%
-      // return rzChiSquared < 28.772f; //full t3s, multi dnn add uncert to dnn 99%
-      // return rzChiSquared < 28.574f; //99% add reg radii to dnn
-      return rzChiSquared < 28.459f; //99% add reg radii and t3 scores to dnn
+      return rzChiSquared < 28.459f;
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9 and layer4 == 15)  //1
     {
-      // if (rzChiSquared < 6.274f) //95% displaced retention
-      // if (rzChiSquared < 6.295f) //95% displaced retention, add uncert
-      // if (rzChiSquared < 6.295f) //95% displaced retention, add radii
-      if (rzChiSquared < 6.298f) //95% displaced retention, add radii and t3 scores
+      if (rzChiSquared < 6.298f)
         tightCutFlag = true;
-      // return rzChiSquared < 8.968f; //full t3s, multi dnn 99%
-      // return rzChiSquared < 8.971f; //full t3s, multi dnn add uncert to dnn 99%
-      // return rzChiSquared < 8.999f; //99% add reg radii to dnn
-      return rzChiSquared < 8.968f; //99% add reg radii and t3 scores to dnn
+      return rzChiSquared < 8.968f;
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 14 and layer4 == 15)  //2
     {
-      // if (rzChiSquared < 3.824f) //95% displaced retention
-      // if (rzChiSquared < 3.886f) //95% displaced retention, add uncert
-      // if (rzChiSquared < 3.871f) //95% displaced retention, add radii
-      if (rzChiSquared < 3.879f) //95% displaced retention, add radii and t3 scores
+      if (rzChiSquared < 3.879f)
         tightCutFlag = true;
-      // return rzChiSquared < 5.032f; //full t3s, multi dnn 99%
-      // return rzChiSquared < 5.160f; //full t3s, multi dnn add uncert to dnn 99%
-      // return rzChiSquared < 5.091f; //99% add reg radii to dnn
-      return rzChiSquared < 5.158f; //99% add reg radii and t3 scores to dnn
+      return rzChiSquared < 5.158f;
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
       if (layer4 == 11)  //3
       {
-        // if (rzChiSquared < 18.572f) //95% displaced retention
-        // if (rzChiSquared < 18.714f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 18.414f) //95% displaced retention, add radii
-        if (rzChiSquared < 18.516f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 18.516f)
           tightCutFlag = true;
-        // return rzChiSquared < 29.292f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 29.924f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 29.755f; //99% add reg radii to dnn
-        return rzChiSquared < 29.270f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 29.270f;
       }
       if (layer4 == 16)  //4
       {
-        // if (rzChiSquared < 6.362f) //95% displaced retention
-        // if (rzChiSquared < 6.467f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 6.418f) //95% displaced retention, add radii
-        if (rzChiSquared < 6.378f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 6.378f)
           tightCutFlag = true;
-        // return rzChiSquared < 9.359f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 9.357f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 9.359f; //99% add reg radii to dnn
-        return rzChiSquared < 9.310f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 9.310f;
       }
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
     { 
-        // if (rzChiSquared < 3.379f) //95% displaced retention
-        // if (rzChiSquared < 3.412f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 3.474f) //95% displaced retention, add radii
-        if (rzChiSquared < 3.493f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 3.493f)
           tightCutFlag = true;
-        // return rzChiSquared < 4.190f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 4.347f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 4.382f; //99% add reg radii to dnn
-        return rzChiSquared < 4.328f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 4.328f;
     }
     else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 4)  //6
       {
-        // if (rzChiSquared < 13.331f) //95% displaced retention
-        // if (rzChiSquared < 13.366f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 13.499f) //95% displaced retention, add radii
-        if (rzChiSquared < 13.252f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 13.252f)
           tightCutFlag = true;
-        // return rzChiSquared < 23.235f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 23.585f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 23.296f; //99% add reg radii to dnn
-        return rzChiSquared < 23.138f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 23.138f;
       }
       else if (layer4 == 7)  //7
       {
-        // if (rzChiSquared < 17.074f) //95% displaced retention
-        // if (rzChiSquared < 17.074f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 17.276f) //95% displaced retention, add radii
-        if (rzChiSquared < 16.956f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 16.956f)
           tightCutFlag = true;
-        // return rzChiSquared < 29.561f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 28.862f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 29.243f; //99% add reg radii to dnn
-        return rzChiSquared < 29.561f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 29.561f;
       } else if (layer4 == 12)  //8
       {
-        // if (rzChiSquared < 10.879f) //95% displaced retention
-        // if (rzChiSquared < 10.887f) //95% displaced retention, add uncert
-        // if (rzChiSquared <10.887f) //95% displaced retention, add radii
-        if (rzChiSquared < 10.924f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 10.924f)
           tightCutFlag = true;
-        // return rzChiSquared < 18.687f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 19.136f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 18.74f; //99% add reg radii to dnn
-        return rzChiSquared < 18.905f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 18.905f;
       }
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
       if (layer4 == 8)  //9
       {
-        // if (rzChiSquared < 18.237f) //95% displaced retention
-        // if (rzChiSquared < 18.039f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 18.263f) //95% displaced retention, add radii
-        if (rzChiSquared < 18.263f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 18.263f)
           tightCutFlag = true;
-        // return rzChiSquared < 30.072f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 28.911f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 29.803f; //99% add reg radii to dnn
-        return rzChiSquared < 29.534f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 29.534f;
       } else if (layer4 == 13)  //10
       {
-        // if (rzChiSquared < 8.467f) //95% displaced retention
-        // if (rzChiSquared < 8.418f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 8.384f) //95% displaced retention, add radii
-        if (rzChiSquared < 8.384f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 8.384f)
           tightCutFlag = true;
-        // return rzChiSquared < 12.88f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 12.797f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 12.664f; //99% add reg radii to dnn
-        return rzChiSquared < 12.608f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 12.608f;
       } 
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 9) //11
       {
-        // if (rzChiSquared < 18.778f) //95% displaced retention
-        // if (rzChiSquared < 18.850f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 18.856f) //95% displaced retention, add radii
-        if (rzChiSquared < 18.741f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 18.741f)
           tightCutFlag = true;
-        // return rzChiSquared < 27.908f; //full t3s, multi dnn 99%GeV
-        // return rzChiSquared < 28.349f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 28.224f; //99% add reg radii to dnn
-        return rzChiSquared < 28.270f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 28.270f;
       } else if (layer4 == 14)  //12
       {
-        return true; // leftover T3s, //full T3s 99%
+        return true;
       } 
     } else if (layer1 == 2 and layer2 ==3) {
       if (layer3 == 4) {
         if (layer4 == 5)  //13
         {
-          // if (rzChiSquared < 4.426f) //95% displaced retention
-          // if (rzChiSquared < 4.438f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 4.396f) //95% displaced retention, add radii
-          if (rzChiSquared < 4.376f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 4.376f)
             tightCutFlag = true;
-          // return rzChiSquared < 5.419f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 5.423f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 5.292f; //99% add reg radii to dnn
-          return rzChiSquared < 5.430f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 5.430f;
         }
         else if (layer4 == 12) //14
         { 
-          // if (rzChiSquared <4.07f) //95% displaced retention
-          // if (rzChiSquared < 4.119f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 4.072f) //95% displaced retention, add radii
-          if (rzChiSquared < 4.196f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 4.196f)
             tightCutFlag = true;
-          // return rzChiSquared < 4.949f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 5.285f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 5.233f; //99% add reg radii to dnn
-          return rzChiSquared < 5.176f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 5.176f;
         }
       }
       else if (layer3 == 7) {
         if (layer4 == 8) // 15
         { 
-          // return true; // leftover T3s, //full T3s 99%
-          // if (rzChiSquared < 11.934f) //95% displaced retention
-          // if (rzChiSquared < 11.935f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 11.934f) //95% displaced retention, add radii
-          if (rzChiSquared < 11.934f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 11.934f)
             tightCutFlag = true;
-          // return rzChiSquared < 20.491f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 20.491f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 20.491f; //99% add reg radii to dnn
-          return rzChiSquared < 20.491f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 20.491f;
         }
         else if (layer4 == 13) //16
         { 
-          // if (rzChiSquared < 9.671f) //95% displaced retention
-          // if (rzChiSquared < 9.672f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 9.545f) //95% displaced retention, add radii
-          if (rzChiSquared < 9.518f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 9.518f)
             tightCutFlag = true;
-          // return rzChiSquared < 14.355f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 14.527f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 14.477f; //99% add reg radii to dnn
-          return rzChiSquared < 14.100f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 14.100f;
         }
       }
       else if (layer3 == 12 and layer4 == 13) //17
       { 
-        // if (rzChiSquared < 4.107f) //95% displaced retention
-        // if (rzChiSquared < 4.230f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 4.201f) //95% displaced retention, add radii
-        if (rzChiSquared < 4.269f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 4.269f)
           tightCutFlag = true;
-        // return rzChiSquared < 5.160f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 5.306f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 5.157f; //99% add reg radii to dnn
-        return rzChiSquared < 5.499f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 5.499f;
       }
     } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
     { 
-      // if (rzChiSquared < 22.416f) //95% displaced retention
-      // if (rzChiSquared < 22.481f) //95% displaced retention, add uncert
-      // if (rzChiSquared < 22.5f) //95% displaced retention, add radii
-      if (rzChiSquared < 22.481f) //95% displaced retention, add radii and t3 scores
+      if (rzChiSquared < 22.481f)
         tightCutFlag = true;
-      // return rzChiSquared < 35.778f; //full t3s, multi dnn 99%
-      // return rzChiSquared < 35.844f; //full t3s, multi dnn add uncert to dnn 99%
-      // return rzChiSquared < 35.778f; //99% add reg radii to dnn
-      return rzChiSquared < 36.038f; //99% add reg radii and t3 scores to dnn
+      return rzChiSquared < 36.038f;
     } else if (layer1 == 2 and layer2 == 7)
     {
       if (layer3 == 8 and layer4 == 14) //19
       { 
-        // if (rzChiSquared < 7.129f) //95% displaced retention
-        // if (rzChiSquared < 7.129f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 7.086f) //95% displaced retention, add radii
-        if (rzChiSquared < 7.06f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 7.06f)
           tightCutFlag = true;
-        // return rzChiSquared < 10.899f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 11.166f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 11.011f; //99% add reg radii to dnn
-        return rzChiSquared < 10.991f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 10.991f;
       }
       else if (layer3 == 13 and layer4 == 14) //20
       { 
-        // if (rzChiSquared < 3.217f) //95% displaced retention
-        // if (rzChiSquared < 3.311f) //95% displaced retention, add uncert
-        // if (rzChiSquared < 3.37f) //95% displaced retention, add radii
-        if (rzChiSquared < 3.343f) //95% displaced retention, add radii and t3 scores
+        if (rzChiSquared < 3.343f)
           tightCutFlag = true;
-        // return rzChiSquared < 3.876f; //full t3s, multi dnn 99%
-        // return rzChiSquared < 3.868f; //full t3s, multi dnn add uncert to dnn 99%
-        // return rzChiSquared < 4.159f; //99% add reg radii to dnn
-        return rzChiSquared < 4.144f; //99% add reg radii and t3 scores to dnn
+        return rzChiSquared < 4.144f;
       }
     } else if (layer1 == 3)
     {
       if (layer2 == 4){
         if (layer3 == 5 and layer4 == 6 ) //21
         { 
-          // if (rzChiSquared < 56.658f) //95% displaced retention
-          // if (rzChiSquared < 57.321f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 57.047f) //95% displaced retention, add radii
-          if (rzChiSquared < 56.716f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 56.716f)
             tightCutFlag = true;
-          // return rzChiSquared < 75.304f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 77.495f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 78.026f; //99% add reg radii to dnn
-          return rzChiSquared < 76.861f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 76.861f;
         }
         else if (layer3 == 12 and layer4 == 13) //24
         {
-          // if (rzChiSquared < 16.991f) //95% displaced retention
-          // if (rzChiSquared < 17.851f) //95% displaced retention
-          // if (rzChiSquared < 18.597f) //95% displaced retention, add radii
-          if (rzChiSquared < 17.68f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 17.68f)
             tightCutFlag = true;
-          // return rzChiSquared < 24.917f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 26.821f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 27.695f; //99% add reg radii to dnn
-          return rzChiSquared < 27.034f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 27.034f;
         }
         else if (layer3 == 5 and layer4 == 12) //25
         {
-          // if (rzChiSquared < 35.097f) //95% displaced retention
-          // if (rzChiSquared < 36.715f) //95% displaced retention, add uncert to dnn
-          // if (rzChiSquared < 35.939f) //95% displaced retention, add radii
-          if (rzChiSquared < 36.004f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 36.004f)
             tightCutFlag = true;
-          // return rzChiSquared < 44.968f; //full t3s, multi dnn 99%
-          // return rzChiSquared < 46.854f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 46.246f; //99% add reg radii to dnn
-          return rzChiSquared < 48.511f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 48.511f;
         }
       }
       else if (layer2 == 7) {
         if (layer3 == 8 and layer4 == 14) //22
         {
-          // if (rzChiSquared < 3.971f) //95% displaced retention, add uncert (with and without)
-          // if (rzChiSquared < 3.971f) //95% displaced retention, add radii
-          if (rzChiSquared < 3.971f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 3.971f)
             tightCutFlag = true;
-          // return true; // leftover T3s, full T3s
-          // return rzChiSquared < 6.822f; //full t3s, multi dnn 99%
-          return rzChiSquared < 6.017f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 6.017f;
         }
         else if (layer3 == 13 and layer4 == 14) //23
         {
-          // if (rzChiSquared < 3.53f) //95% displaced retention
-          // if (rzChiSquared < 3.494f) //95% displaced retention, add uncert
-          // if (rzChiSquared < 3.569f) //95% displaced retention, add radii
-          if (rzChiSquared < 3.571f) //95% displaced retention, add radii and t3 scores
+          if (rzChiSquared < 3.571f)
             tightCutFlag = true;
-          // return rzChiSquared < 4.342f; //full t3s, multi dnn 99%
-            // return rzChiSquared < 4.363f; //full t3s, multi dnn add uncert to dnn 99%
-          // return rzChiSquared < 4.418f; //99% add reg radii to dnn
-          return rzChiSquared < 4.415f; //99% add reg radii and t3 scores to dnn
+          return rzChiSquared < 4.415f;
         }
       }
     }
@@ -1644,8 +1481,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& fakeScore,
                                                                float& x_5,
                                                                bool& tightDNNFlag,
-                                                               bool& tightCutFlag,
-                                                               float* error2s) {
+                                                               bool& tightCutFlag) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
     unsigned int thirdSegmentIndex = triplets.segmentIndices()[outerTripletIndex][0]; //second and third segments are the same here
@@ -1693,63 +1529,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float outerRadius = triplets.radius()[outerTripletIndex];
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
     float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
-
-    const int moduleType1 = modules.moduleType()[lowerModuleIndex1];  //0 is ps, 1 is 2s
-    const int moduleType2 = modules.moduleType()[lowerModuleIndex2];
-    const int moduleType3 = modules.moduleType()[lowerModuleIndex3];
-    const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
-    
-    for (size_t i = 0; i < 4; i++) {
-      float error2;
-      int moduleTypei;
-      if (i == 0) {
-        moduleTypei = moduleType1;
-      } else if (i == 1) {
-        moduleTypei = moduleType2;
-      } else if (i == 2) {
-        moduleTypei = moduleType3;
-      } else if (i == 3) {
-        moduleTypei = moduleType4;
-      } 
-      if (moduleTypei == 0) {
-        error2 = kPixelPSZpitch * kPixelPSZpitch;
-      } else  //2S modules
-      {
-        error2 = kStrip2SZpitch * kStrip2SZpitch;
-      }
-
-      //check the tilted module, side: PosZ, NegZ, Center(for not tilted)
-      float drdz;
-      short side, subdets;
-      if (i == 0) {
-        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex1]);
-        side = modules.sides()[lowerModuleIndex1];
-        subdets = modules.subdets()[lowerModuleIndex1];
-      }
-      if (i == 1) {
-        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex2]);
-        side = modules.sides()[lowerModuleIndex2];
-        subdets = modules.subdets()[lowerModuleIndex2];
-      }
-      if (i == 2) {
-        drdz = alpaka::math::abs(acc, modules.drdzs()[lowerModuleIndex3]);
-        side = modules.sides()[lowerModuleIndex3];
-        subdets = modules.subdets()[lowerModuleIndex3];
-      }
-      if (i==0 || i == 1 || i == 2) {
-        float projection_missing2 = 1.f;
-        if (drdz < 1)
-          projection_missing2 = ((subdets == Endcap) or (side == Center))
-                                    ? 1.f
-                                    : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
-        if (drdz > 1)
-          projection_missing2 = ((subdets == Endcap) or (side == Center))
-                                    ? 1.f
-                                    : (drdz * drdz) / (1 + drdz * drdz);  //sin(atan(drdz)), if dr/dz>1
-        error2 = error2 * projection_missing2;
-      }  
-      error2s[i] = error2;
-    }
     
     // 4 categories for sigmas
     float sigmas2[4], delta1[4], delta2[4], slopes[4];
@@ -1827,7 +1606,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               displacedScore,
                                               fakeScore,
                                               tightDNNFlag,
-                                              error2s,
                                               regressionRadius,
                                               nonAnchorRegressionRadius,
                                               triplets.fakeScore()[innerTripletIndex],
@@ -1929,28 +1707,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int nInnerTriplets = tripletsOccupancy.nTriplets()[lowerModule1];
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           unsigned int innerTripletIndex = ranges.tripletModuleIndices()[lowerModule1] + innerTripletArrayIndex;
-          // if (triplets.partOfPT5[innerTripletIndex])
+          // if (triplets.partOfPT5()[innerTripletIndex])
           //     continue;  //don't create T4s for T3s accounted in pT5s
-          // if (triplets.partOfPT3[innerTripletIndex])
+          // if (triplets.partOfPT3()[innerTripletIndex])
           //     continue;  //don't create T4s for T3s accounted in pT3s
-          // if (triplets.partOfT5[innerTripletIndex])
+          // if (triplets.partOfT5()[innerTripletIndex])
           //     continue;  //don't create T4s for T3s accounted in T5s
           uint16_t lowerModule2 = triplets.lowerModuleIndices()[innerTripletIndex][1];
           unsigned int nOuterTriplets = tripletsOccupancy.nTriplets()[lowerModule2];
           for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
             unsigned int outerTripletIndex = ranges.tripletModuleIndices()[lowerModule2] + outerTripletArrayIndex;
-            // if (triplets.partOfPT5[outerTripletIndex])
+            // if (triplets.partOfPT5()[outerTripletIndex])
             //   continue;  //don't create T4s for T3s accounted in pT5s
             // if (triplets.partOfPT3[outerTripletIndex])
             //   continue;  //don't create T4s for T3s accounted in pT3s
-            // if (triplets.partOfT5[outerTripletIndex])
+            // if (triplets.partOfT5()[outerTripletIndex])
             //   continue;  //don't create T4s for T3s accounted in T5s
             uint16_t lowerModule3 = triplets.lowerModuleIndices()[outerTripletIndex][1];
             uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][2];
             float innerRadius = triplets.radius()[innerTripletIndex];
             float outerRadius = triplets.radius()[outerTripletIndex];  
             float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
-            float error2s[4]; 
             bool tightDNNFlag = false;
             bool tightCutFlag = false;
       
@@ -1981,8 +1758,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     fakeScore,
                                                     x_5,
                                                     tightDNNFlag,
-                                                    tightCutFlag,
-                                                    error2s); 
+                                                    tightCutFlag); 
             if (success) {
               int totOccupancyQuadruplets = alpaka::atomicAdd(
                   acc, &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
@@ -2035,8 +1811,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         regressionRadius,
                                         nonAnchorRegressionRadius,
                                         tightDNNFlag,
-                                        tightCutFlag,
-                                        error2s);
+                                        tightCutFlag);
 
                   // triplets.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex]] = true;
                   // triplets.partOfT4[quadrupletsInGPU.tripletIndices[2 * quadrupletIndex + 1]] = true;

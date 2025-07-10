@@ -111,155 +111,69 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // all 99% retention cuts
     if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 12) {  // cat 8
-        return rzChiSquared < 10.358f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 10.358f;
       } else if (layer4 == 4) {  // cat 6
-        return rzChiSquared < 9.514f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.514f;
       } else if (layer4 == 7) {  // cat 7
-        return rzChiSquared < 9.441f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.441f;
       } 
     } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
       if (layer4 == 13) {  // cat 10
-        return rzChiSquared < 9.415f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.415f;
       } else if (layer4 == 8) {  // cat 9
-        return rzChiSquared < 10.128f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 10.128f;
       }
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 9) {  // cat 11
-        return rzChiSquared < 9.943f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.943f;
       } 
     } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
       if (layer4 == 12) {  // cat 14
-        return rzChiSquared < 0.081f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 0.081f;
       } else if (layer4 == 5) {  // cat 13
         return true;
       } 
     } else if (layer1 == 2 and layer2 == 3 and layer4 == 7) {
       if (layer4 == 13) {  // cat 16
-        return rzChiSquared < 3.895f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 3.895f;
       } else if (layer4 == 8) {  // cat 15
         return true;
       }
     } else if (layer1 == 2 and layer2 == 3 and layer4 == 13) {
       if (layer4 == 14) {  // cat 17
-        return rzChiSquared < 4.158f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 4.158f;
       } 
     } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
       if (layer4 == 14) {  // cat 19
-        return rzChiSquared < 5.118f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 5.118f;
       } else if (layer4 == 9) {  // cat 18
-        return rzChiSquared < 5.178f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 5.178f;
       }
     } else if (layer1 == 2 and layer2 == 7 and layer3 == 13) {
       if (layer4 == 14) {  // cat 20
-        return rzChiSquared < 9.034f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.034f;
       } 
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
       if (layer4 == 10) {  // cat 0
-        return rzChiSquared < 10.125f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 10.125f;
       } else if (layer4 == 15) {  // cat 1
-        return rzChiSquared < 9.769f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.769f;
       }
     } else if (layer1 == 7 and layer2 == 8 and layer3 == 14) {
       if (layer4 == 15) {  // cat 2
-        return rzChiSquared < 9.721f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 9.721f;
       } 
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
       if (layer4 == 11) {  // cat 3
-        // return rzChiSquared < 11.059f;
-        // return rzChiSquared < 10.202f;
-        // return rzChiSquared < 10.528f; //radii in t4 dnn
-        return rzChiSquared < 10.452f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 10.452f;
       } else if (layer4 == 16) {  // cat 4
-        return rzChiSquared < 11.063f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 11.063f;
       }
     } else if (layer1 == 8 and layer2 == 9 and layer3 == 15) {
       if (layer4 == 16) {  // cat 5
-        return rzChiSquared < 10.734f; //radii and t3 scores in t4 dnn
+        return rzChiSquared < 10.734f;
       } 
     }
-    return true;
-  };
-
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT4RPhiChiSquaredCuts(ModulesConst modules,
-                                                                uint16_t lowerModuleIndex1,
-                                                                uint16_t lowerModuleIndex2,
-                                                                uint16_t lowerModuleIndex3,
-                                                                uint16_t lowerModuleIndex4,
-                                                                float rPhiChiSquared) {
-    const int layer1 =
-        modules.layers()[lowerModuleIndex1] + 6 * (modules.subdets()[lowerModuleIndex1] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex1] == Endcap and modules.moduleType()[lowerModuleIndex1] == TwoS);
-    const int layer2 =
-        modules.layers()[lowerModuleIndex2] + 6 * (modules.subdets()[lowerModuleIndex2] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex2] == Endcap and modules.moduleType()[lowerModuleIndex2] == TwoS);
-    const int layer3 =
-        modules.layers()[lowerModuleIndex3] + 6 * (modules.subdets()[lowerModuleIndex3] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex3] == Endcap and modules.moduleType()[lowerModuleIndex3] == TwoS);
-    const int layer4 =
-        modules.layers()[lowerModuleIndex4] + 6 * (modules.subdets()[lowerModuleIndex4] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex4] == Endcap and modules.moduleType()[lowerModuleIndex4] == TwoS);
-    //99% retention cuts
-    if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 12) {  // cat 8
-        return rPhiChiSquared < 41.357f;
-      } else if (layer4 == 4) {  // cat 6
-        return rPhiChiSquared < 72.582f;
-      } else if (layer4 == 7) {  // cat 7
-        return rPhiChiSquared < 43.805f;
-      } 
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 13) {  // cat 10
-        return rPhiChiSquared < 25.676f;
-      } else if (layer4 == 8) {  // cat 9
-        return rPhiChiSquared < 34.761f;
-      }
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9) {  // cat 11
-        return rPhiChiSquared < 26.225f;
-      } 
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 12) {  // cat 14
-        return rPhiChiSquared < 66.674f;
-      } else if (layer4 == 5) {  // cat 13
-        return rPhiChiSquared < 94.909f;
-      } 
-    } else if (layer1 == 2 and layer2 == 3 and layer4 == 7) {
-      if (layer4 == 13) {  // cat 16
-        return rPhiChiSquared < 41.637f;
-      } else if (layer4 == 8) {  // cat 15
-        return rPhiChiSquared < 34.361f;
-      }
-    } else if (layer1 == 2 and layer2 == 3 and layer4 == 13) {
-      if (layer4 == 14) {  // cat 17
-        return rPhiChiSquared < 36.066f;
-      } 
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 14) {  // cat 19
-        return rPhiChiSquared < 37.355f;
-      } else if (layer4 == 9) {  // cat 18
-        return rPhiChiSquared < 46.833f;
-      }
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 13) {
-      if (layer4 == 14) {  // cat 20
-        return rPhiChiSquared < 25.718f;
-      } 
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      if (layer4 == 10) {  // cat 0
-        return rPhiChiSquared < 36.799f;
-      } else if (layer4 == 15) {  // cat 1
-        return rPhiChiSquared < 43.453f;
-      }
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 14) {
-      if (layer4 == 15) {  // cat 2
-        return rPhiChiSquared < 39.417f;
-      } 
-    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
-      if (layer4 == 11) {  // cat 3
-        return rPhiChiSquared < 53.360f;
-      } else if (layer4 == 16) {  // cat 4
-        return rPhiChiSquared < 33.764f;
-      }
-    } 
     return true;
   };
 
@@ -299,90 +213,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
     chiSquared *= 0.5f;
     return chiSquared;
-  };
-
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT4RPhiChiSquaredInwardsCuts(ModulesConst modules,
-                                                                       uint16_t lowerModuleIndex1,
-                                                                       uint16_t lowerModuleIndex2,
-                                                                       uint16_t lowerModuleIndex3,
-                                                                       uint16_t lowerModuleIndex4,
-                                                                       float rPhiChiSquared) {
-    const int layer1 =
-        modules.layers()[lowerModuleIndex1] + 6 * (modules.subdets()[lowerModuleIndex1] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex1] == Endcap and modules.moduleType()[lowerModuleIndex1] == TwoS);
-    const int layer2 =
-        modules.layers()[lowerModuleIndex2] + 6 * (modules.subdets()[lowerModuleIndex2] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex2] == Endcap and modules.moduleType()[lowerModuleIndex2] == TwoS);
-    const int layer3 =
-        modules.layers()[lowerModuleIndex3] + 6 * (modules.subdets()[lowerModuleIndex3] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex3] == Endcap and modules.moduleType()[lowerModuleIndex3] == TwoS);
-    const int layer4 =
-        modules.layers()[lowerModuleIndex4] + 6 * (modules.subdets()[lowerModuleIndex4] == Endcap) +
-        5 * (modules.subdets()[lowerModuleIndex4] == Endcap and modules.moduleType()[lowerModuleIndex4] == TwoS);
-    //99% retention cuts
-    if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
-      if (layer4 == 12) {  // cat 8
-        return rPhiChiSquared < 373.435f;
-      } else if (layer4 == 4) {  // cat 6
-        return rPhiChiSquared < 358.781f;
-      } else if (layer4 == 7) {  // cat 7
-        return rPhiChiSquared < 237.174f;
-      } 
-    } else if (layer1 == 1 and layer2 == 2 and layer3 == 7) {
-      if (layer4 == 13) {  // cat 10
-        return rPhiChiSquared < 250.843f;
-      } else if (layer4 == 8) {  // cat 9
-        return rPhiChiSquared < 309.453f;
-      }
-    } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9) {  // cat 11
-        return rPhiChiSquared < 428.893f;
-      } 
-    } else if (layer1 == 2 and layer2 == 3 and layer3 == 4) {
-      if (layer4 == 12) {  // cat 14
-        return rPhiChiSquared < 789.866f;
-      } else if (layer4 == 5) {  // cat 13
-        return rPhiChiSquared < 460.781f;
-      } 
-    } else if (layer1 == 2 and layer2 == 3 and layer4 == 7) {
-      if (layer4 == 13) {  // cat 16
-        return rPhiChiSquared < 798.898f;
-      } else if (layer4 == 8) {  // cat 15
-        return rPhiChiSquared < 1233.757f;
-      }
-    } else if (layer1 == 2 and layer2 == 3 and layer4 == 13) {
-      if (layer4 == 14) {  // cat 17
-        return rPhiChiSquared < 947.383f;
-      } 
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 14) {  // cat 19
-        return rPhiChiSquared < 869.827f;
-      } else if (layer4 == 9) {  // cat 18
-        return rPhiChiSquared < 600.346f;
-      }
-    } else if (layer1 == 2 and layer2 == 7 and layer3 == 13) {
-      if (layer4 == 14) {  // cat 20
-        return rPhiChiSquared < 788.826f;
-      } 
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 9) {
-      if (layer4 == 10) {  // cat 0
-        return rPhiChiSquared < 586.576f;
-      } else if (layer4 == 15) {  // cat 1
-        return rPhiChiSquared < 924.267f;
-      }
-    } else if (layer1 == 7 and layer2 == 8 and layer3 == 14) {
-      if (layer4 == 15) {  // cat 2
-        return rPhiChiSquared < 2450.287f;
-      } 
-    } else if (layer1 == 8 and layer2 == 9 and layer3 == 10) {
-      if (layer4 == 11) {  // cat 3
-        return rPhiChiSquared < 586.317f;
-      } else if (layer4 == 16) {  // cat 4
-        // return rPhiChiSquared < 5.844f;
-        return false;
-      }
-    }
-    return true; 
   };
 
   template <typename TAcc>

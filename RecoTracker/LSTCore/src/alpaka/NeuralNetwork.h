@@ -449,7 +449,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     float& displacedScore,
                                                     float& fakeScore,
                                                     bool& tightDNNFlag,
-                                                    float* errors,
                                                     const float regressionRadius,
                                                     const float nonAnchorRegressionRadius,
                                                     float fakeScore1,
@@ -459,11 +458,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     float promptScore2,
                                                     float displacedScore2) {
       // Constants
-      // constexpr unsigned int kinputFeatures = 19; //no additional
-      constexpr unsigned int kinputFeatures = 27;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
-      // constexpr unsigned int kinputFeatures = 31;  //add radii =21, add uncert =23, add radii and t3 scores=27, all = 31
+      constexpr unsigned int kinputFeatures = 27;
       constexpr unsigned int khiddenFeatures = 32;
-      // constexpr unsigned int khiddenFeatures = 64;
       constexpr unsigned int koutputFeatures = 3;
 
       const int layer1 = modules.lstLayers()[lowerModuleIndex1];
@@ -513,8 +509,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           (z4 - z3) / dnn::t4dnn::kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
           (r4 - r3) / dnn::t4dnn::kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
 
-          alpaka::math::log10(acc, innerRadius),   // T5 inner radius (t5_innerRadius)
-          alpaka::math::log10(acc, outerRadius),    // T5 outer radius (t5_outerRadius)
+          alpaka::math::log10(acc, innerRadius),   // T4 inner radius (t4_innerRadius)
+          alpaka::math::log10(acc, outerRadius),    // T4 outer radius (t4_outerRadius)
           alpaka::math::log10(acc, innerRadius/outerRadius),    // radius ratio
           alpaka::math::log10(acc, regressionRadius), 
           alpaka::math::log10(acc, nonAnchorRegressionRadius),
@@ -524,18 +520,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           (fakeScore2- fakeScore1),
           (promptScore2 - promptScore1),
           (displacedScore2 - displacedScore1),
-          // errors[0],
-          // errors[1],
-          // errors[2],
-          // errors[3]
       };
 
       float x_1[khiddenFeatures];  // Layer 1 output
       float x_2[khiddenFeatures];  // Layer 2 output
-      // float x_4[khiddenFeatures];
-      // float x_5[khiddenFeatures];
-      float x_3[koutputFeatures];  // Layer 3 output (3 classes) multi-class version
-      // float x_3[1];                // Layer 3 linear output
+      float x_3[koutputFeatures];  // Layer 3 output
 
       // Layer 1: Linear + Relu
       linear_layer<kinputFeatures, khiddenFeatures>(x, x_1, dnn::t4dnn::wgtT_layer1, dnn::t4dnn::bias_layer1);
@@ -545,19 +534,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, dnn::t4dnn::wgtT_layer2, dnn::t4dnn::bias_layer2);
       relu_activation<khiddenFeatures>(x_2);
 
-      // linear_layer<khiddenFeatures, khiddenFeatures>(x_2, x_4, wgtT_layer2, bias_layer2);
-      // relu_activation<khiddenFeatures>(x_4);
-
-      // linear_layer<khiddenFeatures, khiddenFeatures>(x_4, x_5, wgtT_layer2, bias_layer2);
-      // relu_activation<khiddenFeatures>(x_5);
-
-      // // Layer 3: Linear + Sigmoid
-      // linear_layer<khiddenFeatures, 1>(x_2, x_3, wgtT_output_layer, bias_output_layer);
-      // x_5 = sigmoid_activation(acc, x_3[0]);
-
-      // Layer 3: Linear + Softmax multi-class version
+      // Layer 3: Linear + Softmax 
       linear_layer<khiddenFeatures, koutputFeatures>(x_2, x_3, dnn::t4dnn::wgtT_output_layer, dnn::t4dnn::bias_output_layer);
-      // linear_layer<khiddenFeatures, koutputFeatures>(x_5, x_3, wgtT_output_layer, bias_output_layer);
       softmax_activation<koutputFeatures>(acc, x_3);
 
       // Get the bin index based on abs(eta) of first hit and t4_pt
@@ -571,37 +549,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       fakeScore = x_3[0];
 
       tightDNNFlag = false;
+      //70% retention cut for all
       if (layer1 == 1){ //barrel 1
         if (layer2==2) { 
           if (layer3 == 3) {
             if (layer4 == 4) {//reg 6 
-              // if ((x_3[2] < 0.436f or x_3[2] > 0.730f) and x_3[0]<0.077f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f) //70
+              if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f)
                 tightDNNFlag = true;
             }
             else if (layer4 == 7) { //reg 7
-              // if ((x_3[2] < 0.374f or x_3[2] > 0.741) and x_3[0]<0.076f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f) //70
+              if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f)
                 tightDNNFlag = true;
             }
             else if (layer4 == 13) { //reg 8
-              // if ((x_3[2] < 0.289f or x_3[2] > 0.710f) and x_3[0]<0.103f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f) //70% add radii and t3 score
+              if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f)
                 tightDNNFlag = true;
             }
           }
           else if (layer3==7) {
             if (layer4 == 8) { //reg 9
-              // if ((x_3[2] < 0.883f or x_3[2] > 0.924f) and x_3[0]<0.049f) //90% add radii and t3 score
-              if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f) //70% add radii and t3 score
+              if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f)
                   tightDNNFlag = true;
             }
           }
         } else if (layer2 == 7) {
           if (layer3 == 8) {
             if (layer4 == 9) { //reg 11
-              // if ((x_3[2] < 0.308f or x_3[2] > 0.780f) and x_3[0]<0.025f) //90% add radii and t3 score
-              if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f) //70% add radii and t3 score
+              if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f)
                   tightDNNFlag = true;
             }
           }
@@ -610,33 +584,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (layer2 == 3) {
           if (layer3 == 4) {
             if (layer4 == 5) { //reg 13
-              // if ((x_3[2] < 0.306f or x_3[2] > 0.697f) and x_3[0]<0.166f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f) //70% add radii and t3 score
+              if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f)
                   tightDNNFlag = true;
             } else if (layer4 == 12) { //reg 14
-              // if ((x_3[2] < 0.211f or x_3[2] > 0.532f) and x_3[0]<0.233f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f) //70% add radii and t3 score
+              if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f)
                   tightDNNFlag = true;
             }
           } else if (layer3 == 7) {
             if (layer4 == 13) { //reg 16
-              // if ((x_3[2] < 0.842f or x_3[2] > 0.909f) and x_3[0]<0.057f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f) //70% add radii and t3 score
+              if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f)
                   tightDNNFlag = true;
             }
           } else if (layer3 == 12) { //reg 17
-            // if ((x_3[2] < 0.316f or x_3[2] > 0.476f) and x_3[0]<0.280f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f) //70% add radii and t3 score
+            if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f)
                   tightDNNFlag = true;
           }
         } else if (layer2 == 7) {
           if (layer3 == 8) { //reg 19
-            // if ((x_3[2] < 0.582f or x_3[2] > 0.852f) and x_3[0]<0.044f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f) //70% add radii and t3 score
+            if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f)
                   tightDNNFlag = true;
           } else if (layer3 == 13) { //reg 20
-            // if ((x_3[2] < 0.229f or x_3[2] > 0.496f) and x_3[0]<0.261f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039) //70% add radii and t3 score
+            if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039)
                   tightDNNFlag = true;
           }
         }
@@ -644,39 +612,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (layer2 == 4) {
           if (layer3 == 5) {
             if (layer4 == 6) { //reg 21
-              // if ((x_3[2] < 0.418f or x_3[2] > 0.613f) and x_3[0]<0.276f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f) //70% add radii and t3 score
+              if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f)
                   tightDNNFlag = true;
             } else if (layer4 == 12) { //reg 25
-              // if ((x_3[2] < 0.229f or x_3[2] > 0.482f) and x_3[0]<0.376f) //90/85% add radii and t3 score
-              if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f) //70% add radii and t3 score
+              if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f)
                   tightDNNFlag = true;
             }
           } else if (layer3 == 12) { //reg 24
-            // if ((x_3[2] < 0.293f or x_3[2] > 0.492f) and x_3[0]<0.44f) //90% add radii and t3 score
-            if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f) //70% add radii and t3 score
+            if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f)
                   tightDNNFlag = true;
           }
         } else if (layer2 == 7) { //reg 23
-          // if ((x_3[2] < 0.390f or x_3[2] > 0.648f) and x_3[0]<0.159f) //90/85% add radii and t3 score
-          if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054) //70% add radii and t3 score
+          if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054)
                   tightDNNFlag = true;
         }
       } else if (layer1 == 7) { //endcap 1
         if (layer2 == 8) {
           if (layer3 == 9) {
             if (layer4 ==10) { //reg 0
-              // if ((x_3[2] < 0.405f or x_3[2] > 0.871f) and x_3[0]<0.012f) //90% add radii and t3 score
-              if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f) //70% add radii and t3 score
+              if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f)
                 tightDNNFlag = true;
             } else if (layer4 == 15) { //reg 1
-              // if ((x_3[2] < 0.438f or x_3[2] > 0.825f) and x_3[0]<0.045f) //90% add radii and t3 score
-              if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f) //70% add radii and t3 score
+              if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f)
                 tightDNNFlag = true;
             }
           } else if (layer3 == 14) { //reg 2
-            // if ((x_3[2] < 0.319f or x_3[2] > 0.635f) and x_3[0]<0.134f) //90% add radii and t3 score
-            if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f) //70% add radii and t3 score
+            if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f)
               tightDNNFlag = true;
           }
         }
@@ -684,17 +645,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (layer2 == 9) {
           if (layer3 == 10) {
             if (layer4 == 11) { //reg 3
-              // if ((x_3[2] < 0.793f or x_3[2] > 0.866f) and x_3[0]<0.021f) //90% add radii and t3 score
-              if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f) //70% add radii and t3 score
+              if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f)
                 tightDNNFlag = true;
             } else if (layer4 == 16) { //reg 4
-              // if ((x_3[2] < 0.281f or x_3[2] > 0.805f) and x_3[0]<0.060f) //90/95% add radii and t3 score
-              if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f) //70% add radii and t3 score
+              if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f)
                 tightDNNFlag = true;
             }
           } else { //reg 5
-            // if ((x_3[2] < 0.431f or x_3[2] > 0.75f) and x_3[0]<0.168f) //90/85% add radii and t3 score
-            if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f) //70% add radii and t3 score
+            if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f)
               tightDNNFlag = true;
           }
         }

@@ -627,7 +627,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     radius,
                                     trackCandidateIdx,
                                     pixelTripletIndex);
-          // printf("Added pT3 Track Candidate %u with pixel index %u\n", trackCandidateIdx, pT3PixelIndex);                           
         }
       }
     }
