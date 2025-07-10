@@ -20,6 +20,7 @@ namespace lst {
                       SOA_COLUMN(float, fakeScore),       // DNN confidence score for fake t3
                       SOA_COLUMN(float, promptScore),     // DNN confidence score for real (prompt) t3
                       SOA_COLUMN(float, displacedScore),  // DNN confidence score for real (displaced) t3
+                      SOA_COLUMN(float, charge),
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(float, zOut),
                       SOA_COLUMN(float, rtOut),
@@ -27,7 +28,8 @@ namespace lst {
 #endif
                       SOA_COLUMN(bool, partOfPT5),   // is it used in a pT5
                       SOA_COLUMN(bool, partOfT5),    // is it used in a T5
-                      SOA_COLUMN(bool, partOfPT3));  // is it used in a pT3
+                      SOA_COLUMN(bool, partOfPT3),   // is it used in a pT3
+                      SOA_COLUMN(bool, partOfPT4));  // is it used in a pT4
 
   using TripletsSoA = TripletsSoALayout<>;
   using Triplets = TripletsSoA::View;

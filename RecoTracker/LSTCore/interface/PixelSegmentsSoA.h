@@ -13,6 +13,7 @@ namespace lst {
                       SOA_COLUMN(Params_pLS::ArrayFxEmbed, plsEmbed),
                       SOA_COLUMN(char, isDup),
                       SOA_COLUMN(bool, partOfPT5),
+                      SOA_COLUMN(bool, partOfPT4),
                       SOA_COLUMN(float, score),
                       SOA_COLUMN(float, circleCenterX),
                       SOA_COLUMN(float, circleCenterY),
