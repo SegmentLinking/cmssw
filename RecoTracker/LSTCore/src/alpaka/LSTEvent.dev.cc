@@ -764,7 +764,7 @@ void LSTEvent::createQuintuplets() {
                       tripletsDC_->const_view<TripletsOccupancySoA>(),
                       quintupletsDC_->view<QuintupletsSoA>(),
                       quintupletsDC_->view<QuintupletsOccupancySoA>(),
-                      rangesDC_->const_view(),
+                      rangesDC_->view(),
                       nEligibleT5Modules,
                       ptCut_);
 

@@ -7,7 +7,6 @@
 #include "RecoTracker/LSTCore/interface/Common.h"
 
 namespace lst {
-
   GENERATE_SOA_LAYOUT(ObjectRangesSoALayout,
                       SOA_COLUMN(ArrayIx2, mdRanges),
                       SOA_COLUMN(ArrayIx2, segmentRanges),

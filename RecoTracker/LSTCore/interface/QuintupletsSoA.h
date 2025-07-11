@@ -9,6 +9,7 @@
 
 namespace lst {
   GENERATE_SOA_LAYOUT(QuintupletsSoALayout,
+                      SOA_COLUMN(ArrayUx2, PreAllocatedTripletIndices),            // pre-allocated the theoretical max triplet indices
                       SOA_COLUMN(ArrayUx2, tripletIndices),                        // inner and outer triplet indices
                       SOA_COLUMN(Params_T5::ArrayU16xLayers, lowerModuleIndices),  // lower module index in each layer
                       SOA_COLUMN(Params_T5::ArrayU8xLayers, logicalLayers),        // layer ID
