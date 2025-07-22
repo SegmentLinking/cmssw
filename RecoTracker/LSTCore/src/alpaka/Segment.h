@@ -354,8 +354,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     const float zGeom = modules.layers()[innerLowerModuleIndex] <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
-    zLo = zIn + (zIn - kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) -
-          zGeom;  //slope-correction only on outer end
+    //slope-correction only on outer end
+    zLo = zIn + (zIn - kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) - zGeom;
     zHi = zIn + (zIn + kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn < 0.f ? 1.f : dzDrtScale) + zGeom;
 
     if ((zOut < zLo) || (zOut > zHi))
