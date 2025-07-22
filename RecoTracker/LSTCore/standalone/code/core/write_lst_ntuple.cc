@@ -566,7 +566,7 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     // N.B. these simulated tracks are looser than MTV denominator
     ana.tx->pushbackToBranch<float>("sim_pt", trk_sim_pt[isimtrk]);
     ana.tx->pushbackToBranch<float>("sim_eta", trk_sim_eta[isimtrk]);
-    ana.tx->pushbackToBranch<float>("sim_phi", trk_sim_eta[isimtrk]);
+    ana.tx->pushbackToBranch<float>("sim_phi", trk_sim_phi[isimtrk]);
     ana.tx->pushbackToBranch<float>("sim_pca_dxy", trk_sim_pca_dxy[isimtrk]);
     ana.tx->pushbackToBranch<float>("sim_pca_dz", trk_sim_pca_dz[isimtrk]);
     ana.tx->pushbackToBranch<int>("sim_q", trk_sim_q[isimtrk]);
