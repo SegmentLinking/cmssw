@@ -411,9 +411,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float& circleCenterY,
                                                                    const float ptCut,
                                                                    float (&t3Scores)[dnn::t3dnn::kOutputFeatures]) {
-    unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
-    unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
-    unsigned int thirdMDIndex = segments.mdIndices()[outerSegmentIndex][1];
 
     const unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
     const unsigned int secondMDIndex = segments.mdIndices()[outerSegmentIndex][0];
@@ -479,7 +476,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
-      constexpr uint16_t maxMatchedPairs = 3000;
+      //constexpr uint16_t maxMatchedPairs = 3000;
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc); // AtomicAdd does not support uint16_t variable
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
@@ -554,21 +551,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             // Match inner Sg and Outer Sg
             int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
 
-            if (mIdx < maxMatchedPairs) {
+            //if (mIdx < maxMatchedPairs) {
               //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][0] = innerSegmentIndex;
               //ranges.tripletPreselInnerOuterSgPairs()[innerLowerModuleArrayIdx][mIdx][1] = outerSegmentIndex;
-              unsigned int tripletIndex =
-                  ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + mIdx;
-              triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
-              triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
+            unsigned int tripletIndex =
+                ranges.tripletModuleIndices()[innerInnerLowerModuleIndex] + mIdx;
+            triplets.PreAllocatedSegmentIndices()[tripletIndex][0] = innerSegmentIndex;
+            triplets.PreAllocatedSegmentIndices()[tripletIndex][1] = outerSegmentIndex;
               
-            }
+            //}
           }
         }
 
         
         alpaka::syncBlockThreads(acc);
-        if (!(matchCount<maxMatchedPairs) || matchCount==0){
+        if (matchCount==0){
           continue;
         }
 
@@ -655,7 +652,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           }
         }
       }
-    }
   };
   
   struct CountSegmentConnections {
