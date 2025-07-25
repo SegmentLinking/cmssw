@@ -13,6 +13,7 @@ namespace lst {
                       SOA_COLUMN(ArrayIx2, segmentRanges),
                       SOA_COLUMN(ArrayIx2, tripletRanges),
                       SOA_COLUMN(ArrayIx2, quintupletRanges),
+                      SOA_COLUMN(ArrayIx2, quadrupletRanges),
                       SOA_COLUMN(int, miniDoubletModuleIndices),
                       SOA_COLUMN(int, miniDoubletModuleOccupancy),
                       SOA_COLUMN(int, segmentModuleIndices),
@@ -21,12 +22,17 @@ namespace lst {
                       SOA_COLUMN(int, tripletModuleOccupancy),
                       SOA_COLUMN(int, quintupletModuleIndices),
                       SOA_COLUMN(int, quintupletModuleOccupancy),
+                      SOA_COLUMN(int, quadrupletModuleIndices),
+                      SOA_COLUMN(int, quadrupletModuleOccupancy),
                       SOA_COLUMN(uint16_t, indicesOfEligibleT5Modules),
+                      SOA_COLUMN(uint16_t, indicesOfEligibleT4Modules),
                       SOA_SCALAR(unsigned int, nTotalMDs),
                       SOA_SCALAR(unsigned int, nTotalSegs),
                       SOA_SCALAR(unsigned int, nTotalTrips),
                       SOA_SCALAR(unsigned int, nTotalQuints),
-                      SOA_SCALAR(uint16_t, nEligibleT5Modules))
+                      SOA_SCALAR(unsigned int, nTotalQuads),
+                      SOA_SCALAR(uint16_t, nEligibleT5Modules),
+                      SOA_SCALAR(uint16_t, nEligibleT4Modules))
 
   using ObjectRangesSoA = ObjectRangesSoALayout<>;
 
