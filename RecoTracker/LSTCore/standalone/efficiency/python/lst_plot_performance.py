@@ -10,7 +10,7 @@ from math import sqrt
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate"]
 variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy"]
-objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower"]
+objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "T4", "pT5_lower", "pT3_lower", "T5_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
 r.gROOT.SetBatch(True)
@@ -118,7 +118,7 @@ def plot(args):
     numer = []
     numer.append(params["input_file"].Get(params["numer"]).Clone())
 
-    breakdown_hist_types = ["pT5", "pT3", "T5", "pLS"]
+    breakdown_hist_types = ["pT5", "pT3", "T5", "pLS", "T4"]
     print("breakdown = ", params["breakdown"])
     if params["breakdown"]:
         for breakdown_hist_type in breakdown_hist_types:
@@ -136,7 +136,7 @@ def plot(args):
 
 
     if params["breakdown"]:
-        params["legend_labels"] = ["TC" ,"pT5" ,"pT3" ,"T5" ,"pLS"]
+        params["legend_labels"] = ["TC" ,"pT5" ,"pT3" ,"T5" ,"pLS", "T4"]
     else:
         params["legend_labels"] = [args.objecttype]
 
@@ -372,7 +372,7 @@ def parse_plot_name(output_name):
     elif "pT4_" in output_name:
         rtnstr.append("Quadruplet w/ Pixel LS")
     elif "T4_" in output_name:
-        rtnstr.append("Quadruplet w/o gap")
+        rtnstr.append("Quadruplet")
     elif "T4x_" in output_name:
         rtnstr.append("Quadruplet w/ gap")
     elif "pT3_" in output_name:
@@ -537,8 +537,8 @@ def draw_plot(effs, nums, dens, params):
     effs[0].SetTitle(parse_plot_name(output_name))
 
     # Draw the efficiency graphs
-    colors = [1, 2, 3, 4, 6]
-    markerstyles = [20, 26, 28, 24, 27]
+    colors = [1, 2, 3, 4, 6, 7]
+    markerstyles = [20, 26, 28, 24, 27, 25]
     markersize = 1.2
     linewidth = 2
     for i, eff in enumerate(effs):
@@ -672,6 +672,7 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4": [False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
@@ -682,6 +683,7 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4": [False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
@@ -692,6 +694,7 @@ def plot_standard_performance_plots(args):
                 "pT3": [False],
                 "T5": [False],
                 "pLS": [False],
+                "T4": [False],
                 "pT5_lower":[False],
                 "pT3_lower":[False],
                 "T5_lower":[False],
@@ -784,4 +787,3 @@ def plot_standard_performance_plots(args):
 if __name__ == "__main__":
 
     main()
-
