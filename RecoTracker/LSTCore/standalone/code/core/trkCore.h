@@ -23,13 +23,13 @@ float runMiniDoublet(LSTEvent* event, int evt);
 float runSegment(LSTEvent* event);
 float runT4(LSTEvent* event);
 float runT4x(LSTEvent* event);
-float runpT4(LSTEvent* event);
 float runT3(LSTEvent* event);
 float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets);
 float runQuintuplet(LSTEvent* event);
 float runPixelQuintuplet(LSTEvent* event);
 float runPixelLineSegment(LSTEvent* event, bool no_pls_dupclean);
 float runpT3(LSTEvent* event);
+float runQuadruplet(LSTEvent *event);
 
 // --------------------- ======================== ---------------------
 
