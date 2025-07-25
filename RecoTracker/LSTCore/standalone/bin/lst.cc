@@ -330,9 +330,6 @@ void run_lst() {
 
   if (ana.do_write_ntuple) {
     createOutputBranches();
-    if (ana.gnn_ntuple) {
-      createGnnNtupleBranches();
-    }
   }
 
   std::vector<LSTInputHostCollection> out_lstInputHC;

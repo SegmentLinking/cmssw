@@ -162,43 +162,32 @@ void createT3DNNBranches() {
 //________________________________________________________________________________________________________________________________
 void createGnnNtupleBranches() {
   // Mini Doublets
-  ana.tx->createBranch<std::vector<float>>("MD_pt");
-  ana.tx->createBranch<std::vector<float>>("MD_eta");
-  ana.tx->createBranch<std::vector<float>>("MD_phi");
-  ana.tx->createBranch<std::vector<float>>("MD_dphichange");
-  ana.tx->createBranch<std::vector<int>>("MD_isFake");
-  ana.tx->createBranch<std::vector<int>>("MD_tpType");
-  ana.tx->createBranch<std::vector<int>>("MD_detId");
-  ana.tx->createBranch<std::vector<int>>("MD_layer");
-  ana.tx->createBranch<std::vector<float>>("MD_0_r");
-  ana.tx->createBranch<std::vector<float>>("MD_0_x");
-  ana.tx->createBranch<std::vector<float>>("MD_0_y");
-  ana.tx->createBranch<std::vector<float>>("MD_0_z");
-  ana.tx->createBranch<std::vector<float>>("MD_1_r");
-  ana.tx->createBranch<std::vector<float>>("MD_1_x");
-  ana.tx->createBranch<std::vector<float>>("MD_1_y");
-  ana.tx->createBranch<std::vector<float>>("MD_1_z");
+  ana.tx->createBranch<std::vector<int>>("md_tpType");
+  ana.tx->createBranch<std::vector<int>>("md_detId");
+  ana.tx->createBranch<std::vector<int>>("md_layer");
+  ana.tx->createBranch<std::vector<float>>("md_0_r");
+  ana.tx->createBranch<std::vector<float>>("md_0_x");
+  ana.tx->createBranch<std::vector<float>>("md_0_y");
+  ana.tx->createBranch<std::vector<float>>("md_0_z");
+  ana.tx->createBranch<std::vector<float>>("md_1_r");
+  ana.tx->createBranch<std::vector<float>>("md_1_x");
+  ana.tx->createBranch<std::vector<float>>("md_1_y");
+  ana.tx->createBranch<std::vector<float>>("md_1_z");
 
   // Line Segments
-  ana.tx->createBranch<std::vector<float>>("LS_pt");
-  ana.tx->createBranch<std::vector<float>>("LS_eta");
-  ana.tx->createBranch<std::vector<float>>("LS_phi");
-  ana.tx->createBranch<std::vector<int>>("LS_isFake");
-  ana.tx->createBranch<std::vector<int>>("LS_MD_idx0");
-  ana.tx->createBranch<std::vector<int>>("LS_MD_idx1");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_pt");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_eta");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_phi");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_pca_dxy");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_pca_dz");
-  ana.tx->createBranch<std::vector<int>>("LS_sim_q");
-  ana.tx->createBranch<std::vector<int>>("LS_sim_pdgId");
-  ana.tx->createBranch<std::vector<int>>("LS_sim_event");
-  ana.tx->createBranch<std::vector<int>>("LS_sim_bx");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_vx");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_vy");
-  ana.tx->createBranch<std::vector<float>>("LS_sim_vz");
-  ana.tx->createBranch<std::vector<int>>("LS_isInTrueTC");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_pt");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_eta");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_phi");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_pca_dxy");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_pca_dz");
+  ana.tx->createBranch<std::vector<int>>("ls_sim_q");
+  ana.tx->createBranch<std::vector<int>>("ls_sim_pdgId");
+  ana.tx->createBranch<std::vector<int>>("ls_sim_event");
+  ana.tx->createBranch<std::vector<int>>("ls_sim_bx");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_vx");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_vy");
+  ana.tx->createBranch<std::vector<float>>("ls_sim_vz");
+  ana.tx->createBranch<std::vector<int>>("ls_isInTrueTC");
 
   // TC's LS
   ana.tx->createBranch<std::vector<std::vector<int>>>("tc_lsIdx");
@@ -2371,7 +2360,7 @@ void setGnnNtupleBranches(LSTEvent* event, float matchfrac) {
     }
   }
 
-  std::cout << " lss_used_in_true_tc.size(): " << lss_used_in_true_tc.size() << std::endl;
+  // std::cout << " lss_used_in_true_tc.size(): " << lss_used_in_true_tc.size() << std::endl;
 
   // std::cout <<  " nTotalMD: " << nTotalMD <<  std::endl;
   // std::cout <<  " nTotalLS: " << nTotalLS <<  std::endl;
@@ -2433,9 +2422,6 @@ void setGnnNtupleBranches(LSTEvent* event, float matchfrac) {
                                 trk_pix_simHitIdx);
       }
 
-      ana.tx->pushbackToBranch<int>("LS_MD_idx0", md_index_map[MDs[0]]);
-      ana.tx->pushbackToBranch<int>("LS_MD_idx1", md_index_map[MDs[1]]);
-
       std::vector<unsigned int> hits = getHitsFromLS(event, sgIdx);
 
       // Computing line segment pt estimate (assuming beam spot is at zero)
@@ -2447,37 +2433,30 @@ void setGnnNtupleBranches(LSTEvent* event, float matchfrac) {
       float eta = hitC.eta();
       float phi = hitB.phi();
 
-      ana.tx->pushbackToBranch<float>("LS_pt", pt);
-      ana.tx->pushbackToBranch<float>("LS_eta", eta);
-      ana.tx->pushbackToBranch<float>("LS_phi", phi);
-      // ana.tx->pushbackToBranch<int>("LS_layer0", layer0);
-      // ana.tx->pushbackToBranch<int>("LS_layer1", layer1);
-
       std::vector<unsigned int> hitidxs;
       std::vector<unsigned int> hittypes;
       std::tie(hitidxs, hittypes) = getHitIdxsAndHitTypesFromLS(event, sgIdx);
       std::vector<int> simidxs = matchedSimTrkIdxs(
           hitidxs, hittypes, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac);
 
-      ana.tx->pushbackToBranch<int>("LS_isFake", simidxs.size() == 0);
-      ana.tx->pushbackToBranch<float>("LS_sim_pt", simidxs.size() > 0 ? trk_sim_pt[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_eta", simidxs.size() > 0 ? trk_sim_eta[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_phi", simidxs.size() > 0 ? trk_sim_phi[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_pca_dxy", simidxs.size() > 0 ? trk_sim_pca_dxy[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_pca_dz", simidxs.size() > 0 ? trk_sim_pca_dz[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_q", simidxs.size() > 0 ? trk_sim_q[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_event", simidxs.size() > 0 ? trk_sim_event[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_bx", simidxs.size() > 0 ? trk_sim_bunchCrossing[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_sim_pdgId", simidxs.size() > 0 ? trk_sim_pdgId[simidxs[0]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vx",
+      ana.tx->pushbackToBranch<float>("ls_sim_pt", simidxs.size() > 0 ? trk_sim_pt[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<float>("ls_sim_eta", simidxs.size() > 0 ? trk_sim_eta[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<float>("ls_sim_phi", simidxs.size() > 0 ? trk_sim_phi[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<float>("ls_sim_pca_dxy", simidxs.size() > 0 ? trk_sim_pca_dxy[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<float>("ls_sim_pca_dz", simidxs.size() > 0 ? trk_sim_pca_dz[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<int>("ls_sim_q", simidxs.size() > 0 ? trk_sim_q[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<int>("ls_sim_event", simidxs.size() > 0 ? trk_sim_event[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<int>("ls_sim_bx", simidxs.size() > 0 ? trk_sim_bunchCrossing[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<int>("ls_sim_pdgId", simidxs.size() > 0 ? trk_sim_pdgId[simidxs[0]] : -999);
+      ana.tx->pushbackToBranch<float>("ls_sim_vx",
                                       simidxs.size() > 0 ? trk_simvtx_x[trk_sim_parentVtxIdx[simidxs[0]]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vy",
+      ana.tx->pushbackToBranch<float>("ls_sim_vy",
                                       simidxs.size() > 0 ? trk_simvtx_y[trk_sim_parentVtxIdx[simidxs[0]]] : -999);
-      ana.tx->pushbackToBranch<float>("LS_sim_vz",
+      ana.tx->pushbackToBranch<float>("ls_sim_vz",
                                       simidxs.size() > 0 ? trk_simvtx_z[trk_sim_parentVtxIdx[simidxs[0]]] : -999);
-      ana.tx->pushbackToBranch<int>("LS_isInTrueTC", lss_used_in_true_tc.find(sgIdx) != lss_used_in_true_tc.end());
+      ana.tx->pushbackToBranch<int>("ls_isInTrueTC", lss_used_in_true_tc.find(sgIdx) != lss_used_in_true_tc.end());
 
-      sg_index_map[sgIdx] = ana.tx->getBranch<std::vector<int>>("LS_isFake").size() - 1;
+      sg_index_map[sgIdx] = ana.tx->getBranch<std::vector<int>>("ls_sim_pt").size() - 1;
 
       // // T5 eta and phi are computed using outer and innermost hits
       // lst_math::Hit hitA(trk_ph2_x[anchitidx], trk_ph2_y[anchitidx], trk_ph2_z[anchitidx]);
@@ -2495,7 +2474,7 @@ void setGnnNtupleBranches(LSTEvent* event, float matchfrac) {
     ana.tx->pushbackToBranch<std::vector<int>>("tc_lsIdx", lsIdx);
   }
 
-  std::cout << " mds_used_in_sg.size(): " << mds_used_in_sg.size() << std::endl;
+  // std::cout << " mds_used_in_sg.size(): " << mds_used_in_sg.size() << std::endl;
 }
 
 //________________________________________________________________________________________________________________________________
@@ -2576,22 +2555,17 @@ void setGnnNtupleMiniDoublet(LSTEvent* event,
   const float eta = hitA.eta();
 
   // Mini Doublets
-  ana.tx->pushbackToBranch<float>("MD_pt", pt);
-  ana.tx->pushbackToBranch<float>("MD_eta", eta);
-  ana.tx->pushbackToBranch<float>("MD_phi", phi);
-  ana.tx->pushbackToBranch<float>("MD_dphichange", dphichange);
-  ana.tx->pushbackToBranch<int>("MD_isFake", isFake);
-  ana.tx->pushbackToBranch<int>("MD_tpType", tp_type);
-  ana.tx->pushbackToBranch<int>("MD_detId", detId);
-  ana.tx->pushbackToBranch<int>("MD_layer", layer);
-  ana.tx->pushbackToBranch<float>("MD_0_r", hit0_r);
-  ana.tx->pushbackToBranch<float>("MD_0_x", hit0_x);
-  ana.tx->pushbackToBranch<float>("MD_0_y", hit0_y);
-  ana.tx->pushbackToBranch<float>("MD_0_z", hit0_z);
-  ana.tx->pushbackToBranch<float>("MD_1_r", hit1_r);
-  ana.tx->pushbackToBranch<float>("MD_1_x", hit1_x);
-  ana.tx->pushbackToBranch<float>("MD_1_y", hit1_y);
-  ana.tx->pushbackToBranch<float>("MD_1_z", hit1_z);
+  ana.tx->pushbackToBranch<int>("md_tpType", tp_type);
+  ana.tx->pushbackToBranch<int>("md_detId", detId);
+  ana.tx->pushbackToBranch<int>("md_layer", layer);
+  ana.tx->pushbackToBranch<float>("md_0_r", hit0_r);
+  ana.tx->pushbackToBranch<float>("md_0_x", hit0_x);
+  ana.tx->pushbackToBranch<float>("md_0_y", hit0_y);
+  ana.tx->pushbackToBranch<float>("md_0_z", hit0_z);
+  ana.tx->pushbackToBranch<float>("md_1_r", hit1_r);
+  ana.tx->pushbackToBranch<float>("md_1_x", hit1_x);
+  ana.tx->pushbackToBranch<float>("md_1_y", hit1_y);
+  ana.tx->pushbackToBranch<float>("md_1_z", hit1_z);
   // ana.tx->pushbackToBranch<int>("MD_sim_idx", simidxs.size() > 0 ? simidxs[0] : -999);
 }
 
