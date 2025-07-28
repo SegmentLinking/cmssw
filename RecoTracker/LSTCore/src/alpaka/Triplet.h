@@ -476,7 +476,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   uint16_t nonZeroModules,
                                   const float ptCut) const {
 
-      //constexpr uint16_t maxMatchedPairs = 3000;
       int& matchCount = alpaka::declareSharedVar<int, __COUNTER__>(acc); // AtomicAdd does not support uint16_t variable
 
       const auto threadIdx = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc);
