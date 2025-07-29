@@ -347,7 +347,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
 
 void LSTEvent::createTriplets() {
   if (!tripletsDC_) {
-    auto const countSegConn_wd = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+    auto const countSegConn_wd = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 16, 16});
 
     alpaka::exec<Acc3D>(queue_,
                         countSegConn_wd,

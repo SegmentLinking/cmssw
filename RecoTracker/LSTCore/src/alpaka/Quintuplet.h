@@ -1819,6 +1819,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool isValidQuintRegion(ModulesConst modules, uint16_t lowerModule) {
+    const short layer = modules.layers()[lowerModule];
+    const short subdet = modules.subdets()[lowerModule];
+    // Quintuplets starting outside these regions are not built.
+    return (subdet == Barrel && layer < 3) || (subdet == Endcap && layer <= 1);
+  }
+
   struct CountTripletConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -1832,9 +1839,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const auto& tripIdx = ranges.tripletModuleIndices();
 
       for (uint16_t lowerModule1 : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
-        const short layer = modules.layers()[lowerModule1];
-        const short subdet = modules.subdets()[lowerModule1];
-        if ((subdet == Barrel && layer >= 3) || (subdet == Endcap && layer > 1))
+        if (!isValidQuintRegion(modules, lowerModule1))
           continue;
 
         const unsigned int nInnerTriplets = tripletsOcc.nTriplets()[lowerModule1];
@@ -1883,22 +1888,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       alpaka::syncBlockThreads(acc);
 
-      for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
-        short layer = modules.layers()[i];
-        short subdet = modules.subdets()[i];
-
-        if (subdet == Barrel && layer >= 3)
-          continue;
-        if (subdet == Endcap && layer > 1)
+      for (uint16_t lowerModule : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
+        if (!isValidQuintRegion(modules, lowerModule))
           continue;
 
-        unsigned int nInnerTriplets = tripletsOcc.nTriplets()[i];
+        unsigned int nInnerTriplets = tripletsOcc.nTriplets()[lowerModule];
         if (nInnerTriplets == 0)
           continue;
 
         // Sum the real connectivity for triplets in this module
         int dynamic_count = 0;
-        const unsigned int firstTripletIdx = ranges.tripletModuleIndices()[i];
+        const unsigned int firstTripletIdx = ranges.tripletModuleIndices()[lowerModule];
         for (unsigned int t = 0; t < nInnerTriplets; ++t) {
           unsigned int tripletIndex = firstTripletIdx + t;
           dynamic_count += triplets.connectedMax()[tripletIndex];
@@ -1910,9 +1910,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         int nEligibleT5Modules = alpaka::atomicAdd(acc, &nEligibleT5Modulesx, 1, alpaka::hierarchy::Threads{});
         int nTotQ = alpaka::atomicAdd(acc, &nTotalQuintupletsx, dynamic_count, alpaka::hierarchy::Threads{});
 
-        ranges.quintupletModuleIndices()[i] = nTotQ;
-        ranges.indicesOfEligibleT5Modules()[nEligibleT5Modules] = i;
-        ranges.quintupletModuleOccupancy()[i] = dynamic_count;
+        ranges.quintupletModuleIndices()[lowerModule] = nTotQ;
+        ranges.indicesOfEligibleT5Modules()[nEligibleT5Modules] = lowerModule;
+        ranges.quintupletModuleOccupancy()[lowerModule] = dynamic_count;
       }
 
       // Wait for all threads to finish before reporting final values
