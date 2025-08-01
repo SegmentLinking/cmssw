@@ -746,7 +746,7 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
   std::cout << "   " << std::setw(6) << "LS";
   std::cout << "   " << std::setw(6) << "T3";
   std::cout << "   " << std::setw(6) << "T5";
-  std::cout << "   " << std::setw(6) << "pLS"; 
+  std::cout << "   " << std::setw(6) << "pLS";
   std::cout << "   " << std::setw(6) << "T4";
   std::cout << "   " << std::setw(6) << "pT5";
   std::cout << "   " << std::setw(6) << "pT3";
@@ -762,25 +762,25 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
     auto timing = timing_information[ievt];
     float timing_total = 0.f;
     float timing_total_short = 0.f;
-    timing_total += timing[0] * 1000;        // Hits
-    timing_total += timing[1] * 1000;        // MD
-    timing_total += timing[2] * 1000;        // LS
-    timing_total += timing[3] * 1000;        // T3
-    timing_total += timing[4] * 1000;        // T5
-    timing_total += timing[5] * 1000;        // pLS
-    timing_total += timing[6] * 1000;        // T4
-    timing_total += timing[7] * 1000;        // pT5
-    timing_total += timing[8] * 1000;        // pT3
-    timing_total += timing[9] * 1000;        // TC
-    timing_total_short += timing[1] * 1000;  // MD
-    timing_total_short += timing[2] * 1000;  // LS
-    timing_total_short += timing[3] * 1000;  // T3
-    timing_total_short += timing[4] * 1000;  // T5
-    timing_total_short += timing[6] * 1000;  // T4
-    timing_total_short += timing[7] * 1000;  // pT5
-    timing_total_short += timing[8] * 1000;  // pT3
-    timing_total_short += timing[9] * 1000;  // TC
-    timing_total_short += timing[10] * 1000; // Reset
+    timing_total += timing[0] * 1000;         // Hits
+    timing_total += timing[1] * 1000;         // MD
+    timing_total += timing[2] * 1000;         // LS
+    timing_total += timing[3] * 1000;         // T3
+    timing_total += timing[4] * 1000;         // T5
+    timing_total += timing[5] * 1000;         // pLS
+    timing_total += timing[6] * 1000;         // T4
+    timing_total += timing[7] * 1000;         // pT5
+    timing_total += timing[8] * 1000;         // pT3
+    timing_total += timing[9] * 1000;         // TC
+    timing_total_short += timing[1] * 1000;   // MD
+    timing_total_short += timing[2] * 1000;   // LS
+    timing_total_short += timing[3] * 1000;   // T3
+    timing_total_short += timing[4] * 1000;   // T5
+    timing_total_short += timing[6] * 1000;   // T4
+    timing_total_short += timing[7] * 1000;   // pT5
+    timing_total_short += timing[8] * 1000;   // pT3
+    timing_total_short += timing[9] * 1000;   // TC
+    timing_total_short += timing[10] * 1000;  // Reset
     std::cout << std::setw(6) << ievt;
     std::cout << "   " << std::setw(6) << timing[0] * 1000;    // Hits
     std::cout << "   " << std::setw(6) << timing[1] * 1000;    // MD
@@ -796,54 +796,54 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
     std::cout << "   " << std::setw(7) << timing_total;        // Total time
     std::cout << "   " << std::setw(7) << timing_total_short;  // Total time
     std::cout << std::endl;
-    timing_sum_information[0] += timing[0] * 1000;   // Hits
-    timing_sum_information[1] += timing[1] * 1000;   // MD
-    timing_sum_information[2] += timing[2] * 1000;   // LS
-    timing_sum_information[3] += timing[3] * 1000;   // T3
-    timing_sum_information[4] += timing[4] * 1000;   // T5
-    timing_sum_information[5] += timing[5] * 1000;   // pLS
-    timing_sum_information[6] += timing[6] * 1000;   // T4
-    timing_sum_information[7] += timing[7] * 1000;   // pT5
-    timing_sum_information[8] += timing[8] * 1000;   // pT3
-    timing_sum_information[9] += timing[9] * 1000;   // TC
-    timing_sum_information[10] += timing[10] * 1000; // Reset
-    timing_shortlist.push_back(timing_total_short);  // short total
-    timing_list.push_back(timing_total);             // short total
+    timing_sum_information[0] += timing[0] * 1000;    // Hits
+    timing_sum_information[1] += timing[1] * 1000;    // MD
+    timing_sum_information[2] += timing[2] * 1000;    // LS
+    timing_sum_information[3] += timing[3] * 1000;    // T3
+    timing_sum_information[4] += timing[4] * 1000;    // T5
+    timing_sum_information[5] += timing[5] * 1000;    // pLS
+    timing_sum_information[6] += timing[6] * 1000;    // T4
+    timing_sum_information[7] += timing[7] * 1000;    // pT5
+    timing_sum_information[8] += timing[8] * 1000;    // pT3
+    timing_sum_information[9] += timing[9] * 1000;    // TC
+    timing_sum_information[10] += timing[10] * 1000;  // Reset
+    timing_shortlist.push_back(timing_total_short);   // short total
+    timing_list.push_back(timing_total);              // short total
   }
-  timing_sum_information[0] /= timing_information.size();  // Hits
-  timing_sum_information[1] /= timing_information.size();  // MD
-  timing_sum_information[2] /= timing_information.size();  // LS
-  timing_sum_information[3] /= timing_information.size();  // T3
-  timing_sum_information[4] /= timing_information.size();  // T5
-  timing_sum_information[5] /= timing_information.size();  // pLS
-  timing_sum_information[6] /= timing_information.size();  // T4
-  timing_sum_information[7] /= timing_information.size();  // pT5
-  timing_sum_information[8] /= timing_information.size();  // pT3
-  timing_sum_information[9] /= timing_information.size();  // TC
-  timing_sum_information[10] /= timing_information.size(); // Reset
+  timing_sum_information[0] /= timing_information.size();   // Hits
+  timing_sum_information[1] /= timing_information.size();   // MD
+  timing_sum_information[2] /= timing_information.size();   // LS
+  timing_sum_information[3] /= timing_information.size();   // T3
+  timing_sum_information[4] /= timing_information.size();   // T5
+  timing_sum_information[5] /= timing_information.size();   // pLS
+  timing_sum_information[6] /= timing_information.size();   // T4
+  timing_sum_information[7] /= timing_information.size();   // pT5
+  timing_sum_information[8] /= timing_information.size();   // pT3
+  timing_sum_information[9] /= timing_information.size();   // TC
+  timing_sum_information[10] /= timing_information.size();  // Reset
 
   float timing_total_avg = 0.0;
-  timing_total_avg += timing_sum_information[0];  // Hits
-  timing_total_avg += timing_sum_information[1];  // MD
-  timing_total_avg += timing_sum_information[2];  // LS
-  timing_total_avg += timing_sum_information[3];  // T3
-  timing_total_avg += timing_sum_information[4];  // T5
-  timing_total_avg += timing_sum_information[5];  // pLS
-  timing_total_avg += timing_sum_information[6];  // T4
-  timing_total_avg += timing_sum_information[7];  // pT5
-  timing_total_avg += timing_sum_information[8];  // pT3
-  timing_total_avg += timing_sum_information[9];  // TC
-  timing_total_avg += timing_sum_information[10]; // Reset
+  timing_total_avg += timing_sum_information[0];   // Hits
+  timing_total_avg += timing_sum_information[1];   // MD
+  timing_total_avg += timing_sum_information[2];   // LS
+  timing_total_avg += timing_sum_information[3];   // T3
+  timing_total_avg += timing_sum_information[4];   // T5
+  timing_total_avg += timing_sum_information[5];   // pLS
+  timing_total_avg += timing_sum_information[6];   // T4
+  timing_total_avg += timing_sum_information[7];   // pT5
+  timing_total_avg += timing_sum_information[8];   // pT3
+  timing_total_avg += timing_sum_information[9];   // TC
+  timing_total_avg += timing_sum_information[10];  // Reset
   float timing_totalshort_avg = 0.0;
-  timing_totalshort_avg += timing_sum_information[1];  // MD
-  timing_totalshort_avg += timing_sum_information[2];  // LS
-  timing_totalshort_avg += timing_sum_information[3];  // T3
-  timing_totalshort_avg += timing_sum_information[4];  // T5
-  timing_totalshort_avg += timing_sum_information[6];  // T4
-  timing_totalshort_avg += timing_sum_information[7];  // pT5
-  timing_totalshort_avg += timing_sum_information[8];  // pT3
-  timing_totalshort_avg += timing_sum_information[9];  // TC
-  timing_totalshort_avg += timing_sum_information[10]; // Reset
+  timing_totalshort_avg += timing_sum_information[1];   // MD
+  timing_totalshort_avg += timing_sum_information[2];   // LS
+  timing_totalshort_avg += timing_sum_information[3];   // T3
+  timing_totalshort_avg += timing_sum_information[4];   // T5
+  timing_totalshort_avg += timing_sum_information[6];   // T4
+  timing_totalshort_avg += timing_sum_information[7];   // pT5
+  timing_totalshort_avg += timing_sum_information[8];   // pT3
+  timing_totalshort_avg += timing_sum_information[9];   // TC
+  timing_totalshort_avg += timing_sum_information[10];  // Reset
 
   float standardDeviation = 0.0;
   for (auto shorttime : timing_shortlist) {
@@ -868,19 +868,19 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
   std::cout << "   " << std::setw(7) << "Total(short)";
   std::cout << std::endl;
   std::cout << std::setw(6) << "avg";
-  std::cout << "   " << std::setw(6) << timing_sum_information[0];  // Hits
-  std::cout << "   " << std::setw(6) << timing_sum_information[1];  // MD
-  std::cout << "   " << std::setw(6) << timing_sum_information[2];  // LS
-  std::cout << "   " << std::setw(6) << timing_sum_information[3];  // T3
-  std::cout << "   " << std::setw(6) << timing_sum_information[4];  // T5
-  std::cout << "   " << std::setw(6) << timing_sum_information[5];  // pLS
-  std::cout << "   " << std::setw(6) << timing_sum_information[6];  // T4
-  std::cout << "   " << std::setw(6) << timing_sum_information[7];  // pT5
-  std::cout << "   " << std::setw(6) << timing_sum_information[8];  // pT3
-  std::cout << "   " << std::setw(6) << timing_sum_information[9];  // TC
-  std::cout << "   " << std::setw(6) << timing_sum_information[10]; // Reset
-  std::cout << "   " << std::setw(7) << timing_total_avg;           // Average total time
-  std::cout << "   " << std::setw(7) << timing_totalshort_avg;      // Average total time
+  std::cout << "   " << std::setw(6) << timing_sum_information[0];   // Hits
+  std::cout << "   " << std::setw(6) << timing_sum_information[1];   // MD
+  std::cout << "   " << std::setw(6) << timing_sum_information[2];   // LS
+  std::cout << "   " << std::setw(6) << timing_sum_information[3];   // T3
+  std::cout << "   " << std::setw(6) << timing_sum_information[4];   // T5
+  std::cout << "   " << std::setw(6) << timing_sum_information[5];   // pLS
+  std::cout << "   " << std::setw(6) << timing_sum_information[6];   // T4
+  std::cout << "   " << std::setw(6) << timing_sum_information[7];   // pT5
+  std::cout << "   " << std::setw(6) << timing_sum_information[8];   // pT3
+  std::cout << "   " << std::setw(6) << timing_sum_information[9];   // TC
+  std::cout << "   " << std::setw(6) << timing_sum_information[10];  // Reset
+  std::cout << "   " << std::setw(7) << timing_total_avg;            // Average total time
+  std::cout << "   " << std::setw(7) << timing_totalshort_avg;       // Average total time
   std::cout << "+/- " << std::setw(4) << stdDev;
   std::cout << "   " << std::setw(7) << fullavg;  // Average full time
   std::cout << "   " << ana.compilation_target;

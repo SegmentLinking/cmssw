@@ -1,6 +1,6 @@
 #include "performance.h"
 
-enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9};
+enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9 };
 
 //__________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char** argv) {
@@ -287,7 +287,7 @@ int main(int argc, char** argv) {
                              /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
                              /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
                              /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
-                             /* type  */ [&]() { return lstEff.getVI("tc_type"); }));                                                      
+                             /* type  */ [&]() { return lstEff.getVI("tc_type"); }));
 
   if (ana.do_lower_level) {
     list_DRSetDef.push_back(RecoTrackSetDefinition(

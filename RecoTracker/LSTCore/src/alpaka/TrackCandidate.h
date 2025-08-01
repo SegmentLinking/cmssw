@@ -79,19 +79,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addT4TrackCandidateToMemory(TrackCandidatesBase& candsBase,
-                                                                TrackCandidatesExtended& candsExtended,
-                                                                LSTObjType trackCandidateType,
-                                                                unsigned int innerTrackletIndex,
-                                                                unsigned int outerTrackletIndex,
-                                                                uint8_t* logicalLayerIndices,
-                                                                uint16_t* lowerModuleIndices,
-                                                                unsigned int* hitIndices,
-                                                                int pixelSeedIndex,
-                                                                float centerX,
-                                                                float centerY,
-                                                                float radius,
-                                                                unsigned int trackCandidateIndex,
-                                                                unsigned int directObjectIndex) {
+                                                                  TrackCandidatesExtended& candsExtended,
+                                                                  LSTObjType trackCandidateType,
+                                                                  unsigned int innerTrackletIndex,
+                                                                  unsigned int outerTrackletIndex,
+                                                                  uint8_t* logicalLayerIndices,
+                                                                  uint16_t* lowerModuleIndices,
+                                                                  unsigned int* hitIndices,
+                                                                  int pixelSeedIndex,
+                                                                  float centerX,
+                                                                  float centerY,
+                                                                  float radius,
+                                                                  unsigned int trackCandidateIndex,
+                                                                  unsigned int directObjectIndex) {
     candsBase.trackCandidateType()[trackCandidateIndex] = trackCandidateType;
     candsExtended.directObjectIndices()[trackCandidateIndex] = directObjectIndex;
     candsBase.pixelSeedIndex()[trackCandidateIndex] = pixelSeedIndex;
@@ -179,7 +179,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float dR2 = dEta * dEta + dPhi * dPhi;
           if (dR2 < 1e-5f)
             pixelTriplets.isDup()[pixelTripletIndex] = true;
-        } 
+        }
       }
     }
   };
@@ -344,7 +344,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 0.000001f)
               pixelSegments.isDup()[pixelArrayIndex] = true;
-          }          
+          }
           if (type == LSTObjType::T4) {
             unsigned int quadrupletIndex = innerTrackletIdx;  // T4 index
             float eta2 = __H2F(quadruplets.eta()[quadrupletIndex]);
@@ -365,7 +365,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   Quadruplets quadruplets,
-                                  QuadrupletsOccupancyConst quadrupletsOccupancy,                                
+                                  QuadrupletsOccupancyConst quadrupletsOccupancy,
                                   PixelQuintupletsConst pixelQuintuplets,
                                   PixelTripletsConst pixelTriplets,
                                   QuintupletsConst quintuplets,
@@ -377,7 +377,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ObjectRangesConst ranges) const {
       for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
         if (ranges.quadrupletModuleIndices()[lowmod] == -1)
-          continue;                              
+          continue;
 
         unsigned int nQuads = quadrupletsOccupancy.nQuadruplets()[lowmod];
         for (unsigned int iOff : cms::alpakatools::uniform_elements_y(acc, nQuads)) {
@@ -388,7 +388,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           // // Cross cleaning step
-          float eta1 = __H2F(quadruplets.eta()[iT4]); 
+          float eta1 = __H2F(quadruplets.eta()[iT4]);
           float phi1 = __H2F(quadruplets.phi()[iT4]);
 
           unsigned int nTrackCandidates = candsBase.nTrackCandidates();
@@ -398,7 +398,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (type == LSTObjType::T5) {
               unsigned int quintupletIndex = outerTrackletIdx;  // T5 index
               uint16_t t5_lowerModIdx1 = quintuplets.lowerModuleIndices()[quintupletIndex][0];
-              short layer2_adjustment =1;
+              short layer2_adjustment = 1;
               short layer3_adjustment;
               int layer = modules.layers()[t5_lowerModIdx1];
               if (layer == 1) {
@@ -409,19 +409,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
               int innerTripletIndex = quintuplets.tripletIndices()[quintupletIndex][0];
               float phi2 =
-                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float eta2 =
-                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-  
+
               float dR2 = dEta * dEta + dPhi * dPhi;
               if (dR2 < 1e-3f) {
                 quadruplets.isDup()[iT4] = true;
               }
-              
             }
-            if (type == LSTObjType::pT3) { 
+            if (type == LSTObjType::pT3) {
               int pT3Index = outerTrackletIdx;
               uint16_t pT3_lowerModIdx1 = pixelTriplets.lowerModuleIndices()[pT3Index][0];
               short layer2_adjustment = 1;
@@ -435,20 +436,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
               int innerTripletIndex = pixelTriplets.tripletIndices()[pT3Index];
               float phi2 =
-                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float eta2 =
-                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-  
+
               float dR2 = dEta * dEta + dPhi * dPhi;
               if (dR2 < 1e-3f)
                 quadruplets.isDup()[iT4] = true;
             }
-            if (type == LSTObjType::pT5) { 
+            if (type == LSTObjType::pT5) {
               unsigned int quintupletIndex = outerTrackletIdx;  // T5 index
               uint16_t t5_lowerModIdx1 = quintuplets.lowerModuleIndices()[quintupletIndex][0];
-              short layer2_adjustment =1;
+              short layer2_adjustment = 1;
               short layer3_adjustment;
               int layer = modules.layers()[t5_lowerModIdx1];
               if (layer == 1) {
@@ -459,17 +462,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
               int innerTripletIndex = quintuplets.tripletIndices()[quintupletIndex][0];
               float phi2 =
-                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float eta2 =
-                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]][layer2_adjustment]]; //layer 3
+                  mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
+                                                      [layer2_adjustment]];  //layer 3
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-  
+
               float dR2 = dEta * dEta + dPhi * dPhi;
               if (dR2 < 1e-3f) {
                 quadruplets.isDup()[iT4] = true;
               }
-            }            
+            }
           }
         }
       }
@@ -679,7 +684,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TrackCandidatesBase candsBase,
                                   TrackCandidatesExtended candsExtended,
                                   ObjectRangesConst ranges) const {
-                              
       for (int idx : cms::alpakatools::uniform_elements_y(acc, nLowerModules)) {
         if (ranges.quadrupletModuleIndices()[idx] == -1)
           continue;
@@ -697,8 +701,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           unsigned int trackCandidateIdx =
               alpaka::atomicAdd(acc, &candsBase.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
-          if (trackCandidateIdx - candsExtended.nTrackCandidatespT5() - candsExtended.nTrackCandidatespT3() 
-              - candsExtended.nTrackCandidatesT5() >= n_max_nonpixel_track_candidates)  // pT5, pT3, T5 TCs have been added, but not pLS TCs
+          if (trackCandidateIdx - candsExtended.nTrackCandidatespT5() - candsExtended.nTrackCandidatespT3() -
+                  candsExtended.nTrackCandidatesT5() >=
+              n_max_nonpixel_track_candidates)  // pT5, pT3, T5 TCs have been added, but not pLS TCs
           {
 #ifdef WARNINGS
             printf("Track Candidate excess alert! Type = T4");
@@ -709,19 +714,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             alpaka::atomicAdd(acc, &candsExtended.nTrackCandidatesT4(), 1u, alpaka::hierarchy::Threads{});
             unsigned int innerTripletIndex = quadruplets.tripletIndices()[quadrupletIndex][0];
             addT4TrackCandidateToMemory(candsBase,
-                                      candsExtended,
-                                      LSTObjType::T4,
-                                      quadrupletIndex,
-                                      quadrupletIndex,
-                                      quadruplets.logicalLayers()[quadrupletIndex].data(),
-                                      quadruplets.lowerModuleIndices()[quadrupletIndex].data(),
-                                      quadruplets.hitIndices()[quadrupletIndex].data(),
-                                      -1 /*no pixel seed index for T4s*/,
-                                      triplets.centerX()[innerTripletIndex],
-                                      triplets.centerY()[innerTripletIndex],
-                                      quadruplets.innerRadius()[quadrupletIndex],
-                                      trackCandidateIdx,
-                                      quadrupletIndex);
+                                        candsExtended,
+                                        LSTObjType::T4,
+                                        quadrupletIndex,
+                                        quadrupletIndex,
+                                        quadruplets.logicalLayers()[quadrupletIndex].data(),
+                                        quadruplets.lowerModuleIndices()[quadrupletIndex].data(),
+                                        quadruplets.hitIndices()[quadrupletIndex].data(),
+                                        -1 /*no pixel seed index for T4s*/,
+                                        triplets.centerX()[innerTripletIndex],
+                                        triplets.centerY()[innerTripletIndex],
+                                        quadruplets.innerRadius()[quadrupletIndex],
+                                        trackCandidateIdx,
+                                        quadrupletIndex);
             quadruplets.partOfTC()[quadrupletIndex] = true;
           }
         }

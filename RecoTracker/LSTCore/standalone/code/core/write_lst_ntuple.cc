@@ -164,7 +164,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<int>>("sim_T4_matched");
   ana.tx->createBranch<std::vector<int>>("t4_isFake");
   ana.tx->createBranch<std::vector<int>>("t4_isDuplicate");
-  ana.tx->createBranch<std::vector<int>>("t4_moduleType_binary"); 
+  ana.tx->createBranch<std::vector<int>>("t4_moduleType_binary");
   ana.tx->createBranch<std::vector<int>>("t4_layer_binary");
   ana.tx->createBranch<std::vector<float>>("t4_innerRadius");
   ana.tx->createBranch<std::vector<float>>("t4_outerRadius");
@@ -184,7 +184,7 @@ void createOptionalOutputBranches() {
 
   // T4 DNN branches
   createT4DNNBranches();
-    
+
   // Occupancy branches
   ana.tx->createBranch<std::vector<int>>("module_layers");
   ana.tx->createBranch<std::vector<int>>("module_subdets");
@@ -256,7 +256,7 @@ void createT3DNNBranches() {
   ana.tx->createBranch<std::vector<float>>("t3_pMatched");
   ana.tx->createBranch<std::vector<float>>("t3_sim_vxy");
   ana.tx->createBranch<std::vector<float>>("t3_sim_vz");
-  ana.tx->createBranch<std::vector<float>>("t3_fakeScore"); 
+  ana.tx->createBranch<std::vector<float>>("t3_fakeScore");
   ana.tx->createBranch<std::vector<float>>("t3_promptScore");
   ana.tx->createBranch<std::vector<float>>("t3_displacedScore");
 
@@ -301,7 +301,8 @@ void createT4DNNBranches() {
 
   // Hit-specific branches
   std::vector<std::string> hitIndices = {"0", "1", "2", "3", "4", "5"};
-  std::vector<std::string> hitProperties = {"r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType", "moduleIdx"};
+  std::vector<std::string> hitProperties = {
+      "r", "x", "y", "z", "eta", "phi", "detId", "layer", "moduleType", "moduleIdx"};
 
   for (const auto& idx : hitIndices) {
     for (const auto& prop : hitProperties) {
@@ -882,7 +883,7 @@ void setQuadrupletOutputBranches(LSTEvent* event) {
     int nQuadruplets = quadrupletsOccupancy.nQuadruplets()[lowerModuleIdx];
     for (unsigned int idx = 0; idx < nQuadruplets; idx++) {
       unsigned int quadrupletIndex = ranges.quadrupletModuleIndices()[lowerModuleIdx] + idx;
-      float pt = __H2F(quadruplets.pt()[quadrupletIndex]); 
+      float pt = __H2F(quadruplets.pt()[quadrupletIndex]);
       float eta = __H2F(quadruplets.eta()[quadrupletIndex]);
       float phi = __H2F(quadruplets.phi()[quadrupletIndex]);
 
@@ -896,17 +897,18 @@ void setQuadrupletOutputBranches(LSTEvent* event) {
       for (size_t i = 0; i < module_idx.size(); i += 2) {
         layer_binary |= (1 << (modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4)));
         moduleType_binary |= (modules.moduleType()[module_idx[i]] << i);
-        layers.push_back(modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4) + 5 * (modules.subdets()[module_idx[i]] == 4 && modules.moduleType()[module_idx[i]] == 1)); 
+        layers.push_back(modules.layers()[module_idx[i]] + 6 * (modules.subdets()[module_idx[i]] == 4) +
+                         5 * (modules.subdets()[module_idx[i]] == 4 && modules.moduleType()[module_idx[i]] == 1));
       }
       int innerTripletIndex = quadruplets.tripletIndices()[quadrupletIndex][0];
       int outerTripletIndex = quadruplets.tripletIndices()[quadrupletIndex][1];
-      
+
       float percent_matched;
       std::vector<int> simidx = matchedSimTrkIdxs(
           hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, &percent_matched);
 
       int isDup = quadruplets.isDup()[quadrupletIndex];
-      ana.tx->pushbackToBranch<int>("t4_isDup", isDup); 
+      ana.tx->pushbackToBranch<int>("t4_isDup", isDup);
       ana.tx->pushbackToBranch<int>("t4_isFake", static_cast<int>(simidx.size() == 0));
       ana.tx->pushbackToBranch<float>("t4_pt", pt);
       ana.tx->pushbackToBranch<float>("t4_eta", eta);
@@ -944,7 +946,6 @@ void setQuadrupletOutputBranches(LSTEvent* event) {
 
       ana.tx->pushbackToBranch<float>("t4_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
       ana.tx->pushbackToBranch<float>("t4_sim_vz", vtx_z);
-    
     }
   }
 
@@ -1281,7 +1282,7 @@ void fillT4DNNBranches(LSTEvent* event, unsigned int iT4) {
                                                                                 hitObjects[1].y(),
                                                                                 hitObjects[2].x(),
                                                                                 hitObjects[2].y());
- 
+
   ana.tx->pushbackToBranch<float>("t4_t3_pt", k2Rinv1GeVf * 2 * radius);
 
   // Angles
@@ -1338,7 +1339,7 @@ void setT4DNNBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t4_t3_fakeScore2", tripletsSoA.fakeScore()[t3sIdx[1]]);
       ana.tx->pushbackToBranch<float>("t4_t3_promptScore2", tripletsSoA.promptScore()[t3sIdx[1]]);
       ana.tx->pushbackToBranch<float>("t4_t3_displacedScore2", tripletsSoA.displacedScore()[t3sIdx[1]]);
-      
+
       ana.tx->pushbackToBranch<float>("t4_regressionRadius", quadruplets.regressionRadius()[t4Idx]);
       ana.tx->pushbackToBranch<float>("t4_nonAnchorRegressionRadius", quadruplets.nonAnchorRegressionRadius()[t4Idx]);
 

@@ -74,7 +74,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quadruplets.hitIndices()[quadrupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
     quadruplets.hitIndices()[quadrupletIndex][6] = triplets.hitIndices()[outerTripletIndex][4];
     quadruplets.hitIndices()[quadrupletIndex][7] = triplets.hitIndices()[outerTripletIndex][5];
-    
+
     quadruplets.rzChiSquared()[quadrupletIndex] = rzChiSquared;
     quadruplets.dBeta()[quadrupletIndex] = dBeta;
     quadruplets.promptscore_t4dnn()[quadrupletIndex] = promptScore;
@@ -249,7 +249,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         rtsi = rt4;
         layeri = layer4;
         moduleTypei = moduleType4;
-      } 
+      }
 
       if (moduleType3 == 0) {  //0: ps
         if (i == 3)
@@ -320,9 +320,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         residual = (layeri <= 6 && ((side == Center) or (drdz < 1))) ? diffz : diffr;
         float projection_missing2 = 1.f;
         if (drdz < 1)
-          projection_missing2 = ((subdets == Endcap) or (side == Center))
-                                    ? 1.f
-                                    : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
+          projection_missing2 =
+              ((subdets == Endcap) or (side == Center)) ? 1.f : 1.f / (1 + drdz * drdz);  // cos(atan(drdz)), if dr/dz<1
         if (drdz > 1)
           projection_missing2 = ((subdets == Endcap) or (side == Center))
                                     ? 1.f
@@ -349,9 +348,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       residual4_linear = residual4_linear * 100;
 
       rzChiSquared = 12 * (residual4_linear * residual4_linear);
-      if (rzChiSquared < 9.666f) //95% retention, add radii and t3 scores
+      if (rzChiSquared < 9.666f)  //95% retention, add radii and t3 scores
         tightCutFlag = true;
-      return rzChiSquared < 14.064f; //99% add reg radii and t3 scores to dnn
+      return rzChiSquared < 14.064f;  //99% add reg radii and t3 scores to dnn
     }
     // The category numbers are related to module regions and layers, decoding of the region numbers can be found here in slide 2 table. https://github.com/SegmentLinking/TrackLooper/files/11420927/part.2.pdf
     // The commented numbers after each case is the region code, and can look it up from the table to see which category it belongs to. For example, //0 means T4 built with Endcap 1,2,3,4 ps modules
@@ -384,20 +383,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           tightCutFlag = true;
         return rzChiSquared < 9.310f;
       }
-    } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16) //5
-    { 
-        if (rzChiSquared < 3.493f)
-          tightCutFlag = true;
-        return rzChiSquared < 4.328f;
-    }
-    else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
+    } else if (layer1 == 8 and layer2 == 9 and layer3 == 15 and layer4 == 16)  //5
+    {
+      if (rzChiSquared < 3.493f)
+        tightCutFlag = true;
+      return rzChiSquared < 4.328f;
+    } else if (layer1 == 1 and layer2 == 2 and layer3 == 3) {
       if (layer4 == 4)  //6
       {
         if (rzChiSquared < 13.252f)
           tightCutFlag = true;
         return rzChiSquared < 23.138f;
-      }
-      else if (layer4 == 7)  //7
+      } else if (layer4 == 7)  //7
       {
         if (rzChiSquared < 16.956f)
           tightCutFlag = true;
@@ -419,9 +416,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (rzChiSquared < 8.384f)
           tightCutFlag = true;
         return rzChiSquared < 12.608f;
-      } 
+      }
     } else if (layer1 == 1 and layer2 == 7 and layer3 == 8) {
-      if (layer4 == 9) //11
+      if (layer4 == 9)  //11
       {
         if (rzChiSquared < 18.741f)
           tightCutFlag = true;
@@ -429,91 +426,80 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       } else if (layer4 == 14)  //12
       {
         return true;
-      } 
-    } else if (layer1 == 2 and layer2 ==3) {
+      }
+    } else if (layer1 == 2 and layer2 == 3) {
       if (layer3 == 4) {
         if (layer4 == 5)  //13
         {
           if (rzChiSquared < 4.376f)
             tightCutFlag = true;
           return rzChiSquared < 5.430f;
-        }
-        else if (layer4 == 12) //14
-        { 
+        } else if (layer4 == 12)  //14
+        {
           if (rzChiSquared < 4.196f)
             tightCutFlag = true;
           return rzChiSquared < 5.176f;
         }
-      }
-      else if (layer3 == 7) {
-        if (layer4 == 8) // 15
-        { 
+      } else if (layer3 == 7) {
+        if (layer4 == 8)  // 15
+        {
           if (rzChiSquared < 11.934f)
             tightCutFlag = true;
           return rzChiSquared < 20.491f;
-        }
-        else if (layer4 == 13) //16
-        { 
+        } else if (layer4 == 13)  //16
+        {
           if (rzChiSquared < 9.518f)
             tightCutFlag = true;
           return rzChiSquared < 14.100f;
         }
-      }
-      else if (layer3 == 12 and layer4 == 13) //17
-      { 
+      } else if (layer3 == 12 and layer4 == 13)  //17
+      {
         if (rzChiSquared < 4.269f)
           tightCutFlag = true;
         return rzChiSquared < 5.499f;
       }
-    } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14) //18
-    { 
+    } else if (layer1 == 2 and layer2 == 12 and layer3 == 13 and layer4 == 14)  //18
+    {
       if (rzChiSquared < 22.481f)
         tightCutFlag = true;
       return rzChiSquared < 36.038f;
-    } else if (layer1 == 2 and layer2 == 7)
-    {
-      if (layer3 == 8 and layer4 == 14) //19
-      { 
+    } else if (layer1 == 2 and layer2 == 7) {
+      if (layer3 == 8 and layer4 == 14)  //19
+      {
         if (rzChiSquared < 7.06f)
           tightCutFlag = true;
         return rzChiSquared < 10.991f;
-      }
-      else if (layer3 == 13 and layer4 == 14) //20
-      { 
+      } else if (layer3 == 13 and layer4 == 14)  //20
+      {
         if (rzChiSquared < 3.343f)
           tightCutFlag = true;
         return rzChiSquared < 4.144f;
       }
-    } else if (layer1 == 3)
-    {
-      if (layer2 == 4){
-        if (layer3 == 5 and layer4 == 6 ) //21
-        { 
+    } else if (layer1 == 3) {
+      if (layer2 == 4) {
+        if (layer3 == 5 and layer4 == 6)  //21
+        {
           if (rzChiSquared < 56.716f)
             tightCutFlag = true;
           return rzChiSquared < 76.861f;
-        }
-        else if (layer3 == 12 and layer4 == 13) //24
+        } else if (layer3 == 12 and layer4 == 13)  //24
         {
           if (rzChiSquared < 17.68f)
             tightCutFlag = true;
           return rzChiSquared < 27.034f;
-        }
-        else if (layer3 == 5 and layer4 == 12) //25
+        } else if (layer3 == 5 and layer4 == 12)  //25
         {
           if (rzChiSquared < 36.004f)
             tightCutFlag = true;
           return rzChiSquared < 48.511f;
         }
-      }
-      else if (layer2 == 7) {
-        if (layer3 == 8 and layer4 == 14) //22
+      } else if (layer2 == 7) {
+        if (layer3 == 8 and layer4 == 14)  //22
         {
           if (rzChiSquared < 3.971f)
             tightCutFlag = true;
           return rzChiSquared < 6.017f;
-        }
-        else if (layer3 == 13 and layer4 == 14) //23
+        } else if (layer3 == 13 and layer4 == 14)  //23
         {
           if (rzChiSquared < 3.571f)
             tightCutFlag = true;
@@ -526,14 +512,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void computeSigmasForRegressionT4(TAcc const& acc,
-                                                                 ModulesConst modules,
-                                                                 const uint16_t* lowerModuleIndices,
-                                                                 float* delta1,
-                                                                 float* delta2,
-                                                                 float* slopes,
-                                                                 bool* isFlat,
-                                                                 unsigned int nPoints = 5,
-                                                                 bool anchorHits = true) {
+                                                                   ModulesConst modules,
+                                                                   const uint16_t* lowerModuleIndices,
+                                                                   float* delta1,
+                                                                   float* delta2,
+                                                                   float* slopes,
+                                                                   bool* isFlat,
+                                                                   unsigned int nPoints = 5,
+                                                                   bool anchorHits = true) {
     /*
         Bool anchorHits required to deal with a weird edge case wherein 
         the hits ultimately used in the regression are anchor hits, but the
@@ -613,17 +599,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeRadiusUsingRegressionT4(TAcc const& acc,
-                                                                    unsigned int nPoints,
-                                                                    float* xs,
-                                                                    float* ys,
-                                                                    float* delta1,
-                                                                    float* delta2,
-                                                                    float* slopes,
-                                                                    bool* isFlat,
-                                                                    float& g,
-                                                                    float& f,
-                                                                    float* sigmas2,
-                                                                    float& chiSquared) {
+                                                                      unsigned int nPoints,
+                                                                      float* xs,
+                                                                      float* ys,
+                                                                      float* delta1,
+                                                                      float* delta2,
+                                                                      float* slopes,
+                                                                      bool* isFlat,
+                                                                      float& g,
+                                                                      float& f,
+                                                                      float* sigmas2,
+                                                                      float& chiSquared) {
     float radius = 0.f;
 
     // Some extra variables
@@ -712,16 +698,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float computeT4ChiSquared(TAcc const& acc,
-                                                         unsigned int nPoints,
-                                                         float* xs,
-                                                         float* ys,
-                                                         float* delta1,
-                                                         float* delta2,
-                                                         float* slopes,
-                                                         bool* isFlat,
-                                                         float g,
-                                                         float f,
-                                                         float radius) {
+                                                           unsigned int nPoints,
+                                                           float* xs,
+                                                           float* ys,
+                                                           float* delta1,
+                                                           float* delta2,
+                                                           float* slopes,
+                                                           bool* isFlat,
+                                                           float g,
+                                                           float f,
+                                                           float radius) {
     // given values of (g, f, radius) and a set of points (and its uncertainties)
     // compute chi squared
     float c = g * g + f * f - radius * radius;
@@ -771,8 +757,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       betaOut += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc,
-              alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaOut);
       return;
     }
@@ -783,21 +768,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                             8.f * kPt_betaMax)))  //and the pt_beta is well-defined; less strict for endcap-endcap
     {
       const float betaInUpd =
-          betaIn + alpaka::math::copysign(
-                       acc,
-                       alpaka::math::asin(
-                           acc,
-                           alpaka::math::min(
-                               acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-                       betaIn);  //FIXME: need a faster version
+          betaIn +
+          alpaka::math::copysign(
+              acc,
+              alpaka::math::asin(
+                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
-          betaOut + alpaka::math::copysign(
-                        acc,
-                        alpaka::math::asin(
-                            acc,
-                            alpaka::math::min(
-                                acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-                        betaOut);  //FIXME: need a faster version
+          betaOut +
+          alpaka::math::copysign(
+              acc,
+              alpaka::math::asin(
+                  acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              betaOut);  //FIXME: need a faster version
       betaAv = 0.5f * (betaInUpd + betaOutUpd);
 
       //1st update
@@ -822,21 +805,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float pt_betaIn = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaIn);
 
       const float betaInUpd =
-          betaIn + alpaka::math::copysign(
-                       acc,
-                       alpaka::math::asin(
-                           acc,
-                           alpaka::math::min(
-                               acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
-                       betaIn);  //FIXME: need a faster version
+          betaIn +
+          alpaka::math::copysign(
+              acc,
+              alpaka::math::asin(
+                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
+              betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
           betaOut +
           alpaka::math::copysign(
               acc,
               alpaka::math::asin(
                   acc,
-                  alpaka::math::min(
-                      acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
+                  alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
               betaIn);  //FIXME: need a faster version
       betaAv = (alpaka::math::abs(acc, betaOut) > 0.2f * alpaka::math::abs(acc, betaIn))
                    ? (0.5f * (betaInUpd + betaOutUpd))
@@ -847,14 +828,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       betaIn += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc,
-              alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaIn);  //FIXME: need a faster version
       betaOut += alpaka::math::copysign(
           acc,
           alpaka::math::asin(
-              acc,
-              alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
+              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
           betaIn);  //FIXME: need a faster version
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
@@ -989,7 +968,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float sdOut_d = mds.anchorRt()[fourthMDIndex] - mds.anchorRt()[thirdMDIndex];
 
     runDeltaBetaIterations(acc, betaIn, betaOut, betaAv, pt_beta, rt_InSeg, sdOut_dr, drt_tl_axis, lIn);
-    
+
     const float betaInMMSF = (alpaka::math::abs(acc, betaInRHmin + betaInRHmax) > 0)
                                  ? (2.f * betaIn / alpaka::math::abs(acc, betaInRHmin + betaInRHmax))
                                  : 0.f;  //mean value of min,max is the old betaIn
@@ -1005,14 +984,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confimm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
-    const float alphaInAbsReg = alpaka::math::max(
-        acc,
-        alpaka::math::abs(acc, alpha_InLo),
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
-    const float alphaOutAbsReg = alpaka::math::max(
-        acc,
-        alpaka::math::abs(acc, alpha_OutLo),
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaInAbsReg =
+        alpaka::math::max(acc,
+                          alpaka::math::abs(acc, alpha_InLo),
+                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaOutAbsReg =
+        alpaka::math::max(acc,
+                          alpaka::math::abs(acc, alpha_OutLo),
+                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1033,7 +1012,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dBetaRes = 0.02f / alpaka::math::min(acc, sdOut_d, drt_InSeg);
     float dBetaCut2 =
-        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaROut2 + 
+        (dBetaRes * dBetaRes * 2.0f + dBetaMuls2 + dBetaLum2 + dBetaROut2 +
          0.25f *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)) *
              (alpaka::math::abs(acc, betaInRHmin - betaInRHmax) + alpaka::math::abs(acc, betaOutRHmin - betaOutRHmax)));
@@ -1484,7 +1463,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                bool& tightCutFlag) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
     unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
-    unsigned int thirdSegmentIndex = triplets.segmentIndices()[outerTripletIndex][0]; //second and third segments are the same here
+    unsigned int thirdSegmentIndex =
+        triplets.segmentIndices()[outerTripletIndex][0];  //second and third segments are the same here
     unsigned int fourthSegmentIndex = triplets.segmentIndices()[outerTripletIndex][1];
 
     unsigned int innerOuterInnerMiniDoubletIndex =
@@ -1500,8 +1480,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (innerOuterInnerMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
       return false;
     if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
-      return false; 
-    
+      return false;
+
     // require both T3s to have the same charge
     int innerT3charge = triplets.charge()[innerTripletIndex];
     int outerT3charge = triplets.charge()[outerTripletIndex];
@@ -1511,7 +1491,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
     unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
-    unsigned int fourthMDIndex = segments.mdIndices()[fourthSegmentIndex][1]; 
+    unsigned int fourthMDIndex = segments.mdIndices()[fourthSegmentIndex][1];
 
     float x1 = mds.anchorX()[firstMDIndex];
     float x2 = mds.anchorX()[secondMDIndex];
@@ -1528,8 +1508,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float innerRadius = triplets.radius()[innerTripletIndex];
     float outerRadius = triplets.radius()[outerTripletIndex];
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
-    float pt = (innerRadius+outerRadius) * k2Rinv1GeVf;
-    
+    float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+
     // 4 categories for sigmas
     float sigmas2[4], delta1[4], delta2[4], slopes[4];
     bool isFlat[4];
@@ -1537,22 +1517,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float xVec[] = {x1, x2, x3, x4};
     float yVec[] = {y1, y2, y3, y4};
 
-    const uint16_t lowerModuleIndices[] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
+    const uint16_t lowerModuleIndices[] = {lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
 
     computeSigmasForRegressionT4(acc, modules, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegressionT4(acc,
-                                                    Params_T4::kLayers,
-                                                    xVec,
-                                                    yVec,
-                                                    delta1,
-                                                    delta2,
-                                                    slopes,
-                                                    isFlat,
-                                                    regressionG,
-                                                    regressionF,
-                                                    sigmas2,
-                                                    chiSquared);
+                                                      Params_T4::kLayers,
+                                                      xVec,
+                                                      yVec,
+                                                      delta1,
+                                                      delta2,
+                                                      slopes,
+                                                      isFlat,
+                                                      regressionG,
+                                                      regressionF,
+                                                      sigmas2,
+                                                      chiSquared);
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
@@ -1567,27 +1546,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                            mds.outerY()[fourthMDIndex]};
 
     computeSigmasForRegressionT4(acc,
-                               modules,
-                               lowerModuleIndices,
-                               nonAnchorDelta1,
-                               nonAnchorDelta2,
-                               nonAnchorSlopes,
-                               isFlat,
-                               Params_T4::kLayers,
-                               false);
-    
+                                 modules,
+                                 lowerModuleIndices,
+                                 nonAnchorDelta1,
+                                 nonAnchorDelta2,
+                                 nonAnchorSlopes,
+                                 isFlat,
+                                 Params_T4::kLayers,
+                                 false);
+
     nonAnchorRegressionRadius = computeRadiusUsingRegressionT4(acc,
-                                                    Params_T4::kLayers,
-                                                    nonAnchorxs,
-                                                    nonAnchorys,
-                                                    nonAnchorDelta1,
-                                                    nonAnchorDelta2,
-                                                    nonAnchorSlopes,
-                                                    isFlat,
-                                                    regressionG,
-                                                    regressionF,
-                                                    sigmas2,
-                                                    chiSquared);                           
+                                                               Params_T4::kLayers,
+                                                               nonAnchorxs,
+                                                               nonAnchorys,
+                                                               nonAnchorDelta1,
+                                                               nonAnchorDelta2,
+                                                               nonAnchorSlopes,
+                                                               isFlat,
+                                                               regressionG,
+                                                               regressionF,
+                                                               sigmas2,
+                                                               chiSquared);
 
     bool inference = lst::t4dnn::runInference(acc,
                                               mds,
@@ -1619,58 +1598,57 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     //run Beta Selector for high pT T4s
-    if (pt >10) {
+    if (pt > 10) {
       if (not runQuadrupletdBetaAlgoSelector(acc,
-                                           modules,
-                                           mds,
-                                           segments,
-                                           lowerModuleIndex1,
-                                           lowerModuleIndex2,
-                                           lowerModuleIndex3,
-                                           lowerModuleIndex4,
-                                           firstSegmentIndex,
-                                           thirdSegmentIndex,
-                                           firstMDIndex,
-                                           secondMDIndex,
-                                           thirdMDIndex,
-                                           fourthMDIndex,
-                                           dBeta,
-                                           ptCut))
-      return false;
+                                             modules,
+                                             mds,
+                                             segments,
+                                             lowerModuleIndex1,
+                                             lowerModuleIndex2,
+                                             lowerModuleIndex3,
+                                             lowerModuleIndex4,
+                                             firstSegmentIndex,
+                                             thirdSegmentIndex,
+                                             firstMDIndex,
+                                             secondMDIndex,
+                                             thirdMDIndex,
+                                             fourthMDIndex,
+                                             dBeta,
+                                             ptCut))
+        return false;
     }
-    
-    if (not passT4RZConstraint(acc,
-                              modules,
-                              mds,
-                              firstMDIndex, 
-                              secondMDIndex, 
-                              thirdMDIndex, 
-                              fourthMDIndex, 
-                              lowerModuleIndex1, 
-                              lowerModuleIndex2, 
-                              lowerModuleIndex3, 
-                              lowerModuleIndex4, 
-                              rzChiSquared, 
-                              inner_pt, 
-                              innerRadius, 
-                              inner_circleCenterX, 
-                              inner_circleCenterY, 
-                              innerT3charge,
-                              tightCutFlag))
-    return false; 
 
-    
+    if (not passT4RZConstraint(acc,
+                               modules,
+                               mds,
+                               firstMDIndex,
+                               secondMDIndex,
+                               thirdMDIndex,
+                               fourthMDIndex,
+                               lowerModuleIndex1,
+                               lowerModuleIndex2,
+                               lowerModuleIndex3,
+                               lowerModuleIndex4,
+                               rzChiSquared,
+                               inner_pt,
+                               innerRadius,
+                               inner_circleCenterX,
+                               inner_circleCenterY,
+                               innerT3charge,
+                               tightCutFlag))
+      return false;
+
     nonAnchorChiSquared = computeT4ChiSquared(acc,
-                                            Params_T4::kLayers,
-                                            nonAnchorxs,
-                                            nonAnchorys,
-                                            nonAnchorDelta1,
-                                            nonAnchorDelta2,
-                                            nonAnchorSlopes,
-                                            isFlat,
-                                            regressionG,
-                                            regressionF,
-                                            regressionRadius); 
+                                              Params_T4::kLayers,
+                                              nonAnchorxs,
+                                              nonAnchorys,
+                                              nonAnchorDelta1,
+                                              nonAnchorDelta2,
+                                              nonAnchorSlopes,
+                                              isFlat,
+                                              regressionG,
+                                              regressionF,
+                                              regressionRadius);
 
     return true;
   };
@@ -1685,7 +1663,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   Quadruplets quadruplets,
                                   QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
-                                  uint16_t nEligibleT4Modules, 
+                                  uint16_t nEligibleT4Modules,
                                   const float ptCut) const {
       for (int iter : cms::alpakatools::uniform_elements_z(acc, nEligibleT4Modules)) {
         uint16_t lowerModule1 = ranges.indicesOfEligibleT4Modules()[iter];
@@ -1693,26 +1671,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         short md_adjustment;
         int layer = modules.layers()[lowerModule1];
         if (layer == 1) {
-          if (modules.subdets()[lowerModule1] != Endcap) continue;
+          if (modules.subdets()[lowerModule1] != Endcap)
+            continue;
           layer2_adjustment = 1;
           md_adjustment = 1;
         }  // get upper segment to be in third layer
         else if (layer == 2) {
-          if (modules.subdets()[lowerModule1] != Endcap) continue;
-          layer2_adjustment = 1; 
+          if (modules.subdets()[lowerModule1] != Endcap)
+            continue;
+          layer2_adjustment = 1;
           md_adjustment = 0;
         }  // get lower segment to be in third layer
         else {
-          layer2_adjustment = 0; 
+          layer2_adjustment = 0;
           md_adjustment = 0;
         }
         unsigned int nInnerTriplets = tripletsOccupancy.nTriplets()[lowerModule1];
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           unsigned int innerTripletIndex = ranges.tripletModuleIndices()[lowerModule1] + innerTripletArrayIndex;
           if (triplets.partOfPT5()[innerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in pT5s
+            continue;  //don't create T4s for T3s accounted in pT5s
           if (triplets.partOfT5()[innerTripletIndex])
-              continue;  //don't create T4s for T3s accounted in T5s
+            continue;  //don't create T4s for T3s accounted in T5s
           uint16_t lowerModule2 = triplets.lowerModuleIndices()[innerTripletIndex][1];
           unsigned int nOuterTriplets = tripletsOccupancy.nTriplets()[lowerModule2];
           for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
@@ -1724,11 +1704,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             uint16_t lowerModule3 = triplets.lowerModuleIndices()[outerTripletIndex][1];
             uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][2];
             float innerRadius = triplets.radius()[innerTripletIndex];
-            float outerRadius = triplets.radius()[outerTripletIndex];  
-            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius, nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore; 
+            float outerRadius = triplets.radius()[outerTripletIndex];
+            float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius,
+                nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, x_5, fakeScore;
             bool tightDNNFlag = false;
             bool tightCutFlag = false;
-      
+
             float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
 
             bool success = runQuadrupletDefaultAlgo(acc,
@@ -1756,7 +1737,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     fakeScore,
                                                     x_5,
                                                     tightDNNFlag,
-                                                    tightCutFlag); 
+                                                    tightCutFlag);
             if (success) {
               int totOccupancyQuadruplets = alpaka::atomicAdd(
                   acc, &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
@@ -1775,13 +1756,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   printf("Quadruplets : no memory for module at module index = %d\n", lowerModule1);
 #endif
                 } else {
-                  unsigned int quadrupletIndex =
-                      ranges.quadrupletModuleIndices()[lowerModule1] + quadrupletModuleIndex;
+                  unsigned int quadrupletIndex = ranges.quadrupletModuleIndices()[lowerModule1] + quadrupletModuleIndex;
                   float phi =
-                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
+                      mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]]
+                                                          [layer2_adjustment]];  //layer 3
                   float eta =
-                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]][layer2_adjustment]]; //layer 3
-                  
+                      mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]]
+                                                          [layer2_adjustment]];  //layer 3
+
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuadrupletToMemory(triplets,
                                         quadruplets,
@@ -1841,17 +1823,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // Occupancy matrix for 0.8 GeV pT Cut
       constexpr int p08_occupancy_matrix[4][4] = {
           {500000, 500000, 500000, 500000},  // category 0
-          {500000, 500000, 500000, 500000},          // category 1
-          {500000, 500000, 500000, 500000},          // category 2
-          {500000, 500000, 500000, 500000}       // category 3
+          {500000, 500000, 500000, 500000},  // category 1
+          {500000, 500000, 500000, 500000},  // category 2
+          {500000, 500000, 500000, 500000}   // category 3
       };
 
-      // Occupancy matrix for 0.6 GeV pT Cut, 99.99% //FIXME -recalculate 
+      // Occupancy matrix for 0.6 GeV pT Cut, 99.99% //FIXME -recalculate
       constexpr int p06_occupancy_matrix[4][4] = {
           {1500000, 1500000, 1500000, 1500000},  // category 0
-          {1500000, 1500000, 1500000, 1500000},          // category 1
-          {1500000, 1500000, 1500000, 1500000},          // category 2
-          {1500000, 1500000, 1500000, 1500000}       // category 3
+          {1500000, 1500000, 1500000, 1500000},  // category 1
+          {1500000, 1500000, 1500000, 1500000},  // category 2
+          {1500000, 1500000, 1500000, 1500000}   // category 3
       };
 
       // Select the appropriate occupancy matrix based on ptCut
