@@ -119,6 +119,8 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("pLS_pz");
   ana.tx->createBranch<std::vector<float>>("pLS_eta");
   ana.tx->createBranch<std::vector<bool>>("pLS_isQuad");
+  ana.tx->createBranch<std::vector<int>>("pLS_charge");
+  ana.tx->createBranch<std::vector<float>>("pLS_deltaPhi");
   ana.tx->createBranch<std::vector<float>>("pLS_etaErr");
   ana.tx->createBranch<std::vector<float>>("pLS_phi");
   ana.tx->createBranch<std::vector<float>>("pLS_score");
@@ -1546,6 +1548,8 @@ void setpLSOutputBranches(LSTEvent* event) {
     float py = pixelSeeds.py()[i_pLS];
     float pz = pixelSeeds.pz()[i_pLS];
     bool isQuad = static_cast<bool>(pixelSeeds.isQuad()[i_pLS]);
+    int charge = pixelSeeds.charge()[i_pLS];
+    float deltaPhi = pixelSeeds.deltaPhi()[i_pLS];
     float ptErr = pixelSeeds.ptErr()[i_pLS];
     float eta = pixelSeeds.eta()[i_pLS];
     float etaErr = pixelSeeds.etaErr()[i_pLS];
@@ -1573,6 +1577,8 @@ void setpLSOutputBranches(LSTEvent* event) {
     ana.tx->pushbackToBranch<float>("pLS_eta", eta);
     ana.tx->pushbackToBranch<float>("pLS_etaErr", etaErr);
     ana.tx->pushbackToBranch<float>("pLS_phi", phi);
+    ana.tx->pushbackToBranch<int>("pLS_charge", charge);
+    ana.tx->pushbackToBranch<float>("pLS_deltaPhi", deltaPhi);
     ana.tx->pushbackToBranch<float>("pLS_score", score);
     ana.tx->pushbackToBranch<float>("pLS_circleCenterX", centerX);
     ana.tx->pushbackToBranch<float>("pLS_circleCenterY", centerY);
