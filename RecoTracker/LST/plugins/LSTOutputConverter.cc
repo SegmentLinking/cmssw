@@ -144,17 +144,22 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     LogDebug("LSTOutputConverter") << " cand " << i << " " << lstOutput_view.trackCandidateType()[i] << " "
                                    << lstOutput_view.pixelSeedIndex()[i];
     TrajectorySeed seed;
-    if ((lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T5) && (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T4))
+    if ((lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T5) &&
+        (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T4))
       seed = pixelSeeds[lstOutput_view.pixelSeedIndex()[i]];
 
     edm::OwnVector<TrackingRecHit> recHits;
-    if ((lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T5) && (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T4)) {
+    if ((lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T5) &&
+        (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::T4)) {
       for (auto const& hit : seed.recHits())
         recHits.push_back(hit.clone());
     }
 
     // pixel-seeded TCs from LST always have 4 pixel hits
-    unsigned int const nPixelHits = ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4)) ? 0 : 4;
+    unsigned int const nPixelHits = ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) ||
+                                     (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4))
+                                        ? 0
+                                        : 4;
     unsigned int nHits = 0;
     switch (lstOutput_view.trackCandidateType()[i]) {
       case lst::LSTObjType::T5:
@@ -200,7 +205,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     if (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::pLS) {
       // Construct a full-length TrajectorySeed always for T5s,
       // only when required by a flag for other pT objects.
-      if (includeNonpLSTSs_ || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4)) {
+      if (includeNonpLSTSs_ || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) ||
+          (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4)) {
         using Hit = SeedingHitSet::ConstRecHitPointer;
         std::vector<Hit> hitsForSeed;
         hitsForSeed.reserve(nHits);
@@ -221,10 +227,12 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           edm::LogInfo("LSTOutputConverter")
               << "failed to convert a LST object to a seed" << i << " " << lstOutput_view.trackCandidateType()[i] << " "
               << lstOutput_view.pixelSeedIndex()[i];
-          if ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4))
+          if ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) ||
+              (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4))
             continue;
         }
-        if ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4))
+        if ((lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) ||
+            (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4))
           seed = seeds[0];
 
         auto trajectorySeed = (seeds.empty() ? seed : seeds[0]);
@@ -285,7 +293,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   }
 
   LogDebug("LSTOutputConverter") << "done with conversion: Track candidate output size = " << outputpTC.size()
-                                 << " (p* objects) + " << outputT5TC.size() << " (T5 objects) + " << outputT4TC.size() << " (T4 objects)";
+                                 << " (p* objects) + " << outputT5TC.size() << " (T5 objects) + " << outputT4TC.size()
+                                 << " (T4 objects)";
   std::vector<SeedStopInfo> outputSeedStopInfo(pixelSeeds.size());
   iEvent.emplace(trajectorySeedPutToken_, std::move(outputTS));
   iEvent.emplace(trajectorySeedpLSPutToken_, std::move(outputpLSTS));

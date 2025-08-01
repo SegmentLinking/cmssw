@@ -41,7 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuadrupletFromMemory(Quadruplets quadruplets,
                                                              unsigned int quadrupletIndex,
-                                                            bool secondpass = false) {
+                                                             bool secondpass = false) {
     quadruplets.isDup()[quadrupletIndex] |= 1 + secondpass;
   };
 
@@ -149,9 +149,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     matched[1] = nMatched;
   }
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT4(unsigned int ix,
-                                                 unsigned int jx,
-                                                 QuadrupletsConst quadruplets) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT4(unsigned int ix, unsigned int jx, QuadrupletsConst quadruplets) {
     unsigned int hits1[Params_T4::kHits];
     unsigned int hits2[Params_T4::kHits];
 
@@ -159,7 +157,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       hits1[i] = quadruplets.hitIndices()[ix][i];
       hits2[i] = quadruplets.hitIndices()[jx][i];
     }
-   
+
     int nMatched = 0;
     for (int i = 0; i < Params_T4::kHits; i++) {
       bool matched = false;
@@ -326,7 +324,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float promptscore_t4dnn1 = quadruplets.promptscore_t4dnn()[ix];
           float displacedscore_t4dnn1 = quadruplets.displacedscore_t4dnn()[ix];
           float fakescore_t4dnn1 = quadruplets.fakescore_t4dnn()[ix];
-          float score_t4dnn1 = (promptscore_t4dnn1 > displacedscore_t4dnn1 ? promptscore_t4dnn1 : displacedscore_t4dnn1)-fakescore_t4dnn1;  
+          float score_t4dnn1 =
+              (promptscore_t4dnn1 > displacedscore_t4dnn1 ? promptscore_t4dnn1 : displacedscore_t4dnn1) -
+              fakescore_t4dnn1;
 
           for (unsigned int jx1 : cms::alpakatools::uniform_elements_x(acc, ix1 + 1, nQuadruplets_lowmod)) {
             unsigned int jx = quadrupletModuleIndices_lowmod + jx1;
@@ -338,20 +338,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float promptscore_t4dnn2 = quadruplets.promptscore_t4dnn()[jx];
             float displacedscore_t4dnn2 = quadruplets.displacedscore_t4dnn()[jx];
             float fakescore_t4dnn2 = quadruplets.fakescore_t4dnn()[jx];
-            float score_t4dnn2 = (promptscore_t4dnn2 > displacedscore_t4dnn2 ? promptscore_t4dnn2 : displacedscore_t4dnn2)-fakescore_t4dnn2; 
+            float score_t4dnn2 =
+                (promptscore_t4dnn2 > displacedscore_t4dnn2 ? promptscore_t4dnn2 : displacedscore_t4dnn2) -
+                fakescore_t4dnn2;
 
             if (dEta > 0.1f)
               continue;
 
             if (alpaka::math::abs(acc, dPhi) > 0.1f)
               continue;
-          
+
             int nMatched = checkHitsT4(ix, jx, quadruplets);
             const int minNHitsForDup_T4 = 5;
             if (nMatched >= minNHitsForDup_T4) {
-              if (score_t4dnn1 >= score_t4dnn2){
+              if (score_t4dnn1 >= score_t4dnn2) {
                 rmQuadrupletFromMemory(quadruplets, jx);
-              } else{
+              } else {
                 rmQuadrupletFromMemory(quadruplets, ix);
               }
             }
@@ -371,9 +373,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int nQuadruplets_lowmod1 = quadrupletsOccupancy.nQuadruplets()[lowmod1];
         if (nQuadruplets_lowmod1 == 0)
           continue;
-        
+
         unsigned int quadrupletModuleIndices_lowmod1 = ranges.quadrupletModuleIndices()[lowmod1];
-        
+
         for (unsigned int lowmodIdx2 :
              cms::alpakatools::uniform_elements_x(acc, lowmodIdx1, ranges.nEligibleT4Modules())) {
           uint16_t lowmod2 = ranges.indicesOfEligibleT4Modules()[lowmodIdx2];
@@ -401,14 +403,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float promptscore_t4dnn1 = quadruplets.promptscore_t4dnn()[ix];
               float displacedscore_t4dnn1 = quadruplets.displacedscore_t4dnn()[ix];
               float fakescore_t4dnn1 = quadruplets.fakescore_t4dnn()[ix];
-              float score_t4dnn1 = (promptscore_t4dnn1 > displacedscore_t4dnn1 ? promptscore_t4dnn1 : displacedscore_t4dnn1)-fakescore_t4dnn1;
+              float score_t4dnn1 =
+                  (promptscore_t4dnn1 > displacedscore_t4dnn1 ? promptscore_t4dnn1 : displacedscore_t4dnn1) -
+                  fakescore_t4dnn1;
 
               float eta2 = __H2F(quadruplets.eta()[jx]);
               float phi2 = __H2F(quadruplets.phi()[jx]);
               float promptscore_t4dnn2 = quadruplets.promptscore_t4dnn()[jx];
               float displacedscore_t4dnn2 = quadruplets.displacedscore_t4dnn()[jx];
               float fakescore_t4dnn2 = quadruplets.fakescore_t4dnn()[jx];
-              float score_t4dnn2 = (promptscore_t4dnn2 > displacedscore_t4dnn2 ? promptscore_t4dnn2 : displacedscore_t4dnn2)-fakescore_t4dnn2;
+              float score_t4dnn2 =
+                  (promptscore_t4dnn2 > displacedscore_t4dnn2 ? promptscore_t4dnn2 : displacedscore_t4dnn2) -
+                  fakescore_t4dnn2;
 
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);

@@ -459,8 +459,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       rangesDC_->const_view(),
                       pixelTripletsDC_->view(),
                       lstInputDC_->const_view<PixelSeedsSoA>(),
-                      pixelQuintupletsDC_->const_view()                                         
-                    );
+                      pixelQuintupletsDC_->const_view());
 
   auto const addpT3asTrackCandidates_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 512);
 
@@ -521,7 +520,8 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       rangesDC_->const_view());
 
   auto const removeDupQuadrupletsBeforeTC_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
-      {std::max(nEligibleModules / threadsPerBlockY, 1), std::max(nEligibleModules / threadsPerBlockX, 1)}, {16, 32}); //FIXME: change nEligibleModules for T4s?
+      {std::max(nEligibleModules / threadsPerBlockY, 1), std::max(nEligibleModules / threadsPerBlockX, 1)},
+      {16, 32});  //FIXME: change nEligibleModules for T4s?
 
   alpaka::exec<Acc2D>(queue_,
                       removeDupQuadrupletsBeforeTC_workDiv,
@@ -547,8 +547,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       miniDoubletsDC_->view(),
                       segmentsDC_->view(),
                       tripletsDC_->view(),
-                      rangesDC_->const_view()
-                      );
+                      rangesDC_->const_view());
 
   auto const addT4asTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc2D>({8, 10}, {8, 128});
 
@@ -561,7 +560,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       tripletsDC_->const_view(),
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view(),
-                      rangesDC_->const_view()); 
+                      rangesDC_->const_view());
 
   if (!no_pls_dupclean) {
     auto const checkHitspLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({max_blocks * 4, max_blocks / 4}, {16, 16});
@@ -593,8 +592,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
                       lstInputDC_->const_view<HitsBaseSoA>(),
                       quintupletsDC_->const_view<QuintupletsSoA>(),
-                      quadrupletsDC_->const_view<QuadrupletsSoA>()
-                      );
+                      quadrupletsDC_->const_view<QuadrupletsSoA>());
 
   auto const addpLSasTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 384);
 
@@ -1105,7 +1103,6 @@ void LSTEvent::createQuadruplets() {
   }
 }
 
-
 void LSTEvent::addMiniDoubletsToEventExplicit() {
   auto nMDsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   auto mdsOccupancy = miniDoubletsDC_->const_view<MiniDoubletsOccupancySoA>();
@@ -1261,7 +1258,8 @@ void LSTEvent::addTripletsToEventExplicit() {
 
 void LSTEvent::addQuadrupletsToEventExplicit() {
   auto quadrupletsOccupancy = quadrupletsDC_->const_view<QuadrupletsOccupancySoA>();
-  auto nQuadruplets_view = cms::alpakatools::make_device_view(queue_, quadrupletsOccupancy.nQuadruplets(), nLowerModules_);
+  auto nQuadruplets_view =
+      cms::alpakatools::make_device_view(queue_, quadrupletsOccupancy.nQuadruplets(), nLowerModules_);
   auto nQuadrupletsCPU_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nLowerModules_);
   alpaka::memcpy(queue_, nQuadrupletsCPU_buf, nQuadruplets_view);
 

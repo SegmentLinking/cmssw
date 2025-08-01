@@ -432,30 +432,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   namespace t4dnn {
     template <typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
-                                                    MiniDoubletsConst mds,
-                                                    ModulesConst modules,
-                                                    const unsigned int mdIndex1,
-                                                    const unsigned int mdIndex2,
-                                                    const unsigned int mdIndex3,
-                                                    const unsigned int mdIndex4,
-                                                    uint16_t lowerModuleIndex1,
-                                                    uint16_t lowerModuleIndex2,
-                                                    uint16_t lowerModuleIndex3,
-                                                    uint16_t lowerModuleIndex4,
-                                                    const float innerRadius,
-                                                    const float outerRadius,
-                                                    float& promptScore,
-                                                    float& displacedScore,
-                                                    float& fakeScore,
-                                                    bool& tightDNNFlag,
-                                                    const float regressionRadius,
-                                                    const float nonAnchorRegressionRadius,
-                                                    float fakeScore1,
-                                                    float promptScore1,
-                                                    float displacedScore1,
-                                                    float fakeScore2,
-                                                    float promptScore2,
-                                                    float displacedScore2) {
+                                                     MiniDoubletsConst mds,
+                                                     ModulesConst modules,
+                                                     const unsigned int mdIndex1,
+                                                     const unsigned int mdIndex2,
+                                                     const unsigned int mdIndex3,
+                                                     const unsigned int mdIndex4,
+                                                     uint16_t lowerModuleIndex1,
+                                                     uint16_t lowerModuleIndex2,
+                                                     uint16_t lowerModuleIndex3,
+                                                     uint16_t lowerModuleIndex4,
+                                                     const float innerRadius,
+                                                     const float outerRadius,
+                                                     float& promptScore,
+                                                     float& displacedScore,
+                                                     float& fakeScore,
+                                                     bool& tightDNNFlag,
+                                                     const float regressionRadius,
+                                                     const float nonAnchorRegressionRadius,
+                                                     float fakeScore1,
+                                                     float promptScore1,
+                                                     float displacedScore1,
+                                                     float fakeScore2,
+                                                     float promptScore2,
+                                                     float displacedScore2) {
       // Constants
       constexpr unsigned int kinputFeatures = 27;
       constexpr unsigned int khiddenFeatures = 32;
@@ -488,35 +488,38 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       // Build the input feature vector using pairwise differences after the first hit
       float x[kinputFeatures] = {
-          eta1 / dnn::t4dnn::kEta_norm,  // inner T3: First hit eta normalized
+          eta1 / dnn::t4dnn::kEta_norm,                   // inner T3: First hit eta normalized
           alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,  // inner T3: First hit phi normalized
-          z1 / dnn::t4dnn::kZ_max,       // inner T3: First hit z normalized
-          r1 / dnn::t4dnn::kR_max,       // inner T3: First hit r normalized
+          z1 / dnn::t4dnn::kZ_max,                        // inner T3: First hit z normalized
+          r1 / dnn::t4dnn::kR_max,                        // inner T3: First hit r normalized
 
-          eta2 - eta1,         // inner T3: Difference in eta between hit 2 and 1
-          cms::alpakatools::deltaPhi(acc, phi2, phi1) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 2 and 1
+          eta2 - eta1,  // inner T3: Difference in eta between hit 2 and 1
+          cms::alpakatools::deltaPhi(acc, phi2, phi1) /
+              dnn::kPhi_norm,              // inner T3: Difference in phi between hit 2 and 1
           (z2 - z1) / dnn::t4dnn::kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
           (r2 - r1) / dnn::t4dnn::kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
 
-          eta3 - eta2,         // inner T3: Difference in eta between hit 3 and 2
-          cms::alpakatools::deltaPhi(acc, phi3, phi2) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 3 and 2
+          eta3 - eta2,  // inner T3: Difference in eta between hit 3 and 2
+          cms::alpakatools::deltaPhi(acc, phi3, phi2) /
+              dnn::kPhi_norm,              // inner T3: Difference in phi between hit 3 and 2
           (z3 - z2) / dnn::t4dnn::kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
           (r3 - r2) / dnn::t4dnn::kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
 
-          eta4 - eta3,         // outer T3: Difference in eta between hit 4 and 3
-          cms::alpakatools::deltaPhi(acc, phi4, phi3) / dnn::kPhi_norm,         // inner T3: Difference in phi between hit 4 and 3
+          eta4 - eta3,  // outer T3: Difference in eta between hit 4 and 3
+          cms::alpakatools::deltaPhi(acc, phi4, phi3) /
+              dnn::kPhi_norm,              // inner T3: Difference in phi between hit 4 and 3
           (z4 - z3) / dnn::t4dnn::kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
           (r4 - r3) / dnn::t4dnn::kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
 
-          alpaka::math::log10(acc, innerRadius),   // T4 inner radius (t4_innerRadius)
-          alpaka::math::log10(acc, outerRadius),    // T4 outer radius (t4_outerRadius)
-          alpaka::math::log10(acc, innerRadius/outerRadius),    // radius ratio
-          alpaka::math::log10(acc, regressionRadius), 
+          alpaka::math::log10(acc, innerRadius),                // T4 inner radius (t4_innerRadius)
+          alpaka::math::log10(acc, outerRadius),                // T4 outer radius (t4_outerRadius)
+          alpaka::math::log10(acc, innerRadius / outerRadius),  // radius ratio
+          alpaka::math::log10(acc, regressionRadius),
           alpaka::math::log10(acc, nonAnchorRegressionRadius),
           fakeScore1,
           promptScore1,
           displacedScore1,
-          (fakeScore2- fakeScore1),
+          (fakeScore2 - fakeScore1),
           (promptScore2 - promptScore1),
           (displacedScore2 - displacedScore1),
       };
@@ -533,12 +536,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       linear_layer<khiddenFeatures, khiddenFeatures>(x_1, x_2, dnn::t4dnn::wgtT_layer2, dnn::t4dnn::bias_layer2);
       relu_activation<khiddenFeatures>(x_2);
 
-      // Layer 3: Linear + Softmax 
-      linear_layer<khiddenFeatures, koutputFeatures>(x_2, x_3, dnn::t4dnn::wgtT_output_layer, dnn::t4dnn::bias_output_layer);
+      // Layer 3: Linear + Softmax
+      linear_layer<khiddenFeatures, koutputFeatures>(
+          x_2, x_3, dnn::t4dnn::wgtT_output_layer, dnn::t4dnn::bias_output_layer);
       softmax_activation<koutputFeatures>(acc, x_3);
 
       // Get the bin index based on abs(eta) of first hit and t4_pt
-      float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf; //t4 pt is average
+      float t4_pt = (innerRadius + outerRadius) * lst::k2Rinv1GeVf;  //t4 pt is average
 
       uint8_t pt_index = (t4_pt > 5);
       uint8_t bin_index = (eta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1 / 0.25f);
@@ -549,116 +553,114 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       tightDNNFlag = false;
       //70% retention cut for all
-      if (layer1 == 1){ //barrel 1
-        if (layer2==2) { 
+      if (layer1 == 1) {  //barrel 1
+        if (layer2 == 2) {
           if (layer3 == 3) {
-            if (layer4 == 4) {//reg 6 
-              if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0]<0.045f and x_3[1]<0.117f)
+            if (layer4 == 4) {  //reg 6
+              if ((x_3[2] < 0.197f or x_3[2] > 0.863f) and x_3[0] < 0.045f and x_3[1] < 0.117f)
+                tightDNNFlag = true;
+            } else if (layer4 == 7) {  //reg 7
+              if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0] < 0.027f and x_3[1] < 0.143f)
+                tightDNNFlag = true;
+            } else if (layer4 == 13) {  //reg 8
+              if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0] < 0.062f and x_3[1] < 0.245f)
                 tightDNNFlag = true;
             }
-            else if (layer4 == 7) { //reg 7
-              if ((x_3[2] < 0.133f or x_3[2] > 0.821f) and x_3[0]<0.027f and x_3[1]<0.143f)
+          } else if (layer3 == 7) {
+            if (layer4 == 8) {  //reg 9
+              if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0] < 0.016f and x_3[1] < 0.135f)
                 tightDNNFlag = true;
-            }
-            else if (layer4 == 13) { //reg 8
-              if ((x_3[2] < 0.163f or x_3[2] > 0.841f) and x_3[0]<0.062f and x_3[1]<0.245f)
-                tightDNNFlag = true;
-            }
-          }
-          else if (layer3==7) {
-            if (layer4 == 8) { //reg 9
-              if ((x_3[2] < 0.890f or x_3[2] > 0.959f) and x_3[0]<0.016f and x_3[1]< 0.135f)
-                  tightDNNFlag = true;
             }
           }
         } else if (layer2 == 7) {
           if (layer3 == 8) {
-            if (layer4 == 9) { //reg 11
-              if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0]<0.010f and x_3[1]<0.105f)
-                  tightDNNFlag = true;
+            if (layer4 == 9) {  //reg 11
+              if ((x_3[2] < 0.149f or x_3[2] > 0.893f) and x_3[0] < 0.010f and x_3[1] < 0.105f)
+                tightDNNFlag = true;
             }
           }
         }
-      } else if (layer1 == 2) { //barrel 2
+      } else if (layer1 == 2) {  //barrel 2
         if (layer2 == 3) {
           if (layer3 == 4) {
-            if (layer4 == 5) { //reg 13
-              if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0]<0.074f and x_3[1]<0.050f)
-                  tightDNNFlag = true;
-            } else if (layer4 == 12) { //reg 14
-              if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0]<0.159f and x_3[1]<0.087f)
-                  tightDNNFlag = true;
+            if (layer4 == 5) {  //reg 13
+              if ((x_3[2] < 0.306f or x_3[2] > 0.867f) and x_3[0] < 0.074f and x_3[1] < 0.050f)
+                tightDNNFlag = true;
+            } else if (layer4 == 12) {  //reg 14
+              if ((x_3[2] < 0.205f or x_3[2] > 0.755f) and x_3[0] < 0.159f and x_3[1] < 0.087f)
+                tightDNNFlag = true;
             }
           } else if (layer3 == 7) {
-            if (layer4 == 13) { //reg 16
-              if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0]<0.030f and x_3[1]<0.672f)
-                  tightDNNFlag = true;
+            if (layer4 == 13) {  //reg 16
+              if ((x_3[2] < 0.459f or x_3[2] > 0.938f) and x_3[0] < 0.030f and x_3[1] < 0.672f)
+                tightDNNFlag = true;
             }
-          } else if (layer3 == 12) { //reg 17
-            if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0]<0.185f and x_3[1]<0.113f)
-                  tightDNNFlag = true;
+          } else if (layer3 == 12) {  //reg 17
+            if ((x_3[2] < 0.324f or x_3[2] > 0.720f) and x_3[0] < 0.185f and x_3[1] < 0.113f)
+              tightDNNFlag = true;
           }
         } else if (layer2 == 7) {
-          if (layer3 == 8) { //reg 19
-            if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0]<0.025f and x_3[1]<0.055f)
-                  tightDNNFlag = true;
-          } else if (layer3 == 13) { //reg 20
-            if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0]<0.141f and x_3[1]<0.039)
-                  tightDNNFlag = true;
-          }
-        }
-      } else if (layer1 == 3) { //barrel 3
-        if (layer2 == 4) {
-          if (layer3 == 5) {
-            if (layer4 == 6) { //reg 21
-              if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0]<0.161f and x_3[0]<0.028f)
-                  tightDNNFlag = true;
-            } else if (layer4 == 12) { //reg 25
-              if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.295f and x_3[1]< 0.033f)
-                  tightDNNFlag = true;
-            }
-          } else if (layer3 == 12) { //reg 24
-            if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0]<0.245f and x_3[1]<0.027f)
-                  tightDNNFlag = true;
-          }
-        } else if (layer2 == 7) { //reg 23
-          if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0]<0.086f and x_3[1]<0.054)
-                  tightDNNFlag = true;
-        }
-      } else if (layer1 == 7) { //endcap 1
-        if (layer2 == 8) {
-          if (layer3 == 9) {
-            if (layer4 ==10) { //reg 0
-              if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0]<0.006f and x_3[1] <0.091f)
-                tightDNNFlag = true;
-            } else if (layer4 == 15) { //reg 1
-              if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0]<0.013f and x_3[1]<0.212f)
-                tightDNNFlag = true;
-            }
-          } else if (layer3 == 14) { //reg 2
-            if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0]<0.050f and x_3[1]<0.658f)
+          if (layer3 == 8) {  //reg 19
+            if ((x_3[2] < 0.169f or x_3[2] > 0.901f) and x_3[0] < 0.025f and x_3[1] < 0.055f)
+              tightDNNFlag = true;
+          } else if (layer3 == 13) {  //reg 20
+            if ((x_3[2] < 0.178f or x_3[2] > 0.683f) and x_3[0] < 0.141f and x_3[1] < 0.039)
               tightDNNFlag = true;
           }
         }
-      } else { //endcap 2
-        if (layer2 == 9) {
-          if (layer3 == 10) {
-            if (layer4 == 11) { //reg 3
-              if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0]<0.008f and x_3[1]<0.287f)
+      } else if (layer1 == 3) {  //barrel 3
+        if (layer2 == 4) {
+          if (layer3 == 5) {
+            if (layer4 == 6) {  //reg 21
+              if ((x_3[2] < 0.266f or x_3[2] > 0.798f) and x_3[0] < 0.161f and x_3[0] < 0.028f)
                 tightDNNFlag = true;
-            } else if (layer4 == 16) { //reg 4
-              if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0]<0.015f and x_3[1]<0.068f)
+            } else if (layer4 == 12) {  //reg 25
+              if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0] < 0.295f and x_3[1] < 0.033f)
                 tightDNNFlag = true;
             }
-          } else { //reg 5
-            if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0]<0.090f and x_3[1]<0.663f)
+          } else if (layer3 == 12) {  //reg 24
+            if ((x_3[2] < 0.159f or x_3[2] > 0.622f) and x_3[0] < 0.245f and x_3[1] < 0.027f)
+              tightDNNFlag = true;
+          }
+        } else if (layer2 == 7) {  //reg 23
+          if ((x_3[2] < 0.229f or x_3[2] > 0.635f) and x_3[0] < 0.086f and x_3[1] < 0.054)
+            tightDNNFlag = true;
+        }
+      } else if (layer1 == 7) {  //endcap 1
+        if (layer2 == 8) {
+          if (layer3 == 9) {
+            if (layer4 == 10) {  //reg 0
+              if ((x_3[2] < 0.160f or x_3[2] > 0.903f) and x_3[0] < 0.006f and x_3[1] < 0.091f)
+                tightDNNFlag = true;
+            } else if (layer4 == 15) {  //reg 1
+              if ((x_3[2] < 0.297f or x_3[2] > 0.934f) and x_3[0] < 0.013f and x_3[1] < 0.212f)
+                tightDNNFlag = true;
+            }
+          } else if (layer3 == 14) {  //reg 2
+            if ((x_3[2] < 0.319f or x_3[2] > 0.864f) and x_3[0] < 0.050f and x_3[1] < 0.658f)
+              tightDNNFlag = true;
+          }
+        }
+      } else {  //endcap 2
+        if (layer2 == 9) {
+          if (layer3 == 10) {
+            if (layer4 == 11) {  //reg 3
+              if ((x_3[2] < 0.557f or x_3[2] > 0.937f) and x_3[0] < 0.008f and x_3[1] < 0.287f)
+                tightDNNFlag = true;
+            } else if (layer4 == 16) {  //reg 4
+              if ((x_3[2] < 0.205f or x_3[2] > 0.931f) and x_3[0] < 0.015f and x_3[1] < 0.068f)
+                tightDNNFlag = true;
+            }
+          } else {  //reg 5
+            if ((x_3[2] < 0.427f or x_3[2] > 0.855f) and x_3[0] < 0.090f and x_3[1] < 0.663f)
               tightDNNFlag = true;
           }
         }
       }
 
-      return x_3[1] > dnn::t4dnn::kWp_prompt[pt_index][bin_index] || x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
-    } 
+      return x_3[1] > dnn::t4dnn::kWp_prompt[pt_index][bin_index] ||
+             x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
+    }
 
   }  //namespace t4dnn
 
