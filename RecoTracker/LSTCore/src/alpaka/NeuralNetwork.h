@@ -659,7 +659,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
 
       return x_3[1] > dnn::t4dnn::kWp_prompt[pt_index][bin_index] ||
-             x_3[2] > dnn::t3dnn::kWp_displaced[pt_index][bin_index];
+             x_3[2] > dnn::t4dnn::kWp_displaced[pt_index][bin_index];
     }
 
   }  //namespace t4dnn

@@ -518,7 +518,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    float* delta2,
                                                                    float* slopes,
                                                                    bool* isFlat,
-                                                                   unsigned int nPoints = 5,
+                                                                   unsigned int nPoints = 4,
                                                                    bool anchorHits = true) {
     /*
         Bool anchorHits required to deal with a weird edge case wherein 
