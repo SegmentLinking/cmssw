@@ -49,11 +49,10 @@ private:
   const edm::EDPutTokenT<TrajectorySeedCollection> trajectorySeedpLSPutToken_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatePutToken_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatepTCPutToken_;
-  const edm::EDPutTokenT<TrackCandidateCollection> trackCandidateT5TCPutToken_;
+  const edm::EDPutTokenT<TrackCandidateCollection> trackCandidateT4T5TCPutToken_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidateNopLSTCPutToken_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatepTTCPutToken_;
   const edm::EDPutTokenT<TrackCandidateCollection> trackCandidatepLSTCPutToken_;
-  const edm::EDPutTokenT<TrackCandidateCollection> trackCandidateT4TCPutToken_;
   const edm::EDPutTokenT<std::vector<SeedStopInfo>> seedStopInfoPutToken_;
 };
 
@@ -73,18 +72,17 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       // FIXME: need to make creation configurable:
       // - A toggle to not produce TSs at all could be useful to save memory;
       //   it won't affect speed though
-      // - The minimal set for TCs is t5TCsLST, pTTCsLST and pLSTCsLST.
+      // - The minimal set for TCs is t4t5TCsLST, pTTCsLST and pLSTCsLST.
       //   That would complicate the handling of collections though,
       //   so it is deferred to when we have a clearer picture of what's needed.
       trajectorySeedPutToken_(produces("")),
       trajectorySeedpLSPutToken_(produces("pLSTSsLST")),
       trackCandidatePutToken_(produces("")),
       trackCandidatepTCPutToken_(produces("pTCsLST")),
-      trackCandidateT5TCPutToken_(produces("t5TCsLST")),
+      trackCandidateT4T5TCPutToken_(produces("t4t5TCsLST")),
       trackCandidateNopLSTCPutToken_(produces("nopLSTCsLST")),
       trackCandidatepTTCPutToken_(produces("pTTCsLST")),
       trackCandidatepLSTCPutToken_(produces("pLSTCsLST")),
-      trackCandidateT4TCPutToken_(produces("t4TCsLST")),
       seedStopInfoPutToken_(produces()) {}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -128,14 +126,13 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   TrajectorySeedCollection outputTS, outputpLSTS;
   outputTS.reserve(nTrackCandidates);
   outputpLSTS.reserve(nTrackCandidates);
-  TrackCandidateCollection outputTC, outputpTC, outputT5TC, outputNopLSTC, outputpTTC, outputpLSTC, outputT4TC;
+  TrackCandidateCollection outputTC, outputpTC, outputT4T5TC, outputNopLSTC, outputpTTC, outputpLSTC;
   outputTC.reserve(nTrackCandidates);
   outputpTC.reserve(nTrackCandidates);
-  outputT5TC.reserve(nTrackCandidates);
+  outputT4T5TC.reserve(nTrackCandidates);
   outputNopLSTC.reserve(nTrackCandidates);
   outputpTTC.reserve(nTrackCandidates);
   outputpLSTC.reserve(nTrackCandidates);
-  outputT4TC.reserve(nTrackCandidates);
 
   auto OTHits = lstInputHC.const_view<lst::HitsBaseSoA>().hits();
 
@@ -203,7 +200,7 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 
     TrajectorySeedCollection seeds;
     if (lstOutput_view.trackCandidateType()[i] != lst::LSTObjType::pLS) {
-      // Construct a full-length TrajectorySeed always for T5s,
+      // Construct a full-length TrajectorySeed always for T4s and T5s,
       // only when required by a flag for other pT objects.
       if (includeNonpLSTSs_ || (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) ||
           (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4)) {
@@ -258,20 +255,16 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
       PTrajectoryStateOnDet st =
           trajectoryStateTransform::persistentState(tsosPair.first, recHits[0].det()->geographicalId().rawId());
 
-      if (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5) {
+      if (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T5 ||
+          lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4) {
         if (!includeT5s_) {
           continue;
         } else {
           auto tc = TrackCandidate(recHits, seed, st);
           outputTC.emplace_back(tc);
-          outputT5TC.emplace_back(tc);
+          outputT4T5TC.emplace_back(tc);
           outputNopLSTC.emplace_back(tc);
-        }
-      } else if (lstOutput_view.trackCandidateType()[i] == lst::LSTObjType::T4) {
-        auto tc = TrackCandidate(recHits, seed, st);
-        outputTC.emplace_back(tc);
-        outputT4TC.emplace_back(tc);
-        outputNopLSTC.emplace_back(tc);
+        };
       } else {
         auto tc = TrackCandidate(recHits, seed, st);
         outputTC.emplace_back(tc);
@@ -293,18 +286,16 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   }
 
   LogDebug("LSTOutputConverter") << "done with conversion: Track candidate output size = " << outputpTC.size()
-                                 << " (p* objects) + " << outputT5TC.size() << " (T5 objects) + " << outputT4TC.size()
-                                 << " (T4 objects)";
+                                 << " (p* objects) + " << outputT4T5TC.size() << " (T4T5 objects)";
   std::vector<SeedStopInfo> outputSeedStopInfo(pixelSeeds.size());
   iEvent.emplace(trajectorySeedPutToken_, std::move(outputTS));
   iEvent.emplace(trajectorySeedpLSPutToken_, std::move(outputpLSTS));
   iEvent.emplace(trackCandidatePutToken_, std::move(outputTC));
   iEvent.emplace(trackCandidatepTCPutToken_, std::move(outputpTC));
-  iEvent.emplace(trackCandidateT5TCPutToken_, std::move(outputT5TC));
+  iEvent.emplace(trackCandidateT4T5TCPutToken_, std::move(outputT4T5TC));
   iEvent.emplace(trackCandidateNopLSTCPutToken_, std::move(outputNopLSTC));
   iEvent.emplace(trackCandidatepTTCPutToken_, std::move(outputpTTC));
   iEvent.emplace(trackCandidatepLSTCPutToken_, std::move(outputpLSTC));
-  iEvent.emplace(trackCandidateT4TCPutToken_, std::move(outputT4TC));
   iEvent.emplace(seedStopInfoPutToken_, std::move(outputSeedStopInfo));  //dummy stop info
 }
 
