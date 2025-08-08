@@ -20,6 +20,7 @@ namespace lst {
                       SOA_COLUMN(float, fakeScore),       // DNN confidence score for fake t3
                       SOA_COLUMN(float, promptScore),     // DNN confidence score for real (prompt) t3
                       SOA_COLUMN(float, displacedScore),  // DNN confidence score for real (displaced) t3
+                      SOA_COLUMN(float, charge),
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(float, zOut),
                       SOA_COLUMN(float, rtOut),

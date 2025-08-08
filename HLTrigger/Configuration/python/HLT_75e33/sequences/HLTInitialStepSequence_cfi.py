@@ -16,7 +16,7 @@ from ..modules.hltInputLST_cfi import *
 from ..modules.hltLST_cfi import *
 from ..modules.hltInitialStepTrackspTTCLST_cfi import *
 from ..modules.hltInitialStepTrackspLSTCLST_cfi import *
-from ..modules.hltInitialStepTracksT5TCLST_cfi import *
+from ..modules.hltInitialStepTracksT4T5TCLST_cfi import *
 from ..modules.hltInitialStepTrackCutClassifierpTTCLST_cfi import *
 from ..modules.hltInitialStepTrackCutClassifierpLSTCLST_cfi import *
 from ..modules.hltInitialStepTrackSelectionHighPuritypTTCLST_cfi import *
@@ -32,7 +32,7 @@ _HLTInitialStepSequenceLST = cms.Sequence(
     +hltInitialStepTrackCandidates
     +hltInitialStepTrackspTTCLST
     +hltInitialStepTrackspLSTCLST
-    +hltInitialStepTracksT5TCLST
+    +hltInitialStepTracksT4T5TCLST
     +hltInitialStepTrackCutClassifierpTTCLST
     +hltInitialStepTrackCutClassifierpLSTCLST
     +hltInitialStepTrackSelectionHighPuritypTTCLST
