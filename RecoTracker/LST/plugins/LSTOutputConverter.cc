@@ -177,8 +177,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         return true;
       } else if (GeomDetEnumerators::isOuterTracker(asub) && GeomDetEnumerators::isInnerTracker(bsub)) {
         return false;
-      } else if (asub != bsub) {
-        return asub < bsub;
+      } else if (asub != bsub) { // here: both are in the inner or both are in the outer
+        return GeomDetEnumerators::isBarrel(asub); // assumes only one subdet per barrel/endcap
       } else {
         const auto& apos = a.surface();
         const auto& bpos = b.surface();
