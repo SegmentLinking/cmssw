@@ -15,7 +15,6 @@ using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
 // Common
 void createOutputBranches();
-void createGnnNtupleBranches();
 void createJetBranches();
 void createT5DNNBranches();
 void createT3DNNBranches();
@@ -72,21 +71,6 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
                                                                 std::map<unsigned int, unsigned int> const& pls_idx_map,
                                                                 std::map<unsigned int, unsigned int> const& t5_idx_map);
 
-void setGnnNtupleBranches(LSTEvent* event, float matchfrac = 0.75);
-void setGnnNtupleMiniDoublet(LSTEvent* event,
-                             unsigned int MD,
-                             std::vector<int> const& trk_sim_q,
-                             std::vector<float> const& trk_sim_pt,
-                             std::vector<float> const& trk_sim_eta,
-                             std::vector<int> const& trk_sim_bunchCrossing,
-                             std::vector<int> const& trk_sim_event,
-                             std::vector<int> const& trk_sim_parentVtxIdx,
-                             std::vector<float> const& trk_simvtx_x,
-                             std::vector<float> const& trk_simvtx_y,
-                             std::vector<float> const& trk_simvtx_z,
-                             std::vector<int> const& trk_simhit_simTrkIdx,
-                             std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
-                             std::vector<std::vector<int>> const& trk_pix_simHitIdx);
 void fillT5DNNBranches(LSTEvent* event, unsigned int T3);
 void fillT3DNNBranches(LSTEvent* event, unsigned int iT3);
 void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3);
