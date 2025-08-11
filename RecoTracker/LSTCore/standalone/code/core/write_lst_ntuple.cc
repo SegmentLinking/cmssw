@@ -12,9 +12,9 @@ void createOutputBranches() {
 
   if (ana.gnn_ntuple)
     createGnnNtupleBranches();
-  
+
   if (ana.jet_branches)
-      createJetBranches();
+    createJetBranches();
 
 #ifdef CUT_VALUE_DEBUG
   // Event-wide branches
@@ -195,12 +195,12 @@ void createGnnNtupleBranches() {
 
 //________________________________________________________________________________________________________________________________
 void createJetBranches() {
-    ana.tx->createBranch<std::vector<float>>("sim_deltaEta");
-    ana.tx->createBranch<std::vector<float>>("sim_deltaPhi");
-    ana.tx->createBranch<std::vector<float>>("sim_deltaR");
-    ana.tx->createBranch<std::vector<float>>("sim_jet_eta");
-    ana.tx->createBranch<std::vector<float>>("sim_jet_phi");
-    ana.tx->createBranch<std::vector<float>>("sim_jet_pt");
+  ana.tx->createBranch<std::vector<float>>("sim_deltaEta");
+  ana.tx->createBranch<std::vector<float>>("sim_deltaPhi");
+  ana.tx->createBranch<std::vector<float>>("sim_deltaR");
+  ana.tx->createBranch<std::vector<float>>("sim_jet_eta");
+  ana.tx->createBranch<std::vector<float>>("sim_jet_phi");
+  ana.tx->createBranch<std::vector<float>>("sim_jet_pt");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -557,27 +557,27 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     // Skip out-of-time pileup
     if (trk_sim_bunchCrossing[isimtrk] != 0)
       continue;
-    
+
     // Skip non-hard-scatter
-        if (trk_sim_event[isimtrk] != 0)
-          continue;
+    if (trk_sim_event[isimtrk] != 0)
+      continue;
 
     // Now we have a list of "accepted" tracks (no condition on vtx_z/perp, nor pt, eta etc are applied yet)
-    
+
     if (ana.jet_branches) {
-        auto const& trk_sim_deltaEta = trk.getVF("sim_deltaEta");
-        auto const& trk_sim_deltaPhi = trk.getVF("sim_deltaPhi");
-        auto const& trk_sim_deltaR = trk.getVF("sim_deltaR");
-        auto const& trk_sim_jet_eta = trk.getVF("sim_jet_eta");
-        auto const& trk_sim_jet_phi = trk.getVF("sim_jet_phi");
-        auto const& trk_sim_jet_pt = trk.getVF("sim_jet_pt");
-        
-        ana.tx->pushbackToBranch<float>("sim_deltaEta", trk_sim_deltaEta[isimtrk]);
-        ana.tx->pushbackToBranch<float>("sim_deltaPhi", trk_sim_deltaPhi[isimtrk]);
-        ana.tx->pushbackToBranch<float>("sim_deltaR", trk_sim_deltaR[isimtrk]);
-        ana.tx->pushbackToBranch<float>("sim_jet_eta", trk_sim_jet_eta[isimtrk]);
-        ana.tx->pushbackToBranch<float>("sim_jet_phi", trk_sim_jet_phi[isimtrk]);
-        ana.tx->pushbackToBranch<float>("sim_jet_pt", trk_sim_jet_pt[isimtrk]);
+      auto const& trk_sim_deltaEta = trk.getVF("sim_deltaEta");
+      auto const& trk_sim_deltaPhi = trk.getVF("sim_deltaPhi");
+      auto const& trk_sim_deltaR = trk.getVF("sim_deltaR");
+      auto const& trk_sim_jet_eta = trk.getVF("sim_jet_eta");
+      auto const& trk_sim_jet_phi = trk.getVF("sim_jet_phi");
+      auto const& trk_sim_jet_pt = trk.getVF("sim_jet_pt");
+
+      ana.tx->pushbackToBranch<float>("sim_deltaEta", trk_sim_deltaEta[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_deltaPhi", trk_sim_deltaPhi[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_deltaR", trk_sim_deltaR[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_jet_eta", trk_sim_jet_eta[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_jet_phi", trk_sim_jet_phi[isimtrk]);
+      ana.tx->pushbackToBranch<float>("sim_jet_pt", trk_sim_jet_pt[isimtrk]);
     }
 
     // Fill the branch with simulated tracks.
@@ -740,11 +740,11 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     ana.tx->pushbackToBranch<std::vector<float>>("sim_recoHitZ", recoHitZ);
     ana.tx->pushbackToBranch<std::vector<int>>("sim_recoHitDetId", recoHitDetId);
 
-      // The trkNtupIdx is the idx in the trackingNtuple
-      ana.tx->pushbackToBranch<float>("sim_trkNtupIdx", isimtrk);
+    // The trkNtupIdx is the idx in the trackingNtuple
+    ana.tx->pushbackToBranch<float>("sim_trkNtupIdx", isimtrk);
 
-      // Increase the counter for accepted simtrk
-      n_accepted_simtrk++;
+    // Increase the counter for accepted simtrk
+    n_accepted_simtrk++;
   }
 
   return n_accepted_simtrk;
