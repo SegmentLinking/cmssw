@@ -71,7 +71,13 @@ int main(int argc, char **argv) {
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
       cxxopts::value<int>())("3,tc_pls_triplets", "Allow triplet pLSs in TC collection")(
       "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")("h,help", "Print help")(
-      "J,jet_branches", "Accounts for specific jet branches in input root file for testing");
+      "md", "Write MD branches in output ntuple.")("ls", "Write LS branches in output ntuple.")(
+      "t3", "Write T3 branches in output ntuple.")("t5", "Write T5 branches in output ntuple.")(
+      "pls", "Write pLS branches in output ntuple.")("pt3", "Write pT3 branches in output ntuple.")(
+      "pt5", "Write pT5 branches in output ntuple.")("occ", "Write occupancy branches in output ntuple.")(
+      "t5dnn", "Write T5 DNN branches in output ntuple.")("t3dnn", "Write T3 DNN branches in output ntuple.")(
+      "pt3dnn", "Write pT3 DNN branches in output ntuple.")("allobj", "Write all object branches in output ntuple.")(
+      "J,jet", "Accounts for specific jet branches in input root file for testing");
 
   auto result = options.parse(argc, argv);
 
@@ -250,8 +256,52 @@ int main(int argc, char **argv) {
   ana.no_pls_dupclean = result["no_pls_dupclean"].as<bool>();
 
   //_______________________________________________________________________________
-  // --jet_branches
-  ana.jet_branches = result["jet_branches"].as<bool>();
+  // --md
+  ana.md_branches = result["md"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --ls
+  ana.ls_branches = result["ls"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --t3
+  ana.t3_branches = result["t3"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --t5
+  ana.t5_branches = result["t5"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --pls
+  ana.pls_branches = result["pls"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --pt3
+  ana.pt3_branches = result["pt3"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --pt5
+  ana.pt5_branches = result["pt5"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --occ
+  ana.occ_branches = result["occ"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --t5dnn
+  ana.t5dnn_branches = result["t5dnn"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --t3dnn
+  ana.t3dnn_branches = result["t3dnn"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --pt3dnn
+  ana.pt3dnn_branches = result["pt3dnn"].as<bool>() || result["allobj"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --jet
+  ana.jet_branches = result["jet"].as<bool>();
 
   // Printing out the option settings overview
   std::cout << "=========================================================" << std::endl;

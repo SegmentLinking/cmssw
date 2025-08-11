@@ -35,12 +35,10 @@ void setOccupancyBranches(LSTEvent* event);
 unsigned int setSimTrackContainerBranches(LSTEvent* event);
 void setTrackCandidateBranches(LSTEvent* event,
                                unsigned int n_accepted_tracks,
-#ifdef CUT_VALUE_DEBUG
                                std::map<unsigned int, unsigned int> t5_idx_map,
                                std::map<unsigned int, unsigned int> pls_idx_map,
                                std::map<unsigned int, unsigned int> pt3_idx_map,
                                std::map<unsigned int, unsigned int> pt5_idx_map,
-#endif
                                float matchfrac);
 std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
                                                             unsigned int n_accepted_simtrk,

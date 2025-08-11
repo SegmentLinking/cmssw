@@ -129,6 +129,39 @@ public:
   // Boolean to disable pLS duplicate cleaning
   bool no_pls_dupclean;
 
+  // Boolean to enable MD branches
+  bool md_branches;
+
+  // Boolean to enable LS branches
+  bool ls_branches;
+
+  // Boolean to enable T3 branches
+  bool t3_branches;
+
+  // Boolean to enable T5 branches
+  bool t5_branches;
+
+  // Boolean to enable pLS branches
+  bool pls_branches;
+
+  // Boolean to enable pT3 branches
+  bool pt3_branches;
+
+  // Boolean to enable pT5 branches
+  bool pt5_branches;
+
+  // Boolean to enable occupancy branches
+  bool occ_branches;
+
+  // Boolean to enable T3 DNN branches
+  bool t3dnn_branches;
+
+  // Boolean to enable T5 DNN branches
+  bool t5dnn_branches;
+
+  // Boolean to enable pT3 DNN branches
+  bool pt3dnn_branches;
+
   // Boolean to enable jet branches
   bool jet_branches;
 };
