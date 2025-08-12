@@ -407,6 +407,18 @@ bool HGCalDDDConstants::cellInLayer(int waferU, int waferV, int cellU, int cellV
   }
 }
 
+std::vector<double> HGCalDDDConstants::cellThickness() const {
+  std::vector<double> thick;
+  if (waferHexagon8()) {
+    thick = hgpar_->cellThickness_;
+    HGCalGeomParameters::rescale(thick, 10000.0);  //cm to micron
+  } else if (waferHexagon6()) {
+    for (int k = 0; k < 3; ++k)
+      thick.emplace_back(100.0 * (k + 1));
+  }
+  return thick;
+}
+
 double HGCalDDDConstants::cellThickness(int layer, int waferU, int waferV) const {
   double thick(-1);
   int type = waferType(layer, waferU, waferV, false);
@@ -1217,7 +1229,7 @@ int HGCalDDDConstants::maxCells(int lay, bool reco) const {
     }
     return cells;
   } else if (tileTrapezoid()) {
-    return hgpar_->scintCells(index.first + hgpar_->firstLayer_);
+    return hgpar_->scintCells(lay);  //(index.first + hgpar_->firstLayer_);
   } else {
     return 0;
   }
@@ -1533,8 +1545,8 @@ bool HGCalDDDConstants::tileExist(int zside, int layer, int ring, int phi) const
         edm::LogWarning("HGCalGeomT") << "TileExist:input " << zside << ":" << layer << ":" << ring << ":" << phi
                                       << " Index flag " << indx << ":" << (itr != hgpar_->tileInfoMap_.end()) << " ok "
                                       << ok;
-      if (HGCalTileIndex::tileFineExist(itr->second.hex, zside, phi) !=
-          HGCalTileIndex::tileExist(itr->second.hex, zside, phi))
+      else if (HGCalTileIndex::tileFineExist(itr->second.hex, zside, phi) !=
+               HGCalTileIndex::tileExist(itr->second.hex, zside, phi))
         edm::LogVerbatim("HGCalGeom") << "Zside:Layer:Ring:Phi " << zside << ":" << layer << ":" << ring << ":" << phi
                                       << " hex " << std::hex << itr->second.hex[0] << ":" << itr->second.hex[1] << ":"
                                       << itr->second.hex[2] << ":" << itr->second.hex[3] << ":" << itr->second.hex[4]
@@ -1858,8 +1870,7 @@ void HGCalDDDConstants::waferFromPosition(const double x,
     bool fineCoarse =
         ((celltype == HGCSiliconDetId::HGCalHD120) || (celltype == HGCSiliconDetId::HGCalHD200)) ? false : true;
     cellHex(xx, yy, fineCoarse, place, part, cellU, cellV, extend, debug);
-    wt = ((((celltype == HGCSiliconDetId::HGCalHD120) || (celltype == HGCSiliconDetId::HGCalHD200)) &&
-           (hgpar_->useSimWt_ > 0))
+    wt = (((celltype == HGCSiliconDetId::HGCalHD120) && (hgpar_->useSimWt_ > 0))
               ? (hgpar_->cellThickness_[celltype] / hgpar_->waferThick_)
               : 1.0);
   } else {
@@ -1882,8 +1893,8 @@ void HGCalDDDConstants::waferFromPosition(const double x,
                                     << hexside;
     }
   }
-  edm::LogVerbatim("HGCalGeomX") << "Input x:y:layer " << x << ":" << y << ":" << layer << " Wafer " << waferU << ":"
-                                 << waferV << " Cell " << cellU << ":" << cellV << ":" << celltype << " wt " << wt;
+  edm::LogVerbatim("HGCalGeom") << "Input x:y:layer " << x << ":" << y << ":" << layer << " Wafer " << waferU << ":"
+                                << waferV << " Cell " << cellU << ":" << cellV << ":" << celltype << " wt " << wt;
 }
 
 bool HGCalDDDConstants::waferInLayer(int wafer, int lay, bool reco) const {

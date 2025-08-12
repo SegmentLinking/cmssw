@@ -86,7 +86,7 @@ namespace edm {
 
       //initialize the services
       auto& serviceSets = procDesc->getServicesPSets();
-      ServiceToken token = items.initServices(serviceSets, *psetPtr, iToken, serviceregistry::kOverlapIsError, true);
+      ServiceToken token = items.initServices(serviceSets, *psetPtr, iToken, serviceregistry::kOverlapIsError);
       serviceToken_ = items.addTNS(*psetPtr, token);
 
       //make the services available
@@ -432,7 +432,8 @@ namespace edm {
       espController_->finishConfiguration();
       actReg_->eventSetupConfigurationSignal_(esp_->recordsToResolverIndices(), processContext_);
 
-      schedule_->beginJob(*preg_, esp_->recordsToResolverIndices(), *processBlockHelper_, processContext_);
+      schedule_->beginJob(
+          *preg_, esp_->recordsToResolverIndices(), *processBlockHelper_, processContext_.processName());
 
       for (unsigned int i = 0; i < preallocations_.numberOfStreams(); ++i) {
         schedule_->beginStream(i);
@@ -504,7 +505,7 @@ namespace edm {
 
       auto const& es = esp_->eventSetupImpl();
 
-      RunTransitionInfo transitionInfo(*runPrincipal_, es, nullptr);
+      RunTransitionInfo transitionInfo(*runPrincipal_, es);
       {
         using Traits = OccurrenceTraits<RunPrincipal, BranchActionGlobalBegin>;
         processGlobalTransition<Traits>(transitionInfo);
@@ -532,7 +533,7 @@ namespace edm {
 
       auto const& es = esp_->eventSetupImpl();
 
-      LumiTransitionInfo transitionInfo(*lumiPrincipal_, es, nullptr);
+      LumiTransitionInfo transitionInfo(*lumiPrincipal_, es);
 
       {
         using Traits = OccurrenceTraits<LuminosityBlockPrincipal, BranchActionGlobalBegin>;
@@ -592,7 +593,7 @@ namespace edm {
 
         auto const& es = esp_->eventSetupImpl();
 
-        LumiTransitionInfo transitionInfo(*lumiPrincipal, es, nullptr);
+        LumiTransitionInfo transitionInfo(*lumiPrincipal, es);
 
         {
           using Traits = OccurrenceTraits<LuminosityBlockPrincipal, BranchActionStreamEnd>;

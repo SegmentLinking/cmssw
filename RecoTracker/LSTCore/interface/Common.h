@@ -18,7 +18,7 @@ namespace lst {
   enum PixelType : int8_t { kInvalid = -1, kHighPt = 0, kLowPtPosCurv = 1, kLowPtNegCurv = 2 };
 
   // Named types for LST objects
-  enum LSTObjType { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
+  enum LSTObjType : int8_t { T5 = 4, pT3 = 5, pT5 = 7, pLS = 8 };
 
   constexpr unsigned int max_blocks = 80;
   constexpr unsigned int max_connected_modules = 40;
@@ -44,17 +44,6 @@ namespace lst {
 #define __F2H
 #define __H2F
   typedef float FPX;
-#endif
-
-// Needed for files that are compiled by g++ to not throw an error.
-// uint4 is defined only for CUDA, so we will have to revisit this soon when running on other backends.
-#if !defined(ALPAKA_ACC_GPU_CUDA_ENABLED) && !defined(ALPAKA_ACC_GPU_HIP_ENABLED)
-  struct uint4 {
-    unsigned int x;
-    unsigned int y;
-    unsigned int z;
-    unsigned int w;
-  };
 #endif
 
   // Defining the constant host device variables right up here
@@ -93,6 +82,12 @@ namespace lst {
     using ArrayFxEmbed = edm::StdArray<float, kEmbed>;
   };
   struct Params_pT5 {
+    static constexpr int kLayers = 7, kHits = 14;
+    using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
+    using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
+    using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
+  };
+  struct Params_TC {
     static constexpr int kLayers = 7, kHits = 14;
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;

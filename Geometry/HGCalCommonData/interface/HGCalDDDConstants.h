@@ -67,6 +67,7 @@ public:
   inline std::pair<double, double> cellSizeTrap(int type, int irad) const {
     return std::make_pair(hgpar_->radiusLayer_[type][irad - 1], hgpar_->radiusLayer_[type][irad]);
   }
+  std::vector<double> cellThickness() const;
   double cellThickness(int layer, int waferU, int waferV) const;
   int32_t cellType(int type, int waferU, int waferV, int iz, int fwdBack, int orient) const;
   double distFromEdgeHex(double x, double y, double z) const;
@@ -158,6 +159,7 @@ public:
   std::pair<double, double> rangeRLayer(int lay, bool reco) const;
   std::pair<double, double> rangeZ(bool reco) const;
   std::pair<int, int> rowColumnWafer(const int wafer) const;
+  bool scintFine(int layer) const { return (hgpar_->scintFine(layer - hgpar_->firstLayer_)); }
   inline int sectors() const { return hgpar_->nSectors_; }
   double sensorSizeOffset(bool reco) const;
   std::pair<int, int> simToReco(int cell, int layer, int mod, bool half) const;
@@ -265,6 +267,10 @@ public:
   }
   int waferType(DetId const& id, bool fromFile) const;
   int waferType(int layer, int waferU, int waferV, bool fromFile) const;
+  inline int waferTypes() const {
+    return ((waferHexagon8()) ? (hgpar_->cellThickness_.size()) : ((waferHexagon6()) ? 3 : 0));
+    ;
+  }
   std::tuple<int, int, int> waferType(HGCSiliconDetId const& id, bool fromFile) const;
   std::pair<int, int> waferTypeRotation(int layer, int waferU, int waferV, bool fromFile, bool debug) const;
   inline int waferUVMax() const { return hgpar_->waferUVMax_; }

@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 from PhysicsTools.NanoAOD.common_cff import *
 
 hltPFCandidateTable = cms.EDProducer("SimplePFCandidateFlatTableProducer",
+    skipNonExistingSrc = cms.bool(True),
     src = cms.InputTag("hltParticleFlowTmp"),
     name = cms.string("hltPFCandidate"),
     cut = cms.string(""),
@@ -15,6 +16,7 @@ hltPFCandidateTable = cms.EDProducer("SimplePFCandidateFlatTableProducer",
   )
 
 hltJetTable = cms.EDProducer("SimplePFJetFlatTableProducer",
+      skipNonExistingSrc = cms.bool(True),
       src = cms.InputTag("hltAK4PFPuppiJets"),
       name = cms.string("hltAK4PuppiJet"),
       cut = cms.string(""),
@@ -23,11 +25,11 @@ hltJetTable = cms.EDProducer("SimplePFJetFlatTableProducer",
       extension = cms.bool(False),
       externalVariables = cms.PSet(
         DeepFlavour_prob_b = ExtVar(cms.InputTag("hltPfDeepFlavourJetTags:probb"), float, doc="DeepFlavour probability of b", precision=10),
-        DeepFalvour_prob_bb = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probbb'), float, doc="DeepFlavour probability of bb", precision=10),
-        DeepFalvour_prob_c = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probc'), float, doc="DeepFlavour probability of c", precision=10),
-        DeepFalvour_prob_uds = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probuds'), float, doc="DeepFlavour probability of uds", precision=10),
-        DeepFalvour_prob_g = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probg'), float, doc="DeepFlavour probability of g", precision=10),
-        DeepFalvour_prob_lepb = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:problepb'), float, doc="DeepFlavour probability of lepb", precision=10),
+        DeepFlavour_prob_bb = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probbb'), float, doc="DeepFlavour probability of bb", precision=10),
+        DeepFlavour_prob_c = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probc'), float, doc="DeepFlavour probability of c", precision=10),
+        DeepFlavour_prob_uds = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probuds'), float, doc="DeepFlavour probability of uds", precision=10),
+        DeepFlavour_prob_g = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:probg'), float, doc="DeepFlavour probability of g", precision=10),
+        DeepFlavour_prob_lepb = ExtVar(cms.InputTag('hltPfDeepFlavourJetTags:problepb'), float, doc="DeepFlavour probability of lepb", precision=10),
       ),
       variables = cms.PSet(
         P4Vars,
