@@ -392,6 +392,13 @@ void createQuintupletBranches() {
   ana.tx->createBranch<std::vector<std::vector<int>>>("t5_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<float>>>("t5_simIdxAllFrac");
+  ana.tx->createBranch<std::vector<float>>("t5_innerRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_outerRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_bridgeRadius");
+  ana.tx->createBranch<std::vector<float>>("t5_pMatched");
+  ana.tx->createBranch<std::vector<float>>("t5_sim_vxy");
+  ana.tx->createBranch<std::vector<float>>("t5_sim_vz");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("pT5_matched_simIdx");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1241,6 +1248,10 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
   //--------------------------------------------
 
   auto const& trk_sim_pt = trk.getVF("sim_pt");
+  auto const& trk_sim_parentVtxIdx = trk.getVI("sim_parentVtxIdx");
+  auto const& trk_simvtx_x = trk.getVF("simvtx_x");
+  auto const& trk_simvtx_y = trk.getVF("simvtx_y");
+  auto const& trk_simvtx_z = trk.getVF("simvtx_z");
   auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
   auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
   auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
@@ -1270,8 +1281,9 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
       std::tie(hit_idx, hit_type) = getHitIdxsAndHitTypesFromT5(event, t5Idx);
       std::vector<int> simidx;
       std::vector<float> simidxfrac;
+      float percent_matched;
       std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(
-          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
+          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac, &percent_matched);
       std::vector<unsigned int> t3Idxs = getT3sFromT5(event, t5Idx);
       if (ana.t3_branches) {
         ana.tx->pushbackToBranch<int>("t5_t3Idx0", t3_idx_map.at(t3Idxs[0]));
@@ -1285,6 +1297,10 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<float>("t5_pt", pt);
       ana.tx->pushbackToBranch<float>("t5_eta", eta);
       ana.tx->pushbackToBranch<float>("t5_phi", phi);
+      ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets.innerRadius()[t5Idx]));
+      ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets.bridgeRadius()[t5Idx]));
+      ana.tx->pushbackToBranch<float>("t5_outerRadius", __H2F(quintuplets.outerRadius()[t5Idx]));
+      ana.tx->pushbackToBranch<float>("t5_pMatched", percent_matched);
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         if (simidxfrac[isim] > matchfrac) {
@@ -1316,6 +1332,21 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<int>("t5_simIdx", t5_simIdx);
       // count global
       t5_idx++;
+      
+      // Avoid fakes when calculating the vertex distance, set default to 0.0.
+        if (simidx.size() == 0) {
+            ana.tx->pushbackToBranch<float>("t5_sim_vxy", 0.0);
+            ana.tx->pushbackToBranch<float>("t5_sim_vz", 0.0);
+        } else {
+    
+        int vtxidx = trk_sim_parentVtxIdx[simidx[0]];
+        float vtx_x = trk_simvtx_x[vtxidx];
+        float vtx_y = trk_simvtx_y[vtxidx];
+        float vtx_z = trk_simvtx_z[vtxidx];
+    
+        ana.tx->pushbackToBranch<float>("t5_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
+        ana.tx->pushbackToBranch<float>("t5_sim_vz", vtx_z);
+        }
     }
   }
   ana.tx->setBranch<std::vector<std::vector<int>>>("t5_simIdxAll", t5_simIdxAll);
