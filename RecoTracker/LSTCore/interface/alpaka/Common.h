@@ -94,10 +94,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     namespace pt3dnn {
       HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
+      // 95% sig-efficiency for abs(eta) <= 1.25, 84% for abs(eta) > 1.25
       HOST_DEVICE_CONSTANT float kWp[kEtaBins] = {
-          0.189f, 0.1805f, 0.2267f, 0.3104f, 0.4719f, 0.3159f, 0.1372f, 0.1571f, 0.3198f, 0.186f};
-      HOST_DEVICE_CONSTANT float kWpHigh = 0.0473f;
+          0.7367f, 0.8276f, 0.7724f, 0.7987f, 0.7972f, 0.8948f, 0.6903f, 0.7096f, 0.7256f, 0.7674f};
+      // 95% sig-efficiency for high pT bin
+      HOST_DEVICE_CONSTANT float kWpHigh = 0.6997f;
     }  // namespace pt3dnn
+
+    namespace pt5dnn {
+      HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
+      // Constant 99.5% signal efficiency
+      HOST_DEVICE_CONSTANT float kWp[kEtaBins] = {
+          0.1493f, 0.2735f, 0.3378f, 0.4545f, 0.1858f, 0.1616f, 0.0219f, 0.0248f, 0.0879f, 0.083f};
+      // 99.5% signal efficiency for high pT bin
+      HOST_DEVICE_CONSTANT float kWpHigh = 0.1154f;
+    }  // namespace pt5dnn
 
   }  // namespace dnn
 
