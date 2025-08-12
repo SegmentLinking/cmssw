@@ -1757,7 +1757,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               continue;
 
             // Match inner Sg and Outer Sg
-            int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Blocks{});
+            int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Threads{});
             unsigned int quintupletIndex = ranges.quintupletModuleIndices()[lowerModule1] + mIdx;
             quintuplets.PreAllocatedTripletIndices()[quintupletIndex][0] = innerTripletIndex;
             quintuplets.PreAllocatedTripletIndices()[quintupletIndex][1] = outerTripletIndex;

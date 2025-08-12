@@ -682,43 +682,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  struct CountSegmentConnections {
-    ALPAKA_FN_ACC void operator()(Acc3D const& acc,
-                                  ModulesConst modules,
-                                  Segments segments,
-                                  SegmentsOccupancyConst segOcc,
-                                  ObjectRangesConst ranges) const {
-      const auto& mdIndices = segments.mdIndices();
-      const auto& outerLowerModuleIndices = segments.outerLowerModuleIndices();
-      const auto& segmentRanges = ranges.segmentRanges();
-
-      for (uint16_t innerLowerModuleArrayIdx : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
-        const unsigned int nInnerSegments = segOcc.nSegments()[innerLowerModuleArrayIdx];
-        if (nInnerSegments == 0)
-          continue;
-
-        for (unsigned int innerSegmentArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerSegments)) {
-          const unsigned int innerSegmentIndex = segmentRanges[innerLowerModuleArrayIdx][0] + innerSegmentArrayIndex;
-          const uint16_t middleLowerModuleIndex = outerLowerModuleIndices[innerSegmentIndex];
-          const unsigned int mdShared = mdIndices[innerSegmentIndex][1];
-
-          const unsigned int nOuterSegments = segOcc.nSegments()[middleLowerModuleIndex];
-          if (nOuterSegments == 0)
-            continue;
-
-          for (unsigned int outerSegmentArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterSegments)) {
-            const unsigned int outerSegmentIndex = segmentRanges[middleLowerModuleIndex][0] + outerSegmentArrayIndex;
-
-            // Increment the count of connected segments for this segment.
-            if (mdIndices[outerSegmentIndex][0] == mdShared) {
-              alpaka::atomicAdd(acc, &segments.connectedMax()[innerSegmentIndex], 1u, alpaka::hierarchy::Threads{});
-            }
-          }
-        }
-      }
-    }
-  };
-
   struct CreateTripletArrayRanges {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
