@@ -409,8 +409,10 @@ void createPixelLineSegmentBranches() {
   //
   // pt (taken from pt of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<float>>("pLS_pt");
+  ana.tx->createBranch<std::vector<float>>("pLS_ptErr");
   // eta (taken from eta of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<float>>("pLS_eta");
+  ana.tx->createBranch<std::vector<float>>("pLS_etaErr");
   // phi (taken from phi of the 3-vector from see_stateTrajGlbPx/Py/Pz)
   ana.tx->createBranch<std::vector<float>>("pLS_phi");
   ana.tx->createBranch<std::vector<int>>("pLS_nhit");         // Number of actual hit: 3 if triplet, 4 if quadruplet
@@ -433,6 +435,13 @@ void createPixelLineSegmentBranches() {
   ana.tx->createBranch<std::vector<std::vector<int>>>("pLS_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<float>>>("pLS_simIdxAllFrac");
+  ana.tx->createBranch<std::vector<float>>("pLS_circleCenterX");
+  ana.tx->createBranch<std::vector<float>>("pLS_circleCenterY");
+  ana.tx->createBranch<std::vector<float>>("pLS_circleRadius");
+  ana.tx->createBranch<std::vector<float>>("pLS_px");
+  ana.tx->createBranch<std::vector<float>>("pLS_py");
+  ana.tx->createBranch<std::vector<float>>("pLS_pz");
+  ana.tx->createBranch<std::vector<bool>>("pLS_isQuad");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1282,8 +1291,14 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
       std::vector<int> simidx;
       std::vector<float> simidxfrac;
       float percent_matched;
-      std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(
-          hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, matchfrac, &percent_matched);
+      std::tie(simidx, simidxfrac) = matchedSimTrkIdxsAndFracs(hit_idx,
+                                                               hit_type,
+                                                               trk_simhit_simTrkIdx,
+                                                               trk_ph2_simHitIdx,
+                                                               trk_pix_simHitIdx,
+                                                               false,
+                                                               matchfrac,
+                                                               &percent_matched);
       std::vector<unsigned int> t3Idxs = getT3sFromT5(event, t5Idx);
       if (ana.t3_branches) {
         ana.tx->pushbackToBranch<int>("t5_t3Idx0", t3_idx_map.at(t3Idxs[0]));
@@ -1332,21 +1347,20 @@ std::map<unsigned int, unsigned int> setQuintupletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<int>("t5_simIdx", t5_simIdx);
       // count global
       t5_idx++;
-      
+
       // Avoid fakes when calculating the vertex distance, set default to 0.0.
-        if (simidx.size() == 0) {
-            ana.tx->pushbackToBranch<float>("t5_sim_vxy", 0.0);
-            ana.tx->pushbackToBranch<float>("t5_sim_vz", 0.0);
-        } else {
-    
+      if (simidx.size() == 0) {
+        ana.tx->pushbackToBranch<float>("t5_sim_vxy", 0.0);
+        ana.tx->pushbackToBranch<float>("t5_sim_vz", 0.0);
+      } else {
         int vtxidx = trk_sim_parentVtxIdx[simidx[0]];
         float vtx_x = trk_simvtx_x[vtxidx];
         float vtx_y = trk_simvtx_y[vtxidx];
         float vtx_z = trk_simvtx_z[vtxidx];
-    
+
         ana.tx->pushbackToBranch<float>("t5_sim_vxy", sqrt(vtx_x * vtx_x + vtx_y * vtx_y));
         ana.tx->pushbackToBranch<float>("t5_sim_vz", vtx_z);
-        }
+      }
     }
   }
   ana.tx->setBranch<std::vector<std::vector<int>>>("t5_simIdxAll", t5_simIdxAll);
@@ -1414,6 +1428,7 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
   auto const& ranges = event->getRanges();
   auto const& modules = event->getModules<ModulesSoA>();
   auto const& pixelSeeds = event->getInput<PixelSeedsSoA>();
+  auto const& pixelSegments = event->getPixelSegments();
   auto const& segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
 
   int n_total_simtrk = trk_sim_pt.size();
@@ -1439,8 +1454,17 @@ std::map<unsigned int, unsigned int> setPixelLineSegmentBranches(LSTEvent* event
           hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, 0);
       int seedIdx = pixelSeeds.seedIdx()[ipLS];
       ana.tx->pushbackToBranch<float>("pLS_pt", trk_see_pt[seedIdx]);
+      ana.tx->pushbackToBranch<float>("pLS_ptErr", pixelSeeds.ptErr()[seedIdx]);
       ana.tx->pushbackToBranch<float>("pLS_eta", trk_see_eta[seedIdx]);
+      ana.tx->pushbackToBranch<float>("pLS_etaErr", pixelSeeds.ptErr()[seedIdx]);
       ana.tx->pushbackToBranch<float>("pLS_phi", trk_see_phi[seedIdx]);
+      ana.tx->pushbackToBranch<float>("pLS_circleCenterX", pixelSegments.circleCenterX()[ipLS]);
+      ana.tx->pushbackToBranch<float>("pLS_circleCenterY", pixelSegments.circleCenterY()[ipLS]);
+      ana.tx->pushbackToBranch<float>("pLS_circleRadius", pixelSegments.circleRadius()[ipLS]);
+      ana.tx->pushbackToBranch<float>("pLS_px", pixelSeeds.px()[seedIdx]);
+      ana.tx->pushbackToBranch<float>("pLS_py", pixelSeeds.py()[seedIdx]);
+      ana.tx->pushbackToBranch<float>("pLS_pz", pixelSeeds.pz()[seedIdx]);
+      ana.tx->pushbackToBranch<bool>("pLS_isQuad", static_cast<bool>(pixelSeeds.isQuad()[seedIdx]));
       ana.tx->pushbackToBranch<int>("pLS_nhit", hit_idx.size());
       for (size_t ihit = 0; ihit < trk_see_hitIdx[seedIdx].size(); ++ihit) {
         int hitidx = trk_see_hitIdx[seedIdx][ihit];
