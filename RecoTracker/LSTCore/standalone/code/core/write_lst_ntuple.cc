@@ -450,6 +450,8 @@ void createPixelTripletBranches() {
   //
   //  The container will hold per entry a pT3 built by LST in the event.
   //
+  ana.tx->createBranch<std::vector<int>>("sim_pT3_matched");
+  ana.tx->createBranch<std::vector<float>>("pT3_score");
   ana.tx->createBranch<std::vector<float>>("pT3_pt");         // pt (taken from the pLS)
   ana.tx->createBranch<std::vector<float>>("pT3_eta");        // eta (taken from the pLS)
   ana.tx->createBranch<std::vector<float>>("pT3_phi");        // phi (taken from the pLS)
@@ -1577,6 +1579,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event,
   auto const& pixelTriplets = event->getPixelTriplets();
 
   int n_total_simtrk = trk_sim_pt.size();
+  std::vector<int> sim_pT3_matched(n_total_simtrk);
   std::vector<std::vector<int>> sim_pt3IdxAll(n_total_simtrk);
   std::vector<std::vector<float>> sim_pt3IdxAllFrac(n_total_simtrk);
   std::vector<std::vector<int>> pt3_simIdxAll;
@@ -1604,6 +1607,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event,
     ana.tx->pushbackToBranch<float>("pT3_pt", pt);
     ana.tx->pushbackToBranch<float>("pT3_eta", eta);
     ana.tx->pushbackToBranch<float>("pT3_phi", phi);
+    ana.tx->pushbackToBranch<float>("pT3_score", pixelTriplets.score()[ipT3]);
     if (ana.pls_branches) {
       unsigned int plsIdx = ranges.segmentModuleIndices()[modules.nLowerModules()] + ipLS;
       unsigned int pls_idx = pls_idx_map.at(plsIdx);
@@ -1627,6 +1631,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event,
     for (size_t is = 0; is < simidx.size(); ++is) {
       int sim_idx = simidx.at(is);
       float sim_idx_frac = simidxfrac.at(is);
+      sim_pT3_matched.at(sim_idx) += 1;
       if (sim_idx < n_total_simtrk) {
         sim_pt3IdxAll.at(sim_idx).push_back(pt3_idx);
         sim_pt3IdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
@@ -1679,6 +1684,7 @@ std::map<unsigned int, unsigned int> setPixelTripletBranches(LSTEvent* event,
     }
     pt3_isDuplicate[pt3_idx] = isDuplicate;
   }
+  ana.tx->setBranch<std::vector<int>>("sim_pT3_matched", sim_pT3_matched);
   ana.tx->setBranch<std::vector<int>>("pT3_isDuplicate", pt3_isDuplicate);
 
   return pt3_idx_map;
