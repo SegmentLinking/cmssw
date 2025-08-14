@@ -145,10 +145,10 @@ initialSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
     allTrackProducer = 'hltInitialStepTrackSelectionHighPuritypLSTCLST'
 )
 
-initialStepT5TCLSTTracksMonitoringHLT = trackingMonHLT.clone(
-    FolderName       = 'HLT/Tracking/initialStepTracksT5TCLST',
-    TrackProducer    = 'hltInitialStepTracksT5TCLST',
-    allTrackProducer = 'hltInitialStepTracksT5TCLST'
+initialStepT4T5TCLSTTracksMonitoringHLT = trackingMonHLT.clone(
+    FolderName       = 'HLT/Tracking/initialStepTracksT4T5TCLST',
+    TrackProducer    = 'hltInitialStepTracksT4T5TCLST',
+    allTrackProducer = 'hltInitialStepTracksT4T5TCLST'
 )
 
 highPtTripletSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
@@ -301,8 +301,8 @@ phase2_tracker.toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitor
 
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
-(~seedingLST & trackingLST).toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialSteppLSTCLSTTracksMonitoringHLT + initialStepT5TCLSTTracksMonitoringHLT + iterHighPtTripletsMonitoringHLT))
-(seedingLST & trackingLST).toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialStepT5TCLSTTracksMonitoringHLT + highPtTripletSteppLSTCLSTTracksMonitoringHLT))
+(~seedingLST & trackingLST).toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialSteppLSTCLSTTracksMonitoringHLT + initialStepLSTTracksMonitoringHLT + iterHighPtTripletsMonitoringHLT))
+(seedingLST & trackingLST).toReplaceWith(trackingMonitorHLT, cms.Sequence(pixelTracksMonitoringHLT + iterHLTTracksMonitoringHLT + initialSteppTTCLSTTracksMonitoringHLT + initialStepT4T5TCLSTTracksMonitoringHLT + highPtTripletSteppLSTCLSTTracksMonitoringHLT))
 
 run3_common.toReplaceWith(trackingMonitorHLTall, cms.Sequence(pixelTracksMonitoringHLT + iter0TracksMonitoringHLT + iter0HPTracksMonitoringHLT + doubletRecoveryTracksMonitoringHLT + doubletRecoveryHPTracksMonitoringHLT + iterHLTTracksMonitoringHLT))
 run3_common.toReplaceWith(egmTrackingMonitorHLT, cms.Sequence(gsfTracksMonitoringHLT))

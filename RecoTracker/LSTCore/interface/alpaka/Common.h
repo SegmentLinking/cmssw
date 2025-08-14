@@ -99,6 +99,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       HOST_DEVICE_CONSTANT float kWpHigh = 0.0473f;
     }  // namespace pt3dnn
 
+    namespace t4dnn {
+      HOST_DEVICE_CONSTANT float kZ_max = 267.2349854f;
+      HOST_DEVICE_CONSTANT float kR_max = 110.1099396f;
+      HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
+
+      HOST_DEVICE_CONSTANT float kWp_prompt[kPtBins][kEtaBins] = {
+          {0.6398f, 0.6448f, 0.6586f, 0.6875f, 0.6146f, 0.6181f, 0.6515f, 0.6528f, 0.6872f, 0.6870f},
+          {0.2145f, 0.2547f, 0.2754f, 0.2830f, 0.2413f, 0.2249f, 0.3232f, 0.3532f, 0.3180f, 0.2721f}};
+      HOST_DEVICE_CONSTANT float kWp_displaced[kPtBins][kEtaBins] = {
+          {0.4056f, 0.4600f, 0.4429f, 0.4547f, 0.3771f, 0.3657f, 0.3660f, 0.3992f, 0.4521f, 0.4764f},
+          {0.4893f, 0.4653f, 0.4464f, 0.4310f, 0.3706f, 0.3340f, 0.3140f, 0.2800f, 0.3107f, 0.3028f}};
+    }  // namespace t4dnn
+
   }  // namespace dnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
