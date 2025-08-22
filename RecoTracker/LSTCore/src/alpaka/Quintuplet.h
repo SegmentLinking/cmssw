@@ -1508,6 +1508,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (innerOuterOuterMiniDoubletIndex != outerInnerInnerMiniDoubletIndex)
       return false;
 
+    // require both T3s to have the same charge
+    int innerT3charge = triplets.charge()[innerTripletIndex];
+    int outerT3charge = triplets.charge()[outerTripletIndex];
+    if (innerT3charge != outerT3charge)
+      return false;
+
     unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
     unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
@@ -1862,7 +1868,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int thirdSegIdx = segIdx[outerTripletIndex][0];
             const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
 
-            if (secondMDOuter == thirdMDInner) {
+            int innerT3charge = triplets.charge()[innerTripletIndex];
+            int outerT3charge = triplets.charge()[outerTripletIndex];
+
+            if (secondMDOuter == thirdMDInner && innerT3charge == outerT3charge) {
               alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
             }
           }
