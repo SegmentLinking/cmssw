@@ -669,6 +669,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float y2 = mds.anchorY()[secondMDIndex];
     float y3 = mds.anchorY()[thirdMDIndex];
 
+    charge = ((x2 - x1)*(y3 - y1) - (y2 - y1)*(x3 - x1) > 0.f) ? -1 : +1;
+
     std::tie(circleRadius, circleCenterX, circleCenterY) =
         computeRadiusFromThreeAnchorHits(acc, x1, y1, x2, y2, x3, y3);
 
