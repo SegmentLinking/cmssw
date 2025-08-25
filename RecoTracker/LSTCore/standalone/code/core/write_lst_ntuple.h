@@ -21,6 +21,7 @@ void createGnnNtupleBranches();
 void createT5DNNBranches();
 void createT3DNNBranches();
 void createpT3DNNBranches();
+void createT4DNNBranches();
 
 void fillOutputBranches(LSTEvent* event);
 void setOutputBranches(LSTEvent* event);
@@ -29,6 +30,7 @@ void setOccupancyBranches(LSTEvent* event);
 void setPixelQuintupletOutputBranches(LSTEvent* event);
 void setQuintupletOutputBranches(LSTEvent* event);
 void setPixelTripletOutputBranches(LSTEvent* event);
+void setQuadrupletOutputBranches(LSTEvent* event);
 void setGnnNtupleBranches(LSTEvent* event);
 void setGnnNtupleMiniDoublet(LSTEvent* event,
                              unsigned int MD,
@@ -50,6 +52,8 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3);
 void setT5DNNBranches(LSTEvent* event);
 void setT3DNNBranches(LSTEvent* event);
 void setpT3DNNBranches(LSTEvent* event);
+void fillT4DNNBranches(LSTEvent* event, unsigned int T4);
+void setT4DNNBranches(LSTEvent* event);
 void setpLSOutputBranches(LSTEvent* event);
 
 std::tuple<int, float, float, float, int, std::vector<int>> parseTrackCandidate(
@@ -73,6 +77,12 @@ std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned 
     std::vector<float> const& trk_ph2_z);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepLS(LSTEvent* event,
                                                                                                unsigned int);
+std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parseT4(
+    LSTEvent* event,
+    unsigned int,
+    std::vector<float> const& trk_ph2_x,
+    std::vector<float> const& trk_ph2_y,
+    std::vector<float> const& trk_ph2_z);
 
 // Print multiplicities
 void printMiniDoubletMultiplicities(LSTEvent* event);

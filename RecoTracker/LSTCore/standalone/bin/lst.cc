@@ -403,6 +403,7 @@ void run_lst() {
     float timing_T3;
     float timing_T5;
     float timing_pLS;
+    float timing_T4;
     float timing_pT5;
     float timing_pT3;
     float timing_TC;
@@ -427,7 +428,7 @@ void run_lst() {
       timing_T5 = runQuintuplet(events.at(omp_get_thread_num()));
 
       timing_pLS = runPixelLineSegment(events.at(omp_get_thread_num()), ana.no_pls_dupclean);
-
+      timing_T4 = runQuadruplet(events.at(omp_get_thread_num()));
       timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);
@@ -473,6 +474,7 @@ void run_lst() {
                                     timing_T3,
                                     timing_T5,
                                     timing_pLS,
+                                    timing_T4,
                                     timing_pT5,
                                     timing_pT3,
                                     timing_TC,
