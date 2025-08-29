@@ -7,6 +7,9 @@ def _label(tag):
         t = cms.InputTag(tag)
     return t.getModuleLabel()+t.getProductInstanceLabel()
 
+def _usePileupSimHits(process):
+    return hasattr(process, "mix") and hasattr(process.mix, "input") and len(process.mix.input.fileNames) > 0
+
 def customiseTrackingNtupleTool(process, isRECO = True, mergeIters = False):
     process.load("Validation.RecoTrack.trackingNtuple_cff")
     process.TFileService = cms.Service("TFileService",
@@ -17,31 +20,43 @@ def customiseTrackingNtupleTool(process, isRECO = True, mergeIters = False):
         if isRECO:
             if not hasattr(process, "reconstruction_step"):
                 raise Exception("TrackingNtuple includeSeeds=True needs reconstruction which is missing")
-        else: #assumes HLT with PF iter
-            if not hasattr(process, "HLTIterativeTrackingIter02"):
-                raise Exception("TrackingNtuple includeSeeds=True needs HLTIterativeTrackingIter02 which is missing")
+        else: #assumes HLT sequence
+            if not (hasattr(process, "HLTIterativeTrackingIter02") or hasattr(process, "HLTTrackingSequence")):
+                raise Exception("TrackingNtuple includeSeeds=True needs HLTIterativeTrackingIter02 or HLTTrackingSequence which is missing")
 
     # Replace validation_step with ntuplePath
     if not hasattr(process, "validation_step"):
         raise Exception("TrackingNtuple customise assumes process.validation_step exists")
 
 
-    # Should replay mixing for pileup simhits?
-    usePileupSimHits = hasattr(process, "mix") and hasattr(process.mix, "input") and len(process.mix.input.fileNames) > 0
-#    process.eda = cms.EDAnalyzer("EventContentAnalyzer")
-
     if not isRECO:
         if not hasattr(process,"hltMultiTrackValidation"):
             process.load("Validation.RecoTrack.HLTmultiTrackValidator_cff")
         process.trackingNtupleSequence = process.hltMultiTrackValidation.copy()
-        import RecoLocalTracker.SiStripRecHitConverter.SiStripRecHitConverter_cfi as SiStripRecHitConverter_cfi
-        process.hltSiStripRecHits = SiStripRecHitConverter_cfi.siStripMatchedRecHits.clone(
-            ClusterProducer = "hltSiStripRawToClustersFacility",
-            StripCPE = "hltESPStripCPEfromTrackAngle:hltESPStripCPEfromTrackAngle"
-        )
         process.trackingNtupleSequence.insert(0,process.trackingParticlesIntime+process.simHitTPAssocProducer)
         process.trackingNtupleSequence.remove(process.hltTrackValidator)
-        process.trackingNtupleSequence += process.hltSiStripRecHits + process.trackingNtuple
+
+        isPhase2 = hasattr(process, "HLTTrackingSequence")
+        if not isPhase2:
+            if not hasattr(process, "hltSiStripRecHits"):
+                import RecoLocalTracker.SiStripRecHitConverter.SiStripRecHitConverter_cfi as SiStripRecHitConverter_cfi
+                process.hltSiStripRecHits = SiStripRecHitConverter_cfi.siStripMatchedRecHits.clone(
+                    ClusterProducer = "hltSiStripRawToClustersFacility",
+                    StripCPE = "hltESPStripCPEfromTrackAngle:hltESPStripCPEfromTrackAngle"
+                )
+            else:
+                if not process.hltSiStripRecHits.doMatching.value():
+                    process.hltSiStripRecHits.doMatching = True
+            process.trackingNtupleSequence += process.hltSiStripRawToClustersFacility
+            process.trackingNtupleSequence += process.hltSiStripRecHits
+        else:
+            if not hasattr(process, "hltSiPhase2RecHits"):
+                import HLTrigger.Configuration.HLT_75e33.modules.hltSiPhase2RecHits_cfi as _mod
+                process.hltSiPhase2RecHits = _mod.hltSiPhase2RecHits.clone()
+            process.trackingNtupleSequence += process.hltSiPhase2Clusters
+            process.trackingNtupleSequence += process.hltSiPhase2RecHits
+
+        process.trackingNtupleSequence += process.trackingNtuple
 
     #combine all *StepTracks (TODO: write one for HLT)
     if mergeIters and isRECO:
@@ -61,7 +76,7 @@ def customiseTrackingNtupleTool(process, isRECO = True, mergeIters = False):
 
     ntuplePath = cms.Path(process.trackingNtupleSequence)
 
-    if process.trackingNtuple.includeAllHits and process.trackingNtuple.includeTrackingParticles and usePileupSimHits:
+    if process.trackingNtuple.includeAllHits and process.trackingNtuple.includeTrackingParticles and _usePileupSimHits(process):
         ntuplePath.insert(0, cms.SequencePlaceholder("mix"))
 
         process.load("Validation.RecoTrack.crossingFramePSimHitToPSimHits_cfi")
@@ -104,21 +119,28 @@ def customiseTrackingNtupleMergeIters(process):
     customiseTrackingNtupleTool(process, isRECO = True, mergeIters = True)
     return process
 
+from Validation.RecoTrack.plotting.ntupleEnum import Algo as _algo
 def customiseTrackingNtupleHLT(process):
     import Validation.RecoTrack.TrackValidation_cff as _TrackValidation_cff
-    _seedProducers = [
-        "hltIter0PFLowPixelSeedsFromPixelTracks",
-        "hltIter1PFLowPixelSeedsFromPixelTracks",
-        "hltIter2PFlowPixelSeeds",
-        "hltDoubletRecoveryPFlowPixelSeeds"
-    ]
-    _candidatesProducers = [ 
-        "hltIter0PFlowCkfTrackCandidates",
-        "hltIter1PFlowCkfTrackCandidates",
-        "hltIter2PFlowCkfTrackCandidates",
-        "hltDoubletRecoveryPFlowCkfTrackCandidates"
-    ]
-    (_seedSelectors, _tmpTask) = _TrackValidation_cff._addSeedToTrackProducers(_seedProducers, globals())
+    _seedProducers = cms.PSet(
+        names = cms.vstring("hltIter0PFLowPixelSeedsFromPixelTracks", "hltDoubletRecoveryPFlowPixelSeeds")
+    )
+
+    isPhase2 = hasattr(process, "HLTTrackingSequence")
+    if isPhase2: #default 75e33 menu, weakly attached to procModifiers
+        _seedProducers.names = ["hltInitialStepSeeds", "hltHighPtTripletStepSeeds"]
+    from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+    from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+    from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
+    (singleIterPatatrack & ~trackingLST).toModify(_seedProducers, names = ["hltInitialStepSeeds"])
+    (singleIterPatatrack & trackingLST & ~seedingLST).toModify(_seedProducers, names = ["hltInputLST", "hltInitialStepTrackCandidates"])
+    (singleIterPatatrack & trackingLST & seedingLST).toModify(_seedProducers, names = ["hltInitialStepTrajectorySeedsLST"])
+    (~singleIterPatatrack & trackingLST & ~seedingLST).toModify(_seedProducers,
+        names = ["hltInputLST", "hltInitialStepTrackCandidates", "hltHighPtTripletStepSeeds"])
+    (~singleIterPatatrack & trackingLST & seedingLST).toModify(_seedProducers,
+        names = ["hltInputLST", "hltInitialStepTrackCandidates", "hltInitialStepTrackCandidates:pLSTSsLST"])
+
+    (_seedSelectors, _tmpTask) = _TrackValidation_cff._addSeedToTrackProducers(_seedProducers.names, globals())
     _seedSelectorsTask = cms.Task()
     for modName in _seedSelectors:
         if not hasattr(process, modName):
@@ -128,13 +150,34 @@ def customiseTrackingNtupleHLT(process):
     customiseTrackingNtupleTool(process, isRECO = False)
 
     process.trackingNtupleSequence.insert(0,cms.Sequence(_seedSelectorsTask))
-    if process.hltSiStripRawToClustersFacility.onDemand.value():
+    if not isPhase2 and process.hltSiStripRawToClustersFacility.onDemand.value():
         #make sure that all iter tracking is done before running the ntuple-related modules
         process.trackingNtupleSequence.insert(0,process.hltMergedTracks)
 
     process.trackingNtuple.tracks = "hltMergedTracks"
+    if isPhase2:
+        process.trackingNtuple.tracks = "hltGeneralTracks"
+
     process.trackingNtuple.seedTracks = _seedSelectors
-    process.trackingNtuple.trackCandidates = _candidatesProducers
+    (singleIterPatatrack & trackingLST & seedingLST).toModify(process.trackingNtuple,
+        seedAlgoDetect = False, seedAlgos = [getattr(_algo,"hltIter0")])
+    (~singleIterPatatrack & trackingLST & seedingLST).toModify(process.trackingNtuple,
+        seedAlgoDetect = False, seedAlgos = [getattr(_algo,"hltPixel"), getattr(_algo,"hltIter0"), getattr(_algo,"hltIterX")])
+    process.trackingNtuple.trackCandidates = ["hltIter0PFlowCkfTrackCandidates", "hltDoubletRecoveryPFlowCkfTrackCandidates"]
+    if isPhase2:
+        process.trackingNtuple.trackCandidates = ["hltInitialStepTrackCandidates", "hltHighPtTripletStepTrackCandidates"]
+    (singleIterPatatrack & (~trackingLST | seedingLST)).toModify(process.trackingNtuple, trackCandidates = ["hltInitialStepTrackCandidates"])
+    (singleIterPatatrack & trackingLST & ~seedingLST).toModify(process.trackingNtuple,
+        trackCandidates = ["hltInitialStepTrackCandidates:pTCsLST", "hltInitialStepTrackCandidates:t5TCsLST"])
+    (~singleIterPatatrack & trackingLST & ~seedingLST).toModify(process.trackingNtuple,
+        trackCandidates = ["hltInitialStepTrackCandidates:pTCsLST", "hltInitialStepTrackCandidates:t5TCsLST", "hltHighPtTripletStepTrackCandidates"])
+    (~singleIterPatatrack & trackingLST & seedingLST).toModify(process.trackingNtuple,
+        trackCandidates = ["hltInitialStepTrackCandidates:pTTCsLST", "hltInitialStepTrackCandidates:t5TCsLST", "hltHighPtTripletStepTrackCandidatespLSTCLST"])
+    process.trackingNtuple.clusterMasks = [dict(index = getattr(_algo,"pixelPairStep"), src = "hltDoubletRecoveryClustersRefRemoval")]
+    if isPhase2:
+        process.trackingNtuple.clusterMasks = [dict(index = getattr(_algo,"highPtTripletStep"), src = "hltHighPtTripletStepClusters")]
+    singleIterPatatrack.toModify(process.trackingNtuple, clusterMasks = [])
+
     process.trackingNtuple.clusterTPMap = "hltTPClusterProducer"
     process.trackingNtuple.trackAssociator = "hltTrackAssociatorByHits"
     process.trackingNtuple.beamSpot = "hltOnlineBeamSpot"
@@ -142,15 +185,23 @@ def customiseTrackingNtupleHLT(process):
     process.trackingNtuple.stripRphiRecHits = "hltSiStripRecHits:rphiRecHit"
     process.trackingNtuple.stripStereoRecHits = "hltSiStripRecHits:stereoRecHit"
     process.trackingNtuple.stripMatchedRecHits = "hltSiStripRecHits:matchedRecHit"
-    process.trackingNtuple.vertices = "hltPixelVertices"
-    process.trackingNtuple.TTRHBuilder = "hltESPTTRHBWithTrackAngle"
-    process.trackingNtuple.parametersDefiner = "hltLhcParametersDefinerForTP"
+    process.trackingNtuple.phase2OTRecHits = "hltSiPhase2RecHits"
+    process.trackingNtuple.vertices = "hltPhase2PixelVertices" if isPhase2 else "hltPixelVertices"
+    process.trackingNtuple.TTRHBuilder = "hltESPTTRHBWithTrackAngle" if isPhase2 else "hltESPTTRHBWithTrackAngle"
     process.trackingNtuple.includeMVA = False
 
     return process
 
 def extendedContent(process):
-    process.trackingParticlesIntime.intimeOnly = False
+    process.trackingParticlesIntime.intimeOnly = True
+    shTags = [process.simHitTPAssocProducer.simHitSrc]
+    if _usePileupSimHits(process):
+        shTags += [process.crossingFramePSimHitToPSimHits.src]
+    for vTags in shTags:
+        lowT = {t for t in vTags if t.endswith("HighTof")}
+        htNeeded = {t.replace("LowTof", "HighTof") for t in vTags if t.endswith("LowTof")}
+        for t in (t for t in htNeeded if t not in lowT):
+            vTags += [t]
     process.trackingNtuple.includeOOT = True
     process.trackingNtuple.keepEleSimHits = True
 
