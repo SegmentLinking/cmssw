@@ -55,13 +55,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
 
+  // Common constants for eta, pT bins used in DNNs and other cuts.
+  HOST_DEVICE_CONSTANT unsigned int kPtBins = 2;
+  HOST_DEVICE_CONSTANT unsigned int kEtaBins = 10;
+  HOST_DEVICE_CONSTANT float kEtaSize = 0.25f;  // Bin size in eta.
+
+  // 99% efficiency, set with the T5 DNN turned off.
+  HOST_DEVICE_CONSTANT float kWpT5Radii[kPtBins][kEtaBins] = {
+      {0.119411, 0.113887, 0.113921, 0.12682, 0.715833, 1.678992, 2.165896, 1.37728, 0.363937, 0.415612},
+      {0.587614, 0.390938, 0.543635, 0.555977, 1.070057, 1.931417, 2.635957, 2.219691, 1.308424, 1.672192}};
+
   namespace dnn {
 
-    // Common constants for both DNNs
+    // Shared normalization constant for inputs.
     HOST_DEVICE_CONSTANT float kPhi_norm = kPi;
-    HOST_DEVICE_CONSTANT float kEtaSize = 0.25f;  // Bin size in eta.
-    constexpr unsigned int kPtBins = 2;
-    constexpr unsigned int kEtaBins = 10;
 
     namespace plsembdnn {
       HOST_DEVICE_CONSTANT float kEta_norm = 4.0f;

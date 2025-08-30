@@ -632,10 +632,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   }
 
-  HOST_DEVICE_CONSTANT float kWpRadii[dnn::kPtBins][dnn::kEtaBins] = {
-      {0.119411, 0.113887, 0.113921, 0.12682, 0.715833, 1.678992, 2.165896, 1.37728, 0.363937, 0.415612},
-      {0.587614, 0.390938, 0.543635, 0.555977, 1.070057, 1.931417, 2.635957, 2.219691, 1.308424, 1.672192}};
-
   template <typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE float radiiHarmonicMetric(TAcc const& acc,
                                                            float innerRadius,
@@ -1557,16 +1553,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (!edm::isFinite(bridgeRadius) || bridgeRadius <= 0.f)
       return false;
 
+    // Get the bin index based on abs(eta) of first hit.
     const float eta_abs = alpaka::math::abs(acc, mds.anchorEta()[firstMDIndex]);
+    const unsigned tmp = static_cast<unsigned>(eta_abs / kEtaSize);
+    const uint8_t binIndex = (tmp >= kEtaBins) ? (kEtaBins - 1) : tmp;
 
-    // Get the bin index based on abs(eta) of first hit and t5_pt
-    const uint8_t bin_index =
-        (eta_abs > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta_abs / dnn::kEtaSize);
-    float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
-    uint8_t pt_index = (t5_pt > 5.0f);
+    const float t5Pt = innerRadius * lst::k2Rinv1GeVf * 2;
+    const uint8_t ptIndex = (t5Pt > 5.0f);
 
     radiiMetric = radiiHarmonicMetric(acc, innerRadius, outerRadius, bridgeRadius);
-    if (radiiMetric > kWpRadii[pt_index][bin_index])
+
+    if (radiiMetric > kWpT5Radii[ptIndex][binIndex])
       return false;
 
     bool inference = lst::t5dnn::runInference(acc,
@@ -1578,7 +1575,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               fifthMDIndex,
                                               innerRadius,
                                               outerRadius,
-                                              bridgeRadius);
+                                              bridgeRadius,
+                                              ptIndex,
+                                              binIndex);
     tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;
@@ -1908,13 +1907,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           const unsigned int secondMDInner = mdIndices[secondSegIdx][0];
           const unsigned int secondMDOuter = mdIndices[secondSegIdx][1];
 
+          // Get the bin index based on abs(eta) of first hit.
           const float eta1_abs = alpaka::math::abs(acc, mds.anchorEta()[firstMDIndex]);
-          const uint8_t bin_index =
-              (eta1_abs > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1_abs / dnn::kEtaSize);
+          const unsigned tmp = static_cast<unsigned>(eta1_abs / kEtaSize);
+          const uint8_t binIndex = (tmp >= kEtaBins) ? (kEtaBins - 1) : tmp;
+
           const float innerRadius = triplets.radius()[innerTripletIndex];
-          float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
-          uint8_t pt_index = (t5_pt > 5.0f);
-          const float cut_wp = kWpRadii[pt_index][bin_index];
+          float t5Pt = innerRadius * lst::k2Rinv1GeVf * 2;
+          uint8_t ptIndex = (t5Pt > 5.0f);
+
+          const float cut_wp = kWpT5Radii[ptIndex][binIndex];
 
           for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
             const unsigned int outerTripletIndex = tripIdx[lowerModule3] + outerTripletArrayIndex;

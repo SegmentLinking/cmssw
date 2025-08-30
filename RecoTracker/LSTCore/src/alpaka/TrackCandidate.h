@@ -250,7 +250,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         // Get pLS embedding eta bin and cut value for that bin.
         float absEta1 = alpaka::math::abs(acc, eta1);
-        uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
+        uint8_t bin_idx = (absEta1 >= 2.5f) ? (kEtaBins - 1) : static_cast<uint8_t>(absEta1 / kEtaSize);
         const float threshold = dnn::plsembdnn::kWP[bin_idx];
 
         unsigned int nTrackCandidates = candsBase.nTrackCandidates();
