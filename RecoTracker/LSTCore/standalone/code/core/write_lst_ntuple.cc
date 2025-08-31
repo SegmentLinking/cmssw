@@ -126,8 +126,13 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("pLS_px");
   ana.tx->createBranch<std::vector<float>>("pLS_py");
   ana.tx->createBranch<std::vector<float>>("pLS_pz");
+  ana.tx->createBranch<std::vector<float>>("pLS_x");
+  ana.tx->createBranch<std::vector<float>>("pLS_y");
+  ana.tx->createBranch<std::vector<float>>("pLS_z");
   ana.tx->createBranch<std::vector<float>>("pLS_eta");
   ana.tx->createBranch<std::vector<bool>>("pLS_isQuad");
+  ana.tx->createBranch<std::vector<int>>("pLS_charge");
+  ana.tx->createBranch<std::vector<float>>("pLS_deltaPhi");
   ana.tx->createBranch<std::vector<float>>("pLS_etaErr");
   ana.tx->createBranch<std::vector<float>>("pLS_phi");
   ana.tx->createBranch<std::vector<float>>("pLS_score");
@@ -1596,6 +1601,17 @@ void setpLSOutputBranches(LSTEvent* event) {
   std::vector<int> sim_pLS_matched(n_accepted_simtrk, 0);
   std::vector<std::vector<int>> pLS_matched_simIdx;
 
+  // Logic from printpLS
+  SegmentsConst segments = event->getSegments<SegmentsSoA>();
+  SegmentsOccupancyConst segmentsOccupancy = event->getSegments<SegmentsOccupancySoA>();
+  MiniDoubletsConst miniDoublets = event->getMiniDoublets<MiniDoubletsSoA>();
+  auto hitsBase = event->getInput<HitsBaseSoA>();
+  auto modules = event->getModules<ModulesSoA>();
+  auto ranges = event->getRanges();
+  unsigned int i = modules.nLowerModules();
+  unsigned int idx = i;  //modules->lowerModuleIndices[i];
+  int npLS = segmentsOccupancy.nSegments()[idx];
+
   for (unsigned int i_pLS = 0; i_pLS < n_pLS; ++i_pLS) {
     // Get pLS properties
     float pt = pixelSeeds.ptIn()[i_pLS];
@@ -1603,6 +1619,8 @@ void setpLSOutputBranches(LSTEvent* event) {
     float py = pixelSeeds.py()[i_pLS];
     float pz = pixelSeeds.pz()[i_pLS];
     bool isQuad = static_cast<bool>(pixelSeeds.isQuad()[i_pLS]);
+    int charge = pixelSeeds.charge()[i_pLS];
+    float deltaPhi = pixelSeeds.deltaPhi()[i_pLS];
     float ptErr = pixelSeeds.ptErr()[i_pLS];
     float eta = pixelSeeds.eta()[i_pLS];
     float etaErr = pixelSeeds.etaErr()[i_pLS];
@@ -1611,6 +1629,18 @@ void setpLSOutputBranches(LSTEvent* event) {
     float centerX = pixelSegments.circleCenterX()[i_pLS];
     float centerY = pixelSegments.circleCenterY()[i_pLS];
     float radius = pixelSegments.circleRadius()[i_pLS];
+
+    // Logic from printpLS
+    unsigned int sgIdx = ranges.segmentModuleIndices()[idx] + i_pLS;
+    unsigned int InnerMiniDoubletIndex = segments.mdIndices()[sgIdx][0];
+    unsigned int OuterMiniDoubletIndex = segments.mdIndices()[sgIdx][1];
+    unsigned int InnerMiniDoubletLowerHitIndex = miniDoublets.anchorHitIndices()[InnerMiniDoubletIndex];
+    unsigned int InnerMiniDoubletUpperHitIndex = miniDoublets.outerHitIndices()[InnerMiniDoubletIndex];
+    unsigned int OuterMiniDoubletLowerHitIndex = miniDoublets.anchorHitIndices()[OuterMiniDoubletIndex];
+    unsigned int OuterMiniDoubletUpperHitIndex = miniDoublets.outerHitIndices()[OuterMiniDoubletIndex];
+    const auto x = hitsBase.xs()[OuterMiniDoubletLowerHitIndex];
+    const auto y = hitsBase.ys()[OuterMiniDoubletLowerHitIndex];
+    const auto z = hitsBase.zs()[OuterMiniDoubletLowerHitIndex];
 
     // Get hits from pLS
     std::vector<unsigned int> hit_idx = getPixelHitIdxsFrompLS(event, i_pLS);
@@ -1627,9 +1657,14 @@ void setpLSOutputBranches(LSTEvent* event) {
     ana.tx->pushbackToBranch<float>("pLS_px", px);
     ana.tx->pushbackToBranch<float>("pLS_py", py);
     ana.tx->pushbackToBranch<float>("pLS_pz", pz);
+    ana.tx->pushbackToBranch<float>("pLS_x", x);
+    ana.tx->pushbackToBranch<float>("pLS_y", y);
+    ana.tx->pushbackToBranch<float>("pLS_z", z);
     ana.tx->pushbackToBranch<float>("pLS_eta", eta);
     ana.tx->pushbackToBranch<float>("pLS_etaErr", etaErr);
     ana.tx->pushbackToBranch<float>("pLS_phi", phi);
+    ana.tx->pushbackToBranch<int>("pLS_charge", charge);
+    ana.tx->pushbackToBranch<float>("pLS_deltaPhi", deltaPhi);
     ana.tx->pushbackToBranch<float>("pLS_score", score);
     ana.tx->pushbackToBranch<float>("pLS_circleCenterX", centerX);
     ana.tx->pushbackToBranch<float>("pLS_circleCenterY", centerY);
