@@ -144,6 +144,7 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("t5_pMatched");
   ana.tx->createBranch<std::vector<float>>("t5_eta");
   ana.tx->createBranch<std::vector<float>>("t5_phi");
+  ana.tx->createBranch<std::vector<float>>("t5_radiiMetric");
   ana.tx->createBranch<std::vector<float>>("t5_score_rphisum");
   ana.tx->createBranch<std::vector<std::vector<int>>>("t5_hitIdxs");
   ana.tx->createBranch<std::vector<std::vector<int>>>("t5_matched_simIdx");
@@ -644,6 +645,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       float pt = __H2F(quintuplets.innerRadius()[quintupletIndex]) * k2Rinv1GeVf * 2;
       float eta = __H2F(quintuplets.eta()[quintupletIndex]);
       float phi = __H2F(quintuplets.phi()[quintupletIndex]);
+      float radiiMetric = quintuplets.radiiMetric()[quintupletIndex];
 
       std::vector<unsigned int> hit_idx = getHitIdxsFromT5(event, quintupletIndex);
       std::vector<unsigned int> hit_type = getHitTypesFromT5(event, quintupletIndex);
@@ -664,6 +666,7 @@ void setQuintupletOutputBranches(LSTEvent* event) {
       ana.tx->pushbackToBranch<float>("t5_pt", pt);
       ana.tx->pushbackToBranch<float>("t5_pMatched", percent_matched);
       ana.tx->pushbackToBranch<float>("t5_eta", eta);
+      ana.tx->pushbackToBranch<float>("t5_radiiMetric", radiiMetric);
       ana.tx->pushbackToBranch<float>("t5_phi", phi);
       ana.tx->pushbackToBranch<float>("t5_innerRadius", __H2F(quintuplets.innerRadius()[quintupletIndex]));
       ana.tx->pushbackToBranch<float>("t5_bridgeRadius", __H2F(quintuplets.bridgeRadius()[quintupletIndex]));

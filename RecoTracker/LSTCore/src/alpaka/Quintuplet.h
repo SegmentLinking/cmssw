@@ -45,6 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float scores,
                                                             uint8_t layer,
                                                             unsigned int quintupletIndex,
+                                                            float radiiMetric,
                                                             const float (&t5Embed)[Params_T5::kEmbed],
                                                             bool tightCutFlag) {
     quintuplets.tripletIndices()[quintupletIndex][0] = innerTripletIndex;
@@ -88,6 +89,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.nonAnchorChiSquared()[quintupletIndex] = nonAnchorChiSquared;
     quintuplets.dBeta1()[quintupletIndex] = dBeta1;
     quintuplets.dBeta2()[quintupletIndex] = dBeta2;
+    quintuplets.radiiMetric()[quintupletIndex] = radiiMetric;
 
     CMS_UNROLL_LOOP
     for (unsigned int i = 0; i < Params_T5::kEmbed; ++i) {
@@ -628,6 +630,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
       }
     }
+  }
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float radiiHarmonicMetric(TAcc const& acc,
+                                                           float innerRadius,
+                                                           float outerRadius,
+                                                           float bridgeRadius) {
+    const float invBridge = 1.f / bridgeRadius;
+    const float x1 = alpaka::math::abs(acc, 1.f - outerRadius * invBridge);
+    const float x2 = alpaka::math::abs(acc, 1.f - innerRadius * invBridge);
+
+    // Harmonic mean gives consistency check between inner, bridge and outer radii.
+    constexpr float eps = 1.0e-6f;
+    return x1 * x2 / (x1 + x2 + eps);
   }
 
   template <typename TAcc>
@@ -1492,6 +1508,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& dBeta1,
                                                                float& dBeta2,
                                                                bool& tightCutFlag,
+                                                               float& radiiMetric,
                                                                float (&t5Embed)[Params_T5::kEmbed],
                                                                const float ptCut) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
@@ -1531,6 +1548,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::tie(bridgeRadius, g, f) = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4);
     innerRadius = triplets.radius()[innerTripletIndex];
 
+    if (!edm::isFinite(bridgeRadius) || bridgeRadius <= 0.f)
+      return false;
+
+    // Get the bin index based on abs(eta) of first hit.
+    const float eta_abs = alpaka::math::abs(acc, mds.anchorEta()[firstMDIndex]);
+    const unsigned tmp = static_cast<unsigned>(eta_abs / kEtaSize);
+    const uint8_t binIndex = (tmp >= kEtaBins) ? (kEtaBins - 1) : tmp;
+
+    const float t5Pt = innerRadius * lst::k2Rinv1GeVf * 2;
+    const uint8_t ptIndex = (t5Pt > 5.0f);
+
+    radiiMetric = radiiHarmonicMetric(acc, innerRadius, outerRadius, bridgeRadius);
+
+    if (radiiMetric > kWpT5Radii[ptIndex][binIndex])
+      return false;
+
     bool inference = lst::t5dnn::runInference(acc,
                                               mds,
                                               firstMDIndex,
@@ -1540,7 +1573,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               fifthMDIndex,
                                               innerRadius,
                                               outerRadius,
-                                              bridgeRadius);
+                                              bridgeRadius,
+                                              ptIndex,
+                                              binIndex);
     tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;
@@ -1724,7 +1759,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             uint16_t lowerModule5 = triplets.lowerModuleIndices()[outerTripletIndex][2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
-                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
+                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2,
+                radiiMetric;  //required for making distributions
 
             float t5Embed[Params_T5::kEmbed] = {0.f};
 
@@ -1753,6 +1789,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     dBeta1,
                                                     dBeta2,
                                                     tightCutFlag,
+                                                    radiiMetric,
                                                     t5Embed,
                                                     ptCut);
 
@@ -1807,6 +1844,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         scores,
                                         layer,
                                         quintupletIndex,
+                                        radiiMetric,
                                         t5Embed,
                                         tightCutFlag);
 
@@ -1831,6 +1869,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct CountTripletConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
+                                  MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOcc,
@@ -1859,17 +1898,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterTriplets == 0)
             continue;
 
+          const unsigned int firstSegIdx = segIdx[innerTripletIndex][0];
           const unsigned int secondSegIdx = segIdx[innerTripletIndex][1];
+
+          const unsigned int firstMDIndex = mdIndices[firstSegIdx][0];
+          const unsigned int secondMDInner = mdIndices[secondSegIdx][0];
           const unsigned int secondMDOuter = mdIndices[secondSegIdx][1];
+
+          // Get the bin index based on abs(eta) of first hit.
+          const float eta1_abs = alpaka::math::abs(acc, mds.anchorEta()[firstMDIndex]);
+          const unsigned tmp = static_cast<unsigned>(eta1_abs / kEtaSize);
+          const uint8_t binIndex = (tmp >= kEtaBins) ? (kEtaBins - 1) : tmp;
+
+          const float innerRadius = triplets.radius()[innerTripletIndex];
+          float t5Pt = innerRadius * lst::k2Rinv1GeVf * 2;
+          uint8_t ptIndex = (t5Pt > 5.0f);
+
+          const float cut_wp = kWpT5Radii[ptIndex][binIndex];
 
           for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
             const unsigned int outerTripletIndex = tripIdx[lowerModule3] + outerTripletArrayIndex;
             const unsigned int thirdSegIdx = segIdx[outerTripletIndex][0];
             const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
 
-            if (secondMDOuter == thirdMDInner) {
-              alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
-            }
+            // Must share a common MD
+            if (secondMDOuter != thirdMDInner)
+              continue;
+
+            const float outerRadius = triplets.radius()[outerTripletIndex];
+            const unsigned int thirdMDOuter = mdIndices[thirdSegIdx][1];
+
+            const float x2 = mds.anchorX()[secondMDInner];
+            const float y2 = mds.anchorY()[secondMDInner];
+            const float x3 = mds.anchorX()[secondMDOuter];
+            const float y3 = mds.anchorY()[secondMDOuter];
+            const float x4 = mds.anchorX()[thirdMDOuter];
+            const float y4 = mds.anchorY()[thirdMDOuter];
+
+            float g_unused, f_unused;
+            float bridgeRadius;
+            std::tie(bridgeRadius, g_unused, f_unused) = computeRadiusFromThreeAnchorHits(acc, x2, y2, x3, y3, x4, y4);
+
+            if (!edm::isFinite(bridgeRadius) || bridgeRadius <= 0.f)
+              continue;
+
+            const float radiiMetric = radiiHarmonicMetric(acc, innerRadius, outerRadius, bridgeRadius);
+
+            if (radiiMetric > cut_wp)
+              continue;
+
+            alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
           }
         }
       }
