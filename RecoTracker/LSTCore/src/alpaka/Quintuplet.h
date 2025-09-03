@@ -1869,46 +1869,57 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int thirdSegIdx = segIdx[outerTripletIndex][0];
             const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
 
+            std::cout << "number of inner triplets: " << nInnerTriplets << std::endl;
+            std::cout << "number of outer triplets: " << nOuterTriplets << std::endl;
+
             if (secondMDOuter == thirdMDInner) {
-              const uint16_t lowerModule2 = lmIdx[innerTripletIndex][1];
-              const uint16_t lowerModule4 = lmIdx[outerTripletIndex][1];
-              const uint16_t lowerModule5 = lmIdx[outerTripletIndex][2];
+              if(nInnerTriplets < 1000 && nOuterTriplets < 1000) {
+                std::cout << "    less than 1000" << std::endl;
+                const bool ok = true;
+                if (ok) {
+                  alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                }
+              }
+              else {
+                const uint16_t lowerModule2 = lmIdx[innerTripletIndex][1];
+                const uint16_t lowerModule4 = lmIdx[outerTripletIndex][1];
+                const uint16_t lowerModule5 = lmIdx[outerTripletIndex][2];
 
-              float innerRadius_s, outerRadius_s, bridgeRadius_s;
-              float regCx_s, regCy_s, regR_s;
-              float rzChi2_s, chi2_s, nonAnchorChi2_s, dBeta1_s, dBeta2_s;
-              float t5Embed_s[Params_T5::kEmbed] = {0.f};
-              bool tightFlag_s = false;
+                float innerRadius_s, outerRadius_s, bridgeRadius_s;
+                float regCx_s, regCy_s, regR_s;
+                float rzChi2_s, chi2_s, nonAnchorChi2_s, dBeta1_s, dBeta2_s;
+                float t5Embed_s[Params_T5::kEmbed] = {0.f};
+                bool tightFlag_s = false;
 
-              const bool ok = runQuintupletDefaultAlgo(acc,
-                                                       modules,
-                                                       mds,
-                                                       segments,
-                                                       triplets,
-                                                       lowerModule1,
-                                                       lowerModule2,
-                                                       lowerModule3,
-                                                       lowerModule4,
-                                                       lowerModule5,
-                                                       innerTripletIndex,
-                                                       outerTripletIndex,
-                                                       innerRadius_s,
-                                                       outerRadius_s,
-                                                       bridgeRadius_s,
-                                                       regCx_s,
-                                                       regCy_s,
-                                                       regR_s,
-                                                       rzChi2_s,
-                                                       chi2_s,
-                                                       nonAnchorChi2_s,
-                                                       dBeta1_s,
-                                                       dBeta2_s,
-                                                       tightFlag_s,
-                                                       t5Embed_s,
-                                                       ptCut);
-
-              if (ok) {
-                alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                const bool ok = runQuintupletDefaultAlgo(acc,
+                                                          modules,
+                                                          mds,
+                                                          segments,
+                                                          triplets,
+                                                          lowerModule1,
+                                                          lowerModule2,
+                                                          lowerModule3,
+                                                          lowerModule4,
+                                                          lowerModule5,
+                                                          innerTripletIndex,
+                                                          outerTripletIndex,
+                                                          innerRadius_s,
+                                                          outerRadius_s,
+                                                          bridgeRadius_s,
+                                                          regCx_s,
+                                                          regCy_s,
+                                                          regR_s,
+                                                          rzChi2_s,
+                                                          chi2_s,
+                                                          nonAnchorChi2_s,
+                                                          dBeta1_s,
+                                                          dBeta2_s,
+                                                          tightFlag_s,
+                                                          t5Embed_s,
+                                                          ptCut);
+                if (ok) {
+                  alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                }
               }
             }
           }

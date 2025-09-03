@@ -35,6 +35,8 @@ namespace lst {
 
   constexpr unsigned int size_superbins = 45000;
 
+  constexpr unsigned int n_triplet_threshold = 1000;
+
 // Half precision wrapper functions.
 #if defined(FP16_Base)
 #define __F2H __float2half
