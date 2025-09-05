@@ -9,7 +9,7 @@ run_rocm()
     # ROCm backend
     lst_make_tracklooper -mR $*
     for s_value in 1 2 4 6 8; do
-        lst -n ${NEVENTS} -o ${OUTDIR}/rocm_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst_rocm -n ${NEVENTS} -o ${OUTDIR}/rocm_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
@@ -22,7 +22,7 @@ run_cuda()
     # CUDA backend
     lst_make_tracklooper -mG $*
     for s_value in 1 2 4 6 8; do
-        lst -n ${NEVENTS} -o ${OUTDIR}/cuda_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst_cuda -n ${NEVENTS} -o ${OUTDIR}/cuda_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
@@ -35,7 +35,7 @@ run_cpu()
     # CPU backend
     lst_make_tracklooper -mC $*
     for s_value in 1 4 16 32 64; do
-        lst -n ${NEVENTS} -o ${OUTDIR}/cpu_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
+        lst_cpu -n ${NEVENTS} -o ${OUTDIR}/cpu_${version}_s${s_value}.root -v 1 -w 0 -s ${s_value} -i ${sample} | tee -a timing_temp.txt
     done
 }
 
