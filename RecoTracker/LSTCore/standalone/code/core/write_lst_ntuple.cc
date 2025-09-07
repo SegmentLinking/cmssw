@@ -821,10 +821,22 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3) {
   std::vector<unsigned int> t3_hit_idx = getHitsFromT3(event, T3Index);
   std::vector<unsigned int> t3_hit_type = getHitTypesFromT3(event, T3Index);
 
+  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+
   float pLS_percent_matched = 0.f;
   float t3_percent_matched = 0.f;
-  matchedSimTrkIdxs(pls_hit_idx, pls_hit_type, false, &pLS_percent_matched);
-  matchedSimTrkIdxs(t3_hit_idx, t3_hit_type, false, &t3_percent_matched);
+  matchedSimTrkIdxs(pls_hit_idx,
+                    pls_hit_type,
+                    trk_simhit_simTrkIdx,
+                    trk_ph2_simHitIdx,
+                    trk_pix_simHitIdx,
+                    false,
+                    &pLS_percent_matched);
+
+  matchedSimTrkIdxs(
+      t3_hit_idx, t3_hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, &t3_percent_matched);
 
   ana.tx->pushbackToBranch<float>("pT3_pix_eta", eta_pix);
   ana.tx->pushbackToBranch<float>("pT3_pix_phi", phi_pix);
