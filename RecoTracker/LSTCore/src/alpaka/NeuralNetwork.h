@@ -140,7 +140,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   namespace pt3dnn {
 
-    template <bool IsPT5, typename TAcc>
+    template <bool isPT5WP, typename TAcc>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runInference(TAcc const& acc,
                                                      const float rPhiChiSquared,
                                                      const float tripletRadius,
@@ -178,7 +178,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                               ? (dnn::kEtaBins - 1)
                               : static_cast<unsigned int>(alpaka::math::abs(acc, pixelEta) / dnn::kEtaSize);
 
-      if constexpr (IsPT5) {
+      if constexpr (isPT5WP) {
         if (pixelPt > 5.0f)
           return output > dnn::pt5dnn::kWpHigh;
         return output > dnn::pt5dnn::kWp[bin_index];

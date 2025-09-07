@@ -529,7 +529,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return RMSE;
   }
 
-  template <bool UsePT5 = false, typename TAcc>
+  template <bool usePT5 = false, typename TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runPixelTripletDefaultAlgo(TAcc const& acc,
                                                                  ModulesConst modules,
                                                                  ObjectRangesConst ranges,
@@ -677,7 +677,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     centerX = 0;
     centerY = 0;
 
-    if (runDNN and !lst::pt3dnn::runInference<UsePT5>(acc,
+    if (runDNN and !lst::pt3dnn::runInference<usePT5>(acc,
                                                       rPhiChiSquared,
                                                       tripletRadius,
                                                       pixelRadius,
