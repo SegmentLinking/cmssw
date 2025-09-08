@@ -24,6 +24,7 @@ namespace lst {
                       SOA_COLUMN(char, isDup),         // duplicate flag
                       SOA_COLUMN(bool, tightCutFlag),  // tight pass to be a TC
                       SOA_COLUMN(bool, partOfPT5),
+                      SOA_COLUMN(float, dnnScore),
                       SOA_COLUMN(float, regressionRadius),
                       SOA_COLUMN(float, regressionCenterX),
                       SOA_COLUMN(float, regressionCenterY),

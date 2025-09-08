@@ -59,7 +59,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Common constants for both DNNs
     HOST_DEVICE_CONSTANT float kPhi_norm = kPi;
-    HOST_DEVICE_CONSTANT float kEtaSize = 0.25f;  // Bin size in eta.
+    HOST_DEVICE_CONSTANT float kEtaSize = 0.25f;         // Bin size in eta.
+    HOST_DEVICE_CONSTANT float kHighPtThreshold = 5.0f;  // 5 GeV
+    HOST_DEVICE_CONSTANT float kMaxEtaLimit = 2.5f;      // Last eta bin.
     constexpr unsigned int kPtBins = 2;
     constexpr unsigned int kEtaBins = 10;
 

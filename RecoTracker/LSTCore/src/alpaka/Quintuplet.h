@@ -44,6 +44,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float phi,
                                                             float scores,
                                                             uint8_t layer,
+                                                            float dnnScore,
                                                             unsigned int quintupletIndex,
                                                             const float (&t5Embed)[Params_T5::kEmbed],
                                                             bool tightCutFlag) {
@@ -63,6 +64,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.score_rphisum()[quintupletIndex] = __F2H(scores);
     quintuplets.isDup()[quintupletIndex] = 0;
     quintuplets.tightCutFlag()[quintupletIndex] = tightCutFlag;
+    quintuplets.dnnScore()[quintupletIndex] = dnnScore;
     quintuplets.regressionRadius()[quintupletIndex] = regressionRadius;
     quintuplets.regressionCenterX()[quintupletIndex] = regressionCenterX;
     quintuplets.regressionCenterY()[quintupletIndex] = regressionCenterY;
@@ -1492,6 +1494,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                float& dBeta1,
                                                                float& dBeta2,
                                                                bool& tightCutFlag,
+                                                               float& dnnScore,
                                                                float (&t5Embed)[Params_T5::kEmbed],
                                                                const float ptCut) {
     unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
@@ -1540,7 +1543,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               fifthMDIndex,
                                               innerRadius,
                                               outerRadius,
-                                              bridgeRadius);
+                                              bridgeRadius,
+                                              dnnScore);
     tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;
@@ -1724,7 +1728,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             uint16_t lowerModule5 = triplets.lowerModuleIndices()[outerTripletIndex][2];
 
             float innerRadius, outerRadius, bridgeRadius, regressionCenterX, regressionCenterY, regressionRadius,
-                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2;  //required for making distributions
+                rzChiSquared, chiSquared, nonAnchorChiSquared, dBeta1, dBeta2, dnnScore;
 
             float t5Embed[Params_T5::kEmbed] = {0.f};
 
@@ -1753,6 +1757,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                     dBeta1,
                                                     dBeta2,
                                                     tightCutFlag,
+                                                    dnnScore,
                                                     t5Embed,
                                                     ptCut);
 
@@ -1779,7 +1784,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   [layer2_adjustment]];
                   float eta = mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][0]]
                                                                   [layer2_adjustment]];
-                  float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+                  float pt = innerRadius * lst::k2Rinv1GeVf * 2;
                   float scores = chiSquared + nonAnchorChiSquared;
                   addQuintupletToMemory(triplets,
                                         quintuplets,
@@ -1806,6 +1811,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         phi,
                                         scores,
                                         layer,
+                                        dnnScore,
                                         quintupletIndex,
                                         t5Embed,
                                         tightCutFlag);

@@ -156,7 +156,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int ix = quintupletModuleIndices_lowmod + ix1;
           float eta1 = __H2F(quintuplets.eta()[ix]);
           float phi1 = __H2F(quintuplets.phi()[ix]);
-          float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
+          float qualityScore1;
+          if (quintuplets.pt()[ix] < dnn::kHighPtThreshold) {
+            qualityScore1 = 1.0f - quintuplets.dnnScore()[ix];
+          } else {
+            qualityScore1 = __H2F(quintuplets.score_rphisum()[ix]);
+          }
 
           for (unsigned int jx1 : cms::alpakatools::uniform_elements_x(acc, ix1 + 1, nQuintuplets_lowmod)) {
             unsigned int jx = quintupletModuleIndices_lowmod + jx1;
@@ -165,7 +170,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float phi2 = __H2F(quintuplets.phi()[jx]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-            float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
+            float qualityScore2;
+            // Both trigger on the outer quintuplet to never compare dnn to chi-square score.
+            if (quintuplets.pt()[ix] < dnn::kHighPtThreshold) {
+              qualityScore2 = 1.0f - quintuplets.dnnScore()[jx];
+            } else {
+              qualityScore2 = __H2F(quintuplets.score_rphisum()[jx]);
+            }
 
             if (dEta > 0.1f)
               continue;
@@ -176,7 +187,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             int nMatched = checkHitsT5(ix, jx, quintuplets);
             const int minNHitsForDup_T5 = 7;
             if (nMatched >= minNHitsForDup_T5) {
-              if (score_rphisum1 >= score_rphisum2) {
+              if (qualityScore1 >= qualityScore2) {
                 rmQuintupletFromMemory(quintuplets, ix);
               } else {
                 rmQuintupletFromMemory(quintuplets, jx);
@@ -232,11 +243,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
               float eta1 = __H2F(quintuplets.eta()[ix]);
               float phi1 = __H2F(quintuplets.phi()[ix]);
-              float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
+              float qualityScore1;
+              if (quintuplets.pt()[ix] < dnn::kHighPtThreshold) {
+                qualityScore1 = 1.0f - quintuplets.dnnScore()[ix];
+              } else {
+                qualityScore1 = __H2F(quintuplets.score_rphisum()[ix]);
+              }
 
               float eta2 = __H2F(quintuplets.eta()[jx]);
               float phi2 = __H2F(quintuplets.phi()[jx]);
-              float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
+              float qualityScore2;
+              // Both trigger on the outer quintuplet to never compare dnn to chi-square score.
+              if (quintuplets.pt()[ix] < dnn::kHighPtThreshold) {
+                qualityScore2 = 1.0f - quintuplets.dnnScore()[jx];
+              } else {
+                qualityScore2 = __H2F(quintuplets.score_rphisum()[jx]);
+              }
 
               float dEta = alpaka::math::abs(acc, eta1 - eta2);
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
@@ -259,9 +281,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
 
               if (((dR2 < 0.001f || nMatched >= minNHitsForDup_T5) && d2 < 1.0f) || (dR2 < 0.02f && d2 < 0.1f)) {
-                if (isPT5_jx || score_rphisum1 > score_rphisum2) {
+                if (isPT5_jx || qualityScore1 > qualityScore2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
-                } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
+                } else if (isPT5_ix || qualityScore1 < qualityScore2) {
                   rmQuintupletFromMemory(quintuplets, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintuplets, (ix < jx ? ix : jx), true);
