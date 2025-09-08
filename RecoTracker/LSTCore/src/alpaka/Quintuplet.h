@@ -1870,15 +1870,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
 
             if (secondMDOuter == thirdMDInner) {
-              if(nInnerTriplets < 1000 && nOuterTriplets < 1000) {
+              if(nInnerTriplets < n_triplet_threshold && nOuterTriplets < n_triplet_threshold) {
                 const bool ok = true;
                 if (ok) {
                    alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
                 }
               }
               else {
-                // std::cout << "number of inner triplets: " << nInnerTriplets << std::endl;
-                // std::cout << "number of outer triplets: " << nOuterTriplets << std::endl;
                 const uint16_t lowerModule2 = lmIdx[innerTripletIndex][1];
                 const uint16_t lowerModule4 = lmIdx[outerTripletIndex][1];
                 const uint16_t lowerModule5 = lmIdx[outerTripletIndex][2];
