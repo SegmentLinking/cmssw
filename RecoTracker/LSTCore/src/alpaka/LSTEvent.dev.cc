@@ -351,7 +351,9 @@ void LSTEvent::createTriplets() {
                         modules_.const_view<ModulesSoA>(),
                         segmentsDC_->view<SegmentsSoA>(),
                         segmentsDC_->const_view<SegmentsOccupancySoA>(),
-                        rangesDC_->const_view());
+                        rangesDC_->const_view(),
+                        miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
+                        ptCut_);
 
     auto const createTripletArrayRanges_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 

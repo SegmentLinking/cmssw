@@ -45,6 +45,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // To be updated with std::numeric_limits<float>::infinity() in the code and data files
   HOST_DEVICE_CONSTANT float kVerticalModuleSlope = 123456789.0;
 
+  // Thresholds in counting kernels to run full set of cuts.
+  // Lower thresholds reduce LST memory footprint but increase timing.
+  HOST_DEVICE_CONSTANT unsigned int kLSThreshold = 2000u;
+
   HOST_DEVICE_CONSTANT float kMiniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
   HOST_DEVICE_CONSTANT float kMiniDeltaFlat[6] = {0.26f, 0.16f, 0.16f, 0.18f, 0.18f, 0.18f};
   HOST_DEVICE_CONSTANT float kMiniDeltaLooseTilted[3] = {0.4f, 0.4f, 0.4f};

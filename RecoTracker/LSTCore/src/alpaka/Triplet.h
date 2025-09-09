@@ -825,7 +825,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ModulesConst modules,
                                   Segments segments,
                                   SegmentsOccupancyConst segOcc,
-                                  ObjectRangesConst ranges) const {
+                                  ObjectRangesConst ranges,
+                                  MiniDoubletsConst mds,
+                                  const float ptCut) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -847,13 +849,48 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterSegments == 0)
             continue;
 
+          // For modules with a lot of line segments, we run the full set of T3 cuts to prevent memory blow-ups.
+          const bool isDense = (nInnerSegments > lst::kLSThreshold) || (nOuterSegments > lst::kLSThreshold);
+
           for (unsigned int outerSegmentArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterSegments)) {
             const unsigned int outerSegmentIndex = segmentRanges[middleLowerModuleIndex][0] + outerSegmentArrayIndex;
 
-            // Increment the count of connected segments for this segment.
-            if (mdIndices[outerSegmentIndex][0] == mdShared) {
-              alpaka::atomicAdd(acc, &segments.connectedMax()[innerSegmentIndex], 1u, alpaka::hierarchy::Threads{});
+            // Default check that the LS pair share a common MiniDoublet.
+            if (mdIndices[outerSegmentIndex][0] != mdShared)
+              continue;
+
+            if (isDense) {
+              const uint16_t innerInnerLowerModuleIndex = innerLowerModuleArrayIdx;
+              const uint16_t outerOuterLowerModuleIndex = outerLowerModuleIndices[outerSegmentIndex];
+
+              float zOut, rtOut, betaIn, betaInCut, circleRadius, circleCenterX, circleCenterY;
+              float t3Scores[dnn::t3dnn::kOutputFeatures] = {0.f};
+
+              const bool passes = runTripletConstraintsAndAlgo(acc,
+                                                               modules,
+                                                               mds,
+                                                               segments,
+                                                               innerInnerLowerModuleIndex,
+                                                               middleLowerModuleIndex,
+                                                               outerOuterLowerModuleIndex,
+                                                               innerSegmentIndex,
+                                                               outerSegmentIndex,
+                                                               zOut,
+                                                               rtOut,
+                                                               betaIn,
+                                                               betaInCut,
+                                                               circleRadius,
+                                                               circleCenterX,
+                                                               circleCenterY,
+                                                               ptCut,
+                                                               t3Scores);
+              if (!passes) {
+                continue;
+              }
             }
+
+            // Allocate space for this T3 candidate if it passes above selections.
+            alpaka::atomicAdd(acc, &segments.connectedMax()[innerSegmentIndex], 1u, alpaka::hierarchy::Threads{});
           }
         }
       }
