@@ -747,6 +747,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterMDs == 0)
             continue;
 
+          const bool isDense = (nInnerMDs > lst::kMDThreshold) || (nOuterMDs > lst::kMDThreshold);
           const unsigned int limit = nInnerMDs * nOuterMDs;
 
           for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
@@ -756,9 +757,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int innerMDIndex = mdRanges[innerLowerModuleIndex][0] + innerMDArrayIdx;
             const unsigned int outerMDIndex = mdRanges[outerLowerModuleIndex][0] + outerMDArrayIdx;
 
-            // Increment the connected max if the LS passes the delta phi cuts.
-            if (passDeltaPhiCutsSelector(
-                    acc, modules, mds, innerLowerModuleIndex, outerLowerModuleIndex, innerMDIndex, outerMDIndex, ptCut)) {
+            bool passes;
+            if (!isDense) {
+              passes = passDeltaPhiCutsSelector(
+                  acc, modules, mds, innerLowerModuleIndex, outerLowerModuleIndex, innerMDIndex, outerMDIndex, ptCut);
+            } else {
+              // Use full set of cuts in creation kernel if dense module.
+              float dPhi, dPhiMin = 0.f, dPhiMax = 0.f, dPhiChange, dPhiChangeMin = 0.f, dPhiChangeMax = 0.f;
+              passes = runSegmentDefaultAlgo(acc,
+                                             modules,
+                                             mds,
+                                             innerLowerModuleIndex,
+                                             outerLowerModuleIndex,
+                                             innerMDIndex,
+                                             outerMDIndex,
+                                             dPhi,
+                                             dPhiMin,
+                                             dPhiMax,
+                                             dPhiChange,
+                                             dPhiChangeMin,
+                                             dPhiChangeMax,
+                                             ptCut);
+            }
+            if (passes) {
               alpaka::atomicAdd(acc, &mds.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
             }
           }

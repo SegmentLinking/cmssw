@@ -47,6 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   // Thresholds in counting kernels to run full set of cuts.
   // Lower thresholds reduce LST memory footprint but increase timing.
+  HOST_DEVICE_CONSTANT unsigned int kMDThreshold = 1000u;
   HOST_DEVICE_CONSTANT unsigned int kLSThreshold = 2000u;
 
   HOST_DEVICE_CONSTANT float kMiniDeltaTilted[3] = {0.26f, 0.26f, 0.26f};
