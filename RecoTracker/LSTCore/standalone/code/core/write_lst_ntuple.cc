@@ -115,6 +115,12 @@ void createOptionalOutputBranches() {
   ana.tx->createBranch<std::vector<float>>("pT3_rzChiSquared");
   ana.tx->createBranch<std::vector<int>>("pT3_layer_binary");
   ana.tx->createBranch<std::vector<int>>("pT3_moduleType_binary");
+  ana.tx->createBranch<std::vector<float>>("pT3_pLS_pMatched");
+  ana.tx->createBranch<std::vector<float>>("pT3_pix_eta");
+  ana.tx->createBranch<std::vector<float>>("pT3_pix_phi");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_eta");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_pMatched");
 
   // pLS branches
   ana.tx->createBranch<std::vector<int>>("sim_pLS_matched");
@@ -807,6 +813,37 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3) {
   float centerX = pixelTriplets.centerX()[iPT3];  // T3-based circle center x
   float centerY = pixelTriplets.centerY()[iPT3];  // T3-based circle center y
 
+  unsigned int pLSIndex = getPixelLSFrompT3(event, iPT3);
+  unsigned int T3Index = getT3FrompT3(event, iPT3);
+
+  std::vector<unsigned int> pls_hit_idx = getPixelHitIdxsFrompLS(event, pLSIndex);
+  std::vector<unsigned int> pls_hit_type = getPixelHitTypesFrompLS(event, pLSIndex);
+  std::vector<unsigned int> t3_hit_idx = getHitsFromT3(event, T3Index);
+  std::vector<unsigned int> t3_hit_type = getHitTypesFromT3(event, T3Index);
+
+  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+
+  float pLS_percent_matched = 0.f;
+  float t3_percent_matched = 0.f;
+  matchedSimTrkIdxs(pls_hit_idx,
+                    pls_hit_type,
+                    trk_simhit_simTrkIdx,
+                    trk_ph2_simHitIdx,
+                    trk_pix_simHitIdx,
+                    false,
+                    &pLS_percent_matched);
+
+  matchedSimTrkIdxs(
+      t3_hit_idx, t3_hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, false, &t3_percent_matched);
+
+  ana.tx->pushbackToBranch<float>("pT3_pix_eta", eta_pix);
+  ana.tx->pushbackToBranch<float>("pT3_pix_phi", phi_pix);
+  ana.tx->pushbackToBranch<float>("pT3_t3_eta", eta);
+  ana.tx->pushbackToBranch<float>("pT3_t3_phi", phi);
+  ana.tx->pushbackToBranch<float>("pT3_t3_pMatched", t3_percent_matched);
+  ana.tx->pushbackToBranch<float>("pT3_pLS_pMatched", pLS_percent_matched);
   ana.tx->pushbackToBranch<float>("pT3_rPhiChiSquared", rPhiChiSquared);
   ana.tx->pushbackToBranch<float>("pT3_rPhiChiSquaredInwards", rPhiChiSquaredInwards);
   ana.tx->pushbackToBranch<float>("pT3_rzChiSquared", rzChiSquared);
