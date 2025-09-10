@@ -1870,6 +1870,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
 
             if (secondMDOuter == thirdMDInner) {
+              // Will only perform runQuintupletDefaultAlgorithm() checks if densely connected
               if(nInnerTriplets < n_triplet_threshold && nOuterTriplets < n_triplet_threshold) {
                 const bool ok = true;
                 if (ok) {
