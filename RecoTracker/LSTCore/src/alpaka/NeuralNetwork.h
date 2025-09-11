@@ -207,6 +207,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // Constants
       constexpr unsigned int kInputFeatures = 30;
       constexpr unsigned int kHiddenFeatures = 32;
+      constexpr unsigned int kOutputFeatures = 3;
 
       float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);  // inner T3 anchor hit 1 eta
       float eta2 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex2]);  // inner T3 anchor hit 2 eta
@@ -271,7 +272,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       float x_1[kHiddenFeatures];  // Layer 1 output
       float x_2[kHiddenFeatures];  // Layer 2 output
-      float x_3[1];                // Layer 3 linear output
+      float x_3[kOutputFeatures];
 
       // Layer 1: Linear + Relu
       linear_layer<kInputFeatures, kHiddenFeatures>(x, x_1, dnn::t5dnn::wgtT_layer1, dnn::t5dnn::bias_layer1);
@@ -282,8 +283,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       relu_activation<kHiddenFeatures>(x_2);
 
       // Layer 3: Linear + Sigmoid
-      linear_layer<kHiddenFeatures, 1>(x_2, x_3, dnn::t5dnn::wgtT_output_layer, dnn::t5dnn::bias_output_layer);
-      float x_5 = sigmoid_activation(acc, x_3[0]);
+      linear_layer<kHiddenFeatures, kOutputFeatures>(
+          x_2, x_3, dnn::t5dnn::wgtT_output_layer, dnn::t5dnn::bias_output_layer);
+      softmax_activation<dnn::t3dnn::kOutputFeatures>(acc, x_3);
 
       // Get the bin index based on abs(eta) of first hit and t5_pt
       float t5_pt = innerRadius * lst::k2Rinv1GeVf * 2;
@@ -292,7 +294,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       uint8_t bin_index = (eta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(eta1 / dnn::kEtaSize);
 
       // Compare x_5 to the cut value for the relevant bin
-      return x_5 > dnn::t5dnn::kWp[pt_index][bin_index];
+      return x_3[1] > dnn::t5dnn::kWp_prompt[pt_index][bin_index] ||
+             x_3[2] > dnn::t5dnn::kWp_displaced[pt_index][bin_index];
     }
   }  // namespace t5dnn
 
