@@ -197,9 +197,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      const unsigned int mdIndex5,
                                                      const float innerRadius,
                                                      const float outerRadius,
-                                                     const float bridgeRadius) {
+                                                     const float bridgeRadius,
+                                                     const float fakeScore1,
+                                                     const float promptScore1,
+                                                     const float dispScore1,
+                                                     const float fakeScore2,
+                                                     const float promptScore2,
+                                                     const float dispScore2) {
       // Constants
-      constexpr unsigned int kInputFeatures = 23;
+      constexpr unsigned int kInputFeatures = 30;
       constexpr unsigned int kHiddenFeatures = 32;
 
       float eta1 = alpaka::math::abs(acc, mds.anchorEta()[mdIndex1]);  // inner T3 anchor hit 1 eta
@@ -220,47 +226,48 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       float z4 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex4]);  // outer T3 anchor hit 4 z
       float z5 = alpaka::math::abs(acc, mds.anchorZ()[mdIndex5]);  // outer T3 anchor hit 5 z
 
-      float r1 = mds.anchorRt()[mdIndex1];  // inner T3 anchor hit 1 r
-      float r2 = mds.anchorRt()[mdIndex2];  // inner T3 anchor hit 2 r
-      float r3 = mds.anchorRt()[mdIndex3];  // inner T3 anchor hit 3 r
-      float r4 = mds.anchorRt()[mdIndex4];  // outer T3 anchor hit 4 r
-      float r5 = mds.anchorRt()[mdIndex5];  // outer T3 anchor hit 5 r
+      float r1 = mds.anchorRt()[mdIndex1];
+      float r2 = mds.anchorRt()[mdIndex2];
+      float r3 = mds.anchorRt()[mdIndex3];
+      float r4 = mds.anchorRt()[mdIndex4];
+      float r5 = mds.anchorRt()[mdIndex5];
 
-      // Build the input feature vector using pairwise differences after the first hit
-      float x[kInputFeatures] = {
-          eta1 / dnn::t5dnn::kEta_norm,                   // inner T3: First hit eta normalized
-          alpaka::math::abs(acc, phi1) / dnn::kPhi_norm,  // inner T3: First hit phi normalized
-          z1 / dnn::t5dnn::kZ_max,                        // inner T3: First hit z normalized
-          r1 / dnn::t5dnn::kR_max,                        // inner T3: First hit r normalized
+      float x[kInputFeatures] = {eta1 / dnn::t5dnn::kEta_norm,
+                                 alpaka::math::cos(acc, phi1),
+                                 alpaka::math::sin(acc, phi1),
+                                 z1 / dnn::t5dnn::kZ_max,
+                                 r1 / dnn::t5dnn::kR_max,
 
-          eta2 - eta1,  // inner T3: Difference in eta between hit 2 and 1
-          cms::alpakatools::deltaPhi(acc, phi2, phi1) /
-              dnn::kPhi_norm,              // inner T3: Difference in phi between hit 2 and 1
-          (z2 - z1) / dnn::t5dnn::kZ_max,  // inner T3: Difference in z between hit 2 and 1 normalized
-          (r2 - r1) / dnn::t5dnn::kR_max,  // inner T3: Difference in r between hit 2 and 1 normalized
+                                 eta2 - eta1,
+                                 cms::alpakatools::deltaPhi(acc, phi2, phi1),
+                                 (z2 - z1) / dnn::t5dnn::kZ_max,
+                                 (r2 - r1) / dnn::t5dnn::kR_max,
 
-          eta3 - eta2,  // inner T3: Difference in eta between hit 3 and 2
-          cms::alpakatools::deltaPhi(acc, phi3, phi2) /
-              dnn::kPhi_norm,              // inner T3: Difference in phi between hit 3 and 2
-          (z3 - z2) / dnn::t5dnn::kZ_max,  // inner T3: Difference in z between hit 3 and 2 normalized
-          (r3 - r2) / dnn::t5dnn::kR_max,  // inner T3: Difference in r between hit 3 and 2 normalized
+                                 eta3 - eta2,
+                                 cms::alpakatools::deltaPhi(acc, phi3, phi2),
+                                 (z3 - z2) / dnn::t5dnn::kZ_max,
+                                 (r3 - r2) / dnn::t5dnn::kR_max,
 
-          eta4 - eta3,  // outer T3: Difference in eta between hit 4 and 3
-          cms::alpakatools::deltaPhi(acc, phi4, phi3) /
-              dnn::kPhi_norm,              // outer T3: Difference in phi between hit 4 and 3
-          (z4 - z3) / dnn::t5dnn::kZ_max,  // outer T3: Difference in z between hit 4 and 3 normalized
-          (r4 - r3) / dnn::t5dnn::kR_max,  // outer T3: Difference in r between hit 4 and 3 normalized
+                                 eta4 - eta3,
+                                 cms::alpakatools::deltaPhi(acc, phi4, phi3),
+                                 (z4 - z3) / dnn::t5dnn::kZ_max,
+                                 (r4 - r3) / dnn::t5dnn::kR_max,
 
-          eta5 - eta4,  // outer T3: Difference in eta between hit 5 and 4
-          cms::alpakatools::deltaPhi(acc, phi5, phi4) /
-              dnn::kPhi_norm,              // outer T3: Difference in phi between hit 5 and 4
-          (z5 - z4) / dnn::t5dnn::kZ_max,  // outer T3: Difference in z between hit 5 and 4 normalized
-          (r5 - r4) / dnn::t5dnn::kR_max,  // outer T3: Difference in r between hit 5 and 4 normalized
+                                 eta5 - eta4,
+                                 cms::alpakatools::deltaPhi(acc, phi5, phi4),
+                                 (z5 - z4) / dnn::t5dnn::kZ_max,
+                                 (r5 - r4) / dnn::t5dnn::kR_max,
 
-          alpaka::math::log10(acc, innerRadius),   // T5 inner radius
-          alpaka::math::log10(acc, bridgeRadius),  // T5 bridge radius
-          alpaka::math::log10(acc, outerRadius)    // T5 outer radius
-      };
+                                 1.0f / innerRadius,
+                                 1.0f / bridgeRadius,
+                                 1.0f / outerRadius,
+
+                                 fakeScore1,
+                                 promptScore1,
+                                 dispScore1,
+                                 (fakeScore2 - fakeScore1),
+                                 (promptScore2 - promptScore1),
+                                 (dispScore2 - dispScore1)};
 
       float x_1[kHiddenFeatures];  // Layer 1 output
       float x_2[kHiddenFeatures];  // Layer 2 output

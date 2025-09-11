@@ -1540,7 +1540,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               fifthMDIndex,
                                               innerRadius,
                                               outerRadius,
-                                              bridgeRadius);
+                                              bridgeRadius,
+                                              triplets.fakeScore()[innerTripletIndex],
+                                              triplets.promptScore()[innerTripletIndex],
+                                              triplets.displacedScore()[innerTripletIndex],
+                                              triplets.fakeScore()[outerTripletIndex],
+                                              triplets.promptScore()[outerTripletIndex],
+                                              triplets.displacedScore()[outerTripletIndex]);
     tightCutFlag = tightCutFlag and inference;  // T5-in-TC cut
     if (!inference)                             // T5-building cut
       return false;
