@@ -9,7 +9,7 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2@alpaka',
     fillStatistics = cms.bool(False),
     minHitsPerNtuplet = cms.uint32(4),
     maxNumberOfDoublets = cms.string(str(5*512*1024)),
-    maxNumberOfTuples = cms.string(str(32*1024)), 
+    maxNumberOfTuples = cms.string(str(256 * 1024)), 
     cellPtCut = cms.double(0.85),
     cellZ0Cut = cms.double(7.5),
     minYsizeB1 = cms.int32(25),
@@ -17,10 +17,10 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2@alpaka',
     maxDYsize12 = cms.int32(12),
     maxDYsize = cms.int32(10),
     maxDYPred = cms.int32(20),
-    avgHitsPerTrack = cms.double(7.0),
+    avgHitsPerTrack = cms.double(6.5),
     avgCellsPerHit = cms.double(6),
     avgCellsPerCell = cms.double(0.151),
-    avgTracksPerCell = cms.double(0.040),
+    avgTracksPerCell = cms.double(0.130),
     minHitsForSharingCut = cms.uint32(10),
     fitNas4 = cms.bool(False),
     useRiemannFit = cms.bool(False),
@@ -46,3 +46,8 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2@alpaka',
     # autoselect the alpaka backend
     alpaka = cms.untracked.PSet(backend = cms.untracked.string(''))
 )
+
+_hltPhase2PixelTracksSoASingleIterPatatrack = hltPhase2PixelTracksSoA.clone( minHitsPerNtuplet = 3 )
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+singleIterPatatrack.toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoASingleIterPatatrack)
