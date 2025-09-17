@@ -7,7 +7,7 @@ namespace lst {
 
   struct SensorInfo {
     unsigned int detId;
-    char binaryDetId;
+    unsigned int binaryDetId;
     std::string section;
     int layer;
     int ring;
