@@ -6,11 +6,11 @@
 namespace lst {
 
   struct SensorInfo {
-    unsigned int DetId;
-    char BinaryDetId;
-    std::string Section;
-    int Layer;
-    int Ring;
+    unsigned int detId;
+    char binaryDetId;
+    std::string section;
+    int layer;
+    int ring;
     double sensorCenterRho_mm;
     double sensorCenterZ_mm;
     double phi_deg;
