@@ -182,7 +182,7 @@ namespace lst {
 
     // To hold information whether it is a 2S or PS
   public:
-    enum ModuleType { PS, TwoS };
+    enum ModuleType { PS, PSP = 23, PSS = 24, TwoS = 25 };
 
   private:
     ModuleType moduleType_;

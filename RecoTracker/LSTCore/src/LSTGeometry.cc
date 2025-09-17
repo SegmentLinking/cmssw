@@ -2,4 +2,5 @@
 //
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/CornerMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/IO.h"
