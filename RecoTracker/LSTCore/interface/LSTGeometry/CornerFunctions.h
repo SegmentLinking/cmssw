@@ -3,6 +3,7 @@
 
 #include <numbers>
 #include <cmath>
+#include <unordered_map>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
@@ -12,6 +13,7 @@ namespace lst {
 
   double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
 
+  //Calculates the Rodrigues' rotation matrix for rotating a vector around an arbitrary axis.
   MatrixD3x3 rodriguesRotationMatrix(Eigen::Matrix<double, 3, 1> axis, double theta) {
     axis.normalize();
 
@@ -22,6 +24,7 @@ namespace lst {
     return rotationMatrix;
   }
 
+  // Generates a rotation matrix for rotating around the tangential direction in cylindrical coordinates.
   MatrixD3x3 tangentialRotationMatrix(double phi, double theta) {
     ColVectorD3 axis;
     axis << -sin(phi), cos(phi), 0;
@@ -29,6 +32,11 @@ namespace lst {
     return rodriguesRotationMatrix(axis, theta);
   }
 
+  // Computes the final rotation matrix based on tilt and phi angles.
+  // Note:
+  // Only the tilt angles are non-zero for the current geometry. If the other
+  // angles get used, implement their rotations using the tangentialRotationMatrix
+  // function above as an example.
   MatrixD3x3 rotationMatrix(double tilt_deg, double skew_deg, double yaw_deg, double phi_deg) {
     if (skew_deg != 0 || yaw_deg != 0)
       throw std::invalid_argument("Skew and yaw angles are not currently supported.");
@@ -52,7 +60,8 @@ namespace lst {
     return finalR;
   }
 
-  void transformSensorCorners(ModuleInfo &moduleInfo) {
+  // Calculates the transformed corners of each sensor
+  void transformSensorCorners(ModuleInfo& moduleInfo) {
     auto module_z = moduleInfo.sensorCenterZ_mm;
     auto module_rho = moduleInfo.sensorCenterRho_mm;
     auto module_phi = moduleInfo.phi_deg;
@@ -98,6 +107,74 @@ namespace lst {
     moduleInfo.transformedCorners.col(0) = rotated_corners.col(2);
     moduleInfo.transformedCorners.col(1) = rotated_corners.col(0);
     moduleInfo.transformedCorners.col(2) = rotated_corners.col(1);
+  }
+
+  // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
+  std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(std::vector<ModuleInfo> modules,
+                                                                      std::vector<SensorInfo> sensors) {
+    std::unordered_map<unsigned int, MatrixD4x3> transformed_corners_dict;
+
+    for (auto const& moduleInfo : modules) {
+      unsigned int module_det_id = moduleInfo.detId;
+      unsigned int sensor_det_id_1 = module_det_id + 1;
+      unsigned int sensor_det_id_2 = module_det_id + 2;
+
+      auto& transformed_corners = moduleInfo.transformedCorners;
+      RowVectorD3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
+      RowVectorD3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
+
+      bool found_sensor_1 = false;
+      bool found_sensor_2 = false;
+      unsigned int sensor_index_1 = 0;
+      unsigned int sensor_index_2 = 0;
+
+      for (unsigned int i = 0; i < sensors.size(); i++) {
+        if (!found_sensor_1 && sensors[i].detId == sensor_det_id_1) {
+          sensor_index_1 = i;
+          found_sensor_1 = true;
+        }
+        if (!found_sensor_2 && sensors[i].detId == sensor_det_id_2) {
+          sensor_index_2 = i;
+          found_sensor_2 = true;
+        }
+        if (found_sensor_1 && found_sensor_2)
+          break;
+      }
+
+      if (!found_sensor_1 || !found_sensor_2) {
+        throw std::runtime_error("Sensor not found");
+      }
+
+      double sensor1_center_z = sensors[sensor_index_1].sensorCenterZ_mm;
+      double sensor1_center_x =
+          sensors[sensor_index_1].sensorCenterRho_mm * cos(degToRad(sensors[sensor_index_1].phi_deg));
+      double sensor1_center_y =
+          sensors[sensor_index_1].sensorCenterRho_mm * sin(degToRad(sensors[sensor_index_1].phi_deg));
+      double sensor2_center_z = sensors[sensor_index_2].sensorCenterZ_mm;
+      double sensor2_center_x =
+          sensors[sensor_index_2].sensorCenterRho_mm * cos(degToRad(sensors[sensor_index_2].phi_deg));
+      double sensor2_center_y =
+          sensors[sensor_index_2].sensorCenterRho_mm * sin(degToRad(sensors[sensor_index_2].phi_deg));
+
+      RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
+      RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
+
+      sensor_centroid_1 /= 10;
+      sensor_centroid_2 /= 10;
+
+      double distance_to_sensor_1 = (centroid_sensor_1 - sensor_centroid_1).norm();
+      double distance_to_sensor_2 = (centroid_sensor_2 - sensor_centroid_2).norm();
+
+      if (distance_to_sensor_1 < distance_to_sensor_2) {
+        transformed_corners_dict[sensor_det_id_1] = transformed_corners.topRows(4);
+        transformed_corners_dict[sensor_det_id_2] = transformed_corners.bottomRows(4);
+      } else {
+        transformed_corners_dict[sensor_det_id_2] = transformed_corners.topRows(4);
+        transformed_corners_dict[sensor_det_id_1] = transformed_corners.bottomRows(4);
+      }
+    }
+
+    return transformed_corners_dict;
   }
 
 }  // namespace lst
