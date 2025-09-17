@@ -49,7 +49,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       theInnerZ_ = hh[innerHitId].zGlobal();
       theInnerR_ = hh[innerHitId].rGlobal();
 
-      outerRoZ_ = hh[outerHitId].rGlobal() / hh[outerHitId].zGlobal();
+      theOuterZ_ = hh[outerHitId].zGlobal();
+      theOuterR_ = hh[outerHitId].rGlobal();
+
+      outerRoZ_ = theOuterR_ / theOuterZ_;
     }
 
     using hindex_type = ::caStructures::hindex_type;
@@ -167,6 +170,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     template <int DEPTH>
     ALPAKA_FN_ACC ALPAKA_FN_INLINE void find_ntuplets(Acc1D const& acc,
                                                       const ::reco::CAGraphSoAConstView& cc,
+                                                      const HitsConstView& hh,
                                                       CACell* __restrict__ cells,
                                                       HitContainer& foundNtuplets,
                                                       CellToCell const* __restrict__ cellNeighborsHisto,
@@ -217,6 +221,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           last = false;
           cells[otherCell].template find_ntuplets<DEPTH - 1>(acc,
                                                              cc,
+                                                             hh,
                                                              cells,
                                                              foundNtuplets,
                                                              cellNeighborsHisto,
@@ -231,7 +236,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
 #ifdef ONLY_TRIPLETS_IN_BARREL
-            if (tmpNtuplet.size() >= 3 || std::abs(outerRoZ_) > 0.224f)
+            // printf("r: %f, z: %f, ro/z: %f\n", theOuterR_, theOuterZ_, outerRoZ_);
+            // if (tmpNtuplet.size() >= 3 || fabs(outerRoZ_) > 0.224f)
+            // triplets accepted only pointing to the barrel
+            auto rOut = outer_r(hh);
+            auto zOut = outer_z(hh);
+
+            constexpr float rBarrelMin = 0.f;
+            constexpr float rBarrelMax = 120.f;
+            constexpr float zBarrelMax = 260.f;
+
+            bool isBarrel = (rOut >= rBarrelMin && rOut <= rBarrelMax && fabs(zOut) <= zBarrelMax);
+
+            if (tmpNtuplet.size() >= 3 || (isBarrel))
 #endif
             {
               hindex_type hits[TrackerTraits::maxDepth + 2];
@@ -251,8 +268,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef CA_DEBUG
               printf("track n. %d nhits %d with cells: ", it, nh + 1);
 #endif
+#ifdef ONLY_TRIPLETS_IN_BARREL
+              printf("number of cells: %d | ", tmpNtuplet.size());
+#endif
               if (it >= 0) {  // if negative is overflow....
                 for (auto c : tmpNtuplet) {
+#ifdef ONLY_TRIPLETS_IN_BARREL
+                  printf("r: %f z: %f | ",
+                          cells[c].outer_r(hh),
+                          cells[c].outer_z(hh));
+#endif
 #ifdef CA_DEBUG
                   printf("%d - ", c);
 #endif
@@ -273,6 +298,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #ifdef CA_DEBUG
                 printf("\n");
 #endif
+#ifdef ONLY_TRIPLETS_IN_BARREL
+                // printf("r: %f z: %f r/z: %f\n", this->outer_r(hh), this->outer_z(hh), fabs(this->outer_r(hh)) / this->outer_z(hh));
+                printf("\n");
+#endif
                 quality[it] = bad;  // initialize to bad
               }
             }
@@ -291,12 +320,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     float theInnerZ_;
     float theInnerR_;
+    float theOuterZ_;
+    float theOuterR_;
     float outerRoZ_;
     hindex_type theInnerHitId_;
     hindex_type theOuterHitId_;
     hindex_type theFishboneId_;
   };
-
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // RecoTracker_PixelSeeding_plugins_alpaka_CACell_h
