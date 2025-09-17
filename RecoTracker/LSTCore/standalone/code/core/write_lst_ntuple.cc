@@ -54,7 +54,7 @@ void fillOutputBranches(LSTEvent* event) {
   if (ana.t5dnn_branches)
     setT5DNNBranches(event);
   if (ana.pt3dnn_branches)
-    setpT3DNNBranches(event);
+    setpT3DNNBranches(event, matchfrac);
 
   auto const md_idx_map = (ana.md_branches ? setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac)
                                            : std::map<unsigned int, unsigned int>());
@@ -474,6 +474,11 @@ void createPixelTripletBranches() {
   ana.tx->createBranch<std::vector<int>>("pT3_isFake");       // 1 if pT3 is fake 0 other if not
   ana.tx->createBranch<std::vector<int>>("pT3_isDuplicate");  // 1 if pT3 is duplicate 0 other if not
   ana.tx->createBranch<std::vector<int>>("pT3_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  ana.tx->createBranch<std::vector<float>>("pT3_pix_eta");
+  ana.tx->createBranch<std::vector<float>>("pT3_pix_phi");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_eta");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_phi");
+  ana.tx->createBranch<std::vector<float>>("pT3_t3_pMatched");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<int>>>("pT3_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
@@ -2087,7 +2092,7 @@ void setOccupancyBranches(LSTEvent* event) {
 }
 
 //________________________________________________________________________________________________________________________________
-void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3) {
+void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3, float matchfrac) {
   // Retrieve the pT3 object from the PixelTriplets SoA.
   auto pixelTriplets = event->getPixelTriplets();
 
@@ -2105,6 +2110,44 @@ void fillpT3DNNBranches(LSTEvent* event, unsigned int iPT3) {
   float centerX = pixelTriplets.centerX()[iPT3];  // T3-based circle center x
   float centerY = pixelTriplets.centerY()[iPT3];  // T3-based circle center y
 
+  unsigned int pLSIndex = getPixelLSFrompT3(event, iPT3);
+  unsigned int T3Index = getT3FrompT3(event, iPT3);
+
+  std::vector<unsigned int> pls_hit_idx = getPixelHitIdxsFrompLS(event, pLSIndex);
+  std::vector<unsigned int> pls_hit_type = getPixelHitTypesFrompLS(event, pLSIndex);
+  std::vector<unsigned int> t3_hit_idx = getHitsFromT3(event, T3Index);
+  std::vector<unsigned int> t3_hit_type = getHitTypesFromT3(event, T3Index);
+
+  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+
+  float pLS_percent_matched = 0.f;
+  float t3_percent_matched = 0.f;
+  matchedSimTrkIdxs(pls_hit_idx,
+                    pls_hit_type,
+                    trk_simhit_simTrkIdx,
+                    trk_ph2_simHitIdx,
+                    trk_pix_simHitIdx,
+                    false,
+                    matchfrac,
+                    &pLS_percent_matched);
+
+  matchedSimTrkIdxs(t3_hit_idx,
+                    t3_hit_type,
+                    trk_simhit_simTrkIdx,
+                    trk_ph2_simHitIdx,
+                    trk_pix_simHitIdx,
+                    false,
+                    matchfrac,
+                    &t3_percent_matched);
+
+  ana.tx->pushbackToBranch<float>("pT3_pix_eta", eta_pix);
+  ana.tx->pushbackToBranch<float>("pT3_pix_phi", phi_pix);
+  ana.tx->pushbackToBranch<float>("pT3_t3_eta", eta);
+  ana.tx->pushbackToBranch<float>("pT3_t3_phi", phi);
+  ana.tx->pushbackToBranch<float>("pT3_t3_pMatched", t3_percent_matched);
+  ana.tx->pushbackToBranch<float>("pT3_pLS_pMatched", pLS_percent_matched);
   ana.tx->pushbackToBranch<float>("pT3_rPhiChiSquared", rPhiChiSquared);
   ana.tx->pushbackToBranch<float>("pT3_rPhiChiSquaredInwards", rPhiChiSquaredInwards);
   ana.tx->pushbackToBranch<float>("pT3_rzChiSquared", rzChiSquared);
@@ -2210,11 +2253,11 @@ void fillT5DNNBranches(LSTEvent* event, unsigned int iT3) {
 }
 
 //________________________________________________________________________________________________________________________________
-void setpT3DNNBranches(LSTEvent* event) {
+void setpT3DNNBranches(LSTEvent* event, float matchfrac) {
   auto pixelTriplets = event->getPixelTriplets();
   unsigned int nPT3 = pixelTriplets.nPixelTriplets();
   for (unsigned int iPT3 = 0; iPT3 < nPT3; ++iPT3) {
-    fillpT3DNNBranches(event, iPT3);
+    fillpT3DNNBranches(event, iPT3, matchfrac);
   }
 }
 
