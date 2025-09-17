@@ -7,7 +7,7 @@ namespace lst {
 
   struct ModuleInfo {
     unsigned int detId;
-    char binaryDetId;
+    unsigned int binaryDetId;
     std::string section;
     int layer;
     int ring;
