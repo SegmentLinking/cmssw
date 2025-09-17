@@ -1,0 +1,6 @@
+#ifndef RecoTracker_LSTCore_interface_LSTGeometry_CentroidMethods_h
+#define RecoTracker_LSTCore_interface_LSTGeometry_CentroidMethods_h
+
+
+
+#endif
