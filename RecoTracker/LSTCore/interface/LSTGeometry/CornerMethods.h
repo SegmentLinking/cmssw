@@ -11,8 +11,6 @@
 
 namespace lst {
 
-  double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
-
   //Calculates the Rodrigues' rotation matrix for rotating a vector around an arbitrary axis.
   MatrixD3x3 rodriguesRotationMatrix(Eigen::Matrix<double, 3, 1> axis, double theta) {
     axis.normalize();
