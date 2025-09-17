@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_h
+#ifndef RecoTracker_LSTCore_interface_LSTGeometry_CornerMethods_h
+#define RecoTracker_LSTCore_interface_LSTGeometry_CornerMethods_h
 
 #include <numbers>
 #include <cmath>
