@@ -317,7 +317,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         workDiv1D,
                         Kernel_find_ntuplets<TrackerTraits>{},
                         cc,
-                        hh,
                         tracks_view,
                         this->device_hitContainer_->data(),
                         this->device_cellToNeighbors_->data(),

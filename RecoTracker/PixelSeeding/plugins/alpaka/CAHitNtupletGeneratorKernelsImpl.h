@@ -474,7 +474,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const &acc,
                                   const ::reco::CAGraphSoAConstView &cc,
-                                  const HitsConstView &hh,
                                   TkSoAView tracks_view,
                                   HitContainer *foundNtuplets,
                                   CellToCell const *__restrict__ cellNeighborsHisto,
@@ -522,7 +521,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::caHitNtupletGeneratorKernels {
           stack.reset();
           thisCell.template find_ntuplets<maxDepth>(acc,
                                                     cc,
-                                                    hh,
                                                     cells,
                                                     *foundNtuplets,
                                                     cellNeighborsHisto,
