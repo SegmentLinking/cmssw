@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 #include "Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleDetIdParser.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 
