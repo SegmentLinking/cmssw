@@ -4,6 +4,7 @@
 // #define GPU_DEBUG
 // #define CA_DEBUG
 // #define CA_WARNINGS
+#define ONLY_TRIPLETS_IN_BARREL
 
 #include <cmath>
 #include <limits>
@@ -43,10 +44,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       theOuterLayer_ = theOuterLayer;
       theStatus_ = 0;
       theFishboneId_ = invalidHitId;
-
+      
       // optimization that depends on access pattern
       theInnerZ_ = hh[innerHitId].zGlobal();
       theInnerR_ = hh[innerHitId].rGlobal();
+      theOuterZ_ = hh[outerHitId].zGlobal();
+      theOuterR_ = hh[outerHitId].rGlobal();
+      outerRoZ_ = theOuterR_ / theOuterZ_;
     }
 
     using hindex_type = ::caStructures::hindex_type;
@@ -227,6 +231,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         }
         if (last) {  // if long enough save...
           if ((unsigned int)(tmpNtuplet.size()) >= minHitsPerNtuplet - 1) {
+#ifdef ONLY_TRIPLETS_IN_BARREL
+            if (tmpNtuplet.size() >= 3 || fabs(outerRoZ_) > 0.224f)
+#endif
             {
               hindex_type hits[TrackerTraits::maxDepth + 2];
               auto nh = 0U;
@@ -285,6 +292,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     float theInnerZ_;
     float theInnerR_;
+    float theOuterZ_;
+    float theOuterR_;
+    float outerRoZ_;
     hindex_type theInnerHitId_;
     hindex_type theOuterHitId_;
     hindex_type theFishboneId_;

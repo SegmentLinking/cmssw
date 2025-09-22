@@ -174,17 +174,22 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2@alpaka',
     fillStatistics = cms.bool(False),
     minHitsPerNtuplet = cms.uint32(4),
     maxNumberOfDoublets = cms.string(str(6*512*1024)),
-    maxNumberOfTuples = cms.string(str(60*1024)),
+    # maxNumberOfTuples = cms.string(str(60*1024)),
+    maxNumberOfTuples = cms.string(str(256 * 1024)),
     cellZ0Cut = cms.double(12.5), # it's half the BS width! It has nothing to do with the sample!!
     minYsizeB1 = cms.int32(20),
     minYsizeB2 = cms.int32(18),
     maxDYsize12 = cms.int32(12),
     maxDYsize = cms.int32(10),
     maxDYPred = cms.int32(24),
-    avgHitsPerTrack = cms.double(7.0),
-    avgCellsPerHit = cms.double(12),
+    # avgHitsPerTrack = cms.double(7.0),
+    # avgCellsPerHit = cms.double(12),
+    # avgCellsPerCell = cms.double(0.151),
+    # avgTracksPerCell = cms.double(0.040),
+    avgHitsPerTrack = cms.double(6.5),
+    avgCellsPerHit = cms.double(6),
     avgCellsPerCell = cms.double(0.151),
-    avgTracksPerCell = cms.double(0.040),
+    avgTracksPerCell = cms.double(0.130),
     minHitsForSharingCut = cms.uint32(10),
     fitNas4 = cms.bool(False),
     useRiemannFit = cms.bool(False),
@@ -320,3 +325,8 @@ from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtensi
 phase2CAExtension.toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoA)
 
 #print("Using {} pair connections: {}".format(len(hltPhase2PixelTracksSoA.geometry.pairGraph) // 2, hltPhase2PixelTracksSoA.geometry.pairGraph))
+
+_hltPhase2PixelTracksSoASingleIterPatatrack = hltPhase2PixelTracksSoA.clone( minHitsPerNtuplet = 3 )
+
+from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+singleIterPatatrack.toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoASingleIterPatatrack)
