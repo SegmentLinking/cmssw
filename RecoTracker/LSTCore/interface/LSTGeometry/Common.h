@@ -12,6 +12,8 @@ namespace lst {
   using ColVectorD3 = Eigen::Matrix<double, 3, 1>;
   using RowVectorD3 = Eigen::Matrix<double, 1, 3>;
 
+  constexpr double kPtThreshold = 0.8;
+
   // This is defined as a constant in case the legacy value (123456789) needs to be used
   double kDefaultSlope = std::numeric_limits<double>::infinity();
 
