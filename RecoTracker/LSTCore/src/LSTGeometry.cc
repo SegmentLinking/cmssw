@@ -5,3 +5,4 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/OrientationMethods.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/IO.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
