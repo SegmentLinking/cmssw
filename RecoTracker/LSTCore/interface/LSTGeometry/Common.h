@@ -12,12 +12,23 @@ namespace lst {
   using ColVectorD3 = Eigen::Matrix<double, 3, 1>;
   using RowVectorD3 = Eigen::Matrix<double, 1, 3>;
 
+  // TODO: These should be moved to ../Common.h
   constexpr double kPtThreshold = 0.8;
+  constexpr double k2Rinv1GeVf = 0.00299792458;
+  constexpr double kB = 3.8112;
 
   // This is defined as a constant in case the legacy value (123456789) needs to be used
   double kDefaultSlope = std::numeric_limits<double>::infinity();
 
   double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
+
+  double phi_mpi_pi(double phi) {
+    while (phi > std::numbers::pi_v<double>)
+      phi -= 2 * std::numbers::pi_v<double>;
+    while (phi < -std::numbers::pi_v<double>)
+      phi += 2 * std::numbers::pi_v<double>;
+    return phi;
+  }
 
 }  // namespace lst
 
