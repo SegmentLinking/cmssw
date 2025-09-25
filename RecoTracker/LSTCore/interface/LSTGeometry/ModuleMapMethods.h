@@ -1,0 +1,6 @@
+#ifndef RecoTracker_LSTCore_interface_LSTGeometry_ModuleMapMethods_h
+#define RecoTracker_LSTCore_interface_LSTGeometry_ModuleMapMethods_h
+
+#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTMath.h"
+
+#endif

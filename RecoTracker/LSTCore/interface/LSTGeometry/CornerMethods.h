@@ -12,7 +12,7 @@
 namespace lst {
 
   //Calculates the Rodrigues' rotation matrix for rotating a vector around an arbitrary axis.
-  MatrixD3x3 rodriguesRotationMatrix(Eigen::Matrix<double, 3, 1> axis, double theta) {
+  MatrixD3x3 rodriguesRotationMatrix(ColVectorD3 axis, double theta) {
     axis.normalize();
 
     MatrixD3x3 k{{0, -axis(2), axis(1)}, {axis(2), 0, -axis(0)}, {-axis(1), axis(0), 0}};
