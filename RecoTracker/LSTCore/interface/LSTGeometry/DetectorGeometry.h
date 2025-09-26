@@ -3,8 +3,10 @@
 
 #include <algorithm>
 #include <vector>
+#include <functional>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
 
 namespace lst {
 
@@ -13,6 +15,8 @@ namespace lst {
     std::unordered_map<unsigned int, MatrixD4x3> corners_;
     std::vector<double> avg_radii_;
     std::vector<double> avg_z_;
+    std::vector<std::vector<unsigned int>> barrel_lower_det_ids_;
+    std::vector<std::vector<unsigned int>> endcap_lower_det_ids_;
 
   public:
     DetectorGeometry(std::unordered_map<unsigned int, MatrixD4x3> corners,
@@ -20,12 +24,44 @@ namespace lst {
                      std::vector<double> avg_z)
         : corners_(corners), avg_radii_(avg_radii), avg_z_(avg_z) {}
 
-    std::vector<unsigned int> getDetIds() const {
+    MatrixD4x3 const& getCorners(unsigned int detId) const { return corners_.at(detId); }
+
+    std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, MatrixD4x3>&)> filter =
+                                            [](const auto&) { return true; }) const {
       std::vector<unsigned int> detIds;
       for (const auto& entry : corners_) {
-        detIds.push_back(entry.first);
+        if (filter(entry)) {
+          detIds.push_back(entry.first);
+        }
       }
       return detIds;
+    }
+
+    void buildByLayer() {
+      // Clear just in case they were already built
+      barrel_lower_det_ids_.clear();
+      endcap_lower_det_ids_.clear();
+
+      for (unsigned int layer = 1; layer < 7; layer++) {
+        barrel_lower_det_ids_.push_back(getDetIds([&layer](const auto& x) {
+          Module m(x.first);
+          return m.subdet() == 5 && m.layer() == layer && m.isLower() == 1;
+        }));
+      }
+      for (unsigned int layer = 1; layer < 6; layer++) {
+        barrel_lower_det_ids_.push_back(getDetIds([&layer](const auto& x) {
+          Module m(x.first);
+          return m.subdet() == 4 && m.layer() == layer && m.isLower() == 1;
+        }));
+      }
+    }
+
+    std::vector<unsigned int> const& getBarrelLayerDetIds(unsigned int layer) const {
+      return barrel_lower_det_ids_[layer - 1];
+    }
+
+    std::vector<unsigned int> const& getEndcapLayerDetIds(unsigned int layer) const {
+      return endcap_lower_det_ids_[layer - 1];
     }
 
     double getMinR(unsigned int detId) const {
