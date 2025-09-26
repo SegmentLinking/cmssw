@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 
-namespace lst {
+namespace lstgeometry {
 
   class Module {
   private:
@@ -242,7 +242,7 @@ namespace lst {
     static ModuleLayerType parseModuleLayerType(unsigned int);
   };
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 lst::Module::Module() { setDetId(0); }
 
