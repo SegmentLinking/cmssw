@@ -10,6 +10,9 @@
 
 namespace lstgeometry {
 
+  using Point = boost::geometry::model::d2::point_xy<double>;
+  using Polygon = boost::geometry::model::polygon<Point>;
+
   std::pair<double, double> getEtaPhi(double x, double y, double z, double refphi = 0) {
     if (refphi != 0) {
       double xnew = x * std::cos(-refphi) - y * std::sin(-refphi);
@@ -20,6 +23,22 @@ namespace lstgeometry {
     double phi = std::atan2(y, x);
     double eta = std::copysign(-std::log(std::tan(std::atan(std::sqrt(x * x + y * y) / std::abs(z)) / 2.)), z);
     return std::make_pair(eta, phi);
+  }
+
+  Polygon getEtaPhiPolygon(MatrixD4x3 const& mod_boundaries, double refphi, double zshift = 0) {
+    MatrixD4x2 mod_boundaries_etaphi;
+    for (int i = 0; i < 4; ++i) {
+      auto ref_etaphi = getEtaPhi(mod_boundaries(i, 1), mod_boundaries(i, 2), mod_boundaries(i, 0) + zshift, refphi);
+      mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
+      mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
+    }
+
+    Polygon poly;
+    // <= 4 because we need to close the polygon with the first point
+    for (int i = 0; i <= 4; ++i) {
+      boost::geometry::append(poly, Point(mod_boundaries_etaphi(i % 4, 0), mod_boundaries_etaphi(i % 4, 1)));
+    }
+    return poly;
   }
 
   bool moduleOverlapsInEtaPhi(MatrixD4x3 const& ref_mod_boundaries,
@@ -55,10 +74,6 @@ namespace lstgeometry {
       return false;
     if (std::fabs(phi_mpi_pi(diff(1))) > 1.)
       return false;
-
-    // TODO: It might be easy enough to implement this without Boost polygon
-    using Point = boost::geometry::model::d2::point_xy<double>;
-    using Polygon = boost::geometry::model::polygon<Point>;
 
     Polygon ref_poly, tar_poly;
 
