@@ -9,7 +9,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
 
-namespace lst {
+namespace lstgeometry {
 
   struct SlopeData {
     double drdz_slope;
@@ -55,6 +55,6 @@ namespace lst {
 
     return std::make_tuple(barrel_slopes, endcap_slopes);
   }
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif
