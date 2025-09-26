@@ -3,7 +3,7 @@
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 
-namespace lst {
+namespace lstgeometry {
 
   struct ModuleInfo {
     unsigned int detId;
@@ -32,6 +32,6 @@ namespace lst {
     MatrixD8x3 transformedCorners;
   };
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

@@ -9,7 +9,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 
-namespace lst {
+namespace lstgeometry {
 
   unsigned int extractBits(unsigned int value, unsigned int start, unsigned int end) {
     unsigned int mask = (1 << (end - start + 1)) - 1;
@@ -75,6 +75,6 @@ namespace lst {
     return centroids;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

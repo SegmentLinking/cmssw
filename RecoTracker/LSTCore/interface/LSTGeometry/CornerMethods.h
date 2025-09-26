@@ -9,7 +9,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 
-namespace lst {
+namespace lstgeometry {
 
   //Calculates the Rodrigues' rotation matrix for rotating a vector around an arbitrary axis.
   MatrixD3x3 rodriguesRotationMatrix(ColVectorD3 axis, double theta) {
@@ -175,6 +175,6 @@ namespace lst {
     return transformed_corners_dict;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

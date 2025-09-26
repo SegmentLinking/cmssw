@@ -9,7 +9,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
 
-namespace lst {
+namespace lstgeometry {
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
                                                        std::unordered_map<unsigned int, Centroid> const& centroids,
@@ -39,6 +39,6 @@ namespace lst {
     return list_of_detids_etaphi_layer_tar;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
 #define RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
 
-namespace lst {
+namespace lstgeometry {
 
   struct Centroid {
     unsigned int detId;
@@ -11,6 +11,6 @@ namespace lst {
     double z;
   };
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif
