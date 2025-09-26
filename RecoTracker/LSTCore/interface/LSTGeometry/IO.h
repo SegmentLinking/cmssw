@@ -10,7 +10,7 @@
 #include <sstream>
 #include <string>
 
-namespace lst {
+namespace lstgeometry {
 
   std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\r\n");
@@ -121,6 +121,6 @@ namespace lst {
     return sensors;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

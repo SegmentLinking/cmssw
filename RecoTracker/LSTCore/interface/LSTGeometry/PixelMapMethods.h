@@ -11,7 +11,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
 
-namespace lst {
+namespace lstgeometry {
 
   using PtEtaPhiZChargeKey = std::tuple<unsigned int, unsigned int, unsigned int, unsigned int, int>;
   using LayerSubdetKey = std::tuple<unsigned int, unsigned int>;
@@ -126,6 +126,6 @@ namespace lst {
     return maps;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

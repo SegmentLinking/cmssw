@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace lst {
+namespace lstgeometry {
 
   struct SensorInfo {
     unsigned int detId;
@@ -15,6 +15,6 @@ namespace lst {
     double sensorCenterZ_mm;
     double phi_deg;
   };
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif

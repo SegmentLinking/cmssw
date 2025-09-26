@@ -4,7 +4,7 @@
 #include <Eigen/Dense>
 #include <limits>
 
-namespace lst {
+namespace lstgeometry {
 
   using MatrixD3x3 = Eigen::Matrix<double, 3, 3, Eigen::RowMajor>;
   using MatrixD4x2 = Eigen::Matrix<double, 4, 2, Eigen::RowMajor>;
@@ -32,6 +32,6 @@ namespace lst {
     return phi;
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif
