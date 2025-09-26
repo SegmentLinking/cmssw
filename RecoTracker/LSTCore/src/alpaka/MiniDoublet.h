@@ -456,7 +456,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3076
     if (modules.sides()[lowerModuleIndex] != Center) {
       // When it is tilted, use the new shifted positions
-      if (modules.moduleLayerType()[lowerModuleIndex] != Pixel) {
+      if (modules.moduleLayerType()[lowerModuleIndex] == Pixel) {
         // dPhi Change should be calculated so that the upper hit has higher rt.
         // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
         // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
