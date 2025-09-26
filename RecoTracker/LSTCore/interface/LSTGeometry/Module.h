@@ -244,56 +244,58 @@ namespace lstgeometry {
 
 }  // namespace lstgeometry
 
-lst::Module::Module() { setDetId(0); }
+lstgeometry::Module::Module() { setDetId(0); }
 
-lst::Module::Module(unsigned int detId) { setDetId(detId); }
+lstgeometry::Module::Module(unsigned int detId) { setDetId(detId); }
 
-lst::Module::Module(unsigned int detId, unsigned int moduleTypeInfo) { setDetId(detId, moduleTypeInfo); }
+lstgeometry::Module::Module(unsigned int detId, unsigned int moduleTypeInfo) { setDetId(detId, moduleTypeInfo); }
 
-lst::Module::Module(const Module& module) { setDetId(module.detId(), module.moduleType(), module.moduleLayerType()); }
+lstgeometry::Module::Module(const Module& module) {
+  setDetId(module.detId(), module.moduleType(), module.moduleLayerType());
+}
 
-lst::Module::~Module() {}
+lstgeometry::Module::~Module() {}
 
-const unsigned short& lst::Module::subdet() const { return subdet_; }
+const unsigned short& lstgeometry::Module::subdet() const { return subdet_; }
 
-const unsigned short& lst::Module::side() const { return side_; }
+const unsigned short& lstgeometry::Module::side() const { return side_; }
 
-const unsigned short& lst::Module::layer() const { return layer_; }
+const unsigned short& lstgeometry::Module::layer() const { return layer_; }
 
-const unsigned short& lst::Module::rod() const { return rod_; }
+const unsigned short& lstgeometry::Module::rod() const { return rod_; }
 
-const unsigned short& lst::Module::ring() const { return ring_; }
+const unsigned short& lstgeometry::Module::ring() const { return ring_; }
 
-const unsigned short& lst::Module::module() const { return module_; }
+const unsigned short& lstgeometry::Module::module() const { return module_; }
 
-const unsigned short& lst::Module::isLower() const { return isLower_; }
+const unsigned short& lstgeometry::Module::isLower() const { return isLower_; }
 
-const unsigned int& lst::Module::detId() const { return detId_; }
+const unsigned int& lstgeometry::Module::detId() const { return detId_; }
 
-const unsigned int& lst::Module::partnerDetId() const { return partnerDetId_; }
+const unsigned int& lstgeometry::Module::partnerDetId() const { return partnerDetId_; }
 
-const bool& lst::Module::isInverted() const { return isInverted_; }
+const bool& lstgeometry::Module::isInverted() const { return isInverted_; }
 
-const lst::Module::ModuleType& lst::Module::moduleType() const { return moduleType_; }
+const lstgeometry::Module::ModuleType& lstgeometry::Module::moduleType() const { return moduleType_; }
 
-const lst::Module::ModuleLayerType& lst::Module::moduleLayerType() const { return moduleLayerType_; }
+const lstgeometry::Module::ModuleLayerType& lstgeometry::Module::moduleLayerType() const { return moduleLayerType_; }
 
-void lst::Module::setDetId(unsigned int detId) {
+void lstgeometry::Module::setDetId(unsigned int detId) {
   detId_ = detId;
   setDerivedQuantities();
 }
 
-void lst::Module::setDetId(unsigned int detId, unsigned int moduleTypeInfo) {
+void lstgeometry::Module::setDetId(unsigned int detId, unsigned int moduleTypeInfo) {
   detId_ = detId;
   setDerivedQuantities(moduleTypeInfo);
 }
 
-void lst::Module::setDetId(unsigned int detId, ModuleType moduleType, ModuleLayerType moduleLayerType) {
+void lstgeometry::Module::setDetId(unsigned int detId, ModuleType moduleType, ModuleLayerType moduleLayerType) {
   detId_ = detId;
   setDerivedQuantities(moduleType, moduleLayerType);
 }
 
-void lst::Module::setDerivedQuantities() {
+void lstgeometry::Module::setDerivedQuantities() {
   subdet_ = parseSubdet(detId_);
   side_ = parseSide(detId_);
   layer_ = parseLayer(detId_);
@@ -307,7 +309,7 @@ void lst::Module::setDerivedQuantities() {
   moduleLayerType_ = parseModuleLayerType(detId_);
 }
 
-void lst::Module::setDerivedQuantities(unsigned int moduleTypeInfo) {
+void lstgeometry::Module::setDerivedQuantities(unsigned int moduleTypeInfo) {
   subdet_ = parseSubdet(detId_);
   side_ = parseSide(detId_);
   layer_ = parseLayer(detId_);
@@ -317,12 +319,13 @@ void lst::Module::setDerivedQuantities(unsigned int moduleTypeInfo) {
   isLower_ = parseIsLower(detId_);
   isInverted_ = parseIsInverted(detId_);
   partnerDetId_ = parsePartnerDetId(detId_);
-  moduleType_ = (moduleTypeInfo == 25 ? lst::Module::TwoS : lst::Module::PS);  // 23 : Ph2PSP, 24 : Ph2PSS, 25 : Ph2SS
-  moduleLayerType_ =
-      (moduleTypeInfo == 23 ? lst::Module::Pixel : lst::Module::Strip);  // 23 : Ph2PSP, 24 : Ph2PSS, 25 : Ph2SS
+  moduleType_ = (moduleTypeInfo == 25 ? lstgeometry::Module::TwoS
+                                      : lstgeometry::Module::PS);  // 23 : Ph2PSP, 24 : Ph2PSS, 25 : Ph2SS
+  moduleLayerType_ = (moduleTypeInfo == 23 ? lstgeometry::Module::Pixel
+                                           : lstgeometry::Module::Strip);  // 23 : Ph2PSP, 24 : Ph2PSS, 25 : Ph2SS
 }
 
-void lst::Module::setDerivedQuantities(ModuleType moduleType, ModuleLayerType moduleLayerType) {
+void lstgeometry::Module::setDerivedQuantities(ModuleType moduleType, ModuleLayerType moduleLayerType) {
   subdet_ = parseSubdet(detId_);
   side_ = parseSide(detId_);
   layer_ = parseLayer(detId_);
@@ -336,68 +339,68 @@ void lst::Module::setDerivedQuantities(ModuleType moduleType, ModuleLayerType mo
   moduleLayerType_ = moduleLayerType;
 }
 
-unsigned short lst::Module::parseSubdet(unsigned int detId) { return (detId & (7 << 25)) >> 25; }
+unsigned short lstgeometry::Module::parseSubdet(unsigned int detId) { return (detId & (7 << 25)) >> 25; }
 
-unsigned short lst::Module::parseSide(unsigned int detId) {
-  if (parseSubdet(detId) == lst::Module::Endcap) {
+unsigned short lstgeometry::Module::parseSide(unsigned int detId) {
+  if (parseSubdet(detId) == lstgeometry::Module::Endcap) {
     return (detId & (3 << 23)) >> 23;
-  } else if (parseSubdet(detId) == lst::Module::Barrel) {
+  } else if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
     return (detId & (3 << 18)) >> 18;
   } else {
     return 0;
   }
 }
 
-unsigned short lst::Module::parseLayer(unsigned int detId) {
-  if (parseSubdet(detId) == lst::Module::Endcap) {
+unsigned short lstgeometry::Module::parseLayer(unsigned int detId) {
+  if (parseSubdet(detId) == lstgeometry::Module::Endcap) {
     return (detId & (7 << 18)) >> 18;
-  } else if (parseSubdet(detId) == lst::Module::Barrel) {
+  } else if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
     return (detId & (7 << 20)) >> 20;
   } else {
     return 0;
   }
 }
 
-unsigned short lst::Module::parseRod(unsigned int detId) {
-  if (parseSubdet(detId) == lst::Module::Endcap) {
+unsigned short lstgeometry::Module::parseRod(unsigned int detId) {
+  if (parseSubdet(detId) == lstgeometry::Module::Endcap) {
     return 0;
-  } else if (parseSubdet(detId) == lst::Module::Barrel) {
+  } else if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
     return (detId & (127 << 10)) >> 10;
   } else {
     return 0;
   }
 }
 
-unsigned short lst::Module::parseRing(unsigned int detId) {
-  if (parseSubdet(detId) == lst::Module::Endcap) {
+unsigned short lstgeometry::Module::parseRing(unsigned int detId) {
+  if (parseSubdet(detId) == lstgeometry::Module::Endcap) {
     return (detId & (15 << 12)) >> 12;
-  } else if (parseSubdet(detId) == lst::Module::Barrel) {
+  } else if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
     return 0;
   } else {
     return 0;
   }
 }
 
-unsigned short lst::Module::parseModule(unsigned int detId) { return (detId & (127 << 2)) >> 2; }
+unsigned short lstgeometry::Module::parseModule(unsigned int detId) { return (detId & (127 << 2)) >> 2; }
 
-unsigned short lst::Module::parseIsLower(unsigned int detId) {
+unsigned short lstgeometry::Module::parseIsLower(unsigned int detId) {
   return ((parseIsInverted(detId)) ? !(detId & 1) : (detId & 1));
 }
 
-bool lst::Module::parseIsInverted(unsigned int detId) {
+bool lstgeometry::Module::parseIsInverted(unsigned int detId) {
   if (detId == 1)  // "1" detId means "pixel module" where we store all pixel hits/mini/segments into one bucket
     return 0;
-  if (parseSubdet(detId) == lst::Module::Endcap) {
-    if (parseSide(detId) == lst::Module::NegZ) {
+  if (parseSubdet(detId) == lstgeometry::Module::Endcap) {
+    if (parseSide(detId) == lstgeometry::Module::NegZ) {
       return parseModule(detId) % 2 == 1;
-    } else if (parseSide(detId) == lst::Module::PosZ) {
+    } else if (parseSide(detId) == lstgeometry::Module::PosZ) {
       return parseModule(detId) % 2 == 0;
     } else {
       std::cout << "Warning: parseIsInverted() categorization failed" << std::endl;
       return 0;
     }
-  } else if (parseSubdet(detId) == lst::Module::Barrel) {
-    if (parseSide(detId) == lst::Module::Center) {
+  } else if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
+    if (parseSide(detId) == lstgeometry::Module::Center) {
       if (parseLayer(detId) <= 3) {
         return parseModule(detId) % 2 == 1;
       } else if (parseLayer(detId) >= 4) {
@@ -406,7 +409,7 @@ bool lst::Module::parseIsInverted(unsigned int detId) {
         std::cout << "Warning: parseIsInverted() categorization failed" << std::endl;
         return 0;
       }
-    } else if (parseSide(detId) == lst::Module::NegZ or parseSide(detId) == lst::Module::PosZ) {
+    } else if (parseSide(detId) == lstgeometry::Module::NegZ or parseSide(detId) == lstgeometry::Module::PosZ) {
       if (parseLayer(detId) <= 2) {
         return parseModule(detId) % 2 == 1;
       } else if (parseLayer(detId) == 3) {
@@ -425,47 +428,47 @@ bool lst::Module::parseIsInverted(unsigned int detId) {
   }
 }
 
-unsigned int lst::Module::parsePartnerDetId(unsigned int detId) {
+unsigned int lstgeometry::Module::parsePartnerDetId(unsigned int detId) {
   if (parseIsLower(detId))
     return ((parseIsInverted(detId)) ? detId - 1 : detId + 1);
   else
     return ((parseIsInverted(detId)) ? detId + 1 : detId - 1);
 }
 
-lst::Module::ModuleType lst::Module::parseModuleType(unsigned int detId) {
-  if (parseSubdet(detId) == lst::Module::Barrel) {
+lstgeometry::Module::ModuleType lstgeometry::Module::parseModuleType(unsigned int detId) {
+  if (parseSubdet(detId) == lstgeometry::Module::Barrel) {
     if (parseLayer(detId) <= 3)
-      return lst::Module::PS;
+      return lstgeometry::Module::PS;
     else
-      return lst::Module::TwoS;
+      return lstgeometry::Module::TwoS;
   } else {
     if (parseLayer(detId) <= 2) {
       if (parseRing(detId) <= 10)
-        return lst::Module::PS;
+        return lstgeometry::Module::PS;
       else
-        return lst::Module::TwoS;
+        return lstgeometry::Module::TwoS;
     } else {
       if (parseRing(detId) <= 7)
-        return lst::Module::PS;
+        return lstgeometry::Module::PS;
       else
-        return lst::Module::TwoS;
+        return lstgeometry::Module::TwoS;
     }
   }
 }
 
-lst::Module::ModuleLayerType lst::Module::parseModuleLayerType(unsigned int detId) {
-  if (parseModuleType(detId) == lst::Module::TwoS)
-    return lst::Module::Strip;
+lstgeometry::Module::ModuleLayerType lstgeometry::Module::parseModuleLayerType(unsigned int detId) {
+  if (parseModuleType(detId) == lstgeometry::Module::TwoS)
+    return lstgeometry::Module::Strip;
   if (parseIsInverted(detId)) {
     if (parseIsLower(detId))
-      return lst::Module::Strip;
+      return lstgeometry::Module::Strip;
     else
-      return lst::Module::Pixel;
+      return lstgeometry::Module::Pixel;
   } else {
     if (parseIsLower(detId))
-      return lst::Module::Pixel;
+      return lstgeometry::Module::Pixel;
     else
-      return lst::Module::Strip;
+      return lstgeometry::Module::Strip;
   }
 }
 
