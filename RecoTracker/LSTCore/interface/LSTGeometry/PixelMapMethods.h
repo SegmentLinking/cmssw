@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <unordered_map>
+#include <array>
 #include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
@@ -23,12 +24,12 @@ namespace lstgeometry {
     constexpr unsigned int kNEta = 25;
     constexpr unsigned int kNPhi = 72;
     constexpr unsigned int kNZ = 25;
-    constexpr double kPtBounds[] = {kPtThreshold, 2.0, 10'000.0};
+    constexpr std::array<double, 3> kPtBounds = {{kPtThreshold, 2.0, 10'000.0}};
 
     PtEtaPhiZChargeMap maps;
 
     // Initialize empty lists for the pixel map
-    for (unsigned int ipt = 0; ipt < sizeof(kPtBounds) / sizeof(kPtBounds[0]) - 1; ipt++) {
+    for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
       for (unsigned int ieta = 0; ieta < kNEta; ieta++) {
         for (unsigned int iphi = 0; iphi < kNPhi; iphi++) {
           for (unsigned int iz = 0; iz < kNZ; iz++) {
@@ -65,7 +66,7 @@ namespace lstgeometry {
       // For this module, now compute which super bins they belong to
       // To compute which super bins it belongs to, one needs to provide at least pt and z window to compute compatible eta and phi range
       // So we have a loop in pt and Z
-      for (unsigned int ipt = 0; ipt < sizeof(kPtBounds) / sizeof(kPtBounds[0]) - 1; ipt++) {
+      for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
         for (unsigned int iz = 0; iz < kNZ; iz++) {
           // The zmin, zmax of consideration
           double zmin = -30 + iz * (60. / kNZ);
