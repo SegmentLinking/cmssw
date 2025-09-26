@@ -8,7 +8,7 @@
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 
-namespace lst {
+namespace lstgeometry {
 
   std::pair<double, double> getEtaPhi(double x, double y, double z, double refphi = 0) {
     if (refphi != 0) {
@@ -73,5 +73,5 @@ namespace lst {
     return boost::geometry::intersects(ref_poly, tar_poly);
   }
 
-}  // namespace lst
+}  // namespace lstgeometry
 #endif

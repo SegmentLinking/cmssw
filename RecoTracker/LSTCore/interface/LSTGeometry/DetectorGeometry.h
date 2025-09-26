@@ -8,7 +8,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
 
-namespace lst {
+namespace lstgeometry {
 
   class DetectorGeometry {
   private:
@@ -189,6 +189,6 @@ namespace lst {
                             std::make_pair(neg_q_phi_lo_bound, neg_q_phi_hi_bound));
     }
   };
-}  // namespace lst
+}  // namespace lstgeometry
 
 #endif
