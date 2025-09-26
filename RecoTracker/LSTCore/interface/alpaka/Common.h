@@ -94,9 +94,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     namespace pt3dnn {
       HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
-      HOST_DEVICE_CONSTANT float kWp[kEtaBins] = {
-          0.189f, 0.1805f, 0.2267f, 0.3104f, 0.4719f, 0.3159f, 0.1372f, 0.1571f, 0.3198f, 0.186f};
-      HOST_DEVICE_CONSTANT float kWpHigh = 0.0473f;
+
+      // 95% sig-efficiency for abs(eta) <= 1.25, 84% for abs(eta) > 1.25
+      HOST_DEVICE_CONSTANT float kWp_pT3[kEtaBins] = {
+          0.7367f, 0.8276f, 0.7724f, 0.7987f, 0.7972f, 0.8948f, 0.6903f, 0.7096f, 0.7256f, 0.7674f};
+      // 95% sig-efficiency for high pT bin
+      HOST_DEVICE_CONSTANT float kWpHigh_pT3 = 0.6997f;
+      // Constant 99.5% signal efficiency
+      HOST_DEVICE_CONSTANT float kWp_pT5[kEtaBins] = {
+          0.1493f, 0.2735f, 0.3378f, 0.4545f, 0.1858f, 0.1616f, 0.0219f, 0.0248f, 0.0879f, 0.083f};
+      // 99.5% signal efficiency for high pT bin
+      HOST_DEVICE_CONSTANT float kWpHigh_pT5 = 0.1154f;
+
+      // kWp's must be defined with inline static in the structs to compile.
+      struct pT3WP {
+        ALPAKA_FN_ACC static inline float wp(unsigned i) { return kWp_pT3[i]; }
+        ALPAKA_FN_ACC static inline float wpHigh() { return kWpHigh_pT3; }
+      };
+      struct pT5WP {
+        ALPAKA_FN_ACC static inline float wp(unsigned i) { return kWp_pT5[i]; }
+        ALPAKA_FN_ACC static inline float wpHigh() { return kWpHigh_pT5; }
+      };
     }  // namespace pt3dnn
 
   }  // namespace dnn
