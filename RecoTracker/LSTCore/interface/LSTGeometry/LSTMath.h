@@ -5,13 +5,73 @@
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+#include <boost/math/tools/minima.hpp>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/Helix.h"
 
 namespace lstgeometry {
 
   using Point = boost::geometry::model::d2::point_xy<double>;
   using Polygon = boost::geometry::model::polygon<Point>;
+
+  // Clarification : phi was derived assuming a negatively charged particle would start
+  // at the first quadrant. However the way signs are set up in the get_track_point function
+  // implies the particle actually starts out in the fourth quadrant, and phi is measured from
+  // the y axis as opposed to x axis in the expression provided in this function. Hence I tucked
+  // in an extra pi/2 to account for these effects
+  Helix constructHelixFromPoints(
+      double pt, double vx, double vy, double vz, double mx, double my, double mz, int charge) {
+    double radius = pt / (k2Rinv1GeVf * kB);
+    double r = std::fabs(radius);  // TODO: Is this needed?
+
+    double t = 2. * std::asin(std::sqrt((vx - mx) * (vx - mx) + (vy - my) * (vy - my)) / (2. * r));
+    double phi = std::numbers::pi_v<double> / 2. + std::atan((vy - my) / (vx - mx)) +
+                 ((vy - my) / (vx - mx) < 0) * (std::numbers::pi_v<double>)+charge * t / 2. +
+                 (my - vy < 0) * (std::numbers::pi_v<double> / 2.) - (my - vy > 0) * (std::numbers::pi_v<double> / 2.);
+
+    double cx = vx + charge * radius * std::sin(phi);
+    double cy = vy - charge * radius * std::cos(phi);
+    double cz = vz;
+    double lam = std::atan((mz - vz) / (radius * t));
+
+    return Helix(cx, cy, cz, radius, phi, lam, charge);
+  }
+
+  std::tuple<double, double, double, double> getHelixPointFromRadius(Helix const& helix, double target_r) {
+    auto objective_function = [&helix, target_r](double t) {
+      double x = helix.center_x - helix.charge * helix.radius * std::sin(helix.phi - helix.charge * t);
+      double y = helix.center_y + helix.charge * helix.radius * std::cos(helix.phi - helix.charge * t);
+      return std::fabs(std::sqrt(x * x + y * y) - target_r);
+    };
+    int bits = std::numeric_limits<double>::digits;
+    auto result = boost::math::tools::brent_find_minima(objective_function, 0.0, std::numbers::pi_v<double>, bits);
+    double t = result.first;
+
+    double x = helix.center_x - helix.charge * helix.radius * std::sin(helix.phi - helix.charge * t);
+    double y = helix.center_y + helix.charge * helix.radius * std::cos(helix.phi - helix.charge * t);
+    double z = helix.center_z + helix.radius * std::tan(helix.lam) * t;
+    double r = std::sqrt(x * x + y * y);
+
+    return std::make_tuple(x, y, z, r);
+  }
+
+  std::tuple<double, double, double, double> getHelixPointFromZ(Helix const& helix, double target_z) {
+    auto objective_function = [&helix, target_z](double t) {
+      double z = helix.center_z + helix.radius * std::tan(helix.lam) * t;
+      return std::fabs(std::sqrt(z * z) - target_z);
+    };
+    int bits = std::numeric_limits<double>::digits;
+    auto result = boost::math::tools::brent_find_minima(objective_function, 0.0, std::numbers::pi_v<double>, bits);
+    double t = result.first;
+
+    double x = helix.center_x - helix.charge * helix.radius * std::sin(helix.phi - helix.charge * t);
+    double y = helix.center_y + helix.charge * helix.radius * std::cos(helix.phi - helix.charge * t);
+    double z = helix.center_z + helix.radius * std::tan(helix.lam) * t;
+    double r = std::sqrt(x * x + y * y);
+
+    return std::make_tuple(x, y, z, r);
+  }
 
   std::pair<double, double> getEtaPhi(double x, double y, double z, double refphi = 0) {
     if (refphi != 0) {
@@ -25,18 +85,20 @@ namespace lstgeometry {
     return std::make_pair(eta, phi);
   }
 
-  Polygon getEtaPhiPolygon(MatrixD4x3 const& mod_boundaries, double refphi, double zshift = 0) {
-    MatrixD4x2 mod_boundaries_etaphi;
-    for (int i = 0; i < 4; ++i) {
+  Polygon getEtaPhiPolygon(MatrixDNx3 const& mod_boundaries, double refphi, double zshift = 0) {
+    int npoints = mod_boundaries.rows();
+    MatrixDNx2 mod_boundaries_etaphi(npoints, 2);
+    for (int i = 0; i < npoints; ++i) {
       auto ref_etaphi = getEtaPhi(mod_boundaries(i, 1), mod_boundaries(i, 2), mod_boundaries(i, 0) + zshift, refphi);
       mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
       mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
     }
 
     Polygon poly;
-    // <= 4 because we need to close the polygon with the first point
-    for (int i = 0; i <= 4; ++i) {
-      boost::geometry::append(poly, Point(mod_boundaries_etaphi(i % 4, 0), mod_boundaries_etaphi(i % 4, 1)));
+    // <= because we need to close the polygon with the first point
+    for (int i = 0; i <= npoints; ++i) {
+      boost::geometry::append(poly,
+                              Point(mod_boundaries_etaphi(i % npoints, 0), mod_boundaries_etaphi(i % npoints, 1)));
     }
     return poly;
   }

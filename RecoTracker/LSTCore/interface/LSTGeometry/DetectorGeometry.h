@@ -64,6 +64,10 @@ namespace lstgeometry {
       return endcap_lower_det_ids_[layer - 1];
     }
 
+    double getBarrelLayerAverageRadius(unsigned int layer) const { return avg_radii_[layer - 1]; }
+
+    double getEndcapLayerAverageAbsZ(unsigned int layer) const { return avg_z_[layer - 1]; }
+
     double getMinR(unsigned int detId) const {
       auto const& corners = corners_.at(detId);
       double minR = std::numeric_limits<double>::max();
