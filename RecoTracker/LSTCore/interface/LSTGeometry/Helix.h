@@ -1,12 +1,12 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
-
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
+#ifndef RecoTracker_LSTCore_interface_LSTGeometry_Helix_h
+#define RecoTracker_LSTCore_interface_LSTGeometry_Helix_h
 
 namespace lstgeometry {
 
   struct Helix {
-    ColVectorD3 center;
+    double center_x;
+    double center_y;
+    double center_z;
     double radius;
     double phi;
     double lam;
