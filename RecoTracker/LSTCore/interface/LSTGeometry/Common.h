@@ -10,6 +10,8 @@ namespace lstgeometry {
   using MatrixD4x2 = Eigen::Matrix<double, 4, 2, Eigen::RowMajor>;
   using MatrixD4x3 = Eigen::Matrix<double, 4, 3, Eigen::RowMajor>;
   using MatrixD8x3 = Eigen::Matrix<double, 8, 3, Eigen::RowMajor>;
+  using MatrixDNx2 = Eigen::Matrix<double, Eigen::Dynamic, 2, Eigen::RowMajor>;
+  using MatrixDNx3 = Eigen::Matrix<double, Eigen::Dynamic, 3, Eigen::RowMajor>;
   using RowVectorD2 = Eigen::Matrix<double, 1, 2>;
   using ColVectorD3 = Eigen::Matrix<double, 3, 1>;
   using RowVectorD3 = Eigen::Matrix<double, 1, 3>;
