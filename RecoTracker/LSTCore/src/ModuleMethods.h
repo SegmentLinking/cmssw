@@ -298,8 +298,7 @@ namespace lst {
       } else {
         setDerivedQuantities(detId, layer, ring, rod, module, subdet, side, m_x, m_y, m_z, eta, r);
         isInverted = parseIsInverted(subdet, side, module, layer);
-        // P-side is always lower
-        isLower = m_t == 23 || (m_t == 25 && parseIsLower(isInverted, detId));
+        isLower = parseIsLower(isInverted, detId);
       }
       if (isLower) {
         index = lowerModuleCounter;
