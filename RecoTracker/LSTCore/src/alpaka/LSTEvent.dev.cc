@@ -747,9 +747,11 @@ void LSTEvent::createQuintuplets() {
                       CountTripletConnections{},
                       modules_.const_view<ModulesSoA>(),
                       segmentsDC_->const_view<SegmentsSoA>(),
+                      miniDoubletsDC_->const_view<MiniDoubletsSoA>(),
                       tripletsDC_->view<TripletsSoA>(),
                       tripletsDC_->const_view<TripletsOccupancySoA>(),
-                      rangesDC_->const_view());
+                      rangesDC_->const_view(),
+                      ptCut_);
 
   auto const createEligibleModulesListForQuintuplets_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
