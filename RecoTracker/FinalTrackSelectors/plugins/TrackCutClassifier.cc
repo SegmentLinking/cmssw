@@ -188,6 +188,7 @@ namespace {
       fillArrayF(d0err, dr_par, "d0err");
       fillArrayF(d0err_par, dr_par, "d0err_par");
       fillArrayF(drWPVerr_par, dr_par, "drWPVerr_par");
+      passThroughForDisplaced = cfg.getParameter<bool>("passThroughForDisplaced");
     }
 
     void beginStream() {}
@@ -202,6 +203,12 @@ namespace {
         ret = std::min(ret, cut(nHits(trk), minHits4pass, std::greater_equal<int>()));
         if (ret == 1.f)
           return ret;
+      }
+      // If requested in the configuration, bypass the other checks
+      // for tracks without pixel hits (displaced tracks)
+      if (passThroughForDisplaced) {
+        if (nPixelHits(trk) == 0)
+          return 1.f;
       }
 
       if (maxRelPtErr[2] < std::numeric_limits<float>::max()) {
@@ -396,6 +403,7 @@ namespace {
                                        std::numeric_limits<float>::max(),
                                        std::numeric_limits<float>::max()});  // par = 3.
       desc.add<edm::ParameterSetDescription>("dr_par", dr_par);
+      desc.add<bool>("passThroughForDisplaced", false);
     }
 
     bool isHLT;
@@ -423,6 +431,7 @@ namespace {
     float d0err[3];
     float d0err_par[3];
     float drWPVerr_par[3];
+    bool passThroughForDisplaced;
   };
 
   using TrackCutClassifier = TrackMVAClassifier<Cuts>;
