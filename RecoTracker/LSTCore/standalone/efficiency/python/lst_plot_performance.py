@@ -444,12 +444,12 @@ def set_label(eff, output_name, raw_number):
     else:
         title = "#eta"
     eff.GetXaxis().SetTitle(title)
-    if "fakerate" in output_name:
+    if "fakeorduplrate" in output_name:
+        eff.GetYaxis().SetTitle("Fake-or-duplicate Rate")
+    elif "fakerate" in output_name:
         eff.GetYaxis().SetTitle("Fake Rate")
     elif "duplrate" in output_name:
         eff.GetYaxis().SetTitle("Duplicate Rate")
-    elif "fakeorduplrate" in output_name:
-        eff.GetYaxis().SetTitle("Fake-or-duplicate Rate")
     elif "inefficiency" in output_name:
         eff.GetYaxis().SetTitle("Inefficiency")
     else:
