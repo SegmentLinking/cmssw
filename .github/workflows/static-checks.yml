@@ -29,6 +29,7 @@ jobs:
         github.event.comment.user.login == 'mmasciov' ||
         github.event.comment.user.login == 'pwittich' ||
         github.event.comment.user.login == 'sgnoohc' ||
+        github.event.comment.user.login == 'alexandertuna' ||
         github.event.comment.user.login == 'slava77devel' ||
         github.event.comment.user.login == 'slava77'
       )
