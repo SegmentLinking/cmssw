@@ -29,10 +29,6 @@ from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPat
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
 
-#(~singleIterPatatrack & trackingLST & ~seedingLST).toModify(hltGeneralTracks, indivShareFrac = [0.1,0.1])
-#
-#(~singleIterPatatrack & trackingLST & seedingLST).toModify(hltGeneralTracks, indivShareFrac = [0.1,0.1])
-
 (~singleIterPatatrack & trackingLST).toModify(hltGeneralTracks, indivShareFrac = [0.1,0.1])
 
 _hltGeneralTracksSingleIterPatatrack = hltGeneralTracks.clone(
@@ -48,11 +44,3 @@ _hltGeneralTracksSingleIterPatatrack = hltGeneralTracks.clone(
 
 (singleIterPatatrack & trackingLST).toModify(_hltGeneralTracksSingleIterPatatrack, indivShareFrac = [0.1])
 (singleIterPatatrack).toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
-
-#(singleIterPatatrack & ~trackingLST & ~seedingLST).toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
-#
-#(singleIterPatatrack & trackingLST & ~seedingLST).toModify(_hltGeneralTracksSingleIterPatatrack, indivShareFrac = [0.1])
-#(singleIterPatatrack & trackingLST & ~seedingLST).toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
-#
-#(singleIterPatatrack & trackingLST & seedingLST).toModify(_hltGeneralTracksSingleIterPatatrack, indivShareFrac = [0.1])
-#(singleIterPatatrack & trackingLST & seedingLST).toReplaceWith(hltGeneralTracks, _hltGeneralTracksSingleIterPatatrack)
