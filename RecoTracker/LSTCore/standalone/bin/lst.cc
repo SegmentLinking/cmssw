@@ -76,8 +76,8 @@ int main(int argc, char **argv) {
       "pls", "Write pLS branches in output ntuple.")("pt3", "Write pT3 branches in output ntuple.")(
       "pt5", "Write pT5 branches in output ntuple.")("occ", "Write occupancy branches in output ntuple.")(
       "t5dnn", "Write T5 DNN branches in output ntuple.")("t3dnn", "Write T3 DNN branches in output ntuple.")(
-      "allobj", "Write all object branches in output ntuple.")(
-      "t4", "Write T4 branches in output ntuple.")("t4dnn", "Write T4 DNN branches in output ntuple.")(
+      "allobj", "Write all object branches in output ntuple.")("t4", "Write T4 branches in output ntuple.")(
+      "t4dnn", "Write T4 DNN branches in output ntuple.")(
       "J,jet", "Accounts for specific jet branches in input root file for testing")(
       "sim", "Write extra sim branches in output ntuple");
 
