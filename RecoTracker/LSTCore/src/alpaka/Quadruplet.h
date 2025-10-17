@@ -347,9 +347,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
     float eta1 = alpaka::math::abs(acc, mds.anchorEta()[firstMDIndex]);
     uint8_t bin_index = (eta1 > 2.5f) ? (25 - 1) : static_cast<unsigned int>(eta1 / 0.1f);
-    float chi2_cuts[] = {31.5082, 24.5654, 28.9223, 35.5906, 32.0746, 22.6416, 39.1476, 41.0791,
-                         30.2745, 40.2882, 31.2135, 17.8911, 9.0297,  7.6862,  2.7591,  5.0587,
-                         6.4014,  3.7348,  4.4768,  5.3087,  15.4535, 14.1107, 23.2778, 18.3643};
+    float chi2_cuts[] = {31.5082, 24.5654, 28.9223, 35.5906, 32.0746, 22.6416, 39.1476, 41.0791, 30.2745,
+                         40.2882, 31.2135, 17.8911, 9.0297,  7.6862,  2.7591,  5.0587,  6.4014,  3.7348,
+                         4.4768,  5.3087,  15.4535, 14.1107, 23.2778, 18.3643, 26.3276};
 
     return rzChiSquared < chi2_cuts[bin_index];
   };
@@ -504,7 +504,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     //run Beta Selector for high pT T4s
-    if (pt > 10) {
+    if (pt > 10 || pt < 1) {
       if (not runQuintupletdBetaAlgoSelector(acc,
                                              modules,
                                              mds,
@@ -669,6 +669,104 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (innerOuterOuterMiniDoubletIndex != outerOuterInnerMiniDoubletIndex)
               continue;
 
+            // If densely connected, do not attempt parallel processing to avoid truncation
+            if (nInnerTriplets >= kNTripletThreshold || nOuterTriplets >= kNTripletThreshold) {
+              uint16_t lowerModule2 = triplets.lowerModuleIndices()[innerTripletIndex][1];
+              uint16_t lowerModule3 = triplets.lowerModuleIndices()[outerTripletIndex][1];
+              uint16_t lowerModule4 = triplets.lowerModuleIndices()[outerTripletIndex][2];
+
+              float innerRadius = triplets.radius()[innerTripletIndex];
+              float outerRadius = triplets.radius()[outerTripletIndex];
+              float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius,
+                  nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, fakeScore;
+
+              float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+
+              bool success = runQuadrupletDefaultAlgo(acc,
+                                                      modules,
+                                                      mds,
+                                                      segments,
+                                                      triplets,
+                                                      lowerModule1,
+                                                      lowerModule2,
+                                                      lowerModule3,
+                                                      lowerModule4,
+                                                      innerTripletIndex,
+                                                      outerTripletIndex,
+                                                      regressionG,
+                                                      regressionF,
+                                                      regressionRadius,
+                                                      nonAnchorRegressionRadius,
+                                                      chiSquared,
+                                                      ptCut,
+                                                      rzChiSquared,
+                                                      nonAnchorChiSquared,
+                                                      dBeta,
+                                                      promptScore,
+                                                      displacedScore,
+                                                      fakeScore);
+              if (success) {
+                int totOccupancyQuadruplets =
+                    alpaka::atomicAdd(acc,
+                                      &quadrupletsOccupancy.totOccupancyQuadruplets()[lowerModule1],
+                                      1u,
+                                      alpaka::hierarchy::Threads{});
+                if (totOccupancyQuadruplets >= ranges.quadrupletModuleOccupancy()[lowerModule1]) {
+#ifdef WARNINGS
+                  printf("Quadruplet excess alert! Module index = %d, Occupancy = %d\n",
+                         lowerModule1,
+                         totOccupancyQuadruplets);
+#endif
+                } else {
+                  int quadrupletModuleIndex = alpaka::atomicAdd(
+                      acc, &quadrupletsOccupancy.nQuadruplets()[lowerModule1], 1u, alpaka::hierarchy::Threads{});
+                  //this if statement should never get executed!
+                  if (ranges.quadrupletModuleIndices()[lowerModule1] == -1) {
+#ifdef WARNINGS
+                    printf("Quadruplets : no memory for module at module index = %d\n", lowerModule1);
+#endif
+                  } else {
+                    unsigned int quadrupletIndex =
+                        ranges.quadrupletModuleIndices()[lowerModule1] + quadrupletModuleIndex;
+                    float phi =
+                        mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]]
+                                                            [layer2_adjustment]];  //layer 3
+                    float eta =
+                        mds.anchorEta()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][md_adjustment]]
+                                                            [layer2_adjustment]];  //layer 3
+
+                    float scores = chiSquared + nonAnchorChiSquared;
+                    addQuadrupletToMemory(triplets,
+                                          quadruplets,
+                                          innerTripletIndex,
+                                          outerTripletIndex,
+                                          lowerModule1,
+                                          lowerModule2,
+                                          lowerModule3,
+                                          lowerModule4,
+                                          innerRadius,
+                                          outerRadius,
+                                          pt,
+                                          eta,
+                                          phi,
+                                          scores,
+                                          layer,
+                                          quadrupletIndex,
+                                          rzChiSquared,
+                                          dBeta,
+                                          promptScore,
+                                          displacedScore,
+                                          fakeScore,
+                                          regressionG,
+                                          regressionF,
+                                          regressionRadius,
+                                          nonAnchorRegressionRadius);
+                  }
+                }
+              }
+              continue;
+            }
+
             int mIdx = alpaka::atomicAdd(acc, &matchCount, 1, alpaka::hierarchy::Threads{});
             unsigned int quadrupletIndex = ranges.quadrupletModuleIndices()[lowerModule1] + mIdx;
 
@@ -805,10 +903,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct CountTripletLSConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
+                                  MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOcc,
-                                  ObjectRangesConst ranges) const {
+                                  ObjectRangesConst ranges,
+                                  const float ptCut) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -844,7 +944,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             const unsigned int thirdMDOuter = mdIndices[thirdSegIdx][1];
 
             if ((secondMDInner == thirdMDInner) && (secondMDOuter == thirdMDOuter)) {
-              alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+              // printf("nInnerTriplets %d, nOuterTriplets %d \n", nInnerTriplets, nOuterTriplets)
+              // Will only perform runQuintupletDefaultAlgorithm() checks if densely connected
+              if (nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
+                alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+              } else {
+                const uint16_t lowerModule3 = lmIdx[outerTripletIndex][1];
+                const uint16_t lowerModule4 = lmIdx[outerTripletIndex][2];
+
+                // float innerRadius, outerRadius;
+                float rzChiSquared, dBeta, nonAnchorChiSquared, regressionG, regressionF, regressionRadius,
+                    nonAnchorRegressionRadius, chiSquared, promptScore, displacedScore, fakeScore;
+
+                bool ok = runQuadrupletDefaultAlgo(acc,
+                                                   modules,
+                                                   mds,
+                                                   segments,
+                                                   triplets,
+                                                   lowerModule1,
+                                                   lowerModule2,
+                                                   lowerModule3,
+                                                   lowerModule4,
+                                                   innerTripletIndex,
+                                                   outerTripletIndex,
+                                                   regressionG,
+                                                   regressionF,
+                                                   regressionRadius,
+                                                   nonAnchorRegressionRadius,
+                                                   chiSquared,
+                                                   ptCut,
+                                                   rzChiSquared,
+                                                   nonAnchorChiSquared,
+                                                   dBeta,
+                                                   promptScore,
+                                                   displacedScore,
+                                                   fakeScore);
+                if (ok) {
+                  alpaka::atomicAdd(
+                      acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                }
+              }
             }
           }
         }
