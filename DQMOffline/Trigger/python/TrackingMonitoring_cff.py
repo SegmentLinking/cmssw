@@ -146,9 +146,9 @@ initialSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(
 )
 
 initialStepT5TCLSTTracksMonitoringHLT = trackingMonHLT.clone(
-    FolderName       = 'HLT/Tracking/initialStepTracksT5TCLST',
-    TrackProducer    = 'hltInitialStepTracksT5TCLST',
-    allTrackProducer = 'hltInitialStepTracksT5TCLST'
+    FolderName       = 'HLT/Tracking/initialStepTrackSelectionHighPurityT5TCLST',
+    TrackProducer    = 'hltInitialStepTrackSelectionHighPurityT5TCLST',
+    allTrackProducer = 'hltInitialStepTrackSelectionHighPurityT5TCLST'
 )
 
 highPtTripletSteppLSTCLSTTracksMonitoringHLT = trackingMonHLT.clone(

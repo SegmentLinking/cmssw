@@ -19,8 +19,10 @@ from ..modules.hltInitialStepTrackspLSTCLST_cfi import *
 from ..modules.hltInitialStepTracksT5TCLST_cfi import *
 from ..modules.hltInitialStepTrackCutClassifierpTTCLST_cfi import *
 from ..modules.hltInitialStepTrackCutClassifierpLSTCLST_cfi import *
+from ..modules.hltInitialStepTrackCutClassifierT5TCLST_cfi import *
 from ..modules.hltInitialStepTrackSelectionHighPuritypTTCLST_cfi import *
 from ..modules.hltInitialStepTrackSelectionHighPuritypLSTCLST_cfi import *
+from ..modules.hltInitialStepTrackSelectionHighPurityT5TCLST_cfi import *
 _HLTInitialStepSequenceLST = cms.Sequence(
      hltInitialStepSeeds
     +hltInitialStepSeedTracksLST
@@ -35,8 +37,10 @@ _HLTInitialStepSequenceLST = cms.Sequence(
     +hltInitialStepTracksT5TCLST
     +hltInitialStepTrackCutClassifierpTTCLST
     +hltInitialStepTrackCutClassifierpLSTCLST
+    +hltInitialStepTrackCutClassifierT5TCLST
     +hltInitialStepTrackSelectionHighPuritypTTCLST
     +hltInitialStepTrackSelectionHighPuritypLSTCLST
+    +hltInitialStepTrackSelectionHighPurityT5TCLST
 )
 
 from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
