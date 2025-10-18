@@ -150,6 +150,9 @@ public:
   // Boolean to enable pT5 branches
   bool pt5_branches;
 
+  // Boolean to enable T4 branches
+  bool t4_branches;
+
   // Boolean to enable occupancy branches
   bool occ_branches;
 
@@ -158,6 +161,9 @@ public:
 
   // Boolean to enable T5 DNN branches
   bool t5dnn_branches;
+
+  // Boolean to enable T4 DNN branches
+  bool t4dnn_branches;
 
   // Boolean to enable jet branches
   bool jet_branches;
