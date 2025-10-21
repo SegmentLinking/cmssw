@@ -26,7 +26,10 @@ int main(int argc, char **argv) {
         cxxopts::value<std::string>()->default_value("../data/average_r_OT800_IT711.txt"))(
         "average_z_file",
         "The path to the text file containing the average z positions of the Endcap layers.",
-        cxxopts::value<std::string>()->default_value("../data/average_z_OT800_IT711.txt"));
+        cxxopts::value<std::string>()->default_value("../data/average_z_OT800_IT711.txt"))(
+        "output_dir",
+        "The path to the output directory.",
+        cxxopts::value<std::string>()->default_value("../data/"));
         
     auto result = options.parse(argc, argv);
     
@@ -34,6 +37,7 @@ int main(int argc, char **argv) {
     std::string sensor_info_file = result["sensor_info_file"].as<std::string>();
     std::string average_r_file = result["average_r_file"].as<std::string>();
     std::string average_z_file = result["average_z_file"].as<std::string>();
+    std::string output_dir = result["output_dir"].as<std::string>();
     
     auto modules_info = readModuleInfo(module_info_file);
     auto sensors_info = readSensorInfo(sensor_info_file);
@@ -46,8 +50,11 @@ int main(int argc, char **argv) {
     auto assigned_corners = assignCornersToSensors(modules_info, sensors_info);
     
     auto centroids = computeCentroids(sensors_info);
+    writeCentroids(centroids, output_dir + "output_centroids.bin", false);
     
     auto [barrel_slopes, endcap_slopes] = processCorners(assigned_corners);
+    writeSlopes(barrel_slopes, sensors_info, output_dir + "tilted_barrel_orientation.bin", false);
+    writeSlopes(endcap_slopes, sensors_info, output_dir + "endcap_orientation.bin", false);
     
     auto det_geom = DetectorGeometry(assigned_corners, average_r, average_z);
     det_geom.buildByLayer();

@@ -108,8 +108,8 @@ namespace lstgeometry {
   }
 
   // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
-  std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(std::vector<ModuleInfo>& modules,
-                                                                      std::vector<SensorInfo>& sensors) {
+  std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(std::vector<ModuleInfo> const& modules,
+                                                                      std::unordered_map<unsigned int, SensorInfo> const& sensors) {
     std::unordered_map<unsigned int, MatrixD4x3> transformed_corners_dict;
 
     for (auto const& moduleInfo : modules) {
@@ -121,38 +121,16 @@ namespace lstgeometry {
       RowVectorD3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
       RowVectorD3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
 
-      bool found_sensor_1 = false;
-      bool found_sensor_2 = false;
-      unsigned int sensor_index_1 = 0;
-      unsigned int sensor_index_2 = 0;
-
-      for (unsigned int i = 0; i < sensors.size(); i++) {
-        if (!found_sensor_1 && sensors[i].detId == sensor_det_id_1) {
-          sensor_index_1 = i;
-          found_sensor_1 = true;
-        }
-        if (!found_sensor_2 && sensors[i].detId == sensor_det_id_2) {
-          sensor_index_2 = i;
-          found_sensor_2 = true;
-        }
-        if (found_sensor_1 && found_sensor_2)
-          break;
-      }
-
-      if (!found_sensor_1 || !found_sensor_2) {
-        throw std::runtime_error("Sensor not found");
-      }
-
-      double sensor1_center_z = sensors[sensor_index_1].sensorCenterZ_mm;
+      double sensor1_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
       double sensor1_center_x =
-          sensors[sensor_index_1].sensorCenterRho_mm * cos(degToRad(sensors[sensor_index_1].phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(degToRad(sensors.at(sensor_det_id_1).phi_deg));
       double sensor1_center_y =
-          sensors[sensor_index_1].sensorCenterRho_mm * sin(degToRad(sensors[sensor_index_1].phi_deg));
-      double sensor2_center_z = sensors[sensor_index_2].sensorCenterZ_mm;
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(degToRad(sensors.at(sensor_det_id_1).phi_deg));
+      double sensor2_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
       double sensor2_center_x =
-          sensors[sensor_index_2].sensorCenterRho_mm * cos(degToRad(sensors[sensor_index_2].phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(degToRad(sensors.at(sensor_det_id_1).phi_deg));
       double sensor2_center_y =
-          sensors[sensor_index_2].sensorCenterRho_mm * sin(degToRad(sensors[sensor_index_2].phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(degToRad(sensors.at(sensor_det_id_1).phi_deg));
 
       RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
       RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
