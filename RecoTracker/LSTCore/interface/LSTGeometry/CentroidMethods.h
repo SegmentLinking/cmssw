@@ -51,10 +51,9 @@ namespace lstgeometry {
     }
   }
 
-  std::unordered_map<unsigned int, Centroid> computeCentroids(std::vector<SensorInfo> &sensors) {
+  std::unordered_map<unsigned int, Centroid> computeCentroids(std::unordered_map<unsigned int, SensorInfo> const& sensors) {
     std::unordered_map<unsigned int, Centroid> centroids;
-    for (const auto& sensor : sensors) {
-      unsigned int detId = sensor.detId;
+    for (auto const& [detId, sensor] : sensors) {
       int moduleType = parseModuleType(detId);
 
       // Remove sensors from inner tracker
