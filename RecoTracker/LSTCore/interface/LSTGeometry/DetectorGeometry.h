@@ -49,7 +49,7 @@ namespace lstgeometry {
         }));
       }
       for (unsigned int layer = 1; layer < 6; layer++) {
-        barrel_lower_det_ids_.push_back(getDetIds([&layer](const auto& x) {
+        endcap_lower_det_ids_.push_back(getDetIds([&layer](const auto& x) {
           Module m(x.first);
           return m.subdet() == 4 && m.layer() == layer && m.isLower() == 1;
         }));
