@@ -13,15 +13,15 @@ namespace lstgeometry {
 
   struct SlopeData {
     double drdz_slope;
-    double drdy_slope;
+    double dxdy_slope;
   };
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
   SlopeData calculateSlope(double dx, double dy, double dz) {
     double dr = sqrt(dx * dx + dy * dy);
     double drdz_slope = dz != 0 ? dr / dz : kDefaultSlope;
-    double drdy_slope = dy != 0 ? -dx / dy : kDefaultSlope;
-    return SlopeData{drdz_slope, drdy_slope};
+    double dxdy_slope = dy != 0 ? -dx / dy : kDefaultSlope;
+    return SlopeData{drdz_slope, dxdy_slope};
   }
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
