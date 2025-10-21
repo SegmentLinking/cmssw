@@ -5,7 +5,6 @@
 #include <cassert>
 #include <iterator>
 #include <vector>
-#include <optional>
 #include <tuple>
 #include <unordered_set>
 #include <boost/geometry.hpp>
@@ -47,27 +46,30 @@ namespace lstgeometry {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
       for (int zshift : {0, 10, -10}) {
-        std::optional<Polygon> ref_polygon = getEtaPhiPolygon(det_geom.getCorners(ref_detid), refphi, zshift);
+        std::vector<Polygon> ref_polygon;
+        ref_polygon.push_back(getEtaPhiPolygon(det_geom.getCorners(ref_detid), refphi, zshift));
 
         // Check whether there is still significant non-zero area
         for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
-          if (!ref_polygon)
+          if (!ref_polygon.size())
             break;
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           std::vector<Polygon> difference;
-          boost::geometry::difference(ref_polygon.value(), tar_polygon, difference);
+          for (auto &ref_polygon_piece : ref_polygon) {
+              std::vector<Polygon> tmp_difference;
+              boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
+              difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
+          }
 
-          // I think this is always true, but if not there needs to be a bit of extra logic
-          assert(difference.size() < 2);
-
-          if (difference.size())
-            ref_polygon = difference[0];
-          else
-            ref_polygon.reset();
+          ref_polygon = std::move(difference);
         }
 
-        if (!ref_polygon || boost::geometry::area(ref_polygon.value()) <= 0.0001)
+        double area = 0.;
+        for (auto &ref_polygon_piece : ref_polygon)
+            area += boost::geometry::area(ref_polygon_piece);
+        
+        if (area <= 0.0001)
           continue;
 
         auto const& new_tar_detids_to_be_considered = det_geom.getEndcapLayerDetIds(1);
@@ -81,7 +83,15 @@ namespace lstgeometry {
 
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
-          if (boost::geometry::intersects(ref_polygon.value(), tar_polygon))
+          bool intersects = false;
+          for (auto &ref_polygon_piece : ref_polygon){
+              if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
+                  intersects = true;
+                  break;
+              }
+          }
+          
+          if (intersects)
             barrel_endcap_connected_tar_detids.insert(tar_detid);
         }
       }
@@ -207,27 +217,30 @@ namespace lstgeometry {
 
       int zshift = 0;
 
-      std::optional<Polygon> ref_polygon = getEtaPhiPolygon(next_layer_bound_points_matrix, refphi, zshift);
+      std::vector<Polygon> ref_polygon;
+      ref_polygon.push_back(getEtaPhiPolygon(next_layer_bound_points_matrix, refphi, zshift));
 
       // Check whether there is still significant non-zero area
       for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
-        if (!ref_polygon)
+          if (!ref_polygon.size())
           break;
         Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
         std::vector<Polygon> difference;
-        boost::geometry::difference(ref_polygon.value(), tar_polygon, difference);
+        for (auto &ref_polygon_piece : ref_polygon) {
+            std::vector<Polygon> tmp_difference;
+            boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
+            difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
+        }
 
-        // I think this is always true, but if not there needs to be a bit of extra logic
-        assert(difference.size() < 2);
-
-        if (difference.size())
-          ref_polygon = difference[0];
-        else
-          ref_polygon.reset();
+        ref_polygon = std::move(difference);
       }
+      
+      double area = 0.;
+      for (auto &ref_polygon_piece : ref_polygon)
+          area += boost::geometry::area(ref_polygon_piece);
 
-      if (ref_polygon && boost::geometry::area(ref_polygon.value()) > 0.0001) {
+      if (area > 0.0001) {
         auto const& new_tar_detids_to_be_considered = det_geom.getEndcapLayerDetIds(1);
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
@@ -239,7 +252,15 @@ namespace lstgeometry {
 
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
-          if (boost::geometry::intersects(ref_polygon.value(), tar_polygon))
+          bool intersects = false;
+          for (auto &ref_polygon_piece : ref_polygon){
+              if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
+                  intersects = true;
+                  break;
+              }
+          }
+          
+          if (intersects)
             barrel_endcap_connected_tar_detids.insert(tar_detid);
         }
       }

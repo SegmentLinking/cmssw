@@ -120,6 +120,29 @@ namespace lstgeometry {
 
     return sensors;
   }
+  
+  std::vector<double> readAverages(const std::string& filename) {
+    std::vector<double> averages;
+    std::string line;
+    std::ifstream file(filename);
+
+    if (!file.is_open()) {
+      throw std::runtime_error("Could not open file " + filename);
+    }
+
+    while (std::getline(file, line)) {
+      if (line.empty())
+        continue;
+
+      std::vector<std::string> tokens = parseCSVLine(line);
+      if (tokens.size() != 1)
+        continue;
+
+      averages.push_back(std::stod(tokens[0]));
+    }
+
+    return averages;
+  }
 
 }  // namespace lstgeometry
 
