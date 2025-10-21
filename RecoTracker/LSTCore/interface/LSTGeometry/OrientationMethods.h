@@ -25,8 +25,8 @@ namespace lstgeometry {
   }
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
-  std::tuple<std::unordered_map<unsigned int, SlopeData>, std::unordered_map<unsigned int, SlopeData>> process_corners(
-      std::unordered_map<unsigned int, MatrixD4x3> corners) {
+  std::tuple<std::unordered_map<unsigned int, SlopeData>, std::unordered_map<unsigned int, SlopeData>> processCorners(
+      std::unordered_map<unsigned int, MatrixD4x3>& corners) {
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
 

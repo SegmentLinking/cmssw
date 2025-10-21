@@ -51,7 +51,7 @@ namespace lstgeometry {
     }
   }
 
-  std::unordered_map<unsigned int, Centroid> compute_centroids(std::vector<SensorInfo> sensors) {
+  std::unordered_map<unsigned int, Centroid> computeCentroids(std::vector<SensorInfo> &sensors) {
     std::unordered_map<unsigned int, Centroid> centroids;
     for (const auto& sensor : sensors) {
       unsigned int detId = sensor.detId;
