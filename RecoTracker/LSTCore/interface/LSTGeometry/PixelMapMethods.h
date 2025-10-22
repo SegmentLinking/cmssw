@@ -1,9 +1,9 @@
 #ifndef RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
 #define RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
 
-#include <vector>
 #include <tuple>
 #include <unordered_map>
+#include <unordered_set>
 #include <array>
 #include <boost/functional/hash.hpp>
 
@@ -16,31 +16,26 @@ namespace lstgeometry {
 
   using PtEtaPhiZChargeKey = std::tuple<unsigned int, unsigned int, unsigned int, unsigned int, int>;
   using LayerSubdetKey = std::tuple<unsigned int, unsigned int>;
-  using LayerSubdetMap = std::unordered_map<LayerSubdetKey, std::vector<unsigned int>, boost::hash<LayerSubdetKey>>;
-  using PtEtaPhiZChargeMap = std::unordered_map<PtEtaPhiZChargeKey, LayerSubdetMap, boost::hash<PtEtaPhiZChargeKey>>;
+  using PtEtaPhiZChargeMap = std::unordered_map<PtEtaPhiZChargeKey, std::unordered_set<unsigned int>, boost::hash<PtEtaPhiZChargeKey>>;
+  using LayerSubdetMap = std::unordered_map<LayerSubdetKey, PtEtaPhiZChargeMap, boost::hash<LayerSubdetKey>>;
+  using PixelMap = LayerSubdetMap;
 
-  PtEtaPhiZChargeMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,
+  PixelMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,
                                      DetectorGeometry const& det_geom) {
-    constexpr unsigned int kNEta = 25;
-    constexpr unsigned int kNPhi = 72;
-    constexpr unsigned int kNZ = 25;
-    constexpr std::array<double, 3> kPtBounds = {{kPtThreshold, 2.0, 10'000.0}};
 
-    PtEtaPhiZChargeMap maps;
+    LayerSubdetMap maps;
 
     // Initialize empty lists for the pixel map
-    for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
-      for (unsigned int ieta = 0; ieta < kNEta; ieta++) {
-        for (unsigned int iphi = 0; iphi < kNPhi; iphi++) {
-          for (unsigned int iz = 0; iz < kNZ; iz++) {
-            maps[{ipt, ieta, iphi, iz, 1}] = LayerSubdetMap();
-            maps[{ipt, ieta, iphi, iz, -1}] = LayerSubdetMap();
-            auto& map_pos = maps.at({ipt, ieta, iphi, iz, 1});
-            auto& map_neg = maps.at({ipt, ieta, iphi, iz, -1});
-            for (unsigned int layer : {1, 2}) {
-              for (unsigned int subdet : {4, 5}) {
-                map_pos[{layer, subdet}] = {};
-                map_neg[{layer, subdet}] = {};
+    for (unsigned int layer : {1, 2}) {
+      for (unsigned int subdet : {4, 5}) {
+          maps[{layer, subdet}] = PtEtaPhiZChargeMap();
+          auto& map = maps.at({layer, subdet});
+            for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
+              for (unsigned int ieta = 0; ieta < kNEta; ieta++) {
+                for (unsigned int iphi = 0; iphi < kNPhi; iphi++) {
+                  for (unsigned int iz = 0; iz < kNZ; iz++) {
+                    map.try_emplace({ipt, ieta, iphi, iz, 1});
+                    map.try_emplace({ipt, ieta, iphi, iz, -1});
               }
             }
           }
@@ -114,10 +109,10 @@ namespace lstgeometry {
 
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
             for (unsigned int iphi = phibins_pos_start; iphi < phibins_pos_end; iphi++) {
-              maps[{ipt, ieta, iphi, iz, 1}][{layer, subdet}].push_back(detId);
+              maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
             }
             for (unsigned int iphi = phibins_neg_start; iphi < phibins_neg_end; iphi++) {
-              maps[{ipt, ieta, iphi, iz, 1}][{layer, subdet}].push_back(detId);
+              maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
             }
           }
         }
