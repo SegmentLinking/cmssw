@@ -7,6 +7,8 @@
 #include <vector>
 #include <tuple>
 #include <unordered_set>
+#include <unordered_map>
+#include <initializer_list>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
@@ -271,6 +273,20 @@ namespace lstgeometry {
     }
 
     return list_of_detids_etaphi_layer_tar;
+  }
+  
+  std::unordered_map<unsigned int, std::unordered_set<unsigned int>>
+  mergeLineConnections(std::initializer_list<const std::unordered_map<unsigned int, std::vector<unsigned int>>*> connections_list) {
+      std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged;
+  
+      for (auto* connections : connections_list) {
+          for (const auto& [detid, list] : *connections) {
+              auto& target = merged[detid];
+              target.insert(list.begin(), list.end());
+          }
+      }
+
+      return merged;
   }
 
 }  // namespace lstgeometry
