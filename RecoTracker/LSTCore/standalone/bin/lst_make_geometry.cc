@@ -55,13 +55,13 @@ int main(int argc, char **argv) {
     
     std::cout << "Computing centroids" << std::endl;
     auto centroids = computeCentroids(sensors_info);
-    writeCentroids(centroids, output_dir + "output_centroids.bin", false);
+    writeCentroids(centroids, output_dir + "sensor_centroids", false);
     std::cout << "Computing centroids done" << std::endl;
     
     std::cout << "Processing corners" << std::endl;
     auto [barrel_slopes, endcap_slopes] = processCorners(assigned_corners);
-    writeSlopes(barrel_slopes, sensors_info, output_dir + "tilted_barrel_orientation.bin", false);
-    writeSlopes(endcap_slopes, sensors_info, output_dir + "endcap_orientation.bin", false);
+    writeSlopes(barrel_slopes, sensors_info, output_dir + "tilted_barrel_orientation", false);
+    writeSlopes(endcap_slopes, sensors_info, output_dir + "endcap_orientation", false);
     std::cout << "Processing corners done" << std::endl;
     
     std::cout << "Building detector geometry" << std::endl;
@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
     
     std::cout << "Computing pixel map" << std::endl;
     auto pixel_map = computePixelMap(centroids, det_geom);
+    writePixelMaps(pixel_map, output_dir + "pixelmap/pLS_map", false);
     std::cout << "Computing pixel map done" << std::endl;
     
     std::cout << "Computing module maps" << std::endl;
@@ -95,7 +96,7 @@ int main(int argc, char **argv) {
         curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, centroids, det_geom);
     }
     auto merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
-    writeModuleConnections(merged_line_connections, output_dir + "module_connection_tracing_merged.bin", false);
+    writeModuleConnections(merged_line_connections, output_dir + "module_connection_tracing_merged", false);
     std::cout << "Computing module maps done" << std::endl;
     
     std::cout << "Done!" << std::endl;
