@@ -244,15 +244,47 @@ namespace lstgeometry {
               std::ofstream file_pos(filename_pos, std::ios::binary);
               std::ofstream file_neg(filename_neg, std::ios::binary);
               
-              for (auto& [key, list] : map) {
+              for (auto& [key, set] : map) {
                   auto& [ipt, ieta, iphi, iz, charge] = key;
                   unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
                   
+                  file_all.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
+                  (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
+                  unsigned int length = set.size();
+                  file_all.write(reinterpret_cast<const char*>(&length), sizeof(length));
+                  (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&length), sizeof(length));
+                  for (unsigned int i : set) {
+                      file_all.write(reinterpret_cast<const char*>(&i), sizeof(i));
+                      (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&i), sizeof(i));
+                  }
               }
           }
       } else {
         for (auto& [layersubdet, map] : maps) {
+            auto& [layer, subdet] = layersubdet;
             
+            std::string filename_all = std::format("{}_layer{}_subdet{}.txt", base_filename, layer, subdet);
+            std::string filename_pos = std::format("{}_pos_layer{}_subdet{}.txt", base_filename, layer, subdet);
+            std::string filename_neg = std::format("{}_neg_layer{}_subdet{}.txt", base_filename, layer, subdet);
+            
+            std::ofstream file_all(filename_all);
+            std::ofstream file_pos(filename_pos);
+            std::ofstream file_neg(filename_neg);
+            
+            for (auto& [key, set] : map) {
+                auto& [ipt, ieta, iphi, iz, charge] = key;
+                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                
+                unsigned int length = set.size();
+                file_all << isuperbin << "," << length;
+                (charge > 0 ? file_pos : file_neg) << isuperbin << "," << length;
+                for (unsigned int i : set) {
+                    file_all << "," << i;
+                    (charge > 0 ? file_pos : file_neg) << "," << i;
+                }
+                file_all << std::endl;
+                (charge > 0 ? file_pos : file_neg) << std::endl;
+            }
         }
     }
   }
