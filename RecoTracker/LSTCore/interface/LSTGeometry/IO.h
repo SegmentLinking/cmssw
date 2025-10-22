@@ -4,12 +4,15 @@
 #include "Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
 
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <format>
+#include <filesystem>
 
 namespace lstgeometry {
 
@@ -145,7 +148,8 @@ namespace lstgeometry {
     return averages;
   }
   
-  void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids, std::string const& filename, bool binary = true) {
+  void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids, std::string const& base_filename, bool binary = true) {
+      std::string filename = base_filename + (binary ? ".bin" : ".txt");
       std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
       
       if(binary) {
@@ -167,7 +171,8 @@ namespace lstgeometry {
       }
   }
   
-  void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes, std::unordered_map<unsigned int, SensorInfo> const& sensors, std::string const& filename, bool binary = true) {
+  void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes, std::unordered_map<unsigned int, SensorInfo> const& sensors, std::string const& base_filename, bool binary = true) {
+      std::string filename = base_filename + (binary ? ".bin" : ".txt");
       std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
       
       if(binary) {
@@ -199,7 +204,8 @@ namespace lstgeometry {
       }
   }
   
-  void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections, std::string const& filename, bool binary = true) {
+  void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections, std::string const& base_filename, bool binary = true) {
+      std::string filename = base_filename + (binary ? ".bin" : ".txt");
       std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
       
       if(binary) {
@@ -220,6 +226,35 @@ namespace lstgeometry {
             file << std::endl;
         }
       }
+  }
+  
+  void writePixelMaps(PixelMap const& maps, std::string const& base_filename, bool binary = true) {
+      std::filesystem::path filepath(base_filename);
+      std::filesystem::create_directories(filepath.parent_path());
+      
+      if(binary) {
+          for (auto& [layersubdet, map] : maps) {
+              auto& [layer, subdet] = layersubdet;
+              
+              std::string filename_all = std::format("{}_layer{}_subdet{}.bin", base_filename, layer, subdet);
+              std::string filename_pos = std::format("{}_pos_layer{}_subdet{}.bin", base_filename, layer, subdet);
+              std::string filename_neg = std::format("{}_neg_layer{}_subdet{}.bin", base_filename, layer, subdet);
+              
+              std::ofstream file_all(filename_all, std::ios::binary);
+              std::ofstream file_pos(filename_pos, std::ios::binary);
+              std::ofstream file_neg(filename_neg, std::ios::binary);
+              
+              for (auto& [key, list] : map) {
+                  auto& [ipt, ieta, iphi, iz, charge] = key;
+                  unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                  
+              }
+          }
+      } else {
+        for (auto& [layersubdet, map] : maps) {
+            
+        }
+    }
   }
 
 }  // namespace lstgeometry
