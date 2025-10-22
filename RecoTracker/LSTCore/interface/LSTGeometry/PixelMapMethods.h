@@ -89,7 +89,7 @@ namespace lstgeometry {
           // Compute the indices of the compatible eta range
           unsigned int ietamin = static_cast<unsigned int>(std::max((etamin + 2.6) / (5.2 / kNEta), 0.0));
           unsigned int ietamax =
-              static_cast<unsigned int>(std::min((etamax + 2.6) / (5.2 / kNEta), static_cast<double>(kNEta)));
+              static_cast<unsigned int>(std::min((etamax + 2.6) / (5.2 / kNEta), static_cast<double>(kNEta-1)));
 
           auto phi_ranges = det_geom.getCompatiblePhiRange(detId, pt_lo, pt_hi);
 
@@ -102,17 +102,32 @@ namespace lstgeometry {
           int iphimax_neg = static_cast<int>((phi_ranges.second.second + std::numbers::pi_v<double>) /
                                              (2. * std::numbers::pi_v<double> / kNPhi));
 
-          unsigned int phibins_pos_start = iphimin_pos <= iphimax_pos ? iphimin_pos : 0;
-          unsigned int phibins_pos_end = iphimin_pos <= iphimax_pos ? iphimax_pos : kNPhi;
-          unsigned int phibins_neg_start = iphimin_neg <= iphimax_neg ? iphimin_neg : 0;
-          unsigned int phibins_neg_end = iphimin_neg <= iphimax_neg ? iphimax_neg : kNPhi;
-
+          // <= to cover some inefficiencies
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
-            for (unsigned int iphi = phibins_pos_start; iphi < phibins_pos_end; iphi++) {
-              maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+              // if the range is crossing the -pi v. pi boundary special care is needed
+            if (iphimin_pos <= iphimax_pos) {
+                for (unsigned int iphi = iphimin_pos; iphi < iphimax_pos; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                }
+            } else {
+                for (unsigned int iphi = 0; iphi < iphimax_pos; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                }
+                for (unsigned int iphi = iphimin_pos; iphi < kNPhi; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                }
             }
-            for (unsigned int iphi = phibins_neg_start; iphi < phibins_neg_end; iphi++) {
-              maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+            if (iphimin_neg <= iphimax_neg) {
+                for (unsigned int iphi = iphimin_neg; iphi < iphimax_neg; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                }
+            } else {
+                for (unsigned int iphi = 0; iphi < iphimax_neg; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                }
+                for (unsigned int iphi = iphimin_neg; iphi < kNPhi; iphi++) {
+                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                }
             }
           }
         }
