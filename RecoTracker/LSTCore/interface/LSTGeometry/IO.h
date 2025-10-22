@@ -248,14 +248,22 @@ namespace lstgeometry {
                   auto& [ipt, ieta, iphi, iz, charge] = key;
                   unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
                   
-                  file_all.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
                   (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
                   unsigned int length = set.size();
-                  file_all.write(reinterpret_cast<const char*>(&length), sizeof(length));
                   (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&length), sizeof(length));
                   for (unsigned int i : set) {
-                      file_all.write(reinterpret_cast<const char*>(&i), sizeof(i));
                       (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&i), sizeof(i));
+                  }
+                  if (charge > 0) {
+                      file_all.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
+                      auto full_set = std::set<unsigned int>(set.begin(), set.end());
+                      auto& negative_set = map.at({ipt, ieta, iphi, iz, -1});
+                      full_set.insert(negative_set.begin(), negative_set.end());
+                      unsigned int full_length = full_set.size();
+                      file_all.write(reinterpret_cast<const char*>(&full_length), sizeof(full_length));
+                      for (unsigned int i : full_set) {
+                          file_all.write(reinterpret_cast<const char*>(&i), sizeof(i));
+                      }
                   }
               }
           }
@@ -276,14 +284,23 @@ namespace lstgeometry {
                 unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
                 
                 unsigned int length = set.size();
-                file_all << isuperbin << "," << length;
                 (charge > 0 ? file_pos : file_neg) << isuperbin << "," << length;
                 for (unsigned int i : set) {
-                    file_all << "," << i;
                     (charge > 0 ? file_pos : file_neg) << "," << i;
                 }
-                file_all << std::endl;
                 (charge > 0 ? file_pos : file_neg) << std::endl;
+                if (charge > 0) {;
+                    auto full_set = std::set<unsigned int>(set.begin(), set.end());
+                    auto& negative_set = map.at({ipt, ieta, iphi, iz, -1});
+                    full_set.insert(negative_set.begin(), negative_set.end());
+                    unsigned int full_length = full_set.size();
+                    file_all << isuperbin << "," << full_length;
+                    for (unsigned int i : full_set) {
+                        file_all << "," << i;
+                    }
+                    file_all << std::endl;
+                }
+                
             }
         }
     }

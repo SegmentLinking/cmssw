@@ -90,7 +90,7 @@ namespace lstgeometry {
       return maxR;
     }
 
-    double getMinz(unsigned int detId) const {
+    double getMinZ(unsigned int detId) const {
       auto const& corners = corners_.at(detId);
       double minZ = std::numeric_limits<double>::max();
       for (int i = 0; i < corners.rows(); i++) {
@@ -100,9 +100,9 @@ namespace lstgeometry {
       return minZ;
     }
 
-    double getMaxz(unsigned int detId) const {
+    double getMaxZ(unsigned int detId) const {
       auto const& corners = corners_.at(detId);
-      double maxZ = std::numeric_limits<double>::min();
+      double maxZ = std::numeric_limits<double>::lowest();
       for (int i = 0; i < corners.rows(); i++) {
         double z = corners(i, 0);
         maxZ = std::max(maxZ, z);
@@ -139,9 +139,9 @@ namespace lstgeometry {
 
     double getMaxPhi(unsigned int detId) const {
       auto const& corners = corners_.at(detId);
-      double maxPhi = std::numeric_limits<double>::min();
-      double maxPosPhi = std::numeric_limits<double>::min();
-      double maxNegPhi = std::numeric_limits<double>::min();
+      double maxPhi = std::numeric_limits<double>::lowest();
+      double maxPosPhi = std::numeric_limits<double>::lowest();
+      double maxNegPhi = std::numeric_limits<double>::lowest();
       unsigned int nPos = 0;
       unsigned int nOverPi2 = 0;
       for (int i = 0; i < corners.rows(); i++) {
@@ -167,8 +167,8 @@ namespace lstgeometry {
     std::pair<double, double> getCompatibleEtaRange(unsigned int detId, double zmin_bound, double zmax_bound) const {
       double minr = getMinR(detId);
       double maxr = getMaxR(detId);
-      double minz = getMinz(detId);
-      double maxz = getMaxz(detId);
+      double minz = getMinZ(detId);
+      double maxz = getMaxZ(detId);
       double mineta = -std::log(std::tan(std::atan2(minz > 0 ? maxr : minr, minz - zmin_bound) / 2.));
       double maxeta = -std::log(std::tan(std::atan2(maxz > 0 ? minr : maxr, maxz - zmax_bound) / 2.));
 
