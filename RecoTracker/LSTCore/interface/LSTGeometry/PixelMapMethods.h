@@ -112,7 +112,7 @@ namespace lstgeometry {
               maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
             }
             for (unsigned int iphi = phibins_neg_start; iphi < phibins_neg_end; iphi++) {
-              maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+              maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
             }
           }
         }
