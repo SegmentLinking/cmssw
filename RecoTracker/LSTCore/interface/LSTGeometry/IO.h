@@ -198,6 +198,29 @@ namespace lstgeometry {
         }
       }
   }
+  
+  void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections, std::string const& filename, bool binary = true) {
+      std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
+      
+      if(binary) {
+          for (auto& [detid, set] : connections) {
+              file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
+              unsigned int length = set.size();
+              file.write(reinterpret_cast<const char*>(&length), sizeof(length));
+              for (unsigned int i : set) {
+                  file.write(reinterpret_cast<const char*>(&i), sizeof(i));
+              }
+          }
+      } else {
+        for (auto& [detid, set] : connections) {
+            file << detid << "," << set.size();
+            for (unsigned int i : set) {
+                file << "," << i;
+            }
+            file << std::endl;
+        }
+      }
+  }
 
 }  // namespace lstgeometry
 
