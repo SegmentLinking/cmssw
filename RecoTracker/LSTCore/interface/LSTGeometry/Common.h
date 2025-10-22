@@ -33,7 +33,7 @@ namespace lstgeometry {
   double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
 
   double phi_mpi_pi(double phi) {
-    while (phi > std::numbers::pi_v<double>)
+    while (phi >= std::numbers::pi_v<double>)
       phi -= 2 * std::numbers::pi_v<double>;
     while (phi < -std::numbers::pi_v<double>)
       phi += 2 * std::numbers::pi_v<double>;
