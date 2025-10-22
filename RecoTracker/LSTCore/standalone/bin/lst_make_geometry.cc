@@ -44,23 +44,36 @@ int main(int argc, char **argv) {
     auto average_r = readAverages(average_r_file);
     auto average_z = readAverages(average_z_file);
     
+    std::cout << "Transforming corners" << std::endl;
     for (auto& mod : modules_info)
         transformSensorCorners(mod);
+    std::cout << "Transforming corners done" << std::endl;
     
+    std::cout << "Assigning corners" << std::endl;
     auto assigned_corners = assignCornersToSensors(modules_info, sensors_info);
+    std::cout << "Assigning corners done" << std::endl;
     
+    std::cout << "Computing centroids" << std::endl;
     auto centroids = computeCentroids(sensors_info);
     writeCentroids(centroids, output_dir + "output_centroids.bin", false);
+    std::cout << "Computing centroids done" << std::endl;
     
+    std::cout << "Processing corners" << std::endl;
     auto [barrel_slopes, endcap_slopes] = processCorners(assigned_corners);
     writeSlopes(barrel_slopes, sensors_info, output_dir + "tilted_barrel_orientation.bin", false);
     writeSlopes(endcap_slopes, sensors_info, output_dir + "endcap_orientation.bin", false);
+    std::cout << "Processing corners done" << std::endl;
     
+    std::cout << "Building detector geometry" << std::endl;
     auto det_geom = DetectorGeometry(assigned_corners, average_r, average_z);
     det_geom.buildByLayer();
+    std::cout << "Building detector geometry done" << std::endl;
     
+    std::cout << "Computing pixel map" << std::endl;
     auto pixel_map = computePixelMap(centroids, det_geom);
+    std::cout << "Computing pixel map done" << std::endl;
     
+    std::cout << "Computing module maps" << std::endl;
     auto detids_etaphi_layer_ref = det_geom.getDetIds(
                 [](const auto& x){
                     auto mod = Module(x.first);
@@ -81,6 +94,9 @@ int main(int argc, char **argv) {
         straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, centroids, det_geom);
         curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, centroids, det_geom);
     }
+    auto merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
+    writeModuleConnections(merged_line_connections, output_dir + "module_connection_tracing_merged.bin", false);
+    std::cout << "Computing module maps done" << std::endl;
     
     std::cout << "Done!" << std::endl;
     
