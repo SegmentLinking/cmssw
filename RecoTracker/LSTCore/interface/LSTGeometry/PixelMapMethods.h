@@ -14,31 +14,23 @@
 
 namespace lstgeometry {
 
-  using PtEtaPhiZChargeKey = std::tuple<unsigned int, unsigned int, unsigned int, unsigned int, int>;
-  using LayerSubdetKey = std::tuple<unsigned int, unsigned int>;
-  using PtEtaPhiZChargeMap = std::unordered_map<PtEtaPhiZChargeKey, std::unordered_set<unsigned int>, boost::hash<PtEtaPhiZChargeKey>>;
-  using LayerSubdetMap = std::unordered_map<LayerSubdetKey, PtEtaPhiZChargeMap, boost::hash<LayerSubdetKey>>;
-  using PixelMap = LayerSubdetMap;
+  using LayerSubdetChargeKey = std::tuple<unsigned int, unsigned int, int>;
+  using LayerSubdetChargeMap = std::unordered_map<LayerSubdetChargeKey, std::vector<std::unordered_set<unsigned int>>, boost::hash<LayerSubdetChargeKey>>;
+  using PixelMap = LayerSubdetChargeMap;
 
   PixelMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,
                                      DetectorGeometry const& det_geom) {
-
-    LayerSubdetMap maps;
+                                         
+    // Charge 0 is the union of charge 1 and charge -1
+    PixelMap maps;
+    
+    std::size_t nSuperbin = (kPtBounds.size()-1) * kNPhi * kNEta * kNZ;
 
     // Initialize empty lists for the pixel map
     for (unsigned int layer : {1, 2}) {
       for (unsigned int subdet : {4, 5}) {
-          maps[{layer, subdet}] = PtEtaPhiZChargeMap();
-          auto& map = maps.at({layer, subdet});
-            for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
-              for (unsigned int ieta = 0; ieta < kNEta; ieta++) {
-                for (unsigned int iphi = 0; iphi < kNPhi; iphi++) {
-                  for (unsigned int iz = 0; iz < kNZ; iz++) {
-                    map.try_emplace({ipt, ieta, iphi, iz, 1});
-                    map.try_emplace({ipt, ieta, iphi, iz, -1});
-              }
-            }
-          }
+        for (int charge : {-1, 0, 1}) {
+          maps.try_emplace({layer, subdet, charge}, nSuperbin);
         }
       }
     }
@@ -107,26 +99,38 @@ namespace lstgeometry {
               // if the range is crossing the -pi v. pi boundary special care is needed
             if (iphimin_pos <= iphimax_pos) {
                 for (unsigned int iphi = iphimin_pos; iphi < iphimax_pos; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                  unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                  maps[{layer, subdet, 1}][isuperbin].insert(detId);
+                  maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
             } else {
                 for (unsigned int iphi = 0; iphi < iphimax_pos; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                    unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                    maps[{layer, subdet, 1}][isuperbin].insert(detId);
+                    maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
                 for (unsigned int iphi = iphimin_pos; iphi < kNPhi; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, 1}].insert(detId);
+                    unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                    maps[{layer, subdet, 1}][isuperbin].insert(detId);
+                    maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
             }
             if (iphimin_neg <= iphimax_neg) {
                 for (unsigned int iphi = iphimin_neg; iphi < iphimax_neg; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                    unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                    maps[{layer, subdet, -1}][isuperbin].insert(detId);
+                    maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
             } else {
                 for (unsigned int iphi = 0; iphi < iphimax_neg; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                    unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                    maps[{layer, subdet, -1}][isuperbin].insert(detId);
+                    maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
                 for (unsigned int iphi = iphimin_neg; iphi < kNPhi; iphi++) {
-                  maps[{layer, subdet}][{ipt, ieta, iphi, iz, -1}].insert(detId);
+                    unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+                    maps[{layer, subdet, -1}][isuperbin].insert(detId);
+                    maps[{layer, subdet, 0}][isuperbin].insert(detId);
                 }
             }
           }

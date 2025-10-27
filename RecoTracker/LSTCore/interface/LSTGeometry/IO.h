@@ -233,74 +233,43 @@ namespace lstgeometry {
       std::filesystem::create_directories(filepath.parent_path());
       
       if(binary) {
-          for (auto& [layersubdet, map] : maps) {
-              auto& [layer, subdet] = layersubdet;
+          for (auto& [layersubdetcharge, map] : maps) {
+              auto& [layer, subdet, charge] = layersubdetcharge;
               
-              std::string filename_all = std::format("{}_layer{}_subdet{}.bin", base_filename, layer, subdet);
-              std::string filename_pos = std::format("{}_pos_layer{}_subdet{}.bin", base_filename, layer, subdet);
-              std::string filename_neg = std::format("{}_neg_layer{}_subdet{}.bin", base_filename, layer, subdet);
+              std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
+              std::string filename = std::format("{}{}_layer{}_subdet{}.bin", base_filename, charge_str, layer, subdet);
               
-              std::ofstream file_all(filename_all, std::ios::binary);
-              std::ofstream file_pos(filename_pos, std::ios::binary);
-              std::ofstream file_neg(filename_neg, std::ios::binary);
+              std::ofstream file(filename, std::ios::binary);
               
-              for (auto& [key, set] : map) {
-                  auto& [ipt, ieta, iphi, iz, charge] = key;
-                  unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+              for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
+                  auto const& set = map.at(isuperbin);
                   
-                  (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
+                  file.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
                   unsigned int length = set.size();
-                  (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&length), sizeof(length));
+                  file.write(reinterpret_cast<const char*>(&length), sizeof(length));
                   for (unsigned int i : set) {
-                      (charge > 0 ? file_pos : file_neg).write(reinterpret_cast<const char*>(&i), sizeof(i));
-                  }
-                  if (charge > 0) {
-                      file_all.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
-                      auto full_set = std::set<unsigned int>(set.begin(), set.end());
-                      auto& negative_set = map.at({ipt, ieta, iphi, iz, -1});
-                      full_set.insert(negative_set.begin(), negative_set.end());
-                      unsigned int full_length = full_set.size();
-                      file_all.write(reinterpret_cast<const char*>(&full_length), sizeof(full_length));
-                      for (unsigned int i : full_set) {
-                          file_all.write(reinterpret_cast<const char*>(&i), sizeof(i));
-                      }
+                      file.write(reinterpret_cast<const char*>(&i), sizeof(i));
                   }
               }
           }
       } else {
-        for (auto& [layersubdet, map] : maps) {
-            auto& [layer, subdet] = layersubdet;
+        for (auto& [layersubdetcharge, map] : maps) {
+            auto& [layer, subdet, charge] = layersubdetcharge;
             
-            std::string filename_all = std::format("{}_layer{}_subdet{}.txt", base_filename, layer, subdet);
-            std::string filename_pos = std::format("{}_pos_layer{}_subdet{}.txt", base_filename, layer, subdet);
-            std::string filename_neg = std::format("{}_neg_layer{}_subdet{}.txt", base_filename, layer, subdet);
+            std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
+            std::string filename = std::format("{}{}_layer{}_subdet{}.txt", base_filename, charge_str, layer, subdet);
             
-            std::ofstream file_all(filename_all);
-            std::ofstream file_pos(filename_pos);
-            std::ofstream file_neg(filename_neg);
+            std::ofstream file(filename);
             
-            for (auto& [key, set] : map) {
-                auto& [ipt, ieta, iphi, iz, charge] = key;
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
+            for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
+                auto const& set = map.at(isuperbin);
                 
                 unsigned int length = set.size();
-                (charge > 0 ? file_pos : file_neg) << isuperbin << "," << length;
+                file << isuperbin << "," << length;
                 for (unsigned int i : set) {
-                    (charge > 0 ? file_pos : file_neg) << "," << i;
+                    file << "," << i;
                 }
-                (charge > 0 ? file_pos : file_neg) << std::endl;
-                if (charge > 0) {;
-                    auto full_set = std::set<unsigned int>(set.begin(), set.end());
-                    auto& negative_set = map.at({ipt, ieta, iphi, iz, -1});
-                    full_set.insert(negative_set.begin(), negative_set.end());
-                    unsigned int full_length = full_set.size();
-                    file_all << isuperbin << "," << full_length;
-                    for (unsigned int i : full_set) {
-                        file_all << "," << i;
-                    }
-                    file_all << std::endl;
-                }
-                
+                file << std::endl;
             }
         }
     }
