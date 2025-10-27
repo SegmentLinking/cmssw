@@ -209,7 +209,7 @@ namespace lstgeometry {
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
-      if (moduleOverlapsInEtaPhi(det_geom.getCorners(ref_detid), det_geom.getCorners(tar_detid), refphi, 0))
+      if (moduleOverlapsInEtaPhi(next_layer_bound_points_matrix, det_geom.getCorners(tar_detid), refphi, 0))
         list_of_detids_etaphi_layer_tar.push_back(tar_detid);
     }
 
