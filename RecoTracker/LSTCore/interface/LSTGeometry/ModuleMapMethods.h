@@ -58,19 +58,19 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           std::vector<Polygon> difference;
-          for (auto &ref_polygon_piece : ref_polygon) {
-              std::vector<Polygon> tmp_difference;
-              boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
-              difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
+          for (auto& ref_polygon_piece : ref_polygon) {
+            std::vector<Polygon> tmp_difference;
+            boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
+            difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
           }
 
           ref_polygon = std::move(difference);
         }
 
         double area = 0.;
-        for (auto &ref_polygon_piece : ref_polygon)
-            area += boost::geometry::area(ref_polygon_piece);
-        
+        for (auto& ref_polygon_piece : ref_polygon)
+          area += boost::geometry::area(ref_polygon_piece);
+
         if (area <= 0.0001)
           continue;
 
@@ -86,13 +86,13 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           bool intersects = false;
-          for (auto &ref_polygon_piece : ref_polygon){
-              if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
-                  intersects = true;
-                  break;
-              }
+          for (auto& ref_polygon_piece : ref_polygon) {
+            if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
+              intersects = true;
+              break;
+            }
           }
-          
+
           if (intersects)
             barrel_endcap_connected_tar_detids.insert(tar_detid);
         }
@@ -105,16 +105,14 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  MatrixD4x3 boundsAfterCurved(
-      unsigned int ref_detid,
-      std::unordered_map<unsigned int, Centroid> const& centroids,
-      DetectorGeometry const& det_geom,
-      bool doR = true) {
+  MatrixD4x3 boundsAfterCurved(unsigned int ref_detid,
+                               std::unordered_map<unsigned int, Centroid> const& centroids,
+                               DetectorGeometry const& det_geom,
+                               bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
     auto centroid = centroids.at(ref_detid);
     int charge = 1;
-    double theta =
-        std::atan2(std::sqrt(centroid.x * centroid.x + centroid.y * centroid.y), centroid.z);
+    double theta = std::atan2(std::sqrt(centroid.x * centroid.x + centroid.y * centroid.y), centroid.z);
     double refphi = std::atan2(centroid.y, centroid.x);
     Module refmodule(ref_detid);
     unsigned short ref_layer = refmodule.layer();
@@ -219,23 +217,23 @@ namespace lstgeometry {
 
       // Check whether there is still significant non-zero area
       for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
-          if (!ref_polygon.size())
+        if (!ref_polygon.size())
           break;
         Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
         std::vector<Polygon> difference;
-        for (auto &ref_polygon_piece : ref_polygon) {
-            std::vector<Polygon> tmp_difference;
-            boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
-            difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
+        for (auto& ref_polygon_piece : ref_polygon) {
+          std::vector<Polygon> tmp_difference;
+          boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
+          difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
         }
 
         ref_polygon = std::move(difference);
       }
-      
+
       double area = 0.;
-      for (auto &ref_polygon_piece : ref_polygon)
-          area += boost::geometry::area(ref_polygon_piece);
+      for (auto& ref_polygon_piece : ref_polygon)
+        area += boost::geometry::area(ref_polygon_piece);
 
       if (area > 0.0001) {
         auto const& new_tar_detids_to_be_considered = det_geom.getEndcapLayerDetIds(1);
@@ -250,13 +248,13 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           bool intersects = false;
-          for (auto &ref_polygon_piece : ref_polygon){
-              if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
-                  intersects = true;
-                  break;
-              }
+          for (auto& ref_polygon_piece : ref_polygon) {
+            if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
+              intersects = true;
+              break;
+            }
           }
-          
+
           if (intersects)
             barrel_endcap_connected_tar_detids.insert(tar_detid);
         }
@@ -269,19 +267,19 @@ namespace lstgeometry {
 
     return list_of_detids_etaphi_layer_tar;
   }
-  
-  std::unordered_map<unsigned int, std::unordered_set<unsigned int>>
-  mergeLineConnections(std::initializer_list<const std::unordered_map<unsigned int, std::vector<unsigned int>>*> connections_list) {
-      std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged;
-  
-      for (auto* connections : connections_list) {
-          for (const auto& [detid, list] : *connections) {
-              auto& target = merged[detid];
-              target.insert(list.begin(), list.end());
-          }
-      }
 
-      return merged;
+  std::unordered_map<unsigned int, std::unordered_set<unsigned int>> mergeLineConnections(
+      std::initializer_list<const std::unordered_map<unsigned int, std::vector<unsigned int>>*> connections_list) {
+    std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged;
+
+    for (auto* connections : connections_list) {
+      for (const auto& [detid, list] : *connections) {
+        auto& target = merged[detid];
+        target.insert(list.begin(), list.end());
+      }
+    }
+
+    return merged;
   }
 
 }  // namespace lstgeometry
