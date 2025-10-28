@@ -105,7 +105,7 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  std::vector<std::tuple<double, double, double>> boundsAfterCurved(
+  MatrixD4x3 boundsAfterCurved(
       unsigned int ref_detid,
       std::unordered_map<unsigned int, Centroid> const& centroids,
       DetectorGeometry const& det_geom,
@@ -114,12 +114,12 @@ namespace lstgeometry {
     auto centroid = centroids.at(ref_detid);
     int charge = 1;
     double theta =
-        std::atan2(std::sqrt(centroid.x * centroid.x + centroid.y * centroid.y), centroid.z);  // TODO: Is this right?
+        std::atan2(std::sqrt(centroid.x * centroid.x + centroid.y * centroid.y), centroid.z);
     double refphi = std::atan2(centroid.y, centroid.x);
     Module refmodule(ref_detid);
     unsigned short ref_layer = refmodule.layer();
     unsigned short ref_subdet = refmodule.subdet();
-    std::vector<std::tuple<double, double, double>> next_layer_bound_points;
+    MatrixD4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
       Helix helix_p10 =
@@ -177,7 +177,9 @@ namespace lstgeometry {
           }
         }
       }
-      next_layer_bound_points.push_back({std::get<2>(next_point), std::get<0>(next_point), std::get<1>(next_point)});
+      next_layer_bound_points(i, 0) = std::get<2>(next_point);
+      next_layer_bound_points(i, 1) = std::get<0>(next_point);
+      next_layer_bound_points(i, 2) = std::get<1>(next_point);
     }
 
     return next_layer_bound_points;
@@ -198,18 +200,11 @@ namespace lstgeometry {
     auto const& tar_detids_to_be_considered =
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1) : det_geom.getEndcapLayerDetIds(ref_layer + 1);
 
-    std::vector<std::tuple<double, double, double>> next_layer_bound_points =
-        boundsAfterCurved(ref_detid, centroids, det_geom);
-    MatrixDNx3 next_layer_bound_points_matrix(next_layer_bound_points.size(), 3);
-    for (size_t i = 0; i < next_layer_bound_points.size(); i++) {
-      next_layer_bound_points_matrix(i, 0) = std::get<0>(next_layer_bound_points[i]);
-      next_layer_bound_points_matrix(i, 1) = std::get<1>(next_layer_bound_points[i]);
-      next_layer_bound_points_matrix(i, 2) = std::get<2>(next_layer_bound_points[i]);
-    }
+    auto next_layer_bound_points = boundsAfterCurved(ref_detid, centroids, det_geom);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
-      if (moduleOverlapsInEtaPhi(next_layer_bound_points_matrix, det_geom.getCorners(tar_detid), refphi, 0))
+      if (moduleOverlapsInEtaPhi(next_layer_bound_points, det_geom.getCorners(tar_detid), refphi, 0))
         list_of_detids_etaphi_layer_tar.push_back(tar_detid);
     }
 
@@ -220,7 +215,7 @@ namespace lstgeometry {
       int zshift = 0;
 
       std::vector<Polygon> ref_polygon;
-      ref_polygon.push_back(getEtaPhiPolygon(next_layer_bound_points_matrix, refphi, zshift));
+      ref_polygon.push_back(getEtaPhiPolygon(next_layer_bound_points, refphi, zshift));
 
       // Check whether there is still significant non-zero area
       for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
