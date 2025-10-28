@@ -59,7 +59,7 @@ namespace lstgeometry {
   std::tuple<double, double, double, double> getHelixPointFromZ(Helix const& helix, double target_z) {
     auto objective_function = [&helix, target_z](double t) {
       double z = helix.center_z + helix.radius * std::tan(helix.lam) * t;
-      return std::fabs(std::sqrt(z * z) - target_z);
+      return std::fabs(z - target_z);
     };
     int bits = std::numeric_limits<double>::digits;
     auto result = boost::math::tools::brent_find_minima(objective_function, 0.0, std::numbers::pi_v<double>, bits);
