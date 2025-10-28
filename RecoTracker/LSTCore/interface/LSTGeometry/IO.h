@@ -124,7 +124,7 @@ namespace lstgeometry {
 
     return sensors;
   }
-  
+
   std::vector<double> readAverages(std::string const& filename) {
     std::vector<double> averages;
     std::string line;
@@ -147,131 +147,139 @@ namespace lstgeometry {
 
     return averages;
   }
-  
-  void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids, std::string const& base_filename, bool binary = true) {
-      std::string filename = base_filename + (binary ? ".bin" : ".txt");
-      std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
-      
-      if(binary) {
-          for (auto& [detid, centroid] : centroids) {
-              float x = centroid.x;
-              float y = centroid.y;
-              float z = centroid.z;
-              unsigned int moduleType = centroid.moduleType;
-              file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
-              file.write(reinterpret_cast<const char*>(&x), sizeof(x));
-              file.write(reinterpret_cast<const char*>(&y), sizeof(y));
-              file.write(reinterpret_cast<const char*>(&z), sizeof(z));
-              file.write(reinterpret_cast<const char*>(&moduleType), sizeof(moduleType));
-          }
-      } else {
-        for (auto& [detid, centroid] : centroids) {
-            file << detid << "," << centroid.x << "," << centroid.y << "," << centroid.z << "," << centroid.moduleType << std::endl;
+
+  void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids,
+                      std::string const& base_filename,
+                      bool binary = true) {
+    std::string filename = base_filename + (binary ? ".bin" : ".txt");
+    std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
+
+    if (binary) {
+      for (auto& [detid, centroid] : centroids) {
+        float x = centroid.x;
+        float y = centroid.y;
+        float z = centroid.z;
+        unsigned int moduleType = centroid.moduleType;
+        file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
+        file.write(reinterpret_cast<const char*>(&x), sizeof(x));
+        file.write(reinterpret_cast<const char*>(&y), sizeof(y));
+        file.write(reinterpret_cast<const char*>(&z), sizeof(z));
+        file.write(reinterpret_cast<const char*>(&moduleType), sizeof(moduleType));
+      }
+    } else {
+      for (auto& [detid, centroid] : centroids) {
+        file << detid << "," << centroid.x << "," << centroid.y << "," << centroid.z << "," << centroid.moduleType
+             << std::endl;
+      }
+    }
+  }
+
+  void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes,
+                   std::unordered_map<unsigned int, SensorInfo> const& sensors,
+                   std::string const& base_filename,
+                   bool binary = true) {
+    std::string filename = base_filename + (binary ? ".bin" : ".txt");
+    std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
+
+    if (binary) {
+      for (auto& [detid, slope] : slopes) {
+        float drdz_slope = slope.drdz_slope;
+        float dxdy_slope = slope.dxdy_slope;
+        float phi = degToRad(sensors.at(detid).phi_deg);
+        file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
+        if (drdz_slope != kDefaultSlope) {
+          file.write(reinterpret_cast<const char*>(&drdz_slope), sizeof(drdz_slope));
+          file.write(reinterpret_cast<const char*>(&dxdy_slope), sizeof(dxdy_slope));
+        } else {
+          file.write(reinterpret_cast<const char*>(&dxdy_slope), sizeof(dxdy_slope));
+          file.write(reinterpret_cast<const char*>(&phi), sizeof(phi));
         }
       }
-  }
-  
-  void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes, std::unordered_map<unsigned int, SensorInfo> const& sensors, std::string const& base_filename, bool binary = true) {
-      std::string filename = base_filename + (binary ? ".bin" : ".txt");
-      std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
-      
-      if(binary) {
-          for (auto& [detid, slope] : slopes) {
-              float drdz_slope = slope.drdz_slope;
-              float dxdy_slope = slope.dxdy_slope;
-              float phi = degToRad(sensors.at(detid).phi_deg);
-              file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
-              if (drdz_slope != kDefaultSlope) {
-                  file.write(reinterpret_cast<const char*>(&drdz_slope), sizeof(drdz_slope));
-                  file.write(reinterpret_cast<const char*>(&dxdy_slope), sizeof(dxdy_slope));
-              } else {
-                  file.write(reinterpret_cast<const char*>(&dxdy_slope), sizeof(dxdy_slope));
-                  file.write(reinterpret_cast<const char*>(&phi), sizeof(phi));
-              }
-          }
-      } else {
-        for (auto& [detid, slope] : slopes) {
-            float drdz_slope = slope.drdz_slope;
-            float dxdy_slope = slope.dxdy_slope;
-            float phi = degToRad(sensors.at(detid).phi_deg);
-            file << detid << ",";
-            if (drdz_slope != kDefaultSlope) {
-                file << drdz_slope << "," << dxdy_slope << std::endl;
-            } else {
-                file << dxdy_slope << "," << phi << std::endl;
-            }
+    } else {
+      for (auto& [detid, slope] : slopes) {
+        float drdz_slope = slope.drdz_slope;
+        float dxdy_slope = slope.dxdy_slope;
+        float phi = degToRad(sensors.at(detid).phi_deg);
+        file << detid << ",";
+        if (drdz_slope != kDefaultSlope) {
+          file << drdz_slope << "," << dxdy_slope << std::endl;
+        } else {
+          file << dxdy_slope << "," << phi << std::endl;
         }
       }
+    }
   }
-  
-  void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections, std::string const& base_filename, bool binary = true) {
-      std::string filename = base_filename + (binary ? ".bin" : ".txt");
-      std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
-      
-      if(binary) {
-          for (auto& [detid, set] : connections) {
-              file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
-              unsigned int length = set.size();
-              file.write(reinterpret_cast<const char*>(&length), sizeof(length));
-              for (unsigned int i : set) {
-                  file.write(reinterpret_cast<const char*>(&i), sizeof(i));
-              }
-          }
-      } else {
-        for (auto& [detid, set] : connections) {
-            file << detid << "," << set.size();
-            for (unsigned int i : set) {
-                file << "," << i;
-            }
-            file << std::endl;
+
+  void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections,
+                              std::string const& base_filename,
+                              bool binary = true) {
+    std::string filename = base_filename + (binary ? ".bin" : ".txt");
+    std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
+
+    if (binary) {
+      for (auto& [detid, set] : connections) {
+        file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
+        unsigned int length = set.size();
+        file.write(reinterpret_cast<const char*>(&length), sizeof(length));
+        for (unsigned int i : set) {
+          file.write(reinterpret_cast<const char*>(&i), sizeof(i));
         }
       }
+    } else {
+      for (auto& [detid, set] : connections) {
+        file << detid << "," << set.size();
+        for (unsigned int i : set) {
+          file << "," << i;
+        }
+        file << std::endl;
+      }
+    }
   }
-  
+
   void writePixelMaps(PixelMap const& maps, std::string const& base_filename, bool binary = true) {
-      std::filesystem::path filepath(base_filename);
-      std::filesystem::create_directories(filepath.parent_path());
-      
-      if(binary) {
-          for (auto& [layersubdetcharge, map] : maps) {
-              auto& [layer, subdet, charge] = layersubdetcharge;
-              
-              std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
-              std::string filename = std::format("{}{}_layer{}_subdet{}.bin", base_filename, charge_str, layer, subdet);
-              
-              std::ofstream file(filename, std::ios::binary);
-              
-              for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
-                  auto const& set = map.at(isuperbin);
-                  
-                  file.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
-                  unsigned int length = set.size();
-                  file.write(reinterpret_cast<const char*>(&length), sizeof(length));
-                  for (unsigned int i : set) {
-                      file.write(reinterpret_cast<const char*>(&i), sizeof(i));
-                  }
-              }
+    std::filesystem::path filepath(base_filename);
+    std::filesystem::create_directories(filepath.parent_path());
+
+    if (binary) {
+      for (auto& [layersubdetcharge, map] : maps) {
+        auto& [layer, subdet, charge] = layersubdetcharge;
+
+        std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
+        std::string filename = std::format("{}{}_layer{}_subdet{}.bin", base_filename, charge_str, layer, subdet);
+
+        std::ofstream file(filename, std::ios::binary);
+
+        for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
+          auto const& set = map.at(isuperbin);
+
+          file.write(reinterpret_cast<const char*>(&isuperbin), sizeof(isuperbin));
+          unsigned int length = set.size();
+          file.write(reinterpret_cast<const char*>(&length), sizeof(length));
+          for (unsigned int i : set) {
+            file.write(reinterpret_cast<const char*>(&i), sizeof(i));
           }
-      } else {
-        for (auto& [layersubdetcharge, map] : maps) {
-            auto& [layer, subdet, charge] = layersubdetcharge;
-            
-            std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
-            std::string filename = std::format("{}{}_layer{}_subdet{}.txt", base_filename, charge_str, layer, subdet);
-            
-            std::ofstream file(filename);
-            
-            for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
-                auto const& set = map.at(isuperbin);
-                
-                unsigned int length = set.size();
-                file << isuperbin << "," << length;
-                for (unsigned int i : set) {
-                    file << "," << i;
-                }
-                file << std::endl;
-            }
         }
+      }
+    } else {
+      for (auto& [layersubdetcharge, map] : maps) {
+        auto& [layer, subdet, charge] = layersubdetcharge;
+
+        std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
+        std::string filename = std::format("{}{}_layer{}_subdet{}.txt", base_filename, charge_str, layer, subdet);
+
+        std::ofstream file(filename);
+
+        for (unsigned int isuperbin = 0; isuperbin < map.size(); isuperbin++) {
+          auto const& set = map.at(isuperbin);
+
+          unsigned int length = set.size();
+          file << isuperbin << "," << length;
+          for (unsigned int i : set) {
+            file << "," << i;
+          }
+          file << std::endl;
+        }
+      }
     }
   }
 

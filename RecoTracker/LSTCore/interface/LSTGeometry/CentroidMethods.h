@@ -51,7 +51,8 @@ namespace lstgeometry {
     }
   }
 
-  std::unordered_map<unsigned int, Centroid> computeCentroids(std::unordered_map<unsigned int, SensorInfo> const& sensors) {
+  std::unordered_map<unsigned int, Centroid> computeCentroids(
+      std::unordered_map<unsigned int, SensorInfo> const& sensors) {
     std::unordered_map<unsigned int, Centroid> centroids;
     for (auto const& [detId, sensor] : sensors) {
       int moduleType = parseModuleType(detId);

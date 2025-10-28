@@ -123,8 +123,10 @@ namespace lstgeometry {
     MatrixD4x2 tar_mod_boundaries_etaphi;
 
     for (int i = 0; i < 4; ++i) {
-      auto ref_etaphi = getEtaPhi(ref_mod_boundaries(i, 1), ref_mod_boundaries(i, 2), ref_mod_boundaries(i, 0)+zshift, refphi);
-      auto tar_etaphi = getEtaPhi(tar_mod_boundaries(i, 1), tar_mod_boundaries(i, 2), tar_mod_boundaries(i, 0)+zshift, refphi);
+      auto ref_etaphi =
+          getEtaPhi(ref_mod_boundaries(i, 1), ref_mod_boundaries(i, 2), ref_mod_boundaries(i, 0) + zshift, refphi);
+      auto tar_etaphi =
+          getEtaPhi(tar_mod_boundaries(i, 1), tar_mod_boundaries(i, 2), tar_mod_boundaries(i, 0) + zshift, refphi);
       ref_mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
       ref_mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
       tar_mod_boundaries_etaphi(i, 0) = tar_etaphi.first;

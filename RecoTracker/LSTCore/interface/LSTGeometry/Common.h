@@ -20,7 +20,7 @@ namespace lstgeometry {
   constexpr double kPtThreshold = 0.8;
   constexpr double k2Rinv1GeVf = 0.00299792458;
   constexpr double kB = 3.8112;
-  
+
   // For pixel maps
   constexpr unsigned int kNEta = 25;
   constexpr unsigned int kNPhi = 72;
