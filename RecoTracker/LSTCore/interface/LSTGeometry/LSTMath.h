@@ -74,13 +74,7 @@ namespace lstgeometry {
   }
 
   std::pair<double, double> getEtaPhi(double x, double y, double z, double refphi = 0) {
-    if (refphi != 0) {
-      double xnew = x * std::cos(-refphi) - y * std::sin(-refphi);
-      double ynew = x * std::sin(-refphi) + y * std::cos(-refphi);
-      x = xnew;
-      y = ynew;
-    }
-    double phi = std::atan2(y, x);
+    double phi = phi_mpi_pi(std::atan2(y, x) - refphi);
     double eta = std::copysign(-std::log(std::tan(std::atan(std::sqrt(x * x + y * y) / std::abs(z)) / 2.)), z);
     return std::make_pair(eta, phi);
   }
