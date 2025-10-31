@@ -12,7 +12,6 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-#include "LSTMath.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/LSTMath.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
@@ -133,7 +132,6 @@ namespace lstgeometry {
       double bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
       double phi_diff = phi_mpi_pi(bound_phi - refphi);
 
-      // TODO: Check if the copysign arguments are correct
       std::tuple<double, double, double, double> next_point;
       if (ref_subdet == 5) {
         if (doR) {
@@ -149,13 +147,13 @@ namespace lstgeometry {
             if (phi_diff > 0) {
               next_point = getHelixPointFromZ(helix_p10, std::copysign(tar_layer_z, helix_p10.lam));
             } else {
-              next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10.lam));
+              next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
             }
           } else {
             if (phi_diff > 0) {
               next_point = getHelixPointFromZ(helix_m10, std::copysign(tar_layer_z, helix_p10.lam));
             } else {
-              next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_p10.lam));
+              next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
             }
           }
         }
@@ -165,13 +163,13 @@ namespace lstgeometry {
           if (phi_diff > 0) {
             next_point = getHelixPointFromZ(helix_p10, std::copysign(tar_layer_z, helix_p10.lam));
           } else {
-            next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10.lam));
+            next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
           }
         } else {
           if (phi_diff > 0) {
             next_point = getHelixPointFromZ(helix_m10, std::copysign(tar_layer_z, helix_m10.lam));
           } else {
-            next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_m10.lam));
+            next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_m10_pos.lam));
           }
         }
       }
