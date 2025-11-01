@@ -386,12 +386,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float rtUpper,
                                                      const float ptCut,
                                                      const uint16_t clustSizeCut) {
-
     if ((modules.moduleLayerType()[lowerModuleIndex] == Pixel and clustSizeLower > clustSizeCut) or
         (modules.moduleLayerType()[upperModuleIndex] == Pixel and clustSizeUpper > clustSizeCut) or
         (modules.moduleLayerType()[lowerModuleIndex] == Strip and clustSizeLower > clustSizeCut) or
-        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)
-        ) {
+        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)) {
       return false;
     }
 
@@ -534,8 +532,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if ((modules.moduleLayerType()[lowerModuleIndex] == Pixel and clustSizeLower > clustSizeCut) or
         (modules.moduleLayerType()[upperModuleIndex] == Pixel and clustSizeUpper > clustSizeCut) or
         (modules.moduleLayerType()[lowerModuleIndex] == Strip and clustSizeLower > clustSizeCut) or
-        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)
-        ) {
+        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)) {
       return false;
     }
 

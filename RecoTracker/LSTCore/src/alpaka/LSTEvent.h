@@ -94,7 +94,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
-    LSTEvent(bool verbose, const float pt_cut, const uint16_t clustsize_cut, Queue& q, const LSTESData<Device>* deviceESData)
+    LSTEvent(
+        bool verbose, const float pt_cut, const uint16_t clustsize_cut, Queue& q, const LSTESData<Device>* deviceESData)
         : queue_(q),
           ptCut_(pt_cut),
           clustSizeCut_(clustsize_cut),

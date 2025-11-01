@@ -96,7 +96,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const DetId hitId = it.detId();
       for (auto const& hit : it) {
         ph2_detId.push_back(hitId.rawId());
-        ph2_clustSize.push_back(0); // TODO FIX ME
+        ph2_clustSize.push_back(0);  // TODO FIX ME
         ph2_x.push_back(hit.globalPosition().x());
         ph2_y.push_back(hit.globalPosition().y());
         ph2_z.push_back(hit.globalPosition().z());
