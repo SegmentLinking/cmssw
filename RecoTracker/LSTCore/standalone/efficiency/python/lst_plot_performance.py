@@ -8,7 +8,7 @@ import sys
 from math import sqrt
 
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
-metric_choices = ["eff", "fakerate", "duplrate"]
+metric_choices = ["eff", "fakerate", "duplrate", "avgOTlen"]
 variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
 objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "pT5_lower", "pT3_lower", "T5_lower", "pLS_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
@@ -81,6 +81,10 @@ def main():
 def plot(args):
 
     params = process_arguments_into_params(args)
+
+    if params["metric"] == "avgOTlen":
+        params["objecttype"] = "TC"
+        params["breakdown"] = False
 
     if params["metric"] == "eff":
         params["output_name"] = "{objecttype}_{selection}_{pdgid}_{charge}_{metric}_{variable}".format(**params)
@@ -236,6 +240,7 @@ def process_arguments_into_params(args):
     if params["metric"] == "eff": params["metricsuffix"] = "ef"
     if params["metric"] == "duplrate": params["metricsuffix"] = "dr"
     if params["metric"] == "fakerate": params["metricsuffix"] = "fr"
+    if params["metric"] == "avgOTlen": params["metricsuffix"] = "ol"
 
     # If breakdown it must be object type of TC
     params["breakdown"] = args.breakdown
@@ -322,13 +327,32 @@ def draw_ratio(nums, dens, params):
     # Create efficiency graphs
     teffs = []
     effs = []
-    for num, den in zip(nums, dens):
-        teff = r.TEfficiency(num, den)
-        eff = teff.CreateGraph()
-        teffs.append(teff)
-        effs.append(eff)
-
-    # print(effs)
+    if params["metric"] == "avgOTlen":
+        for num, den in zip(nums, dens):
+            g = r.TGraphErrors()
+            ip = 0
+            nb = den.GetNbinsX()
+            for ib in range(1, nb + 1):
+                cnt = den.GetBinContent(ib)
+                S = num.GetBinContent(ib)
+                if cnt > 0:
+                    x = den.GetXaxis().GetBinCenter(ib)
+                    ex = den.GetXaxis().GetBinWidth(ib) / 2.0
+                    y = S / cnt
+                    ey = sqrt(S) / cnt if S > 0 else 0.0
+                    g.SetPoint(ip, x, y)
+                    g.SetPointError(ip, ex, ey)
+                    ip += 1
+            if g.GetN() == 0:
+                g.SetPoint(0, 0.0, 0.0)
+                g.SetPointError(0, 0.0, 0.0)
+            effs.append(g)
+    else:
+        for num, den in zip(nums, dens):
+            teff = r.TEfficiency(num, den)
+            eff = teff.CreateGraph()
+            teffs.append(teff)
+            effs.append(eff)
 
     #
     hist_name_suffix = ""
@@ -360,6 +384,8 @@ def draw_ratio(nums, dens, params):
 def parse_plot_name(output_name):
     if "fake" in output_name:
         rtnstr = ["Fake Rate of"]
+    elif "avgOTlen" in output_name:
+        rtnstr = ["Average OT length of"]
     elif "dup" in output_name:
         rtnstr = ["Duplicate Rate of"]
     elif "inefficiency" in output_name:
@@ -441,7 +467,9 @@ def set_label(eff, output_name, raw_number):
     else:
         title = "#eta"
     eff.GetXaxis().SetTitle(title)
-    if "fakerate" in output_name:
+    if "avgOTlen" in output_name:
+        eff.GetYaxis().SetTitle("<Number of OT hits>")
+    elif "fakerate" in output_name:
         eff.GetYaxis().SetTitle("Fake Rate")
     elif "duplrate" in output_name:
         eff.GetYaxis().SetTitle("Duplicate Rate")
@@ -507,7 +535,7 @@ def draw_label(params):
         particleselection = ((", Particle:" + pdgidstr) if pdgidstr else "" ) + ((", Charge:" + chargestr) if chargestr else "" )
         fiducial_label += particleselection
     # If fake rate or duplicate rate plot follow the following fiducial label rule
-    elif "fakerate" in output_name or "duplrate" in output_name:
+    elif "fakerate" in output_name or "duplrate" in output_name or "avgOTlen" in output_name:
         if "_pt" in output_name:
             fiducial_label = "|#eta| < {eta}".format(eta=etacut)
         elif "_eta" in output_name:
@@ -584,16 +612,22 @@ def draw_plot(effs, nums, dens, params):
             yaxis_min = effs[0].GetY()[i]
 
     # Set Yaxis range
-    effs[0].GetYaxis().SetRangeUser(0, 1.02)
-    if "zoom" not in output_name:
-        effs[0].GetYaxis().SetRangeUser(0, 1.02)
-    else:
-        if "fakerate" in output_name:
-            effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
-        elif "duplrate" in output_name:
+    if "avgOTlen" in output_name:
+        if "zoom" not in output_name:
             effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
         else:
-            effs[0].GetYaxis().SetRangeUser(0.6, 1.02)
+            effs[0].GetYaxis().SetRangeUser(8.0, 12.0)
+    else:
+        effs[0].GetYaxis().SetRangeUser(0, 1.02)
+        if "zoom" not in output_name:
+            effs[0].GetYaxis().SetRangeUser(0, 1.02)
+        else:
+            if "fakerate" in output_name:
+                effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
+            elif "duplrate" in output_name:
+                effs[0].GetYaxis().SetRangeUser(0.0, yaxis_max * 1.1)
+            else:
+                effs[0].GetYaxis().SetRangeUser(0.6, 1.02)
 
     # Set xaxis range
     if "_eta" in output_name:
@@ -660,12 +694,14 @@ def plot_standard_performance_plots(args):
             "eff": ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy"],
             "fakerate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             "duplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
+            "avgOTlen": ["eta"],
             }
     if (args.jet_branches): variables["eff"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
     sels = {
             "eff": ["base", "loweta"],
             "fakerate": ["none"],
             "duplrate": ["none"],
+            "avgOTlen": ["none"],
             }
     xcoarses = {
             "pt": [False],
@@ -720,16 +756,29 @@ def plot_standard_performance_plots(args):
                 "T5_lower":[False],
                 "pLS_lower":[False],
             },
+            "avgOTlen":{
+                "TC":[False],
+                "pT5":[False],
+                "pT3":[False],
+                "T5":[False],
+                "pLS":[False],
+                "pT5_lower":[False],
+                "pT3_lower":[False],
+                "T5_lower":[False],
+                "pLS_lower":[False],
+            },
     }
     pdgids = {
             "eff": [0, 11, 13, 211, 321],
             "fakerate": [0],
             "duplrate": [0],
+            "avgOTlen": [0],
             }
     charges = {
             "eff":[0, 1, -1],
             "fakerate":[0],
             "duplrate":[0],
+            "avgOTlen":[0],
             }
 
     if args.metric:
@@ -769,14 +818,14 @@ def plot_standard_performance_plots(args):
         # Only eff / TC matters here
         breakdowns = {"eff":{"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
                 "fakerate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
-                "duplrate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]}}
-
-
+                "duplrate": {"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
+                "avgOTlen":{"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]}}
     else:
         # Only eff / TC matters here
         breakdowns = {"eff":{"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
                 "fakerate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
-                "duplrate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]}}
+                "duplrate": {"TC":[True], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]},
+                "avgOTlen":{"TC":[False], "pT5_lower":[False], "pT3_lower":[False], "T5_lower":[False], "pLS_lower":[False]}}
     if args.yzoom:
         args.yzooms = [args.yzoom]
 
@@ -788,7 +837,7 @@ def plot_standard_performance_plots(args):
             for variable in variables[metric]:
                 for yzoom in yzooms:
                     for xcoarse in xcoarses[variable]:
-                        for typ in types:
+                        for typ in (["TC"] if metric == "avgOTlen" else types):
                             print("type = ",typ)
                             for breakdown in breakdowns[metric][typ]:
                                 for pdgid in pdgids[metric]:

@@ -266,6 +266,7 @@ void createTrackCandidateBranches() {
   ana.tx->createBranch<std::vector<int>>("tc_isFake");       // 1 if tc is fake 0 other if not
   ana.tx->createBranch<std::vector<int>>("tc_isDuplicate");  // 1 if tc is duplicate 0 other if not
   ana.tx->createBranch<std::vector<int>>("tc_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  ana.tx->createBranch<std::vector<int>>("tc_nhitOT");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<int>>>("tc_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
@@ -1947,6 +1948,14 @@ void setTrackCandidateBranches(LSTEvent* event,
                                                                                            trk_ph2_simHitIdx,
                                                                                            trk_pix_simHitIdx,
                                                                                            matchfrac);
+
+    int nhitOT = 0;
+    if (type == LSTObjType::T5 || type == LSTObjType::pT5)
+      nhitOT = 10;
+    else if (type == LSTObjType::pT3)
+      nhitOT = 6;
+
+    ana.tx->pushbackToBranch<int>("tc_nhitOT", nhitOT);
 
     // Fill some branches for this track candidate
     ana.tx->pushbackToBranch<float>("tc_pt", pt);
