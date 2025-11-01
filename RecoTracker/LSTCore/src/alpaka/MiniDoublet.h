@@ -377,12 +377,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float xLower,
                                                      float yLower,
                                                      float zLower,
+                                                     uint16_t clustSizeLower,
                                                      float rtLower,
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
+                                                     uint16_t clustSizeUpper,
                                                      float rtUpper,
-                                                     const float ptCut) {
+                                                     const float ptCut,
+                                                     const uint16_t clustSizeCut) {
+    if ((modules.moduleLayerType()[lowerModuleIndex] == Pixel and clustSizeLower > clustSizeCut) or
+        (modules.moduleLayerType()[upperModuleIndex] == Pixel and clustSizeUpper > clustSizeCut) or
+        (modules.moduleLayerType()[lowerModuleIndex] == Strip and clustSizeLower > clustSizeCut) or
+        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)) {
+      return false;
+    }
+
     dz = zLower - zUpper;
     const float dzCut = modules.moduleType()[lowerModuleIndex] == PS ? 2.f : 10.f;
     const float sign = ((dz > 0) - (dz < 0)) * ((zLower > 0) - (zLower < 0));
@@ -505,16 +515,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                      float xLower,
                                                      float yLower,
                                                      float zLower,
+                                                     uint16_t clustSizeLower,
                                                      float rtLower,
                                                      float xUpper,
                                                      float yUpper,
                                                      float zUpper,
+                                                     uint16_t clustSizeUpper,
                                                      float rtUpper,
-                                                     const float ptCut) {
+                                                     const float ptCut,
+                                                     const uint16_t clustSizeCut) {
     // There are series of cuts that applies to mini-doublet in a "endcap" region
     // Cut #1 : dz cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3093
     // For PS module in case when it is tilted a different dz (after the strip hit shift) is calculated later.
+
+    if ((modules.moduleLayerType()[lowerModuleIndex] == Pixel and clustSizeLower > clustSizeCut) or
+        (modules.moduleLayerType()[upperModuleIndex] == Pixel and clustSizeUpper > clustSizeCut) or
+        (modules.moduleLayerType()[lowerModuleIndex] == Strip and clustSizeLower > clustSizeCut) or
+        (modules.moduleLayerType()[upperModuleIndex] == Strip and clustSizeUpper > clustSizeCut)) {
+      return false;
+    }
 
     float dz = zLower - zUpper;  // Not const since later it might change depending on the type of module
 
@@ -617,12 +637,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                float xLower,
                                                float yLower,
                                                float zLower,
+                                               uint16_t clustSizeLower,
                                                float rtLower,
                                                float xUpper,
                                                float yUpper,
                                                float zUpper,
+                                               uint16_t clustSizeUpper,
                                                float rtUpper,
-                                               const float ptCut) {
+                                               const float ptCut,
+                                               const uint16_t clustSizeCut) {
     if (modules.subdets()[lowerModuleIndex] == Barrel) {
       return runMiniDoubletDefaultAlgoBarrel(acc,
                                              modules,
@@ -641,12 +664,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                              xLower,
                                              yLower,
                                              zLower,
+                                             clustSizeLower,
                                              rtLower,
                                              xUpper,
                                              yUpper,
                                              zUpper,
+                                             clustSizeUpper,
                                              rtUpper,
-                                             ptCut);
+                                             ptCut,
+                                             clustSizeCut);
     } else {
       return runMiniDoubletDefaultAlgoEndcap(acc,
                                              modules,
@@ -665,12 +691,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                              xLower,
                                              yLower,
                                              zLower,
+                                             clustSizeLower,
                                              rtLower,
                                              xUpper,
                                              yUpper,
                                              zUpper,
+                                             clustSizeUpper,
                                              rtUpper,
-                                             ptCut);
+                                             ptCut,
+                                             clustSizeCut);
     }
   }
 
@@ -683,7 +712,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoublets mds,
                                   MiniDoubletsOccupancy mdsOccupancy,
                                   ObjectRangesConst ranges,
-                                  const float ptCut) const {
+                                  const float ptCut,
+                                  const uint16_t clustSizeCut) const {
       for (uint16_t lowerModuleIndex : cms::alpakatools::uniform_elements_y(acc, modules.nLowerModules())) {
         uint16_t upperModuleIndex = modules.partnerModuleIndices()[lowerModuleIndex];
         int nLowerHits = hitsRanges.hitRangesnLower()[lowerModuleIndex];
@@ -705,11 +735,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float xLower = hitsBase.xs()[lowerHitArrayIndex];
           float yLower = hitsBase.ys()[lowerHitArrayIndex];
           float zLower = hitsBase.zs()[lowerHitArrayIndex];
+          uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
           float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
           unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
           float xUpper = hitsBase.xs()[upperHitArrayIndex];
           float yUpper = hitsBase.ys()[upperHitArrayIndex];
           float zUpper = hitsBase.zs()[upperHitArrayIndex];
+          uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
           float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
 
           float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
@@ -730,12 +762,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                    xLower,
                                                    yLower,
                                                    zLower,
+                                                   clustSizeLower,
                                                    rtLower,
                                                    xUpper,
                                                    yUpper,
                                                    zUpper,
+                                                   clustSizeUpper,
                                                    rtUpper,
-                                                   ptCut);
+                                                   ptCut,
+                                                   clustSizeCut);
           if (success) {
             int totOccupancyMDs = alpaka::atomicAdd(
                 acc, &mdsOccupancy.totOccupancyMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
