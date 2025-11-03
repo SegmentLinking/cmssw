@@ -97,6 +97,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //use linear approximation for regions 9 and 20-24 because it works better (see https://github.com/SegmentLinking/cmssw/pull/92)
     float residual = alpaka::math::abs(acc, z2 - ((z3 - z1) / (r3 - r1) * (r2 - r1) + z1));
 
+    //get the x,y position of each MD
+    const float x1 = mds.anchorX()[firstMDIndex] / 100;
+    const float x2 = mds.anchorX()[secondMDIndex] / 100;
+    const float x3 = mds.anchorX()[thirdMDIndex] / 100;
+
+    const float y1 = mds.anchorY()[firstMDIndex] / 100;
+    const float y2 = mds.anchorY()[secondMDIndex] / 100;
+    const float y3 = mds.anchorY()[thirdMDIndex] / 100;
+
+    float cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
+    short charge = -1 * ((int)copysignf(1.0f, cross));
+
     //region definitions: https://github.com/user-attachments/assets/2b3c1425-66eb-4524-83de-deb6f3b31f71
     if (layer1 == 1 && layer2 == 7) {
       return residual < 0.01f;  // Region 9
@@ -120,15 +132,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //get the type of module: 0 is ps, 1 is 2s
     const bool moduleType3 = modules.moduleType()[outerOuterLowerModuleIndex];
-
-    //get the x,y position of each MD
-    const float x1 = mds.anchorX()[firstMDIndex] / 100;
-    const float x2 = mds.anchorX()[secondMDIndex] / 100;
-    const float x3 = mds.anchorX()[thirdMDIndex] / 100;
-
-    const float y1 = mds.anchorY()[firstMDIndex] / 100;
-    const float y2 = mds.anchorY()[secondMDIndex] / 100;
-    const float y3 = mds.anchorY()[thirdMDIndex] / 100;
 
     //set initial and target points
     float x_init = x2;
@@ -164,9 +167,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float x_center = circleCenterX / 100;
     float y_center = circleCenterY / 100;
     float pt = 2 * k2Rinv1GeVf * circleRadius;  //k2Rinv1GeVf is already in cm^(-1)
-
-    float cross = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1);
-    short charge = -1 * ((int)copysignf(1.0f, cross));
 
     //get the px and py at the initial point
     float px = 2 * charge * k2Rinv1GeVf * (y_init - y_center) * 100;
