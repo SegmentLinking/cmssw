@@ -30,12 +30,13 @@ namespace lstgeometry {
 
     unsigned short ref_layer = refmodule.layer();
     unsigned short ref_subdet = refmodule.subdet();
-    
+
     auto etaphi = getEtaPhi(centroid.x, centroid.y, centroid.z);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
-        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second) : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
+        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+                        : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
@@ -76,7 +77,8 @@ namespace lstgeometry {
         if (area <= 0.0001)
           continue;
 
-        auto const& new_tar_detids_to_be_considered = det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
+        auto const& new_tar_detids_to_be_considered =
+            det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto centroid_target = centroids.at(tar_detid);
@@ -198,9 +200,10 @@ namespace lstgeometry {
 
     auto etaphi = getEtaPhi(centroid.x, centroid.y, centroid.z);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
-    
+
     auto const& tar_detids_to_be_considered =
-        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second) : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
+        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+                        : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     auto next_layer_bound_points = boundsAfterCurved(ref_detid, centroids, det_geom);
 
@@ -240,7 +243,8 @@ namespace lstgeometry {
         area += boost::geometry::area(ref_polygon_piece);
 
       if (area > 0.0001) {
-        auto const& new_tar_detids_to_be_considered = det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
+        auto const& new_tar_detids_to_be_considered =
+            det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto centroid_target = centroids.at(tar_detid);
