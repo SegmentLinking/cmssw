@@ -10,84 +10,84 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/LSTMath.h"
 
 namespace lstgeometry {
-    
-    using LayerEtaBinPhiBinKey = std::tuple<unsigned int, unsigned int, unsigned int>;
-    
-    // We split modules into overlapping eta-phi bins so that it's easier to construct module maps
-    // These values are just guesses and can be optimized later
-    constexpr unsigned int kNEtaBins = 4;
-    constexpr double kEtaBinRad = std::numbers::pi_v<double> / kNEtaBins;
-    constexpr unsigned int kNPhiBins = 6;
-    constexpr double kPhiBinWidth = 2*std::numbers::pi_v<double> / kNPhiBins;
-     
-    bool isInEtaPhiBin(double eta, double phi, unsigned int eta_bin, unsigned int phi_bin) {
-        double theta = 2. * std::atan(std::exp(-eta));
-        
-        if (eta_bin == 0) {
-            if (theta > 3.*kEtaBinRad/2.)
-              return false;
-        } else if (eta_bin == kNPhiBins-1) {
-            if (theta < (2*(kNPhiBins-1) - 1)*kEtaBinRad/2.)
-              return false;
-        } else if (theta < (2*eta_bin - 1) * kEtaBinRad/2. || theta > (2*(eta_bin+1) + 1) * kEtaBinRad/2.) {
-            return false;
-        }
-        
-        double pi = std::numbers::pi_v<double>;
-        if (phi_bin == 0) {
-            if (phi > -pi + kPhiBinWidth && phi < pi - kPhiBinWidth)
-              return false;
-        } else {
-            if (phi < -pi + (phi_bin - 1) * kPhiBinWidth || phi > -pi + (phi_bin+1) * kPhiBinWidth)
-              return false;
-        }
-        
-          return true;
+
+  using LayerEtaBinPhiBinKey = std::tuple<unsigned int, unsigned int, unsigned int>;
+
+  // We split modules into overlapping eta-phi bins so that it's easier to construct module maps
+  // These values are just guesses and can be optimized later
+  constexpr unsigned int kNEtaBins = 4;
+  constexpr double kEtaBinRad = std::numbers::pi_v<double> / kNEtaBins;
+  constexpr unsigned int kNPhiBins = 6;
+  constexpr double kPhiBinWidth = 2 * std::numbers::pi_v<double> / kNPhiBins;
+
+  bool isInEtaPhiBin(double eta, double phi, unsigned int eta_bin, unsigned int phi_bin) {
+    double theta = 2. * std::atan(std::exp(-eta));
+
+    if (eta_bin == 0) {
+      if (theta > 3. * kEtaBinRad / 2.)
+        return false;
+    } else if (eta_bin == kNPhiBins - 1) {
+      if (theta < (2 * (kNPhiBins - 1) - 1) * kEtaBinRad / 2.)
+        return false;
+    } else if (theta < (2 * eta_bin - 1) * kEtaBinRad / 2. || theta > (2 * (eta_bin + 1) + 1) * kEtaBinRad / 2.) {
+      return false;
     }
-    
-    std::pair<unsigned int, unsigned int> getEtaPhiBins(double eta, double phi) {
-        double theta = 2. * std::atan(std::exp(-eta));
-        
-        unsigned int eta_bin = 0;
-        if (theta <= kEtaBinRad) {
-             eta_bin = 0;
-        } else if (theta >= (kNEtaBins-1)*kEtaBinRad) {
-            eta_bin = kNEtaBins-1;
-        } else {
-            for (unsigned int i = 1; i < kNEtaBins-1; i++) {
-                if (theta >= i * kEtaBinRad && theta <= (i + 1) * kEtaBinRad) {
-                    eta_bin = i;
-                    break;
-                }
-            }
-        }
-        
-        unsigned int phi_bin = 0;
-        double pi = std::numbers::pi_v<double>;
-        
-        if (phi <= -pi + kPhiBinWidth/2. || phi >= pi - kPhiBinWidth/2.){
-            phi_bin = 0;
-        }
-        else {
-            for (unsigned int i = 1; i < kNPhiBins; i++) {
-                if (phi >= -pi + ((2*i - 1) * kPhiBinWidth)/2. && phi <= -pi + ((2*i + 1) * kPhiBinWidth)/2.) {
-                    phi_bin = i;
-                    break;
-                }
-            }
-        }
-        
-        
-        return std::make_pair(eta_bin, phi_bin);
+
+    double pi = std::numbers::pi_v<double>;
+    if (phi_bin == 0) {
+      if (phi > -pi + kPhiBinWidth && phi < pi - kPhiBinWidth)
+        return false;
+    } else {
+      if (phi < -pi + (phi_bin - 1) * kPhiBinWidth || phi > -pi + (phi_bin + 1) * kPhiBinWidth)
+        return false;
     }
+
+    return true;
+  }
+
+  std::pair<unsigned int, unsigned int> getEtaPhiBins(double eta, double phi) {
+    double theta = 2. * std::atan(std::exp(-eta));
+
+    unsigned int eta_bin = 0;
+    if (theta <= kEtaBinRad) {
+      eta_bin = 0;
+    } else if (theta >= (kNEtaBins - 1) * kEtaBinRad) {
+      eta_bin = kNEtaBins - 1;
+    } else {
+      for (unsigned int i = 1; i < kNEtaBins - 1; i++) {
+        if (theta >= i * kEtaBinRad && theta <= (i + 1) * kEtaBinRad) {
+          eta_bin = i;
+          break;
+        }
+      }
+    }
+
+    unsigned int phi_bin = 0;
+    double pi = std::numbers::pi_v<double>;
+
+    if (phi <= -pi + kPhiBinWidth / 2. || phi >= pi - kPhiBinWidth / 2.) {
+      phi_bin = 0;
+    } else {
+      for (unsigned int i = 1; i < kNPhiBins; i++) {
+        if (phi >= -pi + ((2 * i - 1) * kPhiBinWidth) / 2. && phi <= -pi + ((2 * i + 1) * kPhiBinWidth) / 2.) {
+          phi_bin = i;
+          break;
+        }
+      }
+    }
+
+    return std::make_pair(eta_bin, phi_bin);
+  }
 
   class DetectorGeometry {
   private:
     std::unordered_map<unsigned int, MatrixD4x3> corners_;
     std::vector<double> avg_radii_;
     std::vector<double> avg_z_;
-    std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>> barrel_lower_det_ids_;
-    std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>> endcap_lower_det_ids_;
+    std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
+        barrel_lower_det_ids_;
+    std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
+        endcap_lower_det_ids_;
 
   public:
     DetectorGeometry(std::unordered_map<unsigned int, MatrixD4x3> corners,
@@ -112,9 +112,9 @@ namespace lstgeometry {
       // Clear just in case they were already built
       barrel_lower_det_ids_.clear();
       endcap_lower_det_ids_.clear();
-      
+
       // Initialize all vectors
-      for (unsigned int etabin = 0; etabin < kNEtaBins;  etabin++) {
+      for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
         for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
           for (unsigned int layer = 1; layer < 7; layer++) {
             barrel_lower_det_ids_[{layer, etabin, phibin}] = {};
@@ -126,53 +126,56 @@ namespace lstgeometry {
       }
 
       for (unsigned int layer = 1; layer < 7; layer++) {
-          auto detids = getDetIds([&layer](const auto& x) {
-            Module m(x.first);
-            return m.subdet() == 5 && m.layer() == layer && m.isLower() == 1;
-          });
+        auto detids = getDetIds([&layer](const auto& x) {
+          Module m(x.first);
+          return m.subdet() == 5 && m.layer() == layer && m.isLower() == 1;
+        });
         for (auto detid : detids) {
-            auto corners = getCorners(detid);
-            RowVectorD3 center = corners.colwise().mean();
-            center /= 4.;
-            //double ref_phi = std::atan2(center(2), center(1));
-            auto etaphi = getEtaPhi(center(1), center(2), center(0));
-            for (unsigned int etabin = 0; etabin < kNEtaBins;  etabin++) {
-              for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
-                  if (isInEtaPhiBin(etaphi.first, etaphi.second, etabin, phibin)) {
-                      barrel_lower_det_ids_[{layer, etabin, phibin}].push_back(detid);
-                  }
+          auto corners = getCorners(detid);
+          RowVectorD3 center = corners.colwise().mean();
+          center /= 4.;
+          //double ref_phi = std::atan2(center(2), center(1));
+          auto etaphi = getEtaPhi(center(1), center(2), center(0));
+          for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
+            for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
+              if (isInEtaPhiBin(etaphi.first, etaphi.second, etabin, phibin)) {
+                barrel_lower_det_ids_[{layer, etabin, phibin}].push_back(detid);
               }
             }
+          }
         }
       }
       for (unsigned int layer = 1; layer < 6; layer++) {
-          auto detids = getDetIds([&layer](const auto& x) {
-            Module m(x.first);
-            return m.subdet() == 4 && m.layer() == layer && m.isLower() == 1;
-          });
-          for (auto detid : detids) {
-              auto corners = getCorners(detid);
-              RowVectorD3 center = corners.colwise().mean();
-              center /= 4.;
-              //double ref_phi = std::atan2(center(2), center(1));
-              auto etaphi = getEtaPhi(center(1), center(2), center(0));
-              for (unsigned int etabin = 0; etabin < kNEtaBins;  etabin++) {
-                for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
-                    if (isInEtaPhiBin(etaphi.first, etaphi.second, etabin, phibin)) {
-                        endcap_lower_det_ids_[{layer, etabin, phibin}].push_back(detid);
-                    }
-                }
+        auto detids = getDetIds([&layer](const auto& x) {
+          Module m(x.first);
+          return m.subdet() == 4 && m.layer() == layer && m.isLower() == 1;
+        });
+        for (auto detid : detids) {
+          auto corners = getCorners(detid);
+          RowVectorD3 center = corners.colwise().mean();
+          center /= 4.;
+          //double ref_phi = std::atan2(center(2), center(1));
+          auto etaphi = getEtaPhi(center(1), center(2), center(0));
+          for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
+            for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
+              if (isInEtaPhiBin(etaphi.first, etaphi.second, etabin, phibin)) {
+                endcap_lower_det_ids_[{layer, etabin, phibin}].push_back(detid);
               }
+            }
           }
+        }
       }
-      
     }
 
-    std::vector<unsigned int> const& getBarrelLayerDetIds(unsigned int layer, unsigned int etabin, unsigned int phibin) const {
+    std::vector<unsigned int> const& getBarrelLayerDetIds(unsigned int layer,
+                                                          unsigned int etabin,
+                                                          unsigned int phibin) const {
       return barrel_lower_det_ids_.at({layer, etabin, phibin});
     }
 
-    std::vector<unsigned int> const& getEndcapLayerDetIds(unsigned int layer, unsigned int etabin, unsigned int phibin) const {
+    std::vector<unsigned int> const& getEndcapLayerDetIds(unsigned int layer,
+                                                          unsigned int etabin,
+                                                          unsigned int phibin) const {
       return endcap_lower_det_ids_.at({layer, etabin, phibin});
     }
 
