@@ -7,17 +7,17 @@ using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 // ===============
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHitIdxsAndHitTypes(
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> convertHitsToHitIdxsAndHitTypes(
     LSTEvent* event, std::vector<unsigned int> hits) {
   auto hitsBase = event->getInput<HitsBaseSoA>();
   std::vector<unsigned int> hitidxs;
-  std::vector<unsigned int> hittypes;
+  std::vector<HitType> hittypes;
   for (auto& hit : hits) {
     hitidxs.push_back(hitsBase.idxs()[hit]);
-    if (hitsBase.detid()[hit] == 1)
-      hittypes.push_back(0);
+    if (hitsBase.detid()[hit] == kPixelModuleId)
+      hittypes.push_back(HitType::Pixel);
     else
-      hittypes.push_back(4);
+      hittypes.push_back(HitType::Phase2OT);
   }
   return std::make_tuple(hitidxs, hittypes);
 }
@@ -27,7 +27,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> convertHitsToHi
 // ===============
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getPixelHitsFrompLS(LSTEvent* event, unsigned int pLS) {
+std::vector<unsigned int> getHitsFrompLS(LSTEvent* event, unsigned int pLS) {
   SegmentsConst segments = event->getSegments<SegmentsSoA>();
   MiniDoubletsConst miniDoublets = event->getMiniDoublets<MiniDoubletsSoA>();
   auto ranges = event->getRanges();
@@ -46,26 +46,31 @@ std::vector<unsigned int> getPixelHitsFrompLS(LSTEvent* event, unsigned int pLS)
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getPixelHitIdxsFrompLS(LSTEvent* event, unsigned int pLS) {
+std::vector<unsigned int> getHitIdxsFrompLS(LSTEvent* event, unsigned int pLS) {
   auto hitsBase = event->getInput<HitsBaseSoA>();
-  std::vector<unsigned int> hits = getPixelHitsFrompLS(event, pLS);
+  std::vector<unsigned int> hits = getHitsFrompLS(event, pLS);
   std::vector<unsigned int> hitidxs;
+  hitidxs.reserve(hits.size());
   for (auto& hit : hits)
     hitidxs.push_back(hitsBase.idxs()[hit]);
   return hitidxs;
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getPixelHitTypesFrompLS(LSTEvent* event, unsigned int pLS) {
-  std::vector<unsigned int> hits = getPixelHitsFrompLS(event, pLS);
-  std::vector<unsigned int> hittypes(hits.size(), 0);
+std::vector<HitType> getHitTypesFrompLS(LSTEvent* event, unsigned int pLS) {
+  std::vector<unsigned int> hits = getHitsFrompLS(event, pLS);
+  std::vector<HitType> hittypes;
+  hittypes.reserve(hits.size());
+  auto hitsBase = event->getInput<HitsBaseSoA>();
+  for (auto& hit : hits)
+    hittypes.push_back(hitsBase.detid()[hit] == kPixelModuleId ? HitType::Pixel : HitType::Phase2OT);
   return hittypes;
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompLS(LSTEvent* event,
-                                                                                              unsigned pLS) {
-  return convertHitsToHitIdxsAndHitTypes(event, getPixelHitsFrompLS(event, pLS));
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFrompLS(LSTEvent* event,
+                                                                                         unsigned pLS) {
+  return convertHitsToHitIdxsAndHitTypes(event, getHitsFrompLS(event, pLS));
 }
 
 // ==============
@@ -81,8 +86,7 @@ std::vector<unsigned int> getHitsFromMD(LSTEvent* event, unsigned int MD) {
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromMD(LSTEvent* event,
-                                                                                             unsigned MD) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFromMD(LSTEvent* event, unsigned MD) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFromMD(event, MD));
 }
 
@@ -107,8 +111,7 @@ std::vector<unsigned int> getHitsFromLS(LSTEvent* event, unsigned int LS) {
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromLS(LSTEvent* event,
-                                                                                             unsigned LS) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFromLS(LSTEvent* event, unsigned LS) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFromLS(event, LS));
 }
 
@@ -142,8 +145,7 @@ std::vector<unsigned int> getHitsFromT3(LSTEvent* event, unsigned int T3) {
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT3(LSTEvent* event,
-                                                                                             unsigned T3) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFromT3(LSTEvent* event, unsigned T3) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFromT3(event, T3));
 }
 
@@ -220,14 +222,17 @@ std::vector<unsigned int> getModuleIdxsFromT3(LSTEvent* event, unsigned int T3) 
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getHitTypesFromT5(LSTEvent* event, unsigned int T5) { return {4, 4, 4, 4, 4, 4, 4, 4, 4, 4}; }
+std::vector<HitType> getHitTypesFromT5(LSTEvent* event, unsigned int T5) {
+  return {Params_T5::kHits, HitType::Phase2OT};
+}
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getHitTypesFromT3(LSTEvent* event, unsigned int T5) { return {4, 4, 4, 4, 4, 4}; }
+std::vector<HitType> getHitTypesFromT3(LSTEvent* event, unsigned int T5) {
+  return {Params_T3::kHits, HitType::Phase2OT};
+}
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromT5(LSTEvent* event,
-                                                                                             unsigned T5) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFromT5(LSTEvent* event, unsigned T5) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFromT5(event, T5));
 }
 
@@ -236,7 +241,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 // ===============
 
 //____________________________________________________________________________________________
-unsigned int getPixelLSFrompT3(LSTEvent* event, unsigned int pT3) {
+unsigned int getpLSFrompT3(LSTEvent* event, unsigned int pT3) {
   auto const pixelTriplets = event->getPixelTriplets();
   auto ranges = event->getRanges();
   auto modulesEvt = event->getModules<ModulesSoA>();
@@ -263,25 +268,26 @@ std::vector<unsigned int> getMDsFrompT3(LSTEvent* event, unsigned int pT3) {
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getOuterTrackerHitsFrompT3(LSTEvent* event, unsigned int pT3) {
+std::vector<unsigned int> getT3HitsFrompT3(LSTEvent* event, unsigned int pT3) {
   unsigned int T3 = getT3FrompT3(event, pT3);
   return getHitsFromT3(event, T3);
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getPixelHitsFrompT3(LSTEvent* event, unsigned int pT3) {
-  unsigned int pLS = getPixelLSFrompT3(event, pT3);
-  return getPixelHitsFrompLS(event, pLS);
+std::vector<unsigned int> getpLSHitsFrompT3(LSTEvent* event, unsigned int pT3) {
+  unsigned int pLS = getpLSFrompT3(event, pT3);
+  return getHitsFrompLS(event, pLS);
 }
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getHitsFrompT3(LSTEvent* event, unsigned int pT3) {
-  unsigned int pLS = getPixelLSFrompT3(event, pT3);
-  unsigned int T3 = getT3FrompT3(event, pT3);
-  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
-  std::vector<unsigned int> outerTrackerHits = getHitsFromT3(event, T3);
-  pixelHits.insert(pixelHits.end(), outerTrackerHits.begin(), outerTrackerHits.end());
-  return pixelHits;
+  auto const& allHits = event->getPixelTriplets().hitIndices()[pT3];
+  std::vector<unsigned int> hits;
+  hits.reserve(allHits.size());
+  for (auto const hit : allHits)
+    if (hits.empty() || hits.back() != hit)  // should eventually check all and type
+      hits.emplace_back(hit);
+  return hits;
 }
 
 //____________________________________________________________________________________________
@@ -295,7 +301,7 @@ std::vector<unsigned int> getHitIdxsFrompT3(LSTEvent* event, unsigned int pT3) {
 }
 //____________________________________________________________________________________________
 std::vector<unsigned int> getModuleIdxsFrompT3(LSTEvent* event, unsigned int pT3) {
-  std::vector<unsigned int> hits = getOuterTrackerHitsFrompT3(event, pT3);
+  std::vector<unsigned int> hits = getT3HitsFrompT3(event, pT3);
   std::vector<unsigned int> module_idxs;
   auto hitsEvt = event->getHits<HitsExtendedSoA>();
   for (auto& hitIdx : hits) {
@@ -304,19 +310,16 @@ std::vector<unsigned int> getModuleIdxsFrompT3(LSTEvent* event, unsigned int pT3
   return module_idxs;
 }
 //____________________________________________________________________________________________
-std::vector<unsigned int> getHitTypesFrompT3(LSTEvent* event, unsigned int pT3) {
-  unsigned int pLS = getPixelLSFrompT3(event, pT3);
-  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
-  // pixel Hits list will be either 3 or 4 and depending on it return accordingly
-  if (pixelHits.size() == 3)
-    return {0, 0, 0, 4, 4, 4, 4, 4, 4};
-  else
-    return {0, 0, 0, 0, 4, 4, 4, 4, 4, 4};
+std::vector<HitType> getHitTypesFrompT3(LSTEvent* event, unsigned int pT3) {
+  unsigned int pLS = getpLSFrompT3(event, pT3);
+  auto hitTypes = getHitTypesFrompLS(event, pLS);
+  hitTypes.insert(hitTypes.end(), Params_T3::kHits, HitType::Phase2OT);
+  return hitTypes;
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT3(LSTEvent* event,
-                                                                                              unsigned pT3) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFrompT3(LSTEvent* event,
+                                                                                         unsigned pT3) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFrompT3(event, pT3));
 }
 
@@ -325,7 +328,7 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
 // ===============
 
 //____________________________________________________________________________________________
-unsigned int getPixelLSFrompT5(LSTEvent* event, unsigned int pT5) {
+unsigned int getpLSFrompT5(LSTEvent* event, unsigned int pT5) {
   auto const pixelQuintuplets = event->getPixelQuintuplets();
   auto ranges = event->getRanges();
   auto modulesEvt = event->getModules<ModulesSoA>();
@@ -358,25 +361,20 @@ std::vector<unsigned int> getMDsFrompT5(LSTEvent* event, unsigned int pT5) {
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getOuterTrackerHitsFrompT5(LSTEvent* event, unsigned int pT5) {
+std::vector<unsigned int> getT5HitsFrompT5(LSTEvent* event, unsigned int pT5) {
   unsigned int T5 = getT5FrompT5(event, pT5);
   return getHitsFromT5(event, T5);
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getPixelHitsFrompT5(LSTEvent* event, unsigned int pT5) {
-  unsigned int pLS = getPixelLSFrompT5(event, pT5);
-  return getPixelHitsFrompLS(event, pLS);
-}
-
-//____________________________________________________________________________________________
 std::vector<unsigned int> getHitsFrompT5(LSTEvent* event, unsigned int pT5) {
-  unsigned int pLS = getPixelLSFrompT5(event, pT5);
-  unsigned int T5 = getT5FrompT5(event, pT5);
-  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
-  std::vector<unsigned int> outerTrackerHits = getHitsFromT5(event, T5);
-  pixelHits.insert(pixelHits.end(), outerTrackerHits.begin(), outerTrackerHits.end());
-  return pixelHits;
+  auto const& allHits = event->getPixelQuintuplets().hitIndices()[pT5];
+  std::vector<unsigned int> hits;
+  hits.reserve(allHits.size());
+  for (auto const hit : allHits)
+    if (hits.empty() || hits.back() != hit)  // should eventually check all and type
+      hits.emplace_back(hit);
+  return hits;
 }
 
 //____________________________________________________________________________________________
@@ -391,7 +389,7 @@ std::vector<unsigned int> getHitIdxsFrompT5(LSTEvent* event, unsigned int pT5) {
 
 //____________________________________________________________________________________________
 std::vector<unsigned int> getModuleIdxsFrompT5(LSTEvent* event, unsigned int pT5) {
-  std::vector<unsigned int> hits = getOuterTrackerHitsFrompT5(event, pT5);
+  std::vector<unsigned int> hits = getT5HitsFrompT5(event, pT5);
   std::vector<unsigned int> module_idxs;
   auto hitsEvt = event->getHits<HitsExtendedSoA>();
   for (auto& hitIdx : hits) {
@@ -401,19 +399,16 @@ std::vector<unsigned int> getModuleIdxsFrompT5(LSTEvent* event, unsigned int pT5
 }
 
 //____________________________________________________________________________________________
-std::vector<unsigned int> getHitTypesFrompT5(LSTEvent* event, unsigned int pT5) {
-  unsigned int pLS = getPixelLSFrompT5(event, pT5);
-  std::vector<unsigned int> pixelHits = getPixelHitsFrompLS(event, pLS);
-  // pixel Hits list will be either 3 or 4 and depending on it return accordingly
-  if (pixelHits.size() == 3)
-    return {0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
-  else
-    return {0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4};
+std::vector<HitType> getHitTypesFrompT5(LSTEvent* event, unsigned int pT5) {
+  unsigned int pLS = getpLSFrompT5(event, pT5);
+  auto hitTypes = getHitTypesFrompLS(event, pLS);
+  hitTypes.insert(hitTypes.end(), Params_T5::kHits, HitType::Phase2OT);
+  return hitTypes;
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFrompT5(LSTEvent* event,
-                                                                                              unsigned pT5) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFrompT5(LSTEvent* event,
+                                                                                         unsigned pT5) {
   return convertHitsToHitIdxsAndHitTypes(event, getHitsFrompT5(event, pT5));
 }
 
@@ -445,8 +440,7 @@ std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int iTC) {
 }
 
 //____________________________________________________________________________________________
-std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHitTypesFromTC(LSTEvent* event,
-                                                                                             unsigned iTC) {
+std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitTypesFromTC(LSTEvent* event, unsigned iTC) {
   // Get the type of the track candidate
   auto const& trackCandidatesBase = event->getTrackCandidatesBase();
   auto const& trackCandidatesExtended = event->getTrackCandidatesExtended();
