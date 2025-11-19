@@ -7,16 +7,12 @@ namespace lstgeometry {
 
   struct ModuleInfo {
     unsigned int detId;
-    unsigned int binaryDetId;
-    std::string section;
-    int layer;
-    int ring;
     double sensorCenterRho_mm;
     double sensorCenterZ_mm;
-    double tiltAngle_deg;
-    double skewAngle_deg;
-    double yawAngle_deg;
-    double phi_deg;
+    double tiltAngle_rad;
+    double skewAngle_rad;
+    double yawAngle_rad;
+    double phi_rad;
     double vtxOneX_mm;
     double vtxOneY_mm;
     double vtxTwoX_mm;
@@ -28,7 +24,6 @@ namespace lstgeometry {
     double meanWidth_mm;
     double length_mm;
     double sensorSpacing_mm;
-    double sensorThickness_mm;
     MatrixD8x3 transformedCorners;
   };
 

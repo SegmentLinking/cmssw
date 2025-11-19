@@ -65,7 +65,7 @@ namespace lstgeometry {
       // Convert from mm to cm
       double z = sensor.sensorCenterZ_mm / 10.0;
       double rho = sensor.sensorCenterRho_mm / 10.0;
-      double phi = degToRad(sensor.phi_deg);
+      double phi = sensor.phi_rad;
       double x = rho * cos(phi);
       double y = rho * sin(phi);
 

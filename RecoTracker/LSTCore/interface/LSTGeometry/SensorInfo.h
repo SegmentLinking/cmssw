@@ -7,13 +7,9 @@ namespace lstgeometry {
 
   struct SensorInfo {
     unsigned int detId;
-    unsigned int binaryDetId;
-    std::string section;
-    int layer;
-    int ring;
     double sensorCenterRho_mm;
     double sensorCenterZ_mm;
-    double phi_deg;
+    double phi_rad;
   };
 }  // namespace lstgeometry
 

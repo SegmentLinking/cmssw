@@ -2,6 +2,7 @@
 #define RecoTracker_LSTCore_interface_LSTGeometry_IO_h
 
 #include "Common.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
@@ -59,16 +60,12 @@ namespace lstgeometry {
       ModuleInfo m;
 
       m.detId = std::stoul(tokens[0]);
-      m.binaryDetId = std::stoul(tokens[1], nullptr, 2);
-      m.section = tokens[2];
-      m.layer = std::stoi(tokens[3]);
-      m.ring = std::stoi(tokens[4]);
       m.sensorCenterRho_mm = std::stod(tokens[5]);
       m.sensorCenterZ_mm = std::stod(tokens[6]);
-      m.tiltAngle_deg = std::stod(tokens[7]);
-      m.skewAngle_deg = std::stod(tokens[8]);
-      m.yawAngle_deg = std::stod(tokens[9]);
-      m.phi_deg = std::stod(tokens[10]);
+      m.tiltAngle_rad = degToRad(std::stod(tokens[7]));
+      m.skewAngle_rad = degToRad(std::stod(tokens[8]));
+      m.yawAngle_rad = degToRad(std::stod(tokens[9]));
+      m.phi_rad = degToRad(std::stod(tokens[10]));
       m.vtxOneX_mm = std::stod(tokens[11]);
       m.vtxOneY_mm = std::stod(tokens[12]);
       m.vtxTwoX_mm = std::stod(tokens[13]);
@@ -80,7 +77,6 @@ namespace lstgeometry {
       m.meanWidth_mm = std::stod(tokens[19]);
       m.length_mm = std::stod(tokens[20]);
       m.sensorSpacing_mm = std::stod(tokens[21]);
-      m.sensorThickness_mm = std::stod(tokens[22]);
 
       modules.push_back(m);
     }
@@ -111,13 +107,9 @@ namespace lstgeometry {
       SensorInfo s;
 
       s.detId = std::stoul(tokens[0]);
-      s.binaryDetId = std::stoul(tokens[1], nullptr, 2);
-      s.section = tokens[2];
-      s.layer = std::stoi(tokens[3]);
-      s.ring = std::stoi(tokens[4]);
       s.sensorCenterRho_mm = std::stod(tokens[5]);
       s.sensorCenterZ_mm = std::stod(tokens[6]);
-      s.phi_deg = std::stod(tokens[7]);
+      s.phi_rad = degToRad(std::stod(tokens[7]));
 
       sensors[s.detId] = s;
     }
@@ -185,7 +177,7 @@ namespace lstgeometry {
       for (auto& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz_slope;
         float dxdy_slope = slope.dxdy_slope;
-        float phi = degToRad(sensors.at(detid).phi_deg);
+        float phi = sensors.at(detid).phi_rad;
         file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
         if (drdz_slope != kDefaultSlope) {
           file.write(reinterpret_cast<const char*>(&drdz_slope), sizeof(drdz_slope));
@@ -199,7 +191,7 @@ namespace lstgeometry {
       for (auto& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz_slope;
         float dxdy_slope = slope.dxdy_slope;
-        float phi = degToRad(sensors.at(detid).phi_deg);
+        float phi = sensors.at(detid).phi_rad;
         file << detid << ",";
         if (drdz_slope != kDefaultSlope) {
           file << drdz_slope << "," << dxdy_slope << std::endl;
