@@ -1,7 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-# from Configuration.ProcessModifiers.trackingMkFit_cff import trackingMkFit
-from Configuration.ProcessModifiers.trackingMkFitCommon_cff import trackingMkFitCommon as trackingLSTCommon
+trackingLSTCommon = cms.Modifier()
 trackingLST = cms.ModifierChain(trackingLSTCommon)
 
 ###################################################################
