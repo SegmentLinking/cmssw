@@ -35,11 +35,9 @@ namespace lstgeometry {
   // Only the tilt angles are non-zero for the current geometry. If the other
   // angles get used, implement their rotations using the tangentialRotationMatrix
   // function above as an example.
-  MatrixD3x3 rotationMatrix(double tilt_deg, double skew_deg, double yaw_deg, double phi_deg) {
-    if (skew_deg != 0 || yaw_deg != 0)
+  MatrixD3x3 rotationMatrix(double tilt_rad, double skew_rad, double yaw_rad, double phi_rad) {
+    if (skew_rad != 0 || yaw_rad != 0)
       throw std::invalid_argument("Skew and yaw angles are not currently supported.");
-    double tilt_rad = degToRad(tilt_deg);
-    double phi_rad = degToRad(phi_deg);
 
     // Rotation around Z-axis that makes the sensor "face towards" the beamline (i.e. towards z-axis)
     // So for example if phi=0 then R is the identity (i.e. already facing), or if phi=90deg
@@ -62,14 +60,13 @@ namespace lstgeometry {
   void transformSensorCorners(ModuleInfo& moduleInfo) {
     auto module_z = moduleInfo.sensorCenterZ_mm;
     auto module_rho = moduleInfo.sensorCenterRho_mm;
-    auto module_phi = moduleInfo.phi_deg;
+    auto module_phi = moduleInfo.phi_rad;
     auto sensor_spacing = moduleInfo.sensorSpacing_mm;
     auto sensor_width = moduleInfo.meanWidth_mm;
     auto sensor_length = moduleInfo.length_mm;
 
-    auto phi_rad = degToRad(module_phi);
-    auto module_x = module_rho * cos(phi_rad);
-    auto module_y = module_rho * sin(phi_rad);
+    auto module_x = module_rho * cos(module_phi);
+    auto module_y = module_rho * sin(module_phi);
 
     auto half_width = sensor_width / 2;
     auto half_length = sensor_length / 2;
@@ -94,7 +91,7 @@ namespace lstgeometry {
                        {half_spacing, half_width, -half_length}};
 
     MatrixD3x3 rotation_matrix =
-        rotationMatrix(moduleInfo.tiltAngle_deg, moduleInfo.skewAngle_deg, moduleInfo.yawAngle_deg, moduleInfo.phi_deg);
+        rotationMatrix(moduleInfo.tiltAngle_rad, moduleInfo.skewAngle_rad, moduleInfo.yawAngle_rad, moduleInfo.phi_rad);
     MatrixD8x3 rotated_corners = (rotation_matrix * corners.transpose()).transpose();
 
     rotated_corners.rowwise() += RowVectorD3{module_x, module_y, module_z};
@@ -123,14 +120,14 @@ namespace lstgeometry {
 
       double sensor1_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
       double sensor1_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(degToRad(sensors.at(sensor_det_id_1).phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(sensors.at(sensor_det_id_1).phi_rad);
       double sensor1_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(degToRad(sensors.at(sensor_det_id_1).phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(sensors.at(sensor_det_id_1).phi_rad);
       double sensor2_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
       double sensor2_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(degToRad(sensors.at(sensor_det_id_1).phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(sensors.at(sensor_det_id_1).phi_rad);
       double sensor2_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(degToRad(sensors.at(sensor_det_id_1).phi_deg));
+          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(sensors.at(sensor_det_id_1).phi_rad);
 
       RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
       RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
