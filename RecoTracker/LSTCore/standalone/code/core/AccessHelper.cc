@@ -437,6 +437,7 @@ std::vector<unsigned int> getLSsFromTC(LSTEvent* event, unsigned int iTC) {
       return std::vector<unsigned int>();
       break;
   }
+  throw std::logic_error("Unsupported type " + std::to_string(type));
 }
 
 //____________________________________________________________________________________________
@@ -460,4 +461,5 @@ std::tuple<std::vector<unsigned int>, std::vector<HitType>> getHitIdxsAndHitType
       return getHitIdxsAndHitTypesFrompLS(event, objidx);
       break;
   }
+  throw std::logic_error("Unsupported type " + std::to_string(type));
 }
