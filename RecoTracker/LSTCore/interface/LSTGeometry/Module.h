@@ -22,8 +22,8 @@ namespace lstgeometry {
     //
     //  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x  x
     //
-    //    -subdet-       -layer-- -side    --------rod---------    -------module-------        # if subdet == 5
-    //    -subdet- -side       --layer-       ----ring---          -------module-------        # if subdet == 4
+    //  -subdet-       -layer-- -side    --------rod---------    -------module-------        # if subdet == 5
+    //  -subdet- -side       --layer-       ----ring---          -------module-------        # if subdet == 4
     //
     //
 
