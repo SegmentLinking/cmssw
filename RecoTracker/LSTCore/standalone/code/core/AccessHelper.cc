@@ -467,3 +467,39 @@ std::tuple<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndHi
       break;
   }
 }
+
+std::pair<std::vector<unsigned int>, std::vector<unsigned int>> getHitIdxsAndTypesFromTC(LSTEvent* event,
+                                                                                         unsigned int tc_idx) {
+  auto const& base = event->getTrackCandidatesBase();
+  auto const& ext = event->getTrackCandidatesExtended();
+  auto const& hitsBase = event->getInput<HitsBaseSoA>();
+
+  std::vector<unsigned int> hit_idx;
+  hit_idx.reserve(Params_TC::kHits);
+  std::vector<unsigned int> hit_type;
+  hit_type.reserve(Params_TC::kHits);
+
+  for (int slot = 0; slot < Params_TC::kLayers; ++slot) {
+    if (ext.lowerModuleIndices()[tc_idx][slot] == lst::kTCEmptyLowerModule)
+      continue;
+
+    // Get the LOCAL hit indices from the track candidate
+    const unsigned int h0_local = base.hitIndices()[tc_idx][2 * slot + 0];
+    const unsigned int h1_local = base.hitIndices()[tc_idx][2 * slot + 1];
+
+    // Get the GLOBAL ntuple indices
+    const unsigned int h0_global = hitsBase.idxs()[h0_local];
+    const unsigned int h1_global = hitsBase.idxs()[h1_local];
+
+    // Determine the type from the hit's detid (1 = pixel, otherwise OT)
+    const unsigned int t0 = (hitsBase.detid()[h0_local] == 1) ? 0u : 4u;
+    const unsigned int t1 = (hitsBase.detid()[h1_local] == 1) ? 0u : 4u;
+
+    // Push the GLOBAL indices and correct types
+    hit_idx.push_back(h0_global);
+    hit_type.push_back(t0);
+    hit_idx.push_back(h1_global);
+    hit_type.push_back(t1);
+  }
+  return {hit_idx, hit_type};
+}

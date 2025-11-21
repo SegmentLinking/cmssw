@@ -581,6 +581,30 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       pixelSegmentsDC_->const_view(),
                       tc_pls_triplets);
 
+  // Get number of TCs to configure grid
+  auto nTrackCandidates_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
+  alpaka::memcpy(queue_,
+                 nTrackCandidates_buf_h,
+                 cms::alpakatools::make_device_view(queue_, (*trackCandidatesBaseDC_)->nTrackCandidates()));
+  alpaka::wait(queue_);
+  unsigned int nTC = *nTrackCandidates_buf_h.data();
+
+  if (nTC > 0) {
+    // One block per TC (Dimension Z/0), 128 threads per block (Dims Y/1, X/2)
+    auto const wd = cms::alpakatools::make_workdiv<Acc3D>({nTC, 1, 1}, {1, 4, 32});
+
+    using K = ALPAKA_ACCELERATOR_NAMESPACE::lst::ExtendTrackCandidatesFromDupT5;
+    alpaka::exec<Acc3D>(queue_,
+                        wd,
+                        K{},
+                        modules_.const_view<ModulesSoA>(),
+                        rangesDC_->const_view(),
+                        quintupletsDC_->const_view<QuintupletsSoA>(),
+                        quintupletsDC_->const_view<QuintupletsOccupancySoA>(),
+                        trackCandidatesBaseDC_->view(),
+                        trackCandidatesExtendedDC_->view());
+  }
+
   // Check if either n_max_pixel_track_candidates or n_max_nonpixel_track_candidates was reached
   auto nTrackCanpT5Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTrackCanpT3Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
