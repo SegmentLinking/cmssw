@@ -89,7 +89,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       candsExtended.logicalLayers()[trackCandidateIndex][s] = 0;  // 0 means 'pixel' if filled; harmless for empty
       candsExtended.lowerModuleIndices()[trackCandidateIndex][s] = ::lst::kTCEmptyLowerModule;
     }
-    CMS_UNROLL_LOOP for (int i = 0; i < Params_TC::kHits; ++i) { candsBase.hitIndices()[trackCandidateIndex][i] = 0u; }
+    CMS_UNROLL_LOOP for (int i = 0; i < Params_TC::kHits; ++i) {
+      candsBase.hitIndices()[trackCandidateIndex][i] = ::lst::kTCEmptyHitIdx;
+    }
 
     // --- Write layers by slot mapping ---
     if (type == LSTObjType::T5) {

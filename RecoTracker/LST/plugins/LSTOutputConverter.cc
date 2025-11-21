@@ -164,23 +164,13 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 
     // pixel-seeded TCs from LST always have 4 pixel hits
     unsigned int const nPixelHits = iType == lst::LSTObjType::T5 ? 0 : 4;
-    unsigned int nHits = 0;
-    switch (iType) {
-      case lst::LSTObjType::T5:
-        nHits = lst::Params_T5::kHits;
-        break;
-      case lst::LSTObjType::pT3:
-        nHits = lst::Params_pT3::kHits;
-        break;
-      case lst::LSTObjType::pT5:
-        nHits = lst::Params_pT5::kHits;
-        break;
-      case lst::LSTObjType::pLS:
-        nHits = lst::Params_pLS::kHits;
-        break;
+
+    for (unsigned int j = nPixelHits; j < lst::Params_TC::kHits; j++) {
+      unsigned int hitIdx = lstOutput_view.hitIndices()[i][j];
+      if (hitIdx == lst::kTCEmptyHitIdx)
+        continue;
+      recHits.push_back(OTHits[hitIdx]->clone());
     }
-    for (unsigned int j = nPixelHits; j < nHits; j++)
-      recHits.push_back(OTHits[lstOutput_view.hitIndices()[i][j]]->clone());
 
     recHits.sort([](const auto& a, const auto& b) {
       const auto asub = a.det()->subDetector();
@@ -209,7 +199,7 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
       if (includeNonpLSTSs_ || iType == lst::LSTObjType::T5) {
         using Hit = SeedingHitSet::ConstRecHitPointer;
         std::vector<Hit> hitsForSeed;
-        hitsForSeed.reserve(nHits);
+        hitsForSeed.reserve(recHits.size());
         int n = 0;
         for (auto const& hit : recHits) {
           if (iType == lst::LSTObjType::T5) {

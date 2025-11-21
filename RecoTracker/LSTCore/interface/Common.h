@@ -35,7 +35,8 @@ namespace lst {
 
   constexpr unsigned int size_superbins = 45000;
 
-  constexpr uint16_t kTCEmptyLowerModule = 0xFFFF;  // never a real lowerModule index
+  constexpr uint16_t kTCEmptyLowerModule = 0xFFFF;     // never a real lowerModule index
+  constexpr unsigned int kTCEmptyHitIdx = 0xFFFFFFFF;  // Sentinel for empty hit slots
 
 // Half precision wrapper functions.
 #if defined(FP16_Base)
