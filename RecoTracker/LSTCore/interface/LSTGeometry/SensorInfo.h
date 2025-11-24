@@ -7,8 +7,8 @@ namespace lstgeometry {
 
   struct SensorInfo {
     unsigned int detId;
-    double sensorCenterRho_mm;
-    double sensorCenterZ_mm;
+    double sensorCenterRho_cm;
+    double sensorCenterZ_cm;
     double phi_rad;
   };
 }  // namespace lstgeometry

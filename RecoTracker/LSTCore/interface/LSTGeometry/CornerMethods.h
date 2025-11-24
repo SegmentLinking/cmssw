@@ -58,12 +58,12 @@ namespace lstgeometry {
 
   // Calculates the transformed corners of each sensor
   void transformSensorCorners(ModuleInfo& moduleInfo) {
-    auto module_z = moduleInfo.sensorCenterZ_mm;
-    auto module_rho = moduleInfo.sensorCenterRho_mm;
+    auto module_z = moduleInfo.sensorCenterZ_cm;
+    auto module_rho = moduleInfo.sensorCenterRho_cm;
     auto module_phi = moduleInfo.phi_rad;
-    auto sensor_spacing = moduleInfo.sensorSpacing_mm;
-    auto sensor_width = moduleInfo.meanWidth_mm;
-    auto sensor_length = moduleInfo.length_mm;
+    auto sensor_spacing = moduleInfo.sensorSpacing_cm;
+    auto sensor_width = moduleInfo.meanWidth_cm;
+    auto sensor_length = moduleInfo.length_cm;
 
     auto module_x = module_rho * cos(module_phi);
     auto module_y = module_rho * sin(module_phi);
@@ -75,8 +75,8 @@ namespace lstgeometry {
     // Make the module sizes consistent with hit-based method.
     // FIXME: Using the real (smaller) sizes specified by CSV file increases
     // fake rate significantly and lowers efficiency between abs(eta) 1 to 2.
-    auto width_extension = 50.0 - half_width;
-    auto length_extension = (half_length > 40 ? 50.0 : 25.0) - half_length;
+    auto width_extension = 5.0 - half_width;
+    auto length_extension = (half_length > 4 ? 5.0 : 2.5) - half_length;
 
     half_width += width_extension;
     half_length += length_extension;
@@ -95,8 +95,6 @@ namespace lstgeometry {
     MatrixD8x3 rotated_corners = (rotation_matrix * corners.transpose()).transpose();
 
     rotated_corners.rowwise() += RowVectorD3{module_x, module_y, module_z};
-
-    rotated_corners /= 10;
 
     // Coordinate reorder before saving (x,y,z)->(z,x,y)
     moduleInfo.transformedCorners.col(0) = rotated_corners.col(2);
@@ -118,22 +116,19 @@ namespace lstgeometry {
       RowVectorD3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
       RowVectorD3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
 
-      double sensor1_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
+      double sensor1_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_cm;
       double sensor1_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_1).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_1).phi_rad);
       double sensor1_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(sensors.at(sensor_det_id_1).phi_rad);
-      double sensor2_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_mm;
+          sensors.at(sensor_det_id_1).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_1).phi_rad);
+      double sensor2_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_cm;
       double sensor2_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * cos(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_1).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_1).phi_rad);
       double sensor2_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_mm * sin(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_1).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_1).phi_rad);
 
       RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
       RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
-
-      sensor_centroid_1 /= 10;
-      sensor_centroid_2 /= 10;
 
       double distance_to_sensor_1 = (centroid_sensor_1 - sensor_centroid_1).norm();
       double distance_to_sensor_2 = (centroid_sensor_2 - sensor_centroid_2).norm();
