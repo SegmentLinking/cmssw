@@ -50,7 +50,7 @@ namespace lstgeometry {
     if (ref_subdet == 5) {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
-      for (int zshift : {0, 10, -10}) {
+      for (float zshift : {0, 10, -10}) {
         std::vector<Polygon> ref_polygon;
         ref_polygon.push_back(getEtaPhiPolygon(det_geom.getCorners(ref_detid), refphi, zshift));
 
@@ -74,7 +74,7 @@ namespace lstgeometry {
         for (auto& ref_polygon_piece : ref_polygon)
           area += boost::geometry::area(ref_polygon_piece);
 
-        if (area <= 0.0001)
+        if (area <= 1e-6)
           continue;
 
         auto const& new_tar_detids_to_be_considered =
@@ -242,7 +242,7 @@ namespace lstgeometry {
       for (auto& ref_polygon_piece : ref_polygon)
         area += boost::geometry::area(ref_polygon_piece);
 
-      if (area > 0.0001) {
+      if (area > 1e-6) {
         auto const& new_tar_detids_to_be_considered =
             det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
 
