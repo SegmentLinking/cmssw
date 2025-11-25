@@ -1,8 +1,7 @@
 ##########################################################
 #
-# The file trackingNtuple.root has the data I need.
-# I can section it off into jets.
-# I then put these jets into a new n-tuple, 
+# Adds deltaR branches to the trackingNtuple.root file
+# using GenJets.
 #
 ##########################################################
 
@@ -60,6 +59,7 @@ for ind in range(old_tree.GetEntries()):
     genJetsPhi = old_tree.genJetPhi
     genJetLen = len(genJetsPt)
 
+    # Declare arrays (all entries will be filled with non-dummy values)
     deltaEtas = np.ones(simLen)*-999
     deltaPhis = np.ones(simLen)*-999
     deltaRs = np.ones(simLen)*-999
@@ -72,7 +72,9 @@ for ind in range(old_tree.GetEntries()):
             dEtaj = etaList[i] - genJetsEta[j]
             dPhij = np.arccos(np.cos(phiList[i] - genJetsPhi[j]))
             dRj = np.sqrt(dEtaj**2 + dPhij**2)
-            if(dRj < dRTemp): # Selects smallest dR, corresponding to closest jet
+            
+            # Selects smallest dR, corresponding to closest jet
+            if(dRj < dRTemp): 
                 dRTemp = dRj
                 dPhiTemp = dPhij
                 dEtaTemp = dEtaj
