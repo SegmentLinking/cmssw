@@ -150,9 +150,9 @@ void createJetBranches() {
   ana.tx->createBranch<std::vector<float>>("sim_deltaEta");
   ana.tx->createBranch<std::vector<float>>("sim_deltaPhi");
   ana.tx->createBranch<std::vector<float>>("sim_deltaR");
-  ana.tx->createBranch<std::vector<float>>("sim_jet_eta");
-  ana.tx->createBranch<std::vector<float>>("sim_jet_phi");
-  ana.tx->createBranch<std::vector<float>>("sim_jet_pt");
+  ana.tx->createBranch<std::vector<float>>("genJetEta");
+  ana.tx->createBranch<std::vector<float>>("genJetPhi");
+  ana.tx->createBranch<std::vector<float>>("genJetPt");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -577,16 +577,16 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
       auto const& trk_sim_deltaEta = trk.getVF("sim_deltaEta");
       auto const& trk_sim_deltaPhi = trk.getVF("sim_deltaPhi");
       auto const& trk_sim_deltaR = trk.getVF("sim_deltaR");
-      auto const& trk_sim_jet_eta = trk.getVF("sim_jet_eta");
-      auto const& trk_sim_jet_phi = trk.getVF("sim_jet_phi");
-      auto const& trk_sim_jet_pt = trk.getVF("sim_jet_pt");
+      auto const& trk_genJetEta = trk.getVF("genJetEta");
+      auto const& trk_genJetPhi = trk.getVF("genJetPhi");
+      auto const& trk_genJetPt = trk.getVF("genJetPt");
 
       ana.tx->pushbackToBranch<float>("sim_deltaEta", trk_sim_deltaEta[isimtrk]);
       ana.tx->pushbackToBranch<float>("sim_deltaPhi", trk_sim_deltaPhi[isimtrk]);
       ana.tx->pushbackToBranch<float>("sim_deltaR", trk_sim_deltaR[isimtrk]);
-      ana.tx->pushbackToBranch<float>("sim_jet_eta", trk_sim_jet_eta[isimtrk]);
-      ana.tx->pushbackToBranch<float>("sim_jet_phi", trk_sim_jet_phi[isimtrk]);
-      ana.tx->pushbackToBranch<float>("sim_jet_pt", trk_sim_jet_pt[isimtrk]);
+      ana.tx->pushbackToBranch<float>("genJetEta", trk_genJetEta[isimtrk]);
+      ana.tx->pushbackToBranch<float>("genJetPhi", trk_genJetPhi[isimtrk]);
+      ana.tx->pushbackToBranch<float>("genJetPt", trk_genJetPt[isimtrk]);
     }
 
     // Fill the branch with simulated tracks.

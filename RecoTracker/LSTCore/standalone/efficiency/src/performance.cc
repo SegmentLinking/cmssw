@@ -595,52 +595,52 @@ void bookEfficiencySet(SimTrackSetDefinition& effset) {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_deltaR");
   });
 
-  // Lines for jet_eta
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_jet_eta");
-  ana.histograms.addVecHistogram(category_name + "_ef_denom_jet_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_jet_eta");
+  // Lines for genJetEta
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_genJetEta");
+  ana.histograms.addVecHistogram(category_name + "_ef_denom_genJetEta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_genJetEta");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_jet_eta");
-  ana.histograms.addVecHistogram(category_name + "_ef_numer_jet_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_jet_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_genJetEta");
+  ana.histograms.addVecHistogram(category_name + "_ef_numer_genJetEta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_genJetEta");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_jet_eta");
-  ana.histograms.addVecHistogram(category_name + "_ie_numer_jet_eta", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_jet_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_genJetEta");
+  ana.histograms.addVecHistogram(category_name + "_ie_numer_genJetEta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_genJetEta");
   });
 
-  // Lines for jet_phi
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_jet_phi");
-  ana.histograms.addVecHistogram(category_name + "_ef_denom_jet_phi", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_jet_phi");
+  // Lines for genJetPhi
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_genJetPhi");
+  ana.histograms.addVecHistogram(category_name + "_ef_denom_genJetPhi", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_genJetPhi");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_jet_phi");
-  ana.histograms.addVecHistogram(category_name + "_ef_numer_jet_phi", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_jet_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_genJetPhi");
+  ana.histograms.addVecHistogram(category_name + "_ef_numer_genJetPhi", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_genJetPhi");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_jet_phi");
-  ana.histograms.addVecHistogram(category_name + "_ie_numer_jet_phi", 180, -4.5, 4.5, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_jet_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_genJetPhi");
+  ana.histograms.addVecHistogram(category_name + "_ie_numer_genJetPhi", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_genJetPhi");
   });
 
-  // Lines for jet_pt
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_jet_pt");
-  ana.histograms.addVecHistogram(category_name + "_ef_denom_jet_pt", 50, 50, 1000, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_jet_pt");
+  // Lines for genJetPt
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ef_denom_genJetPt", 50, 50, 1000, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_genJetPt");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_jet_pt");
-  ana.histograms.addVecHistogram(category_name + "_ef_numer_jet_pt", 50, 50, 1000, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_jet_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ef_numer_genJetPt", 50, 50, 1000, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_genJetPt");
   });
 
-  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_jet_pt");
-  ana.histograms.addVecHistogram(category_name + "_ie_numer_jet_pt", 50, 50, 1000, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_jet_pt");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ie_numer_genJetPt", 50, 50, 1000, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_genJetPt");
   });
 
   // Moving the standard pT code up here for convenience
@@ -941,9 +941,9 @@ void fillEfficiencySets(std::vector<SimTrackSetDefinition>& effsets) {
     std::vector<float> const& deltaEta = lstEff.getVF("sim_deltaEta");
     std::vector<float> const& deltaPhi = lstEff.getVF("sim_deltaPhi");
     std::vector<float> const& deltaR = lstEff.getVF("sim_deltaR");
-    std::vector<float> const& jet_eta = lstEff.getVF("sim_jet_eta");
-    std::vector<float> const& jet_phi = lstEff.getVF("sim_jet_phi");
-    std::vector<float> const& jet_pt = lstEff.getVF("sim_jet_pt");
+    std::vector<float> const& genJetEta = lstEff.getVF("genJetEta");
+    std::vector<float> const& genJetPhi = lstEff.getVF("genJetPhi");
+    std::vector<float> const& genJetPt = lstEff.getVF("genJetPt");
 
     for (auto& effset : effsets) {
       for (unsigned int isimtrk = 0; isimtrk < lstEff.getVF("sim_pt").size(); ++isimtrk) {
@@ -962,9 +962,9 @@ void fillEfficiencySets(std::vector<SimTrackSetDefinition>& effsets) {
                           deltaEta.at(isimtrk),
                           deltaPhi.at(isimtrk),
                           deltaR.at(isimtrk),
-                          jet_eta.at(isimtrk),
-                          jet_phi.at(isimtrk),
-                          jet_pt.at(isimtrk));
+                          genJetEta.at(isimtrk),
+                          genJetPhi.at(isimtrk),
+                          genJetPt.at(isimtrk));
       }
     }
   } else {
@@ -1003,9 +1003,9 @@ void fillEfficiencySet(int isimtrk,
                        float deltaEta,
                        float deltaPhi,
                        float deltaR,
-                       float jet_eta,
-                       float jet_phi,
-                       float jet_pt) {
+                       float genJetEta,
+                       float genJetPhi,
+                       float genJetPt) {
   //=========================================================
   // NOTE: The following is not applied as the LSTNtuple no longer writes this.
   // const int &bunch = lstEff.getVI("sim_bunchCrossing")[isimtrk];
@@ -1043,103 +1043,101 @@ void fillEfficiencySet(int isimtrk,
   const float vtx_z_thresh = 30;
   const float vtx_perp_thresh = 2.5;
 
-  if (pt > 0 && jet_eta < 140 && jet_eta > -140 && (jet_eta > -999 && deltaEta > -999)) {
-    // N minus eta cut
-    if (pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
-      // vs. eta plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_eta", eta);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_eta", eta);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_eta", eta);
+  // N minus eta cut
+  if (pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
+    // vs. eta plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_eta", eta);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_eta", eta);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_eta", eta);
+  }
+
+  // N minus pt cut
+  if (std::abs(eta) < ana.eta_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
+    // vs. pt plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_pt", pt);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_pt", pt);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_pt", pt);
+  }
+
+  // N minus dxy cut
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh) {
+    // vs. dxy plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dxy", dxy);
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_vxy", vtx_perp);
+    if (pass) {
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_dxy", dxy);
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_vxy", vtx_perp);
+    } else {
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_dxy", dxy);
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_vxy", vtx_perp);
     }
+  }
 
-    // N minus pt cut
-    if (std::abs(eta) < ana.eta_cut and std::abs(vtx_z) < vtx_z_thresh and std::abs(vtx_perp) < vtx_perp_thresh) {
-      // vs. pt plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_pt", pt);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_pt", pt);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_pt", pt);
-    }
+  // N minus dz cut
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_perp) < vtx_perp_thresh) {
+    // vs. dz plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dz", dz);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_dz", dz);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_dz", dz);
+  }
 
-    // N minus dxy cut
-    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh) {
-      // vs. dxy plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dxy", dxy);
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_vxy", vtx_perp);
-      if (pass) {
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_dxy", dxy);
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_vxy", vtx_perp);
-      } else {
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_dxy", dxy);
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_vxy", vtx_perp);
-      }
-    }
+  // All phase-space cuts
+  if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and
+      std::abs(vtx_perp) < vtx_perp_thresh) {
+    // vs. Phi plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_phi", phi);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_phi", phi);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_phi", phi);
 
-    // N minus dz cut
-    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_perp) < vtx_perp_thresh) {
-      // vs. dz plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_dz", dz);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_dz", dz);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_dz", dz);
-    }
+    // vs. deltaEta plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaEta", deltaEta);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaEta", deltaEta);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaEta", deltaEta);
 
-    // All phase-space cuts
-    if (std::abs(eta) < ana.eta_cut and pt > ana.pt_cut and std::abs(vtx_z) < vtx_z_thresh and
-        std::abs(vtx_perp) < vtx_perp_thresh) {
-      // vs. Phi plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_phi", phi);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_phi", phi);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_phi", phi);
+    // vs. deltaPhi plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaPhi", deltaPhi);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaPhi", deltaPhi);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaPhi", deltaPhi);
 
-      // vs. deltaEta plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaEta", deltaEta);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaEta", deltaEta);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaEta", deltaEta);
+    // vs. deltaR plot
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaR", deltaR);
+    if (pass)
+      ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaR", deltaR);
+    else
+      ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaR", deltaR);
 
-      // vs. deltaPhi plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaPhi", deltaPhi);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaPhi", deltaPhi);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaPhi", deltaPhi);
+  // vs. genJetEta plot
+  ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_genJetEta", genJetEta);
+  if (pass)
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_genJetEta", genJetEta);
+  else
+    ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_genJetEta", genJetEta);
 
-      // vs. deltaR plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaR", deltaR);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaR", deltaR);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaR", deltaR);
+  // vs. genJetPhi plot
+  ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_genJetPhi", genJetPhi);
+  if (pass)
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_genJetPhi", genJetPhi);
+  else
+    ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_genJetPhi", genJetPhi);
 
-      // vs. jet_eta plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_jet_eta", jet_eta);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_jet_eta", jet_eta);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_jet_eta", jet_eta);
-
-      // vs. jet_phi plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_jet_phi", jet_phi);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_jet_phi", jet_phi);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_jet_phi", jet_phi);
-
-      // vs. jet_pt plot
-      ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_jet_pt", jet_pt);
-      if (pass)
-        ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_jet_pt", jet_pt);
-      else
-        ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_jet_pt", jet_pt);
-    }
+  // vs. genJetPt plot
+  ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_genJetPt", genJetPt);
+  if (pass)
+    ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_genJetPt", genJetPt);
+  else
+    ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_genJetPt", genJetPt);
   }
 }
 

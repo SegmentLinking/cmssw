@@ -93,6 +93,12 @@
 
 #include "RecoTracker/FinalTrackSelectors/interface/getBestVertex.h"
 
+// GenJet headers
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
+#include "DataFormats/JetReco/interface/GenJetCollection.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
+
 #include <set>
 #include <map>
 #include <unordered_set>
@@ -627,6 +633,8 @@ private:
 
   void fillTrackingVertices(const TrackingVertexRefVector& trackingVertices,
                             const TrackingParticleRefKeyToIndex& tpKeyToIndex);
+  
+  void fillGenJets(const edm::Event& iEvent);
 
   struct SimHitData {
     std::vector<int> matchingSimHit;
@@ -704,6 +712,8 @@ private:
 
   HistoryBase tracer_;
   ParametersDefinerForTP parametersDefiner_;
+
+  const edm::EDGetTokenT<reco::GenJetCollection> tok_jets_;
 
   TTree* t;
 
@@ -1295,7 +1305,7 @@ private:
       ph2_radL;  //http://cmslxr.fnal.gov/lxr/source/DataFormats/GeometrySurface/interface/MediumProperties.h
   std::vector<float> ph2_bbxi;
   std::vector<uint64_t> ph2_usedMask;
-  std::vector<uint16_t> ph2_clustSize;
+  std::vector<size_t> ph2_clustSize;
 
   ////////////////////
   // invalid (missing/inactive/etc) hits
@@ -1415,6 +1425,12 @@ private:
   std::vector<std::vector<int>> simvtx_sourceSimIdx;    // second index runs through source TrackingParticles
   std::vector<std::vector<int>> simvtx_daughterSimIdx;  // second index runs through daughter TrackingParticles
   std::vector<int> simpv_idx;
+
+  ////////////////////
+  // GenJets
+  std::vector<float> genJetPt;
+  std::vector<float> genJetEta;
+  std::vector<float> genJetPhi;
 };
 
 //
@@ -1473,7 +1489,8 @@ TrackingNtuple::TrackingNtuple(const edm::ParameterSet& iConfig)
       keepEleSimHits_(iConfig.getUntrackedParameter<bool>("keepEleSimHits")),
       saveSimHitsP3_(iConfig.getUntrackedParameter<bool>("saveSimHitsP3")),
       simHitBySignificance_(iConfig.getUntrackedParameter<bool>("simHitBySignificance")),
-      parametersDefiner_(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"), consumesCollector()) {
+      parametersDefiner_(iConfig.getUntrackedParameter<edm::InputTag>("beamSpot"), consumesCollector()),
+      tok_jets_(consumes<reco::GenJetCollection>(iConfig.getParameter<edm::InputTag>("JetSource"))) {
   if (includeSeeds_) {
     seedTokens_ =
         edm::vector_transform(iConfig.getUntrackedParameter<std::vector<edm::InputTag>>("seedTracks"),
@@ -1550,7 +1567,7 @@ TrackingNtuple::TrackingNtuple(const edm::ParameterSet& iConfig)
             index, consumes<Phase2OTMaskContainer>(mask.getUntrackedParameter<edm::InputTag>("src")));
     }
   }
-
+  
   const bool tpRef = iConfig.getUntrackedParameter<bool>("trackingParticlesRef");
   const auto tpTag = iConfig.getUntrackedParameter<edm::InputTag>("trackingParticles");
   if (tpRef) {
@@ -2053,6 +2070,11 @@ TrackingNtuple::TrackingNtuple(const edm::ParameterSet& iConfig)
 
   t->Branch("simpv_idx", &simpv_idx);
 
+  // GenJets
+  t->Branch("genJetPt", &genJetPt);
+  t->Branch("genJetEta", &genJetEta);
+  t->Branch("genJetPhi", &genJetPhi);
+
   //t->Branch("" , &);
 }
 
@@ -2462,6 +2484,11 @@ void TrackingNtuple::clearVariables() {
   simvtx_sourceSimIdx.clear();
   simvtx_daughterSimIdx.clear();
   simpv_idx.clear();
+
+  // GenJets
+  genJetPt.clear();
+  genJetEta.clear();
+  genJetPhi.clear();
 }
 
 // ------------ method called for each event  ------------
@@ -2735,7 +2762,23 @@ void TrackingNtuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   // tracking vertices
   fillTrackingVertices(tvRefs, tpKeyToIndex);
 
+  // GenJets
+  fillGenJets(iEvent);
+
   t->Fill();
+}
+
+void TrackingNtuple::fillGenJets(const edm::Event& iEvent) {
+  edm::Handle<reco::GenJetCollection> genJets;  
+  iEvent.getByToken(tok_jets_, genJets);
+  if (genJets.isValid()) {
+    for (unsigned iGenJet = 0; iGenJet < genJets->size(); ++iGenJet) {
+      const reco::GenJet& genJet = (*genJets)[iGenJet];
+      genJetPt.push_back(genJet.pt());
+      genJetEta.push_back(genJet.eta());
+      genJetPhi.push_back(genJet.phi());
+    }
+  }
 }
 
 void TrackingNtuple::fillBeamSpot(const reco::BeamSpot& bs) {
@@ -4721,6 +4764,7 @@ void TrackingNtuple::fillDescriptions(edm::ConfigurationDescriptions& descriptio
   desc.addUntracked<bool>("keepEleSimHits", false);
   desc.addUntracked<bool>("saveSimHitsP3", false);
   desc.addUntracked<bool>("simHitBySignificance", false);
+  desc.add<edm::InputTag>("JetSource", edm::InputTag("ak4GenJets"));
   descriptions.add("trackingNtuple", desc);
 }
 
