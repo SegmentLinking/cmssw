@@ -16,20 +16,15 @@
 
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
+// LST includes
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometryMethods.h"
 
 #include <cmath>
 #include <vector>
-
-// temporary
-#include "FWCore/Utilities/interface/typelookup.h"
-#include <string>
-
-TYPELOOKUP_DATA_REG(std::string);
-
-// LST includes
+#include <unordered_map>
 
 class LSTGeometryESProducer : public edm::ESProducer {
 public:
@@ -37,7 +32,7 @@ public:
 
   static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
 
-  std::unique_ptr<std::string> produce(const TrackerRecoGeometryRecord &iRecord);
+  std::unique_ptr<lstgeometry::LSTGeometry> produce(const TrackerRecoGeometryRecord &iRecord);
 
 private:
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
@@ -60,15 +55,15 @@ void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &des
   descriptions.addWithDefaultLabel(desc);
 }
 
-std::unique_ptr<std::string> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
+std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
   trackerGeom_ = &iRecord.get(geomToken_);
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
-  std::vector<lstgeometry::SensorInfo> sensors;
   std::vector<lstgeometry::ModuleInfo> modules;
+  std::unordered_map<unsigned int, lstgeometry::SensorInfo> sensors;
 
-  std::vector<float> avg_r_cm(6, 0.0);
-  std::vector<float> avg_z_cm(5, 0.0);
+  std::vector<double> avg_r_cm(6, 0.0);
+  std::vector<double> avg_z_cm(5, 0.0);
   std::vector<unsigned int> avg_r_counter(6, 0);
   std::vector<unsigned int> avg_z_counter(5, 0);
 
@@ -90,7 +85,7 @@ std::unique_ptr<std::string> LSTGeometryESProducer::produce(const TrackerRecoGeo
       sensor.sensorCenterRho_cm = rho_cm;
       sensor.sensorCenterZ_cm = z_cm;
       sensor.phi_rad = phi_rad;
-      sensors.push_back(sensor);
+      sensors[detId()] = std::move(sensor);
       continue;
     }
 
@@ -166,7 +161,12 @@ std::unique_ptr<std::string> LSTGeometryESProducer::produce(const TrackerRecoGeo
     avg_z_cm[i] /= avg_z_counter[i];
   }
 
-  return std::make_unique<std::string>("LSTGeometryESProducer");
+  auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm);
+
+  return lstGeometry;
 }
 
 DEFINE_FWK_EVENTSETUP_MODULE(LSTGeometryESProducer);
+
+#include "FWCore/Utilities/interface/typelookup.h"
+TYPELOOKUP_DATA_REG(lstgeometry::LSTGeometry);

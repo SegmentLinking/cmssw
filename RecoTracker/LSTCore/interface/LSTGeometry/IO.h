@@ -6,6 +6,7 @@
 #include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/OrientationMethods.h"
 
 #include <vector>
 #include <iostream>
