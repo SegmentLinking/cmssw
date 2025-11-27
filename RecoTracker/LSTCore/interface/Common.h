@@ -35,6 +35,9 @@ namespace lst {
 
   constexpr unsigned int size_superbins = 45000;
 
+  constexpr uint16_t kTCEmptyLowerModule = 0xFFFF;     // never a real lowerModule index
+  constexpr unsigned int kTCEmptyHitIdx = 0xFFFFFFFF;  // Sentinel for empty hit slots
+
 // Half precision wrapper functions.
 #if defined(FP16_Base)
 #define __F2H __float2half
@@ -88,7 +91,7 @@ namespace lst {
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_TC {
-    static constexpr int kLayers = 7, kHits = 14;
+    static constexpr int kLayers = 13, kHits = 26;
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;

@@ -1,4 +1,8 @@
 <lcgdict>
+  <class name="edm::StdArray<unsigned int,26>"/>
+  <class name="edm::StdArray<unsigned char, 13>"/>
+  <class name="edm::StdArray<unsigned short, 13>"/>
+
   <class name="lst::HitsBaseSoALayout<128,false>"/>
   <class name="lst::PixelSeedsSoALayout<128,false>"/>
 

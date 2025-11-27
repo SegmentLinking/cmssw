@@ -92,6 +92,7 @@ std::tuple<int, float, float, float, int, std::vector<int>, std::vector<float>> 
     std::vector<int> const& trk_simhit_simTrkIdx,
     std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
     std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float& percentMatched,
     float matchfrac = 0.75);
 std::tuple<float, float, float, std::vector<unsigned int>, std::vector<unsigned int>> parsepT5(LSTEvent* event,
                                                                                                unsigned int);
