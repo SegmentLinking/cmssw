@@ -23,12 +23,8 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, _PH2_GLOBAL_TAG, '')
 
-# In Fireworks/Geom reco dumper:
-# from Configuration.AlCa.autoCond import autoCond
-# process.GlobalTag.globaltag = autoCond['phase2_realistic']
-
 process.MessageLogger.cerr.threshold = "INFO"
-process.MessageLogger.cerr.MkFitGeometryESProducer = dict(limit=-1)
+process.MessageLogger.cerr.LSTGeometryESProducer = dict(limit=-1)
 
 process.source = cms.Source("EmptySource")
 process.maxEvents.input = 1
@@ -36,12 +32,9 @@ process.maxEvents.input = 1
 
 process.add_(cms.ESProducer("LSTGeometryESProducer"))
 
-defaultOutputDirectory="lstgeometry"
+defaultOutputDirectory="data"
 
-# level: 0 - no printout; 1 - print layers, 2 - print shapes and modules
-# outputFileName: binary dump file; no dump if empty string
 process.dump = cms.EDAnalyzer("DumpLSTGeometry",
-                              level = cms.untracked.int32(1),
                               outputDirectory = cms.untracked.string(defaultOutputDirectory)
                               )
 

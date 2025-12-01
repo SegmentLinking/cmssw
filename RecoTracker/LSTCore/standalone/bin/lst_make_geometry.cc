@@ -43,8 +43,9 @@ int main(int argc, char** argv) {
   auto lstGeometry = makeLSTGeometry(modules_info, sensors_info, average_r, average_z);
 
   writeCentroids(lstGeometry->centroids, output_dir + "sensor_centroids", output_as_bin);
-  writeSlopes(lstGeometry->barrel_slopes, sensors_info, output_dir + "tilted_barrel_orientation", output_as_bin);
-  writeSlopes(lstGeometry->endcap_slopes, sensors_info, output_dir + "endcap_orientation", output_as_bin);
+  writeSlopes(
+      lstGeometry->barrel_slopes, lstGeometry->sensor_info, output_dir + "tilted_barrel_orientation", output_as_bin);
+  writeSlopes(lstGeometry->endcap_slopes, lstGeometry->sensor_info, output_dir + "endcap_orientation", output_as_bin);
   writePixelMaps(lstGeometry->pixel_map, output_dir + "pixelmap/pLS_map", output_as_bin);
   writeModuleConnections(
       lstGeometry->merged_line_connections, output_dir + "module_connection_tracing_merged", output_as_bin);
