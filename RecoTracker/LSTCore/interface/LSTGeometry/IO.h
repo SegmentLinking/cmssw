@@ -144,6 +144,9 @@ namespace lstgeometry {
   void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids,
                       std::string const& base_filename,
                       bool binary = true) {
+    std::filesystem::path filepath(base_filename);
+    std::filesystem::create_directories(filepath.parent_path());
+
     std::string filename = base_filename + (binary ? ".bin" : ".txt");
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
@@ -171,6 +174,9 @@ namespace lstgeometry {
                    std::unordered_map<unsigned int, SensorInfo> const& sensors,
                    std::string const& base_filename,
                    bool binary = true) {
+    std::filesystem::path filepath(base_filename);
+    std::filesystem::create_directories(filepath.parent_path());
+
     std::string filename = base_filename + (binary ? ".bin" : ".txt");
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
@@ -206,6 +212,9 @@ namespace lstgeometry {
   void writeModuleConnections(std::unordered_map<unsigned int, std::unordered_set<unsigned int>> const& connections,
                               std::string const& base_filename,
                               bool binary = true) {
+    std::filesystem::path filepath(base_filename);
+    std::filesystem::create_directories(filepath.parent_path());
+
     std::string filename = base_filename + (binary ? ".bin" : ".txt");
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 

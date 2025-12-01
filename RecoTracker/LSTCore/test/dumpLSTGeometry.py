@@ -32,7 +32,7 @@ process.maxEvents.input = 1
 
 process.add_(cms.ESProducer("LSTGeometryESProducer"))
 
-defaultOutputDirectory="data"
+defaultOutputDirectory="data/"
 
 process.dump = cms.EDAnalyzer("DumpLSTGeometry",
                               outputDirectory = cms.untracked.string(defaultOutputDirectory)

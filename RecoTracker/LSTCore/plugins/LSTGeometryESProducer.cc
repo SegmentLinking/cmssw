@@ -167,6 +167,3 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
 }
 
 DEFINE_FWK_EVENTSETUP_MODULE(LSTGeometryESProducer);
-
-#include "FWCore/Utilities/interface/typelookup.h"
-TYPELOOKUP_DATA_REG(lstgeometry::LSTGeometry);
