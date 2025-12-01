@@ -15,6 +15,7 @@ namespace lstgeometry {
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
     PixelMap pixel_map;
     std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged_line_connections;
+    std::unordered_map<unsigned int, SensorInfo> sensor_info;
   };
 
 }  // namespace lstgeometry
