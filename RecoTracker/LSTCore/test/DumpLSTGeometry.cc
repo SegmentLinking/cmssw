@@ -24,7 +24,7 @@ private:
 
 DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)
     : lstGeoToken_{esConsumes()},
-      outputDirectory_(config.getUntrackedParameter<std::string>("outputDirectory", "data")),
+      outputDirectory_(config.getUntrackedParameter<std::string>("outputDirectory", "data/")),
       binaryOutput_(config.getUntrackedParameter<bool>("output_as_binary", true)) {}
 
 void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
