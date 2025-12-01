@@ -7,8 +7,8 @@ namespace lstgeometry {
 
   std::unique_ptr<LSTGeometry> makeLSTGeometry(std::vector<ModuleInfo> &modules_info,
                                                std::unordered_map<unsigned int, SensorInfo> &sensors_info,
-                                               std::vector<double> &average_r,
-                                               std::vector<double> &average_z) {
+                                               std::vector<double> const &average_r,
+                                               std::vector<double> const &average_z) {
     for (auto &mod : modules_info)
       transformSensorCorners(mod);
 
@@ -44,7 +44,8 @@ namespace lstgeometry {
                                                      std::move(barrel_slopes),
                                                      std::move(endcap_slopes),
                                                      std::move(pixel_map),
-                                                     std::move(merged_line_connections));
+                                                     std::move(merged_line_connections),
+                                                     std::move(sensors_info));
 
     return lstGeometry;
   }
