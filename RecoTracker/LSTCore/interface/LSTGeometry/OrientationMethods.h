@@ -31,9 +31,9 @@ namespace lstgeometry {
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
 
     for (const auto& [detId, corners] : corners) {
-      double dx = corners(1, 1) - corners(0, 1);
-      double dy = corners(1, 2) - corners(0, 2);
-      double dz = corners(1, 0) - corners(0, 0);
+      double dx = roundCoordinate(corners(1, 1) - corners(0, 1));
+      double dy = roundCoordinate(corners(1, 2) - corners(0, 2));
+      double dz = roundCoordinate(corners(1, 0) - corners(0, 0));
 
       SlopeData slope = calculateSlope(dx, dy, dz);
 
