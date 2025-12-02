@@ -74,9 +74,9 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     const Bounds *b = &(surface).bounds();
     const auto &position = surface.position();
 
-    double rho_cm = position.perp();
-    double z_cm = position.z();
-    const double phi_rad = position.phi();
+    const double rho_cm = position.perp();
+    const double z_cm = lstgeometry::roundCoordinate(position.z());
+    const double phi_rad = lstgeometry::roundAngle(position.phi());
 
     if (det->isLeaf()) {
       // Leafs are the sensors
@@ -94,7 +94,7 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
       throw cms::Exception("UnimplementedFeature") << "unsupported Bounds class";
     }
 
-    double tiltAngle_rad = std::asin(det->rotation().zz());
+    double tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
     double meanWidth_cm = b2->width();
     double length_cm = b2->length();
