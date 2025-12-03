@@ -13,6 +13,8 @@ namespace lst {
                       SOA_COLUMN(Params_TC::ArrayUxHits, hitIndices),
                       SOA_COLUMN(unsigned int, pixelSeedIndex),
                       SOA_COLUMN(LSTObjType, trackCandidateType),
+                      SOA_COLUMN(uint8_t, nLayers),
+                      SOA_COLUMN(uint8_t, nHits),
                       SOA_SCALAR(unsigned int, nTrackCandidates))
 
   GENERATE_SOA_LAYOUT(TrackCandidatesExtendedSoALayout,
