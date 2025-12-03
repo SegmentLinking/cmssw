@@ -5,16 +5,11 @@
 #include <cmath>
 #include <unordered_map>
 
-#include "CentroidMethods.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/SlopeData.h"
 
 namespace lstgeometry {
-
-  struct SlopeData {
-    double drdz_slope;
-    double dxdy_slope;
-  };
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
   SlopeData calculateSlope(double dx, double dy, double dz) {

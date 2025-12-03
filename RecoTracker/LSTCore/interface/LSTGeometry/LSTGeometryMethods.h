@@ -2,6 +2,12 @@
 #define RecoTracker_LSTCore_interface_LSTGeometry_LSTGeometryMethods_h
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/CornerMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/OrientationMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleMapMethods.h"
 
 namespace lstgeometry {
 
