@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"

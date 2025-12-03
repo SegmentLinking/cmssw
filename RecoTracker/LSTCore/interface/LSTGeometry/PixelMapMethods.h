@@ -1,24 +1,15 @@
 #ifndef RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
 #define RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
 
-#include <tuple>
-#include <unordered_map>
-#include <unordered_set>
 #include <array>
-#include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
 #include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
+#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMap.h"
 
 namespace lstgeometry {
-
-  using LayerSubdetChargeKey = std::tuple<unsigned int, unsigned int, int>;
-  using LayerSubdetChargeMap = std::unordered_map<LayerSubdetChargeKey,
-                                                  std::vector<std::unordered_set<unsigned int>>,
-                                                  boost::hash<LayerSubdetChargeKey>>;
-  using PixelMap = LayerSubdetChargeMap;
 
   PixelMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,
                            DetectorGeometry const& det_geom) {

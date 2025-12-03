@@ -39,21 +39,21 @@ namespace lstgeometry {
       phi += 2 * std::numbers::pi_v<double>;
     return phi;
   }
-  
+
   double roundAngle(double angle, double tol = 1e-3) {
     const double pi = std::numbers::pi_v<double>;
     if (std::fabs(angle) < tol) {
       return 0.0;
-    } else if (std::fabs(angle - pi/2) < tol) {
-        return pi / 2;
-    } else if (std::fabs(angle + pi/2) < tol) {
-        return - pi / 2;
+    } else if (std::fabs(angle - pi / 2) < tol) {
+      return pi / 2;
+    } else if (std::fabs(angle + pi / 2) < tol) {
+      return -pi / 2;
     } else if (std::fabs(angle - pi) < tol || std::fabs(angle + pi) < tol) {
       return -pi;
     }
     return angle;
   }
-  
+
   double roundCoordinate(double coord, double tol = 1e-3) {
     if (std::fabs(coord) < tol) {
       return 0.0;
