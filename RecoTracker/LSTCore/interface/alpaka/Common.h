@@ -88,9 +88,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       HOST_DEVICE_CONSTANT float kEta_norm = 2.5f;
       HOST_DEVICE_CONSTANT float kZ_max = 267.2349854f;
       HOST_DEVICE_CONSTANT float kR_max = 110.1099396f;
-      HOST_DEVICE_CONSTANT float kWp[kPtBins][kEtaBins] = {
-          {0.4493f, 0.4939f, 0.5715f, 0.6488f, 0.5709f, 0.5938f, 0.7164f, 0.7565f, 0.8103f, 0.8593f},
-          {0.4488f, 0.4448f, 0.5067f, 0.5929f, 0.4836f, 0.4112f, 0.4968f, 0.4403f, 0.5597f, 0.5067f}};
+      HOST_DEVICE_CONSTANT float kWp_prompt[kPtBins][kEtaBins] = {
+          {0.398084f, 0.403121f, 0.354281f, 0.358435f, 0.367765f, 0.349150f, 0.378903f, 0.373203f, 0.406608f, 0.374461f},
+          {0.097341f, 0.106300f, 0.077975f, 0.103842f, 0.124790f, 0.052589f, 0.054577f, 0.112889f, 0.179196f, 0.200328f}};
+      HOST_DEVICE_CONSTANT float kWp_displaced[kPtBins][kEtaBins] = {
+          {0.421372f, 0.466420f, 0.611434f, 0.646523f, 0.543573f, 0.552745f, 0.577597f, 0.630934f, 0.620449f, 0.665398f},
+          {0.674274f, 0.768983f, 0.888747f, 0.847046f, 0.566714f, 0.946426f, 0.912854f, 0.522756f, 0.538444f, 0.473106f}};
     }  // namespace t5dnn
 
     namespace pt3dnn {
