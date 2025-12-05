@@ -69,7 +69,7 @@ namespace lstgeometry {
       double x = rho * cos(phi);
       double y = rho * sin(phi);
 
-      Centroid centroid{detId, static_cast<unsigned int>(moduleType), x, y, z};
+      Centroid centroid{static_cast<unsigned int>(moduleType), x, y, z};
       centroids[detId] = centroid;
     }
     return centroids;
