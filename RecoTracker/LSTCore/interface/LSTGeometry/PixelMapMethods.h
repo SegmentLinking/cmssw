@@ -12,11 +12,12 @@
 namespace lstgeometry {
 
   PixelMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,
-                           DetectorGeometry const& det_geom) {
+                           DetectorGeometry const& det_geom,
+                           double ptCut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
-    std::size_t nSuperbin = (kPtBounds.size() - 1) * kNPhi * kNEta * kNZ;
+    std::size_t nSuperbin = kPtBounds.size() * kNPhi * kNEta * kNZ;
 
     // Initialize empty lists for the pixel map
     for (unsigned int layer : {1, 2}) {
@@ -45,7 +46,7 @@ namespace lstgeometry {
       // For this module, now compute which super bins they belong to
       // To compute which super bins it belongs to, one needs to provide at least pt and z window to compute compatible eta and phi range
       // So we have a loop in pt and Z
-      for (unsigned int ipt = 0; ipt < kPtBounds.size() - 1; ipt++) {
+      for (unsigned int ipt = 0; ipt < kPtBounds.size(); ipt++) {
         for (unsigned int iz = 0; iz < kNZ; iz++) {
           // The zmin, zmax of consideration
           double zmin = -30 + iz * (60. / kNZ);
@@ -55,8 +56,8 @@ namespace lstgeometry {
           zmin += 0.05;
 
           // The ptmin, ptmax of consideration
-          double pt_lo = kPtBounds[ipt];
-          double pt_hi = kPtBounds[ipt + 1];
+          double pt_lo = ipt == 0 ? ptCut : kPtBounds[ipt - 1];
+          double pt_hi = kPtBounds[ipt];
 
           auto [etamin, etamax] = det_geom.getCompatibleEtaRange(detId, zmin, zmax);
 

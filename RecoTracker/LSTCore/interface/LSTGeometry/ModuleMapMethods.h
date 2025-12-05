@@ -112,6 +112,7 @@ namespace lstgeometry {
   MatrixD4x3 boundsAfterCurved(unsigned int ref_detid,
                                std::unordered_map<unsigned int, Centroid> const& centroids,
                                DetectorGeometry const& det_geom,
+                               double ptCut,
                                bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
     auto centroid = centroids.at(ref_detid);
@@ -124,14 +125,11 @@ namespace lstgeometry {
     MatrixD4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
-      Helix helix_p10 =
-          constructHelixFromPoints(kPtThreshold, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      Helix helix_m10 =
-          constructHelixFromPoints(kPtThreshold, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      Helix helix_p10_pos =
-          constructHelixFromPoints(kPtThreshold, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
+      Helix helix_p10 = constructHelixFromPoints(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
+      Helix helix_m10 = constructHelixFromPoints(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
+      Helix helix_p10_pos = constructHelixFromPoints(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       Helix helix_m10_pos =
-          constructHelixFromPoints(kPtThreshold, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
+          constructHelixFromPoints(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       double bound_theta =
           std::atan2(std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2)), bounds(i, 0));
       double bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
@@ -188,7 +186,8 @@ namespace lstgeometry {
 
   std::vector<unsigned int> getCurvedLineConnections(unsigned int ref_detid,
                                                      std::unordered_map<unsigned int, Centroid> const& centroids,
-                                                     DetectorGeometry const& det_geom) {
+                                                     DetectorGeometry const& det_geom,
+                                                     double ptCut) {
     auto centroid = centroids.at(ref_detid);
 
     double refphi = std::atan2(centroid.y, centroid.x);
@@ -205,7 +204,7 @@ namespace lstgeometry {
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
-    auto next_layer_bound_points = boundsAfterCurved(ref_detid, centroids, det_geom);
+    auto next_layer_bound_points = boundsAfterCurved(ref_detid, centroids, det_geom, ptCut);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
