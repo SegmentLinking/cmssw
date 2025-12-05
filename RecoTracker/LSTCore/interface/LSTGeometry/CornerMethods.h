@@ -121,11 +121,11 @@ namespace lstgeometry {
           sensors.at(sensor_det_id_1).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_1).phi_rad);
       double sensor1_center_y =
           sensors.at(sensor_det_id_1).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_1).phi_rad);
-      double sensor2_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_cm;
+      double sensor2_center_z = sensors.at(sensor_det_id_2).sensorCenterZ_cm;
       double sensor2_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_2).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_2).phi_rad);
       double sensor2_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_2).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_2).phi_rad);
 
       RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
       RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
