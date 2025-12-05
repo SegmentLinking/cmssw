@@ -128,7 +128,7 @@ namespace lstgeometry {
     }
 
     // Quick cut
-    RowVectorD2 diff = ref_mod_boundaries_etaphi.row(0) - ref_mod_boundaries_etaphi.row(0);
+    RowVectorD2 diff = ref_mod_boundaries_etaphi.row(0) - tar_mod_boundaries_etaphi.row(0);
     if (std::fabs(diff(0)) > 0.5)
       return false;
     if (std::fabs(phi_mpi_pi(diff(1))) > 1.)
