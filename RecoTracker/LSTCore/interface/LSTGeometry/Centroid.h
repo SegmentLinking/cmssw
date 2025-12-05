@@ -4,7 +4,6 @@
 namespace lstgeometry {
 
   struct Centroid {
-    unsigned int detId;
     unsigned int moduleType;
     double x;
     double y;

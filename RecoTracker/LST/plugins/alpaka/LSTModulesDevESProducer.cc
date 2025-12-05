@@ -27,7 +27,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
-      desc.add<std::string>("ptCut", " 0.8");
+      desc.add<std::string>("ptCut", "0.8");
       descriptions.addWithDefaultLabel(desc);
     }
 

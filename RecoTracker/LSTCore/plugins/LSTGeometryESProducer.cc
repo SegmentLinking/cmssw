@@ -1,19 +1,9 @@
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
 
-#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
-#include "DataFormats/TrackerCommon/interface/TrackerDetSide.h"
-#include "Geometry/Records/interface/TrackerTopologyRcd.h"
-#include "RecoTracker/TkDetLayers/interface/GeometricSearchTracker.h"
-#include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
-#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-
+#include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
-#include "DataFormats/GeometrySurface/interface/TrapezoidalPlaneBounds.h"
-
-#include "DataFormats/SiStripDetId/interface/SiStripEnums.h"
-
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
 // LST includes
@@ -38,10 +28,7 @@ private:
   std::string ptCut_;
 
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
-  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> ttopoToken_;
-  edm::ESGetToken<GeometricSearchTracker, TrackerRecoGeometryRecord> trackerToken_;
 
-  const TrackerTopology *trackerTopo_ = nullptr;
   const TrackerGeometry *trackerGeom_ = nullptr;
 };
 
@@ -49,8 +36,6 @@ LSTGeometryESProducer::LSTGeometryESProducer(const edm::ParameterSet &iConfig)
     : ptCut_(iConfig.getParameter<std::string>("ptCut")) {
   auto cc = setWhatProduced(this, ptCut_);
   geomToken_ = cc.consumes();
-  ttopoToken_ = cc.consumes();
-  trackerToken_ = cc.consumes();
 }
 
 void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
@@ -61,7 +46,6 @@ void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &des
 
 std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
   trackerGeom_ = &iRecord.get(geomToken_);
-  trackerTopo_ = &iRecord.get(ttopoToken_);
 
   std::vector<lstgeometry::ModuleInfo> modules;
   std::unordered_map<unsigned int, lstgeometry::SensorInfo> sensors;
