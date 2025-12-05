@@ -14,7 +14,8 @@ namespace lstgeometry {
   std::unique_ptr<LSTGeometry> makeLSTGeometry(std::vector<ModuleInfo> &modules_info,
                                                std::unordered_map<unsigned int, SensorInfo> &sensors_info,
                                                std::vector<double> const &average_r,
-                                               std::vector<double> const &average_z) {
+                                               std::vector<double> const &average_z,
+                                               double ptCut) {
     for (auto &mod : modules_info)
       transformSensorCorners(mod);
 
@@ -27,7 +28,7 @@ namespace lstgeometry {
     auto det_geom = DetectorGeometry(assigned_corners, average_r, average_z);
     det_geom.buildByLayer();
 
-    auto pixel_map = computePixelMap(centroids, det_geom);
+    auto pixel_map = computePixelMap(centroids, det_geom, ptCut);
 
     auto detids_etaphi_layer_ref = det_geom.getDetIds([](const auto &x) {
       auto mod = Module(x.first);
@@ -42,7 +43,7 @@ namespace lstgeometry {
 
     for (auto ref_detid : detids_etaphi_layer_ref) {
       straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, centroids, det_geom);
-      curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, centroids, det_geom);
+      curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, centroids, det_geom, ptCut);
     }
     auto merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
 
