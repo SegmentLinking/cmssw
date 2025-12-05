@@ -58,26 +58,25 @@ namespace lstgeometry {
       if (tokens.size() != 23)
         continue;
 
-      ModuleInfo m;
-
-      m.detId = std::stoul(tokens[0]);
-      m.sensorCenterRho_cm = std::stod(tokens[5]) / 10.0;
-      m.sensorCenterZ_cm = std::stod(tokens[6]) / 10.0;
-      m.tiltAngle_rad = degToRad(std::stod(tokens[7]));
-      m.skewAngle_rad = degToRad(std::stod(tokens[8]));
-      m.yawAngle_rad = degToRad(std::stod(tokens[9]));
-      m.phi_rad = degToRad(std::stod(tokens[10]));
-      m.vtxOneX_cm = std::stod(tokens[11]) / 10.0;
-      m.vtxOneY_cm = std::stod(tokens[12]) / 10.0;
-      m.vtxTwoX_cm = std::stod(tokens[13]) / 10.0;
-      m.vtxTwoY_cm = std::stod(tokens[14]) / 10.0;
-      m.vtxThreeX_cm = std::stod(tokens[15]) / 10.0;
-      m.vtxThreeY_cm = std::stod(tokens[16]) / 10.0;
-      m.vtxFourX_cm = std::stod(tokens[17]) / 10.0;
-      m.vtxFourY_cm = std::stod(tokens[18]) / 10.0;
-      m.meanWidth_cm = std::stod(tokens[19]) / 10.0;
-      m.length_cm = std::stod(tokens[20]) / 10.0;
-      m.sensorSpacing_cm = std::stod(tokens[21]) / 10.0;
+      ModuleInfo m{static_cast<unsigned int>(std::stoul(tokens[0])),
+                   std::stod(tokens[5]) / 10.0,
+                   std::stod(tokens[6]) / 10.0,
+                   degToRad(std::stod(tokens[7])),
+                   degToRad(std::stod(tokens[8])),
+                   degToRad(std::stod(tokens[9])),
+                   degToRad(std::stod(tokens[10])),
+                   std::stod(tokens[11]) / 10.0,
+                   std::stod(tokens[12]) / 10.0,
+                   std::stod(tokens[13]) / 10.0,
+                   std::stod(tokens[14]) / 10.0,
+                   std::stod(tokens[15]) / 10.0,
+                   std::stod(tokens[16]) / 10.0,
+                   std::stod(tokens[17]) / 10.0,
+                   std::stod(tokens[18]) / 10.0,
+                   std::stod(tokens[19]) / 10.0,
+                   std::stod(tokens[20]) / 10.0,
+                   std::stod(tokens[21]) / 10.0,
+                   MatrixD8x3::Zero()};
 
       modules.push_back(m);
     }
@@ -105,12 +104,12 @@ namespace lstgeometry {
       if (tokens.size() != 8)
         continue;
 
-      SensorInfo s;
-
-      s.detId = std::stoul(tokens[0]);
-      s.sensorCenterRho_cm = std::stod(tokens[5]) / 10.0;
-      s.sensorCenterZ_cm = std::stod(tokens[6]) / 10.0;
-      s.phi_rad = degToRad(std::stod(tokens[7]));
+      SensorInfo s{
+          static_cast<unsigned int>(std::stoul(tokens[0])),
+          std::stod(tokens[5]) / 10.0,
+          std::stod(tokens[6]) / 10.0,
+          degToRad(std::stod(tokens[7])),
+      };
 
       sensors[s.detId] = s;
     }
