@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
       "output_dir", "The path to the output directory.", cxxopts::value<std::string>()->default_value("../data/"))(
       "output_as_binary",
       "Boolean flag specifying whether to write outputs as binary or text files.",
-      cxxopts::value<bool>()->default_value("true"));
+      cxxopts::value<bool>()->default_value("true"))(
+      "pt_cut", "pT cutoff value.", cxxopts::value<double>()->default_value("0.8"));
 
   auto result = options.parse(argc, argv);
 
@@ -34,13 +35,14 @@ int main(int argc, char** argv) {
   std::string average_z_file = result["average_z_file"].as<std::string>();
   std::string output_dir = result["output_dir"].as<std::string>();
   bool output_as_bin = result["output_as_binary"].as<bool>();
+  double ptCut = result["pt_cut"].as<double>();
 
   auto modules_info = readModuleInfo(module_info_file);
   auto sensors_info = readSensorInfo(sensor_info_file);
   auto average_r = readAverages(average_r_file);
   auto average_z = readAverages(average_z_file);
 
-  auto lstGeometry = makeLSTGeometry(modules_info, sensors_info, average_r, average_z);
+  auto lstGeometry = makeLSTGeometry(modules_info, sensors_info, average_r, average_z, ptCut);
 
   writeCentroids(lstGeometry->centroids, output_dir + "sensor_centroids", output_as_bin);
   writeSlopes(
