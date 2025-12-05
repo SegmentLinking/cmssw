@@ -53,7 +53,7 @@ namespace lstgeometry {
           double zmax = -30 + (iz + 1) * (60. / kNZ);
 
           zmin -= 0.05;
-          zmin += 0.05;
+          zmax += 0.05;
 
           // The ptmin, ptmax of consideration
           double pt_lo = ipt == 0 ? ptCut : kPtBounds[ipt - 1];
