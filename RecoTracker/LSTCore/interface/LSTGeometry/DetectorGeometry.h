@@ -27,8 +27,8 @@ namespace lstgeometry {
     if (eta_bin == 0) {
       if (theta > 3. * kEtaBinRad / 2.)
         return false;
-    } else if (eta_bin == kNPhiBins - 1) {
-      if (theta < (2 * (kNPhiBins - 1) - 1) * kEtaBinRad / 2.)
+    } else if (eta_bin == kNEtaBins - 1) {
+      if (theta < (2 * (kNEtaBins - 1) - 1) * kEtaBinRad / 2.)
         return false;
     } else if (theta < (2 * eta_bin - 1) * kEtaBinRad / 2. || theta > (2 * (eta_bin + 1) + 1) * kEtaBinRad / 2.) {
       return false;
