@@ -14,8 +14,10 @@ namespace lst {
   public:
     ModuleConnectionMap();
     ModuleConnectionMap(std::string const& filename);
+    ModuleConnectionMap(std::map<unsigned int, std::vector<unsigned int>> const&);
 
     void load(std::string const&);
+    void load(std::map<unsigned int, std::vector<unsigned int>> const&);
     void add(std::string const&);
     void print();
 
