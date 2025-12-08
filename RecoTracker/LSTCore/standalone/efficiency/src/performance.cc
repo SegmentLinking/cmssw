@@ -771,11 +771,13 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_denom_deltaR");
 
   // Numerator tracks' quantities
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_dr_numer_deltaR");
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_dr_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -793,6 +795,9 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   ana.histograms.addVecHistogram(category_name + "_dr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_phi");
   });
+  ana.histograms.addVecHistogram(category_name + "_dr_denom_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_denom_deltaR");
+  });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_pt", getPtBounds(0), [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_pt");
   });
@@ -807,6 +812,9 @@ void bookDuplicateRateSet(RecoTrackSetDefinition& DRset) {
   });
   ana.histograms.addVecHistogram(category_name + "_dr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_phi");
+  });
+  ana.histograms.addVecHistogram(category_name + "_dr_numer_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_dr_numer_deltaR");
   });
 }
 
@@ -825,11 +833,14 @@ void bookFakeOrDuplicateRateSet(RecoTrackSetDefinition& FDRset) {
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_denom_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_denom_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_denom_deltaR");
+
 
   // Numerator tracks' quantities
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_numer_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_numer_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fdr_numer_deltaR");
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_fdr_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -847,6 +858,9 @@ void bookFakeOrDuplicateRateSet(RecoTrackSetDefinition& FDRset) {
   ana.histograms.addVecHistogram(category_name + "_fdr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fdr_denom_phi");
   });
+  ana.histograms.addVecHistogram(category_name + "_fdr_denom_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fdr_denom_deltaR");
+  });
   ana.histograms.addVecHistogram(category_name + "_fdr_numer_pt", getPtBounds(0), [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fdr_numer_pt");
   });
@@ -861,6 +875,9 @@ void bookFakeOrDuplicateRateSet(RecoTrackSetDefinition& FDRset) {
   });
   ana.histograms.addVecHistogram(category_name + "_fdr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fdr_numer_phi");
+  });
+  ana.histograms.addVecHistogram(category_name + "_fdr_numer_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fdr_numer_deltaR");
   });
 }
 
@@ -879,11 +896,13 @@ void bookFakeRateSet(RecoTrackSetDefinition& FRset) {
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_denom_deltaR");
 
   // Numerator tracks' quantities
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_pt");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_eta");
   ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_phi");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_fr_numer_deltaR");
 
   // Histogram utility object that is used to define the histograms
   ana.histograms.addVecHistogram(category_name + "_fr_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -897,6 +916,12 @@ void bookFakeRateSet(RecoTrackSetDefinition& FRset) {
   });
   ana.histograms.addVecHistogram(category_name + "_fr_denom_eta", 180, -4.5, 4.5, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_eta");
+  });
+  ana.histograms.addVecHistogram(category_name + "_fr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_phi");
+  });
+  ana.histograms.addVecHistogram(category_name + "_fr_denom_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_deltaR");
   });
   ana.histograms.addVecHistogram(category_name + "_fr_numer_phi", 180, -M_PI, M_PI, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_phi");
@@ -913,8 +938,8 @@ void bookFakeRateSet(RecoTrackSetDefinition& FRset) {
   ana.histograms.addVecHistogram(category_name + "_fr_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_eta");
   });
-  ana.histograms.addVecHistogram(category_name + "_fr_denom_phi", 180, -M_PI, M_PI, [&, category_name]() {
-    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_denom_phi");
+  ana.histograms.addVecHistogram(category_name + "_fr_numer_deltaR", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_fr_numer_deltaR");
   });
 }
 
@@ -1282,6 +1307,26 @@ void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset, float pt, float eta
     if (pass)
       ana.tx.pushbackToBranch<float>(category_name + "_fr_numer_phi", phi);
   }
+  if (ana.jet_branches) {
+    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
+    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    float dEtaj = 999;
+    float dPhij = 999;
+    float dRj = 999;
+    float dRTemp = 999;
+    for (unsigned int ijet; ijet < genJetPhi.size(); ++ijet) {
+      dEtaj = eta - genJetEta[ijet];
+      dPhij = std::acos(std::cos(phi - genJetPhi[ijet]));
+      dRj = std::sqrt(std::pow(dEtaj,2) + std::pow(dPhij,2));
+      if(dRj < dRTemp) {
+        dRTemp = dRj;
+      }
+    }
+    ana.tx.pushbackToBranch<float>(category_name + "_fr_denom_deltaR", dRTemp);
+    if (pass) {
+      ana.tx.pushbackToBranch<float>(category_name + "_fr_numer_deltaR", dRTemp);
+    }
+  }
 }
 
 //__________________________________________________________________________________________________________________________________________________________________________
@@ -1320,6 +1365,28 @@ void fillDuplicateRateSet(int itc, RecoTrackSetDefinition& DRset, float pt, floa
     if (pass)
       ana.tx.pushbackToBranch<float>(category_name + "_dr_numer_phi", phi);
   }
+
+  if (ana.jet_branches) {
+    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
+    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    float dEtaj = 999;
+    float dPhij = 999;
+    float dRj = 999;
+    float dRTemp = 999;
+    for (unsigned int ijet; ijet < genJetPhi.size(); ++ijet) {
+      dEtaj = eta - genJetEta[ijet];
+      dPhij = std::acos(std::cos(phi - genJetPhi[ijet]));
+      dRj = std::sqrt(std::pow(dEtaj,2) + std::pow(dPhij,2));
+      if(dRj < dRTemp) {
+        dRTemp = dRj;
+      }
+    }
+    ana.tx.pushbackToBranch<float>(category_name + "_dr_denom_deltaR", dRTemp);
+    if (pass) {
+      ana.tx.pushbackToBranch<float>(category_name + "_dr_numer_deltaR", dRTemp);
+    }
+  }
+
 }
 
 //__________________________________________________________________________________________________________________________________________________________________________
@@ -1357,5 +1424,25 @@ void fillFakeOrDuplicateRateSet(int itc, RecoTrackSetDefinition& FDRset, float p
     ana.tx.pushbackToBranch<float>(category_name + "_fdr_denom_phi", phi);
     if (pass)
       ana.tx.pushbackToBranch<float>(category_name + "_fdr_numer_phi", phi);
+  }
+  if (ana.jet_branches) {
+    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
+    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    float dEtaj = 999;
+    float dPhij = 999;
+    float dRj = 999;
+    float dRTemp = 999;
+    for (unsigned int ijet; ijet < genJetPhi.size(); ++ijet) {
+      dEtaj = eta - genJetEta[ijet];
+      dPhij = std::acos(std::cos(phi - genJetPhi[ijet]));
+      dRj = std::sqrt(std::pow(dEtaj,2) + std::pow(dPhij,2));
+      if(dRj < dRTemp) {
+        dRTemp = dRj;
+      }
+    }
+    ana.tx.pushbackToBranch<float>(category_name + "_fdr_denom_deltaR", dRTemp);
+    if (pass) {
+      ana.tx.pushbackToBranch<float>(category_name + "_fdr_numer_deltaR", dRTemp);
+    }
   }
 }

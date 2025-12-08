@@ -17,7 +17,7 @@ file = TFile("trackingNtuple_100_GenJet.root")
 old_tree = file["trackingNtuple"]["tree"]
 
 # Create a new ROOT file to store the new TTree
-new_file = ROOT.TFile("new_tree_100_GenJet.root", "RECREATE")
+new_file = ROOT.TFile("new_tree_100_GenJet2.root", "RECREATE")
 
 # Create a new subdirectory in the new file
 new_directory = new_file.mkdir("trackingNtuple")
@@ -51,8 +51,12 @@ for ind in range(old_tree.GetEntries()):
     new_leaf_deltaR.clear()
 
     # Creates the lists that will fill the leaves
-    pTList, etaList, phiList, massList = getLists(old_tree, hardSc=True, pTcut=True)
-    simLen = len(pTList)
+    simPt = old_tree.sim_pt
+    simEta = old_tree.sim_eta
+    simPhi = old_tree.sim_phi
+    simLen = len(simPt)
+
+    print(old_tree.Print())
 
     genJetsPt = old_tree.genJetPt
     genJetsEta = old_tree.genJetEta
@@ -64,13 +68,13 @@ for ind in range(old_tree.GetEntries()):
     deltaPhis = np.ones(simLen)*-999
     deltaRs = np.ones(simLen)*-999
     
-    for i in range(len(pTList)):
+    for i in range(len(simPt)):
         dRTemp = 999
         dPhiTemp = 999
         dEtaTemp = 999
         for j in range(genJetLen):
-            dEtaj = etaList[i] - genJetsEta[j]
-            dPhij = np.arccos(np.cos(phiList[i] - genJetsPhi[j]))
+            dEtaj = simEta[i] - genJetsEta[j]
+            dPhij = np.arccos(np.cos(simPhi[i] - genJetsPhi[j]))
             dRj = np.sqrt(dEtaj**2 + dPhij**2)
             
             # Selects smallest dR, corresponding to closest jet

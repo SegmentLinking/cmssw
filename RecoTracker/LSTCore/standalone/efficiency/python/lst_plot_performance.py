@@ -675,7 +675,11 @@ def plot_standard_performance_plots(args):
             "duplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             "fakeorduplrate": ["pt", "ptlow", "ptmtv", "eta", "phi"],
             }
-    if (args.jet_branches): variables["eff"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "genJetEta", "genJetPhi", "genJetPt"]
+    if (args.jet_branches): 
+        variables["eff"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "genJetEta", "genJetPhi", "genJetPt"]
+        variables["duplrate"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "deltaR"]
+        variables["fakerate"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "deltaR"]
+        variables["fakeorduplrate"] = ["pt", "ptlow", "ptmtv", "eta", "phi", "deltaR"]
     sels = {
             "eff": ["base", "loweta"],
             "fakerate": ["none"],
