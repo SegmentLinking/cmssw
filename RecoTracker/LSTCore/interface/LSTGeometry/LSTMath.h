@@ -23,9 +23,8 @@ namespace lstgeometry {
   Helix constructHelixFromPoints(
       double pt, double vx, double vy, double vz, double mx, double my, double mz, int charge) {
     double radius = pt / (k2Rinv1GeVf * kB);
-    double r = std::fabs(radius);  // TODO: Is this needed?
 
-    double t = 2. * std::asin(std::sqrt((vx - mx) * (vx - mx) + (vy - my) * (vy - my)) / (2. * r));
+    double t = 2. * std::asin(std::sqrt((vx - mx) * (vx - mx) + (vy - my) * (vy - my)) / (2. * radius));
     double phi = std::numbers::pi_v<double> / 2. + std::atan((vy - my) / (vx - mx)) +
                  ((vy - my) / (vx - mx) < 0) * (std::numbers::pi_v<double>)+charge * t / 2. +
                  (my - vy < 0) * (std::numbers::pi_v<double> / 2.) - (my - vy > 0) * (std::numbers::pi_v<double> / 2.);
