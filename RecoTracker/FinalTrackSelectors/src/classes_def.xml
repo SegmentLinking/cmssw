@@ -1,0 +1,9 @@
+<lcgdict>
+  <class name="TrackFeaturesSoALayout<128,false>"/>
+  <class name="PortableHostCollection<TrackFeaturesSoALayout<128,false>>" persistent="false"/>
+  <class name="edm::Wrapper<PortableHostCollection<TrackFeaturesSoALayout<128,false>>>" persistent="false"/>
+
+  <class name="TrackScoresSoALayout<128,false>"/>
+  <class name="PortableHostCollection<TrackScoresSoALayout<128,false>>" persistent="false"/>
+  <class name="edm::Wrapper<PortableHostCollection<TrackScoresSoALayout<128,false>>>" persistent="false"/>
+</lcgdict>

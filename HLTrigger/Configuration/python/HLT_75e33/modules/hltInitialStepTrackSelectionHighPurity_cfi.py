@@ -6,5 +6,5 @@ hltInitialStepTrackSelectionHighPurity = cms.EDProducer("TrackCollectionFilterCl
     minQuality = cms.string('highPurity'),
     originalMVAVals = cms.InputTag("hltInitialStepTrackCutClassifier","MVAValues"),
     originalQualVals = cms.InputTag("hltInitialStepTrackCutClassifier","QualityMasks"),
-    originalSource = cms.InputTag("hltInitialStepTracks")
+    originalSource = cms.InputTag("hltInitialStepTrackTorchClassifierOutput")
 )

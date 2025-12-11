@@ -32,7 +32,7 @@ hltInitialStepTrackCutClassifier = cms.EDProducer("TrackCutClassifier",
         minLayersForDisplaced = cms.int32(4)
     ),
     qualityCuts = cms.vdouble(-0.7, 0.1, 0.7),
-    src = cms.InputTag("hltInitialStepTracks"),
+    src = cms.InputTag("hltInitialStepTrackTorchClassifierOutput"),
     vertices = cms.InputTag("hltPhase2PixelVertices")
 )
 
