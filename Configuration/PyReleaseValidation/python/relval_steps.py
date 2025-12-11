@@ -2166,21 +2166,21 @@ steps['DIGIUP15_ID']=merge([{'--restoreRND':'HLT','--process':'HLT2'},steps['DIG
 steps['RESIM']=merge([{'-s':'reGEN,reSIM','-n':10},steps['DIGI']])
 #steps['RESIMDIGI']=merge([{'-s':'reGEN,reSIM,DIGI,L1,DIGI2RAW,HLT:@fake,RAW2DIGI,L1Reco','-n':10,'--restoreRNDSeeds':'','--process':'HLT'},steps['DIGI']])
 
-steps['DIGIHI2025APPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:HIon'}, hiDefaults2025_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2025']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:HIon'}, hiDefaults2025, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIUPC2025']=merge([{'-s':'DIGI,L1,DIGI2RAW,HLT:HIon'}, upcDefaults2025, step2Upg2015Defaults])
-steps['DIGIUPC2024']=merge([{'-s':'DIGI,L1,DIGI2RAW,HLT:@fake2'}, upcDefaults2024, step2Upg2015Defaults])
-steps['DIGIHI2024APPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2024_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2024']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2024, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2023PPRECOAPPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2023_ppReco_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2023PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2023_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2022PPRECOAPPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2022_ppReco_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
-steps['DIGIHI2022PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2022_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2025APPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2025'}, hiDefaults2025_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2025']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2025'}, hiDefaults2025, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIUPC2025']=merge([{'-s':'DIGI,L1,DIGI2RAW,HLT:@relvalHI2025'}, upcDefaults2025, step2Upg2015Defaults])
+steps['DIGIUPC2024']=merge([{'-s':'DIGI,L1,DIGI2RAW,HLT:@relvalHI2024'}, upcDefaults2024, step2Upg2015Defaults])
+steps['DIGIHI2024APPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2024'}, hiDefaults2024_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2024']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2024'}, hiDefaults2024, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2023PPRECOAPPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2023'}, hiDefaults2023_ppReco_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2023PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2023'}, hiDefaults2023_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2022PPRECOAPPROXCLUSTERS']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2022'}, hiDefaults2022_ppReco_approxClusters, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
+steps['DIGIHI2022PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2022'}, hiDefaults2022_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
 steps['DIGIHI2018PPRECO']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2018_ppReco, {'--pileup':'HiMixNoPU'}, step2Upg2015Defaults])
 steps['DIGIHI2017']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2'}, hiDefaults2017, step2Upg2015Defaults])
-steps['DIGIHI2024MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2', '-n':2}, hiDefaults2024, {'--pileup':'HiMix'}, PUHI2024, step2Upg2015Defaults])
-steps['DIGIHI2023MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2', '-n':2}, hiDefaults2023_ppReco, {'--pileup':'HiMix'}, PUHI2023, step2Upg2015Defaults])
-steps['DIGIHI2022MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2', '-n':2}, hiDefaults2022_ppReco, {'--pileup':'HiMix'}, PUHI2022, step2Upg2015Defaults])
+steps['DIGIHI2024MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2024', '-n':2}, hiDefaults2024, {'--pileup':'HiMix'}, PUHI2024, step2Upg2015Defaults])
+steps['DIGIHI2023MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2023', '-n':2}, hiDefaults2023_ppReco, {'--pileup':'HiMix'}, PUHI2023, step2Upg2015Defaults])
+steps['DIGIHI2022MIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@relvalHI2022', '-n':2}, hiDefaults2022_ppReco, {'--pileup':'HiMix'}, PUHI2022, step2Upg2015Defaults])
 steps['DIGIHIMIX']=merge([{'-s':'DIGI:pdigi_hi_nogen,L1,DIGI2RAW,HLT:@fake2', '-n':2}, hiDefaults2018_ppReco, {'--pileup':'HiMix'}, PUHI, step2Upg2015Defaults])
 
 steps['DIGIPPREF2024']=merge([{'-s':'DIGI:pdigi_valid,L1,DIGI2RAW,HLT:@fake2'}, ppRefDefaults2024, step2Upg2015Defaults])
@@ -2943,9 +2943,6 @@ steps['RECODR3_reHLT_2023']=merge([{'--conditions':'auto:run3_data_relval', '--h
 steps['RECODR3_reHLT_2023B']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3']])
 steps['RECODR3_reHLT_2024']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3_2024']])
 steps['RECODR3_reHLT_2025']=merge([{'--conditions':'auto:run3_data_prompt_relval', '--hltProcess':'reHLT'},steps['RECODR3_2025']])
-# Added to run with the offline GT on few 2024 Eras.
-# Could be removed once 2025 wfs are in and we'll test the online GT with them
-steps['RECODR3_reHLT_2024_Offline']=merge([{'--conditions':'auto:run3_data_relval', '--hltProcess':'reHLT'},steps['RECODR3_2024']])
 
 steps['RECODR2_2016_UPC']=merge([{'--conditions':'auto:run2_data', '--era':'Run2_2016_UPC', '-s':'RAW2DIGI,L1Reco,RECO,PAT,DQM:@commonFakeHLT+@standardDQMFakeHLT', '--repacked':''},steps['RECODR2_2016']])
 steps['RECODR3_2023_HIN']=merge([{'--conditions':'auto:run3_data_prompt', '-s':'RAW2DIGI,L1Reco,RECO,PAT,DQM:@commonFakeHLT+@standardDQMFakeHLT', '--repacked':'', '-n':1000},steps['RECODR3_2023']])
@@ -3354,9 +3351,6 @@ steps['RECOHIRUN3_reHLT_2023']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,DQM:@stand
 
 steps['RECONANORUN3_reHLT_2024']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQMFakeHLT+@miniAODDQM+@nanoAODDQM','--datatier':'RECO,MINIAOD,NANOAOD,DQMIO','--eventcontent':'RECO,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2024']])
 steps['RECONANORUN3_ZB_reHLT_2024']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@rerecoZeroBiasFakeHLT+@miniAODDQM+@nanoAODDQM'},steps['RECONANORUN3_reHLT_2024']])
-
-steps['RECONANORUN3_reHLT_2024_Offline']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQMFakeHLT+@miniAODDQM+@nanoAODDQM','--datatier':'RECO,MINIAOD,NANOAOD,DQMIO','--eventcontent':'RECO,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2024_Offline']])
-steps['RECONANORUN3_ZB_reHLT_2024_Offline']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@rerecoZeroBiasFakeHLT+@miniAODDQM+@nanoAODDQM'},steps['RECONANORUN3_reHLT_2024_Offline']])
 
 steps['RECONANORUN3_reHLT_2025']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@standardDQM+@miniAODDQM+@nanoAODDQM','--datatier':'RECO,MINIAOD,NANOAOD,DQMIO','--eventcontent':'RECO,MINIAOD,NANOEDMAOD,DQM'},steps['RECODR3_reHLT_2025']])
 steps['RECONANORUN3_ZB_reHLT_2025']=merge([{'-s':'RAW2DIGI,L1Reco,RECO,PAT,NANO,DQM:@rerecoZeroBias+@miniAODDQM+@nanoAODDQM'},steps['RECONANORUN3_reHLT_2025']])
@@ -4708,7 +4702,6 @@ steps['NANOUP15FS'] = merge([{'--filein':'file:step3.root','--fast':''}, steps['
 steps['NANOUP17FS'] = merge([{'--filein':'file:step3.root','--fast':'','--era':'Run2_2017_FastSim'}, steps['NANOUP17']])
 steps['NANOUP18FS'] = merge([{'--filein':'file:step3.root','--fast':'','--era':'Run2_2018_FastSim'}, steps['NANOUP18']])
 
-steps['NANOUP15FSrefine'] = merge([{'--customise':'PhysicsTools/NanoAOD/jetsAK4_CHS_cff.nanoAOD_refineFastSim_bTagDeepFlav'}, steps['NANOUP15FS']])
 
 steps['HEfail'] = {'--conditions':'auto:phase1_2018_realistic_HEfail',
                    '-n':'10',
@@ -4757,8 +4750,10 @@ defaultDataSets['2023']='CMSSW_13_0_10-130X_mcRun3_2023_realistic_withEarly2023B
 defaultDataSets['2023FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v'
 defaultDataSets['2024']='CMSSW_14_2_0_pre4-140X_mcRun3_2024_realistic_v26_STD_RegeneratedGS_2024_noPU-v'
 defaultDataSets['2025']='CMSSW_15_1_0_pre5-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
+defaultDataSets['2026']='CMSSW_15_1_0_pre5-151X_mcRun3_2025_realistic_v4_STD_RegeneratedGS_2025_noPU-v'
 defaultDataSets['2024HLTOnDigi'] = defaultDataSets["2024SimOnGen"] = defaultDataSets['2024']
 defaultDataSets["2025HLTOnDigi"] = defaultDataSets["2025SimOnGen"] = defaultDataSets['2025']
+defaultDataSets["2026HLTOnDigi"] = defaultDataSets["2026SimOnGen"] = defaultDataSets['2026']
 defaultDataSets['2024FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v' #To replace with new dataset
 defaultDataSets['2025FS']='CMSSW_13_0_11-130X_mcRun3_2023_realistic_withEarly2023BS_v1_FastSim-v' #To replace with new dataset
 defaultDataSets['Run4D49']='CMSSW_12_0_0_pre4-113X_mcRun4_realistic_v7_2026D49noPU-v'
@@ -4769,6 +4764,7 @@ defaultDataSets['Run4D95']='CMSSW_13_1_0_pre1-130X_mcRun4_realistic_v2_2026D95no
 defaultDataSets['Run4D96']='CMSSW_13_1_0_pre1-130X_mcRun4_realistic_v2_2026D96noPU-v'
 defaultDataSets['Run4D98']='CMSSW_13_2_0_pre1-131X_mcRun4_realistic_v5_2026D98noPU-v'
 defaultDataSets['Run4D110']='CMSSW_15_1_0_pre5-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D110_noPU-v'
+defaultDataSets['Run4D121']='CMSSW_16_0_0_pre2-150X_mcRun4_realistic_v1_STD_RegeneratedGS_Run4D121_noPU-v'
 
 ## HIN
 defaultDataSets['2023HIN']='CCMSSW_14_1_0-PU_140X_mcRun3_2023_realistic_HI_v4_STD_2023HIN_PU-v'
