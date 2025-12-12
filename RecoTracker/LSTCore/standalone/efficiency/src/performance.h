@@ -32,9 +32,9 @@ void fillEfficiencySet(int isimtrk,
                        float deltaEta,
                        float deltaPhi,
                        float deltaR,
-                       float jet_eta,
-                       float jet_phi,
-                       float jet_pt);
+                       float genJetEta,
+                       float genJetPhi,
+                       float genJetPt);
 void fillEfficiencySet(int isimtrk,
                        SimTrackSetDefinition& effset,
                        float pt,
