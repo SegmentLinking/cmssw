@@ -205,6 +205,15 @@ void GenParticles2HepMCConverter::produce(edm::Event& event, const edm::EventSet
     if (p == parton1 or p == parton2)
       continue;
 
+    // No mother info: connect to the incident proton vertex
+    if (p->numberOfMothers() == 0) {
+      if (p->pz() > 0) {
+        vertex1->add_particle_out(genCandToHepMCMap[p]);
+      } else {
+        vertex2->add_particle_out(genCandToHepMCMap[p]);
+      }
+      continue;
+    }
     // Connect mother-daughters for the other cases
     for (unsigned int j = 0, nMothers = p->numberOfMothers(); j < nMothers; ++j) {
       // Mother-daughter hierarchy defines vertex
@@ -231,7 +240,7 @@ void GenParticles2HepMCConverter::produce(edm::Event& event, const edm::EventSet
   }
 
   // Finalize HepMC event record
-  auto hepmc_product = std::make_unique<edm::HepMC3Product>(&hepmc_event);
+  auto hepmc_product = std::make_unique<edm::HepMC3Product>(hepmc_event);
   event.put(std::move(hepmc_product), "unsmeared");
 }
 
