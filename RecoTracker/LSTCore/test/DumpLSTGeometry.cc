@@ -16,16 +16,18 @@ public:
 private:
   void analyze(const edm::Event& event, const edm::EventSetup& eventSetup) override;
 
-  edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
-
+  std::string ptCut_;
   std::string outputDirectory_;
   bool binaryOutput_;
+  
+  edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
 };
 
 DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)
-    : lstGeoToken_{esConsumes()},
+    : ptCut_(config.getParameter<std::string>("ptCut")),
       outputDirectory_(config.getUntrackedParameter<std::string>("outputDirectory", "data/")),
-      binaryOutput_(config.getUntrackedParameter<bool>("output_as_binary", true)) {}
+      binaryOutput_(config.getUntrackedParameter<bool>("output_as_binary", true)),
+      lstGeoToken_{esConsumes(edm::ESInputTag("", ptCut_))} {}
 
 void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& lstg = iSetup.getData(lstGeoToken_);
