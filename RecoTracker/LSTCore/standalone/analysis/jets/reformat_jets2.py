@@ -8,7 +8,6 @@
 import matplotlib.pyplot as plt
 import ROOT
 from ROOT import TFile
-from myjets import getLists, createJets, matchArr
 import numpy as np
 
 # Load existing tree

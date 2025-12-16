@@ -1136,7 +1136,7 @@ void fillEfficiencySet(int isimtrk,
     else
       ana.tx.pushbackToBranch<float>(category_name + "_ie_numer_deltaPhi", deltaPhi);
 
-    // vs. deltaR plot
+  // vs. deltaR plot
     ana.tx.pushbackToBranch<float>(category_name + "_ef_denom_deltaR", deltaR);
     if (pass)
       ana.tx.pushbackToBranch<float>(category_name + "_ef_numer_deltaR", deltaR);
@@ -1308,6 +1308,7 @@ void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset, float pt, float eta
       ana.tx.pushbackToBranch<float>(category_name + "_fr_numer_phi", phi);
   }
   if (ana.jet_branches) {
+    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
     float dEtaj = 999;
@@ -1322,9 +1323,9 @@ void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset, float pt, float eta
         dRTemp = dRj;
       }
     }
-    ana.tx.pushbackToBranch<float>(category_name + "_fr_denom_deltaR", dRTemp);
+    ana.tx.pushbackToBranch<float>(category_name + "_dr_denom_deltaR", dRTemp);
     if (pass) {
-      ana.tx.pushbackToBranch<float>(category_name + "_fr_numer_deltaR", dRTemp);
+      ana.tx.pushbackToBranch<float>(category_name + "_dr_numer_deltaR", dRTemp);
     }
   }
 }
@@ -1367,6 +1368,7 @@ void fillDuplicateRateSet(int itc, RecoTrackSetDefinition& DRset, float pt, floa
   }
 
   if (ana.jet_branches) {
+    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
     float dEtaj = 999;
@@ -1426,6 +1428,7 @@ void fillFakeOrDuplicateRateSet(int itc, RecoTrackSetDefinition& FDRset, float p
       ana.tx.pushbackToBranch<float>(category_name + "_fdr_numer_phi", phi);
   }
   if (ana.jet_branches) {
+    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
     float dEtaj = 999;
@@ -1440,9 +1443,9 @@ void fillFakeOrDuplicateRateSet(int itc, RecoTrackSetDefinition& FDRset, float p
         dRTemp = dRj;
       }
     }
-    ana.tx.pushbackToBranch<float>(category_name + "_fdr_denom_deltaR", dRTemp);
+    ana.tx.pushbackToBranch<float>(category_name + "_dr_denom_deltaR", dRTemp);
     if (pass) {
-      ana.tx.pushbackToBranch<float>(category_name + "_fdr_numer_deltaR", dRTemp);
+      ana.tx.pushbackToBranch<float>(category_name + "_dr_numer_deltaR", dRTemp);
     }
   }
 }
