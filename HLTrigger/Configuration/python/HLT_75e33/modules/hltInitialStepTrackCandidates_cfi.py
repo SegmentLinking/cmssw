@@ -87,3 +87,16 @@ from Configuration.ProcessModifiers.hltTrackingMkFitInitialStep_cff import hltTr
 (singleIterPatatrack & trackingLST & seedingLST).toModify(hltInitialStepTrackCandidates, src = "hltInitialStepTrajectorySeedsLST") # All LST seeds
 (~seedingLST & ~trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFit)
 (singleIterPatatrack & seedingLST & trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
+
+# Supported combinations for LST CPU vs. GPU validation
+hltInitialStepTrackCandidatesSerialSync = hltInitialStepTrackCandidates.clone()
+(singleIterPatatrack & trackingLST & ~seedingLST).toModify(hltInitialStepTrackCandidatesSerialSync,
+    lstOutput = cms.InputTag('hltLSTSerialSync'),
+    lstInput = cms.InputTag('hltInputLSTSerialSync'),
+    lstPixelSeeds = cms.InputTag('hltInputLSTSerialSync')
+)
+(singleIterPatatrack & seedingLST & trackingLST & hltTrackingMkFitInitialStep).toModify(hltInitialStepTrackCandidatesSerialSync,
+    mkFitSeeds = "hltInitialStepMkFitSeedsSerialSync",
+    seeds = "hltInitialStepTrajectorySeedsLSTSerialSync",
+    tracks = "hltInitialStepTrackCandidatesMkFitSerialSync",
+)
