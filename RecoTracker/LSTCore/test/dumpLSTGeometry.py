@@ -33,9 +33,11 @@ process.maxEvents.input = 1
 process.add_(cms.ESProducer("LSTGeometryESProducer"))
 
 defaultOutputDirectory="data/"
+defaultPtCut="0.8"
 
 process.dump = cms.EDAnalyzer("DumpLSTGeometry",
-                              outputDirectory = cms.untracked.string(defaultOutputDirectory)
+                              outputDirectory = cms.untracked.string(defaultOutputDirectory),
+                              ptCut = cms.string(defaultPtCut)
                               )
 
 print("Requesting LST geometry dump into directory:", defaultOutputDirectory, "\n");
