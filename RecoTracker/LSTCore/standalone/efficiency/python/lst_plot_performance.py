@@ -9,7 +9,7 @@ from math import sqrt
 
 sel_choices = ["base", "loweta", "xtr", "vtr", "none"]
 metric_choices = ["eff", "fakerate", "duplrate", "fakeorduplrate", "avgOTlen"]
-variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "jet_eta", "jet_phi", "jet_pt"]
+variable_choices = ["pt", "ptmtv", "ptlow", "eta", "phi", "dxy", "dz", "vxy", "deltaEta", "deltaPhi", "deltaR", "genJetEta", "genJetPhi", "genJetPt"]
 objecttype_choices = ["TC", "pT5", "T5", "pT3", "pLS", "T4", "pT5_lower", "pT3_lower", "T5_lower", "pLS_lower"]
 #lowerObjectType = ["pT5_lower", "pT3_lower", "T5_lower"]
 
