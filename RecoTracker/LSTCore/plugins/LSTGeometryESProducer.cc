@@ -68,11 +68,7 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
 
     if (det->isLeaf()) {
       // Leafs are the sensors
-      lstgeometry::SensorInfo sensor;
-      sensor.detId = detId();
-      sensor.sensorCenterRho_cm = rho_cm;
-      sensor.sensorCenterZ_cm = z_cm;
-      sensor.phi_rad = phi_rad;
+      lstgeometry::SensorInfo sensor{detId(), rho_cm, z_cm, phi_rad};
       sensors[detId()] = std::move(sensor);
       continue;
     }
@@ -86,28 +82,8 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
 
     double meanWidth_cm = b2->width();
     double length_cm = b2->length();
-    double dx = b2->width() * 0.5;
-    double dy = b2->length() * 0.5;
 
     double sensorSpacing_cm = det->components()[0]->toLocal(det->components()[1]->position()).mag();
-
-    double vtxOneX_cm_tmp = rho_cm - dy * std::sin(tiltAngle_rad);
-    double vtxOneY_cm_tmp = dx;
-    double vtxTwoX_cm_tmp = rho_cm + dy * std::sin(tiltAngle_rad);
-    double vtxTwoY_cm_tmp = dx;
-    double vtxThreeX_cm_tmp = rho_cm - dy * std::sin(tiltAngle_rad);
-    double vtxThreeY_cm_tmp = -dx;
-    double vtxFourX_cm_tmp = rho_cm + dy * std::sin(tiltAngle_rad);
-    double vtxFourY_cm_tmp = -dx;
-
-    double vtxOneX_cm = vtxOneX_cm_tmp * cos(phi_rad) + vtxOneY_cm_tmp * sin(phi_rad);
-    double vtxOneY_cm = vtxOneX_cm_tmp * sin(phi_rad) - vtxOneY_cm_tmp * cos(phi_rad);
-    double vtxTwoX_cm = vtxTwoX_cm_tmp * cos(phi_rad) + vtxTwoY_cm_tmp * sin(phi_rad);
-    double vtxTwoY_cm = vtxTwoX_cm_tmp * sin(phi_rad) - vtxTwoY_cm_tmp * cos(phi_rad);
-    double vtxThreeX_cm = vtxThreeX_cm_tmp * cos(phi_rad) + vtxThreeY_cm_tmp * sin(phi_rad);
-    double vtxThreeY_cm = vtxThreeX_cm_tmp * sin(phi_rad) - vtxThreeY_cm_tmp * cos(phi_rad);
-    double vtxFourX_cm = vtxFourX_cm_tmp * cos(phi_rad) + vtxFourY_cm_tmp * sin(phi_rad);
-    double vtxFourY_cm = vtxFourX_cm_tmp * sin(phi_rad) - vtxFourY_cm_tmp * cos(phi_rad);
 
     unsigned int detid = detId();
 
@@ -120,25 +96,17 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
       avg_z_counter[layer - 1] += 1;
     }
 
-    lstgeometry::ModuleInfo module;
-    module.detId = detid;
-    module.sensorCenterRho_cm = rho_cm;
-    module.sensorCenterZ_cm = z_cm;
-    module.tiltAngle_rad = tiltAngle_rad;
-    module.skewAngle_rad = 0.0;
-    module.yawAngle_rad = 0.0;
-    module.phi_rad = phi_rad;
-    module.vtxOneX_cm = vtxOneX_cm;
-    module.vtxOneY_cm = vtxOneY_cm;
-    module.vtxTwoX_cm = vtxTwoX_cm;
-    module.vtxTwoY_cm = vtxTwoY_cm;
-    module.vtxThreeX_cm = vtxThreeX_cm;
-    module.vtxThreeY_cm = vtxThreeY_cm;
-    module.vtxFourX_cm = vtxFourX_cm;
-    module.vtxFourY_cm = vtxFourY_cm;
-    module.meanWidth_cm = meanWidth_cm;
-    module.length_cm = length_cm;
-    module.sensorSpacing_cm = sensorSpacing_cm;
+    lstgeometry::ModuleInfo module{detid,
+                                   rho_cm,
+                                   z_cm,
+                                   tiltAngle_rad,
+                                   0.0,
+                                   0.0,
+                                   phi_rad,
+                                   meanWidth_cm,
+                                   length_cm,
+                                   sensorSpacing_cm,
+                                   lstgeometry::MatrixD8x3::Zero()};
     modules.push_back(module);
   }
 
@@ -148,6 +116,28 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
   for (size_t i = 0; i < avg_z_cm.size(); ++i) {
     avg_z_cm[i] /= avg_z_counter[i];
   }
+
+  // For debugging
+  for (auto &m : modules) {
+    std::cout << "module," << m.detId << "," << m.sensorCenterRho_cm << "," << m.sensorCenterZ_cm << ","
+              << m.tiltAngle_rad << "," << m.phi_rad << "," << m.meanWidth_cm << "," << m.length_cm << ","
+              << m.sensorSpacing_cm << std::endl;
+  }
+  for (auto &[detid, s] : sensors) {
+    std::cout << "sensor," << s.detId << "," << s.sensorCenterRho_cm << "," << s.sensorCenterZ_cm << "," << s.phi_rad
+              << std::endl;
+  }
+  std::cout << "avg_r_cm,";
+  for (auto &r : avg_r_cm) {
+    std::cout << r << ",";
+  }
+  std::cout << std::endl;
+  std::cout << "avg_z_cm,";
+  for (auto &z : avg_z_cm) {
+    std::cout << z << ",";
+  }
+  std::cout << std::endl;
+  // end debugging
 
   double ptCut = std::stod(ptCut_);
   auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut);

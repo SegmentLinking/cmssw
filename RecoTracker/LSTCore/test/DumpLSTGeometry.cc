@@ -19,7 +19,7 @@ private:
   std::string ptCut_;
   std::string outputDirectory_;
   bool binaryOutput_;
-  
+
   edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
 };
 
