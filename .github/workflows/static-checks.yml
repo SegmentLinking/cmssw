@@ -5,7 +5,7 @@ on:
     types: [created]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ contains(github.event.comment.body, '/run checks') || contains(github.event.comment.body, '/run all') }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}-${{ contains(github.event.comment.body, '/run checks') || contains(github.event.comment.body, '/run all') || contains(github.event.comment.body, '/run gpu-all') }}
   cancel-in-progress: true
 
 permissions:
