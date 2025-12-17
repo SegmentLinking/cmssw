@@ -34,10 +34,12 @@ process.add_(cms.ESProducer("LSTGeometryESProducer"))
 
 defaultOutputDirectory="data/"
 defaultPtCut="0.8"
+defaultToBinary=True
 
 process.dump = cms.EDAnalyzer("DumpLSTGeometry",
                               outputDirectory = cms.untracked.string(defaultOutputDirectory),
-                              ptCut = cms.string(defaultPtCut)
+                              ptCut = cms.string(defaultPtCut),
+                              outputAsBinary = cms.untracked.bool(defaultToBinary),
                               )
 
 print("Requesting LST geometry dump into directory:", defaultOutputDirectory, "\n");
