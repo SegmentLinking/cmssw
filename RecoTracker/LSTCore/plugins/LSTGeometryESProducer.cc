@@ -79,6 +79,11 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     }
 
     double tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
+    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
+      tiltAngle_rad = std::numbers::pi_v<double> / 2;
+    } else if (std::fabs(tiltAngle_rad) > 1e-3) {
+      tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
+    }
 
     double meanWidth_cm = b2->width();
     double length_cm = b2->length();
@@ -116,28 +121,6 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
   for (size_t i = 0; i < avg_z_cm.size(); ++i) {
     avg_z_cm[i] /= avg_z_counter[i];
   }
-
-  // For debugging
-  for (auto &m : modules) {
-    std::cout << "module," << m.detId << "," << m.sensorCenterRho_cm << "," << m.sensorCenterZ_cm << ","
-              << m.tiltAngle_rad << "," << m.phi_rad << "," << m.meanWidth_cm << "," << m.length_cm << ","
-              << m.sensorSpacing_cm << std::endl;
-  }
-  for (auto &[detid, s] : sensors) {
-    std::cout << "sensor," << s.detId << "," << s.sensorCenterRho_cm << "," << s.sensorCenterZ_cm << "," << s.phi_rad
-              << std::endl;
-  }
-  std::cout << "avg_r_cm,";
-  for (auto &r : avg_r_cm) {
-    std::cout << r << ",";
-  }
-  std::cout << std::endl;
-  std::cout << "avg_z_cm,";
-  for (auto &z : avg_z_cm) {
-    std::cout << z << ",";
-  }
-  std::cout << std::endl;
-  // end debugging
 
   double ptCut = std::stod(ptCut_);
   auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut);
