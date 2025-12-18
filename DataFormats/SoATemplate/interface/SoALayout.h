@@ -1531,7 +1531,7 @@ _SWITCH_ON_TYPE(VALUE_TYPE,                                                     
         const_element operator[](size_type _soa_impl_index) const {                                                    \
           if constexpr (rangeChecking == cms::soa::RangeChecking::enabled) {                                           \
             if (_soa_impl_index >= elements_ or _soa_impl_index < 0)                                                   \
-              SOA_THROW_OUT_OF_RANGE("Out of range index in ConstViewTemplateFreeParams ::operator[]",                 \
+              SOA_THROW_OUT_OF_RANGE("Out of range index in ConstViewTemplateFreeParams " #CLASS "::operator[]",       \
                 _soa_impl_index, elements_)                                                                            \
           }                                                                                                            \
           return const_element{                                                                                        \
@@ -1718,7 +1718,7 @@ _SWITCH_ON_TYPE(VALUE_TYPE,                                                     
       element operator[](size_type _soa_impl_index) {                                                                  \
         if constexpr (rangeChecking == cms::soa::RangeChecking::enabled) {                                             \
           if (_soa_impl_index >= base_type::elements_ or _soa_impl_index < 0)                                          \
-            SOA_THROW_OUT_OF_RANGE("Out of range index in ViewTemplateFreeParams ::operator[]",                        \
+            SOA_THROW_OUT_OF_RANGE("Out of range index in ViewTemplateFreeParams" #CLASS "::operator[]",               \
               _soa_impl_index, base_type::elements_)                                                                   \
         }                                                                                                              \
         return element{_soa_impl_index, _ITERATE_ON_ALL_COMMA(_DECLARE_VIEW_ELEMENT_CONSTR_CALL, ~, __VA_ARGS__)};     \
@@ -1795,8 +1795,11 @@ _SWITCH_ON_TYPE(VALUE_TYPE,                                                     
     }                                                                                                                  \
                                                                                                                        \
     /* Helper to implement View as derived from ConstView in SoABlocks implementation */                               \
-    SOA_HOST_DEVICE SOA_INLINE static View const_cast_View(ConstView const& view)  {                                   \
-      return View{view.metadata().size(), _ITERATE_ON_ALL_COMMA(_DECLARE_CONST_CAST_COLUMNS, ~, __VA_ARGS__)};         \
+    template <bool RESTRICT_QUALIFY, bool RANGE_CHECKING>                                                              \
+    SOA_HOST_DEVICE SOA_INLINE static ViewTemplate<RESTRICT_QUALIFY, RANGE_CHECKING> const_cast_View(                  \
+      ConstViewTemplate<RESTRICT_QUALIFY, RANGE_CHECKING> const& view)  {                                              \
+      return ViewTemplate<RESTRICT_QUALIFY, RANGE_CHECKING>{                                                           \
+        view.metadata().size(), _ITERATE_ON_ALL_COMMA(_DECLARE_CONST_CAST_COLUMNS, ~, __VA_ARGS__)};                   \
     }                                                                                                                  \
                                                                                                                        \
     /*                                                                                                                 \

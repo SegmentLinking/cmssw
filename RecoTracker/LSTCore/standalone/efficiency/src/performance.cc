@@ -1,6 +1,6 @@
 #include "performance.h"
 
-enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8 };
+enum { pT5 = 7, pT3 = 5, T5 = 4, pLS = 8, T4 = 9 };
 
 //__________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char** argv) {
@@ -96,6 +96,18 @@ int main(int argc, char** argv) {
               return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == pLS : false;
             },
             /* sel   */ sels[isel]));
+        list_effSetDef.push_back(SimTrackSetDefinition(
+            /* name  */
+            TString("T4_") + selnames[isel],
+            /* pdgid */ pdgid,
+            /* q     */ charge,
+            /* pass  */
+            [&](unsigned int isim) {
+              auto& lstEff_sim_tcIdx = lstEff.getVI("sim_tcIdx");
+              auto& lstEff_tc_type = lstEff.getVI("tc_type");
+              return lstEff_sim_tcIdx.at(isim) >= 0 ? lstEff_tc_type.at(lstEff_sim_tcIdx.at(isim)) == T4 : false;
+            },
+            /* sel   */ sels[isel]));
 
         if (ana.do_lower_level) {
           //lower objects - name will have pT5_lower_, T5_lower_, pT3_lower_
@@ -164,6 +176,20 @@ int main(int argc, char** argv) {
     }
   }
 
+  // ---------------- OT track length sets ----------------
+  std::vector<RecoTrackSetDefinition> list_OLSetDef;
+  list_OLSetDef.push_back(RecoTrackSetDefinition(
+      /* name */
+      "TC",
+      /* pass */ [&](unsigned int itc) { return 1; },
+      /* sel  */ [&](unsigned int itc) { return 1; },
+      /* pt   */ [&]() { return lstEff.getVF("tc_pt"); },
+      /* eta  */ [&]() { return lstEff.getVF("tc_eta"); },
+      /* phi  */ [&]() { return lstEff.getVF("tc_phi"); },
+      /* type */ [&]() { return lstEff.getVI("tc_type"); }));
+  bookOTLengthSets(list_OLSetDef);
+  // --------------------------------------------------------
+
   bookEfficiencySets(list_effSetDef);
 
   // creating a set of fake rate plots
@@ -218,6 +244,17 @@ int main(int argc, char** argv) {
                              [&](unsigned int itc) { return lstEff.getVI("tc_isFake").at(itc) > 0; },
                              /* sel   */
                              [&](unsigned int itc) { return lstEff.getVI("tc_type").at(itc) == pLS; },
+                             /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
+                             /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
+                             /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
+                             /* type  */ [&]() { return lstEff.getVI("tc_type"); }));
+  list_FRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */
+                             "T4",
+                             /* pass  */
+                             [&](unsigned int itc) { return lstEff.getVI("tc_isFake").at(itc) > 0; },
+                             /* sel   */
+                             [&](unsigned int itc) { return lstEff.getVI("tc_type").at(itc) == T4; },
                              /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
                              /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
                              /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
@@ -316,6 +353,17 @@ int main(int argc, char** argv) {
                              [&](unsigned int itc) { return lstEff.getVI("tc_isDuplicate").at(itc) > 0; },
                              /* sel   */
                              [&](unsigned int itc) { return lstEff.getVI("tc_type").at(itc) == pLS; },
+                             /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
+                             /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
+                             /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
+                             /* type  */ [&]() { return lstEff.getVI("tc_type"); }));
+  list_DRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */
+                             "T4",
+                             /* pass  */
+                             [&](unsigned int itc) { return lstEff.getVI("tc_isDuplicate").at(itc) > 0; },
+                             /* sel   */
+                             [&](unsigned int itc) { return lstEff.getVI("tc_type").at(itc) == T4; },
                              /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
                              /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
                              /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
@@ -432,6 +480,20 @@ int main(int argc, char** argv) {
                              /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
                              /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
                              /* type  */ [&]() { return lstEff.getVI("tc_type"); }));
+  list_FDRSetDef.push_back(
+      RecoTrackSetDefinition(/* name  */
+                             "T4",
+                             /* pass  */
+                             [&](unsigned int itc) {
+                               return (lstEff.getVI("tc_isDuplicate").at(itc) > 0) or
+                                      (lstEff.getVI("tc_isFake").at(itc) > 0);
+                             },
+                             /* sel   */
+                             [&](unsigned int itc) { return lstEff.getVI("tc_type").at(itc) == T4; },
+                             /* pt    */ [&]() { return lstEff.getVF("tc_pt"); },
+                             /* eta   */ [&]() { return lstEff.getVF("tc_eta"); },
+                             /* phi   */ [&]() { return lstEff.getVF("tc_phi"); },
+                             /* type  */ [&]() { return lstEff.getVI("tc_type"); }));
 
   if (ana.do_lower_level) {
     list_FDRSetDef.push_back(RecoTrackSetDefinition(
@@ -507,6 +569,7 @@ int main(int argc, char** argv) {
     fillFakeRateSets(list_FRSetDef);
     fillDuplicateRateSets(list_DRSetDef);
     fillFakeOrDuplicateRateSets(list_FDRSetDef);
+    fillOTLengthSets(list_OLSetDef);
 
     // Reset all temporary variables necessary for histogramming
     ana.cutflow.fill();
@@ -536,6 +599,73 @@ int main(int argc, char** argv) {
 // ---------------------------------------------------------=============================================-------------------------------------------------------------------
 // ---------------------------------------------------------=============================================-------------------------------------------------------------------
 // ---------------------------------------------------------=============================================-------------------------------------------------------------------
+
+// ---------------------------------------------------------=============================================-------------------------------------------------------------------
+void bookOTLengthSets(std::vector<RecoTrackSetDefinition>& OLsets) {
+  for (auto& OLset : OLsets) {
+    bookOTLengthSet(OLset);
+  }
+}
+
+//__________________________________________________________________________________________________________________________________________________________________________
+void bookOTLengthSet(RecoTrackSetDefinition& OLset) {
+  TString category_name = OLset.set_name;
+
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ol_denom_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ol_numer_eta");
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ol_numerSq_eta");
+
+  ana.histograms.addVecHistogram(category_name + "_ol_denom_eta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ol_denom_eta");
+  });
+  ana.histograms.addVecHistogram(category_name + "_ol_numer_eta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ol_numer_eta");
+  });
+  ana.histograms.addVecHistogram(category_name + "_ol_numerSq_eta", 180, -4.5, 4.5, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ol_numerSq_eta");
+  });
+}
+
+//__________________________________________________________________________________________________________________________________________________________________________
+void fillOTLengthSets(std::vector<RecoTrackSetDefinition>& OLsets) {
+  for (auto& OLset : OLsets) {
+    const std::vector<float>& pt = OLset.pt();
+    const std::vector<float>& eta = OLset.eta();
+    for (unsigned int itc = 0; itc < pt.size(); ++itc) {
+      fillOTLengthSet(static_cast<int>(itc), OLset, pt[itc], eta[itc]);
+    }
+  }
+}
+
+//__________________________________________________________________________________________________________________________________________________________________________
+void fillOTLengthSet(int itc, RecoTrackSetDefinition& OLset, float pt, float eta) {
+  TString category_name = OLset.set_name;
+  const bool sel = OLset.sel(itc);  // mirror FR/DR pattern (selection gate)
+  if (!sel)
+    return;
+
+  // Pull OT length from the relevant TC branch
+  const auto& tc_nhitOT = lstEff.getVI("tc_nhitOT");
+  if (itc < 0 || itc >= static_cast<int>(tc_nhitOT.size()))
+    return;
+  const int otlen = tc_nhitOT[itc];
+
+  if (pt > ana.pt_cut) {
+    // Denominator: one entry per TC
+    ana.tx.pushbackToBranch<float>(category_name + "_ol_denom_eta", eta);
+
+    // Numerator: 'otlen' entries at the same eta bin sum, ignore pLSs
+    if (otlen > 0) {
+      for (int k = 0; k < otlen; ++k) {
+        ana.tx.pushbackToBranch<float>(category_name + "_ol_numer_eta", eta);
+      }
+      int otlenSq = otlen * otlen;
+      for (int k = 0; k < otlenSq; ++k) {
+        ana.tx.pushbackToBranch<float>(category_name + "_ol_numerSq_eta", eta);
+      }
+    }
+  }
+}
 
 //__________________________________________________________________________________________________________________________________________________________________________
 void bookEfficiencySets(std::vector<SimTrackSetDefinition>& effsets) {

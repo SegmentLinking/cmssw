@@ -1,8 +1,10 @@
 ###############################################################################
 # Way to use this:
-#   cmsRun testHGCalIdCheck_cfg.py geometry=D120
+#   cmsRun testHGCalIdCheck_cfg.py geometry=D120 detector=file=D120E
 #
 #   Options for geometry D120, D122
+#           for file D120E, D122E, WaferH120, CellE120, CellH120
+#           for detector HGCalEESensitive, HGCalHESiliconSensitive
 #
 ###############################################################################
 import FWCore.ParameterSet.Config as cms
@@ -17,6 +19,16 @@ options.register('geometry',
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
                   "geometry of operations: D120, D122")
+options.register('file',
+                 "D120E",
+                  VarParsing.VarParsing.multiplicity.singleton,
+                  VarParsing.VarParsing.varType.string,
+                  "geometry of operations: D120E, D122E, WaferH120, CellE120, CellH120")
+options.register('detector',
+                 "HGCalEESensitive",
+                  VarParsing.VarParsing.multiplicity.singleton,
+                  VarParsing.VarParsing.varType.string,
+                  "geometry of operations: HGCalEESensitive, HGCalHESiliconSensitive")
 
 ### get and parse the command line arguments
 options.parseArguments()
@@ -28,11 +40,13 @@ print(options)
 
 geomName = "Run4" + options.geometry
 geomFile = "Configuration.Geometry.GeometryExtended" + geomName + "Reco_cff"
-fileName = options.geometry + "E.txt"
+detector = options.detector
+fileName = options.file + ".txt"
 import Configuration.Geometry.defaultPhase2ConditionsEra_cff as _settings
 GLOBAL_TAG, ERA = _settings.get_era_and_conditions(geomName)
 print("Geometry file: ", geomFile)
-print("Output file:   ", fileName)
+print("Input file:    ", fileName)
+print("Deector:       ", detector)
 
 process = cms.Process('HGCIdCheck',ERA)
 
@@ -75,6 +89,7 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(1)
 )
 
+process.hgcalIdCheck.nameDetector = detector
 process.hgcalIdCheck.fileName = fileName
 
 process.p1 = cms.Path(process.generator*process.hgcalIdCheck)
