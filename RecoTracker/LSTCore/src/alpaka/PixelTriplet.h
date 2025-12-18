@@ -923,20 +923,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float muls2 = thetaMuls2 * 9.f / (ptCut * ptCut) * 16.f;
 
     float dzErr = (drt_OutLo_InUp * drt_OutLo_InUp) * (etaErr * etaErr) * cosh2Eta;
-    dzErr += 0.03f * 0.03f;  // Approximately account for IT module size
     dzErr *= 9.f;            // 3 sigma
     dzErr += muls2 * (drt_OutLo_InUp * drt_OutLo_InUp) / 3.f * cosh2Eta;
     dzErr += zGeom * zGeom;
     dzErr = alpaka::math::sqrt(acc, dzErr);
 
     const float dzDrIn = pz / ptIn;
-    const float zWindow = dzErr / drt_InSeg * drt_OutLo_InUp + zGeom;
     const float dzMean = dzDrIn * drt_OutLo_InUp *
                          (1.f + drt_OutLo_InUp * drt_OutLo_InUp * 4 * k2Rinv1GeVf * k2Rinv1GeVf / ptIn / ptIn /
                                     24.f);  // with curved path correction
     // Constructing upper and lower bound
-    zLoPointed = z_InUp + dzMean - zWindow;
-    zHiPointed = z_InUp + dzMean + zWindow;
+    zLoPointed = z_InUp + dzMean - dzErr;
+    zHiPointed = z_InUp + dzMean + dzErr;
 
     if ((z_OutLo < zLoPointed) || (z_OutLo > zHiPointed))
       return false;
