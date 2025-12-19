@@ -89,10 +89,13 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
 
     unsigned short layer = lstgeometry::Module::parseLayer(detid);
 
-    // This part is a little weird, but this is how to match the csv files
+    // This part is a little weird, but this is how to match the csv files.
+    // I think it might be better to not do this since other parts of the code
+    // assume the center of the module is at (rho_cm, z_cm).
+    //
     // z_cm += sensorSpacing_cm / 2.0 * std::sin(tiltAngle_rad);
-    // rho_cm += s * sensorSpacing_cm / 2.0 * std::cos(tiltAngle_rad);
-    // The way to determine the sign s is still a mystery to me
+    // bool isFlipped = surface.normalVector().basicVector().dot(position.basicVector()) < 0;
+    // rho_cm += (isFlipped ? -1 : 1) * signsensorSpacing_cm / 2.0 * std::cos(tiltAngle_rad);
 
     // Fix angles of some modules
     if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
