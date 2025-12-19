@@ -79,11 +79,6 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     }
 
     double tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
-    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
-      tiltAngle_rad = std::numbers::pi_v<double> / 2;
-    } else if (std::fabs(tiltAngle_rad) > 1e-3) {
-      tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
-    }
 
     double meanWidth_cm = b2->width();
     double length_cm = b2->length();
@@ -93,6 +88,19 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     unsigned int detid = detId();
 
     unsigned short layer = lstgeometry::Module::parseLayer(detid);
+
+    // This part is a little weird, but this is how to match the csv files
+    // z_cm += sensorSpacing_cm / 2.0 * std::sin(tiltAngle_rad);
+    // rho_cm += s * sensorSpacing_cm / 2.0 * std::cos(tiltAngle_rad);
+    // The way to determine the sign s is still a mystery to me
+
+    // Fix angles of some modules
+    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
+      tiltAngle_rad = std::numbers::pi_v<double> / 2;
+    } else if (std::fabs(tiltAngle_rad) > 1e-3) {
+      tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
+    }
+
     if (lstgeometry::Module::parseSubdet(detid) == lstgeometry::Module::SubDet::Barrel) {
       avg_r_cm[layer - 1] += rho_cm;
       avg_r_counter[layer - 1] += 1;
