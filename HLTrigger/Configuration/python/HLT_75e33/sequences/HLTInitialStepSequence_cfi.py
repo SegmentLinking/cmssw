@@ -38,6 +38,15 @@ from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 
 (~singleIterPatatrack & trackingLST).toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST)
 
+from Configuration.ProcessModifiers.alpakaValidationLST_cff import alpakaValidationLST
+alpakaValidationLST.toReplaceWith(_HLTInitialStepSequenceLST, cms.Sequence(
+    _HLTInitialStepSequenceLST.copy()
+    +hltInputLSTSerialSync
+    +hltLSTSerialSync
+    +hltInitialStepTrackCandidatesSerialSync
+    +hltInitialStepTracksSerialSync
+    )
+)
 (singleIterPatatrack & trackingLST & ~seedingLST).toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST.copyAndExclude([HLTHighPtTripletStepSeedingSequence,hltHighPtTripletStepSeedTracksLST]))
 
 from ..modules.hltInitialStepTrajectorySeedsLST_cfi import *
@@ -105,6 +114,8 @@ _HLTInitialStepSequenceSingleIterPatatrackLSTSeedingMkFitTracking = cms.Sequence
 )
 
 (singleIterPatatrack & trackingLST & seedingLST & hltTrackingMkFitInitialStep).toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceSingleIterPatatrackLSTSeedingMkFitTracking)
+
+#(alpakaValidation & singleIterPatatrack & trackingLST & seedingLST & hltTrackingMkFitInitialStep).toReplaceWith(HLTInitialStepSequence, HLTInitialStepSequence.copyAndAdd([hltInputLSTSerialSync,hltLSTSerialSync,hltInitialStepTrajectorySeedsLSTSerialSync,hltInitialStepTrackCandidatesSerialSync,hltInitialStepTracksSerialSync]))
 
 from ..modules.hltInitialStepTrackCandidatesMkFitFit_cfi import *
 
