@@ -159,7 +159,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           alpaka::math::log10(acc, rPhiChiSquared),
           alpaka::math::log10(acc, tripletRadius),
           alpaka::math::log10(acc, pixelRadius),
-          alpaka::math::log10(acc, pixRadiusError),
+          alpaka::math::log10(acc, pixRadiusError * 2.f),
           alpaka::math::log10(acc, rzChiSquared),
           alpaka::math::abs(acc, pixelEta) / dnn::pt3dnn::kEta_norm,
           static_cast<float>(moduleType3),
