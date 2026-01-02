@@ -13,12 +13,12 @@ from myjets import getLists, createJets, matchArr
 import numpy as np
 
 # Load existing tree
-file =  TFile("/data2/segmentlinking/CMSSW_12_2_0_pre2/trackingNtuple_ttbar_PU200.root")
-# file = TFile("trackingNtuple100.root")
+# file =  TFile("/data2/segmentlinking/CMSSW_12_2_0_pre2/trackingNtuple_ttbar_PU200.root")
+file = TFile("trackingNtuple_100_GenJet.root")
 old_tree = file["trackingNtuple"]["tree"]
 
 # Create a new ROOT file to store the new TTree
-new_file = ROOT.TFile("new_tree_temp.root", "RECREATE")
+new_file = ROOT.TFile("new_tree_100_temp.root", "RECREATE")
 
 # Create a new subdirectory in the new file
 new_directory = new_file.mkdir("trackingNtuple")
