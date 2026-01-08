@@ -36,7 +36,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     void produce(edm::StreamID, device::Event& iEvent, const device::EventSetup& iSetup) const override;
 
-    const double ptCut_;
+    const std::string ptCut_;
 
     const edm::EDGetTokenT<Phase2TrackerRecHit1DCollectionNew> phase2OTRecHitToken_;
 
@@ -50,7 +50,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
       : EDProducer<>(iConfig),
-        ptCut_(iConfig.getParameter<double>("ptCut")),
+        ptCut_(iConfig.getParameter<std::string>("ptCut")),
         phase2OTRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
         mfToken_(esConsumes()),
         beamSpotToken_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
@@ -63,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   void LSTInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
 
-    desc.add<double>("ptCut", 0.8);
+    desc.add<std::string>("ptCut", "0.8");
 
     desc.add<edm::InputTag>("phase2OTRecHits", edm::InputTag("siPhase2RecHits"));
 
@@ -221,7 +221,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         ph2_y,
                                         ph2_z,
                                         ph2_hits,
-                                        ptCut_,
+                                        std::stof(ptCut_),
                                         iEvent.queue());
 
     iEvent.emplace(lstInputPutToken_, std::move(lstInputHC));

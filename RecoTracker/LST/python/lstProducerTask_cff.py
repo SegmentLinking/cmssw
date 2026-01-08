@@ -4,6 +4,8 @@ from RecoTracker.LST.lstProducer_cfi import lstProducer
 
 from RecoTracker.LST.lstModulesDevESProducer_cfi import lstModulesDevESProducer
 
+from RecoTracker.LST.lstInputProducer_cfi import lstInputProducer
+
 from RecoTracker.LSTCore.lstGeometryESProducer_cfi import lstGeometryESProducer
 
-lstProducerTask = cms.Task(lstGeometryESProducer, lstModulesDevESProducer, lstProducer)
+lstProducerTask = cms.Task(lstGeometryESProducer, lstModulesDevESProducer, lstInputProducer, lstProducer)
