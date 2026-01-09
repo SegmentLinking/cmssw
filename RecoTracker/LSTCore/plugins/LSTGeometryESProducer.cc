@@ -25,7 +25,7 @@ public:
   std::unique_ptr<lstgeometry::LSTGeometry> produce(const TrackerRecoGeometryRecord &iRecord);
 
 private:
-  std::string ptCut_;
+  double ptCut_;
 
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
 
@@ -33,14 +33,14 @@ private:
 };
 
 LSTGeometryESProducer::LSTGeometryESProducer(const edm::ParameterSet &iConfig)
-    : ptCut_(iConfig.getParameter<std::string>("ptCut")) {
-  auto cc = setWhatProduced(this, ptCut_);
+    : ptCut_(iConfig.getParameter<double>("ptCut")) {
+  auto cc = setWhatProduced(this, "LSTGeometry");
   geomToken_ = cc.consumes();
 }
 
 void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
   edm::ParameterSetDescription desc;
-  desc.add<std::string>("ptCut", "0.8");
+  desc.add<double>("ptCut", 0.8);
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -133,8 +133,7 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     avg_z_cm[i] /= avg_z_counter[i];
   }
 
-  double ptCut = std::stod(ptCut_);
-  auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut);
+  auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
 
   return lstGeometry;
 }

@@ -15,19 +15,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
   private:
-    std::string ptCut_;
+    double ptCut_;
     edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
 
   public:
     LSTModulesDevESProducer(edm::ParameterSet const& iConfig)
-        : ESProducer(iConfig), ptCut_(iConfig.getParameter<std::string>("ptCut")) {
-      auto cc = setWhatProduced(this, ptCut_);
-      lstGeoToken_ = cc.consumes<lstgeometry::LSTGeometry>(edm::ESInputTag("", ptCut_));
+        : ESProducer(iConfig), ptCut_(iConfig.getParameter<double>("ptCut")) {
+      auto cc = setWhatProduced(this, "LSTModuleMaps");
+      lstGeoToken_ = cc.consumes<lstgeometry::LSTGeometry>(edm::ESInputTag("", "LSTGeometry"));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
-      desc.add<std::string>("ptCut", "0.8");
+      desc.add<double>("ptCut", 0.8);
       descriptions.addWithDefaultLabel(desc);
     }
 

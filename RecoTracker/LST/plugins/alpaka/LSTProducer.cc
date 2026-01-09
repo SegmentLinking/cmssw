@@ -26,9 +26,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     LSTProducer(edm::ParameterSet const& config)
         : EDProducer(config),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
-          lstESToken_{esConsumes(edm::ESInputTag("", config.getParameter<std::string>("ptCut")))},
+          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps"))},
           verbose_(config.getParameter<bool>("verbose")),
-          ptCut_(config.getParameter<std::string>("ptCut")),
+          ptCut_(config.getParameter<double>("ptCut")),
           clustSizeCut_(static_cast<uint16_t>(config.getParameter<uint32_t>("clustSizeCut"))),
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
@@ -42,7 +42,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       lst.run(iEvent.queue(),
               verbose_,
-              std::stof(ptCut_),
+              ptCut_,
               clustSizeCut_,
               &lstESDeviceData,
               &lstInputDC,
@@ -58,7 +58,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       edm::ParameterSetDescription desc;
       desc.add<edm::InputTag>("lstInput", edm::InputTag{"lstInputProducer"});
       desc.add<bool>("verbose", false);
-      desc.add<std::string>("ptCut", "0.8");
+      desc.add<double>("ptCut", 0.8);
       desc.add<uint32_t>("clustSizeCut", 16);
       desc.add<bool>("nopLSDupClean", false);
       desc.add<bool>("tcpLSTriplets", false);
@@ -69,7 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
     const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_;
-    const std::string ptCut_;
+    const double ptCut_;
     const uint16_t clustSizeCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
