@@ -135,7 +135,6 @@ namespace lstgeometry {
           auto corners = getCorners(detid);
           RowVectorD3 center = corners.colwise().mean();
           center /= 4.;
-          //double ref_phi = std::atan2(center(2), center(1));
           auto etaphi = getEtaPhi(center(1), center(2), center(0));
           for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
             for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
@@ -155,7 +154,6 @@ namespace lstgeometry {
           auto corners = getCorners(detid);
           RowVectorD3 center = corners.colwise().mean();
           center /= 4.;
-          //double ref_phi = std::atan2(center(2), center(1));
           auto etaphi = getEtaPhi(center(1), center(2), center(0));
           for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
             for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
