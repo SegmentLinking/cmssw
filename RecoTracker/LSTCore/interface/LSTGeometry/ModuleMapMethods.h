@@ -47,6 +47,8 @@ namespace lstgeometry {
     }
 
     // Consider barrel to endcap connections if the intersection area is > 0
+    // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
+    // function can return multiple polygons if the difference results in disjoint pieces
     if (ref_subdet == 5) {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
@@ -213,6 +215,8 @@ namespace lstgeometry {
     }
 
     // Consider barrel to endcap connections if the intersection area is > 0
+    // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
+    // function can return multiple polygons if the difference results in disjoint pieces
     if (ref_subdet == 5) {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
