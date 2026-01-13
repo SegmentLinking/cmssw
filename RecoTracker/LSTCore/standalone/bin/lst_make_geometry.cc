@@ -25,9 +25,14 @@ int main(int argc, char** argv) {
       "output_as_binary",
       "Boolean flag specifying whether to write outputs as binary or text files.",
       cxxopts::value<bool>()->default_value("true"))(
-      "pt_cut", "pT cutoff value.", cxxopts::value<double>()->default_value("0.8"));
+      "pt_cut", "pT cutoff value.", cxxopts::value<double>()->default_value("0.8"))("h,help", "Print help");
 
   auto result = options.parse(argc, argv);
+
+  if (result.count("help")) {
+    std::cout << options.help() << std::endl;
+    exit(1);
+  }
 
   std::string module_info_file = result["module_info_file"].as<std::string>();
   std::string sensor_info_file = result["sensor_info_file"].as<std::string>();
