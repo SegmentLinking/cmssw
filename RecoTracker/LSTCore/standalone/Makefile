@@ -74,7 +74,7 @@ efficiency: rooutil
 	$(MAKE) -C efficiency/
 
 clean:
-	rm -f $(OBJECTS) bin/*.o $(EXES) bin/lst
+	rm -f $(OBJECTS) bin/*.o $(EXES) bin/lst $(GEOMETRY_EXES)
 	rm -f code/rooutil/*.so code/rooutil/*.o
 	rm -f bin/lst.o
 	rm -f LST/*.o
