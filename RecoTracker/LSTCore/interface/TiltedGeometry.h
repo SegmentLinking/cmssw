@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_interface_TiltedGeometry_h
 #define RecoTracker_LSTCore_interface_TiltedGeometry_h
 
+#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
+
 #include <map>
 #include <string>
 #include <vector>
@@ -16,6 +18,7 @@ namespace lst {
     TiltedGeometry(std::string const& filename);
 
     void load(std::string const&);
+    void load(std::unordered_map<unsigned int, lstgeometry::SlopeData> const&);
 
     float getDrDz(unsigned int detid) const;
     float getDxDy(unsigned int detid) const;

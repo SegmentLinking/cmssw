@@ -26,7 +26,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     LSTProducer(edm::ParameterSet const& config)
         : EDProducer(config),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
-          lstESToken_{esConsumes(edm::ESInputTag("", config.getParameter<std::string>("ptCutLabel")))},
+          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps"))},
           verbose_(config.getParameter<bool>("verbose")),
           ptCut_(config.getParameter<double>("ptCut")),
           clustSizeCut_(static_cast<uint16_t>(config.getParameter<uint32_t>("clustSizeCut"))),
@@ -42,7 +42,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       lst.run(iEvent.queue(),
               verbose_,
-              static_cast<float>(ptCut_),
+              ptCut_,
               clustSizeCut_,
               &lstESDeviceData,
               &lstInputDC,
@@ -60,7 +60,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("verbose", false);
       desc.add<double>("ptCut", 0.8);
       desc.add<uint32_t>("clustSizeCut", 16);
-      desc.add<std::string>("ptCutLabel", "0.8");
       desc.add<bool>("nopLSDupClean", false);
       desc.add<bool>("tcpLSTriplets", false);
       descriptions.addWithDefaultLabel(desc);
