@@ -1404,7 +1404,7 @@ void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset, float pt, float eta
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
 
-    dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
+    float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
     ana.tx.pushbackToBranch<float>(category_name + "_fr_denom_deltaR", dRTemp);
     if (pass) {
@@ -1454,7 +1454,7 @@ void fillDuplicateRateSet(int itc, RecoTrackSetDefinition& DRset, float pt, floa
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
 
-    dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
+    float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
     ana.tx.pushbackToBranch<float>(category_name + "_dr_denom_deltaR", dRTemp);
     if (pass) {
@@ -1504,7 +1504,7 @@ void fillFakeOrDuplicateRateSet(int itc, RecoTrackSetDefinition& FDRset, float p
     std::vector<float> genJetEta = lstEff.getVF("genJetEta");
     std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
 
-    dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
+    float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
     ana.tx.pushbackToBranch<float>(category_name + "_fdr_denom_deltaR", dRTemp);
     if (pass) {
