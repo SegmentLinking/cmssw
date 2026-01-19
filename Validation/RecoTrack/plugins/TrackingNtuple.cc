@@ -1429,6 +1429,7 @@ private:
   std::vector<float> sim_genjet_deltaEta;  // distance to closest GenJet
   std::vector<float> sim_genjet_deltaPhi;
   std::vector<float> sim_genjet_deltaR;
+  std::vector<int> sim_genjet_idx;         // index of GenJet for each Sim track
 
   ////////////////////
   // GenJets
@@ -1437,7 +1438,6 @@ private:
   std::vector<float> genjet_phi;
   std::vector<float> genjet_invisible_energy;
   std::vector<float> genjet_auxiliary_energy;
-  std::vector<int> genjet_idx;
 };
 
 //
@@ -2086,7 +2086,7 @@ TrackingNtuple::TrackingNtuple(const edm::ParameterSet& iConfig)
   t->Branch("genjet_phi", &genjet_phi);
   t->Branch("genjet_invisible_energy", &genjet_invisible_energy);
   t->Branch("genjet_auxiliary_energy", &genjet_auxiliary_energy);
-  t->Branch("genjet_idx", &genjet_idx);
+  t->Branch("sim_genjet_idx", &sim_genjet_idx);
 
   //t->Branch("" , &);
 }
@@ -2500,6 +2500,7 @@ void TrackingNtuple::clearVariables() {
   sim_genjet_deltaEta.clear();
   sim_genjet_deltaPhi.clear();
   sim_genjet_deltaR.clear();
+  sim_genjet_idx.clear();
 
   // GenJets
   genjet_pt.clear();
@@ -2507,7 +2508,6 @@ void TrackingNtuple::clearVariables() {
   genjet_phi.clear();
   genjet_invisible_energy.clear();
   genjet_auxiliary_energy.clear();
-  genjet_idx.clear();
 }
 
 // ------------ method called for each event  ------------
@@ -2824,7 +2824,7 @@ void TrackingNtuple::fillGenJets(const edm::Event& iEvent,
     sim_genjet_deltaEta.push_back(dEtaTemp);
     sim_genjet_deltaPhi.push_back(dPhiTemp);
     sim_genjet_deltaR.push_back(std::sqrt(dRTemp2));
-    genjet_idx.push_back(jet_idx);
+    sim_genjet_idx.push_back(jet_idx);
   }
 }
 
