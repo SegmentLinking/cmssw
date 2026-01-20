@@ -4811,8 +4811,8 @@ void TrackingNtuple::fillDescriptions(edm::ConfigurationDescriptions& descriptio
   desc.addUntracked<bool>("keepEleSimHits", false);
   desc.addUntracked<bool>("saveSimHitsP3", false);
   desc.addUntracked<bool>("simHitBySignificance", false);
-  descriptions.add("trackingNtuple", desc);
   desc.add<edm::InputTag>("jetSource", edm::InputTag("ak4GenJets"));
+  descriptions.add("trackingNtuple", desc);
 }
 
 //define this as a plug-in

@@ -725,6 +725,22 @@ void bookEfficiencySet(SimTrackSetDefinition& effset) {
     return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_deltaR");
   });
 
+  // Lines for genJetPt
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ef_denom_genJetPt", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_denom_genJetPt");
+  });
+
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ef_numer_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ef_numer_genJetPt", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ef_numer_genJetPt");
+  });
+
+  ana.tx.createBranch<std::vector<float>>(category_name + "_ie_numer_genJetPt");
+  ana.histograms.addVecHistogram(category_name + "_ie_numer_genJetPt", 50, 0, 0.1, [&, category_name]() {
+    return ana.tx.getBranchLazy<std::vector<float>>(category_name + "_ie_numer_genJetPt");
+  });
+
   // Moving the standard pT code up here for convenience
   ana.tx.createBranch<std::vector<float>>(category_name + "_ef_denom_pt");
   ana.histograms.addVecHistogram(category_name + "_ef_denom_pt", getPtBounds(0), [&, category_name]() {
@@ -1042,7 +1058,7 @@ float finddRTemp(float eta,
   float genJetPtj;
   for (unsigned int ijet = 0; ijet < genJetPhi.size(); ++ijet) {
     genJetPtj = genJetPt[ijet];
-    if (genJetPtj > 100) {
+    if (genJetPtj > 1000) {
       dEtaj = eta - genJetEta[ijet];
       dPhij = std::acos(std::cos(phi - genJetPhi[ijet]));
       dRj2 = std::pow(dEtaj,2) + std::pow(dPhij,2);
@@ -1071,15 +1087,13 @@ void fillEfficiencySets(std::vector<SimTrackSetDefinition>& effsets) {
     std::vector<float> const& deltaEta = lstEff.getVF("sim_genjet_deltaEta");
     std::vector<float> const& deltaPhi = lstEff.getVF("sim_genjet_deltaPhi");
     std::vector<float> const& deltaR = lstEff.getVF("sim_genjet_deltaR");
-    std::vector<float> const& genJetIdx = lstEff.getVF("sim_genjet_idx");
-    std::vector<float> const& genJetEta = lstEff.getVF("genjet_eta");
-    std::vector<float> const& genJetPhi = lstEff.getVF("genjet_phi");
+    std::vector<int> const& genJetIdx = lstEff.getVI("sim_genjet_idx");
     std::vector<float> const& genJetPt = lstEff.getVF("genjet_pt");
     float genJetPt_isimtrk = 0;
     
     for (auto& effset : effsets) {
       for (unsigned int isimtrk = 0; isimtrk < lstEff.getVF("sim_pt").size(); ++isimtrk) {
-        genJetPt_isimtrk = genJetPt[genJetIdx.at(isimtrk)];
+        genJetPt_isimtrk = genJetPt.at(genJetIdx.at(isimtrk));
         if (genJetPt_isimtrk > 1000){
           fillEfficiencySet(isimtrk,
                             effset,
@@ -1400,9 +1414,9 @@ void fillFakeRateSet(int itc, RecoTrackSetDefinition& FRset, float pt, float eta
       ana.tx.pushbackToBranch<float>(category_name + "_fr_numer_phi", phi);
   }
   if (ana.jet_branches) {
-    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
-    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
-    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    std::vector<float> genJetPt = lstEff.getVF("genjet_pt");
+    std::vector<float> genJetEta = lstEff.getVF("genjet_eta");
+    std::vector<float> genJetPhi = lstEff.getVF("genjet_phi");
 
     float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
@@ -1450,9 +1464,9 @@ void fillDuplicateRateSet(int itc, RecoTrackSetDefinition& DRset, float pt, floa
       ana.tx.pushbackToBranch<float>(category_name + "_dr_numer_phi", phi);
   }
   if (ana.jet_branches) {
-    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
-    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
-    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    std::vector<float> genJetPt = lstEff.getVF("genjet_pt");
+    std::vector<float> genJetEta = lstEff.getVF("genjet_eta");
+    std::vector<float> genJetPhi = lstEff.getVF("genjet_phi");
 
     float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
@@ -1500,9 +1514,9 @@ void fillFakeOrDuplicateRateSet(int itc, RecoTrackSetDefinition& FDRset, float p
       ana.tx.pushbackToBranch<float>(category_name + "_fdr_numer_phi", phi);
   }
   if (ana.jet_branches) {
-    std::vector<float> genJetPt = lstEff.getVF("genJetPt");
-    std::vector<float> genJetEta = lstEff.getVF("genJetEta");
-    std::vector<float> genJetPhi = lstEff.getVF("genJetPhi");
+    std::vector<float> genJetPt = lstEff.getVF("genjet_pt");
+    std::vector<float> genJetEta = lstEff.getVF("genjet_eta");
+    std::vector<float> genJetPhi = lstEff.getVF("genjet_phi");
 
     float dRTemp = finddRTemp(eta, phi, genJetPt, genJetEta, genJetPhi);
 
