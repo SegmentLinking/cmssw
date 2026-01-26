@@ -634,8 +634,7 @@ private:
   void fillTrackingVertices(const TrackingVertexRefVector& trackingVertices,
                             const TrackingParticleRefKeyToIndex& tpKeyToIndex);
 
-  void fillGenJets(const edm::Event& iEvent,
-                   const TrackingParticleRefVector& tpCollection);
+  void fillGenJets(const edm::Event& iEvent, const TrackingParticleRefVector& tpCollection);
 
   struct SimHitData {
     std::vector<int> matchingSimHit;
@@ -1429,7 +1428,7 @@ private:
   std::vector<float> sim_genjet_deltaEta;  // distance to closest GenJet
   std::vector<float> sim_genjet_deltaPhi;
   std::vector<float> sim_genjet_deltaR;
-  std::vector<int> sim_genjet_idx;         // index of GenJet for each Sim track
+  std::vector<int> sim_genjet_idx;  // index of GenJet for each Sim track
 
   ////////////////////
   // GenJets
@@ -2787,15 +2786,14 @@ void TrackingNtuple::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   t->Fill();
 }
 
-void TrackingNtuple::fillGenJets(const edm::Event& iEvent, 
-                                 const TrackingParticleRefVector& tpCollection) {
+void TrackingNtuple::fillGenJets(const edm::Event& iEvent, const TrackingParticleRefVector& tpCollection) {
   auto const& genJets = iEvent.get(tok_jets_);
   for (auto const& jet : genJets) {
-      genjet_pt.push_back(jet.pt());
-      genjet_eta.push_back(jet.eta());
-      genjet_phi.push_back(jet.phi());
-      genjet_invisible_energy.push_back(jet.invisibleEnergy());
-      genjet_auxiliary_energy.push_back(jet.auxiliaryEnergy());
+    genjet_pt.push_back(jet.pt());
+    genjet_eta.push_back(jet.eta());
+    genjet_phi.push_back(jet.phi());
+    genjet_invisible_energy.push_back(jet.invisibleEnergy());
+    genjet_auxiliary_energy.push_back(jet.auxiliaryEnergy());
   }
   for (const TrackingParticleRef& tp : tpCollection) {
     float sim_eta = tp->eta();
@@ -2812,8 +2810,8 @@ void TrackingNtuple::fillGenJets(const edm::Event& iEvent,
     for (auto const& jet : genJets) {
       dEtaj = sim_eta - jet.eta();
       dPhij = reco::deltaPhi(sim_phi, jet.phi());
-      dRj2 = std::pow(dEtaj,2) + std::pow(dPhij,2);
-      if(dRj2 < dRTemp2) {
+      dRj2 = std::pow(dEtaj, 2) + std::pow(dPhij, 2);
+      if (dRj2 < dRTemp2) {
         dEtaTemp = dEtaj;
         dPhiTemp = dPhij;
         dRTemp2 = dRj2;
