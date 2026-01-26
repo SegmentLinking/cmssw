@@ -27,4 +27,6 @@ jobs:
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
-    secrets: inherit
+    secrets:
+      app-id: ${{ secrets.APP_ID }}
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
