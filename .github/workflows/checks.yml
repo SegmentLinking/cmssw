@@ -6,26 +6,10 @@ on:
       pr-number:
         description: PR number
         required: true
-        type: number
-      required-prs:
-        description: Comma-separated list of required PR numbers that must be merged before checks are run
-        required: false
         type: string
-
-concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-  pull-requests: write
 
 jobs:
   checks:
     uses: SegmentLinking/TrackLooper-actions/.github/workflows/checks.yml@use_reusable_workflows
     with:
       pr-number: ${{ inputs.pr-number }}
-      required-prs: ${{ inputs.required-prs }}
-    secrets:
-      app-id: ${{ secrets.APP_ID }}
-      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
