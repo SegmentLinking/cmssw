@@ -22,7 +22,6 @@ permissions:
 
 jobs:
   checks:
-    name: Run checks on PR \#${{ inputs.pr-number }}
     uses: SegmentLinking/TrackLooper-actions/.github/workflows/checks.yml@use_reusable_workflows
     with:
       pr-number: ${{ inputs.pr-number }}
