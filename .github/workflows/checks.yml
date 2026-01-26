@@ -8,6 +8,14 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   checks:
     uses: SegmentLinking/TrackLooper-actions/.github/workflows/checks.yml@use_reusable_workflows
