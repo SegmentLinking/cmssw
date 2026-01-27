@@ -1,4 +1,4 @@
-name: Standalone Testing
+name: CMSSW Testing
 
 on:
   workflow_dispatch:
@@ -33,8 +33,8 @@ permissions:
 
 jobs:
   test:
-    name: Standalone Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/standalone.yml@use_reusable_workflows
+    name: CMSSW Testing
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@use_reusable_workflows
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
