@@ -64,7 +64,7 @@ jobs:
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
           KNOWN_MODIFIERS="lowpt,gpu"
-          python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows} }'.split(','))"
+          python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(','))"
       # - name: Start workflows
       #   run: |
