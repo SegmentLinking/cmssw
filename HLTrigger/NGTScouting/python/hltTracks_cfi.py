@@ -22,20 +22,17 @@ tpSelectorPixelTracks = cms.PSet(
 )
 
 pixelTrackAssoc = trackingAssocValueMapsProducer.clone(
-    trackCollection =  cms.InputTag("hltPhase2PixelTracks"),
+    trackCollection =  cms.InputTag("hltPhase2PixelTracksCAExtension"),
     associator = cms.InputTag("hltTrackAssociatorByHits"),
     trackingParticles = cms.InputTag("mix", "MergedTrackTruth"),
     tpSelectorPSet = tpSelectorPixelTracks,
     storeTPKinematics = cms.bool(True),
 )
 
-from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
-phase2CAExtension.toModify(pixelTrackAssoc, trackCollection = "hltPhase2PixelTracksCAExtension")
-
 hltPixelTrackTable = cms.EDProducer(
     "SimpleTriggerTrackFlatTableProducer",
     skipNonExistingSrc = cms.bool(True),
-    src = cms.InputTag("hltPhase2PixelTracks"),
+    src = cms.InputTag("hltPhase2PixelTracksCAExtension"),
     cut = cms.string(""),
     name = cms.string("hltPixelTrack"),
     doc = cms.string("HLT Pixel Track information"),
@@ -96,22 +93,17 @@ hltPixelTrackTable = cms.EDProducer(
 hltPixelTrackExtTable = cms.EDProducer("HLTTracksExtraTableProducer",
                                        tableName = cms.string("hltPixelTrack"),                                    
                                        skipNonExistingSrc = cms.bool(True),
-                                       tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
+                                       tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
                                        beamSpot = cms.InputTag("hltOnlineBeamSpot"),
                                        precision = cms.int32(7))
 
 hltPixelTrackRecHitsTable = cms.EDProducer("HLTTracksRecHitsTableProducer",
                                             tableName = cms.string("hltPixelTrackRecHits"),
                                             skipNonExistingSrc = cms.bool(True),
-                                            tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
+                                            tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
                                             maxRecHits = cms.uint32(16),
                                             precision = cms.int32(7)
 )
-
-
-phase2CAExtension.toModify(hltPixelTrackTable, src = "hltPhase2PixelTracksCAExtension")
-phase2CAExtension.toModify(hltPixelTrackExtTable, tracksSrc = "hltPhase2PixelTracksCAExtension")
-phase2CAExtension.toModify(hltPixelTrackRecHitsTable, tracksSrc = "hltPhase2PixelTracksCAExtension")
 
 hltGeneralTrackTable = cms.EDProducer(
     "SimpleTriggerTrackFlatTableProducer",

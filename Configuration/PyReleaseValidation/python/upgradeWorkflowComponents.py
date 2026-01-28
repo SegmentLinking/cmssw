@@ -2057,7 +2057,7 @@ upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].suffix = '_H
 upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].offset = 0.7571
 upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'alpaka,phase2CAExtension,singleIterPatatrack,trackingLST,seedingLST,trackingMkFitCommon,hltTrackingMkFitInitialStep',
+    '--procModifiers': 'alpaka,singleIterPatatrack,trackingLST,seedingLST,trackingMkFitCommon,hltTrackingMkFitInitialStep',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
@@ -2070,7 +2070,7 @@ upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].suffi
 upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].offset = 0.7572
 upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'alpaka,phase2CAExtension,singleIterPatatrack,trackingLST,seedingLST,trackingMkFitCommon,hltTrackingMkFitInitialStep,trackingMkFitFit',
+    '--procModifiers': 'alpaka,singleIterPatatrack,trackingLST,seedingLST,trackingMkFitCommon,hltTrackingMkFitInitialStep,trackingMkFitFit',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
@@ -2088,19 +2088,6 @@ upgradeWFs['HLTTiming75e33TiclBarrel'].step2 = {
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
 upgradeWFs['HLTTiming75e33TiclBarrel'].step3 = {
-    '-s':'HARVESTING:@hltValidation'
-}
-
-upgradeWFs['HLTTiming75e33CAExtension'] = deepcopy(upgradeWFs['HLTTiming75e33'])
-upgradeWFs['HLTTiming75e33CAExtension'].suffix = '_HLT75e33TimingCAExtension'
-upgradeWFs['HLTTiming75e33CAExtension'].offset = 0.7511
-upgradeWFs['HLTTiming75e33CAExtension'].step2 = {
-    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'phase2CAExtension',
-    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
-    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
-}
-upgradeWFs['HLTTiming75e33CAExtension'].step3 = {
     '-s':'HARVESTING:@hltValidation'
 }
 
@@ -2250,7 +2237,7 @@ upgradeWFs['NGTScoutingAll'].suffix = '_NGTScoutingAll'
 upgradeWFs['NGTScoutingAll'].offset = 0.771
 upgradeWFs['NGTScoutingAll'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:NGTScouting,VALIDATION:@hltValidation',
-    '--procModifiers': 'ngtScouting,alpaka,ticl_v5,ticl_barrel,phase2CAExtension',
+    '--procModifiers': 'ngtScouting,alpaka,ticl_v5,ticl_barrel',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
@@ -2264,7 +2251,7 @@ upgradeWFs['NGTScoutingCAExtensionPixelOnly'].suffix = '_NGTScoutingCAExtensionP
 upgradeWFs['NGTScoutingCAExtensionPixelOnly'].offset = 0.774
 upgradeWFs['NGTScoutingCAExtensionPixelOnly'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:NGTScouting,VALIDATION:@hltValidation',
-    '--procModifiers': 'ngtScouting,phase2CAExtension',
+    '--procModifiers': 'ngtScouting',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
@@ -2277,7 +2264,7 @@ upgradeWFs['NGTScoutingCAExtensionMergeT5'].suffix = '_NGTScoutingCAExtensionMer
 upgradeWFs['NGTScoutingCAExtensionMergeT5'].offset = 0.775
 upgradeWFs['NGTScoutingCAExtensionMergeT5'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'ngtScouting,phase2CAExtension,trackingLST',
+    '--procModifiers': 'ngtScouting,trackingLST',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }

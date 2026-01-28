@@ -23,28 +23,19 @@ from RecoTracker.PixelSeeding.caHitNtupletAlpakaPhase2OT_cfi import caHitNtuplet
 
 from ..sequences.HLTEndSequence_cfi import *
 
-HLTHeterogeneousTrackSequence = cms.Sequence(hltPhase2SiPixelClustersSoA
-                                             + hltPhase2SiPixelRecHitsSoA
-                                             + hltPhase2PixelTracksSoA
-                                             #+ hltPhase2PixelVerticesSoA # not yet ready
-                                             )
-
 # in situ change to get the right rechits and tracks
 hltExtendedPhase2PixelTracksSoA = _hltPhase2PixelTracksSoA.clone(pixelRecHitSrc = 'hltPhase2PixelRecHitsExtendedSoA')
 hltExtendedPhase2PixelVerticesSoA = hltPhase2PixelVerticesSoA.clone(pixelTrackSrc = 'hltExtendedPhase2PixelTracksSoA')
 
-_HLTHeterogeneousExtendedTrackSequence = cms.Sequence(hltPhase2SiPixelClustersSoA
-                                                      + hltPhase2SiPixelRecHitsSoA
-                                                      + hltSiPhase2Clusters
-                                                      + hltSiPhase2RecHits
-                                                      + hltPhase2OtRecHitsSoA
-                                                      + hltPhase2PixelRecHitsExtendedSoA
-                                                      + hltExtendedPhase2PixelTracksSoA
-                                                      #+ hltExtendedPhase2PixelVerticesSoA # not yet ready
-                                                      )
-
-from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
-phase2CAExtension.toReplaceWith(HLTHeterogeneousTrackSequence, _HLTHeterogeneousExtendedTrackSequence)
+HLTHeterogeneousTrackSequence = cms.Sequence(hltPhase2SiPixelClustersSoA
+                                             + hltPhase2SiPixelRecHitsSoA
+                                             + hltSiPhase2Clusters
+                                             + hltSiPhase2RecHits
+                                             + hltPhase2OtRecHitsSoA
+                                             + hltPhase2PixelRecHitsExtendedSoA
+                                             + hltExtendedPhase2PixelTracksSoA
+                                             #+ hltExtendedPhase2PixelVerticesSoA # not yet ready
+                                             )
 
 HLTHeterogeneousHGCalRecoSequence = cms.Sequence(hltHgcalDigis +
                                                  hltHGCalUncalibRecHit +

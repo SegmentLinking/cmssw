@@ -3,11 +3,11 @@ import FWCore.ParameterSet.Config as cms
 from ..modules.hltMeasurementTrackerEvent_cfi import *
 from ..modules.hltSiPhase2RecHits_cfi import *
 
-HLTOtLocalRecoSequence = cms.Sequence(hltMeasurementTrackerEvent)
+HLTOtLocalRecoSequence = cms.Sequence(hltMeasurementTrackerEvent
+                                      +hltSiPhase2RecHits
+                                      )
 
-_HLTOtLocalRecoSequenceWithHits = cms.Sequence(hltMeasurementTrackerEvent
-                                               +hltSiPhase2RecHits
-                                               )
-
-from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
-phase2CAExtension.toReplaceWith(HLTOtLocalRecoSequence, _HLTOtLocalRecoSequenceWithHits)
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+phase2LegacyTracking.toReplaceWith(HLTOtLocalRecoSequence,
+                                   HLTOtLocalRecoSequence.copyAndExclude([hltSiPhase2RecHits])
+                                   )

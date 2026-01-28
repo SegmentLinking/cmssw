@@ -8,7 +8,7 @@ hltPhase2PixelVertices = cms.EDProducer("PixelVertexProducer",
         refToPSet_ = cms.string('pSetPvClusterComparerForIT')
     ),
     PtMin = cms.double(1.0),
-    TrackCollection = cms.InputTag("hltPhase2PixelTracks"),
+    TrackCollection = cms.InputTag("hltPhase2PixelTracksCAExtension"),
     UseError = cms.bool(True),
     Verbosity = cms.int32(0),
     WtAverage = cms.bool(True),
@@ -17,7 +17,7 @@ hltPhase2PixelVertices = cms.EDProducer("PixelVertexProducer",
     beamSpot = cms.InputTag("hltOnlineBeamSpot")
 )
 
-from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
-phase2CAExtension.toModify(hltPhase2PixelVertices,
-    TrackCollection = "hltPhase2PixelTracksCAExtension"
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+phase2LegacyTracking.toModify(hltPhase2PixelVertices,
+    TrackCollection = "hltPhase2PixelTracks"
 )
