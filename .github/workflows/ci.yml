@@ -33,7 +33,7 @@ jobs:
         github.event.comment.user.login == 'slava77devel' ||
         github.event.comment.user.login == 'slava77'
       )
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Parse comment
         run: |
