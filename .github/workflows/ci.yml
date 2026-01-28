@@ -65,7 +65,8 @@ jobs:
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
           KNOWN_MODIFIERS="lowpt,gpu"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
-          python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(','))"
+          python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
+          python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
       # - name: Start workflows
       #   run: |
       - name: Leave thumbs up if everything went well
