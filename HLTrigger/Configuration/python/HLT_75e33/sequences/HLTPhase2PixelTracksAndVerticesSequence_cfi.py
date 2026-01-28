@@ -61,7 +61,7 @@ _HLTPhase2PixelTracksAndVerticesSequenceCAExtension = cms.Sequence(
 from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
 phase2CAExtension.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceCAExtension)
 
-from Configuration.ProcessModifiers.phase2LegacyPixelTracks_cff import phase2LegacyPixelTracks
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
 _HLTPhase2PixelTracksAndVerticesSequenceLegacy = cms.Sequence(
   hltPhase2PixelTracksSeedLayers
   +hltPhase2PixelTracksAndHighPtStepTrackingRegions
@@ -72,5 +72,5 @@ _HLTPhase2PixelTracksAndVerticesSequenceLegacy = cms.Sequence(
   +hltPhase2PixelTracks
   +HLTPhase2PixelVertexingSequence
 )
-phase2LegacyPixelTracks.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceLegacy)
+phase2LegacyTracking.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceLegacy)
 
