@@ -1,0 +1,82 @@
+name: Run CI
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  parse-comment:
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'run-ci: ') &&
+      ( github.event.comment.user.login == 'ariostas' ||
+        github.event.comment.user.login == 'GNiendorf' ||
+        github.event.comment.user.login == 'YonsiG' ||
+        github.event.comment.user.login == 'VourMa' ||
+        github.event.comment.user.login == 'aashayarora' ||
+        github.event.comment.user.login == 'bucket420' ||
+        github.event.comment.user.login == 'jchismar' ||
+        github.event.comment.user.login == 'kk428' ||
+        github.event.comment.user.login == 'Hoobidoobidoo' ||
+        github.event.comment.user.login == 'mmasciov' ||
+        github.event.comment.user.login == 'pwittich' ||
+        github.event.comment.user.login == 'sgnoohc' ||
+        github.event.comment.user.login == 'alexandertuna' ||
+        github.event.comment.user.login == 'slava77devel' ||
+        github.event.comment.user.login == 'slava77'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Parse comment
+        run: |
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          WORKFLOWS=($(echo "$COMMENT_BODY" | yq -M ".run-ci | @csv"))
+          # Exit if no workflows found
+          if [[ -z "$WORKFLOWS" || "$WORKFLOWS" == "null" ]]; then
+            echo "No workflows specified to run. Exiting."
+            exit 1
+          fi
+          echo "Running workflows: [$WORKFLOWS]"
+          echo "workflows=$WORKFLOWS" >> $GITHUB_ENV
+          REQUIRED_PRS=$(echo "$COMMENT_BODY" | yq -M ".required-prs | @csv")
+          # Set to empty list if still null
+          if [[ -z "$REQUIRED_PRS" || "$REQUIRED_PRS" == "null" ]]; then
+            REQUIRED_PRS=""
+          fi
+          echo "Required PRs: [$REQUIRED_PRS]"
+          echo "required_prs=($REQUIRED_PRS)" >> $GITHUB_ENV
+          MODIFIERS=$(echo "$COMMENT_BODY" | yq -M ".modifiers | @csv")
+          # Set to empty list if still null
+          if [[ -z "$MODIFIERS" || "$MODIFIERS" == "null" ]]; then
+            MODIFIERS=""
+          fi
+          echo "Modifiers: [$MODIFIERS]"
+          echo "modifiers=($MODIFIERS)" >> $GITHUB_ENV
+      - name: Check validity
+        run: |
+          KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
+          KNOWN_MODIFIERS="lowpt,gpu"
+          python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${env.workflows}'.split(','))"
+          python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${env.modifiers}'.split(','))"
+      # - name: Start workflows
+      #   run: |
+      - name: Leave thumbs up if everything went well
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const comment_id = context.payload.comment.id;
+            await github.rest.reactions.createForIssueComment({
+              owner,
+              repo,
+              comment_id,
+              content: "+1",
+            });
