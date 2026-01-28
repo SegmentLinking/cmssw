@@ -52,14 +52,14 @@ jobs:
             REQUIRED_PRS=""
           fi
           echo "Required PRs: [$REQUIRED_PRS]"
-          echo "required_prs=($REQUIRED_PRS)" >> $GITHUB_ENV
+          echo "required_prs=$REQUIRED_PRS" >> $GITHUB_ENV
           MODIFIERS=$(echo "$COMMENT_BODY" | yq -M ".modifiers | @csv")
           # Set to empty list if still null
           if [[ -z "$MODIFIERS" || "$MODIFIERS" == "null" ]]; then
             MODIFIERS=""
           fi
           echo "Modifiers: [$MODIFIERS]"
-          echo "modifiers=($MODIFIERS)" >> $GITHUB_ENV
+          echo "modifiers=$MODIFIERS" >> $GITHUB_ENV
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
