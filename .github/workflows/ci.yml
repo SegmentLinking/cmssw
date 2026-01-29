@@ -76,8 +76,8 @@ jobs:
               workflow_id: 'checks.yml',
               ref: 'CI_branch_devel',
               inputs: {
-                'pr-number': ${{ github.event.issue.number }},
-                'required-prs': ${{ env.required-prs }}
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}'
               }
             });
       - name: Leave thumbs up if everything went well
