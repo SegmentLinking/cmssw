@@ -4,13 +4,10 @@ on:
   issue_comment:
     types: [created]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
-  cancel-in-progress: false
-
 permissions:
   contents: read
   pull-requests: write
+  actions: write
 
 jobs:
   parse-comment:
@@ -67,8 +64,22 @@ jobs:
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
           python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
-      # - name: Start workflows
-      #   run: |
+      - name: Start checks
+        if: contains(env.workflows, 'checks')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'checks.yml',
+              ref: 'CI_branch_devel',
+              inputs: {
+                'pr-number': ${{ github.event.issue.number }},
+                'required-prs': ${{ env.required-prs }}
+              }
+            });
       - name: Leave thumbs up if everything went well
         uses: actions/github-script@v7
         with:
