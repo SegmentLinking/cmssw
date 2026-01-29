@@ -60,4 +60,3 @@ _HLTPhase2PixelTracksAndVerticesSequenceLegacy = cms.Sequence(
   +HLTPhase2PixelVertexingSequence
 )
 phase2LegacyTracking.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceLegacy)
-

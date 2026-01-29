@@ -51,7 +51,7 @@ from Configuration.Eras.Modifier_run3_common_cff import run3_common
 run3_common.toModify(hltTrackValidator, _modifyForRun3)
 
 def _modifyForPhase2(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
+    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
 
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 phase2_tracker.toModify(hltTrackValidator, _modifyForPhase2)
@@ -69,13 +69,13 @@ phase2_tracker.toReplaceWith(
     )
 )
 
-from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
-from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 
-def _modifyForSingleIterPatatrack(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
-singleIterPatatrack.toModify(hltTrackValidator, _modifyForSingleIterPatatrack)
+def _modifyForPhase2LegacyTracking(trackvalidator):
+    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
+phase2LegacyTracking.toModify(hltTrackValidator, _modifyForPhase2LegacyTracking)
 
 def _modifyForNGTScouting(trackvalidator):
     trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks"]

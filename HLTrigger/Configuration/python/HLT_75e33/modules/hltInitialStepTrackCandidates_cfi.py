@@ -78,12 +78,11 @@ _hltInitialStepTrackCandidatesMkFitLSTSeeds = _hltInitialStepTrackCandidatesMkFi
     candMinPtCut = 0.9
 )
 
-from Configuration.ProcessModifiers.singleIterPatatrack_cff import singleIterPatatrack
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
 from Configuration.ProcessModifiers.hltTrackingMkFitInitialStep_cff import hltTrackingMkFitInitialStep
 # All useful combinations added to make the code work as expected and for clarity
-(~(singleIterPatatrack & seedingLST) & trackingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
-(singleIterPatatrack & trackingLST & seedingLST).toModify(hltInitialStepTrackCandidates, src = "hltInitialStepTrajectorySeedsLST") # All LST seeds
+(trackingLST & ~seedingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
+(trackingLST & seedingLST).toModify(hltInitialStepTrackCandidates, src = "hltInitialStepTrajectorySeedsLST") # All LST seeds
 (~seedingLST & ~trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFit)
-(singleIterPatatrack & seedingLST & trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
+(seedingLST & trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
