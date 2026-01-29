@@ -65,7 +65,7 @@ jobs:
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
           python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
       - name: Start checks
-        if: contains(env.workflows, 'checks')
+        if: contains(env.workflows, 'checks') || contains(env.workflows, 'all')
         uses: actions/github-script@v7
         with:
           script: |
@@ -78,6 +78,42 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}'
+              }
+            });
+      - name: Start standalone tests
+        if: contains(env.workflows, 'standalone') || contains(env.workflows, 'all')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'standalone.yml',
+              ref: 'CI_branch_devel',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}'
+              }
+            });
+      - name: Start CMSSW tests
+        if: contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'cmssw.yml',
+              ref: 'CI_branch_devel',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}'
               }
             });
       - name: Leave thumbs up if everything went well
