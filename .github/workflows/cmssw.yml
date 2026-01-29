@@ -24,7 +24,7 @@ on:
         type: boolean
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
   cancel-in-progress: true
 
 permissions:
