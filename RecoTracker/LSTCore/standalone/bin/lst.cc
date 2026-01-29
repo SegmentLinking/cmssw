@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
   //_______________________________________________________________________________
   // --jet (Not triggered by allobj since most files don't have jet info)
   ana.jet_branches = result["jet"].as<bool>();
-  
+
   //_______________________________________________________________________________
   // --sim
   ana.extra_sim_branches = result["sim"].as<bool>() || result["allobj"].as<bool>();
