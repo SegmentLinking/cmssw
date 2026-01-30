@@ -1,6 +1,33 @@
 import FWCore.ParameterSet.Config as cms
 
-hltInitialStepTrackCandidates = cms.EDProducer("CkfTrackCandidateMaker",
+hltInitialStepTrackCandidates = cms.EDProducer('MkFitOutputConverter',
+    batchSize = cms.int32(16),
+    candMVASel = cms.bool(False),
+    candCutSel = cms.bool(True),
+    candMinNHitsCut = cms.int32(3),
+    candMinPtCut = cms.double(0.8),
+    candWP = cms.double(0),
+    doErrorRescale = cms.bool(True),
+    mightGet = cms.optional.untracked.vstring,
+    mkFitEventOfHits = cms.InputTag("hltMkFitEventOfHits"),
+    mkFitPixelHits = cms.InputTag("hltMkFitSiPixelHits"),
+    mkFitSeeds = cms.InputTag("hltInitialStepMkFitSeeds"),
+    mkFitStripHits = cms.InputTag("hltMkFitSiPhase2Hits"),
+    propagatorAlong = cms.ESInputTag("","PropagatorWithMaterial"),
+    propagatorOpposite = cms.ESInputTag("","PropagatorWithMaterialOpposite"),
+    qualityMaxInvPt = cms.double(100),
+    qualityMaxPosErr = cms.double(100),
+    qualityMaxR = cms.double(120),
+    qualityMaxZ = cms.double(280),
+    qualityMinTheta = cms.double(0.01),
+    qualitySignPt = cms.bool(True),
+    seeds = cms.InputTag("hltInitialStepSeeds"),
+    tfDnnLabel = cms.string('trackSelectionTf'),
+    tracks = cms.InputTag("hltInitialStepTrackCandidatesMkFit"),
+    ttrhBuilder = cms.ESInputTag("","WithTrackAngle")
+)
+
+_hltInitialStepTrackCandidatesLegacy = cms.EDProducer("CkfTrackCandidateMaker",
     MeasurementTrackerEvent = cms.InputTag("hltMeasurementTrackerEvent"),
     NavigationSchool = cms.string('SimpleNavigationSchool'),
     RedundantSeedCleaner = cms.string('CachingSeedCleanerBySharedInput'),
@@ -44,35 +71,7 @@ _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
     )
 )
 
-
-_hltInitialStepTrackCandidatesMkFit = cms.EDProducer('MkFitOutputConverter',
-    batchSize = cms.int32(16),
-    candMVASel = cms.bool(False),
-    candCutSel = cms.bool(True),
-    candMinNHitsCut = cms.int32(3),
-    candMinPtCut = cms.double(0.8),
-    candWP = cms.double(0),
-    doErrorRescale = cms.bool(True),
-    mightGet = cms.optional.untracked.vstring,
-    mkFitEventOfHits = cms.InputTag("hltMkFitEventOfHits"),
-    mkFitPixelHits = cms.InputTag("hltMkFitSiPixelHits"),
-    mkFitSeeds = cms.InputTag("hltInitialStepMkFitSeeds"),
-    mkFitStripHits = cms.InputTag("hltMkFitSiPhase2Hits"),
-    propagatorAlong = cms.ESInputTag("","PropagatorWithMaterial"),
-    propagatorOpposite = cms.ESInputTag("","PropagatorWithMaterialOpposite"),
-    qualityMaxInvPt = cms.double(100),
-    qualityMaxPosErr = cms.double(100),
-    qualityMaxR = cms.double(120),
-    qualityMaxZ = cms.double(280),
-    qualityMinTheta = cms.double(0.01),
-    qualitySignPt = cms.bool(True),
-    seeds = cms.InputTag("hltInitialStepSeeds"),
-    tfDnnLabel = cms.string('trackSelectionTf'),
-    tracks = cms.InputTag("hltInitialStepTrackCandidatesMkFit"),
-    ttrhBuilder = cms.ESInputTag("","WithTrackAngle")
-)
-
-_hltInitialStepTrackCandidatesMkFitLSTSeeds = _hltInitialStepTrackCandidatesMkFit.clone(
+_hltInitialStepTrackCandidatesMkFitLSTSeeds = hltInitialStepTrackCandidates.clone(
     seeds = "hltInitialStepTrajectorySeedsLST",
     candMinNHitsCut = 4,
     candMinPtCut = 0.9
@@ -80,9 +79,8 @@ _hltInitialStepTrackCandidatesMkFitLSTSeeds = _hltInitialStepTrackCandidatesMkFi
 
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
-from Configuration.ProcessModifiers.hltTrackingMkFitInitialStep_cff import hltTrackingMkFitInitialStep
-# All useful combinations added to make the code work as expected and for clarity
 (trackingLST & ~seedingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
-(trackingLST & seedingLST).toModify(hltInitialStepTrackCandidates, src = "hltInitialStepTrajectorySeedsLST") # All LST seeds
-(~seedingLST & ~trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFit)
-(seedingLST & trackingLST & hltTrackingMkFitInitialStep).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
+(trackingLST & seedingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
+
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+phase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)

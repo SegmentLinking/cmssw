@@ -36,7 +36,6 @@ hltInitialStepTrackCutClassifier = cms.EDProducer("TrackCutClassifier",
     vertices = cms.InputTag("hltPhase2PixelVertices")
 )
 
-from Configuration.ProcessModifiers.hltTrackingMkFitInitialStep_cff import hltTrackingMkFitInitialStep
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 

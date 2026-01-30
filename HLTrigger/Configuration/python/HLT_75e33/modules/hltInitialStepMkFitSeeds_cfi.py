@@ -10,5 +10,4 @@ hltInitialStepMkFitSeeds = cms.EDProducer("MkFitSeedConverter",
 
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
-from Configuration.ProcessModifiers.hltTrackingMkFitInitialStep_cff import hltTrackingMkFitInitialStep
-(trackingLST & seedingLST & hltTrackingMkFitInitialStep).toModify(hltInitialStepMkFitSeeds, seeds = "hltInitialStepTrajectorySeedsLST")
+(trackingLST & seedingLST).toModify(hltInitialStepMkFitSeeds, seeds = "hltInitialStepTrajectorySeedsLST")
