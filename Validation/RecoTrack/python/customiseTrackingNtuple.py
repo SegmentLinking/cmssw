@@ -125,14 +125,12 @@ def customiseTrackingNtupleHLT(process):
         names = cms.vstring("hltIter0PFLowPixelSeedsFromPixelTracks", "hltDoubletRecoveryPFlowPixelSeeds")
     )
     from Configuration.Eras.Modifier_trackingPhase2PU140_cff import trackingPhase2PU140
-    trackingPhase2PU140.toModify(_seedProducers, names = ["hltInitialStepSeeds"])
+    trackingPhase2PU140.toModify(_seedProducers, names = ["hltInitialStepTrajectorySeedsLST"])
     # the following modifiers are only phase-2, trackingPhase2PU140 is not repeated
     from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-    from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
     from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
     phase2LegacyTracking.toModify(_seedProducers, names = ["hltInitialStepSeeds", "hltHighPtTripletStepSeeds"])
-    (trackingLST & ~seedingLST).toModify(_seedProducers, names = ["hltInputLST", "hltInitialStepTrackCandidates"])
-    (trackingLST & seedingLST).toModify(_seedProducers, names = ["hltInitialStepTrajectorySeedsLST"])
+    trackingLST.toModify(_seedProducers, names = ["hltInputLST", "hltInitialStepTrackCandidates"])
 
     (_seedSelectors, _tmpTask) = _TrackValidation_cff._addSeedToTrackProducers(_seedProducers.names, globals())
     _seedSelectorsTask = cms.Task()
@@ -152,8 +150,9 @@ def customiseTrackingNtupleHLT(process):
 
     process.trackingNtuple.tracks = "hltMergedTracks"
     trackingPhase2PU140.toModify(process.trackingNtuple, tracks = "hltGeneralTracks")
+    (trackingPhase2PU140 & ~phase2LegacyTracking).toModify(process.trackingNtuple, seedUniqueCheck = False)
 
-    (trackingLST & seedingLST).toModify(process.trackingNtuple,
+    (trackingPhase2PU140 & ~(phase2LegacyTracking | trackingLST)).toModify(process.trackingNtuple,
         seedAlgoDetect = False, seedAlgos = [getattr(_algo,"initialStep")])
 
     process.trackingNtuple.trackCandidates = ["hltIter0PFlowCkfTrackCandidates", "hltDoubletRecoveryPFlowCkfTrackCandidates"]

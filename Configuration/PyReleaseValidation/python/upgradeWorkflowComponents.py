@@ -2003,42 +2003,16 @@ upgradeWFs['HLTTiming75e33AlpakaTrimmedTracking'].step2 = {
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
 
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeeding'] = deepcopy(upgradeWFs['HLTTiming75e33'])
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeeding'].suffix = '_HLT75e33TimingAlpakaSingleIterLSTSeeding'
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeeding'].offset = 0.757
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeeding'].step2 = {
+upgradeWFs['HLTTiming75e33AlpakaMkFitFit'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33AlpakaMkFitFit'].suffix = '_HLT75e33TimingAlpakaMkFitFit'
+upgradeWFs['HLTTiming75e33AlpakaMkFitFit'].offset = 0.7572
+upgradeWFs['HLTTiming75e33AlpakaMkFitFit'].step2 = {
     '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'alpaka,trackingLST,seedingLST',
+    '--procModifiers': 'alpaka,trackingMkFitFit',
     '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeeding'].step3 = {
-    '-s':'HARVESTING:@hltValidation'
-}
-
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'] = deepcopy(upgradeWFs['HLTTiming75e33'])
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].suffix = '_HLT75e33TimingAlpakaSingleIterLSTSeedingMkFitBuilding'
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].offset = 0.7571
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].step2 = {
-    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'alpaka,trackingLST,seedingLST',
-    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
-    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
-}
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].step3 = {
-    '-s':'HARVESTING:@hltValidation'
-}
-
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'] = deepcopy(upgradeWFs['HLTTiming75e33'])
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].suffix = '_HLT75e33TimingAlpakaSingleIterLSTSeedingMkFitBuildingFitting'
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].offset = 0.7572
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuildingFitting'].step2 = {
-    '-s':'DIGI:pdigi_valid,L1TrackTrigger,L1,L1P2GT,DIGI2RAW,HLT:75e33_timing,VALIDATION:@hltValidation',
-    '--procModifiers': 'alpaka,trackingLST,seedingLST,trackingMkFitFit',
-    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
-    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
-}
-upgradeWFs['HLTTiming75e33AlpakaSingleIterLSTSeedingMkFitBuilding'].step3 = {
+upgradeWFs['HLTTiming75e33AlpakaMkFitFit'].step3 = {
     '-s':'HARVESTING:@hltValidation'
 }
 

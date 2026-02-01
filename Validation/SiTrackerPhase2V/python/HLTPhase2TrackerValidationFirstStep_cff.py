@@ -42,10 +42,8 @@ hltTrackerphase2ValidationSource = cms.Sequence(hltClusterValidIT +
                                                 hltTrackingRechitValidIT +
                                                 hltTrackingRechitValidOT)
 
-# Conditionally add hltRechitValidOT if either trackingLST or seedingLST is active
-from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
-from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
-(trackingLST | seedingLST).toModify(
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+(~phase2LegacyTracking).toModify(
     hltTrackerphase2ValidationSource,
     lambda s: s.__iadd__(hltRechitValidOT)
 )

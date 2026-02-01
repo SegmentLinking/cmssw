@@ -13,7 +13,7 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
     copyExtras = cms.untracked.bool(True),
     copyMVA = cms.bool(False),
     hasSelector = cms.vint32(0),
-    indivShareFrac = cms.vdouble(1.0),
+    indivShareFrac = cms.vdouble(0.1),
     makeReKeyedSeeds = cms.untracked.bool(False),
     newQuality = cms.string('confirmed'),
     selectedTrackQuals = cms.VInputTag(cms.InputTag("hltInitialStepTrackSelectionHighPurity")),
@@ -25,8 +25,6 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
     writeOnlyTrkQuals = cms.bool(False)
 )
 
-from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
-trackingLST.toModify(hltGeneralTracks, indivShareFrac = [0.1])
 
 from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
 _hltGeneralTracksLegacy = hltGeneralTracks.clone(
@@ -38,7 +36,9 @@ _hltGeneralTracksLegacy = hltGeneralTracks.clone(
 )
 phase2LegacyTracking.toReplaceWith(hltGeneralTracks, _hltGeneralTracksLegacy)
 
+
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from ..modules.hltPhase2PixelTracks_cfi import *
 _hltGeneralTracksNGTScoutingLST = hltGeneralTracks.clone(
     TrackProducers = ["hltPhase2PixelTracks", "hltInitialStepTracksT4T5TCLST"],

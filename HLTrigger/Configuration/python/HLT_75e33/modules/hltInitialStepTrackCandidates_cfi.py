@@ -4,8 +4,8 @@ hltInitialStepTrackCandidates = cms.EDProducer('MkFitOutputConverter',
     batchSize = cms.int32(16),
     candMVASel = cms.bool(False),
     candCutSel = cms.bool(True),
-    candMinNHitsCut = cms.int32(3),
-    candMinPtCut = cms.double(0.8),
+    candMinNHitsCut = cms.int32(4),
+    candMinPtCut = cms.double(0.9),
     candWP = cms.double(0),
     doErrorRescale = cms.bool(True),
     mightGet = cms.optional.untracked.vstring,
@@ -21,11 +21,12 @@ hltInitialStepTrackCandidates = cms.EDProducer('MkFitOutputConverter',
     qualityMaxZ = cms.double(280),
     qualityMinTheta = cms.double(0.01),
     qualitySignPt = cms.bool(True),
-    seeds = cms.InputTag("hltInitialStepSeeds"),
+    seeds = cms.InputTag("hltInitialStepTrajectorySeedsLST"),
     tfDnnLabel = cms.string('trackSelectionTf'),
     tracks = cms.InputTag("hltInitialStepTrackCandidatesMkFit"),
     ttrhBuilder = cms.ESInputTag("","WithTrackAngle")
 )
+
 
 _hltInitialStepTrackCandidatesLegacy = cms.EDProducer("CkfTrackCandidateMaker",
     MeasurementTrackerEvent = cms.InputTag("hltMeasurementTrackerEvent"),
@@ -51,6 +52,10 @@ _hltInitialStepTrackCandidatesLegacy = cms.EDProducer("CkfTrackCandidateMaker",
     useHitsSplitting = cms.bool(False)
 )
 
+from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+phase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)
+
+
 _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
     lstOutput = cms.InputTag('hltLST'),
     lstInput = cms.InputTag('hltInputLST'),
@@ -71,16 +76,5 @@ _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
     )
 )
 
-_hltInitialStepTrackCandidatesMkFitLSTSeeds = hltInitialStepTrackCandidates.clone(
-    seeds = "hltInitialStepTrajectorySeedsLST",
-    candMinNHitsCut = 4,
-    candMinPtCut = 0.9
-)
-
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
-from Configuration.ProcessModifiers.seedingLST_cff import seedingLST
-(trackingLST & ~seedingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
-(trackingLST & seedingLST).toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesMkFitLSTSeeds)
-
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-phase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)
+trackingLST.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLST)
