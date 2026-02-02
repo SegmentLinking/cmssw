@@ -44,19 +44,26 @@ jobs:
           echo "Running workflows: [$WORKFLOWS]"
           echo "workflows=$WORKFLOWS" >> $GITHUB_ENV
           REQUIRED_PRS=$(echo "$COMMENT_BODY" | yq -M ".required-prs | @csv")
-          # Set to empty list if still null
+          # Set to empty if null
           if [[ -z "$REQUIRED_PRS" || "$REQUIRED_PRS" == "null" ]]; then
             REQUIRED_PRS=""
           fi
           echo "Required PRs: [$REQUIRED_PRS]"
           echo "required_prs=$REQUIRED_PRS" >> $GITHUB_ENV
           MODIFIERS=$(echo "$COMMENT_BODY" | yq -M ".modifiers | @csv")
-          # Set to empty list if still null
+          # Set to empty if null
           if [[ -z "$MODIFIERS" || "$MODIFIERS" == "null" ]]; then
             MODIFIERS=""
           fi
           echo "Modifiers: [$MODIFIERS]"
           echo "modifiers=$MODIFIERS" >> $GITHUB_ENV
+          RELEASE=$(echo "$COMMENT_BODY" | yq -M ".release | @csv")
+          # Set to latest if null
+          if [[ -z "$RELEASE" || "$RELEASE" == "null" ]]; then
+            RELEASE="latest"
+          fi
+          echo "RELEASE: $RELEASE"
+          echo "release=$RELEASE" >> $GITHUB_ENV
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
@@ -95,7 +102,8 @@ jobs:
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
-                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}'
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'release': '${{ env.release }}'
               }
             });
       - name: Start CMSSW tests
@@ -113,7 +121,8 @@ jobs:
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
-                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}'
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'release': '${{ env.release }}'
               }
             });
       - name: Leave thumbs up if everything went well
