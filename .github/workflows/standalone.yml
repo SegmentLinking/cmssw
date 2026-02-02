@@ -26,6 +26,10 @@ on:
         description: CMSSW release to use for testing
         required: false
         type: string
+      packages:
+        description: Comma-separated list of extra packages to add
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
@@ -45,6 +49,7 @@ jobs:
       runs-on: ${{ inputs.runs-on }}
       low-pt: ${{ inputs.low-pt }}
       release: ${{ inputs.release }}
+      packages: ${{ inputs.packages }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}

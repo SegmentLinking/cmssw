@@ -11,6 +11,10 @@ on:
         description: Comma-separated list of required PR numbers that must be merged before checks are run
         required: false
         type: string
+      packages:
+        description: Comma-separated list of extra packages to add
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}
@@ -27,6 +31,7 @@ jobs:
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
+      packages: ${{ inputs.packages }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
