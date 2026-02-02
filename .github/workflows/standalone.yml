@@ -22,6 +22,10 @@ on:
         description: Run the low pT setup
         required: false
         type: boolean
+      release:
+        description: CMSSW release to use for testing
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
@@ -40,6 +44,7 @@ jobs:
       required-prs: ${{ inputs.required-prs }}
       runs-on: ${{ inputs.runs-on }}
       low-pt: ${{ inputs.low-pt }}
+      release: ${{ inputs.release }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
