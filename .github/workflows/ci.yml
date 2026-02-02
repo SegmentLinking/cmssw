@@ -49,7 +49,7 @@ jobs:
             REQUIRED_PRS=""
           fi
           echo "Required PRs: [$REQUIRED_PRS]"
-          echo "required_prs=$REQUIRED_PRS" >> $GITHUB_ENV
+          echo "required-prs=$REQUIRED_PRS" >> $GITHUB_ENV
           MODIFIERS=$(echo "$COMMENT_BODY" | yq -M ".modifiers | @csv")
           # Set to empty if null
           if [[ -z "$MODIFIERS" || "$MODIFIERS" == "null" ]]; then
@@ -62,14 +62,14 @@ jobs:
           if [[ -z "$RELEASE" || "$RELEASE" == "null" ]]; then
             RELEASE="latest"
           fi
-          echo "RELEASE: $RELEASE"
+          echo "Release: $RELEASE"
           echo "release=$RELEASE" >> $GITHUB_ENV
           PACKAGES=$(echo "$COMMENT_BODY" | yq -M ".packages | @csv")
           # Set to empty if null
           if [[ -z "$PACKAGES" || "$PACKAGES" == "null" ]]; then
             PACKAGES=""
           fi
-          echo "PACKAGES: $PACKAGES"
+          echo "Packages: $PACKAGES"
           echo "packages=$PACKAGES" >> $GITHUB_ENV
       - name: Check validity
         run: |
