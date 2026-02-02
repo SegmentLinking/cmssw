@@ -163,15 +163,10 @@ if __name__ == '__main__':
                      prefixDet+34.751,   # HLT phase-2 timing menu Alpaka variant
                      prefixDet+34.752,   # HLT phase-2 timing menu ticl_v5 variant
                      prefixDet+34.7521,  # HLT phase-2 timing menu ticlv5TrackLinkGNN variant   
-                     prefixDet+34.753,   # HLT phase-2 timing menu Alpaka, single tracking iteration variant
-                     prefixDet+34.754,   # HLT phase-2 timing menu Alpaka, single tracking iteration, LST building variant
-                     prefixDet+34.755,   # HLT phase-2 timing menu Alpaka, LST building variant
+                     prefixDet+34.754,   # HLT phase-2 timing menu legacy tracking
+                     prefixDet+34.755,   # HLT phase-2 timing menu LST building variant
                      prefixDet+34.756,   # HLT phase-2 timing menu trimmed tracking
-                     prefixDet+34.7561,  # HLT phase-2 timing menu Alpaka, trimmed tracking
-                     prefixDet+34.7562,  # HLT phase-2 timing menu Alpaka, trimmed tracking, single tracking iteration variant
-                     prefixDet+34.757,   # HLT phase-2 timing menu Alpaka, single tracking iteration, LST seeding + CKF building variant
-                     prefixDet+34.7571,  # HLT phase-2 timing menu Alpaka, single tracking iteration, LST seeding + mkFit building variant
-                     prefixDet+34.7572,  # HLT phase-2 timing menu Alpaka, single tracking iteration, LST seeding + mkFit building and fitting variant
+                     prefixDet+34.757,   # HLT phase-2 timing menu mkFit fitting variant
                      prefixDet+34.758,   # HLT phase-2 timing menu ticl_barrel variant
                      prefixDet+34.759,   # HLT phase-2 timing menu, with NANO:@Phase2HLT
                      prefixDet+34.77,    # HLT phase-2 NGT Scouting menu

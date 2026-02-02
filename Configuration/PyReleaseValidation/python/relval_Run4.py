@@ -57,10 +57,10 @@ numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
 numWFIB.extend([prefixDet+34.751])  # HLTTiming75e33, alpaka
 numWFIB.extend([prefixDet+34.752])  # HLTTiming75e33, ticl_v5
 numWFIB.extend([prefixDet+34.7521]) # HLTTiming75e33, ticl_v5, ticlv5TrackLinkingGNN
-numWFIB.extend([prefixDet+34.755])  # HLTTiming75e33, alpaka,trackingLST
+numWFIB.extend([prefixDet+34.754])  # HLTTiming75e33, legacy tracking
+numWFIB.extend([prefixDet+34.755])  # HLTTiming75e33, trackingLST
 numWFIB.extend([prefixDet+34.756])  # HLTTiming75e33, phase2_hlt_vertexTrimming
-numWFIB.extend([prefixDet+34.7561]) # HLTTiming75e33, alpaka,phase2_hlt_vertexTrimming
-numWFIB.extend([prefixDet+34.7572]) # HLTTiming75e33, alpaka,MkFitFit
+numWFIB.extend([prefixDet+34.757])  # HLTTiming75e33, MkFitFit
 numWFIB.extend([prefixDet+34.758])  # HLTTiming75e33, ticl_barrel
 numWFIB.extend([prefixDet+34.759])  # HLTTiming75e33 + NANO
 numWFIB.extend([prefixDet+34.77])   # NGTScouting
