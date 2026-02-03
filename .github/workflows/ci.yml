@@ -74,7 +74,7 @@ jobs:
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
-          KNOWN_MODIFIERS="lowpt,gpu"
+          KNOWN_MODIFIERS="lowpt,gpu,ci_devel"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
           python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
@@ -92,7 +92,8 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
               }
             });
       - name: Start standalone tests
@@ -112,7 +113,8 @@ jobs:
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
               }
             });
       - name: Start CMSSW tests
@@ -132,7 +134,8 @@ jobs:
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
               }
             });
       - name: Leave thumbs up if everything went well
