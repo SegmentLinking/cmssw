@@ -88,12 +88,11 @@ jobs:
               owner,
               repo,
               workflow_id: 'checks.yml',
-              ref: 'CI_branch_devel',
+              ref: ${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }},
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'packages': '${{ env.packages }}',
-                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
+                'packages': '${{ env.packages }}'
               }
             });
       - name: Start standalone tests
@@ -106,15 +105,14 @@ jobs:
               owner,
               repo,
               workflow_id: 'standalone.yml',
-              ref: 'CI_branch_devel',
+              ref: ${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }},
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}',
-                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
+                'packages': '${{ env.packages }}'
               }
             });
       - name: Start CMSSW tests
@@ -127,15 +125,14 @@ jobs:
               owner,
               repo,
               workflow_id: 'cmssw.yml',
-              ref: 'CI_branch_devel',
+              ref: ${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }},
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}',
-                'ci-devel': '${{ contains(env.modifiers, 'ci_devel') && 'true' || 'false' }}'
+                'packages': '${{ env.packages }}'
               }
             });
       - name: Leave thumbs up if everything went well

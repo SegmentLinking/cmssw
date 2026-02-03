@@ -30,10 +30,6 @@ on:
         description: Comma-separated list of extra packages to add
         required: false
         type: string
-      ci-devel:
-        description: Use the development CI setup
-        required: false
-        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
@@ -46,7 +42,7 @@ permissions:
 jobs:
   test:
     name: CMSSW Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@${{ inputs.ci-devel && 'devel' || 'use_reusable_workflows' }}
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@$use_reusable_workflows
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
