@@ -93,7 +93,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'checks.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }}',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -110,7 +110,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'standalone.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }}',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -130,7 +130,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'cmssw.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel2' || 'CI_branch_devel' }}',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
