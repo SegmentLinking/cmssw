@@ -12,47 +12,46 @@ concurrency:
 permissions:
   contents: read
 
-# We run the usual tests using one old merged PR. We picked 175
-env:
-    TEST_PR: 175
-
 jobs:
-  standalone:
-    runs-on: ubuntu-latest
+  start-tests:
+    name: Start Tests
+    runs-on: ubuntu-slim
     steps:
-      - name: Check out PR
-        uses: actions/checkout@v4
+      - name: Start standalone tests
+        uses: actions/github-script@v7
         with:
-          ref: refs/pull/${{ env.TEST_PR }}/head
-          sparse-checkout: |
-            RecoTracker/LST
-            RecoTracker/LSTCore
-            Configuration/ProcessModifiers
-            RecoTracker/ConversionSeedGenerators
-            RecoTracker/FinalTrackSelectors
-            RecoTracker/IterativeTracking
-            HeterogeneousCore/AlpakaInterface
-            HeterogeneousCore/AlpakaMath
-            DataFormats/Portable
-      - name: Build and run PR
-        timeout-minutes: 60
-        id: build-and-run
-        uses: SegmentLinking/TrackLooper-actions/standalone@cmssw
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'standalone.yml',
+              ref: 'CI_branch',
+              inputs: {
+                'pr-number': '0',
+                'required-prs': '',
+                'runs-on': 'ubuntu-latest',
+                'low-pt': 'false',
+                'release': '',
+                'packages': ''
+              }
+            });
+      - name: Start CMSSW tests
+        uses: actions/github-script@v7
         with:
-          pr-number: ${{ env.TEST_PR }}
-          low-pt: 'false'
-
-  cmssw:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout PR
-        uses: actions/checkout@v4
-        with:
-          ref: refs/pull/${{ env.TEST_PR }}/head
-      - name: Build and run PR
-        timeout-minutes: 200
-        id: build-and-run
-        uses: SegmentLinking/TrackLooper-actions/cmssw@cmssw
-        with:
-          pr-number: ${{ env.TEST_PR }}
-          low-pt: 'false'
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'cmssw.yml',
+              ref: 'CI_branch',
+              inputs: {
+                'pr-number': '0',
+                'required-prs': '',
+                'runs-on': 'ubuntu-latest',
+                'low-pt': 'false',
+                'release': '',
+                'packages': ''
+              }
+            });
