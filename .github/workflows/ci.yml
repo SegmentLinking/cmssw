@@ -71,12 +71,17 @@ jobs:
           fi
           echo "Packages: $PACKAGES"
           echo "packages=$PACKAGES" >> $GITHUB_ENV
+          TOPKEYS=$(echo "$COMMENT_BODY" | yq -M "keys | . | @csv")
+          echo "Top-level keys in comment: $TOPKEYS"
+          echo "topkeys=$TOPKEYS" >> $GITHUB_ENV
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw"
           KNOWN_MODIFIERS="lowpt,gpu,ci_devel"
+          KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,packages"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
+          python -c "kt = '${KNOWN_TOPKEYS}'.split(','); assert all(t in kt for t in '${{ env.topkeys }}'.split(','))"
           python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
       - name: Start checks
         if: contains(env.workflows, 'checks') || contains(env.workflows, 'all')
