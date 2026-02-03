@@ -13,45 +13,32 @@ permissions:
   contents: read
 
 jobs:
-  start-tests:
-    name: Start Tests
-    runs-on: ubuntu-slim
-    steps:
-      - name: Start standalone tests
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            await github.rest.actions.createWorkflowDispatch({
-              owner,
-              repo,
-              workflow_id: 'standalone.yml',
-              ref: 'CI_branch',
-              inputs: {
-                'pr-number': '0',
-                'required-prs': '',
-                'runs-on': 'ubuntu-latest',
-                'low-pt': 'false',
-                'release': '',
-                'packages': ''
-              }
-            });
-      - name: Start CMSSW tests
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            await github.rest.actions.createWorkflowDispatch({
-              owner,
-              repo,
-              workflow_id: 'cmssw.yml',
-              ref: 'CI_branch',
-              inputs: {
-                'pr-number': '0',
-                'required-prs': '',
-                'runs-on': 'ubuntu-latest',
-                'low-pt': 'false',
-                'release': '',
-                'packages': ''
-              }
-            });
+  standalone:
+    name: Standalone Testing
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/standalone.yml@main
+    with:
+      pr-number: 0
+      required-prs: ''
+      runs-on: ubuntu-latest
+      low-pt: false
+      release: latest
+      packages: ''
+    secrets:
+      app-id: ${{ secrets.APP_ID }}
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      deploy-private-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+      
+  cmssw:
+    name: CMSSW Testing
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@main
+    with:
+      pr-number: 0
+      required-prs: ''
+      runs-on: ubuntu-latest
+      low-pt: false
+      release: latest
+      packages: ''
+    secrets:
+      app-id: ${{ secrets.APP_ID }}
+      app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+      deploy-private-key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
