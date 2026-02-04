@@ -16,8 +16,8 @@ hltInitialStepSeeds = cms.EDProducer("SeedGeneratorFromProtoTracksEDProducer",
     removeOTRechits = cms.bool(True)
 )
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-phase2LegacyTracking.toModify(hltInitialStepSeeds,
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+hltPhase2LegacyTracking.toModify(hltInitialStepSeeds,
     includeFourthHit = False,
     removeOTRechits = False
 )

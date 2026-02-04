@@ -26,7 +26,7 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
 )
 
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 _hltGeneralTracksLegacy = hltGeneralTracks.clone(
     TrackProducers = ["hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity"],
     hasSelector = [0, 0],
@@ -34,7 +34,7 @@ _hltGeneralTracksLegacy = hltGeneralTracks.clone(
     selectedTrackQuals = ["hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity"],
     setsToMerge = {0: dict(pQual=True, tLists=[0, 1])}
 )
-phase2LegacyTracking.toReplaceWith(hltGeneralTracks, _hltGeneralTracksLegacy)
+hltPhase2LegacyTracking.toReplaceWith(hltGeneralTracks, _hltGeneralTracksLegacy)
 
 
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting

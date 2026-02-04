@@ -22,7 +22,7 @@ tpSelectorPixelTracks = cms.PSet(
 )
 
 pixelTrackAssoc = trackingAssocValueMapsProducer.clone(
-    trackCollection =  cms.InputTag("hltPhase2PixelTracksCAExtension"),
+    trackCollection =  cms.InputTag("hltPhase2PixelTracks"),
     associator = cms.InputTag("hltTrackAssociatorByHits"),
     trackingParticles = cms.InputTag("mix", "MergedTrackTruth"),
     tpSelectorPSet = tpSelectorPixelTracks,
@@ -32,7 +32,7 @@ pixelTrackAssoc = trackingAssocValueMapsProducer.clone(
 hltPixelTrackTable = cms.EDProducer(
     "SimpleTriggerTrackFlatTableProducer",
     skipNonExistingSrc = cms.bool(True),
-    src = cms.InputTag("hltPhase2PixelTracksCAExtension"),
+    src = cms.InputTag("hltPhase2PixelTracks"),
     cut = cms.string(""),
     name = cms.string("hltPixelTrack"),
     doc = cms.string("HLT Pixel Track information"),
@@ -93,14 +93,14 @@ hltPixelTrackTable = cms.EDProducer(
 hltPixelTrackExtTable = cms.EDProducer("HLTTracksExtraTableProducer",
                                        tableName = cms.string("hltPixelTrack"),                                    
                                        skipNonExistingSrc = cms.bool(True),
-                                       tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
+                                       tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
                                        beamSpot = cms.InputTag("hltOnlineBeamSpot"),
                                        precision = cms.int32(7))
 
 hltPixelTrackRecHitsTable = cms.EDProducer("HLTTracksRecHitsTableProducer",
                                             tableName = cms.string("hltPixelTrackRecHits"),
                                             skipNonExistingSrc = cms.bool(True),
-                                            tracksSrc = cms.InputTag("hltPhase2PixelTracksCAExtension"),
+                                            tracksSrc = cms.InputTag("hltPhase2PixelTracks"),
                                             maxRecHits = cms.uint32(16),
                                             precision = cms.int32(7)
 )

@@ -58,7 +58,8 @@ The offsets currently in use are:
 * 0.751: HLT phase-2 timing menu Alpaka variant
 * 0.752: HLT phase-2 timing menu ticl_v5 variant
 * 0.7521: HLT phase-2 timing menu ticl_v5, ticlv5TrackLinkingGNN variant
-* 0.754: HLT phase-2 timing menu legacy tracking
+* 0.753: HLT phase-2 timing menu legacy tracking
+* 0.754: HLT phase-2 timing menu legacy tracking with Patatrack quads
 * 0.755: HLT phase-2 timing menu LST building variant
 * 0.756 HLT phase-2 timing menu trimmed tracking
 * 0.757: HLT phase-2 timing menu mkFitFit variant

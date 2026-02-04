@@ -163,7 +163,8 @@ if __name__ == '__main__':
                      prefixDet+34.751,   # HLT phase-2 timing menu Alpaka variant
                      prefixDet+34.752,   # HLT phase-2 timing menu ticl_v5 variant
                      prefixDet+34.7521,  # HLT phase-2 timing menu ticlv5TrackLinkGNN variant   
-                     prefixDet+34.754,   # HLT phase-2 timing menu legacy tracking
+                     prefixDet+34.753,   # HLT phase-2 timing menu legacy tracking
+                     prefixDet+34.754,   # HLT phase-2 timing menu legacy tracking with Patatrack quads
                      prefixDet+34.755,   # HLT phase-2 timing menu LST building variant
                      prefixDet+34.756,   # HLT phase-2 timing menu trimmed tracking
                      prefixDet+34.757,   # HLT phase-2 timing menu mkFit fitting variant

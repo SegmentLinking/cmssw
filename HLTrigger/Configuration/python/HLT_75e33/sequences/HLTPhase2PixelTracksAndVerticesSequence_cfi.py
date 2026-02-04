@@ -48,7 +48,7 @@ phase2_hlt_vertexTrimming.toReplaceWith(
     _HLTPhase2PixelTracksAndVerticesSequenceTrimming
 )
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 _HLTPhase2PixelTracksAndVerticesSequenceLegacy = cms.Sequence(
   hltPhase2PixelTracksSeedLayers
   +hltPhase2PixelTracksAndHighPtStepTrackingRegions
@@ -59,4 +59,19 @@ _HLTPhase2PixelTracksAndVerticesSequenceLegacy = cms.Sequence(
   +hltPhase2PixelTracks
   +HLTPhase2PixelVertexingSequence
 )
-phase2LegacyTracking.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceLegacy)
+hltPhase2LegacyTracking.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceLegacy)
+
+from Configuration.ProcessModifiers.hltPhase2LegacyTrackingPatatrackQuads_cff import hltPhase2LegacyTrackingPatatrackQuads
+_HLTPhase2PixelTracksAndVerticesSequenceLegacyPatatrack = cms.Sequence(
+  HLTBeamSpotSequence
+  +hltPhase2PixelTracksAndHighPtStepTrackingRegions
+  +hltPhase2PixelFitterByHelixProjections
+  +hltPhase2PixelTrackFilterByKinematics
+  +hltPhase2PixelTracksSoA
+  +hltPhase2PixelTracks
+  +HLTPhase2PixelVertexingSequence
+)
+(hltPhase2LegacyTracking & hltPhase2LegacyTrackingPatatrackQuads).toReplaceWith(
+    HLTPhase2PixelTracksAndVerticesSequence,
+    _HLTPhase2PixelTracksAndVerticesSequenceLegacyPatatrack
+)

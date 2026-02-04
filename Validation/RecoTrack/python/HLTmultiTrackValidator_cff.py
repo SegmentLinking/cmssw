@@ -70,12 +70,12 @@ phase2_tracker.toReplaceWith(
 )
 
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 
-def _modifyForPhase2LegacyTracking(trackvalidator):
+def _modifyForHLTPhase2LegacyTracking(trackvalidator):
     trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
-phase2LegacyTracking.toModify(hltTrackValidator, _modifyForPhase2LegacyTracking)
+hltPhase2LegacyTracking.toModify(hltTrackValidator, _modifyForHLTPhase2LegacyTracking)
 
 def _modifyForNGTScouting(trackvalidator):
     trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks"]

@@ -31,8 +31,8 @@ HLTInitialStepSequence = cms.Sequence(
 )
 
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-phase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
     HLTInitialStepSequence.copyAndExclude([
         hltInitialStepSeedTracksLST,
         hltSiPhase2RecHits,

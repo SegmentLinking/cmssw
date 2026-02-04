@@ -42,8 +42,8 @@ hltTrackerphase2ValidationSource = cms.Sequence(hltClusterValidIT +
                                                 hltTrackingRechitValidIT +
                                                 hltTrackingRechitValidOT)
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-(~phase2LegacyTracking).toModify(
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+(~hltPhase2LegacyTracking).toModify(
     hltTrackerphase2ValidationSource,
     lambda s: s.__iadd__(hltRechitValidOT)
 )

@@ -57,7 +57,8 @@ numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
 numWFIB.extend([prefixDet+34.751])  # HLTTiming75e33, alpaka
 numWFIB.extend([prefixDet+34.752])  # HLTTiming75e33, ticl_v5
 numWFIB.extend([prefixDet+34.7521]) # HLTTiming75e33, ticl_v5, ticlv5TrackLinkingGNN
-numWFIB.extend([prefixDet+34.754])  # HLTTiming75e33, legacy tracking
+numWFIB.extend([prefixDet+34.753])  # HLTTiming75e33, legacy tracking
+numWFIB.extend([prefixDet+34.754])  # HLTTiming75e33, legacy tracking with Patatrack quads
 numWFIB.extend([prefixDet+34.755])  # HLTTiming75e33, trackingLST
 numWFIB.extend([prefixDet+34.756])  # HLTTiming75e33, phase2_hlt_vertexTrimming
 numWFIB.extend([prefixDet+34.757])  # HLTTiming75e33, MkFitFit

@@ -52,8 +52,8 @@ _hltInitialStepTrackCandidatesLegacy = cms.EDProducer("CkfTrackCandidateMaker",
     useHitsSplitting = cms.bool(False)
 )
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-phase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+hltPhase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)
 
 
 _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',

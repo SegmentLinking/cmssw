@@ -43,7 +43,7 @@ trackingLST.toModify(hltInitialStepTrackCutClassifier,
 )
 
 
-from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
-phase2LegacyTracking.toModify(hltInitialStepTrackCutClassifier,
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+hltPhase2LegacyTracking.toModify(hltInitialStepTrackCutClassifier,
     mva = dict(passThroughForAll=False, passThroughForDisplaced=False)
 )

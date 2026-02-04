@@ -127,9 +127,9 @@ def customiseTrackingNtupleHLT(process):
     from Configuration.Eras.Modifier_trackingPhase2PU140_cff import trackingPhase2PU140
     trackingPhase2PU140.toModify(_seedProducers, names = ["hltInitialStepTrajectorySeedsLST"])
     # the following modifiers are only phase-2, trackingPhase2PU140 is not repeated
-    from Configuration.ProcessModifiers.phase2LegacyTracking_cff import phase2LegacyTracking
+    from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
     from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
-    phase2LegacyTracking.toModify(_seedProducers, names = ["hltInitialStepSeeds", "hltHighPtTripletStepSeeds"])
+    hltPhase2LegacyTracking.toModify(_seedProducers, names = ["hltInitialStepSeeds", "hltHighPtTripletStepSeeds"])
     trackingLST.toModify(_seedProducers, names = ["hltInputLST", "hltInitialStepTrackCandidates"])
 
     (_seedSelectors, _tmpTask) = _TrackValidation_cff._addSeedToTrackProducers(_seedProducers.names, globals())
@@ -150,18 +150,18 @@ def customiseTrackingNtupleHLT(process):
 
     process.trackingNtuple.tracks = "hltMergedTracks"
     trackingPhase2PU140.toModify(process.trackingNtuple, tracks = "hltGeneralTracks")
-    (trackingPhase2PU140 & ~phase2LegacyTracking).toModify(process.trackingNtuple, seedUniqueCheck = False)
+    (trackingPhase2PU140 & ~hltPhase2LegacyTracking).toModify(process.trackingNtuple, seedUniqueCheck = False)
 
-    (trackingPhase2PU140 & ~(phase2LegacyTracking | trackingLST)).toModify(process.trackingNtuple,
+    (trackingPhase2PU140 & ~(hltPhase2LegacyTracking | trackingLST)).toModify(process.trackingNtuple,
         seedAlgoDetect = False, seedAlgos = [getattr(_algo,"initialStep")])
 
     process.trackingNtuple.trackCandidates = ["hltIter0PFlowCkfTrackCandidates", "hltDoubletRecoveryPFlowCkfTrackCandidates"]
     trackingPhase2PU140.toModify(process.trackingNtuple, trackCandidates = ["hltInitialStepTrackCandidates"])
-    phase2LegacyTracking.toModify(process.trackingNtuple, trackCandidates = ["hltInitialStepTrackCandidates", "hltHighPtTripletStepTrackCandidates"])
+    hltPhase2LegacyTracking.toModify(process.trackingNtuple, trackCandidates = ["hltInitialStepTrackCandidates", "hltHighPtTripletStepTrackCandidates"])
 
     process.trackingNtuple.clusterMasks = [dict(index = getattr(_algo,"pixelPairStep"), src = "hltDoubletRecoveryClustersRefRemoval")]
     trackingPhase2PU140.toModify(process.trackingNtuple, clusterMasks = [])
-    phase2LegacyTracking.toModify(process.trackingNtuple, clusterMasks = [dict(index = getattr(_algo,"highPtTripletStep"), src = "hltHighPtTripletStepClusters")])
+    hltPhase2LegacyTracking.toModify(process.trackingNtuple, clusterMasks = [dict(index = getattr(_algo,"highPtTripletStep"), src = "hltHighPtTripletStepClusters")])
 
     process.trackingNtuple.clusterTPMap = "hltTPClusterProducer"
     process.trackingNtuple.trackAssociator = "hltTrackAssociatorByHits"
