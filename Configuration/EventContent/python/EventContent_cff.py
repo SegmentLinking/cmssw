@@ -281,6 +281,7 @@ from Configuration.Eras.Modifier_phase2_muon_cff import phase2_muon
 from Configuration.Eras.Modifier_phase2_timing_layer_cff import phase2_timing_layer
 from Configuration.Eras.Modifier_run2_GEM_2017_cff import run2_GEM_2017
 from Configuration.Eras.Modifier_run3_GEM_cff import run3_GEM
+from Configuration.ProcessModifiers.alpakaValidationHLTTRK_cff import alpakaValidationHLTTRK
 from Configuration.ProcessModifiers.pp_on_AA_cff import pp_on_AA
 from RecoLocalFastTime.Configuration.RecoLocalFastTime_EventContent_cff import *
 from RecoMTD.Configuration.RecoMTD_EventContent_cff import *
@@ -718,6 +719,16 @@ phase2_tracker.toModify(FEVTDEBUGHLTEventContent,
                             'keep *_hltInitialStepTracksT4T5TCLST_*_*',
                             'keep *_hltOfflinePrimaryVertices_*_*',
                         ])
+
+alpakaValidationHLTTRK.toModify(FEVTDEBUGHLTEventContent,
+    outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[
+        'keep *_hltInitialStepTracks_*_*',
+        'keep *_hltInitialStepTracksSerialSync_*_*',
+        'keep *_hltPhase2PixelTracks_*_*',
+        'keep *_hltPhase2PixelTracksSerialSync_*_*',
+        'keep *_hltPhase2PixelVertices_*_*',
+        'keep *_hltPhase2PixelVerticesSerialSync_*_*',
+    ])
 
 phase2_common.toModify(FEVTDEBUGHLTEventContent,
                        outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[

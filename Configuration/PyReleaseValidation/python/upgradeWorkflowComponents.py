@@ -1930,6 +1930,19 @@ upgradeWFs['HLTTrackingOnly75e33'].step2 = {
     '--eventcontent':'FEVTDEBUGHLT,DQMIO'
 }
 
+upgradeWFs['HLTHeterogeneousValid'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTHeterogeneousValid'].suffix = '_HLTHeterogeneousValid'
+upgradeWFs['HLTHeterogeneousValid'].offset = 0.7503
+upgradeWFs['HLTHeterogeneousValid'].step2 = {
+    '-s':'DIGI:pdigi_valid,DIGI2RAW,L1TrackTrigger,L1,L1P2GT,HLT:HeterogeneousValid,VALIDATION:hltMultiTrackValidation',
+    '--procModifiers': 'alpakaValidationHLTTRK',
+    '--datatier':'GEN-SIM-DIGI-RAW,DQMIO',
+    '--eventcontent':'FEVTDEBUGHLT,DQMIO'
+}
+upgradeWFs['HLTHeterogeneousValid'].step3 = {
+    '-s':'HARVESTING:@hltValidation'
+}
+
 upgradeWFs['HLTTiming75e33Alpaka'] = deepcopy(upgradeWFs['HLTTiming75e33'])
 upgradeWFs['HLTTiming75e33Alpaka'].suffix = '_HLT75e33TimingAlpaka'
 upgradeWFs['HLTTiming75e33Alpaka'].offset = 0.751
