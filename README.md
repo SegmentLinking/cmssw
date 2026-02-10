@@ -6,7 +6,7 @@ This fork is used for internal development and validation of the Line Segment Tr
 
 ## CI Instructions
 
-The CI is triggered by the presence of the string `run-ci: ` in PR comments. The comment must exclusively contain CI instructions and it accepts the following items.
+The CI is triggered by the presence of the string `run-ci:` in PR comments. The comment must exclusively contain CI instructions and it accepts the following items.
 
 - `run-ci`: (string or list) This is what indicates which workflows you want to run. The available options are:
   - `all`: Run all available workflows.
