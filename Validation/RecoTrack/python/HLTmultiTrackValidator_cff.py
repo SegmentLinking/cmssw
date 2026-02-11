@@ -69,6 +69,39 @@ phase2_tracker.toReplaceWith(
     )
 )
 
+from DQM.TrackingMonitorSource.TrackToTrackComparisonHists_cfi import TrackToTrackComparisonHists as _TrackToTrackComparisonHists
+hltPixelTrackToTrackSerialSync = _TrackToTrackComparisonHists.clone(
+    requireValidHLTPaths = False,
+    #ignoreLumiPUPlots = True,
+    monitoredTrack = "hltPhase2PixelTracks",
+    monitoredBeamSpot = "hltOnlineBeamSpot",
+    monitoredPrimaryVertices = "hltPhase2PixelVertices",
+    referenceTrack = "hltPhase2PixelTracksSerialSync",
+    referenceBeamSpot = "hltOnlineBeamSpot",
+    referencePrimaryVertices = "hltPhase2PixelVerticesSerialSync",
+    topDirName = cms.string('HLT/Tracking/ValidationWRTSerialSync/pixelTracks'),
+)
+
+hltInitialStepTrackToTrackSerialSync = _TrackToTrackComparisonHists.clone(
+    requireValidHLTPaths = False,
+    #ignoreLumiPUPlots = True,
+    monitoredTrack = "hltInitialStepTracks",
+    monitoredBeamSpot = "hltOnlineBeamSpot",
+    monitoredPrimaryVertices = "hltPhase2PixelVertices",
+    referenceTrack = "hltInitialStepTracksSerialSync",
+    referenceBeamSpot = "hltOnlineBeamSpot",
+    referencePrimaryVertices = "hltPhase2PixelVerticesSerialSync",
+    topDirName = cms.string('HLT/Tracking/ValidationWRTSerialSync/initialStepTracks'),
+)
+
+from Configuration.ProcessModifiers.alpakaValidationHLTTRK_cff import alpakaValidationHLTTRK
+alpakaValidationHLTTRK.toReplaceWith(hltMultiTrackValidation, cms.Sequence(
+    hltMultiTrackValidation.copy()
+    +hltInitialStepTrackToTrackSerialSync
+    +hltPixelTrackToTrackSerialSync
+    )
+)
+
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
