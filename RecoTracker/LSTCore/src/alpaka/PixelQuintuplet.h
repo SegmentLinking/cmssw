@@ -59,16 +59,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelQuintuplets.hitIndices()[pixelQuintupletIndex][2] = mds.anchorHitIndices()[pixelOuterMD];
     pixelQuintuplets.hitIndices()[pixelQuintupletIndex][3] = mds.outerHitIndices()[pixelOuterMD];
 
-    // Copy all 11 OT slots directly (fixed-position layout preserved)
-    for (int i = 0; i < Params_T5::kLayers; ++i) {
-      pixelQuintuplets.logicalLayers()[pixelQuintupletIndex][2 + i] = quintuplets.logicalLayers()[t5Index][i];
-      pixelQuintuplets.lowerModuleIndices()[pixelQuintupletIndex][2 + i] = quintuplets.lowerModuleIndices()[t5Index][i];
-      pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i] = quintuplets.hitIndices()[t5Index][2 * i];
-      pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i + 1] = quintuplets.hitIndices()[t5Index][2 * i + 1];
+    // Copy T5's packed OT layers and initialize remaining pT5 OT slots with sentinels
+    const unsigned int t5NLayers = quintuplets.nLayers()[t5Index];
+    for (unsigned int i = 0; i < Params_T5::kLayers; ++i) {
+      if (i < t5NLayers) {
+        pixelQuintuplets.logicalLayers()[pixelQuintupletIndex][2 + i] = quintuplets.logicalLayers()[t5Index][i];
+        pixelQuintuplets.lowerModuleIndices()[pixelQuintupletIndex][2 + i] =
+            quintuplets.lowerModuleIndices()[t5Index][i];
+        pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i] = quintuplets.hitIndices()[t5Index][2 * i];
+        pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i + 1] =
+            quintuplets.hitIndices()[t5Index][2 * i + 1];
+      } else {
+        pixelQuintuplets.logicalLayers()[pixelQuintupletIndex][2 + i] = 0;
+        pixelQuintuplets.lowerModuleIndices()[pixelQuintupletIndex][2 + i] = lst::kTCEmptyLowerModule;
+        pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i] = lst::kTCEmptyHitIdx;
+        pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i + 1] = lst::kTCEmptyHitIdx;
+      }
     }
 
     // Set pT5 nLayers = 2 pixel + T5 layers
-    pixelQuintuplets.nLayers()[pixelQuintupletIndex] = 2 + quintuplets.nLayers()[t5Index];
+    pixelQuintuplets.nLayers()[pixelQuintupletIndex] = 2 + t5NLayers;
+    pixelQuintuplets.otLayerMask()[pixelQuintupletIndex] = quintuplets.layerMask()[t5Index];
+    pixelQuintuplets.otBaseLayerMask()[pixelQuintupletIndex] = quintuplets.baseLayerMask()[t5Index];
 
     pixelQuintuplets.rzChiSquared()[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintuplets.rPhiChiSquared()[pixelQuintupletIndex] = rPhiChiSquared;

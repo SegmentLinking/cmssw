@@ -23,10 +23,11 @@ namespace lst {
                       SOA_COLUMN(FPX, pt),
                       SOA_COLUMN(FPX, eta),
                       SOA_COLUMN(FPX, phi),
-                      SOA_COLUMN(FPX, score_rphisum),     // r-phi based score
-                      SOA_COLUMN(char, isDup),            // duplicate flag
-                      SOA_COLUMN(unsigned int, nLayers),  // number of active layers (5 base, up to 11 after extension)
+                      SOA_COLUMN(FPX, score_rphisum),       // r-phi based score
+                      SOA_COLUMN(char, isDup),              // duplicate flag
+                      SOA_COLUMN(unsigned int, nLayers),    // number of active layers (5 base, up to 7 after extension)
                       SOA_COLUMN(uint16_t, baseLayerMask),  // bitmask of base-layer slots (set at creation, immutable)
+                      SOA_COLUMN(uint16_t, layerMask),      // bitmask of ALL active layers (base + extension)
                       SOA_COLUMN(bool, tightCutFlag),       // tight pass to be a TC
                       SOA_COLUMN(bool, partOfPT5),
                       SOA_COLUMN(float, regressionRadius),
