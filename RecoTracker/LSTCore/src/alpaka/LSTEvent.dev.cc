@@ -193,7 +193,7 @@ void LSTEvent::createMiniDoublets() {
 
     // Create a host buffer for a value to be passed to the device
     auto pixelMaxMDs_buf_h = cms::alpakatools::make_host_buffer<int>(queue_);
-    *pixelMaxMDs_buf_h.data() = n_max_pixel_md_per_modules;
+    *pixelMaxMDs_buf_h.data() = 2 * pixelSize_;
 
     alpaka::memcpy(queue_, dst_view_miniDoubletModuleOccupancy, pixelMaxMDs_buf_h);
 
@@ -217,7 +217,7 @@ void LSTEvent::createMiniDoublets() {
     alpaka::memcpy(queue_, nTotalMDs_buf_h, nTotalMDs_buf_d);
     alpaka::wait(queue_);  // wait to get the data before manipulation
 
-    *nTotalMDs_buf_h.data() += n_max_pixel_md_per_modules;
+    *nTotalMDs_buf_h.data() += 2 * pixelSize_;
     unsigned int nTotalMDs = *nTotalMDs_buf_h.data();
 
     miniDoubletsDC_.emplace(queue_, nTotalMDs, nLowerModules_ + 1);
@@ -312,7 +312,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
     alpaka::memcpy(queue_, nTotalSegments_view_h, nTotalSegments_view_d);
     alpaka::wait(queue_);  // wait to get the value before manipulation
 
-    nTotalSegments_ += n_max_pixel_segments_per_module;
+    nTotalSegments_ += pixelSize_;
 
     segmentsDC_.emplace(queue_, nTotalSegments_, nLowerModules_ + 1);
     if (addObjects_) {
@@ -769,8 +769,8 @@ void LSTEvent::createPixelTriplets() {
   SegmentsOccupancy segmentsOccupancy = segmentsDC_->view().segmentsOccupancy();
   PixelSeedsConst pixelSeeds = lstInputDC_->const_view().pixelSeeds();
 
-  auto superbins_buf = cms::alpakatools::make_host_buffer<int[]>(queue_, n_max_pixel_segments_per_module);
-  auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, n_max_pixel_segments_per_module);
+  auto superbins_buf = cms::alpakatools::make_host_buffer<int[]>(queue_, pixelSize_);
+  auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, pixelSize_);
 
   alpaka::memcpy(queue_, superbins_buf, cms::alpakatools::make_device_view(queue_, pixelSeeds.superbin(), pixelSize_));
   alpaka::memcpy(
@@ -1028,8 +1028,8 @@ void LSTEvent::createPixelQuintuplets() {
   SegmentsOccupancy segmentsOccupancy = segmentsDC_->view().segmentsOccupancy();
   PixelSeedsConst pixelSeeds = lstInputDC_->const_view().pixelSeeds();
 
-  auto superbins_buf = cms::alpakatools::make_host_buffer<int[]>(queue_, n_max_pixel_segments_per_module);
-  auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, n_max_pixel_segments_per_module);
+  auto superbins_buf = cms::alpakatools::make_host_buffer<int[]>(queue_, pixelSize_);
+  auto pixelTypes_buf = cms::alpakatools::make_host_buffer<PixelType[]>(queue_, pixelSize_);
 
   alpaka::memcpy(queue_, superbins_buf, cms::alpakatools::make_device_view(queue_, pixelSeeds.superbin(), pixelSize_));
   alpaka::memcpy(
