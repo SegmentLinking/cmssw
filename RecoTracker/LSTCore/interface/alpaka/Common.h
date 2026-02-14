@@ -83,6 +83,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       HOST_DEVICE_CONSTANT float kWp_displaced[kPtBins][kEtaBins] = {
           {0.0334f, 0.0504f, 0.0748f, 0.0994f, 0.1128f, 0.1123f, 0.1118f, 0.1525f, 0.1867f, 0.1847f},
           {0.0091f, 0.0075f, 0.0350f, 0.0213f, 0.0435f, 0.0676f, 0.1957f, 0.1649f, 0.1080f, 0.1046f}};
+      HOST_DEVICE_CONSTANT float kWp_extend_fake[kPtBins][kEtaBins] = {
+          {0.0165f, 0.0128f, 0.0291f, 0.0415f, 0.0001f, 0.0066f, 0.0117f, 0.0059f, 0.0169f, 0.0167f},
+          {0.0165f, 0.0128f, 0.0291f, 0.0415f, 0.0001f, 0.0066f, 0.0117f, 0.0059f, 0.0169f, 0.0167f}};
     }  // namespace t3dnn
 
     namespace t5dnn {

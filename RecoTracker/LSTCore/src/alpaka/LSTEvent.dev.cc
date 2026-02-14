@@ -659,6 +659,21 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view());
 
+  alpaka::exec<Acc1D>(queue_,
+                      wd,
+                      ExtendTrackCandidatesFromT3{},
+                      modules_.const_view().modules(),
+                      rangesDC_->const_view(),
+                      tripletsDC_->const_view().triplets(),
+                      tripletsDC_->const_view().tripletsOccupancy(),
+                      segmentsDC_->const_view().segments(),
+                      miniDoubletsDC_->const_view().miniDoublets(),
+                      quintupletsDC_->const_view().quintuplets(),
+                      pixelTripletsDC_->const_view(),
+                      quadrupletsDC_->const_view().quadruplets(),
+                      trackCandidatesBaseDC_->view(),
+                      trackCandidatesExtendedDC_->view());
+
   // Check if either n_max_pixel_track_candidates or n_max_nonpixel_track_candidates was reached
   auto nTrackCanpT5Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTrackCanpT3Host_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
