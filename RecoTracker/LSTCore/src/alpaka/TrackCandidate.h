@@ -39,11 +39,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Initialize all slots to empty
     auto& tcHits = candsBase.hitIndices()[trackCandidateIndex];
-    auto& tcModules = candsExtended.lowerModuleIndices()[trackCandidateIndex];
-    auto& tcLayers = candsExtended.logicalLayers()[trackCandidateIndex];
     CMS_UNROLL_LOOP for (int layerSlot = 0; layerSlot < Params_TC::kLayers; ++layerSlot) {
-      tcLayers[layerSlot] = 0;
-      tcModules[layerSlot] = lst::kTCEmptyLowerModule;
+      candsExtended.logicalLayers()[trackCandidateIndex][layerSlot] = 0;
+      candsExtended.lowerModuleIndices()[trackCandidateIndex][layerSlot] = lst::kTCEmptyLowerModule;
       tcHits[layerSlot][0] = lst::kTCEmptyHitIdx;
       tcHits[layerSlot][1] = lst::kTCEmptyHitIdx;
     }
@@ -63,11 +61,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  uint16_t lowerModule,
                                                                  unsigned int hitIndex0,
                                                                  unsigned int hitIndex1) {
-    auto& tcModules = candsExtended.lowerModuleIndices()[trackCandidateIndex];
-    auto& tcLayers = candsExtended.logicalLayers()[trackCandidateIndex];
     auto& tcHits = candsBase.hitIndices()[trackCandidateIndex];
-    tcLayers[layerSlot] = logicalLayer;
-    tcModules[layerSlot] = lowerModule;
+    candsExtended.logicalLayers()[trackCandidateIndex][layerSlot] = logicalLayer;
+    candsExtended.lowerModuleIndices()[trackCandidateIndex][layerSlot] = lowerModule;
     tcHits[layerSlot][0] = hitIndex0;
     tcHits[layerSlot][1] = hitIndex1;
   }
@@ -95,11 +91,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Initialize all slots to empty
     auto& tcHits = candsBase.hitIndices()[trackCandidateIndex];
-    auto& tcModules = candsExtended.lowerModuleIndices()[trackCandidateIndex];
-    auto& tcLayers = candsExtended.logicalLayers()[trackCandidateIndex];
     CMS_UNROLL_LOOP for (int layerSlot = 0; layerSlot < Params_TC::kLayers; ++layerSlot) {
-      tcLayers[layerSlot] = 0;  // 0 is "pixel" when filled
-      tcModules[layerSlot] = lst::kTCEmptyLowerModule;
+      candsExtended.logicalLayers()[trackCandidateIndex][layerSlot] = 0;  // 0 is "pixel" when filled
+      candsExtended.lowerModuleIndices()[trackCandidateIndex][layerSlot] = lst::kTCEmptyLowerModule;
       tcHits[layerSlot][0] = lst::kTCEmptyHitIdx;
       tcHits[layerSlot][1] = lst::kTCEmptyHitIdx;
     }
@@ -151,9 +145,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           candsBase, candsExtended, trackCandidateIndex, layerSlot, logicalLayer, lowerModule, hit0, hit1);
     }
 
+#ifdef CUT_VALUE_DEBUG
     candsExtended.centerX()[trackCandidateIndex] = __F2H(centerX);
     candsExtended.centerY()[trackCandidateIndex] = __F2H(centerY);
     candsExtended.radius()[trackCandidateIndex] = __F2H(radius);
+#endif
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkPixelHits(

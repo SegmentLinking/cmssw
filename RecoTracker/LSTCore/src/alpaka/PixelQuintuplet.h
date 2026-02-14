@@ -82,9 +82,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelQuintuplets.otLayerMask()[pixelQuintupletIndex] = quintuplets.layerMask()[t5Index];
     pixelQuintuplets.otBaseLayerMask()[pixelQuintupletIndex] = quintuplets.baseLayerMask()[t5Index];
 
+#ifdef CUT_VALUE_DEBUG
     pixelQuintuplets.rzChiSquared()[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintuplets.rPhiChiSquared()[pixelQuintupletIndex] = rPhiChiSquared;
     pixelQuintuplets.rPhiChiSquaredInwards()[pixelQuintupletIndex] = rPhiChiSquaredInwards;
+#endif
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passPT5RZChiSquaredCuts(ModulesConst modules,

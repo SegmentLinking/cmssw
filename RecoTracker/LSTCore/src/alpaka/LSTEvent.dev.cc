@@ -59,6 +59,7 @@ void LSTEvent::resetEventSync() {
       n_quadruplets_by_layer_endcap_[i] = 0;
     }
   }
+  memoryAllocatedMB_ = 0;
   lstInputDC_ = nullptr;
   hitsDC_.reset();
   rangesDC_.reset();
@@ -102,12 +103,22 @@ void LSTEvent::addHitToEvent() {
     hitsDC_.emplace(queue_, nHits, nModules_);
     auto buf = hitsDC_->buffer();
     alpaka::memset(queue_, buf, 0xff);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(hitsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Hits: %d allocated (%.1f MB)\n", nHits, mb);
+    }
   }
 
   if (!rangesDC_) {
     rangesDC_.emplace(queue_, nLowerModules_ + 1);
     auto buf = rangesDC_->buffer();
     alpaka::memset(queue_, buf, 0xff);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(rangesDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Ranges: %u allocated (%.1f MB)\n", nLowerModules_ + 1, mb);
+    }
   }
 
   auto const hit_loop_workdiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
@@ -147,6 +158,11 @@ void LSTEvent::addPixelSegmentToEventStart() {
 
   if (!pixelSegmentsDC_) {
     pixelSegmentsDC_.emplace(queue_, pixelSize_);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(pixelSegmentsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] PixelSegments: %u allocated (%.1f MB)\n", pixelSize_, mb);
+    }
   }
 }
 
@@ -205,6 +221,11 @@ void LSTEvent::createMiniDoublets() {
     unsigned int nTotalMDs = *nTotalMDs_buf_h.data();
 
     miniDoubletsDC_.emplace(queue_, nTotalMDs, nLowerModules_ + 1);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(miniDoubletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] MiniDoublets: %u allocated (%.1f MB)\n", nTotalMDs, mb);
+    }
 
     auto mdsOccupancy = miniDoubletsDC_->view().miniDoubletsOccupancy();
     auto nMDs_view = cms::alpakatools::make_device_view(queue_, mdsOccupancy.nMDs());
@@ -294,6 +315,11 @@ void LSTEvent::createSegmentsWithModuleMap() {
     nTotalSegments_ += n_max_pixel_segments_per_module;
 
     segmentsDC_.emplace(queue_, nTotalSegments_, nLowerModules_ + 1);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(segmentsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Segments: %u allocated (%.1f MB)\n", nTotalSegments_, mb);
+    }
 
     auto segmentsOccupancy = segmentsDC_->view().segmentsOccupancy();
     auto segments = segmentsDC_->view().segments();
@@ -373,7 +399,13 @@ void LSTEvent::createTriplets() {
     alpaka::memcpy(queue_, maxTriplets_buf_h, maxTriplets_buf_d);
     alpaka::wait(queue_);  // wait to get the value before using it
 
-    tripletsDC_.emplace(queue_, *maxTriplets_buf_h.data(), nLowerModules_);
+    unsigned int nTotalTriplets = *maxTriplets_buf_h.data();
+    tripletsDC_.emplace(queue_, nTotalTriplets, nLowerModules_);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(tripletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Triplets: %u allocated (%.1f MB)\n", nTotalTriplets, mb);
+    }
 
     auto tripletsOccupancy = tripletsDC_->view().tripletsOccupancy();
     auto nTriplets_view = cms::alpakatools::make_device_view(queue_, tripletsOccupancy.nTriplets());
@@ -469,11 +501,19 @@ void LSTEvent::createTriplets() {
 
 void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
   if (!trackCandidatesBaseDC_) {
-    trackCandidatesBaseDC_.emplace(queue_, n_max_nonpixel_track_candidates + n_max_pixel_track_candidates);
+    unsigned int nTC = n_max_nonpixel_track_candidates + n_max_pixel_track_candidates;
+    trackCandidatesBaseDC_.emplace(queue_, nTC);
     trackCandidatesBaseDC_->zeroInitialise(queue_);
 
-    trackCandidatesExtendedDC_.emplace(queue_, n_max_nonpixel_track_candidates + n_max_pixel_track_candidates);
+    trackCandidatesExtendedDC_.emplace(queue_, nTC);
     trackCandidatesExtendedDC_->zeroInitialise(queue_);
+    if (addObjects_) {
+      double mb = (alpaka::getExtentProduct(trackCandidatesBaseDC_->buffer()) +
+                   alpaka::getExtentProduct(trackCandidatesExtendedDC_->buffer())) /
+                  1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] TrackCandidates: %u allocated (%.1f MB) [fixed]\n", nTC, mb);
+    }
   }
 
   auto const crossCleanpT3_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {64, 16});
@@ -687,6 +727,11 @@ void LSTEvent::createPixelTriplets() {
     auto totOccupancyPixelTriplets_view =
         cms::alpakatools::make_device_view(queue_, (*pixelTripletsDC_)->totOccupancyPixelTriplets());
     alpaka::memset(queue_, totOccupancyPixelTriplets_view, 0u);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(pixelTripletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] PixelTriplets: %u allocated (%.1f MB) [fixed]\n", n_max_pixel_triplets, mb);
+    }
   }
   SegmentsOccupancy segmentsOccupancy = segmentsDC_->view().segmentsOccupancy();
   PixelSeedsConst pixelSeeds = lstInputDC_->const_view().pixelSeeds();
@@ -840,6 +885,11 @@ void LSTEvent::createQuintuplets() {
 
   if (!quintupletsDC_) {
     quintupletsDC_.emplace(queue_, nTotalQuintuplets, nLowerModules_);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(quintupletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Quintuplets: %u allocated (%.1f MB)\n", nTotalQuintuplets, mb);
+    }
     auto quintupletsOccupancy = quintupletsDC_->view().quintupletsOccupancy();
     auto nQuintuplets_view = cms::alpakatools::make_device_view(queue_, quintupletsOccupancy.nQuintuplets());
     alpaka::memset(queue_, nQuintuplets_view, 0u);
@@ -936,13 +986,26 @@ void LSTEvent::createPixelQuintuplets() {
     auto totOccupancyPixelQuintuplets_view =
         cms::alpakatools::make_device_view(queue_, (*pixelQuintupletsDC_)->totOccupancyPixelQuintuplets());
     alpaka::memset(queue_, totOccupancyPixelQuintuplets_view, 0u);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(pixelQuintupletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] PixelQuintuplets: %u allocated (%.1f MB) [fixed]\n", n_max_pixel_quintuplets, mb);
+    }
   }
   if (!trackCandidatesBaseDC_) {
-    trackCandidatesBaseDC_.emplace(queue_, n_max_nonpixel_track_candidates + n_max_pixel_track_candidates);
+    unsigned int nTC = n_max_nonpixel_track_candidates + n_max_pixel_track_candidates;
+    trackCandidatesBaseDC_.emplace(queue_, nTC);
     trackCandidatesBaseDC_->zeroInitialise(queue_);
 
-    trackCandidatesExtendedDC_.emplace(queue_, n_max_nonpixel_track_candidates + n_max_pixel_track_candidates);
+    trackCandidatesExtendedDC_.emplace(queue_, nTC);
     trackCandidatesExtendedDC_->zeroInitialise(queue_);
+    if (addObjects_) {
+      double mb = (alpaka::getExtentProduct(trackCandidatesBaseDC_->buffer()) +
+                   alpaka::getExtentProduct(trackCandidatesExtendedDC_->buffer())) /
+                  1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] TrackCandidates: %u allocated (%.1f MB) [fixed]\n", nTC, mb);
+    }
   }
   SegmentsOccupancy segmentsOccupancy = segmentsDC_->view().segmentsOccupancy();
   PixelSeedsConst pixelSeeds = lstInputDC_->const_view().pixelSeeds();
@@ -1112,6 +1175,11 @@ void LSTEvent::createQuadruplets() {
 
   if (!quadrupletsDC_) {
     quadrupletsDC_.emplace(queue_, nTotalQuadruplets, nLowerModules_);
+    if (addObjects_) {
+      double mb = alpaka::getExtentProduct(quadrupletsDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      printf("[MEM] Quadruplets: %u allocated (%.1f MB)\n", nTotalQuadruplets, mb);
+    }
     auto quadrupletsOccupancy = quadrupletsDC_->view().quadrupletsOccupancy();
     auto nQuadruplets_view = cms::alpakatools::make_device_view(
         queue_, quadrupletsOccupancy.nQuadruplets(), quadrupletsOccupancy.metadata().size());
