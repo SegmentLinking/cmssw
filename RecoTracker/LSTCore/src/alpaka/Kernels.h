@@ -369,22 +369,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       // Packed layout: position 0 always has the first base layer, position 1 the second
       const uint8_t refStartLogicalLayer = quintuplets.logicalLayers()[refT5Index][0];
 
-      // Module range to scan
-      int lowerModuleBegin = 0;
-      int lowerModuleEnd = static_cast<int>(modules.nLowerModules());
-
-      if (refStartLogicalLayer == 1) {
-        lowerModuleBegin = quintuplets.lowerModuleIndices()[refT5Index][1];
-        lowerModuleEnd = lowerModuleBegin + 1;
-      }
-
       // Linear thread index and block dimension in 1D
       const int threadIndexFlat = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
       const int blockDimFlat = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
 
+      const uint8_t refSecondLayer = quintuplets.logicalLayers()[refT5Index][1];
+      const bool isLayer1 = (refStartLogicalLayer == 1);
+      int iterBegin, iterEnd;
+      if (isLayer1) {
+        iterBegin = quintuplets.lowerModuleIndices()[refT5Index][1];
+        iterEnd = iterBegin + 1;
+      } else {
+        iterBegin = 0;
+        iterEnd = static_cast<int>(ranges.nEligibleT5Modules());
+      }
+
       // Scan over lower modules
-      for (int lowerModuleIndex = lowerModuleBegin + threadIndexFlat; lowerModuleIndex < lowerModuleEnd;
-           lowerModuleIndex += blockDimFlat) {
+      for (int iterIdx = iterBegin + threadIndexFlat; iterIdx < iterEnd; iterIdx += blockDimFlat) {
+        // Resolve actual module index: direct for layer-1, indirect via eligible list otherwise
+        const int lowerModuleIndex =
+            isLayer1 ? iterIdx : static_cast<int>(ranges.indicesOfEligibleT5Modules()[iterIdx]);
+
+        // Layer filter for non-layer-1 refs: candidate must start at layer <= refSecondLayer
+        // and at a different layer than the ref's start layer
+        if (!isLayer1) {
+          const uint8_t moduleLayer = modules.lstLayers()[lowerModuleIndex];
+          if (moduleLayer > refSecondLayer || moduleLayer == refStartLogicalLayer)
+            continue;
+        }
         const int firstQuintupletInModule = ranges.quintupletModuleIndices()[lowerModuleIndex];
         if (firstQuintupletInModule == -1)
           continue;
@@ -396,12 +408,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           const unsigned int testT5Index = firstQuintupletInModule + quintupletOffset;
           if (testT5Index == refT5Index)
             continue;
-
-          // Require different starting layer for extension (skip for already-extended T5s)
-          if (quintuplets.nLayers()[testT5Index] == Params_T5::kBaseLayers) {
-            if (quintuplets.logicalLayers()[testT5Index][0] == refStartLogicalLayer)
-              continue;
-          }
 
           // Quick eta / phi window selection
           const float candidateEta = __H2F(quintuplets.eta()[testT5Index]);
