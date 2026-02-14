@@ -51,11 +51,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.tripletIndices()[quintupletIndex][0] = innerTripletIndex;
     quintuplets.tripletIndices()[quintupletIndex][1] = outerTripletIndex;
 
-    quintuplets.lowerModuleIndices()[quintupletIndex][0] = lowerModule1;
-    quintuplets.lowerModuleIndices()[quintupletIndex][1] = lowerModule2;
-    quintuplets.lowerModuleIndices()[quintupletIndex][2] = lowerModule3;
-    quintuplets.lowerModuleIndices()[quintupletIndex][3] = lowerModule4;
-    quintuplets.lowerModuleIndices()[quintupletIndex][4] = lowerModule5;
     quintuplets.innerRadius()[quintupletIndex] = __F2H(innerRadius);
     quintuplets.outerRadius()[quintupletIndex] = __F2H(outerRadius);
     quintuplets.pt()[quintupletIndex] = __F2H(pt);
@@ -68,22 +63,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.regressionRadius()[quintupletIndex] = regressionRadius;
     quintuplets.regressionCenterX()[quintupletIndex] = regressionCenterX;
     quintuplets.regressionCenterY()[quintupletIndex] = regressionCenterY;
-    quintuplets.logicalLayers()[quintupletIndex][0] = triplets.logicalLayers()[innerTripletIndex][0];
-    quintuplets.logicalLayers()[quintupletIndex][1] = triplets.logicalLayers()[innerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][2] = triplets.logicalLayers()[innerTripletIndex][2];
-    quintuplets.logicalLayers()[quintupletIndex][3] = triplets.logicalLayers()[outerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][4] = triplets.logicalLayers()[outerTripletIndex][2];
-
-    quintuplets.hitIndices()[quintupletIndex][0] = triplets.hitIndices()[innerTripletIndex][0];
-    quintuplets.hitIndices()[quintupletIndex][1] = triplets.hitIndices()[innerTripletIndex][1];
-    quintuplets.hitIndices()[quintupletIndex][2] = triplets.hitIndices()[innerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][3] = triplets.hitIndices()[innerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][4] = triplets.hitIndices()[innerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
-    quintuplets.hitIndices()[quintupletIndex][6] = triplets.hitIndices()[outerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][7] = triplets.hitIndices()[outerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][8] = triplets.hitIndices()[outerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][9] = triplets.hitIndices()[outerTripletIndex][5];
     quintuplets.bridgeRadius()[quintupletIndex] = bridgeRadius;
     quintuplets.rzChiSquared()[quintupletIndex] = rzChiSquared;
     quintuplets.chiSquared()[quintupletIndex] = rPhiChiSquared;
@@ -97,13 +76,49 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       quintuplets.t5Embed()[quintupletIndex][i] = t5Embed[i];
     }
 
-    // Initialize extended layer slots with sentinel values
-    for (int i = Params_T5::kBaseLayers; i < Params_T5::kLayers; ++i) {
+    // Initialize all slots with sentinels
+    for (int i = 0; i < Params_T5::kLayers; ++i) {
       quintuplets.logicalLayers()[quintupletIndex][i] = 0;
       quintuplets.lowerModuleIndices()[quintupletIndex][i] = lst::kTCEmptyLowerModule;
       quintuplets.hitIndices()[quintupletIndex][2 * i] = lst::kTCEmptyHitIdx;
       quintuplets.hitIndices()[quintupletIndex][2 * i + 1] = lst::kTCEmptyHitIdx;
     }
+
+    // Write each base layer to its fixed-position slot (slot = logicalLayer - 1)
+    const uint8_t baseLayer0 = triplets.logicalLayers()[innerTripletIndex][0];
+    const uint8_t baseLayer1 = triplets.logicalLayers()[innerTripletIndex][1];
+    const uint8_t baseLayer2 = triplets.logicalLayers()[innerTripletIndex][2];
+    const uint8_t baseLayer3 = triplets.logicalLayers()[outerTripletIndex][1];
+    const uint8_t baseLayer4 = triplets.logicalLayers()[outerTripletIndex][2];
+
+    quintuplets.logicalLayers()[quintupletIndex][baseLayer0 - 1] = baseLayer0;
+    quintuplets.lowerModuleIndices()[quintupletIndex][baseLayer0 - 1] = lowerModule1;
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer0 - 1)] = triplets.hitIndices()[innerTripletIndex][0];
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer0 - 1) + 1] = triplets.hitIndices()[innerTripletIndex][1];
+
+    quintuplets.logicalLayers()[quintupletIndex][baseLayer1 - 1] = baseLayer1;
+    quintuplets.lowerModuleIndices()[quintupletIndex][baseLayer1 - 1] = lowerModule2;
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer1 - 1)] = triplets.hitIndices()[innerTripletIndex][2];
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer1 - 1) + 1] = triplets.hitIndices()[innerTripletIndex][3];
+
+    quintuplets.logicalLayers()[quintupletIndex][baseLayer2 - 1] = baseLayer2;
+    quintuplets.lowerModuleIndices()[quintupletIndex][baseLayer2 - 1] = lowerModule3;
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer2 - 1)] = triplets.hitIndices()[innerTripletIndex][4];
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer2 - 1) + 1] = triplets.hitIndices()[innerTripletIndex][5];
+
+    quintuplets.logicalLayers()[quintupletIndex][baseLayer3 - 1] = baseLayer3;
+    quintuplets.lowerModuleIndices()[quintupletIndex][baseLayer3 - 1] = lowerModule4;
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer3 - 1)] = triplets.hitIndices()[outerTripletIndex][2];
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer3 - 1) + 1] = triplets.hitIndices()[outerTripletIndex][3];
+
+    quintuplets.logicalLayers()[quintupletIndex][baseLayer4 - 1] = baseLayer4;
+    quintuplets.lowerModuleIndices()[quintupletIndex][baseLayer4 - 1] = lowerModule5;
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer4 - 1)] = triplets.hitIndices()[outerTripletIndex][4];
+    quintuplets.hitIndices()[quintupletIndex][2 * (baseLayer4 - 1) + 1] = triplets.hitIndices()[outerTripletIndex][5];
+
+    quintuplets.baseLayerMask()[quintupletIndex] = (1 << (baseLayer0 - 1)) | (1 << (baseLayer1 - 1)) |
+                                                   (1 << (baseLayer2 - 1)) | (1 << (baseLayer3 - 1)) |
+                                                   (1 << (baseLayer4 - 1));
   }
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt

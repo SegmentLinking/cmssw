@@ -883,7 +883,8 @@ void LSTEvent::createQuintuplets() {
                         modules_.const_view().modules(),
                         rangesDC_->const_view(),
                         quintupletsDC_->view().quintuplets(),
-                        quintupletsDC_->const_view().quintupletsOccupancy());
+                        quintupletsDC_->const_view().quintupletsOccupancy(),
+                        nTotalQuintuplets);
   }
 
   auto const removeDupQuintupletsAfterBuild_workDiv =

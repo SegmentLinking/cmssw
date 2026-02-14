@@ -429,16 +429,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             unsigned int outerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][1];
             if (type == LSTObjType::T5) {
               unsigned int quintupletIndex = outerTrackletIdx;  // T5 index
-              uint16_t t5_lowerModIdx1 = quintuplets.lowerModuleIndices()[quintupletIndex][0];
-              short layer2_adjustment = 1;
-              short layer3_adjustment;
-              int layer = modules.layers()[t5_lowerModIdx1];
-              if (layer == 1) {
-                layer3_adjustment = 1;
-              } else {
-                layer3_adjustment = 0;
-              }
               int innerTripletIndex = quintuplets.tripletIndices()[quintupletIndex][0];
+              int layer = modules.layers()[triplets.lowerModuleIndices()[innerTripletIndex][0]];
+              short layer2_adjustment = 1;
+              short layer3_adjustment = (layer == 1) ? 1 : 0;
               float phi2 =
                   mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
                                                       [layer2_adjustment]];
@@ -480,16 +474,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             }
             if (type == LSTObjType::pT5) {
               unsigned int quintupletIndex = outerTrackletIdx;
-              uint16_t t5_lowerModIdx1 = quintuplets.lowerModuleIndices()[quintupletIndex][0];
-              short layer2_adjustment = 1;
-              short layer3_adjustment;
-              int layer = modules.layers()[t5_lowerModIdx1];
-              if (layer == 1) {
-                layer3_adjustment = 1;
-              } else {
-                layer3_adjustment = 0;
-              }
               int innerTripletIndex = quintuplets.tripletIndices()[quintupletIndex][0];
+              int layer = modules.layers()[triplets.lowerModuleIndices()[innerTripletIndex][0]];
+              short layer2_adjustment = 1;
+              short layer3_adjustment = (layer == 1) ? 1 : 0;
               float phi2 =
                   mds.anchorPhi()[segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][layer3_adjustment]]
                                                       [layer2_adjustment]];

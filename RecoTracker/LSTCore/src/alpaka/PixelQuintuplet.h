@@ -59,25 +59,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelQuintuplets.hitIndices()[pixelQuintupletIndex][2] = mds.anchorHitIndices()[pixelOuterMD];
     pixelQuintuplets.hitIndices()[pixelQuintupletIndex][3] = mds.outerHitIndices()[pixelOuterMD];
 
-    // Copy T5 layers (respects nLayers for extended T5s)
-    unsigned int t5Layers = quintuplets.nLayers()[t5Index];
-    for (unsigned int i = 0; i < t5Layers; ++i) {
+    // Copy all 11 OT slots directly (fixed-position layout preserved)
+    for (int i = 0; i < Params_T5::kLayers; ++i) {
       pixelQuintuplets.logicalLayers()[pixelQuintupletIndex][2 + i] = quintuplets.logicalLayers()[t5Index][i];
       pixelQuintuplets.lowerModuleIndices()[pixelQuintupletIndex][2 + i] = quintuplets.lowerModuleIndices()[t5Index][i];
       pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i] = quintuplets.hitIndices()[t5Index][2 * i];
       pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i + 1] = quintuplets.hitIndices()[t5Index][2 * i + 1];
     }
 
-    // Initialize remaining slots with sentinels
-    for (unsigned int i = t5Layers; i < Params_T5::kLayers; ++i) {
-      pixelQuintuplets.logicalLayers()[pixelQuintupletIndex][2 + i] = 0;
-      pixelQuintuplets.lowerModuleIndices()[pixelQuintupletIndex][2 + i] = lst::kTCEmptyLowerModule;
-      pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i] = lst::kTCEmptyHitIdx;
-      pixelQuintuplets.hitIndices()[pixelQuintupletIndex][4 + 2 * i + 1] = lst::kTCEmptyHitIdx;
-    }
-
     // Set pT5 nLayers = 2 pixel + T5 layers
-    pixelQuintuplets.nLayers()[pixelQuintupletIndex] = 2 + t5Layers;
+    pixelQuintuplets.nLayers()[pixelQuintupletIndex] = 2 + quintuplets.nLayers()[t5Index];
 
     pixelQuintuplets.rzChiSquared()[pixelQuintupletIndex] = rzChiSquared;
     pixelQuintuplets.rPhiChiSquared()[pixelQuintupletIndex] = rPhiChiSquared;
@@ -525,14 +516,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int fourthMDIndex = segments.mdIndices()[thirdSegmentIndex][1];
     unsigned int fifthMDIndex = segments.mdIndices()[fourthSegmentIndex][1];
 
-    uint16_t lowerModuleIndex1 = quintuplets.lowerModuleIndices()[quintupletIndex][0];
-    uint16_t lowerModuleIndex2 = quintuplets.lowerModuleIndices()[quintupletIndex][1];
-    uint16_t lowerModuleIndex3 = quintuplets.lowerModuleIndices()[quintupletIndex][2];
-    uint16_t lowerModuleIndex4 = quintuplets.lowerModuleIndices()[quintupletIndex][3];
-    uint16_t lowerModuleIndex5 = quintuplets.lowerModuleIndices()[quintupletIndex][4];
-
-    uint16_t lowerModuleIndices[Params_T5::kBaseLayers] = {
-        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4, lowerModuleIndex5};
+    // Get the base 5 lowerModuleIndices from the segment chain (unaffected by T5 extension)
+    uint16_t lowerModuleIndices[Params_T5::kBaseLayers] = {segments.innerLowerModuleIndices()[firstSegmentIndex],
+                                                           segments.outerLowerModuleIndices()[firstSegmentIndex],
+                                                           segments.outerLowerModuleIndices()[secondSegmentIndex],
+                                                           segments.outerLowerModuleIndices()[thirdSegmentIndex],
+                                                           segments.outerLowerModuleIndices()[fourthSegmentIndex]};
 
     float rtPix[Params_pLS::kLayers] = {mds.anchorRt()[pixelInnerMDIndex], mds.anchorRt()[pixelOuterMDIndex]};
     float xPix[Params_pLS::kLayers] = {mds.anchorX()[pixelInnerMDIndex], mds.anchorX()[pixelOuterMDIndex]};
@@ -577,11 +566,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (pixelRadius < 5.0f * kR1GeVf) {  //only apply r-z chi2 cuts for <5GeV tracks
       if (not passPT5RZChiSquaredCuts(modules,
-                                      lowerModuleIndex1,
-                                      lowerModuleIndex2,
-                                      lowerModuleIndex3,
-                                      lowerModuleIndex4,
-                                      lowerModuleIndex5,
+                                      lowerModuleIndices[0],
+                                      lowerModuleIndices[1],
+                                      lowerModuleIndices[2],
+                                      lowerModuleIndices[3],
+                                      lowerModuleIndices[4],
                                       rzChiSquared))
         return false;
     }
@@ -610,11 +599,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (pixelRadius < 5.0f * kR1GeVf) {
       if (not passPT5RPhiChiSquaredCuts(modules,
-                                        lowerModuleIndex1,
-                                        lowerModuleIndex2,
-                                        lowerModuleIndex3,
-                                        lowerModuleIndex4,
-                                        lowerModuleIndex5,
+                                        lowerModuleIndices[0],
+                                        lowerModuleIndices[1],
+                                        lowerModuleIndices[2],
+                                        lowerModuleIndices[3],
+                                        lowerModuleIndices[4],
                                         rPhiChiSquared))
         return false;
     }
@@ -623,11 +612,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if (quintuplets.regressionRadius()[quintupletIndex] < 5.0f * kR1GeVf) {
       if (not passPT5RPhiChiSquaredInwardsCuts(modules,
-                                               lowerModuleIndex1,
-                                               lowerModuleIndex2,
-                                               lowerModuleIndex3,
-                                               lowerModuleIndex4,
-                                               lowerModuleIndex5,
+                                               lowerModuleIndices[0],
+                                               lowerModuleIndices[1],
+                                               lowerModuleIndices[2],
+                                               lowerModuleIndices[3],
+                                               lowerModuleIndices[4],
                                                rPhiChiSquaredInwards))
         return false;
     }
