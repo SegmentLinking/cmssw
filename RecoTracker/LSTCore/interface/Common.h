@@ -99,7 +99,7 @@ namespace lst {
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_TC {
-    static constexpr int kLayers = 13;
+    static constexpr int kLayers = 9;  // 2 pixel + 7 OT (packed layout)
     static constexpr int kHitsPerLayer = 2;
     // Number of layers resevered for pixel hits.
     static constexpr int kPixelLayerSlots = 2;

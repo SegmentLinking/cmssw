@@ -55,15 +55,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     tcHits[1][1] = hitIndices[3];
   }
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateLayerHits(
-      TrackCandidatesBase& candsBase,
-      TrackCandidatesExtended& candsExtended,
-      unsigned int trackCandidateIndex,
-      int layerSlot,         // 0..12 (0/1 = pixel, 2..12 = OT logical layers 1..11)
-      uint8_t logicalLayer,  // 0 for pixel, 1..11 for OT
-      uint16_t lowerModule,
-      unsigned int hitIndex0,
-      unsigned int hitIndex1) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void addTrackCandidateLayerHits(TrackCandidatesBase& candsBase,
+                                                                 TrackCandidatesExtended& candsExtended,
+                                                                 unsigned int trackCandidateIndex,
+                                                                 int layerSlot,  // 0..8 (0/1 = pixel, 2+ = packed OT)
+                                                                 uint8_t logicalLayer,  // 0 for pixel, 1..11 for OT
+                                                                 uint16_t lowerModule,
+                                                                 unsigned int hitIndex0,
+                                                                 unsigned int hitIndex1) {
     auto& tcModules = candsExtended.lowerModuleIndices()[trackCandidateIndex];
     auto& tcLayers = candsExtended.logicalLayers()[trackCandidateIndex];
     auto& tcHits = candsBase.hitIndices()[trackCandidateIndex];
@@ -121,6 +120,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       nPixelLayers = Params_TC::kPixelLayerSlots;
     }
 
+    int otWritePos = Params_TC::kPixelLayerSlots;
+
     CMS_UNROLL_LOOP
     for (int i = 0; i < Params_TC::kLayers; ++i) {
       if (i >= nLayersToProcess)
@@ -142,8 +143,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         layerSlot = i;
         logicalLayer = 0;
       } else {
-        // OT layers are mapped: (LogicalLayer - 1) + kPixelLayerSlots
-        layerSlot = (logicalLayer - 1) + Params_TC::kPixelLayerSlots;
+        // OT layers packed contiguously starting at kPixelLayerSlots
+        layerSlot = otWritePos++;
       }
 
       addTrackCandidateLayerHits(
