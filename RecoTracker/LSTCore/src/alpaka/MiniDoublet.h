@@ -239,8 +239,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float yn;       // new y (after the strip hit is moved up or down)
     float abszn;    // new z in absolute value
     float zn;       // new z with the sign (+/-) accounted
-    float angleA;   // in r-z plane the theta of the pixel hit in polar coordinate is the angleA
-    float angleB;   // this is the angle of tilted module in r-z plane ("drdz"), for endcap this is 90 degrees
     bool isEndcap;  // If endcap, drdz = infinity
     float moduleSeparation;
     float drprime;    // The radial shift size in x-y plane projection
@@ -248,9 +246,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float drprime_y;  // y-component of drprime
     const float& slope =
         modules.dxdys()[lowerModuleIndex];  // The slope of the possible strip hits for a given module in x-y plane
-    float absArctanSlope;
-    float angleM;  // the angle M is the angle of rotation of the module in x-y plane if the possible strip hits are along the x-axis, then angleM = 0, and if the possible strip hits are along y-axis angleM = 90 degrees
-    float absdzprime;  // The distance between the two points after shifting
+    float absdzprime;                       // The distance between the two points after shifting
     const float& drdz_ = modules.drdzs()[lowerModuleIndex];
     // Assign hit pointers based on their hit type
     bool pHitInverted = false;
@@ -284,15 +280,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // If it is endcap some of the math gets simplified (and also computers don't like infinities)
     isEndcap = modules.subdets()[lowerModuleIndex] == Endcap;
 
-    // NOTE: TODO: Keep in mind that the sin(atan) function can be simplified to something like x / sqrt(1 + x^2) and similar for cos
-    // I am not sure how slow sin, atan, cos, functions are in c++. If x / sqrt(1 + x^2) are faster change this later to reduce arithmetic computation time
-    angleA = alpaka::math::abs(acc, alpaka::math::atan(acc, rtp / zp));
-    angleB =
-        ((isEndcap)
-             ? kPi / 2.f
-             : alpaka::math::atan(
-                   acc,
-                   drdz_));  // The tilt module on the positive z-axis has negative drdz slope in r-z plane and vice versa
+    // Algebraic replacement: sin(|atan(rtp/zp)|) = |rtp|/sqrt(rtp^2+zp^2), cos = |zp|/sqrt(...)
+    float invDenomA = 1.f / alpaka::math::sqrt(acc, rtp * rtp + zp * zp);
+    float sinA = alpaka::math::abs(acc, rtp) * invDenomA;
+    float cosA = alpaka::math::abs(acc, zp) * invDenomA;
+
+    // Compute sin(A+B) algebraically (cos(A+B) not needed)
+    float sinAplusB;
+    if (isEndcap) {
+      // angleB = pi/2: sin(A + pi/2) = cos(A)
+      sinAplusB = cosA;
+    } else {
+      // sin(atan(x)) = x/sqrt(1+x^2), cos(atan(x)) = 1/sqrt(1+x^2)
+      float invDenomB = 1.f / alpaka::math::sqrt(acc, 1.f + drdz_ * drdz_);
+      float sinB = drdz_ * invDenomB;
+      float cosB = invDenomB;
+      sinAplusB = sinA * cosB + cosA * sinB;
+    }
 
     moduleSeparation = moduleGapSize(modules, lowerModuleIndex);
 
@@ -301,27 +305,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       moduleSeparation *= -1;
     }
 
-    drprime = (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);
+    drprime = moduleSeparation * sinA / sinAplusB;
 
-    // Compute arctan of the slope and take care of the slope = infinity case
-    absArctanSlope =
-        ((slope != kVerticalModuleSlope && edm::isFinite(slope)) ? fabs(alpaka::math::atan(acc, slope)) : kPi / 2.f);
-
-    // Depending on which quadrant the pixel hit lies, we define the angleM by shifting them slightly differently
-    if (xp > 0 and yp > 0) {
-      angleM = absArctanSlope;
-    } else if (xp > 0 and yp < 0) {
-      angleM = kPi - absArctanSlope;
-    } else if (xp < 0 and yp < 0) {
-      angleM = kPi + absArctanSlope;
-    } else  // if (xp < 0 and yp > 0)
-    {
-      angleM = 2.f * kPi - absArctanSlope;
+    // Compute sin and cos of the module angle M algebraically from slope
+    // sin(angleM) has the sign of xp, cos(angleM) has the sign of yp
+    float sinAngleM, cosAngleM;
+    if (slope != kVerticalModuleSlope && edm::isFinite(slope)) {
+      float invDenomS = 1.f / alpaka::math::sqrt(acc, 1.f + slope * slope);
+      float sinMag = alpaka::math::abs(acc, slope) * invDenomS;
+      float cosMag = invDenomS;
+      sinAngleM = (xp > 0) ? sinMag : -sinMag;
+      cosAngleM = (yp > 0) ? cosMag : -cosMag;
+    } else {
+      sinAngleM = (xp > 0) ? 1.f : -1.f;
+      cosAngleM = 0.f;
     }
 
-    // Then since the angleM sign is taken care of properly
-    drprime_x = drprime * alpaka::math::sin(acc, angleM);
-    drprime_y = drprime * alpaka::math::cos(acc, angleM);
+    drprime_x = drprime * sinAngleM;
+    drprime_y = drprime * cosAngleM;
 
     // The new anchor position is
     xa = xp + drprime_x;
@@ -342,12 +343,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     // Computing new Z position
-    absdzprime = alpaka::math::abs(
-        acc,
-        moduleSeparation / alpaka::math::sin(acc, angleA + angleB) *
-            alpaka::math::cos(
-                acc,
-                angleA));  // module separation sign is for shifting in radial direction for z-axis direction take care of the sign later
+    absdzprime = alpaka::math::abs(acc, moduleSeparation * cosA / sinAplusB);
 
     // Depending on which one as closer to the interactin point compute the new z wrt to the pixel properly
     if (modules.moduleLayerType()[lowerModuleIndex] == Pixel) {
@@ -405,6 +401,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3085
     float xn = 0.f, yn = 0.f;
     float shiftedRt2 = 0.f;
+    // Pre-computed phi values shared across dPhi and dPhiChange computations
+    float phiLower = 0.f, phiUpper = 0.f, phiShifted = 0.f;
     if (modules.sides()[lowerModuleIndex] != Center)  // If barrel and not center it is tilted
     {
       // Shift the hits and calculate new xn, yn position
@@ -434,22 +432,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         shiftedZ = zUpper;
         shiftedRt2 = xn * xn + yn * yn;
 
-        dPhi = cms::alpakatools::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);  //function from Hit.cc
-        noShiftedDphi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        // Pre-compute phi values to avoid redundant atan2 calls
+        phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+        phiShifted = alpaka::math::atan2(acc, -shiftedY, -shiftedX);
+        dPhi = cms::alpakatools::reducePhiRange(acc, phiShifted - phiLower);
+        phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+        noShiftedDphi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
       } else {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zLower;
         shiftedRt2 = xn * xn + yn * yn;
-        dPhi = cms::alpakatools::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
-        noShiftedDphi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+
+        // Pre-compute phi values to avoid redundant atan2 calls
+        phiShifted = alpaka::math::atan2(acc, -shiftedY, -shiftedX);
+        phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+        dPhi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiShifted);
+        phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+        noShiftedDphi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
       }
     } else {
       shiftedX = 0.f;
       shiftedY = 0.f;
       shiftedZ = 0.f;
       shiftedRt2 = 0.f;
-      dPhi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+      phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+      phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+      dPhi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
       noShiftedDphi = dPhi;
     }
 
@@ -458,33 +467,44 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Cut #3: The dphi change going from lower Hit to upper Hit
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3076
+    // Reuse pre-computed phi values (phiLower, phiUpper, phiShifted) to avoid redundant atan2 calls.
+    // deltaPhiChange(x1,y1,x2,y2) = deltaPhi(x1,y1, x2-x1,y2-y1) = reducePhiRange(atan2(-(y2-y1),-(x2-x1)) - atan2(-y1,-x1))
     if (modules.sides()[lowerModuleIndex] != Center) {
-      // When it is tilted, use the new shifted positions
       if (modules.moduleLayerType()[lowerModuleIndex] == Pixel) {
-        // dPhi Change should be calculated so that the upper hit has higher rt.
-        // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
-        // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
-        // But I still placed this check for safety. (TODO: After checking explicitly if not needed remove later?)
-        // setdeltaPhiChange(lowerHit.rt() < upperHitMod.rt() ? lowerHit.deltaPhiChange(upperHitMod) : upperHitMod.deltaPhiChange(lowerHit));
-
-        dPhiChange = (rtLower * rtLower < shiftedRt2) ? deltaPhiChange(acc, xLower, yLower, shiftedX, shiftedY)
-                                                      : deltaPhiChange(acc, shiftedX, shiftedY, xLower, yLower);
-        noShiftedDphiChange = rtLower < rtUpper ? deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
-                                                : deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
+        if (rtLower * rtLower < shiftedRt2) {
+          float phiChDir = alpaka::math::atan2(acc, -(shiftedY - yLower), -(shiftedX - xLower));
+          dPhiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiLower);
+        } else {
+          float phiChDir = alpaka::math::atan2(acc, -(yLower - shiftedY), -(xLower - shiftedX));
+          dPhiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiShifted);
+        }
+        if (rtLower < rtUpper) {
+          float phiChDir = alpaka::math::atan2(acc, -(yUpper - yLower), -(xUpper - xLower));
+          noShiftedDphiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiLower);
+        } else {
+          float phiChDir = alpaka::math::atan2(acc, -(yLower - yUpper), -(xLower - xUpper));
+          noShiftedDphiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiUpper);
+        }
       } else {
-        // dPhi Change should be calculated so that the upper hit has higher rt.
-        // In principle, this kind of check rt_lower < rt_upper should not be necessary because the hit shifting should have taken care of this.
-        // (i.e. the strip hit is shifted to be aligned in the line of sight from interaction point to pixel hit of PS module guaranteeing rt ordering)
-        // But I still placed this check for safety. (TODO: After checking explicitly if not needed remove later?)
-
-        dPhiChange = (shiftedRt2 < rtUpper * rtUpper) ? deltaPhiChange(acc, shiftedX, shiftedY, xUpper, yUpper)
-                                                      : deltaPhiChange(acc, xUpper, yUpper, shiftedX, shiftedY);
-        noShiftedDphiChange = rtLower < rtUpper ? deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
-                                                : deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
+        if (shiftedRt2 < rtUpper * rtUpper) {
+          float phiChDir = alpaka::math::atan2(acc, -(yUpper - shiftedY), -(xUpper - shiftedX));
+          dPhiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiShifted);
+        } else {
+          float phiChDir = alpaka::math::atan2(acc, -(shiftedY - yUpper), -(shiftedX - xUpper));
+          dPhiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiUpper);
+        }
+        if (rtLower < rtUpper) {
+          float phiChDir = alpaka::math::atan2(acc, -(yUpper - yLower), -(xUpper - xLower));
+          noShiftedDphiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiLower);
+        } else {
+          float phiChDir = alpaka::math::atan2(acc, -(yLower - yUpper), -(xLower - xUpper));
+          noShiftedDphiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiUpper);
+        }
       }
     } else {
-      // When it is flat lying module, whichever is the lowerSide will always have rt lower
-      dPhiChange = deltaPhiChange(acc, xLower, yLower, xUpper, yUpper);
+      // Flat module: reuse phiLower from above
+      float phiChDir = alpaka::math::atan2(acc, -(yUpper - yLower), -(xUpper - xLower));
+      dPhiChange = cms::alpakatools::reducePhiRange(acc, phiChDir - phiLower);
       noShiftedDphiChange = dPhiChange;
     }
 
@@ -557,26 +577,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     zn = shiftedCoords[2];
 
     if (modules.moduleType()[lowerModuleIndex] == PS) {
-      // Appropriate lower or upper hit is modified after checking which one was actually shifted
       if (modules.moduleLayerType()[lowerModuleIndex] == Pixel) {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zUpper;
-        dPhi = cms::alpakatools::deltaPhi(acc, xLower, yLower, shiftedX, shiftedY);
-        noShiftedDphi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        // Pre-compute shared phi to avoid redundant atan2
+        float phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+        float phiShifted = alpaka::math::atan2(acc, -shiftedY, -shiftedX);
+        dPhi = cms::alpakatools::reducePhiRange(acc, phiShifted - phiLower);
+        float phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+        noShiftedDphi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
       } else {
         shiftedX = xn;
         shiftedY = yn;
         shiftedZ = zLower;
-        dPhi = cms::alpakatools::deltaPhi(acc, shiftedX, shiftedY, xUpper, yUpper);
-        noShiftedDphi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+        // Pre-compute shared phi to avoid redundant atan2
+        float phiShifted = alpaka::math::atan2(acc, -shiftedY, -shiftedX);
+        float phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+        dPhi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiShifted);
+        float phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+        noShiftedDphi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
       }
     } else {
       shiftedX = xn;
       shiftedY = yn;
       shiftedZ = zUpper;
-      dPhi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xn, yn);
-      noShiftedDphi = cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper);
+      // Pre-compute shared phi to avoid redundant atan2
+      float phiLower = alpaka::math::atan2(acc, -yLower, -xLower);
+      float phiN = alpaka::math::atan2(acc, -yn, -xn);
+      dPhi = cms::alpakatools::reducePhiRange(acc, phiN - phiLower);
+      float phiUpper = alpaka::math::atan2(acc, -yUpper, -xUpper);
+      noShiftedDphi = cms::alpakatools::reducePhiRange(acc, phiUpper - phiLower);
     }
 
     // dz needs to change if it is a PS module where the strip hits are shifted in order to properly account for the case when a tilted module falls under "endcap logic"

@@ -264,10 +264,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     */
     float circleRadius = mds.outerX()[innerMDIndex] / (2 * k2Rinv1GeVf);
     float circlePhi = mds.outerZ()[innerMDIndex];
-    float candidateCenterXs[] = {mds.anchorX()[innerMDIndex] + circleRadius * alpaka::math::sin(acc, circlePhi),
-                                 mds.anchorX()[innerMDIndex] - circleRadius * alpaka::math::sin(acc, circlePhi)};
-    float candidateCenterYs[] = {mds.anchorY()[innerMDIndex] - circleRadius * alpaka::math::cos(acc, circlePhi),
-                                 mds.anchorY()[innerMDIndex] + circleRadius * alpaka::math::cos(acc, circlePhi)};
+    float sinPhi = alpaka::math::sin(acc, circlePhi);
+    float cosPhi = alpaka::math::cos(acc, circlePhi);
+    float candidateCenterXs[] = {mds.anchorX()[innerMDIndex] + circleRadius * sinPhi,
+                                 mds.anchorX()[innerMDIndex] - circleRadius * sinPhi};
+    float candidateCenterYs[] = {mds.anchorY()[innerMDIndex] - circleRadius * cosPhi,
+                                 mds.anchorY()[innerMDIndex] + circleRadius * cosPhi};
 
     //check which of the circles can accommodate r3LH better (we won't get perfect agreement)
     float bestChiSquared = std::numeric_limits<float>::infinity();
@@ -319,7 +321,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              const float dPhi,
                                                              const float rtOut,
                                                              const float sdSlope,
-                                                             const float ptCut) {
+                                                             const float ptCut,
+                                                             float xIn,
+                                                             float yIn,
+                                                             float xOut,
+                                                             float yOut,
+                                                             float& dPhiChangeOut) {
     const float sdMuls = kMiniMulsPtScaleBarrel[modules.layers()[innerLm] - 1] * 3.f / ptCut;
     const float sdPVoff = 0.1f / rtOut;
     const float sdCut = sdSlope + alpaka::math::sqrt(acc, sdMuls * sdMuls + sdPVoff * sdPVoff);
@@ -327,15 +334,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, dPhi) > sdCut)
       return false;
 
-    const float xIn = mds.anchorX()[innerMD];
-    const float yIn = mds.anchorY()[innerMD];
-    const float xOut = mds.anchorX()[outerMD];
-    const float yOut = mds.anchorY()[outerMD];
-
-    const float dPhiChange = cms::alpakatools::reducePhiRange(
+    dPhiChangeOut = cms::alpakatools::reducePhiRange(
         acc, cms::alpakatools::phi(acc, xOut - xIn, yOut - yIn) - mds.anchorPhi()[innerMD]);
 
-    return alpaka::math::abs(acc, dPhiChange) < sdCut;
+    return alpaka::math::abs(acc, dPhiChangeOut) < sdCut;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -401,8 +403,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     zOut = mds.anchorZ()[outerMDIndex];
     rtOut = mds.anchorRt()[outerMDIndex];
 
-    float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
-    float dzDrtScale = alpaka::math::tan(acc, sdSlope) / sdSlope;  //FIXME: need appropriate value
+    float sinVal = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    float sdSlope = alpaka::math::asin(acc, sinVal);
+    // tan(asin(x)) / asin(x) = x / (asin(x) * sqrt(1 - x^2))
+    float dzDrtScale = sinVal / (sdSlope * alpaka::math::sqrt(acc, 1.f - sinVal * sinVal));
 
     const float zGeom = modules.layers()[innerLowerModuleIndex] <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
@@ -425,11 +429,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 dPhi,
                                 rtOut,
                                 sdSlope,
-                                ptCut))
+                                ptCut,
+                                xIn,
+                                yIn,
+                                xOut,
+                                yOut,
+                                dPhiChange))
       return false;
-
-    dPhiChange = cms::alpakatools::reducePhiRange(
-        acc, cms::alpakatools::phi(acc, xOut - xIn, yOut - yIn) - mds.anchorPhi()[innerMDIndex]);
 
     float dAlphaThresholdValues[3];
     dAlphaThreshold(acc,
@@ -508,7 +514,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     bool outerLayerEndcapTwoS =
         (modules.subdets()[outerLowerModuleIndex] == Endcap) && (modules.moduleType()[outerLowerModuleIndex] == TwoS);
 
-    float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    float sinVal = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    float sdSlope = alpaka::math::asin(acc, sinVal);
     float disks2SMinRadius = 60.f;
 
     float rtGeom = ((rtIn < disks2SMinRadius && rtOut < disks2SMinRadius)
@@ -522,7 +529,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dz = zOut - zIn;
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    float drtDzScale = sdSlope / alpaka::math::tan(acc, sdSlope);
+    // asin(x) / tan(asin(x)) = asin(x) * sqrt(1 - x^2) / x
+    float drtDzScale = sdSlope * alpaka::math::sqrt(acc, 1.f - sinVal * sinVal) / sinVal;
 
     //rt should increase
     rtLo = alpaka::math::max(acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);
@@ -810,9 +818,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float rtOut = mds.anchorRt()[outerMD];
     const float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
 
-    if (modules.subdets()[innerLm] == Barrel && modules.subdets()[outerLm] == Barrel)
-      return passDeltaPhiCutsBarrel(acc, modules, mds, innerLm, outerLm, innerMD, outerMD, dPhi, rtOut, sdSlope, ptCut);
-    else
+    if (modules.subdets()[innerLm] == Barrel && modules.subdets()[outerLm] == Barrel) {
+      float dPhiChangeUnused;
+      return passDeltaPhiCutsBarrel(acc,
+                                    modules,
+                                    mds,
+                                    innerLm,
+                                    outerLm,
+                                    innerMD,
+                                    outerMD,
+                                    dPhi,
+                                    rtOut,
+                                    sdSlope,
+                                    ptCut,
+                                    mds.anchorX()[innerMD],
+                                    mds.anchorY()[innerMD],
+                                    mds.anchorX()[outerMD],
+                                    mds.anchorY()[outerMD],
+                                    dPhiChangeUnused);
+    } else
       return passDeltaPhiCutsEndcap(acc, modules, mds, innerLm, outerLm, innerMD, outerMD, dPhi, rtOut, sdSlope, ptCut);
   }
 
