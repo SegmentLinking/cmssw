@@ -97,6 +97,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     PixelMap const& pixelMapping_;
     EndcapGeometryDevDeviceCollection const& endcapGeometry_;
     bool addObjects_;
+    double memoryAllocatedMB_ = 0;
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.
@@ -176,6 +177,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int getNumberOfQuadruplets();
     unsigned int getNumberOfQuadrupletsByLayerBarrel(unsigned int layer);
     unsigned int getNumberOfQuadrupletsByLayerEndcap(unsigned int layer);
+
+    double getMemoryAllocatedMB() const { return memoryAllocatedMB_; }
 
     // sync adds alpaka::wait at the end of filling a buffer during lazy fill
     // (has no effect on repeated calls)

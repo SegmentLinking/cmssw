@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_Kernels_h
 #define RecoTracker_LSTCore_src_alpaka_Kernels_h
 
+#include <bit>
+
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/CMSUnrollLoop.h"
 
@@ -45,27 +47,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quadruplets.isDup()[quadrupletIndex] |= 1 + secondpass;
   };
 
+  // Find the packed position of a logical layer in a T5's arrays.
+  // Base layers use popcount for O(1) lookup; extension layers use linear scan.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int findLayerPos(
+      uint16_t layerMask, uint16_t baseLayerMask, const uint8_t* logicalLayers, unsigned int nLayers, uint8_t layer) {
+    const uint16_t layerBit = static_cast<uint16_t>(1 << (layer - 1));
+    if (!(layerMask & layerBit))
+      return -1;
+    if (baseLayerMask & layerBit)
+      return std::popcount(static_cast<uint16_t>(baseLayerMask & (layerBit - 1)));
+    for (unsigned int pos = Params_T5::kBaseLayers; pos < nLayers; ++pos)
+      if (logicalLayers[pos] == layer)
+        return static_cast<int>(pos);
+    return -1;
+  }
+
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitsT5(unsigned int ix, unsigned int jx, QuintupletsConst quintuplets) {
-    unsigned int hits1[Params_T5::kHits];
-    unsigned int hits2[Params_T5::kHits];
-
-    for (int i = 0; i < Params_T5::kHits; i++) {
-      hits1[i] = quintuplets.hitIndices()[ix][i];
-      hits2[i] = quintuplets.hitIndices()[jx][i];
-    }
-
     int nMatched = 0;
-    for (int i = 0; i < Params_T5::kHits; i++) {
-      bool matched = false;
-      for (int j = 0; j < Params_T5::kHits; j++) {
-        if (hits1[i] == hits2[j]) {
-          matched = true;
-          break;
-        }
-      }
-      if (matched) {
+    const uint16_t maskIx = quintuplets.layerMask()[ix];
+    const uint16_t maskJx = quintuplets.layerMask()[jx];
+    const uint16_t baseMaskIx = quintuplets.baseLayerMask()[ix];
+    const uint16_t baseMaskJx = quintuplets.baseLayerMask()[jx];
+    const unsigned int nLayersIx = quintuplets.nLayers()[ix];
+    const unsigned int nLayersJx = quintuplets.nLayers()[jx];
+
+    uint16_t commonMask = maskIx & maskJx;
+    while (commonMask) {
+      const int bit = std::countr_zero(commonMask);
+      const uint8_t layer = static_cast<uint8_t>(bit + 1);
+      const int posIx = findLayerPos(maskIx, baseMaskIx, &quintuplets.logicalLayers()[ix][0], nLayersIx, layer);
+      const int posJx = findLayerPos(maskJx, baseMaskJx, &quintuplets.logicalLayers()[jx][0], nLayersJx, layer);
+      if (quintuplets.hitIndices()[ix][2 * posIx] == quintuplets.hitIndices()[jx][2 * posJx])
         nMatched++;
-      }
+      if (quintuplets.hitIndices()[ix][2 * posIx + 1] == quintuplets.hitIndices()[jx][2 * posJx + 1])
+        nMatched++;
+      commonMask &= commonMask - 1;  // clear lowest set bit
     }
     return nMatched;
   }
@@ -73,26 +89,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT5(unsigned int ix,
                                                   unsigned int jx,
                                                   PixelQuintupletsConst pixelQuintuplets) {
-    unsigned int hits1[Params_pT5::kHits];
-    unsigned int hits2[Params_pT5::kHits];
+    int nMatched = 0;
 
-    for (int i = 0; i < Params_pT5::kHits; i++) {
-      hits1[i] = pixelQuintuplets.hitIndices()[ix][i];
-      hits2[i] = pixelQuintuplets.hitIndices()[jx][i];
+    // Compare pixel hits directly (positions 0-1, i.e. hit slots 0-3)
+    for (int i = 0; i < 2; i++) {
+      if (pixelQuintuplets.hitIndices()[ix][2 * i] == pixelQuintuplets.hitIndices()[jx][2 * i])
+        nMatched++;
+      if (pixelQuintuplets.hitIndices()[ix][2 * i + 1] == pixelQuintuplets.hitIndices()[jx][2 * i + 1])
+        nMatched++;
     }
 
-    int nMatched = 0;
-    for (int i = 0; i < Params_pT5::kHits; i++) {
-      bool matched = false;
-      for (int j = 0; j < Params_pT5::kHits; j++) {
-        if (hits1[i] == hits2[j]) {
-          matched = true;
-          break;
-        }
-      }
-      if (matched) {
+    // Compare OT hits via bitmask iteration (positions 2+ in pT5)
+    const uint16_t otMaskIx = pixelQuintuplets.otLayerMask()[ix];
+    const uint16_t otMaskJx = pixelQuintuplets.otLayerMask()[jx];
+    const uint16_t otBaseMaskIx = pixelQuintuplets.otBaseLayerMask()[ix];
+    const uint16_t otBaseMaskJx = pixelQuintuplets.otBaseLayerMask()[jx];
+    const unsigned int otNLayersIx = pixelQuintuplets.nLayers()[ix] - 2;
+    const unsigned int otNLayersJx = pixelQuintuplets.nLayers()[jx] - 2;
+
+    uint16_t commonOtMask = otMaskIx & otMaskJx;
+    while (commonOtMask) {
+      const int bit = std::countr_zero(commonOtMask);
+      const uint8_t layer = static_cast<uint8_t>(bit + 1);
+      // findLayerPos returns position in T5-space (0-based); pT5 OT starts at position 2
+      const int otPosIx =
+          findLayerPos(otMaskIx, otBaseMaskIx, &pixelQuintuplets.logicalLayers()[ix][2], otNLayersIx, layer);
+      const int otPosJx =
+          findLayerPos(otMaskJx, otBaseMaskJx, &pixelQuintuplets.logicalLayers()[jx][2], otNLayersJx, layer);
+      const int pT5PosIx = otPosIx + 2;
+      const int pT5PosJx = otPosJx + 2;
+      if (pixelQuintuplets.hitIndices()[ix][2 * pT5PosIx] == pixelQuintuplets.hitIndices()[jx][2 * pT5PosJx])
         nMatched++;
-      }
+      if (pixelQuintuplets.hitIndices()[ix][2 * pT5PosIx + 1] == pixelQuintuplets.hitIndices()[jx][2 * pT5PosJx + 1])
+        nMatched++;
+      commonOtMask &= commonOtMask - 1;
     }
     return nMatched;
   }
@@ -215,6 +245,254 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
             }
           }
+        }
+      }
+    }
+  };
+
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void countSharedT5HitsAndFindUnmatched(QuintupletsConst quintuplets,
+                                                                        unsigned int testT5Index,
+                                                                        unsigned int refT5Index,
+                                                                        int& sharedHitCount,
+                                                                        int& unmatchedLayer) {
+    // Only compare base layers of the test T5; skip extension layers added by tryExtendT5.
+    const uint16_t testBaseMask = quintuplets.baseLayerMask()[testT5Index];
+    const uint16_t refLayerMask = quintuplets.layerMask()[refT5Index];
+    const uint16_t refBaseMask = quintuplets.baseLayerMask()[refT5Index];
+    const unsigned int refNLayers = quintuplets.nLayers()[refT5Index];
+
+    sharedHitCount = 0;
+    unmatchedLayer = -1;
+
+    // Iterate over the base layers of the test T5
+    uint16_t remainingMask = testBaseMask;
+    while (remainingMask) {
+      const int bit = std::countr_zero(remainingMask);
+      const uint8_t layer = static_cast<uint8_t>(bit + 1);
+
+      // Test T5: base layer position via popcount
+      const int testPos = std::popcount(static_cast<uint16_t>(testBaseMask & ((1 << bit) - 1)));
+
+      // Ref T5: find position via layerMask lookup
+      const int refPos =
+          findLayerPos(refLayerMask, refBaseMask, &quintuplets.logicalLayers()[refT5Index][0], refNLayers, layer);
+
+      if (refPos >= 0) {
+        const bool hit0Match =
+            (quintuplets.hitIndices()[testT5Index][2 * testPos] == quintuplets.hitIndices()[refT5Index][2 * refPos]);
+        const bool hit1Match = (quintuplets.hitIndices()[testT5Index][2 * testPos + 1] ==
+                                quintuplets.hitIndices()[refT5Index][2 * refPos + 1]);
+
+        if (hit0Match)
+          ++sharedHitCount;
+        if (hit1Match)
+          ++sharedHitCount;
+
+        if (!hit0Match && !hit1Match)
+          unmatchedLayer = layer;
+      } else {
+        unmatchedLayer = layer;
+      }
+
+      remainingMask &= remainingMask - 1;
+    }
+  }
+
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void tryExtendT5(
+      TAcc const& acc, Quintuplets quintuplets, unsigned int recipientIdx, unsigned int donorIdx, int extensionLayer) {
+    if (extensionLayer < 0)
+      return;
+
+    const uint16_t layerBit = static_cast<uint16_t>(1 << (extensionLayer - 1));
+
+    // Skip if this layer is already present in the recipient
+    if (quintuplets.layerMask()[recipientIdx] & layerBit)
+      return;
+
+    // Find the donor's position for this layer
+    const uint16_t donorMask = quintuplets.layerMask()[donorIdx];
+    const uint16_t donorBaseMask = quintuplets.baseLayerMask()[donorIdx];
+    const unsigned int donorNLayers = quintuplets.nLayers()[donorIdx];
+    const int donorPos =
+        findLayerPos(donorMask, donorBaseMask, &quintuplets.logicalLayers()[donorIdx][0], donorNLayers, extensionLayer);
+    if (donorPos < 0)
+      return;
+
+    // Append at the next available position (nLayers)
+    const unsigned int appendPos =
+        alpaka::atomicAdd(acc, &quintuplets.nLayers()[recipientIdx], 1u, alpaka::hierarchy::Threads{});
+
+    quintuplets.logicalLayers()[recipientIdx][appendPos] = static_cast<uint8_t>(extensionLayer);
+    quintuplets.lowerModuleIndices()[recipientIdx][appendPos] = quintuplets.lowerModuleIndices()[donorIdx][donorPos];
+    quintuplets.hitIndices()[recipientIdx][2 * appendPos] = quintuplets.hitIndices()[donorIdx][2 * donorPos];
+    quintuplets.hitIndices()[recipientIdx][2 * appendPos + 1] = quintuplets.hitIndices()[donorIdx][2 * donorPos + 1];
+
+    quintuplets.layerMask()[recipientIdx] |= layerBit;
+  }
+
+  struct ExtendT5FromDupT5 {
+    static constexpr int kPackedScoreShift = 32;                 // Bit shift for packing the score (upper 32 bits).
+    static constexpr int kPackedIndexShift = 4;                  // Bit shift for packing the T5 index.
+    static constexpr unsigned int kPackedIndexMask = 0xFFFFFFF;  // Mask for the 28-bit T5 index.
+    static constexpr unsigned int kPackedSlotMask = 0xF;         // Mask for the 4-bit layer slot.
+    static constexpr int kT5DuplicateMinSharedHits = 8;  // Minimum shared hits required to consider a T5 for merging.
+
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ModulesConst modules,
+                                  ObjectRangesConst ranges,
+                                  Quintuplets quintuplets,
+                                  QuintupletsOccupancyConst quintupletsOccupancy,
+                                  unsigned int nTotalQuintuplets) const {
+      // Shared memory: Packed best candidate info per logical OT layer (1..11)
+      // Format: [Score (32 bits) | Quintuplet Index (28 bits) | Layer (4 bits)]
+      uint64_t* sharedBestPacked = alpaka::declareSharedVar<uint64_t[lst::kLogicalOTLayers], __COUNTER__>(acc);
+
+      // In 1D, the Grid index [0] is the Block index (one block per ref T5)
+      const unsigned int refT5Index = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u];
+
+      // Skip empty/unallocated T5 slots (nLayers is 0 for slots that were allocated but never filled)
+      if (quintuplets.nLayers()[refT5Index] == 0)
+        return;
+
+      // Initialize shared memory once per block
+      if (cms::alpakatools::once_per_block(acc)) {
+        for (int logicalLayerBin = 0; logicalLayerBin < lst::kLogicalOTLayers; ++logicalLayerBin) {
+          sharedBestPacked[logicalLayerBin] = 0;
+        }
+      }
+      alpaka::syncBlockThreads(acc);
+
+      const float baseEta = __H2F(quintuplets.eta()[refT5Index]);
+      const float basePhi = __H2F(quintuplets.phi()[refT5Index]);
+
+      // Packed layout: position 0 always has the first base layer, position 1 the second
+      const uint8_t refStartLogicalLayer = quintuplets.logicalLayers()[refT5Index][0];
+
+      // Linear thread index and block dimension in 1D
+      const int threadIndexFlat = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
+      const int blockDimFlat = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
+
+      const uint8_t refSecondLayer = quintuplets.logicalLayers()[refT5Index][1];
+      const bool isLayer1 = (refStartLogicalLayer == 1);
+      int iterBegin, iterEnd;
+      if (isLayer1) {
+        iterBegin = quintuplets.lowerModuleIndices()[refT5Index][1];
+        iterEnd = iterBegin + 1;
+      } else {
+        iterBegin = 0;
+        iterEnd = static_cast<int>(ranges.nEligibleT5Modules());
+      }
+
+      // Scan over lower modules
+      for (int iterIdx = iterBegin + threadIndexFlat; iterIdx < iterEnd; iterIdx += blockDimFlat) {
+        // Resolve actual module index: direct for layer-1, indirect via eligible list otherwise
+        const int lowerModuleIndex =
+            isLayer1 ? iterIdx : static_cast<int>(ranges.indicesOfEligibleT5Modules()[iterIdx]);
+
+        // Layer filter for non-layer-1 refs: candidate must start at layer <= refSecondLayer
+        // and at a different layer than the ref's start layer
+        if (!isLayer1) {
+          const uint8_t moduleLayer = modules.lstLayers()[lowerModuleIndex];
+          if (moduleLayer > refSecondLayer || moduleLayer == refStartLogicalLayer)
+            continue;
+        }
+        const int firstQuintupletInModule = ranges.quintupletModuleIndices()[lowerModuleIndex];
+        if (firstQuintupletInModule == -1)
+          continue;
+
+        const unsigned int nQuintupletsInModule = quintupletsOccupancy.nQuintuplets()[lowerModuleIndex];
+
+        // Scan over quintuplets in this module
+        for (unsigned int quintupletOffset = 0; quintupletOffset < nQuintupletsInModule; ++quintupletOffset) {
+          const unsigned int testT5Index = firstQuintupletInModule + quintupletOffset;
+          if (testT5Index == refT5Index)
+            continue;
+
+          // Quick eta / phi window selection
+          const float candidateEta = __H2F(quintuplets.eta()[testT5Index]);
+          if (alpaka::math::abs(acc, baseEta - candidateEta) > 0.1f)
+            continue;
+
+          const float candidatePhi = __H2F(quintuplets.phi()[testT5Index]);
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, basePhi, candidatePhi)) > 0.1f)
+            continue;
+
+          // Embedding distance
+          float embedDistance2 = 0.f;
+          CMS_UNROLL_LOOP
+          for (unsigned int embedIndex = 0; embedIndex < Params_T5::kEmbed; ++embedIndex) {
+            const float diff =
+                quintuplets.t5Embed()[refT5Index][embedIndex] - quintuplets.t5Embed()[testT5Index][embedIndex];
+            embedDistance2 += diff * diff;
+          }
+          if (embedDistance2 > 1.0f)
+            continue;
+
+          // Hit matching against base T5 hits
+          int sharedHitCount = 0;
+          int unmatchedLayer = -1;
+
+          countSharedT5HitsAndFindUnmatched(quintuplets, testT5Index, refT5Index, sharedHitCount, unmatchedLayer);
+
+          if (sharedHitCount < kT5DuplicateMinSharedHits)
+            continue;
+          if (unmatchedLayer < 0)
+            continue;
+
+          // Candidate score is the T5 DNN output
+          const float candidateScore = quintuplets.dnnScore()[testT5Index];
+
+          // Packed layout: logicalLayerBin = unmatchedLayer - 1 (logical layers are 1-based)
+          const int logicalLayerBin = unmatchedLayer - 1;
+
+          // Pack the Score, Index, and Layer into 64 bits for atomic update
+          uint64_t scoreBits = (uint64_t)std::bit_cast<int>(candidateScore);
+          uint64_t newPacked = (scoreBits << kPackedScoreShift) |
+                               ((uint64_t)(testT5Index & kPackedIndexMask) << kPackedIndexShift) |
+                               (unmatchedLayer & kPackedSlotMask);
+
+          // Atomic CAS loop
+          uint64_t oldPacked = sharedBestPacked[logicalLayerBin];
+          while (true) {
+            const float oldScore = std::bit_cast<float>((int)(oldPacked >> kPackedScoreShift));
+
+            // If we aren't strictly better, stop trying
+            if (candidateScore <= oldScore) {
+              break;
+            }
+
+            // Try to swap. atomicCas returns the value that was previously there
+            uint64_t assumedOld = alpaka::atomicCas(
+                acc, &sharedBestPacked[logicalLayerBin], oldPacked, newPacked, alpaka::hierarchy::Threads{});
+
+            if (assumedOld == oldPacked) {
+              break;  // Success
+            } else {
+              oldPacked = assumedOld;  // Failed, update view and retry
+            }
+          }
+        }
+      }
+
+      // One thread per block finalizes by actually extending the T5
+      alpaka::syncBlockThreads(acc);
+
+      if (cms::alpakatools::once_per_block(acc)) {
+        CMS_UNROLL_LOOP
+        for (int logicalLayerBin = 0; logicalLayerBin < lst::kLogicalOTLayers; ++logicalLayerBin) {
+          uint64_t bestPacked = sharedBestPacked[logicalLayerBin];
+
+          // Check if valid update occurred (non-zero score)
+          int bestScoreInt = (int)(bestPacked >> kPackedScoreShift);
+          if (bestScoreInt == 0)
+            continue;
+
+          // Unpack Index (bits 4-31) and Layer (bits 0-3)
+          const int bestT5Index = (int)((bestPacked >> kPackedIndexShift) & kPackedIndexMask);
+          const int extensionLayer = (int)(bestPacked & kPackedSlotMask);
+
+          tryExtendT5(acc, quintuplets, refT5Index, bestT5Index, extensionLayer);
         }
       }
     }
