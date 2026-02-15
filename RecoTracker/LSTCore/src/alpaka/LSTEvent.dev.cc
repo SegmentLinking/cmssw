@@ -378,9 +378,11 @@ void LSTEvent::createTriplets() {
                         countSegConn_wd,
                         CountSegmentConnections{},
                         modules_.const_view().modules(),
+                        miniDoubletsDC_->const_view().miniDoublets(),
                         segmentsDC_->view().segments(),
                         segmentsDC_->const_view().segmentsOccupancy(),
-                        rangesDC_->const_view());
+                        rangesDC_->const_view(),
+                        ptCut_);
 
     auto const createTripletArrayRanges_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
