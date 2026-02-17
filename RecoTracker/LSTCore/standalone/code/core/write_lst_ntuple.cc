@@ -125,6 +125,8 @@ void createT5DNNBranches() {
 //________________________________________________________________________________________________________________________________
 void createT3DNNBranches() {
   // Common branches for T3 properties based on TripletsSoA fields
+  ana.tx->createBranch<std::vector<float>>("t3_fakeScore");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("t3_hitIndices");
   ana.tx->createBranch<std::vector<float>>("t3_betaIn");
   ana.tx->createBranch<std::vector<float>>("t3_centerX");
   ana.tx->createBranch<std::vector<float>>("t3_centerY");
@@ -323,6 +325,7 @@ void createTrackCandidateBranches() {
   ana.tx->createBranch<std::vector<int>>("tc_nhitOT");
   ana.tx->createBranch<std::vector<int>>("tc_nhits");
   ana.tx->createBranch<std::vector<int>>("tc_nlayers");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("tc_hitIndices");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<int>>>("tc_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
@@ -2240,6 +2243,13 @@ void setTrackCandidateBranches(LSTEvent* event,
                                                                                            percent_matched,
                                                                                            matchfrac);
 
+    std::vector<unsigned int> tc_hits_u;
+    std::vector<unsigned int> tc_types_u;
+    if (type != LSTObjType::pLS)
+      std::tie(tc_hits_u, tc_types_u) = getHitIdxsAndTypesFromTC(event, tc_idx);
+    std::vector<int> tc_hits_i(tc_hits_u.begin(), tc_hits_u.end());
+    ana.tx->pushbackToBranch<std::vector<int>>("tc_hitIndices", tc_hits_i);
+
     int nPixHits = 0, nOtHits = 0, nLayers = 0;
     for (int layerSlot = 0; layerSlot < Params_TC::kLayers; ++layerSlot) {
       if (trackCandidatesExtended.lowerModuleIndices()[tc_idx][layerSlot] == lst::kTCEmptyLowerModule)
@@ -2514,9 +2524,17 @@ void fillT3DNNBranches(LSTEvent* event, unsigned int iT3) {
   auto const& hitsBase = event->getInput<HitsBaseSoA>();
   auto const& hitsExtended = event->getHits<HitsExtendedSoA>();
   auto const& modules = event->getModules<ModulesSoA>();
+  auto const& triplets = event->getTriplets<TripletsSoA>();
 
   std::vector<unsigned int> hitIdx = getHitsFromT3(event, iT3);
   std::vector<lst_math::Hit> hitObjects;
+
+  std::vector<int> current_t3_hitIndices;
+  for (unsigned int h : hitIdx) {
+    current_t3_hitIndices.push_back(static_cast<int>(h));
+  }
+  ana.tx->pushbackToBranch<std::vector<int>>("t3_hitIndices", current_t3_hitIndices);
+  ana.tx->pushbackToBranch<float>("t3_fakeScore", triplets.fakeScore()[iT3]);
 
   for (int i = 0; i < hitIdx.size(); ++i) {
     unsigned int hit = hitIdx[i];

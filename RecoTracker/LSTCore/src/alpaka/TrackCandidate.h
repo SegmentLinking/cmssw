@@ -688,6 +688,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   }
 
+  // Helper function to count shared hits between a T3 and a TC, and find the unmatched T3 layer
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void countSharedT3HitsWithTC(TripletsConst triplets,
+                                                              unsigned int t3Index,
+                                                              TrackCandidatesBaseConst candsBase,
+                                                              unsigned int tcIndex,
+                                                              int& sharedHitCount,
+                                                              int& unmatchedLayerSlot) {
+    sharedHitCount = 0;
+    unmatchedLayerSlot = -1;
+
+    // T3 has 3 layers, 6 hits (2 per layer)
+    CMS_UNROLL_LOOP
+    for (int layerIndex = 0; layerIndex < Params_T3::kLayers; ++layerIndex) {
+      const unsigned int t3Hit0 = triplets.hitIndices()[t3Index][2 * layerIndex + 0];
+      const unsigned int t3Hit1 = triplets.hitIndices()[t3Index][2 * layerIndex + 1];
+
+      bool hit0InTC = false;
+      bool hit1InTC = false;
+
+      // Check against all TC hits (13 layers * 2 hits per layer)
+      CMS_UNROLL_LOOP
+      for (int tcLayerSlot = 0; tcLayerSlot < Params_TC::kLayers; ++tcLayerSlot) {
+        const unsigned int tcHit0 = candsBase.hitIndices()[tcIndex][tcLayerSlot][0];
+        const unsigned int tcHit1 = candsBase.hitIndices()[tcIndex][tcLayerSlot][1];
+
+        // Skip empty slots
+        if (tcHit0 == kTCEmptyHitIdx && tcHit1 == kTCEmptyHitIdx)
+          continue;
+
+        if (t3Hit0 == tcHit0 || t3Hit0 == tcHit1)
+          hit0InTC = true;
+        if (t3Hit1 == tcHit0 || t3Hit1 == tcHit1)
+          hit1InTC = true;
+
+        if (hit0InTC && hit1InTC)
+          break;
+      }
+
+      if (hit0InTC)
+        ++sharedHitCount;
+      if (hit1InTC)
+        ++sharedHitCount;
+
+      // Track unmatched layer (both hits not found in TC)
+      if (!hit0InTC && !hit1InTC) {
+        unmatchedLayerSlot = layerIndex;
+      }
+    }
+  }
+
   struct ExtendTrackCandidatesFromDupT5 {
     static constexpr int kPackedScoreShift = 32;                 // Bit shift for packing the score (upper 32 bits).
     static constexpr int kPackedIndexShift = 4;                  // Bit shift for packing the T5 index.
@@ -857,6 +907,201 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           const uint16_t lowerModuleIndex = quintuplets.lowerModuleIndices()[bestT5Index][bestT5LayerSlot];
           const unsigned int hitIndex0 = quintuplets.hitIndices()[bestT5Index][2 * bestT5LayerSlot + 0];
           const unsigned int hitIndex1 = quintuplets.hitIndices()[bestT5Index][2 * bestT5LayerSlot + 1];
+
+          addTrackCandidateLayerHits(candsBase,
+                                     candsExtended,
+                                     trackCandidateIndex,
+                                     layerSlot,
+                                     logicalLayer,
+                                     lowerModuleIndex,
+                                     hitIndex0,
+                                     hitIndex1);
+        }
+      }
+    }
+  };
+
+  struct ExtendTrackCandidatesFromT3 {
+    // Packing constants - NOTE: we invert fakeScore since lower is better
+    static constexpr int kPackedScoreShift = 32;
+    static constexpr int kPackedIndexShift = 4;
+    static constexpr unsigned int kPackedIndexMask = 0xFFFFFFF;
+    static constexpr unsigned int kPackedSlotMask = 0xF;
+    static constexpr int kT3MinSharedHits = 4;
+
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ModulesConst modules,
+                                  ObjectRangesConst ranges,
+                                  TripletsConst triplets,
+                                  TripletsOccupancyConst tripletsOccupancy,
+                                  SegmentsConst segments,
+                                  MiniDoubletsConst mds,
+                                  QuintupletsConst quintuplets,
+                                  PixelTripletsConst pixelTriplets,
+                                  QuadrupletsConst quadruplets,
+                                  TrackCandidatesBase candsBase,
+                                  TrackCandidatesExtended candsExtended) const {
+      // Assert that the number of blocks equals nTC
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0u] == candsBase.nTrackCandidates()));
+
+      // Shared memory: Packed best candidate info per logical OT layer (1..11)
+      // Format: [Score (32 bits) | T3 Index (28 bits) | Layer Slot (4 bits)]
+      uint64_t* sharedBestPacked = alpaka::declareSharedVar<uint64_t[lst::kLogicalOTLayers], __COUNTER__>(acc);
+
+      // In 1D, the Grid index [0] is the Block index (which is our TC index)
+      const unsigned int trackCandidateIndex = alpaka::getIdx<alpaka::Grid, alpaka::Blocks>(acc)[0u];
+
+      // Initialize shared memory once per block
+      if (cms::alpakatools::once_per_block(acc)) {
+        for (int logicalLayerBin = 0; logicalLayerBin < lst::kLogicalOTLayers; ++logicalLayerBin) {
+          sharedBestPacked[logicalLayerBin] = 0;
+        }
+      }
+      alpaka::syncBlockThreads(acc);
+
+      // Only consider merging T3s onto non-pLS TCs (pT5, pT3, T4, T5)
+      const LSTObjType trackCandidateType = candsBase.trackCandidateType()[trackCandidateIndex];
+      if (trackCandidateType == LSTObjType::pLS || trackCandidateType == LSTObjType::T4)
+        return;
+
+      // Get TC eta/phi based on type
+      float baseEta, basePhi;
+      const unsigned int innerObjIdx = candsExtended.objectIndices()[trackCandidateIndex][0];
+      const unsigned int outerObjIdx = candsExtended.objectIndices()[trackCandidateIndex][1];
+
+      if (trackCandidateType == LSTObjType::T5) {
+        baseEta = __H2F(quintuplets.eta()[innerObjIdx]);
+        basePhi = __H2F(quintuplets.phi()[innerObjIdx]);
+      } else if (trackCandidateType == LSTObjType::pT5) {
+        // pT5: objectIndices[1] is the T5 index
+        baseEta = __H2F(quintuplets.eta()[outerObjIdx]);
+        basePhi = __H2F(quintuplets.phi()[outerObjIdx]);
+      } else if (trackCandidateType == LSTObjType::pT3) {
+        baseEta = __H2F(pixelTriplets.eta()[innerObjIdx]);
+        basePhi = __H2F(pixelTriplets.phi()[innerObjIdx]);
+      } else if (trackCandidateType == LSTObjType::T4) {
+        // T4: Get eta/phi from first triplet's first MD
+        const unsigned int innerTripletIdx = quadruplets.tripletIndices()[innerObjIdx][0];
+        const unsigned int firstSegmentIdx = triplets.segmentIndices()[innerTripletIdx][0];
+        const unsigned int firstMDIdx = segments.mdIndices()[firstSegmentIdx][0];
+        baseEta = mds.anchorEta()[firstMDIdx];
+        basePhi = mds.anchorPhi()[firstMDIdx];
+      } else {
+        return;  // Unknown type
+      }
+
+      // Linear thread index and block dimension in 1D
+      const int threadIndexFlat = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
+      const int blockDimFlat = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
+
+      // Scan over all lower modules to find matching T3s
+      for (int lowerModuleIndex = threadIndexFlat; lowerModuleIndex < static_cast<int>(modules.nLowerModules());
+           lowerModuleIndex += blockDimFlat) {
+        const int firstTripletInModule = ranges.tripletModuleIndices()[lowerModuleIndex];
+        if (firstTripletInModule == -1)
+          continue;
+
+        const unsigned int nTripletsInModule = tripletsOccupancy.nTriplets()[lowerModuleIndex];
+
+        for (unsigned int tripletOffset = 0; tripletOffset < nTripletsInModule; ++tripletOffset) {
+          const unsigned int t3Index = firstTripletInModule + tripletOffset;
+
+          // Get T3 eta/phi from first MD
+          const unsigned int firstSegmentIdx = triplets.segmentIndices()[t3Index][0];
+          const unsigned int firstMDIdx = segments.mdIndices()[firstSegmentIdx][0];
+          const float t3Eta = mds.anchorEta()[firstMDIdx];
+          const float t3Phi = mds.anchorPhi()[firstMDIdx];
+
+          // Quick eta/phi window selection
+          if (alpaka::math::abs(acc, baseEta - t3Eta) > 0.2f)
+            continue;
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, basePhi, t3Phi)) > 0.2f)
+            continue;
+
+          // Apply T3 DNN fake score cut (fakeScore must be BELOW threshold)
+          const float fakeScore = triplets.fakeScore()[t3Index];
+          const float absT3Eta = alpaka::math::abs(acc, t3Eta);
+          const float t3_pt = triplets.radius()[t3Index] * lst::k2Rinv1GeVf * 2;
+          const uint8_t pt_index = (t3_pt > 5.0f);
+          const uint8_t bin_index =
+              (absT3Eta > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absT3Eta / dnn::kEtaSize);
+
+          if (fakeScore >= dnn::t3dnn::kWp_extend_fake[pt_index][bin_index])
+            continue;
+
+          // Count shared hits with TC
+          int sharedHitCount = 0;
+          int unmatchedLayerSlot = -1;
+          countSharedT3HitsWithTC(
+              triplets, t3Index, candsBase, trackCandidateIndex, sharedHitCount, unmatchedLayerSlot);
+
+          if (sharedHitCount < kT3MinSharedHits)
+            continue;
+          if (unmatchedLayerSlot < 0)
+            continue;  // Must have exactly 1 unmatched layer
+
+          // Candidate score: invert fakeScore since lower fake = better quality
+          // We want higher values to win in atomic compare, so use (1 - fakeScore)
+          const float candidateScore = 1.0f - fakeScore;
+
+          // Get the logical layer of the unmatched T3 layer
+          const uint8_t newLogicalLayer = triplets.logicalLayers()[t3Index][unmatchedLayerSlot];
+          const int logicalLayerBin = static_cast<int>(newLogicalLayer) - 1;  // 0..kLogicalOTLayers-1
+
+          if (logicalLayerBin < 0 || logicalLayerBin >= lst::kLogicalOTLayers)
+            continue;
+
+          // Pack the Score, Index, and Slot into 64 bits for atomic update
+          uint64_t scoreBits = (uint64_t)std::bit_cast<int>(candidateScore);
+          uint64_t newPacked = (scoreBits << kPackedScoreShift) |
+                               ((uint64_t)(t3Index & kPackedIndexMask) << kPackedIndexShift) |
+                               (unmatchedLayerSlot & kPackedSlotMask);
+
+          // Atomic CAS loop to update best T3 for this layer
+          uint64_t oldPacked = sharedBestPacked[logicalLayerBin];
+          while (true) {
+            const float oldScore = std::bit_cast<float>((int)(oldPacked >> kPackedScoreShift));
+
+            // If we aren't strictly better, stop trying
+            if (candidateScore <= oldScore) {
+              break;
+            }
+
+            uint64_t assumedOld = alpaka::atomicCas(
+                acc, &sharedBestPacked[logicalLayerBin], oldPacked, newPacked, alpaka::hierarchy::Threads{});
+
+            if (assumedOld == oldPacked) {
+              break;  // Success
+            } else {
+              oldPacked = assumedOld;  // Failed, update view and retry
+            }
+          }
+        }
+      }
+
+      // One thread per block finalizes by actually extending the TC
+      alpaka::syncBlockThreads(acc);
+
+      if (cms::alpakatools::once_per_block(acc)) {
+        CMS_UNROLL_LOOP
+        for (int logicalLayerBin = 0; logicalLayerBin < lst::kLogicalOTLayers; ++logicalLayerBin) {
+          uint64_t bestPacked = sharedBestPacked[logicalLayerBin];
+
+          // Check if valid update occurred (non-zero score)
+          int bestScoreInt = (int)(bestPacked >> kPackedScoreShift);
+          if (bestScoreInt == 0)
+            continue;
+
+          // Unpack Index (bits 4-31) and Slot (bits 0-3)
+          const int bestT3Index = (int)((bestPacked >> kPackedIndexShift) & kPackedIndexMask);
+          const int bestT3LayerSlot = (int)(bestPacked & kPackedSlotMask);
+
+          const uint8_t logicalLayer = static_cast<uint8_t>(logicalLayerBin + 1);  // 1..11
+          const int layerSlot = (logicalLayer - 1) + Params_TC::kPixelLayerSlots;  // OT slots for TC
+
+          const uint16_t lowerModuleIndex = triplets.lowerModuleIndices()[bestT3Index][bestT3LayerSlot];
+          const unsigned int hitIndex0 = triplets.hitIndices()[bestT3Index][2 * bestT3LayerSlot + 0];
+          const unsigned int hitIndex1 = triplets.hitIndices()[bestT3Index][2 * bestT3LayerSlot + 1];
 
           addTrackCandidateLayerHits(candsBase,
                                      candsExtended,
