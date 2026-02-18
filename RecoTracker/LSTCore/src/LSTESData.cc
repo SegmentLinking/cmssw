@@ -81,7 +81,7 @@ namespace {
   }
 }  // namespace
 
-std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(std::string& ptCutLabel) {
+std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESDataHost(std::string& ptCutLabel) {
   uint16_t nModules;
   uint16_t nLowerModules;
   unsigned int nPixels;
@@ -122,7 +122,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(s
                                                              pixelMappingPtr);
 }
 
-std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(lstgeometry::LSTGeometry const& lstg) {
+std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstgeometry::LSTGeometry const& lstg) {
   uint16_t nModules;
   uint16_t nLowerModules;
   unsigned int nPixels;
@@ -134,7 +134,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESHost(l
 
   endcapGeometry.load(lstg.endcap_slopes, lstg.sensor_info);
   auto endcapGeometryDev =
-      std::make_shared<EndcapGeometryDevHostCollection>(endcapGeometry.nEndCapMap, cms::alpakatools::host());
+      std::make_shared<EndcapGeometryDevHostCollection>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
   std::memcpy(endcapGeometryDev->view().geoMapDetId().data(),
               endcapGeometry.geoMapDetId_buf.data(),
               endcapGeometry.nEndCapMap * sizeof(unsigned int));
