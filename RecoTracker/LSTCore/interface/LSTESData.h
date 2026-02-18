@@ -41,8 +41,8 @@ namespace lst {
           pixelMapping(pixelMappingIn) {}
   };
 
-  std::unique_ptr<LSTESData<alpaka_common::DevHost>> loadAndFillESHost(std::string& ptCutLabel);
-  std::unique_ptr<LSTESData<alpaka_common::DevHost>> loadAndFillESHost(lstgeometry::LSTGeometry const& lstg);
+  std::unique_ptr<LSTESData<alpaka_common::DevHost>> loadAndFillESDataHost(std::string& ptCutLabel);
+  std::unique_ptr<LSTESData<alpaka_common::DevHost>> fillESDataHost(lstgeometry::LSTGeometry const& lstg);
 
 }  // namespace lst
 

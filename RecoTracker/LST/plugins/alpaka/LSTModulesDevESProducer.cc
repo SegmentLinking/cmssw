@@ -33,7 +33,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     std::unique_ptr<lst::LSTESData<DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
       const auto& lstg = iRecord.get(lstGeoToken_);
-      return lst::loadAndFillESHost(lstg);
+      return lst::fillESDataHost(lstg);
     }
   };
 
