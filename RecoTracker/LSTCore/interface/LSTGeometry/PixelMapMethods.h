@@ -86,14 +86,14 @@ namespace lstgeometry {
 
           auto phi_ranges = det_geom.getCompatiblePhiRange(detId, pt_lo, pt_hi);
 
-          int iphimin_pos = static_cast<int>((phi_ranges.first.first + std::numbers::pi_v<double>) /
-                                             (2. * std::numbers::pi_v<double> / kNPhi));
-          int iphimax_pos = static_cast<int>((phi_ranges.first.second + std::numbers::pi_v<double>) /
-                                             (2. * std::numbers::pi_v<double> / kNPhi));
-          int iphimin_neg = static_cast<int>((phi_ranges.second.first + std::numbers::pi_v<double>) /
-                                             (2. * std::numbers::pi_v<double> / kNPhi));
-          int iphimax_neg = static_cast<int>((phi_ranges.second.second + std::numbers::pi_v<double>) /
-                                             (2. * std::numbers::pi_v<double> / kNPhi));
+          unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<double>) /
+                                                               (2. * std::numbers::pi_v<double> / kNPhi));
+          unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<double>) /
+                                                               (2. * std::numbers::pi_v<double> / kNPhi));
+          unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<double>) /
+                                                               (2. * std::numbers::pi_v<double> / kNPhi));
+          unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<double>) /
+                                                               (2. * std::numbers::pi_v<double> / kNPhi));
 
           // <= to cover some inefficiencies
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
