@@ -51,11 +51,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.tripletIndices()[quintupletIndex][0] = innerTripletIndex;
     quintuplets.tripletIndices()[quintupletIndex][1] = outerTripletIndex;
 
-    quintuplets.lowerModuleIndices()[quintupletIndex][0] = lowerModule1;
-    quintuplets.lowerModuleIndices()[quintupletIndex][1] = lowerModule2;
-    quintuplets.lowerModuleIndices()[quintupletIndex][2] = lowerModule3;
-    quintuplets.lowerModuleIndices()[quintupletIndex][3] = lowerModule4;
-    quintuplets.lowerModuleIndices()[quintupletIndex][4] = lowerModule5;
     quintuplets.innerRadius()[quintupletIndex] = __F2H(innerRadius);
     quintuplets.outerRadius()[quintupletIndex] = __F2H(outerRadius);
     quintuplets.pt()[quintupletIndex] = __F2H(pt);
@@ -63,26 +58,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quintuplets.phi()[quintupletIndex] = __F2H(phi);
     quintuplets.score_rphisum()[quintupletIndex] = __F2H(scores);
     quintuplets.isDup()[quintupletIndex] = 0;
+    quintuplets.nLayers()[quintupletIndex] = Params_T5::kBaseLayers;
     quintuplets.tightCutFlag()[quintupletIndex] = tightCutFlag;
     quintuplets.regressionRadius()[quintupletIndex] = regressionRadius;
     quintuplets.regressionCenterX()[quintupletIndex] = regressionCenterX;
     quintuplets.regressionCenterY()[quintupletIndex] = regressionCenterY;
-    quintuplets.logicalLayers()[quintupletIndex][0] = triplets.logicalLayers()[innerTripletIndex][0];
-    quintuplets.logicalLayers()[quintupletIndex][1] = triplets.logicalLayers()[innerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][2] = triplets.logicalLayers()[innerTripletIndex][2];
-    quintuplets.logicalLayers()[quintupletIndex][3] = triplets.logicalLayers()[outerTripletIndex][1];
-    quintuplets.logicalLayers()[quintupletIndex][4] = triplets.logicalLayers()[outerTripletIndex][2];
-
-    quintuplets.hitIndices()[quintupletIndex][0] = triplets.hitIndices()[innerTripletIndex][0];
-    quintuplets.hitIndices()[quintupletIndex][1] = triplets.hitIndices()[innerTripletIndex][1];
-    quintuplets.hitIndices()[quintupletIndex][2] = triplets.hitIndices()[innerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][3] = triplets.hitIndices()[innerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][4] = triplets.hitIndices()[innerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
-    quintuplets.hitIndices()[quintupletIndex][6] = triplets.hitIndices()[outerTripletIndex][2];
-    quintuplets.hitIndices()[quintupletIndex][7] = triplets.hitIndices()[outerTripletIndex][3];
-    quintuplets.hitIndices()[quintupletIndex][8] = triplets.hitIndices()[outerTripletIndex][4];
-    quintuplets.hitIndices()[quintupletIndex][9] = triplets.hitIndices()[outerTripletIndex][5];
     quintuplets.bridgeRadius()[quintupletIndex] = bridgeRadius;
 #ifdef CUT_VALUE_DEBUG
     quintuplets.rzChiSquared()[quintupletIndex] = rzChiSquared;
@@ -97,6 +77,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     for (unsigned int i = 0; i < Params_T5::kEmbed; ++i) {
       quintuplets.t5Embed()[quintupletIndex][i] = t5Embed[i];
     }
+
+    // Initialize all slots with sentinels
+    for (int i = 0; i < Params_T5::kLayers; ++i) {
+      quintuplets.logicalLayers()[quintupletIndex][i] = 0;
+      quintuplets.lowerModuleIndices()[quintupletIndex][i] = lst::kTCEmptyLowerModule;
+      quintuplets.hitIndices()[quintupletIndex][2 * i] = lst::kTCEmptyHitIdx;
+      quintuplets.hitIndices()[quintupletIndex][2 * i + 1] = lst::kTCEmptyHitIdx;
+    }
+
+    // Packed layout: write 5 base layers contiguously at positions 0-4 (already sorted from triplet construction)
+    const uint8_t baseLayer0 = triplets.logicalLayers()[innerTripletIndex][0];
+    const uint8_t baseLayer1 = triplets.logicalLayers()[innerTripletIndex][1];
+    const uint8_t baseLayer2 = triplets.logicalLayers()[innerTripletIndex][2];
+    const uint8_t baseLayer3 = triplets.logicalLayers()[outerTripletIndex][1];
+    const uint8_t baseLayer4 = triplets.logicalLayers()[outerTripletIndex][2];
+
+    quintuplets.logicalLayers()[quintupletIndex][0] = baseLayer0;
+    quintuplets.lowerModuleIndices()[quintupletIndex][0] = lowerModule1;
+    quintuplets.hitIndices()[quintupletIndex][0] = triplets.hitIndices()[innerTripletIndex][0];
+    quintuplets.hitIndices()[quintupletIndex][1] = triplets.hitIndices()[innerTripletIndex][1];
+
+    quintuplets.logicalLayers()[quintupletIndex][1] = baseLayer1;
+    quintuplets.lowerModuleIndices()[quintupletIndex][1] = lowerModule2;
+    quintuplets.hitIndices()[quintupletIndex][2] = triplets.hitIndices()[innerTripletIndex][2];
+    quintuplets.hitIndices()[quintupletIndex][3] = triplets.hitIndices()[innerTripletIndex][3];
+
+    quintuplets.logicalLayers()[quintupletIndex][2] = baseLayer2;
+    quintuplets.lowerModuleIndices()[quintupletIndex][2] = lowerModule3;
+    quintuplets.hitIndices()[quintupletIndex][4] = triplets.hitIndices()[innerTripletIndex][4];
+    quintuplets.hitIndices()[quintupletIndex][5] = triplets.hitIndices()[innerTripletIndex][5];
+
+    quintuplets.logicalLayers()[quintupletIndex][3] = baseLayer3;
+    quintuplets.lowerModuleIndices()[quintupletIndex][3] = lowerModule4;
+    quintuplets.hitIndices()[quintupletIndex][6] = triplets.hitIndices()[outerTripletIndex][2];
+    quintuplets.hitIndices()[quintupletIndex][7] = triplets.hitIndices()[outerTripletIndex][3];
+
+    quintuplets.logicalLayers()[quintupletIndex][4] = baseLayer4;
+    quintuplets.lowerModuleIndices()[quintupletIndex][4] = lowerModule5;
+    quintuplets.hitIndices()[quintupletIndex][8] = triplets.hitIndices()[outerTripletIndex][4];
+    quintuplets.hitIndices()[quintupletIndex][9] = triplets.hitIndices()[outerTripletIndex][5];
+
+    const uint16_t baseMask =
+        static_cast<uint16_t>((1 << (baseLayer0 - 1)) | (1 << (baseLayer1 - 1)) | (1 << (baseLayer2 - 1)) |
+                              (1 << (baseLayer3 - 1)) | (1 << (baseLayer4 - 1)));
+    quintuplets.baseLayerMask()[quintupletIndex] = baseMask;
+    quintuplets.layerMask()[quintupletIndex] = baseMask;
   }
 
   //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
@@ -1633,7 +1659,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     computeSigmasForRegression(acc, modules, lowerModuleIndices, delta1, delta2, slopes, isFlat);
     regressionRadius = computeRadiusUsingRegression(acc,
-                                                    Params_T5::kLayers,
+                                                    Params_T5::kBaseLayers,
                                                     xVec,
                                                     yVec,
                                                     delta1,
@@ -1647,7 +1673,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //compute the other chisquared
     //non anchor is always shifted for tilted and endcap!
-    float nonAnchorDelta1[Params_T5::kLayers], nonAnchorDelta2[Params_T5::kLayers], nonAnchorSlopes[Params_T5::kLayers];
+    float nonAnchorDelta1[Params_T5::kBaseLayers], nonAnchorDelta2[Params_T5::kBaseLayers],
+        nonAnchorSlopes[Params_T5::kBaseLayers];
     float nonAnchorxs[] = {mds.outerX()[firstMDIndex],
                            mds.outerX()[secondMDIndex],
                            mds.outerX()[thirdMDIndex],
@@ -1666,10 +1693,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                nonAnchorDelta2,
                                nonAnchorSlopes,
                                isFlat,
-                               Params_T5::kLayers,
+                               Params_T5::kBaseLayers,
                                false);
     nonAnchorChiSquared = computeChiSquared(acc,
-                                            Params_T5::kLayers,
+                                            Params_T5::kBaseLayers,
                                             nonAnchorxs,
                                             nonAnchorys,
                                             nonAnchorDelta1,

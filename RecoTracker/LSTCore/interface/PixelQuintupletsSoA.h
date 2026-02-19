@@ -27,6 +27,9 @@ namespace lst {
                       SOA_COLUMN(FPX, centerX),  // T3-based circle center x
                       SOA_COLUMN(FPX, centerY),  // T3-based circle center y
                       SOA_COLUMN(bool, isDup),
+                      SOA_COLUMN(unsigned int, nLayers),  // number of active layers (7 base, up to 9 after extension)
+                      SOA_COLUMN(uint16_t, otLayerMask),  // bitmask of OT layers (from T5's layerMask)
+                      SOA_COLUMN(uint16_t, otBaseLayerMask),  // base OT layers (from T5's baseLayerMask)
                       SOA_SCALAR(unsigned int, nPixelQuintuplets),
                       SOA_SCALAR(unsigned int, totOccupancyPixelQuintuplets));
 
