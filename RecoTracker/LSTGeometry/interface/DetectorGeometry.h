@@ -1,14 +1,14 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_DetectorGeometry_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_DetectorGeometry_h
+#ifndef RecoTracker_LSTGeometry_interface_DetectorGeometry_h
+#define RecoTracker_LSTGeometry_interface_DetectorGeometry_h
 
 #include <algorithm>
 #include <vector>
 #include <functional>
 #include <boost/functional/hash.hpp>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTMath.h"
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/Math.h"
 
 namespace lstgeometry {
 

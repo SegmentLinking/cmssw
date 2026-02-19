@@ -1,7 +1,7 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_ModuleInfo_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_ModuleInfo_h
+#ifndef RecoTracker_LSTGeometry_interface_ModuleInfo_h
+#define RecoTracker_LSTGeometry_interface_ModuleInfo_h
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
+#include "RecoTracker/LSTGeometry/interface/Common.h"
 
 namespace lstgeometry {
 

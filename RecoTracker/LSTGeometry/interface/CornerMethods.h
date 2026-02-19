@@ -1,13 +1,13 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_CornerMethods_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_CornerMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_CornerMethods_h
+#define RecoTracker_LSTGeometry_interface_CornerMethods_h
 
 #include <numbers>
 #include <cmath>
 #include <unordered_map>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
 
 namespace lstgeometry {
 

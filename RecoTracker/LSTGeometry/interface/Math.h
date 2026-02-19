@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_LSTMath_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_LSTMath_h
+#ifndef RecoTracker_LSTGeometry_interface_Math_h
+#define RecoTracker_LSTGeometry_interface_Math_h
 
 #include <cmath>
 
@@ -7,8 +7,8 @@
 #include <boost/geometry/geometries/polygon.hpp>
 #include <boost/math/tools/minima.hpp>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Helix.h"
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/Helix.h"
 
 namespace lstgeometry {
 

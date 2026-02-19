@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_ModuleMapMethods_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_ModuleMapMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_ModuleMapMethods_h
+#define RecoTracker_LSTGeometry_interface_ModuleMapMethods_h
 
 #include <cmath>
 #include <cassert>
@@ -12,10 +12,10 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTMath.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/Math.h"
+#include "RecoTracker/LSTGeometry/interface/Centroid.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 
 namespace lstgeometry {
 

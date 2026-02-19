@@ -122,7 +122,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::loadAndFillESDataHo
                                                              pixelMappingPtr);
 }
 
-std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstgeometry::LSTGeometry const& lstg) {
+std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstgeometry::Geometry const& lstg) {
   uint16_t nModules;
   uint16_t nLowerModules;
   unsigned int nPixels;

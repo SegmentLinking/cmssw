@@ -1,13 +1,13 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_OrientationMethods_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_OrientationMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_OrientationMethods_h
+#define RecoTracker_LSTGeometry_interface_OrientationMethods_h
 
 #include <tuple>
 #include <cmath>
 #include <unordered_map>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/SlopeData.h"
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/CentroidMethods.h"
+#include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 
 namespace lstgeometry {
 

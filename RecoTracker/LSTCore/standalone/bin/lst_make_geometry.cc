@@ -2,8 +2,8 @@
 
 #include "cxxopts.h"
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/IO.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometryMethods.h"
+#include "RecoTracker/LSTGeometry/interface/IO.h"
+#include "RecoTracker/LSTGeometry/interface/GeometryMethods.h"
 
 using namespace lstgeometry;
 
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   auto average_r = readAverages(average_r_file);
   auto average_z = readAverages(average_z_file);
 
-  auto lstGeometry = makeLSTGeometry(modules_info, sensors_info, average_r, average_z, ptCut);
+  auto lstGeometry = makeGeometry(modules_info, sensors_info, average_r, average_z, ptCut);
 
   writeCentroids(lstGeometry->centroids, output_dir + "sensor_centroids", output_as_bin);
   writeSlopes(

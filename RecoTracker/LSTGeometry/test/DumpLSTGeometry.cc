@@ -6,8 +6,8 @@
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/IO.h"
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
+#include "RecoTracker/LSTGeometry/interface/IO.h"
 
 class DumpLSTGeometry : public edm::one::EDAnalyzer<> {
 public:
@@ -20,7 +20,7 @@ private:
   std::string outputDirectory_;
   bool binaryOutput_;
 
-  edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
+  edm::ESGetToken<lstgeometry::Geometry, TrackerRecoGeometryRecord> lstGeoToken_;
 };
 
 DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)

@@ -1,12 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_IO_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_IO_h
-
-#include "Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/OrientationMethods.h"
+#ifndef RecoTracker_LSTGeometry_interface_IO_h
+#define RecoTracker_LSTGeometry_interface_IO_h
 
 #include <vector>
 #include <iostream>
@@ -15,6 +8,12 @@
 #include <string>
 #include <format>
 #include <filesystem>
+
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/PixelMapMethods.h"
+#include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
 
 namespace lstgeometry {
 

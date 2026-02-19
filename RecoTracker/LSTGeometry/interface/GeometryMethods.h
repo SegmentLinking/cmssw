@@ -1,17 +1,17 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_LSTGeometryMethods_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_LSTGeometryMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_GeometryMethods_h
+#define RecoTracker_LSTGeometry_interface_GeometryMethods_h
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/CornerMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/CentroidMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/OrientationMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMapMethods.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleMapMethods.h"
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
+#include "RecoTracker/LSTGeometry/interface/CornerMethods.h"
+#include "RecoTracker/LSTGeometry/interface/CentroidMethods.h"
+#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
+#include "RecoTracker/LSTGeometry/interface/PixelMapMethods.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleMapMethods.h"
 
 namespace lstgeometry {
 
-  std::unique_ptr<LSTGeometry> makeLSTGeometry(std::vector<ModuleInfo> &modules_info,
+  std::unique_ptr<Geometry> makeGeometry(std::vector<ModuleInfo> &modules_info,
                                                std::unordered_map<unsigned int, SensorInfo> &sensors_info,
                                                std::vector<double> const &average_r,
                                                std::vector<double> const &average_z,
@@ -47,7 +47,7 @@ namespace lstgeometry {
     }
     auto merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
 
-    auto lstGeometry = std::make_unique<LSTGeometry>(std::move(centroids),
+    auto lstGeometry = std::make_unique<Geometry>(std::move(centroids),
                                                      std::move(barrel_slopes),
                                                      std::move(endcap_slopes),
                                                      std::move(pixel_map),

@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_Helix_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_Helix_h
+#ifndef RecoTracker_LSTGeometry_interface_Helix_h
+#define RecoTracker_LSTGeometry_interface_Helix_h
 
 namespace lstgeometry {
 

@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_Module_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_Module_h
+#ifndef RecoTracker_LSTGeometry_interface_Module_h
+#define RecoTracker_LSTGeometry_interface_Module_h
 
 #include <vector>
 #include <iostream>

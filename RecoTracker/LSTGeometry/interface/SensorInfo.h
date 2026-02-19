@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_SensorInfo_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_SensorInfo_h
+#ifndef RecoTracker_LSTGeometry_interface_SensorInfo_h
+#define RecoTracker_LSTGeometry_interface_SensorInfo_h
 
 #include <string>
 
