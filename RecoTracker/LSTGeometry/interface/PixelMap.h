@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_PixelMap_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_PixelMap_h
+#ifndef RecoTracker_LSTGeometry_interface_PixelMap_h
+#define RecoTracker_LSTGeometry_interface_PixelMap_h
 
 #include <tuple>
 #include <unordered_map>

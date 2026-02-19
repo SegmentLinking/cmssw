@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_Centroid_h
+#ifndef RecoTracker_LSTGeometry_interface_Centroid_h
+#define RecoTracker_LSTGeometry_interface_Centroid_h
 
 namespace lstgeometry {
 

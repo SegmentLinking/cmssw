@@ -1,6 +1,6 @@
 // LST includes
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
@@ -16,13 +16,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   class LSTModulesDevESProducer : public ESProducer {
   private:
     double ptCut_;
-    edm::ESGetToken<lstgeometry::LSTGeometry, TrackerRecoGeometryRecord> lstGeoToken_;
+    edm::ESGetToken<lstgeometry::Geometry, TrackerRecoGeometryRecord> lstGeoToken_;
 
   public:
     LSTModulesDevESProducer(edm::ParameterSet const& iConfig)
         : ESProducer(iConfig), ptCut_(iConfig.getParameter<double>("ptCut")) {
       auto cc = setWhatProduced(this, "LSTModuleMaps");
-      lstGeoToken_ = cc.consumes<lstgeometry::LSTGeometry>(edm::ESInputTag("", "LSTGeometry"));
+      lstGeoToken_ = cc.consumes<lstgeometry::Geometry>(edm::ESInputTag("", "LSTGeometry"));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {

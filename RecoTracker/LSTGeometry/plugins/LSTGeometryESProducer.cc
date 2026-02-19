@@ -6,11 +6,10 @@
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
-// LST includes
-#include "RecoTracker/LSTCore/interface/LSTGeometry/SensorInfo.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/ModuleInfo.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometryMethods.h"
+#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/GeometryMethods.h"
 
 #include <cmath>
 #include <vector>
@@ -22,7 +21,7 @@ public:
 
   static void fillDescriptions(edm::ConfigurationDescriptions &descriptions);
 
-  std::unique_ptr<lstgeometry::LSTGeometry> produce(const TrackerRecoGeometryRecord &iRecord);
+  std::unique_ptr<lstgeometry::Geometry> produce(const TrackerRecoGeometryRecord &iRecord);
 
 private:
   double ptCut_;
@@ -44,7 +43,7 @@ void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &des
   descriptions.addWithDefaultLabel(desc);
 }
 
-std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
+std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
   trackerGeom_ = &iRecord.get(geomToken_);
 
   std::vector<lstgeometry::ModuleInfo> modules;
@@ -133,7 +132,7 @@ std::unique_ptr<lstgeometry::LSTGeometry> LSTGeometryESProducer::produce(const T
     avg_z_cm[i] /= avg_z_counter[i];
   }
 
-  auto lstGeometry = makeLSTGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
+  auto lstGeometry = lstgeometry::makeGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
 
   return lstGeometry;
 }

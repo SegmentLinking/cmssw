@@ -1,14 +1,13 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_PixelMapMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_PixelMapMethods_h
+#define RecoTracker_LSTGeometry_interface_PixelMapMethods_h
 
 #include <array>
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Common.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Centroid.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/DetectorGeometry.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/Module.h"
-#include "RecoTracker/LSTCore/interface/LSTGeometry/PixelMap.h"
-
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/Centroid.h"
+#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 namespace lstgeometry {
 
   PixelMap computePixelMap(std::unordered_map<unsigned int, Centroid> const& centroids,

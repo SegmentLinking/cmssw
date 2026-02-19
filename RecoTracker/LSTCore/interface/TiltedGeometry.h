@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTCore_interface_TiltedGeometry_h
 #define RecoTracker_LSTCore_interface_TiltedGeometry_h
 
-#include "RecoTracker/LSTCore/interface/LSTGeometry/LSTGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
 #include <map>
 #include <string>

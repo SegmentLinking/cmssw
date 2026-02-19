@@ -1,5 +1,5 @@
-#ifndef RecoTracker_LSTCore_interface_LSTGeometry_SlopeData_h
-#define RecoTracker_LSTCore_interface_LSTGeometry_SlopeData_h
+#ifndef RecoTracker_LSTGeometry_interface_SlopeData_h
+#define RecoTracker_LSTGeometry_interface_SlopeData_h
 
 namespace lstgeometry {
 
