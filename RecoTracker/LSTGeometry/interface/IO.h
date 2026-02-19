@@ -18,8 +18,8 @@
 namespace lstgeometry {
 
   void writeSensorCentroids(std::unordered_map<unsigned int, SensorCentroid> const& sensor_centroids,
-                      std::string const& base_filename,
-                      bool binary = true) {
+                            std::string const& base_filename,
+                            bool binary = true) {
     std::filesystem::path filepath(base_filename);
     std::filesystem::create_directories(filepath.parent_path());
 
