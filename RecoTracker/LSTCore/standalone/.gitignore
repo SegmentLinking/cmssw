@@ -15,7 +15,6 @@ bin/lst
 bin/lst_cuda
 bin/lst_cpu
 bin/lst_rocm
-bin/lst_make_geometry
 code/rooutil/librooutil.so
 code/rooutil/rooutil.so
 .gitversion.txt
