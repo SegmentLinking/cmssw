@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/CentroidMethods.h"
+#include "RecoTracker/LSTGeometry/interface/SensorCentroidMethods.h"
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 
 namespace lstgeometry {

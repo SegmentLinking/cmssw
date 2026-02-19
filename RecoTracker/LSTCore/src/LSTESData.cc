@@ -170,7 +170,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
 
   ModuleMetaData mmd;
   unsigned int counter = 0;
-  for (auto const& [detId, centroid] : lstg.centroids) {
+  for (auto const& [detId, centroid] : lstg.sensor_centroids) {
     mmd.detIdToIndex[detId] = counter;
     mmd.module_x[detId] = centroid.x;
     mmd.module_y[detId] = centroid.y;

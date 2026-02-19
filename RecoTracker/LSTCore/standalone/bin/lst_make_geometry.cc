@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
 
   auto lstGeometry = makeGeometry(modules_info, sensors_info, average_r, average_z, ptCut);
 
-  writeCentroids(lstGeometry->centroids, output_dir + "sensor_centroids", output_as_bin);
+  writeCentroids(lstGeometry->sensor_centroids, output_dir + "sensor_centroids", output_as_bin);
   writeSlopes(
       lstGeometry->barrel_slopes, lstGeometry->sensor_info, output_dir + "tilted_barrel_orientation", output_as_bin);
   writeSlopes(lstGeometry->endcap_slopes, lstGeometry->sensor_info, output_dir + "endcap_orientation", output_as_bin);

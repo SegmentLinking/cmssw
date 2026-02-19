@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTGeometry_interface_Geometry_h
 #define RecoTracker_LSTGeometry_interface_Geometry_h
 
-#include "RecoTracker/LSTGeometry/interface/Centroid.h"
+#include "RecoTracker/LSTGeometry/interface/SensorCentroid.h"
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 #include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
@@ -9,7 +9,7 @@
 namespace lstgeometry {
 
   struct Geometry {
-    std::unordered_map<unsigned int, Centroid> centroids;
+    std::unordered_map<unsigned int, SensorCentroid> sensor_centroids;
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
     PixelMap pixel_map;
