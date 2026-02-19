@@ -32,6 +32,7 @@ namespace lstgeometry {
 
     auto detids_etaphi_layer_ref = det_geom.getDetIds([](const auto &x) {
       auto mod = Module(x.first);
+      // exclude the outermost modules that do not have connections to other modules
       return ((mod.subdet() == 5 && mod.isLower() == 1 && mod.layer() != 6) ||
               (mod.subdet() == 4 && mod.isLower() == 1 && mod.layer() != 5 && !(mod.ring() == 15 && mod.layer() == 1) &&
                !(mod.ring() == 15 && mod.layer() == 2) && !(mod.ring() == 12 && mod.layer() == 3) &&
