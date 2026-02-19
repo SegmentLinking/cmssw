@@ -131,7 +131,7 @@ namespace lstgeometry {
     return averages;
   }
 
-  void writeCentroids(std::unordered_map<unsigned int, Centroid> const& centroids,
+  void writeCentroids(std::unordered_map<unsigned int, SensorCentroid> const& sensor_centroids,
                       std::string const& base_filename,
                       bool binary = true) {
     std::filesystem::path filepath(base_filename);
@@ -141,7 +141,7 @@ namespace lstgeometry {
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
     if (binary) {
-      for (auto& [detid, centroid] : centroids) {
+      for (auto& [detid, centroid] : sensor_centroids) {
         float x = centroid.x;
         float y = centroid.y;
         float z = centroid.z;
@@ -153,7 +153,7 @@ namespace lstgeometry {
         file.write(reinterpret_cast<const char*>(&moduleType), sizeof(moduleType));
       }
     } else {
-      for (auto& [detid, centroid] : centroids) {
+      for (auto& [detid, centroid] : sensor_centroids) {
         file << detid << "," << centroid.x << "," << centroid.y << "," << centroid.z << "," << centroid.moduleType
              << std::endl;
       }

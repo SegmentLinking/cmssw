@@ -1,12 +1,12 @@
-#ifndef RecoTracker_LSTGeometry_interface_CentroidMethods_h
-#define RecoTracker_LSTGeometry_interface_CentroidMethods_h
+#ifndef RecoTracker_LSTGeometry_interface_SensorCentroidMethods_h
+#define RecoTracker_LSTGeometry_interface_SensorCentroidMethods_h
 
 #include <stdexcept>
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
-#include "RecoTracker/LSTGeometry/interface/Centroid.h"
+#include "RecoTracker/LSTGeometry/interface/SensorCentroid.h"
 #include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
 
 namespace lstgeometry {
@@ -51,9 +51,9 @@ namespace lstgeometry {
     }
   }
 
-  std::unordered_map<unsigned int, Centroid> computeCentroids(
+  std::unordered_map<unsigned int, SensorCentroid> computeCentroids(
       std::unordered_map<unsigned int, SensorInfo> const& sensors) {
-    std::unordered_map<unsigned int, Centroid> centroids;
+    std::unordered_map<unsigned int, SensorCentroid> centroids;
     for (auto const& [detId, sensor] : sensors) {
       int moduleType = parseModuleType(detId);
 
@@ -69,7 +69,7 @@ namespace lstgeometry {
       double x = rho * cos(phi);
       double y = rho * sin(phi);
 
-      Centroid centroid{static_cast<unsigned int>(moduleType), x, y, z};
+      SensorCentroid centroid{static_cast<unsigned int>(moduleType), x, y, z};
       centroids[detId] = centroid;
     }
     return centroids;

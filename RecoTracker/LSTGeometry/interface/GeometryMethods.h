@@ -3,7 +3,7 @@
 
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
 #include "RecoTracker/LSTGeometry/interface/CornerMethods.h"
-#include "RecoTracker/LSTGeometry/interface/CentroidMethods.h"
+#include "RecoTracker/LSTGeometry/interface/SensorCentroidMethods.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 #include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMapMethods.h"
@@ -12,10 +12,10 @@
 namespace lstgeometry {
 
   std::unique_ptr<Geometry> makeGeometry(std::vector<ModuleInfo> &modules_info,
-                                               std::unordered_map<unsigned int, SensorInfo> &sensors_info,
-                                               std::vector<double> const &average_r,
-                                               std::vector<double> const &average_z,
-                                               double ptCut) {
+                                         std::unordered_map<unsigned int, SensorInfo> &sensors_info,
+                                         std::vector<double> const &average_r,
+                                         std::vector<double> const &average_z,
+                                         double ptCut) {
     for (auto &mod : modules_info)
       transformSensorCorners(mod);
 
@@ -48,11 +48,11 @@ namespace lstgeometry {
     auto merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
 
     auto lstGeometry = std::make_unique<Geometry>(std::move(centroids),
-                                                     std::move(barrel_slopes),
-                                                     std::move(endcap_slopes),
-                                                     std::move(pixel_map),
-                                                     std::move(merged_line_connections),
-                                                     std::move(sensors_info));
+                                                  std::move(barrel_slopes),
+                                                  std::move(endcap_slopes),
+                                                  std::move(pixel_map),
+                                                  std::move(merged_line_connections),
+                                                  std::move(sensors_info));
 
     return lstGeometry;
   }
