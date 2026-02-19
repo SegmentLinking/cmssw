@@ -32,7 +32,7 @@ DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)
 void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& lstg = iSetup.getData(lstGeoToken_);
 
-  lstgeometry::writeCentroids(lstg.sensor_centroids, outputDirectory_ + "sensor_centroids", binaryOutput_);
+  lstgeometry::writeSensorCentroids(lstg.sensor_centroids, outputDirectory_ + "sensor_centroids", binaryOutput_);
   lstgeometry::writeSlopes(
       lstg.barrel_slopes, lstg.sensor_info, outputDirectory_ + "tilted_barrel_orientation", binaryOutput_);
   lstgeometry::writeSlopes(

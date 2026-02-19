@@ -5,5 +5,3 @@
   <use name="RecoTracker/Record"/>
 </library>
 <test name="testDumpLSTGeometry" command="testDumpLSTGeometry.sh"/>
-
-<test name="RecoTrackerLSTCore-standalone-compilation" command="runCompilationTest.sh"/>
