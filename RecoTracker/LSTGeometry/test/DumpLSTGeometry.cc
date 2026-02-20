@@ -27,7 +27,7 @@ DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)
     : ptCut_(config.getParameter<std::string>("ptCut")),
       outputDirectory_(config.getUntrackedParameter<std::string>("outputDirectory", "data/")),
       binaryOutput_(config.getUntrackedParameter<bool>("outputAsBinary", true)),
-      lstGeoToken_{esConsumes(edm::ESInputTag("", ptCut_))} {}
+      lstGeoToken_{esConsumes(edm::ESInputTag("", "LSTGeometry"))} {}
 
 void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& lstg = iSetup.getData(lstGeoToken_);
