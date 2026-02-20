@@ -164,4 +164,6 @@ hltvalidation_withDQM = cms.Sequence(
     +trigdqm_forValidation
 )
 
-    
+hltHeterogeneousValidation = cms.Sequence(
+    hltTrackingHeterogeneousValidation
+)

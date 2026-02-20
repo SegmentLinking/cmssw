@@ -725,6 +725,17 @@ from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2
                                                          'keep *_hltPhase2PixelTracksCAExtension_*_*',
                                                      ])
 
+from Configuration.ProcessModifiers.alpakaValidationHLTTRK_cff import alpakaValidationHLTTRK
+alpakaValidationHLTTRK.toModify(FEVTDEBUGHLTEventContent,
+                                outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[
+                                    'keep *_hltInitialStepTracks_*_*',
+                                    'keep *_hltInitialStepTracksSerialSync_*_*',
+                                    'keep *_hltPhase2PixelTracks_*_*',
+                                    'keep *_hltPhase2PixelTracksSerialSync_*_*',
+                                    'keep *_hltPhase2PixelVertices_*_*',
+                                    'keep *_hltPhase2PixelVerticesSerialSync_*_*',
+                                ])
+
 phase2_common.toModify(FEVTDEBUGHLTEventContent,
                        outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[
                            'keep *_hltHGCalRecHit_*_*',

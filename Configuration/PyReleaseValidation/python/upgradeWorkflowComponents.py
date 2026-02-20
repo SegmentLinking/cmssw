@@ -1997,6 +1997,16 @@ upgradeWFs['HLTTrackingNtuple75e33'].step2 = {
     '--customise' : 'Validation/RecoTrack/customiseTrackingNtuple.customiseTrackingNtupleHLT,Validation/RecoTrack/customiseTrackingNtuple.extendedContent'
 }
 
+upgradeWFs['HLTHeterogeneousValid'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTHeterogeneousValid'].suffix = '_HLTHeterogeneousValid'
+upgradeWFs['HLTHeterogeneousValid'].offset = 0.7503
+upgradeWFs['HLTHeterogeneousValid'].step2['-s'] = upgradeWFs['HLTHeterogeneousValid'].step2['-s'].replace(
+    'HLT:75e33_timing', 'HLT:HeterogeneousValid').replace(
+        '@hltValidation', '@hltHeterogeneousValidation'
+    )
+upgradeWFs['HLTHeterogeneousValid'].step2['--procModifiers'] = 'alpakaValidationHLTTRK' 
+upgradeWFs['HLTHeterogeneousValid'].step3['-s'] = 'HARVESTING:@hltHeterogeneousValidation'
+
 upgradeWFs['HLTTiming75e33Alpaka'] = deepcopy(upgradeWFs['HLTTiming75e33'])
 upgradeWFs['HLTTiming75e33Alpaka'].suffix = '_HLT75e33TimingAlpaka'
 upgradeWFs['HLTTiming75e33Alpaka'].offset = 0.751

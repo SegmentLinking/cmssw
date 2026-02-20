@@ -1,4 +1,5 @@
 import FWCore.ParameterSet.Config as cms
+from HeterogeneousCore.AlpakaCore.functions import makeSerialClone
 
 from ..modules.hltInputLST_cfi import *
 from ..modules.hltInitialStepMkFitSeeds_cfi import *
@@ -26,6 +27,53 @@ HLTInitialStepSequence = cms.Sequence(
     +hltInitialStepTrackCandidatesMkFit
     +hltInitialStepTrackCandidates
     +hltInitialStepTracks
+    +hltInitialStepTrackCutClassifier
+    +hltInitialStepTrackSelectionHighPurity
+)
+
+
+# Serial sequence for CPU vs. GPU validation, to be kept in sync with default sequence
+hltInitialStepSeedsSerialSync = hltInitialStepSeeds.clone(
+    InputCollection = "hltPhase2PixelTracksSerialSync"
+)
+hltInitialStepSeedTracksLSTSerialSync = hltInitialStepSeedTracksLST.clone(
+    src = "hltInitialStepSeedsSerialSync"
+)
+hltInputLSTSerialSync = makeSerialClone(hltInputLST)
+hltLSTSerialSync = makeSerialClone(hltLST,
+    lstInput = "hltInputLSTSerialSync"
+)
+hltInitialStepTrajectorySeedsLSTSerialSync = hltInitialStepTrajectorySeedsLST.clone(
+    lstOutput = "hltLSTSerialSync",
+    lstInput = "hltInputLSTSerialSync",
+    lstPixelSeeds = "hltInputLSTSerialSync"
+)
+hltInitialStepMkFitSeedsSerialSync = hltInitialStepMkFitSeeds.clone(
+    seeds = "hltInitialStepTrajectorySeedsLSTSerialSync"
+)
+hltInitialStepTrackCandidatesMkFitSerialSync = hltInitialStepTrackCandidatesMkFit.clone(
+    seeds = "hltInitialStepMkFitSeedsSerialSync"
+)
+hltInitialStepTrackCandidatesSerialSync = hltInitialStepTrackCandidates.clone(
+    mkFitSeeds = "hltInitialStepMkFitSeedsSerialSync",
+    seeds = "hltInitialStepTrajectorySeedsLSTSerialSync",
+    tracks = "hltInitialStepTrackCandidatesMkFitSerialSync",
+)
+hltInitialStepTracksSerialSync = hltInitialStepTracks.clone(
+    src = "hltInitialStepTrackCandidatesSerialSync",
+)
+HLTInitialStepSequenceSerialSync = cms.Sequence(
+     hltInitialStepSeedsSerialSync
+    +hltInitialStepSeedTracksLSTSerialSync
+    +hltSiPhase2RecHits
+    +hltInputLSTSerialSync
+    +hltLSTSerialSync
+    +hltInitialStepTrajectorySeedsLSTSerialSync
+    +HLTMkFitInputSequence
+    +hltInitialStepMkFitSeedsSerialSync
+    +hltInitialStepTrackCandidatesMkFitSerialSync
+    +hltInitialStepTrackCandidatesSerialSync
+    +hltInitialStepTracksSerialSync
     +hltInitialStepTrackCutClassifier
     +hltInitialStepTrackSelectionHighPurity
 )
