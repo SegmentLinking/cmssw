@@ -83,7 +83,8 @@ namespace lst {
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
   };
   struct Params_T5 {
-    static constexpr int kLayers = 5, kHits = 10;
+    static constexpr int kLayers = 11, kHits = 22;  // Full OT range (expandable)
+    static constexpr int kBaseLayers = 5;           // Original number before extension
     static constexpr int kEmbed = 6;
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
@@ -91,7 +92,8 @@ namespace lst {
     using ArrayFxEmbed = edm::StdArray<float, kEmbed>;
   };
   struct Params_pT5 {
-    static constexpr int kLayers = 7, kHits = 14;
+    static constexpr int kLayers = 13, kHits = 26;  // 2 pixel + 11 OT (matches TC)
+    static constexpr int kBaseLayers = 7;           // Original number before extension
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
