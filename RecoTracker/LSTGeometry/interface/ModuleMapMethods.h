@@ -14,22 +14,23 @@
 
 #include "RecoTracker/LSTGeometry/interface/Math.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 
 namespace lstgeometry {
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
+                                                       std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
                                                        std::unordered_map<unsigned int, Sensor> const& sensors,
                                                        DetectorGeometry const& det_geom) {
     auto& sensor = sensors.at(ref_detid);
 
     double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
 
-    Module refmodule(ref_detid);
+    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
 
-    unsigned short ref_layer = refmodule.layer();
-    unsigned short ref_subdet = refmodule.subdet();
+    unsigned short ref_layer = refmodule.layer;
+    unsigned short ref_subdet = refmodule.subdet;
 
     auto etaphi = getEtaPhi(sensor.centerX_cm, sensor.centerY_cm, sensor.centerZ_cm);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
@@ -112,6 +113,7 @@ namespace lstgeometry {
   }
 
   MatrixD4x3 boundsAfterCurved(unsigned int ref_detid,
+                               std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
                                std::unordered_map<unsigned int, Sensor> const& sensors,
                                DetectorGeometry const& det_geom,
                                double ptCut,
@@ -122,9 +124,9 @@ namespace lstgeometry {
     double theta = std::atan2(std::sqrt(sensor.centerX_cm * sensor.centerX_cm + sensor.centerY_cm * sensor.centerY_cm),
                               sensor.centerZ_cm);
     double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
-    Module refmodule(ref_detid);
-    unsigned short ref_layer = refmodule.layer();
-    unsigned short ref_subdet = refmodule.subdet();
+    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
+    unsigned short ref_layer = refmodule.layer;
+    unsigned short ref_subdet = refmodule.subdet;
     MatrixD4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
@@ -188,6 +190,7 @@ namespace lstgeometry {
   }
 
   std::vector<unsigned int> getCurvedLineConnections(unsigned int ref_detid,
+                                                     std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
                                                      std::unordered_map<unsigned int, Sensor> const& sensors,
                                                      DetectorGeometry const& det_geom,
                                                      double ptCut) {
@@ -195,10 +198,10 @@ namespace lstgeometry {
 
     double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
 
-    Module refmodule(ref_detid);
+    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
 
-    unsigned short ref_layer = refmodule.layer();
-    unsigned short ref_subdet = refmodule.subdet();
+    unsigned short ref_layer = refmodule.layer;
+    unsigned short ref_subdet = refmodule.subdet;
 
     auto etaphi = getEtaPhi(sensor.centerX_cm, sensor.centerY_cm, sensor.centerZ_cm);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
@@ -207,7 +210,7 @@ namespace lstgeometry {
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
-    auto next_layer_bound_points = boundsAfterCurved(ref_detid, sensors, det_geom, ptCut);
+    auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules_info, sensors, det_geom, ptCut);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {

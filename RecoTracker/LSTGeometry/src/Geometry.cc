@@ -15,16 +15,16 @@ Geometry::Geometry(std::unordered_map<unsigned int, ModuleInfo> &modules_info,
   for (auto &[_, mod] : modules_info)
     transformSensorCorners(mod);
 
-  auto assigned_corners = assignCornersToSensors(modules_info, sensors_input);
+  assignCornersToSensors(modules_info, sensors_input);
 
-  auto slopes = processCorners(assigned_corners);
+  auto slopes = processCorners(modules_info, sensors_input);
   barrel_slopes = std::move(std::get<0>(slopes));
   endcap_slopes = std::move(std::get<1>(slopes));
 
-  auto det_geom = DetectorGeometry(assigned_corners, average_r, average_z);
+  auto det_geom = DetectorGeometry(sensors_input, average_r, average_z);
   det_geom.buildByLayer(modules_info, sensors_input);
 
-  pixel_map = computePixelMap(det_geom, ptCut);
+  pixel_map = computePixelMap(modules_info, det_geom, ptCut);
 
   auto detids_etaphi_layer_ref = det_geom.getDetIds([&modules_info, &sensors_input](const auto &x) {
     auto mod = modules_info.at(sensors_input.at(x.first).moduleDetId);
@@ -39,8 +39,9 @@ Geometry::Geometry(std::unordered_map<unsigned int, ModuleInfo> &modules_info,
   std::unordered_map<unsigned int, std::vector<unsigned int>> curved_line_connections;
 
   for (auto ref_detid : detids_etaphi_layer_ref) {
-    straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, sensors_input, det_geom);
-    curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, sensors_input, det_geom, ptCut);
+    straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, modules_info, sensors_input, det_geom);
+    curved_line_connections[ref_detid] =
+        getCurvedLineConnections(ref_detid, modules_info, sensors_input, det_geom, ptCut);
   }
   merged_line_connections = mergeLineConnections({&straight_line_connections, &curved_line_connections});
 
