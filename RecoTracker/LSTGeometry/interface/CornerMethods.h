@@ -7,7 +7,7 @@
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
-#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
 
@@ -105,7 +105,7 @@ namespace lstgeometry {
   // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
   std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(
       std::unordered_map<unsigned int, ModuleInfo> const& modules,
-      std::unordered_map<unsigned int, SensorInfo> const& sensors) {
+      std::unordered_map<unsigned int, Sensor> const& sensors) {
     std::unordered_map<unsigned int, MatrixD4x3> transformed_corners_dict;
 
     for (auto const& [detId, moduleInfo] : modules) {
@@ -117,16 +117,16 @@ namespace lstgeometry {
       RowVectorD3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
       RowVectorD3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
 
-      double sensor1_center_z = sensors.at(sensor_det_id_1).sensorCenterZ_cm;
+      double sensor1_center_z = sensors.at(sensor_det_id_1).centerZ_cm;
       double sensor1_center_x =
-          sensors.at(sensor_det_id_1).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_1).phi_rad);
+          sensors.at(sensor_det_id_1).centerRho_cm * cos(sensors.at(sensor_det_id_1).centerPhi_rad);
       double sensor1_center_y =
-          sensors.at(sensor_det_id_1).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_1).phi_rad);
-      double sensor2_center_z = sensors.at(sensor_det_id_2).sensorCenterZ_cm;
+          sensors.at(sensor_det_id_1).centerRho_cm * sin(sensors.at(sensor_det_id_1).centerPhi_rad);
+      double sensor2_center_z = sensors.at(sensor_det_id_2).centerZ_cm;
       double sensor2_center_x =
-          sensors.at(sensor_det_id_2).sensorCenterRho_cm * cos(sensors.at(sensor_det_id_2).phi_rad);
+          sensors.at(sensor_det_id_2).centerRho_cm * cos(sensors.at(sensor_det_id_2).centerPhi_rad);
       double sensor2_center_y =
-          sensors.at(sensor_det_id_2).sensorCenterRho_cm * sin(sensors.at(sensor_det_id_2).phi_rad);
+          sensors.at(sensor_det_id_2).centerRho_cm * sin(sensors.at(sensor_det_id_2).centerPhi_rad);
 
       RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
       RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};

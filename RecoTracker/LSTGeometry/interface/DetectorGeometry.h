@@ -109,7 +109,7 @@ namespace lstgeometry {
     }
 
     void buildByLayer(std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                      std::unordered_map<unsigned int, SensorInfo> const& sensors_info) {
+                      std::unordered_map<unsigned int, Sensor> const& sensors) {
       // Clear just in case they were already built
       barrel_lower_det_ids_.clear();
       endcap_lower_det_ids_.clear();
@@ -127,8 +127,8 @@ namespace lstgeometry {
       }
 
       for (unsigned int layer = 1; layer < 7; layer++) {
-        auto detids = getDetIds([&modules_info, &sensors_info, &layer](const auto& x) {
-          auto m = modules_info.at(sensors_info.at(x.first).moduleDetId);
+        auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
+          auto& m = modules_info.at(sensors.at(x.first).moduleDetId);
           return m.subdet == 5 && m.layer == layer && m.isLower;
         });
         for (auto detid : detids) {
@@ -146,8 +146,8 @@ namespace lstgeometry {
         }
       }
       for (unsigned int layer = 1; layer < 6; layer++) {
-        auto detids = getDetIds([&modules_info, &sensors_info, &layer](const auto& x) {
-          auto m = modules_info.at(sensors_info.at(x.first).moduleDetId);
+        auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
+          auto& m = modules_info.at(sensors.at(x.first).moduleDetId);
           return m.subdet == 4 && m.layer == layer && m.isLower;
         });
         for (auto detid : detids) {

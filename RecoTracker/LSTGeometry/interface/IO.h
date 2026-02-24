@@ -11,13 +11,13 @@
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
-#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMapMethods.h"
 #include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
 
 namespace lstgeometry {
 
-  void writeSensorCentroids(std::unordered_map<unsigned int, SensorCentroid> const& sensor_centroids,
+  void writeSensorCentroids(std::unordered_map<unsigned int, Sensor> const& sensors,
                             std::string const& base_filename,
                             bool binary = true) {
     std::filesystem::path filepath(base_filename);
@@ -27,11 +27,11 @@ namespace lstgeometry {
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
     if (binary) {
-      for (auto& [detid, centroid] : sensor_centroids) {
-        float x = centroid.x;
-        float y = centroid.y;
-        float z = centroid.z;
-        unsigned int moduleType = centroid.moduleType;
+      for (auto& [detid, sensor] : sensors) {
+        float x = sensor.centerX_cm;
+        float y = sensor.centerY_cm;
+        float z = sensor.centerZ_cm;
+        unsigned int moduleType = static_cast<unsigned int>(sensor.moduleType);
         file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
         file.write(reinterpret_cast<const char*>(&x), sizeof(x));
         file.write(reinterpret_cast<const char*>(&y), sizeof(y));
@@ -39,15 +39,15 @@ namespace lstgeometry {
         file.write(reinterpret_cast<const char*>(&moduleType), sizeof(moduleType));
       }
     } else {
-      for (auto& [detid, centroid] : sensor_centroids) {
-        file << detid << "," << centroid.x << "," << centroid.y << "," << centroid.z << "," << centroid.moduleType
-             << std::endl;
+      for (auto& [detid, sensor] : sensors) {
+        file << detid << "," << sensor.centerX_cm << "," << sensor.centerY_cm << "," << sensor.centerZ_cm << ","
+             << static_cast<unsigned int>(sensor.moduleType) << std::endl;
       }
     }
   }
 
   void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes,
-                   std::unordered_map<unsigned int, SensorInfo> const& sensors,
+                   std::unordered_map<unsigned int, Sensor> const& sensors,
                    std::string const& base_filename,
                    bool binary = true) {
     std::filesystem::path filepath(base_filename);
@@ -60,7 +60,7 @@ namespace lstgeometry {
       for (auto& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz_slope;
         float dxdy_slope = slope.dxdy_slope;
-        float phi = sensors.at(detid).phi_rad;
+        float phi = sensors.at(detid).centerPhi_rad;
         file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
         if (drdz_slope != kDefaultSlope) {
           file.write(reinterpret_cast<const char*>(&drdz_slope), sizeof(drdz_slope));
@@ -74,7 +74,7 @@ namespace lstgeometry {
       for (auto& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz_slope;
         float dxdy_slope = slope.dxdy_slope;
-        float phi = sensors.at(detid).phi_rad;
+        float phi = sensors.at(detid).centerPhi_rad;
         file << detid << ",";
         if (drdz_slope != kDefaultSlope) {
           file << drdz_slope << "," << dxdy_slope << std::endl;

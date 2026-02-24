@@ -4,15 +4,12 @@
 #include <array>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/SensorCentroid.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 namespace lstgeometry {
 
-  PixelMap computePixelMap(std::unordered_map<unsigned int, SensorCentroid> const& sensor_centroids,
-                           DetectorGeometry const& det_geom,
-                           double ptCut) {
+  PixelMap computePixelMap(DetectorGeometry const& det_geom, double ptCut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
@@ -29,10 +26,8 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto detId : det_geom.getDetIds()) {
-      auto centroid = sensor_centroids.at(detId);
-
       // Parse the layer and subdet
-      auto module = Module(detId, centroid.moduleType);
+      auto module = Module(detId);
       auto layer = module.layer();
       if (layer > 2)
         continue;

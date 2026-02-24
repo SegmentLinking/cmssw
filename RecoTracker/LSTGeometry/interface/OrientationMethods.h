@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/SensorCentroidMethods.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 
 namespace lstgeometry {
@@ -32,8 +32,7 @@ namespace lstgeometry {
 
       SlopeData slope = calculateSlope(dx, dy, dz);
 
-      unsigned int module_type = static_cast<unsigned int>(parseModuleType(detId));
-      Module module(detId, module_type);
+      Module module(detId);
 
       unsigned short subdet = module.subdet();
       bool is_tilted = module.side() != 3;
