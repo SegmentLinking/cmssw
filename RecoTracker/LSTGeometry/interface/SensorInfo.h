@@ -6,7 +6,7 @@
 namespace lstgeometry {
 
   struct SensorInfo {
-    unsigned int detId;
+    unsigned int moduleDetId;
     double sensorCenterRho_cm;
     double sensorCenterZ_cm;
     double phi_rad;

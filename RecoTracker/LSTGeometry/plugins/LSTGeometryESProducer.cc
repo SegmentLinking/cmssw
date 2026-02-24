@@ -2,6 +2,8 @@
 #include "FWCore/Framework/interface/ESProducer.h"
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "Geometry/Records/interface/TrackerTopologyRcd.h"
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
@@ -27,14 +29,17 @@ private:
   double ptCut_;
 
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
+  edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> ttopoToken_;
 
   const TrackerGeometry *trackerGeom_ = nullptr;
+  const TrackerTopology *trackerTopo_ = nullptr;
 };
 
 LSTGeometryESProducer::LSTGeometryESProducer(const edm::ParameterSet &iConfig)
     : ptCut_(iConfig.getParameter<double>("ptCut")) {
   auto cc = setWhatProduced(this, "LSTGeometry");
   geomToken_ = cc.consumes();
+  ttopoToken_ = cc.consumes();
 }
 
 void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
@@ -45,8 +50,9 @@ void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &des
 
 std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
   trackerGeom_ = &iRecord.get(geomToken_);
+  trackerTopo_ = &iRecord.get(ttopoToken_);
 
-  std::vector<lstgeometry::ModuleInfo> modules;
+  std::unordered_map<unsigned int, lstgeometry::ModuleInfo> modules;
   std::unordered_map<unsigned int, lstgeometry::SensorInfo> sensors;
 
   std::vector<double> avg_r_cm(6, 0.0);
@@ -56,6 +62,15 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
   for (auto &det : trackerGeom_->dets()) {
     const DetId detId = det->geographicalId();
+    const auto moduleType = trackerGeom_->getDetectorType(detId);
+
+    // TODO: Is there a more straightforward way to only loop through these?
+    if (moduleType != TrackerGeometry::ModuleType::Ph2PSP && moduleType != TrackerGeometry::ModuleType::Ph2PSS &&
+        moduleType != TrackerGeometry::ModuleType::Ph2SS) {
+      continue;
+    }
+
+    const unsigned int detid = detId();
 
     const auto &surface = det->surface();
     const Bounds *b = &(surface).bounds();
@@ -67,8 +82,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     if (det->isLeaf()) {
       // Leafs are the sensors
-      lstgeometry::SensorInfo sensor{detId(), rho_cm, z_cm, phi_rad};
-      sensors[detId()] = std::move(sensor);
+      const unsigned int moduleDetId = detid & ~0b11;  // TODO: Is there a CMSSW method for this?
+      lstgeometry::SensorInfo sensor{moduleDetId, rho_cm, z_cm, phi_rad};
+      sensors[detid] = std::move(sensor);
       continue;
     }
 
@@ -77,24 +93,18 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       throw cms::Exception("UnimplementedFeature") << "unsupported Bounds class";
     }
 
+    const auto subdet = static_cast<GeomDetEnumerators::SubDetector>(detId.subdetId());
+    const auto side = static_cast<Phase2Tracker::BarrelModuleTilt>(trackerTopo_->side(detId));
+    const unsigned int layer = trackerTopo_->layer(detId);
+    const unsigned int ring = trackerTopo_->endcapRingP2(detId);
+    const bool isLower = trackerTopo_->isLower(detId);
+
     double tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
     double meanWidth_cm = b2->width();
     double length_cm = b2->length();
 
     double sensorSpacing_cm = det->components()[0]->toLocal(det->components()[1]->position()).mag();
-
-    unsigned int detid = detId();
-
-    unsigned short layer = lstgeometry::Module::parseLayer(detid);
-
-    // This part is a little weird, but this is how to match the csv files.
-    // I think it might be better to not do this since other parts of the code
-    // assume the center of the module is at (rho_cm, z_cm).
-    //
-    // z_cm += sensorSpacing_cm / 2.0 * std::sin(tiltAngle_rad);
-    // bool isFlipped = surface.normalVector().basicVector().dot(position.basicVector()) < 0;
-    // rho_cm += (isFlipped ? -1 : 1) * signsensorSpacing_cm / 2.0 * std::cos(tiltAngle_rad);
 
     // Fix angles of some modules
     if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
@@ -111,7 +121,12 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       avg_z_counter[layer - 1] += 1;
     }
 
-    lstgeometry::ModuleInfo module{detid,
+    lstgeometry::ModuleInfo module{moduleType,
+                                   subdet,
+                                   side,
+                                   layer,
+                                   ring,
+                                   isLower,
                                    rho_cm,
                                    z_cm,
                                    tiltAngle_rad,
@@ -122,7 +137,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
                                    length_cm,
                                    sensorSpacing_cm,
                                    lstgeometry::MatrixD8x3::Zero()};
-    modules.push_back(module);
+    modules[detid] = std::move(module);
   }
 
   for (size_t i = 0; i < avg_r_cm.size(); ++i) {

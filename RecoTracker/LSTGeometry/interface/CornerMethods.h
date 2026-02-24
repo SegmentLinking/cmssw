@@ -104,11 +104,12 @@ namespace lstgeometry {
 
   // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
   std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(
-      std::vector<ModuleInfo> const& modules, std::unordered_map<unsigned int, SensorInfo> const& sensors) {
+      std::unordered_map<unsigned int, ModuleInfo> const& modules,
+      std::unordered_map<unsigned int, SensorInfo> const& sensors) {
     std::unordered_map<unsigned int, MatrixD4x3> transformed_corners_dict;
 
-    for (auto const& moduleInfo : modules) {
-      unsigned int module_det_id = moduleInfo.detId;
+    for (auto const& [detId, moduleInfo] : modules) {
+      unsigned int module_det_id = detId;
       unsigned int sensor_det_id_1 = module_det_id + 1;
       unsigned int sensor_det_id_2 = module_det_id + 2;
 
