@@ -11,7 +11,7 @@
 #include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
-#include "RecoTracker/LSTGeometry/interface/GeometryMethods.h"
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
 #include <cmath>
 #include <vector>
@@ -147,7 +147,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     avg_z_cm[i] /= avg_z_counter[i];
   }
 
-  auto lstGeometry = lstgeometry::makeGeometry(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
+  auto lstGeometry = std::make_unique<lstgeometry::Geometry>(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
 
   return lstGeometry;
 }

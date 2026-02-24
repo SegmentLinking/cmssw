@@ -27,38 +27,12 @@ namespace lstgeometry {
   constexpr std::array<double, 2> kPtBounds = {{2.0, 10'000.0}};
 
   // This is defined as a constant in case the legacy value (123456789) needs to be used
-  double kDefaultSlope = std::numeric_limits<double>::infinity();
+  constexpr double kDefaultSlope = std::numeric_limits<double>::infinity();
 
-  double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
-
-  double phi_mpi_pi(double phi) {
-    while (phi >= std::numbers::pi_v<double>)
-      phi -= 2 * std::numbers::pi_v<double>;
-    while (phi < -std::numbers::pi_v<double>)
-      phi += 2 * std::numbers::pi_v<double>;
-    return phi;
-  }
-
-  double roundAngle(double angle, double tol = 1e-3) {
-    const double pi = std::numbers::pi_v<double>;
-    if (std::fabs(angle) < tol) {
-      return 0.0;
-    } else if (std::fabs(angle - pi / 2) < tol) {
-      return pi / 2;
-    } else if (std::fabs(angle + pi / 2) < tol) {
-      return -pi / 2;
-    } else if (std::fabs(angle - pi) < tol || std::fabs(angle + pi) < tol) {
-      return -pi;
-    }
-    return angle;
-  }
-
-  double roundCoordinate(double coord, double tol = 1e-3) {
-    if (std::fabs(coord) < tol) {
-      return 0.0;
-    }
-    return coord;
-  }
+  double degToRad(double degrees);
+  double phi_mpi_pi(double phi);
+  double roundAngle(double angle, double tol = 1e-3);
+  double roundCoordinate(double coord, double tol = 1e-3);
 
 }  // namespace lstgeometry
 

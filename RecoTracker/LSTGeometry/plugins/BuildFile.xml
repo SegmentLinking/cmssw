@@ -31,5 +31,6 @@
   <use name="TrackingTools/TrackFitters"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="TrackingTools/TransientTrackingRecHit"/>
+  <use name="RecoTracker/LSTGeometry"/>
   <flags EDM_PLUGIN="1"/>
 </library>
