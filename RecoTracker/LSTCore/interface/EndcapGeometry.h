@@ -24,7 +24,7 @@ namespace lst {
 
     void load(std::string const&);
     void load(std::unordered_map<unsigned int, lstgeometry::SlopeData> const&,
-              std::unordered_map<unsigned int, lstgeometry::SensorInfo> const&);
+              std::unordered_map<unsigned int, lstgeometry::Sensor> const&);
     void fillGeoMapArraysExplicit();
     float getdxdy_slope(unsigned int detid) const;
   };

@@ -132,7 +132,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
   PixelMap pixelMapping;
   ModuleConnectionMap moduleConnectionMap;
 
-  endcapGeometry.load(lstg.endcap_slopes, lstg.sensor_info);
+  endcapGeometry.load(lstg.endcap_slopes, lstg.sensors);
   auto endcapGeometryDev =
       std::make_shared<EndcapGeometryDevHostCollection>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
   std::memcpy(endcapGeometryDev->view().geoMapDetId().data(),
@@ -170,12 +170,12 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
 
   ModuleMetaData mmd;
   unsigned int counter = 0;
-  for (auto const& [detId, centroid] : lstg.sensor_centroids) {
+  for (auto const& [detId, sensor] : lstg.sensors) {
     mmd.detIdToIndex[detId] = counter;
-    mmd.module_x[detId] = centroid.x;
-    mmd.module_y[detId] = centroid.y;
-    mmd.module_z[detId] = centroid.z;
-    mmd.module_type[detId] = centroid.moduleType;
+    mmd.module_x[detId] = sensor.centerX_cm;
+    mmd.module_y[detId] = sensor.centerY_cm;
+    mmd.module_z[detId] = sensor.centerZ_cm;
+    mmd.module_type[detId] = static_cast<unsigned int>(sensor.moduleType);
     counter++;
   }
   mmd.detIdToIndex[1] = counter;  //pixel module is the last module in the module list

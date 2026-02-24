@@ -8,7 +8,7 @@
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
-#include "RecoTracker/LSTGeometry/interface/SensorInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
@@ -53,7 +53,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
   std::unordered_map<unsigned int, lstgeometry::ModuleInfo> modules;
-  std::unordered_map<unsigned int, lstgeometry::SensorInfo> sensors;
+  std::unordered_map<unsigned int, lstgeometry::Sensor> sensors;
 
   std::vector<double> avg_r_cm(6, 0.0);
   std::vector<double> avg_z_cm(5, 0.0);
@@ -67,7 +67,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     // TODO: Is there a more straightforward way to only loop through these?
     if (moduleType != TrackerGeometry::ModuleType::Ph2PSP && moduleType != TrackerGeometry::ModuleType::Ph2PSS &&
         moduleType != TrackerGeometry::ModuleType::Ph2SS) {
-      continue;
+      //continue;
     }
 
     const unsigned int detid = detId();
@@ -83,8 +83,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     if (det->isLeaf()) {
       // Leafs are the sensors
       const unsigned int moduleDetId = detid & ~0b11;  // TODO: Is there a CMSSW method for this?
-      lstgeometry::SensorInfo sensor{moduleDetId, rho_cm, z_cm, phi_rad};
-      sensors[detid] = std::move(sensor);
+      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, moduleType);
       continue;
     }
 
