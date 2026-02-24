@@ -81,7 +81,7 @@ namespace lstgeometry {
 
   class DetectorGeometry {
   private:
-    std::unordered_map<unsigned int, MatrixD4x3> corners_;
+    std::unordered_map<unsigned int, Sensor>& sensors_;
     std::vector<double> avg_radii_;
     std::vector<double> avg_z_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
@@ -90,17 +90,17 @@ namespace lstgeometry {
         endcap_lower_det_ids_;
 
   public:
-    DetectorGeometry(std::unordered_map<unsigned int, MatrixD4x3> corners,
+    DetectorGeometry(std::unordered_map<unsigned int, Sensor> sensors,
                      std::vector<double> avg_radii,
                      std::vector<double> avg_z)
-        : corners_(corners), avg_radii_(avg_radii), avg_z_(avg_z) {}
+        : sensors_(sensors), avg_radii_(avg_radii), avg_z_(avg_z) {}
 
-    MatrixD4x3 const& getCorners(unsigned int detId) const { return corners_.at(detId); }
+    MatrixD4x3 const& getCorners(unsigned int detId) const { return sensors_.at(detId).corners; }
 
-    std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, MatrixD4x3>&)> filter =
+    std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter =
                                             [](const auto&) { return true; }) const {
       std::vector<unsigned int> detIds;
-      for (const auto& entry : corners_) {
+      for (const auto& entry : sensors_) {
         if (filter(entry)) {
           detIds.push_back(entry.first);
         }
@@ -183,7 +183,7 @@ namespace lstgeometry {
     double getEndcapLayerAverageAbsZ(unsigned int layer) const { return avg_z_[layer - 1]; }
 
     double getMinR(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double minR = std::numeric_limits<double>::max();
       for (int i = 0; i < corners.rows(); i++) {
         double x = corners(i, 1);
@@ -194,7 +194,7 @@ namespace lstgeometry {
     }
 
     double getMaxR(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double maxR = std::numeric_limits<double>::min();
       for (int i = 0; i < corners.rows(); i++) {
         double x = corners(i, 1);
@@ -205,7 +205,7 @@ namespace lstgeometry {
     }
 
     double getMinZ(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double minZ = std::numeric_limits<double>::max();
       for (int i = 0; i < corners.rows(); i++) {
         double z = corners(i, 0);
@@ -215,7 +215,7 @@ namespace lstgeometry {
     }
 
     double getMaxZ(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double maxZ = std::numeric_limits<double>::lowest();
       for (int i = 0; i < corners.rows(); i++) {
         double z = corners(i, 0);
@@ -225,7 +225,7 @@ namespace lstgeometry {
     }
 
     double getMinPhi(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double minPhi = std::numeric_limits<double>::max();
       double minPosPhi = std::numeric_limits<double>::max();
       double minNegPhi = std::numeric_limits<double>::max();
@@ -252,7 +252,7 @@ namespace lstgeometry {
     }
 
     double getMaxPhi(unsigned int detId) const {
-      auto const& corners = corners_.at(detId);
+      auto const& corners = getCorners(detId);
       double maxPhi = std::numeric_limits<double>::lowest();
       double maxPosPhi = std::numeric_limits<double>::lowest();
       double maxNegPhi = std::numeric_limits<double>::lowest();

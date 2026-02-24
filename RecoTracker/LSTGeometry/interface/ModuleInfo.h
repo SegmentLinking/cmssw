@@ -12,6 +12,7 @@ namespace lstgeometry {
   struct ModuleInfo {
     TrackerGeometry::ModuleType moduleType;
     GeomDetEnumerators::SubDetector subdet;
+    GeomDetEnumerators::Location location;
     Phase2Tracker::BarrelModuleTilt side;
     unsigned int layer;
     unsigned int ring;

@@ -5,11 +5,13 @@
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 namespace lstgeometry {
 
-  PixelMap computePixelMap(DetectorGeometry const& det_geom, double ptCut) {
+  PixelMap computePixelMap(std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
+                           DetectorGeometry const& det_geom,
+                           double ptCut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
@@ -26,15 +28,20 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto detId : det_geom.getDetIds()) {
-      // Parse the layer and subdet
-      auto module = Module(detId);
-      auto layer = module.layer();
+      // Skip if the detId is not in the modules_info
+      if (!modules_info.contains(detId))
+        continue;
+
+      auto module = modules_info.at(detId);
+      auto subdet = static_cast<unsigned int>(module.subdet);
+      auto layer = module.layer;
       if (layer > 2)
         continue;
-      auto subdet = module.subdet();
+      auto location = module.location;
 
       // Skip if the module is not PS module and is not lower module
-      if (module.isLower() != 1 || module.moduleType() != 0)
+      if (!module.isLower || (module.moduleType != TrackerGeometry::ModuleType::Ph2PSP &&
+                              module.moduleType != TrackerGeometry::ModuleType::Ph2PSS))
         continue;
 
       // For this module, now compute which super bins they belong to
@@ -58,7 +65,7 @@ namespace lstgeometry {
           etamin -= 0.05;
           etamax += 0.05;
 
-          if (layer == 2 && subdet == 4) {
+          if (layer == 2 && location == GeomDetEnumerators::Location::endcap) {
             if (etamax < 2.3)
               continue;
             if (etamin < 2.3)

@@ -103,11 +103,8 @@ namespace lstgeometry {
   }
 
   // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
-  std::unordered_map<unsigned int, MatrixD4x3> assignCornersToSensors(
-      std::unordered_map<unsigned int, ModuleInfo> const& modules,
-      std::unordered_map<unsigned int, Sensor> const& sensors) {
-    std::unordered_map<unsigned int, MatrixD4x3> transformed_corners_dict;
-
+  void assignCornersToSensors(std::unordered_map<unsigned int, ModuleInfo> const& modules,
+                              std::unordered_map<unsigned int, Sensor>& sensors) {
     for (auto const& [detId, moduleInfo] : modules) {
       unsigned int module_det_id = detId;
       unsigned int sensor_det_id_1 = module_det_id + 1;
@@ -135,15 +132,13 @@ namespace lstgeometry {
       double distance_to_sensor_2 = (centroid_sensor_2 - sensor_centroid_2).norm();
 
       if (distance_to_sensor_1 < distance_to_sensor_2) {
-        transformed_corners_dict[sensor_det_id_1] = transformed_corners.topRows(4);
-        transformed_corners_dict[sensor_det_id_2] = transformed_corners.bottomRows(4);
+        sensors[sensor_det_id_1].corners = transformed_corners.topRows(4);
+        sensors[sensor_det_id_2].corners = transformed_corners.bottomRows(4);
       } else {
-        transformed_corners_dict[sensor_det_id_2] = transformed_corners.topRows(4);
-        transformed_corners_dict[sensor_det_id_1] = transformed_corners.bottomRows(4);
+        sensors[sensor_det_id_2].corners = transformed_corners.topRows(4);
+        sensors[sensor_det_id_1].corners = transformed_corners.bottomRows(4);
       }
     }
-
-    return transformed_corners_dict;
   }
 
 }  // namespace lstgeometry

@@ -6,7 +6,8 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 
 namespace lstgeometry {
@@ -21,29 +22,28 @@ namespace lstgeometry {
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
   std::tuple<std::unordered_map<unsigned int, SlopeData>, std::unordered_map<unsigned int, SlopeData>> processCorners(
-      std::unordered_map<unsigned int, MatrixD4x3>& corners) {
+      std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
+      std::unordered_map<unsigned int, Sensor>& sensors) {
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
 
-    for (const auto& [detId, corners] : corners) {
-      double dx = roundCoordinate(corners(1, 1) - corners(0, 1));
-      double dy = roundCoordinate(corners(1, 2) - corners(0, 2));
-      double dz = roundCoordinate(corners(1, 0) - corners(0, 0));
+    for (const auto& [detId, sensor] : sensors) {
+      double dx = roundCoordinate(sensor.corners(1, 1) - sensor.corners(0, 1));
+      double dy = roundCoordinate(sensor.corners(1, 2) - sensor.corners(0, 2));
+      double dz = roundCoordinate(sensor.corners(1, 0) - sensor.corners(0, 0));
 
       SlopeData slope = calculateSlope(dx, dy, dz);
 
-      Module module(detId);
+      auto& module = modules_info.at(sensor.moduleDetId);
 
-      unsigned short subdet = module.subdet();
-      bool is_tilted = module.side() != 3;
-      bool is_strip = module.moduleLayerType() == 1;
+      auto location = module.location;
+      bool is_tilted = module.side != Phase2Tracker::BarrelModuleTilt::flat;
 
-      if (!is_strip)
-        continue;
+      // TODO: Do we need to skip strips?
 
-      if (subdet == Module::SubDet::Barrel and is_tilted)
+      if (location == GeomDetEnumerators::Location::barrel and is_tilted)
         barrel_slopes[detId] = slope;
-      else if (subdet == Module::SubDet::Endcap)
+      else if (location == GeomDetEnumerators::Location::endcap)
         endcap_slopes[detId] = slope;
     }
 

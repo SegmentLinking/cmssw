@@ -10,7 +10,6 @@
 
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
 #include <cmath>
@@ -67,7 +66,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     // TODO: Is there a more straightforward way to only loop through these?
     if (moduleType != TrackerGeometry::ModuleType::Ph2PSP && moduleType != TrackerGeometry::ModuleType::Ph2PSS &&
         moduleType != TrackerGeometry::ModuleType::Ph2SS) {
-      //continue;
+      continue;
     }
 
     const unsigned int detid = detId();
@@ -93,7 +92,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     }
 
     const auto subdet = static_cast<GeomDetEnumerators::SubDetector>(detId.subdetId());
-    const auto side = static_cast<Phase2Tracker::BarrelModuleTilt>(trackerTopo_->side(detId));
+    const auto side = trackerTopo_->barrelTiltTypeP2(detId);
+    const auto location = (GeomDetEnumerators::isBarrel(subdet) ? GeomDetEnumerators::Location::barrel
+                                                                : GeomDetEnumerators::Location::endcap);
     const unsigned int layer = trackerTopo_->layer(detId);
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
@@ -112,7 +113,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
     }
 
-    if (lstgeometry::Module::parseSubdet(detid) == lstgeometry::Module::SubDet::Barrel) {
+    if (location == GeomDetEnumerators::Location::barrel) {
       avg_r_cm[layer - 1] += rho_cm;
       avg_r_counter[layer - 1] += 1;
     } else {
@@ -122,6 +123,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     lstgeometry::ModuleInfo module{moduleType,
                                    subdet,
+                                   location,
                                    side,
                                    layer,
                                    ring,

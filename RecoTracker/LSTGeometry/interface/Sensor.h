@@ -3,6 +3,8 @@
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 
+#include "RecoTracker/LSTGeometry/interface/Common.h"
+
 namespace lstgeometry {
 
   struct Sensor {
@@ -10,6 +12,7 @@ namespace lstgeometry {
     float centerRho_cm;
     float centerZ_cm;
     float centerPhi_rad;
+    MatrixD4x3 corners;
     // Redundant, but convenient to have them
     TrackerGeometry::ModuleType moduleType;
     float centerX_cm;
