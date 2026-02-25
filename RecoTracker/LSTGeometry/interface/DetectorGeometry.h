@@ -83,7 +83,7 @@ namespace lstgeometry {
 
   class DetectorGeometry {
   private:
-    Sensors& sensors_;
+    Sensors sensors_; // TODO: Refactor to avoid a copy
     std::vector<float> avg_radii_;
     std::vector<float> avg_z_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
