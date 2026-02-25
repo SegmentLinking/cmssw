@@ -4,12 +4,12 @@
 namespace lstgeometry {
 
   struct Helix {
-    double center_x;
-    double center_y;
-    double center_z;
-    double radius;
-    double phi;
-    double lam;
+    float center_x;
+    float center_y;
+    float center_z;
+    float radius;
+    float phi;
+    float lam;
     int charge;
   };
 

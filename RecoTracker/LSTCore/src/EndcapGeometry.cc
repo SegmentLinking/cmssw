@@ -46,7 +46,7 @@ void lst::EndcapGeometry::load(std::unordered_map<unsigned int, lstgeometry::Slo
 
   for (const auto& [detId, slopeData] : slopes) {
     dxdy_slope_[detId] = slopeData.dxdy_slope;
-    centroid_phis_[detId] = sensors.at(detId).centerPhi_rad;
+    centroid_phis_[detId] = sensors.at(detId).centerPhi;
   }
 
   fillGeoMapArraysExplicit();

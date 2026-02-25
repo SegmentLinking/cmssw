@@ -2,18 +2,18 @@
 
 namespace lstgeometry {
 
-  double degToRad(double degrees) { return degrees * (std::numbers::pi_v<double> / 180); }
+  float degToRad(float degrees) { return degrees * (std::numbers::pi_v<float> / 180); }
 
-  double phi_mpi_pi(double phi) {
-    while (phi >= std::numbers::pi_v<double>)
-      phi -= 2 * std::numbers::pi_v<double>;
-    while (phi < -std::numbers::pi_v<double>)
-      phi += 2 * std::numbers::pi_v<double>;
+  float phi_mpi_pi(float phi) {
+    while (phi >= std::numbers::pi_v<float>)
+      phi -= 2 * std::numbers::pi_v<float>;
+    while (phi < -std::numbers::pi_v<float>)
+      phi += 2 * std::numbers::pi_v<float>;
     return phi;
   }
 
-  double roundAngle(double angle, double tol) {
-    const double pi = std::numbers::pi_v<double>;
+  float roundAngle(float angle, float tol) {
+    const float pi = std::numbers::pi_v<float>;
     if (std::fabs(angle) < tol) {
       return 0.0;
     } else if (std::fabs(angle - pi / 2) < tol) {
@@ -26,7 +26,7 @@ namespace lstgeometry {
     return angle;
   }
 
-  double roundCoordinate(double coord, double tol) {
+  float roundCoordinate(float coord, float tol) {
     if (std::fabs(coord) < tol) {
       return 0.0;
     }

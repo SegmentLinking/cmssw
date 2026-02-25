@@ -5,13 +5,11 @@
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 namespace lstgeometry {
 
-  PixelMap computePixelMap(std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                           DetectorGeometry const& det_geom,
-                           double ptCut) {
+  PixelMap computePixelMap(Modules const& modules, DetectorGeometry const& det_geom, double ptCut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
@@ -28,11 +26,11 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto detId : det_geom.getDetIds()) {
-      // Skip if the detId is not in the modules_info
-      if (!modules_info.contains(detId))
+      // Skip if the detId is not in the modules
+      if (!modules.contains(detId))
         continue;
 
-      auto module = modules_info.at(detId);
+      auto module = modules.at(detId);
       auto subdet = static_cast<unsigned int>(module.subdet);
       auto layer = module.layer;
       if (layer > 2)

@@ -3,22 +3,22 @@
 
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 
 namespace lstgeometry {
 
   struct Geometry {
-    std::unordered_map<unsigned int, Sensor> sensors;
+    Sensors sensors;
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
     PixelMap pixel_map;
     std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged_line_connections;
 
-    Geometry(std::unordered_map<unsigned int, ModuleInfo> &modules_info,
-             std::unordered_map<unsigned int, Sensor> &sensors_input,
-             std::vector<double> const &average_r,
-             std::vector<double> const &average_z,
+    Geometry(Modules &modules,
+             Sensors &sensors_input,
+             std::vector<float> const &average_r,
+             std::vector<float> const &average_z,
              double ptCut);
   };
 

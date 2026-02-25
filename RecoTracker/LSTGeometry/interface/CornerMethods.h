@@ -6,26 +6,26 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
 
   //Calculates the Rodrigues' rotation matrix for rotating a vector around an arbitrary axis.
-  MatrixD3x3 rodriguesRotationMatrix(ColVectorD3 axis, double theta) {
+  MatrixF3x3 rodriguesRotationMatrix(ColVectorF3 axis, float theta) {
     axis.normalize();
 
-    MatrixD3x3 k{{0, -axis(2), axis(1)}, {axis(2), 0, -axis(0)}, {-axis(1), axis(0), 0}};
+    MatrixF3x3 k{{0, -axis(2), axis(1)}, {axis(2), 0, -axis(0)}, {-axis(1), axis(0), 0}};
 
-    MatrixD3x3 rotationMatrix = MatrixD3x3::Identity() + sin(theta) * k + (1 - cos(theta)) * (k * k);
+    MatrixF3x3 rotationMatrix = MatrixF3x3::Identity() + std::sin(theta) * k + (1 - std::cos(theta)) * (k * k);
 
     return rotationMatrix;
   }
 
   // Generates a rotation matrix for rotating around the tangential direction in cylindrical coordinates.
-  MatrixD3x3 tangentialRotationMatrix(double phi, double theta) {
-    ColVectorD3 axis;
-    axis << -sin(phi), cos(phi), 0;
+  MatrixF3x3 tangentialRotationMatrix(float phi, float theta) {
+    ColVectorF3 axis;
+    axis << -std::sin(phi), std::cos(phi), 0;
 
     return rodriguesRotationMatrix(axis, theta);
   }
@@ -35,38 +35,38 @@ namespace lstgeometry {
   // Only the tilt angles are non-zero for the current geometry. If the other
   // angles get used, implement their rotations using the tangentialRotationMatrix
   // function above as an example.
-  MatrixD3x3 rotationMatrix(double tilt_rad, double skew_rad, double yaw_rad, double phi_rad) {
-    if (skew_rad != 0 || yaw_rad != 0)
+  MatrixF3x3 rotationMatrix(float tilt, float skew, float yaw, float phi) {
+    if (skew != 0 || yaw != 0)
       throw std::invalid_argument("Skew and yaw angles are not currently supported.");
 
     // Rotation around Z-axis that makes the sensor "face towards" the beamline (i.e. towards z-axis)
     // So for example if phi=0 then R is the identity (i.e. already facing), or if phi=90deg
     // then R becomes (x,y,z)->(-y,x,z) so the sensor is rotated 90 degrees to face the beamline
-    MatrixD3x3 initialR{{cos(phi_rad), -sin(phi_rad), 0}, {sin(phi_rad), cos(phi_rad), 0}, {0, 0, 1}};
+    MatrixF3x3 initialR{{std::cos(phi), -std::sin(phi), 0}, {std::sin(phi), std::cos(phi), 0}, {0, 0, 1}};
 
     // The tilt angle given in the CSV files is with respect to a module that is facing
     // the beamline, meaning after R_initial is applied. From there we tilt the module according
     // to the rotation below. Note that because this tilt angle is not with respect to the X,Y,Z
     // axes and is instead around an arbitrary axis (defined from the rotation above) we have to apply
     // the Rodrigues' rotation formula
-    MatrixD3x3 rTilt = tangentialRotationMatrix(phi_rad, -tilt_rad);
+    MatrixF3x3 rTilt = tangentialRotationMatrix(phi, -tilt);
 
-    MatrixD3x3 finalR = rTilt * initialR;
+    MatrixF3x3 finalR = rTilt * initialR;
 
     return finalR;
   }
 
   // Calculates the transformed corners of each sensor
-  void transformSensorCorners(ModuleInfo& moduleInfo) {
-    auto module_z = moduleInfo.sensorCenterZ_cm;
-    auto module_rho = moduleInfo.sensorCenterRho_cm;
-    auto module_phi = moduleInfo.phi_rad;
-    auto sensor_spacing = moduleInfo.sensorSpacing_cm;
-    auto sensor_width = moduleInfo.meanWidth_cm;
-    auto sensor_length = moduleInfo.length_cm;
+  void transformSensorCorners(Module& module) {
+    auto module_z = module.centerZ;
+    auto module_rho = module.centerRho;
+    auto module_phi = module.centerPhi;
+    auto sensor_spacing = module.spacing;
+    auto sensor_width = module.meanWidth;
+    auto sensor_length = module.length;
 
-    auto module_x = module_rho * cos(module_phi);
-    auto module_y = module_rho * sin(module_phi);
+    auto module_x = module_rho * std::cos(module_phi);
+    auto module_y = module_rho * std::sin(module_phi);
 
     auto half_width = sensor_width / 2;
     auto half_length = sensor_length / 2;
@@ -81,7 +81,7 @@ namespace lstgeometry {
     half_width += width_extension;
     half_length += length_extension;
 
-    MatrixD8x3 corners{{-half_spacing, -half_width, -half_length},
+    MatrixF8x3 corners{{-half_spacing, -half_width, -half_length},
                        {-half_spacing, -half_width, half_length},
                        {-half_spacing, half_width, half_length},
                        {-half_spacing, half_width, -half_length},
@@ -90,46 +90,40 @@ namespace lstgeometry {
                        {half_spacing, half_width, half_length},
                        {half_spacing, half_width, -half_length}};
 
-    MatrixD3x3 rotation_matrix =
-        rotationMatrix(moduleInfo.tiltAngle_rad, moduleInfo.skewAngle_rad, moduleInfo.yawAngle_rad, moduleInfo.phi_rad);
-    MatrixD8x3 rotated_corners = (rotation_matrix * corners.transpose()).transpose();
+    MatrixF3x3 rotation_matrix = rotationMatrix(module.tiltAngle, module.skewAngle, module.yawAngle, module.centerPhi);
+    MatrixF8x3 rotated_corners = (rotation_matrix * corners.transpose()).transpose();
 
-    rotated_corners.rowwise() += RowVectorD3{module_x, module_y, module_z};
+    rotated_corners.rowwise() += RowVectorF3{module_x, module_y, module_z};
 
     // Coordinate reorder before saving (x,y,z)->(z,x,y)
-    moduleInfo.transformedCorners.col(0) = rotated_corners.col(2);
-    moduleInfo.transformedCorners.col(1) = rotated_corners.col(0);
-    moduleInfo.transformedCorners.col(2) = rotated_corners.col(1);
+    module.transformedCorners.col(0) = rotated_corners.col(2);
+    module.transformedCorners.col(1) = rotated_corners.col(0);
+    module.transformedCorners.col(2) = rotated_corners.col(1);
   }
 
   // Assigns each set of four corners to the correct sensor DetID based on the closest centroid.
-  void assignCornersToSensors(std::unordered_map<unsigned int, ModuleInfo> const& modules,
-                              std::unordered_map<unsigned int, Sensor>& sensors) {
-    for (auto const& [detId, moduleInfo] : modules) {
+  void assignCornersToSensors(Modules const& modules, Sensors& sensors) {
+    for (auto const& [detId, module] : modules) {
       unsigned int module_det_id = detId;
       unsigned int sensor_det_id_1 = module_det_id + 1;
       unsigned int sensor_det_id_2 = module_det_id + 2;
 
-      auto& transformed_corners = moduleInfo.transformedCorners;
-      RowVectorD3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
-      RowVectorD3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
+      auto& transformed_corners = module.transformedCorners;
+      RowVectorF3 centroid_sensor_1 = transformed_corners.topRows(4).colwise().mean();
+      RowVectorF3 centroid_sensor_2 = transformed_corners.bottomRows(4).colwise().mean();
 
-      double sensor1_center_z = sensors.at(sensor_det_id_1).centerZ_cm;
-      double sensor1_center_x =
-          sensors.at(sensor_det_id_1).centerRho_cm * cos(sensors.at(sensor_det_id_1).centerPhi_rad);
-      double sensor1_center_y =
-          sensors.at(sensor_det_id_1).centerRho_cm * sin(sensors.at(sensor_det_id_1).centerPhi_rad);
-      double sensor2_center_z = sensors.at(sensor_det_id_2).centerZ_cm;
-      double sensor2_center_x =
-          sensors.at(sensor_det_id_2).centerRho_cm * cos(sensors.at(sensor_det_id_2).centerPhi_rad);
-      double sensor2_center_y =
-          sensors.at(sensor_det_id_2).centerRho_cm * sin(sensors.at(sensor_det_id_2).centerPhi_rad);
+      float sensor1_center_z = sensors.at(sensor_det_id_1).centerZ;
+      float sensor1_center_x = sensors.at(sensor_det_id_1).centerRho * cos(sensors.at(sensor_det_id_1).centerPhi);
+      float sensor1_center_y = sensors.at(sensor_det_id_1).centerRho * sin(sensors.at(sensor_det_id_1).centerPhi);
+      float sensor2_center_z = sensors.at(sensor_det_id_2).centerZ;
+      float sensor2_center_x = sensors.at(sensor_det_id_2).centerRho * cos(sensors.at(sensor_det_id_2).centerPhi);
+      float sensor2_center_y = sensors.at(sensor_det_id_2).centerRho * sin(sensors.at(sensor_det_id_2).centerPhi);
 
-      RowVectorD3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
-      RowVectorD3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
+      RowVectorF3 sensor_centroid_1{sensor1_center_z, sensor1_center_x, sensor1_center_y};
+      RowVectorF3 sensor_centroid_2{sensor2_center_z, sensor2_center_x, sensor2_center_y};
 
-      double distance_to_sensor_1 = (centroid_sensor_1 - sensor_centroid_1).norm();
-      double distance_to_sensor_2 = (centroid_sensor_2 - sensor_centroid_2).norm();
+      float distance_to_sensor_1 = (centroid_sensor_1 - sensor_centroid_1).norm();
+      float distance_to_sensor_2 = (centroid_sensor_2 - sensor_centroid_2).norm();
 
       if (distance_to_sensor_1 < distance_to_sensor_2) {
         sensors[sensor_det_id_1].corners = transformed_corners.topRows(4);
