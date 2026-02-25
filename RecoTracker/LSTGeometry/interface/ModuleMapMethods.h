@@ -13,26 +13,26 @@
 #include <boost/geometry/geometries/polygon.hpp>
 
 #include "RecoTracker/LSTGeometry/interface/Math.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 
 namespace lstgeometry {
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
-                                                       std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                                                       std::unordered_map<unsigned int, Sensor> const& sensors,
+                                                       Modules const& modules,
+                                                       Sensors const& sensors,
                                                        DetectorGeometry const& det_geom) {
     auto& sensor = sensors.at(ref_detid);
 
-    double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
+    double refphi = std::atan2(sensor.centerY, sensor.centerX);
 
-    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
+    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
     unsigned short ref_layer = refmodule.layer;
     unsigned short ref_subdet = refmodule.subdet;
 
-    auto etaphi = getEtaPhi(sensor.centerX_cm, sensor.centerY_cm, sensor.centerZ_cm);
+    auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
@@ -85,7 +85,7 @@ namespace lstgeometry {
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto& sensor_target = sensors.at(tar_detid);
-          double tarphi = std::atan2(sensor_target.centerY_cm, sensor_target.centerX_cm);
+          double tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
           if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<double> / 2.)
             continue;
@@ -112,22 +112,22 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  MatrixD4x3 boundsAfterCurved(unsigned int ref_detid,
-                               std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                               std::unordered_map<unsigned int, Sensor> const& sensors,
+  MatrixF4x3 boundsAfterCurved(unsigned int ref_detid,
+                               Modules const& modules,
+                               Sensors const& sensors,
                                DetectorGeometry const& det_geom,
                                double ptCut,
                                bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
     auto& sensor = sensors.at(ref_detid);
     int charge = 1;
-    double theta = std::atan2(std::sqrt(sensor.centerX_cm * sensor.centerX_cm + sensor.centerY_cm * sensor.centerY_cm),
-                              sensor.centerZ_cm);
-    double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
-    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
+    double theta =
+        std::atan2(std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY), sensor.centerZ);
+    double refphi = std::atan2(sensor.centerY, sensor.centerX);
+    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
     unsigned short ref_layer = refmodule.layer;
     unsigned short ref_subdet = refmodule.subdet;
-    MatrixD4x3 next_layer_bound_points;
+    MatrixF4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
       Helix helix_p10 = constructHelixFromPoints(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
@@ -190,27 +190,27 @@ namespace lstgeometry {
   }
 
   std::vector<unsigned int> getCurvedLineConnections(unsigned int ref_detid,
-                                                     std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                                                     std::unordered_map<unsigned int, Sensor> const& sensors,
+                                                     Modules const& modules,
+                                                     Sensors const& sensors,
                                                      DetectorGeometry const& det_geom,
                                                      double ptCut) {
     auto& sensor = sensors.at(ref_detid);
 
-    double refphi = std::atan2(sensor.centerY_cm, sensor.centerX_cm);
+    double refphi = std::atan2(sensor.centerY, sensor.centerX);
 
-    auto refmodule = modules_info.at(sensors.at(ref_detid).moduleDetId);
+    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
     unsigned short ref_layer = refmodule.layer;
     unsigned short ref_subdet = refmodule.subdet;
 
-    auto etaphi = getEtaPhi(sensor.centerX_cm, sensor.centerY_cm, sensor.centerZ_cm);
+    auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
     auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
-    auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules_info, sensors, det_geom, ptCut);
+    auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules, sensors, det_geom, ptCut);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
@@ -255,7 +255,7 @@ namespace lstgeometry {
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto& sensor_target = sensors.at(tar_detid);
-          double tarphi = std::atan2(sensor_target.centerY_cm, sensor_target.centerX_cm);
+          double tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
           if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<double> / 2.)
             continue;

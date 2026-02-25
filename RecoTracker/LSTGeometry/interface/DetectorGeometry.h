@@ -7,6 +7,8 @@
 #include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/Math.h"
 
 namespace lstgeometry {
@@ -81,21 +83,19 @@ namespace lstgeometry {
 
   class DetectorGeometry {
   private:
-    std::unordered_map<unsigned int, Sensor>& sensors_;
-    std::vector<double> avg_radii_;
-    std::vector<double> avg_z_;
+    Sensors& sensors_;
+    std::vector<float> avg_radii_;
+    std::vector<float> avg_z_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
         barrel_lower_det_ids_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
         endcap_lower_det_ids_;
 
   public:
-    DetectorGeometry(std::unordered_map<unsigned int, Sensor> sensors,
-                     std::vector<double> avg_radii,
-                     std::vector<double> avg_z)
+    DetectorGeometry(Sensors sensors, std::vector<float> avg_radii, std::vector<float> avg_z)
         : sensors_(sensors), avg_radii_(avg_radii), avg_z_(avg_z) {}
 
-    MatrixD4x3 const& getCorners(unsigned int detId) const { return sensors_.at(detId).corners; }
+    MatrixF4x3 const& getCorners(unsigned int detId) const { return sensors_.at(detId).corners; }
 
     std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter =
                                             [](const auto&) { return true; }) const {
@@ -108,8 +108,7 @@ namespace lstgeometry {
       return detIds;
     }
 
-    void buildByLayer(std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-                      std::unordered_map<unsigned int, Sensor> const& sensors) {
+    void buildByLayer(Modules const& modules_info, Sensors const& sensors) {
       // Clear just in case they were already built
       barrel_lower_det_ids_.clear();
       endcap_lower_det_ids_.clear();
@@ -133,7 +132,7 @@ namespace lstgeometry {
         });
         for (auto detid : detids) {
           auto corners = getCorners(detid);
-          RowVectorD3 center = corners.colwise().mean();
+          RowVectorF3 center = corners.colwise().mean();
           center /= 4.;
           auto etaphi = getEtaPhi(center(1), center(2), center(0));
           for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
@@ -152,7 +151,7 @@ namespace lstgeometry {
         });
         for (auto detid : detids) {
           auto corners = getCorners(detid);
-          RowVectorD3 center = corners.colwise().mean();
+          RowVectorF3 center = corners.colwise().mean();
           center /= 4.;
           auto etaphi = getEtaPhi(center(1), center(2), center(0));
           for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {

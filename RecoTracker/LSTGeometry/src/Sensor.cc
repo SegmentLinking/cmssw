@@ -4,16 +4,12 @@
 
 using namespace lstgeometry;
 
-Sensor::Sensor(unsigned int moduleDetId,
-               float centerRho_cm,
-               float centerZ_cm,
-               float centerPhi_rad,
-               TrackerGeometry::ModuleType moduleType)
+Sensor::Sensor(unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, ModuleType moduleType)
     : moduleDetId(moduleDetId),
-      centerRho_cm(centerRho_cm),
-      centerZ_cm(centerZ_cm),
-      centerPhi_rad(centerPhi_rad),
-      corners(MatrixD4x3::Zero()),
+      centerRho(centerRho),
+      centerZ(centerZ),
+      centerPhi(centerPhi),
+      corners(MatrixF4x3::Zero()),
       moduleType(moduleType),
-      centerX_cm(centerRho_cm * std::cos(centerPhi_rad)),
-      centerY_cm(centerRho_cm * std::sin(centerPhi_rad)) {}
+      centerX(centerRho * std::cos(centerPhi)),
+      centerY(centerRho * std::sin(centerPhi)) {}

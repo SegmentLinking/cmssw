@@ -78,9 +78,9 @@ namespace lstgeometry {
     return std::make_pair(eta, phi);
   }
 
-  Polygon getEtaPhiPolygon(MatrixDNx3 const& mod_boundaries, double refphi, double zshift = 0) {
+  Polygon getEtaPhiPolygon(MatrixFNx3 const& mod_boundaries, double refphi, double zshift = 0) {
     int npoints = mod_boundaries.rows();
-    MatrixDNx2 mod_boundaries_etaphi(npoints, 2);
+    MatrixFNx2 mod_boundaries_etaphi(npoints, 2);
     for (int i = 0; i < npoints; ++i) {
       auto ref_etaphi = getEtaPhi(mod_boundaries(i, 1), mod_boundaries(i, 2), mod_boundaries(i, 0) + zshift, refphi);
       mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
@@ -97,13 +97,13 @@ namespace lstgeometry {
     return poly;
   }
 
-  bool moduleOverlapsInEtaPhi(MatrixD4x3 const& ref_mod_boundaries,
-                              MatrixD4x3 const& tar_mod_boundaries,
+  bool moduleOverlapsInEtaPhi(MatrixF4x3 const& ref_mod_boundaries,
+                              MatrixF4x3 const& tar_mod_boundaries,
                               double refphi = 0,
                               double zshift = 0) {
-    RowVectorD3 ref_center = ref_mod_boundaries.colwise().sum();
+    RowVectorF3 ref_center = ref_mod_boundaries.colwise().sum();
     ref_center /= 4.;
-    RowVectorD3 tar_center = tar_mod_boundaries.colwise().sum();
+    RowVectorF3 tar_center = tar_mod_boundaries.colwise().sum();
     tar_center /= 4.;
 
     double ref_center_phi = std::atan2(ref_center(2), ref_center(1));
@@ -112,8 +112,8 @@ namespace lstgeometry {
     if (std::fabs(phi_mpi_pi(ref_center_phi - tar_center_phi)) > std::numbers::pi_v<double> / 2.)
       return false;
 
-    MatrixD4x2 ref_mod_boundaries_etaphi;
-    MatrixD4x2 tar_mod_boundaries_etaphi;
+    MatrixF4x2 ref_mod_boundaries_etaphi;
+    MatrixF4x2 tar_mod_boundaries_etaphi;
 
     for (int i = 0; i < 4; ++i) {
       auto ref_etaphi =
@@ -127,7 +127,7 @@ namespace lstgeometry {
     }
 
     // Quick cut
-    RowVectorD2 diff = ref_mod_boundaries_etaphi.row(0) - tar_mod_boundaries_etaphi.row(0);
+    RowVectorF2 diff = ref_mod_boundaries_etaphi.row(0) - tar_mod_boundaries_etaphi.row(0);
     if (std::fabs(diff(0)) > 0.5)
       return false;
     if (std::fabs(phi_mpi_pi(diff(1))) > 1.)

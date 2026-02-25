@@ -172,9 +172,9 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
   unsigned int counter = 0;
   for (auto const& [detId, sensor] : lstg.sensors) {
     mmd.detIdToIndex[detId] = counter;
-    mmd.module_x[detId] = sensor.centerX_cm;
-    mmd.module_y[detId] = sensor.centerY_cm;
-    mmd.module_z[detId] = sensor.centerZ_cm;
+    mmd.module_x[detId] = sensor.centerX;
+    mmd.module_y[detId] = sensor.centerY;
+    mmd.module_z[detId] = sensor.centerZ;
     mmd.module_type[detId] = static_cast<unsigned int>(sensor.moduleType);
     counter++;
   }

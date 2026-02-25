@@ -8,8 +8,8 @@
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
 #include <cmath>
@@ -51,11 +51,11 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
   trackerGeom_ = &iRecord.get(geomToken_);
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
-  std::unordered_map<unsigned int, lstgeometry::ModuleInfo> modules;
-  std::unordered_map<unsigned int, lstgeometry::Sensor> sensors;
+  lstgeometry::Modules modules;
+  lstgeometry::Sensors sensors;
 
-  std::vector<double> avg_r_cm(6, 0.0);
-  std::vector<double> avg_z_cm(5, 0.0);
+  std::vector<float> avg_r_cm(6, 0.0);
+  std::vector<float> avg_z_cm(5, 0.0);
   std::vector<unsigned int> avg_r_counter(6, 0);
   std::vector<unsigned int> avg_z_counter(5, 0);
 
@@ -75,9 +75,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const Bounds *b = &(surface).bounds();
     const auto &position = surface.position();
 
-    const double rho_cm = position.perp();
-    const double z_cm = lstgeometry::roundCoordinate(position.z());
-    const double phi_rad = lstgeometry::roundAngle(position.phi());
+    const float rho_cm = position.perp();
+    const float z_cm = lstgeometry::roundCoordinate(position.z());
+    const float phi_rad = lstgeometry::roundAngle(position.phi());
 
     if (det->isLeaf()) {
       // Leafs are the sensors
@@ -99,16 +99,16 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
 
-    double tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
+    float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
-    double meanWidth_cm = b2->width();
-    double length_cm = b2->length();
+    float meanWidth_cm = b2->width();
+    float length_cm = b2->length();
 
-    double sensorSpacing_cm = det->components()[0]->toLocal(det->components()[1]->position()).mag();
+    float sensorSpacing_cm = det->components()[0]->toLocal(det->components()[1]->position()).mag();
 
     // Fix angles of some modules
-    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<double> / 2) < 1e-3) {
-      tiltAngle_rad = std::numbers::pi_v<double> / 2;
+    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<float> / 2) < 1e-3) {
+      tiltAngle_rad = std::numbers::pi_v<float> / 2;
     } else if (std::fabs(tiltAngle_rad) > 1e-3) {
       tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
     }
@@ -121,23 +121,23 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       avg_z_counter[layer - 1] += 1;
     }
 
-    lstgeometry::ModuleInfo module{moduleType,
-                                   subdet,
-                                   location,
-                                   side,
-                                   layer,
-                                   ring,
-                                   isLower,
-                                   rho_cm,
-                                   z_cm,
-                                   tiltAngle_rad,
-                                   0.0,
-                                   0.0,
-                                   phi_rad,
-                                   meanWidth_cm,
-                                   length_cm,
-                                   sensorSpacing_cm,
-                                   lstgeometry::MatrixD8x3::Zero()};
+    lstgeometry::Module module{moduleType,
+                               subdet,
+                               location,
+                               side,
+                               layer,
+                               ring,
+                               isLower,
+                               rho_cm,
+                               z_cm,
+                               phi_rad,
+                               tiltAngle_rad,
+                               0.0,
+                               0.0,
+                               meanWidth_cm,
+                               length_cm,
+                               sensorSpacing_cm,
+                               lstgeometry::MatrixF8x3::Zero()};
     modules[detid] = std::move(module);
   }
 

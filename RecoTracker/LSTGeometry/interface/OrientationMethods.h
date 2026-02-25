@@ -6,7 +6,7 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/ModuleInfo.h"
+#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 
@@ -22,8 +22,7 @@ namespace lstgeometry {
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
   std::tuple<std::unordered_map<unsigned int, SlopeData>, std::unordered_map<unsigned int, SlopeData>> processCorners(
-      std::unordered_map<unsigned int, ModuleInfo> const& modules_info,
-      std::unordered_map<unsigned int, Sensor>& sensors) {
+      Modules const& modules, Sensors const& sensors) {
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
 
@@ -34,7 +33,7 @@ namespace lstgeometry {
 
       SlopeData slope = calculateSlope(dx, dy, dz);
 
-      auto& module = modules_info.at(sensor.moduleDetId);
+      auto& module = modules.at(sensor.moduleDetId);
 
       auto location = module.location;
       bool is_tilted = module.side != Phase2Tracker::BarrelModuleTilt::flat;
