@@ -1,23 +1,87 @@
-#ifndef RecoTracker_LSTGeometry_interface_ModuleMapMethods_h
-#define RecoTracker_LSTGeometry_interface_ModuleMapMethods_h
-
-#include <cmath>
-#include <cassert>
 #include <iterator>
 #include <vector>
 #include <tuple>
-#include <unordered_set>
-#include <unordered_map>
 #include <initializer_list>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-#include "RecoTracker/LSTGeometry/interface/Math.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
-#include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
+#include "RecoTracker/LSTGeometry/interface/Helix.h"
 
 namespace lstgeometry {
+
+  using Point = boost::geometry::model::d2::point_xy<float>;
+  using Polygon = boost::geometry::model::polygon<Point>;
+
+  Polygon getEtaPhiPolygon(MatrixFNx3 const& mod_boundaries, float refphi, float zshift = 0) {
+    int npoints = mod_boundaries.rows();
+    MatrixFNx2 mod_boundaries_etaphi(npoints, 2);
+    for (int i = 0; i < npoints; ++i) {
+      auto ref_etaphi = getEtaPhi(mod_boundaries(i, 1), mod_boundaries(i, 2), mod_boundaries(i, 0) + zshift, refphi);
+      mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
+      mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
+    }
+
+    Polygon poly;
+    // <= because we need to close the polygon with the first point
+    for (int i = 0; i <= npoints; ++i) {
+      boost::geometry::append(poly,
+                              Point(mod_boundaries_etaphi(i % npoints, 0), mod_boundaries_etaphi(i % npoints, 1)));
+    }
+    boost::geometry::correct(poly);
+    return poly;
+  }
+
+  bool moduleOverlapsInEtaPhi(MatrixF4x3 const& ref_mod_boundaries,
+                              MatrixF4x3 const& tar_mod_boundaries,
+                              float refphi = 0,
+                              float zshift = 0) {
+    RowVectorF3 ref_center = ref_mod_boundaries.colwise().sum();
+    ref_center /= 4.;
+    RowVectorF3 tar_center = tar_mod_boundaries.colwise().sum();
+    tar_center /= 4.;
+
+    float ref_center_phi = std::atan2(ref_center(2), ref_center(1));
+    float tar_center_phi = std::atan2(tar_center(2), tar_center(1));
+
+    if (std::fabs(phi_mpi_pi(ref_center_phi - tar_center_phi)) > std::numbers::pi_v<float> / 2.)
+      return false;
+
+    MatrixF4x2 ref_mod_boundaries_etaphi;
+    MatrixF4x2 tar_mod_boundaries_etaphi;
+
+    for (int i = 0; i < 4; ++i) {
+      auto ref_etaphi =
+          getEtaPhi(ref_mod_boundaries(i, 1), ref_mod_boundaries(i, 2), ref_mod_boundaries(i, 0) + zshift, refphi);
+      auto tar_etaphi =
+          getEtaPhi(tar_mod_boundaries(i, 1), tar_mod_boundaries(i, 2), tar_mod_boundaries(i, 0) + zshift, refphi);
+      ref_mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
+      ref_mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
+      tar_mod_boundaries_etaphi(i, 0) = tar_etaphi.first;
+      tar_mod_boundaries_etaphi(i, 1) = tar_etaphi.second;
+    }
+
+    // Quick cut
+    RowVectorF2 diff = ref_mod_boundaries_etaphi.row(0) - tar_mod_boundaries_etaphi.row(0);
+    if (std::fabs(diff(0)) > 0.5)
+      return false;
+    if (std::fabs(phi_mpi_pi(diff(1))) > 1.)
+      return false;
+
+    Polygon ref_poly, tar_poly;
+
+    // <= 4 because we need to close the polygon with the first point
+    for (int i = 0; i <= 4; ++i) {
+      boost::geometry::append(ref_poly,
+                              Point(ref_mod_boundaries_etaphi(i % 4, 0), ref_mod_boundaries_etaphi(i % 4, 1)));
+      boost::geometry::append(tar_poly,
+                              Point(tar_mod_boundaries_etaphi(i % 4, 0), tar_mod_boundaries_etaphi(i % 4, 1)));
+    }
+    boost::geometry::correct(ref_poly);
+    boost::geometry::correct(tar_poly);
+
+    return boost::geometry::intersects(ref_poly, tar_poly);
+  }
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
                                                        Modules const& modules,
@@ -33,7 +97,7 @@ namespace lstgeometry {
     unsigned short ref_subdet = refmodule.subdet;
 
     auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
-    auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
+    auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
@@ -130,11 +194,10 @@ namespace lstgeometry {
     MatrixF4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
-      Helix helix_p10 = constructHelixFromPoints(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      Helix helix_m10 = constructHelixFromPoints(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      Helix helix_p10_pos = constructHelixFromPoints(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
-      Helix helix_m10_pos =
-          constructHelixFromPoints(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
+      auto helix_p10 = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
+      auto helix_m10 = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
+      auto helix_p10_pos = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
+      auto helix_m10_pos = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       double bound_theta =
           std::atan2(std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2)), bounds(i, 0));
       double bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
@@ -145,23 +208,25 @@ namespace lstgeometry {
         if (doR) {
           double tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
           if (bound_theta > theta) {
-            next_point = getHelixPointFromRadius(phi_diff > 0 ? helix_p10 : helix_p10_pos, tar_layer_radius);
+            auto& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
+            next_point = h.pointFromRadius(tar_layer_radius);
           } else {
-            next_point = getHelixPointFromRadius(phi_diff > 0 ? helix_m10 : helix_m10_pos, tar_layer_radius);
+            auto& h = phi_diff > 0 ? helix_m10 : helix_m10_pos;
+            next_point = h.pointFromRadius(tar_layer_radius);
           }
         } else {
           double tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(1);
           if (bound_theta > theta) {
             if (phi_diff > 0) {
-              next_point = getHelixPointFromZ(helix_p10, std::copysign(tar_layer_z, helix_p10.lam));
+              next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
             } else {
-              next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
+              next_point = helix_p10_pos.pointFromZ(std::copysign(tar_layer_z, helix_p10_pos.lambda));
             }
           } else {
             if (phi_diff > 0) {
-              next_point = getHelixPointFromZ(helix_m10, std::copysign(tar_layer_z, helix_p10.lam));
+              next_point = helix_m10.pointFromZ(std::copysign(tar_layer_z, helix_m10.lambda));
             } else {
-              next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
+              next_point = helix_m10_pos.pointFromZ(std::copysign(tar_layer_z, helix_m10_pos.lambda));
             }
           }
         }
@@ -169,15 +234,15 @@ namespace lstgeometry {
         double tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(ref_layer + 1);
         if (bound_theta > theta) {
           if (phi_diff > 0) {
-            next_point = getHelixPointFromZ(helix_p10, std::copysign(tar_layer_z, helix_p10.lam));
+            next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
           } else {
-            next_point = getHelixPointFromZ(helix_p10_pos, std::copysign(tar_layer_z, helix_p10_pos.lam));
+            next_point = helix_p10_pos.pointFromZ(std::copysign(tar_layer_z, helix_p10_pos.lambda));
           }
         } else {
           if (phi_diff > 0) {
-            next_point = getHelixPointFromZ(helix_m10, std::copysign(tar_layer_z, helix_m10.lam));
+            next_point = helix_m10.pointFromZ(std::copysign(tar_layer_z, helix_m10.lambda));
           } else {
-            next_point = getHelixPointFromZ(helix_m10_pos, std::copysign(tar_layer_z, helix_m10_pos.lam));
+            next_point = helix_m10_pos.pointFromZ(std::copysign(tar_layer_z, helix_m10_pos.lambda));
           }
         }
       }
@@ -204,7 +269,7 @@ namespace lstgeometry {
     unsigned short ref_subdet = refmodule.subdet;
 
     auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
-    auto etaphibins = getEtaPhiBins(etaphi.first, etaphi.second);
+    auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
         ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
@@ -283,9 +348,9 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  std::unordered_map<unsigned int, std::unordered_set<unsigned int>> mergeLineConnections(
+  ModuleMap mergeLineConnections(
       std::initializer_list<const std::unordered_map<unsigned int, std::vector<unsigned int>>*> connections_list) {
-    std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged;
+    ModuleMap merged;
 
     for (auto* connections : connections_list) {
       for (const auto& [detid, list] : *connections) {
@@ -297,6 +362,27 @@ namespace lstgeometry {
     return merged;
   }
 
-}  // namespace lstgeometry
+  ModuleMap buildModuleMap(Modules const& modules,
+                           Sensors const& sensors,
+                           DetectorGeometry const& det_geo,
+                           float pt_cut) {
+    auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](const auto& x) {
+      auto mod = modules.at(sensors.at(x.first).moduleDetId);
+      // exclude the outermost modules that do not have connections to other modules
+      return ((mod.subdet == 5 && mod.isLower && mod.layer != 6) ||
+              (mod.subdet == 4 && mod.isLower && mod.layer != 5 && !(mod.ring == 15 && mod.layer == 1) &&
+               !(mod.ring == 15 && mod.layer == 2) && !(mod.ring == 12 && mod.layer == 3) &&
+               !(mod.ring == 12 && mod.layer == 4)));
+    });
 
-#endif
+    std::unordered_map<unsigned int, std::vector<unsigned int>> straight_line_connections;
+    std::unordered_map<unsigned int, std::vector<unsigned int>> curved_line_connections;
+
+    for (auto ref_detid : detids_etaphi_layer_ref) {
+      straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, modules, sensors, det_geo);
+      curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, modules, sensors, det_geo, pt_cut);
+    }
+    return mergeLineConnections({&straight_line_connections, &curved_line_connections});
+  }
+
+}  // namespace lstgeometry

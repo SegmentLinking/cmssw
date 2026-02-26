@@ -1,15 +1,9 @@
-#ifndef RecoTracker_LSTGeometry_interface_PixelMapMethods_h
-#define RecoTracker_LSTGeometry_interface_PixelMapMethods_h
-
-#include <array>
-
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
+
 namespace lstgeometry {
 
-  PixelMap computePixelMap(Modules const& modules, DetectorGeometry const& det_geom, double ptCut) {
+  PixelMap buildPixelMap(Modules const& modules, DetectorGeometry const& det_geom, float pt_cut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
@@ -38,8 +32,7 @@ namespace lstgeometry {
       auto location = module.location;
 
       // Skip if the module is not PS module and is not lower module
-      if (!module.isLower || (module.moduleType != TrackerGeometry::ModuleType::Ph2PSP &&
-                              module.moduleType != TrackerGeometry::ModuleType::Ph2PSS))
+      if (!module.isLower || (module.moduleType != ModuleType::Ph2PSP && module.moduleType != ModuleType::Ph2PSS))
         continue;
 
       // For this module, now compute which super bins they belong to
@@ -48,15 +41,15 @@ namespace lstgeometry {
       for (unsigned int ipt = 0; ipt < kPtBounds.size(); ipt++) {
         for (unsigned int iz = 0; iz < kNZ; iz++) {
           // The zmin, zmax of consideration
-          double zmin = -30 + iz * (60. / kNZ);
-          double zmax = -30 + (iz + 1) * (60. / kNZ);
+          float zmin = -30 + iz * (60. / kNZ);
+          float zmax = -30 + (iz + 1) * (60. / kNZ);
 
           zmin -= 0.05;
           zmax += 0.05;
 
           // The ptmin, ptmax of consideration
-          double pt_lo = ipt == 0 ? ptCut : kPtBounds[ipt - 1];
-          double pt_hi = kPtBounds[ipt];
+          float pt_lo = ipt == 0 ? pt_cut : kPtBounds[ipt - 1];
+          float pt_hi = kPtBounds[ipt];
 
           auto [etamin, etamax] = det_geom.getCompatibleEtaRange(detId, zmin, zmax);
 
@@ -71,20 +64,20 @@ namespace lstgeometry {
           }
 
           // Compute the indices of the compatible eta range
-          unsigned int ietamin = static_cast<unsigned int>(std::max((etamin + 2.6) / (5.2 / kNEta), 0.0));
+          unsigned int ietamin = static_cast<unsigned int>(std::max((etamin + 2.6f) / (5.2f / kNEta), 0.0f));
           unsigned int ietamax =
-              static_cast<unsigned int>(std::min((etamax + 2.6) / (5.2 / kNEta), static_cast<double>(kNEta - 1)));
+              static_cast<unsigned int>(std::min((etamax + 2.6f) / (5.2f / kNEta), static_cast<float>(kNEta - 1)));
 
           auto phi_ranges = det_geom.getCompatiblePhiRange(detId, pt_lo, pt_hi);
 
-          unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<double>) /
-                                                               (2. * std::numbers::pi_v<double> / kNPhi));
-          unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<double>) /
-                                                               (2. * std::numbers::pi_v<double> / kNPhi));
-          unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<double>) /
-                                                               (2. * std::numbers::pi_v<double> / kNPhi));
-          unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<double>) /
-                                                               (2. * std::numbers::pi_v<double> / kNPhi));
+          unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<float>) /
+                                                               (2. * std::numbers::pi_v<float> / kNPhi));
+          unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<float>) /
+                                                               (2. * std::numbers::pi_v<float> / kNPhi));
+          unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<float>) /
+                                                               (2. * std::numbers::pi_v<float> / kNPhi));
+          unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<float>) /
+                                                               (2. * std::numbers::pi_v<float> / kNPhi));
 
           // <= to cover some inefficiencies
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
@@ -134,5 +127,3 @@ namespace lstgeometry {
   }
 
 }  // namespace lstgeometry
-
-#endif

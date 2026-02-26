@@ -33,4 +33,10 @@ namespace lstgeometry {
     return coord;
   }
 
+  std::pair<float, float> getEtaPhi(float x, float y, float z, float refphi) {
+    float phi = phi_mpi_pi(std::atan2(y, x) - refphi);
+    float eta = std::copysign(-std::log(std::tan(std::atan(std::sqrt(x * x + y * y) / std::abs(z)) / 2.)), z);
+    return std::make_pair(eta, phi);
+  }
+
 }  // namespace lstgeometry

@@ -38,7 +38,7 @@ void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& i
   lstgeometry::writeSlopes(lstg.endcap_slopes, lstg.sensors, outputDirectory_ + "endcap_orientation", binaryOutput_);
   lstgeometry::writePixelMaps(lstg.pixel_map, outputDirectory_ + "pixelmap/pLS_map", binaryOutput_);
   lstgeometry::writeModuleConnections(
-      lstg.merged_line_connections, outputDirectory_ + "module_connection_tracing_merged", binaryOutput_);
+      lstg.module_map, outputDirectory_ + "module_connection_tracing_merged", binaryOutput_);
 
   edm::LogInfo("DumpLSTGeometry") << "Geometry data was successfully dumped." << std::endl;
 }

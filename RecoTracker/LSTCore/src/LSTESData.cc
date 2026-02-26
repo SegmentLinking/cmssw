@@ -145,7 +145,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
   tiltedGeometry.load(lstg.barrel_slopes);
 
   std::map<unsigned int, std::vector<unsigned int>> final_modulemap;
-  for (auto const& [detId, connections] : lstg.merged_line_connections) {
+  for (auto const& [detId, connections] : lstg.module_map) {
     final_modulemap[detId] = std::vector<unsigned int>(connections.begin(), connections.end());
   }
   moduleConnectionMap.load(final_modulemap);
