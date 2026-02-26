@@ -95,7 +95,8 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const auto subdet = static_cast<GeomDetEnumerators::SubDetector>(detId.subdetId());
     const auto side = trackerTopo_->barrelTiltTypeP2(detId);
     // GeomDetEnumerators::isBarrel doesn't give the right answer
-    const auto location = (subdet == SubDetector::TEC ? lstgeometry::Location::barrel : lstgeometry::Location::endcap);
+    const auto location =
+        (subdet == lstgeometry::SubDetector::TEC ? lstgeometry::Location::barrel : lstgeometry::Location::endcap);
     const unsigned int layer = trackerTopo_->layer(detId);
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
