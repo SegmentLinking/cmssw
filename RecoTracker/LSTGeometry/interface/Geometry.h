@@ -3,6 +3,7 @@
 
 #include "RecoTracker/LSTGeometry/interface/SlopeData.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
@@ -13,7 +14,7 @@ namespace lstgeometry {
     std::unordered_map<unsigned int, SlopeData> barrel_slopes;
     std::unordered_map<unsigned int, SlopeData> endcap_slopes;
     PixelMap pixel_map;
-    std::unordered_map<unsigned int, std::unordered_set<unsigned int>> merged_line_connections;
+    ModuleMap module_map;
 
     Geometry(Modules &modules,
              Sensors &sensors_input,

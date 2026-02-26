@@ -1,12 +1,13 @@
 #ifndef RecoTracker_LSTGeometry_interface_Common_h
 #define RecoTracker_LSTGeometry_interface_Common_h
 
+#include <limits>
+#include <array>
+#include <Eigen/Dense>
+
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 #include "DataFormats/SiStripDetId/interface/SiStripEnums.h"
-
-#include <Eigen/Dense>
-#include <limits>
 
 namespace lstgeometry {
 
@@ -42,6 +43,7 @@ namespace lstgeometry {
   float phi_mpi_pi(float phi);
   float roundAngle(float angle, float tol = 1e-3);
   float roundCoordinate(float coord, float tol = 1e-3);
+  std::pair<float, float> getEtaPhi(float x, float y, float z, float refphi = 0);
 
 }  // namespace lstgeometry
 

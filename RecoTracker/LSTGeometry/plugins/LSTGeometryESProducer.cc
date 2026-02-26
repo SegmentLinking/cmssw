@@ -15,6 +15,7 @@
 #include <cmath>
 #include <vector>
 #include <unordered_map>
+#include <iostream>  /////////////////////// remove
 
 class LSTGeometryESProducer : public edm::ESProducer {
 public:
@@ -98,6 +99,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const unsigned int layer = trackerTopo_->layer(detId);
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
+
+    std::cout << "Processing detId " << detid << " with subdet " << subdet << " layer " << layer << " ring " << ring
+              << " side " << side << std::endl;  ////////////////////// remove
 
     float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
