@@ -94,14 +94,15 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     const auto subdet = static_cast<GeomDetEnumerators::SubDetector>(detId.subdetId());
     const auto side = trackerTopo_->barrelTiltTypeP2(detId);
-    const auto location = (GeomDetEnumerators::isBarrel(subdet) ? GeomDetEnumerators::Location::barrel
-                                                                : GeomDetEnumerators::Location::endcap);
+    // GeomDetEnumerators::isBarrel doesn't give the right answer
+    const auto location = (subdet == SubDetector::TEC ? lstgeometry::Location::barrel : lstgeometry::Location::endcap);
     const unsigned int layer = trackerTopo_->layer(detId);
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
 
-    std::cout << "Processing detId " << detid << " with subdet " << subdet << " layer " << layer << " ring " << ring
-              << " side " << side << std::endl;  ////////////////////// remove
+    std::cout << "Processing detId " << detid << " with subdet " << subdet << ", " << static_cast<unsigned int>(subdet)
+              << " layer " << layer << " ring " << ring << " side " << side << ", isbarrel "
+              << GeomDetEnumerators::isBarrel(subdet) << std::endl;  ////////////////////// remove
 
     float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
@@ -117,7 +118,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
     }
 
-    if (location == GeomDetEnumerators::Location::barrel) {
+    if (location == lstgeometry::Location::barrel) {
       avg_r_cm[layer - 1] += rho_cm;
       avg_r_counter[layer - 1] += 1;
     } else {
