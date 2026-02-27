@@ -24,7 +24,8 @@ namespace lstgeometry {
   using ModuleType = TrackerGeometry::ModuleType;
   using SubDetector = GeomDetEnumerators::SubDetector;
   using Location = GeomDetEnumerators::Location;
-  using BarrelModuleTilt = Phase2Tracker::BarrelModuleTilt;
+
+  enum Side { NegZ = 1, PosZ = 2, Center = 3 };
 
   // TODO: These should be moved to ../Common.h
   constexpr float k2Rinv1GeVf = 0.00299792458;
@@ -44,6 +45,11 @@ namespace lstgeometry {
   float roundAngle(float angle, float tol = 1e-3);
   float roundCoordinate(float coord, float tol = 1e-3);
   std::pair<float, float> getEtaPhi(float x, float y, float z, float refphi = 0);
+
+  // Not sure if there is functionality for this already in CMSSW
+  bool isInverted(unsigned int moduleId, Location location, Side side, unsigned int layer);
+  // This differs from TrackerTopology::isLower since it considers if the module is inverted
+  bool isLower(unsigned int moduleId, Location location, Side side, unsigned int layer, unsigned int detId);
 
 }  // namespace lstgeometry
 
