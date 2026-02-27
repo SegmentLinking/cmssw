@@ -100,8 +100,9 @@ namespace lstgeometry {
     auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
-        ref_location == Location::barrel ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
-                        : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
+        ref_location == Location::barrel
+            ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+            : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
@@ -272,8 +273,9 @@ namespace lstgeometry {
     auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
-        ref_location == Location::barrel ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
-                                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
+        ref_location == Location::barrel
+            ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+            : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules, sensors, det_geom, ptCut);
 
@@ -367,12 +369,12 @@ namespace lstgeometry {
                            DetectorGeometry const& det_geo,
                            float pt_cut) {
     auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](const auto& x) {
-      auto mod = modules.at(sensors.at(x.first).moduleDetId);
+      auto& s = sensors.at(x.first);
+      auto& m = modules.at(s.moduleDetId);
       // exclude the outermost modules that do not have connections to other modules
-      return ((mod.location == Location::barrel && mod.isLower && mod.layer != 6) ||
-              (mod.location == Location::endcap && mod.isLower && mod.layer != 5 && !(mod.ring == 15 && mod.layer == 1) &&
-               !(mod.ring == 15 && mod.layer == 2) && !(mod.ring == 12 && mod.layer == 3) &&
-               !(mod.ring == 12 && mod.layer == 4)));
+      return ((m.location == Location::barrel && s.isLower && m.layer != 6) ||
+              (m.location == Location::endcap && s.isLower && m.layer != 5 && !(m.ring == 15 && m.layer == 1) &&
+               !(m.ring == 15 && m.layer == 2) && !(m.ring == 12 && m.layer == 3) && !(m.ring == 12 && m.layer == 4)));
     });
 
     std::unordered_map<unsigned int, std::vector<unsigned int>> straight_line_connections;

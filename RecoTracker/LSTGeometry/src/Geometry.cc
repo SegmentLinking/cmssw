@@ -18,7 +18,7 @@ Geometry::Geometry(Modules &modules,
   assignCornersToSensors(modules, sensors_input);
 
   // std::cout << "Corners are " << std::endl;
-  // std::cout << sensors_input.at(440165400 + 1).corners << std::endl;  /////////////////////// remove 
+  // std::cout << sensors_input.at(440165400 + 1).corners << std::endl;  /////////////////////// remove
 
   auto slopes = processCorners(modules, sensors_input);
   barrel_slopes = std::move(std::get<0>(slopes));

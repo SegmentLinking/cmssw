@@ -32,7 +32,7 @@ namespace lstgeometry {
       auto location = module.location;
 
       // Skip if the module is not PS module and is not lower module
-      if (!module.isLower || (module.moduleType != ModuleType::Ph2PSP && module.moduleType != ModuleType::Ph2PSS))
+      if (module.moduleType == ModuleType::Ph2SS)
         continue;
 
       // For this module, now compute which super bins they belong to

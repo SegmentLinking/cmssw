@@ -80,10 +80,22 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const float z_cm = lstgeometry::roundCoordinate(position.z());
     const float phi_rad = lstgeometry::roundAngle(position.phi());
 
+    const auto subdet = trackerGeom_->geomDetSubDetector(detId.subdetId());
+    const auto location =
+        GeomDetEnumerators::isBarrel(subdet) ? lstgeometry::Location::barrel : lstgeometry::Location::endcap;
+    const auto side = static_cast<lstgeometry::Side>(
+        location == lstgeometry::Location::barrel ? static_cast<unsigned int>(trackerTopo_->barrelTiltTypeP2(detId))
+                                                  : trackerTopo_->side(detId));
+    const unsigned int moduleId = trackerTopo_->module(detId);
+    const unsigned int layer = trackerTopo_->layer(detId);
+    const unsigned int ring = trackerTopo_->endcapRingP2(detId);
+
     if (det->isLeaf()) {
       // Leafs are the sensors
-      const unsigned int moduleDetId = detid & ~0b11;  // TODO: Is there a CMSSW method for this?
-      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, moduleType);
+      const unsigned int moduleDetId = detid & ~0b11;  // I don't think there is there a CMSSW method for this
+      // Can't use TrackerTopology::isLower since it doesn't consider if the module is inverted
+      const bool isLow = isLower(moduleId, location, side, layer, detid);
+      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType);
 
       ///////////// tmp
       // const RectangularPlaneBounds *sensor_bounds = dynamic_cast<const RectangularPlaneBounds *>(b);
@@ -114,19 +126,6 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       throw cms::Exception("UnimplementedFeature") << "unsupported Bounds class";
     }
 
-    const auto subdet = trackerGeom_->geomDetSubDetector(detId.subdetId());
-    const auto side = trackerTopo_->barrelTiltTypeP2(detId);
-    // GeomDetEnumerators::isBarrel doesn't give the right answer
-    const auto location =
-        (subdet == lstgeometry::SubDetector::TEC ? lstgeometry::Location::barrel : lstgeometry::Location::endcap);
-    const unsigned int layer = trackerTopo_->layer(detId);
-    const unsigned int ring = trackerTopo_->endcapRingP2(detId);
-    const bool isLower = trackerTopo_->isLower(detId);
-
-    // std::cout << "Processing detId " << detid << " with subdet " << subdet << ", " << static_cast<unsigned int>(subdet)
-    //           << " layer " << layer << " ring " << ring << " side " << side << ", isbarrel "
-    //           << GeomDetEnumerators::isBarrel(subdet) << std::endl;  ////////////////////// remove
-
     float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
     float meanWidth_cm = b2->width();
@@ -153,9 +152,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
                                subdet,
                                location,
                                side,
+                               moduleId,
                                layer,
                                ring,
-                               isLower,
                                rho_cm,
                                z_cm,
                                phi_rad,

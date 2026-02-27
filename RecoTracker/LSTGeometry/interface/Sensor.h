@@ -14,6 +14,7 @@ namespace lstgeometry {
     float centerRho;
     float centerZ;
     float centerPhi;
+    bool isLower;
     MatrixF4x3 corners;
     // Redundant, but convenient to have them
     ModuleType moduleType;
@@ -21,7 +22,8 @@ namespace lstgeometry {
     float centerY;
 
     Sensor() = default;
-    Sensor(unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, ModuleType moduleType);
+    Sensor(
+        unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, bool isLower, ModuleType moduleType);
   };
 
   using Sensors = std::unordered_map<unsigned int, Sensor>;

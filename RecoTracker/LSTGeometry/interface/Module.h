@@ -11,10 +11,10 @@ namespace lstgeometry {
     ModuleType moduleType;
     SubDetector subdet;
     Location location;
-    BarrelModuleTilt side;
+    Side side;
+    unsigned int moduleId;
     unsigned int layer;
     unsigned int ring;
-    bool isLower;
     float centerRho;
     float centerZ;
     float centerPhi;

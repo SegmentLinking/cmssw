@@ -96,8 +96,9 @@ namespace lstgeometry {
 
     for (unsigned int layer = 1; layer < 7; layer++) {
       auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
-        auto& m = modules_info.at(sensors.at(x.first).moduleDetId);
-        return m.location == Location::barrel && m.layer == layer && m.isLower;
+        auto& s = sensors.at(x.first);
+        auto& m = modules_info.at(s.moduleDetId);
+        return m.location == Location::barrel && m.layer == layer && s.isLower;
       });
       for (auto detid : detids) {
         auto corners = getCorners(detid);
@@ -115,8 +116,9 @@ namespace lstgeometry {
     }
     for (unsigned int layer = 1; layer < 6; layer++) {
       auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
-        auto& m = modules_info.at(sensors.at(x.first).moduleDetId);
-        return m.location == Location::endcap && m.layer == layer && m.isLower;
+        auto& s = sensors.at(x.first);
+        auto& m = modules_info.at(s.moduleDetId);
+        return m.location == Location::endcap && m.layer == layer && s.isLower;
       });
       for (auto detid : detids) {
         auto corners = getCorners(detid);
