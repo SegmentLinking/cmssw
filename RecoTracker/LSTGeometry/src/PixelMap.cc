@@ -56,7 +56,7 @@ namespace lstgeometry {
           etamin -= 0.05;
           etamax += 0.05;
 
-          if (layer == 2 && location == GeomDetEnumerators::Location::endcap) {
+          if (layer == 2 && location == Location::endcap) {
             if (etamax < 2.3)
               continue;
             if (etamin < 2.3)

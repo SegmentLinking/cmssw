@@ -94,13 +94,13 @@ namespace lstgeometry {
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
     unsigned short ref_layer = refmodule.layer;
-    unsigned short ref_subdet = refmodule.subdet;
+    auto ref_location = refmodule.location;
 
     auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
     auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
-        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+        ref_location == Location::barrel ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
@@ -114,7 +114,7 @@ namespace lstgeometry {
     // Consider barrel to endcap connections if the intersection area is > 0
     // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
     // function can return multiple polygons if the difference results in disjoint pieces
-    if (ref_subdet == 5) {
+    if (ref_location == Location::barrel) {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
       for (float zshift : {0, 10, -10}) {
@@ -190,7 +190,7 @@ namespace lstgeometry {
     double refphi = std::atan2(sensor.centerY, sensor.centerX);
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
     unsigned short ref_layer = refmodule.layer;
-    unsigned short ref_subdet = refmodule.subdet;
+    auto ref_location = refmodule.location;
     MatrixF4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
@@ -204,7 +204,7 @@ namespace lstgeometry {
       double phi_diff = phi_mpi_pi(bound_phi - refphi);
 
       std::tuple<double, double, double, double> next_point;
-      if (ref_subdet == 5) {
+      if (ref_location == Location::barrel) {
         if (doR) {
           double tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
           if (bound_theta > theta) {
@@ -266,14 +266,14 @@ namespace lstgeometry {
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
     unsigned short ref_layer = refmodule.layer;
-    unsigned short ref_subdet = refmodule.subdet;
+    auto ref_location = refmodule.location;
 
     auto etaphi = getEtaPhi(sensor.centerX, sensor.centerY, sensor.centerZ);
     auto etaphibins = DetectorGeometry::getEtaPhiBins(etaphi.first, etaphi.second);
 
     auto const& tar_detids_to_be_considered =
-        ref_subdet == 5 ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
-                        : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
+        ref_location == Location::barrel ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
+                                         : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
     auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules, sensors, det_geom, ptCut);
 
@@ -286,7 +286,7 @@ namespace lstgeometry {
     // Consider barrel to endcap connections if the intersection area is > 0
     // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
     // function can return multiple polygons if the difference results in disjoint pieces
-    if (ref_subdet == 5) {
+    if (ref_location == Location::barrel) {
       std::unordered_set<unsigned int> barrel_endcap_connected_tar_detids;
 
       int zshift = 0;
@@ -369,8 +369,8 @@ namespace lstgeometry {
     auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](const auto& x) {
       auto mod = modules.at(sensors.at(x.first).moduleDetId);
       // exclude the outermost modules that do not have connections to other modules
-      return ((mod.subdet == 5 && mod.isLower && mod.layer != 6) ||
-              (mod.subdet == 4 && mod.isLower && mod.layer != 5 && !(mod.ring == 15 && mod.layer == 1) &&
+      return ((mod.location == Location::barrel && mod.isLower && mod.layer != 6) ||
+              (mod.location == Location::endcap && mod.isLower && mod.layer != 5 && !(mod.ring == 15 && mod.layer == 1) &&
                !(mod.ring == 15 && mod.layer == 2) && !(mod.ring == 12 && mod.layer == 3) &&
                !(mod.ring == 12 && mod.layer == 4)));
     });

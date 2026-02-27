@@ -84,6 +84,28 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       // Leafs are the sensors
       const unsigned int moduleDetId = detid & ~0b11;  // TODO: Is there a CMSSW method for this?
       sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, moduleType);
+
+      ///////////// tmp
+      // const RectangularPlaneBounds *sensor_bounds = dynamic_cast<const RectangularPlaneBounds *>(b);
+      // float wid = sensor_bounds->width();
+      // float len = sensor_bounds->length();
+      // auto c1 = GloballyPositioned<float>::LocalPoint(wid / 2, len / 2, 0);
+      // auto c2 = GloballyPositioned<float>::LocalPoint(-wid / 2, len / 2, 0);
+      // auto c3 = GloballyPositioned<float>::LocalPoint(-wid / 2, -len / 2, 0);
+      // auto c4 = GloballyPositioned<float>::LocalPoint(wid / 2, -len / 2, 0);
+      // auto c1g = surface.toGlobal(c1);
+      // auto c2g = surface.toGlobal(c2);
+      // auto c3g = surface.toGlobal(c3);
+      // auto c4g = surface.toGlobal(c4);
+      // if (detid == 440165400 + 1) {
+      //   std::cout << "Corners for detid " << detid << ": " << std::endl;
+      //   std::cout << c1g << std::endl;
+      //   std::cout << c2g << std::endl;
+      //   std::cout << c3g << std::endl;
+      //   std::cout << c4g << std::endl;
+      // }
+      ///
+
       continue;
     }
 
@@ -92,7 +114,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       throw cms::Exception("UnimplementedFeature") << "unsupported Bounds class";
     }
 
-    const auto subdet = static_cast<GeomDetEnumerators::SubDetector>(detId.subdetId());
+    const auto subdet = trackerGeom_->geomDetSubDetector(detId.subdetId());
     const auto side = trackerTopo_->barrelTiltTypeP2(detId);
     // GeomDetEnumerators::isBarrel doesn't give the right answer
     const auto location =
@@ -101,9 +123,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const unsigned int ring = trackerTopo_->endcapRingP2(detId);
     const bool isLower = trackerTopo_->isLower(detId);
 
-    std::cout << "Processing detId " << detid << " with subdet " << subdet << ", " << static_cast<unsigned int>(subdet)
-              << " layer " << layer << " ring " << ring << " side " << side << ", isbarrel "
-              << GeomDetEnumerators::isBarrel(subdet) << std::endl;  ////////////////////// remove
+    // std::cout << "Processing detId " << detid << " with subdet " << subdet << ", " << static_cast<unsigned int>(subdet)
+    //           << " layer " << layer << " ring " << ring << " side " << side << ", isbarrel "
+    //           << GeomDetEnumerators::isBarrel(subdet) << std::endl;  ////////////////////// remove
 
     float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
 
