@@ -36,13 +36,13 @@ namespace lstgeometry {
       auto& module = modules.at(sensor.moduleDetId);
 
       auto location = module.location;
-      bool is_tilted = module.side != Phase2Tracker::BarrelModuleTilt::flat;
+      bool is_tilted = module.side != BarrelModuleTilt::flat;
 
       // TODO: Do we need to skip strips?
 
-      if (location == GeomDetEnumerators::Location::barrel and is_tilted)
+      if (location == Location::barrel and is_tilted)
         barrel_slopes[detId] = slope;
-      else if (location == GeomDetEnumerators::Location::endcap)
+      else if (location == Location::endcap)
         endcap_slopes[detId] = slope;
     }
 
