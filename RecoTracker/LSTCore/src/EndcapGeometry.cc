@@ -39,6 +39,19 @@ void lst::EndcapGeometry::load(std::string const& filename) {
   fillGeoMapArraysExplicit();
 }
 
+void lst::EndcapGeometry::load(std::unordered_map<unsigned int, lstgeometry::SlopeData> const& slopes,
+                               std::unordered_map<unsigned int, lstgeometry::Sensor> const& sensors) {
+  dxdy_slope_.clear();
+  centroid_phis_.clear();
+
+  for (const auto& [detId, slopeData] : slopes) {
+    dxdy_slope_[detId] = slopeData.dxdy_slope;
+    centroid_phis_[detId] = sensors.at(detId).centerPhi;
+  }
+
+  fillGeoMapArraysExplicit();
+}
+
 void lst::EndcapGeometry::fillGeoMapArraysExplicit() {
   nEndCapMap = centroid_phis_.size();
 

@@ -218,19 +218,16 @@ namespace lst {
     nModules = counter;
   }
 
-  inline std::shared_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
-                                                                    const char* moduleMetaDataFilePath,
-                                                                    uint16_t& nModules,
-                                                                    uint16_t& nLowerModules,
-                                                                    unsigned int& nPixels,
-                                                                    PixelMap& pixelMapping,
-                                                                    const EndcapGeometry& endcapGeometry,
-                                                                    const TiltedGeometry& tiltedGeometry,
-                                                                    const ModuleConnectionMap& moduleConnectionMap) {
-    ModuleMetaData mmd;
-
-    loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
-
+  inline std::shared_ptr<ModulesHostCollection> constructModuleCollection(
+      MapPLStoLayer const& pLStoLayer,
+      ModuleMetaData& mmd,
+      uint16_t& nModules,
+      uint16_t& nLowerModules,
+      unsigned int& nPixels,
+      PixelMap& pixelMapping,
+      const EndcapGeometry& endcapGeometry,
+      const TiltedGeometry& tiltedGeometry,
+      const ModuleConnectionMap& moduleConnectionMap) {
     // TODO: this whole section could use some refactoring
     auto [totalSizes,
           connectedModuleDetIds,
@@ -402,5 +399,29 @@ namespace lst {
 
     return modulesHC;
   }
+
+  inline std::shared_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
+                                                                    const char* moduleMetaDataFilePath,
+                                                                    uint16_t& nModules,
+                                                                    uint16_t& nLowerModules,
+                                                                    unsigned int& nPixels,
+                                                                    PixelMap& pixelMapping,
+                                                                    const EndcapGeometry& endcapGeometry,
+                                                                    const TiltedGeometry& tiltedGeometry,
+                                                                    const ModuleConnectionMap& moduleConnectionMap) {
+    ModuleMetaData mmd;
+
+    loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
+    return constructModuleCollection(pLStoLayer,
+                                     mmd,
+                                     nModules,
+                                     nLowerModules,
+                                     nPixels,
+                                     pixelMapping,
+                                     endcapGeometry,
+                                     tiltedGeometry,
+                                     moduleConnectionMap);
+  }
+
 }  // namespace lst
 #endif
