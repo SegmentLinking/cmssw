@@ -89,3 +89,7 @@ hltpostvalidation_prod = cms.Sequence(
     +postProcessorHLTvertexing
     + postProcessorHLTgsfTrackingSequence
     )
+
+hltHeterogeneousPostValidation = cms.Sequence(
+    postProcessorHLTtrackingSummary
+)
