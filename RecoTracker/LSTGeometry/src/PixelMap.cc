@@ -25,7 +25,8 @@ namespace lstgeometry {
         continue;
 
       auto module = modules.at(detId);
-      auto subdet = static_cast<unsigned int>(module.subdet);
+      // Phase-2 enum differs from the legacy one used here
+      unsigned int subdet = module.subdet == SubDetector::P2OTB ? 5 : 4;
       auto layer = module.layer;
       if (layer > 2)
         continue;
