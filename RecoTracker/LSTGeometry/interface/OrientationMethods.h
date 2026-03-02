@@ -48,17 +48,17 @@ namespace lstgeometry {
 
       auto location = module.location;
       bool is_tilted = module.side != Side::Center;
+      bool is_strip = isStripLayer(module, sensor.isLower);
 
       std::cout << "Processing detId " << detId
                 << ", location: " << (location == Location::barrel ? "barrel" : "endcap")
-                << ", is_tilted: " << is_tilted << ", isstrip: " << isStripLayer(module, sensor.isLower)
+                << ", is_tilted: " << is_tilted << ", isstrip: " << is_strip
                 << ", isLower: " << sensor.isLower << ", moduleId: " << module.moduleId << ", layer: " << module.layer
                 << ", isInverted: " << isInverted(module.moduleId, module.location, module.side, module.layer)
                 << ", drdz_slope: " << slope.drdz_slope << ", dxdy_slope: " << slope.dxdy_slope
                 << std::endl;  /////////////////////// remove
 
-      // TODO: Do we need to skip strips?
-      if (isStripLayer(module, sensor.isLower))
+      if (!is_strip)
         continue;
 
       std::cout << "DetId: " << detId << ", location: " << (location == Location::barrel ? "barrel" : "endcap")
