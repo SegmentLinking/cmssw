@@ -16,7 +16,7 @@ namespace lstgeometry {
   // the y axis as opposed to x axis in the expression provided in this function. Hence I tucked
   // in an extra pi/2 to account for these effects
   Helix::Helix(float pt, float vx, float vy, float vz, float mx, float my, float mz, int charge) : charge(charge) {
-    radius = pt / (k2Rinv1GeVf * kB);
+    radius = pt / (kC * kB);
 
     float t = 2. * std::asin(std::sqrt((vx - mx) * (vx - mx) + (vy - my) * (vy - my)) / (2. * radius));
     phi = std::numbers::pi_v<float> / 2. + std::atan((vy - my) / (vx - mx)) +

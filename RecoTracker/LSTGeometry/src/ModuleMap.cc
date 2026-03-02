@@ -89,7 +89,7 @@ namespace lstgeometry {
                                                        DetectorGeometry const& det_geom) {
     auto& sensor = sensors.at(ref_detid);
 
-    double refphi = std::atan2(sensor.centerY, sensor.centerX);
+    float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
@@ -138,7 +138,7 @@ namespace lstgeometry {
           ref_polygon = std::move(difference);
         }
 
-        double area = 0.;
+        float area = 0.;
         for (auto& ref_polygon_piece : ref_polygon)
           area += boost::geometry::area(ref_polygon_piece);
 
@@ -150,9 +150,9 @@ namespace lstgeometry {
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto& sensor_target = sensors.at(tar_detid);
-          double tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
+          float tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
-          if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<double> / 2.)
+          if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
@@ -181,14 +181,14 @@ namespace lstgeometry {
                                Modules const& modules,
                                Sensors const& sensors,
                                DetectorGeometry const& det_geom,
-                               double ptCut,
+                               float ptCut,
                                bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
     auto& sensor = sensors.at(ref_detid);
     int charge = 1;
-    double theta =
+    float theta =
         std::atan2(std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY), sensor.centerZ);
-    double refphi = std::atan2(sensor.centerY, sensor.centerX);
+    float refphi = std::atan2(sensor.centerY, sensor.centerX);
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
@@ -199,15 +199,15 @@ namespace lstgeometry {
       auto helix_m10 = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
       auto helix_p10_pos = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       auto helix_m10_pos = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
-      double bound_theta =
+      float bound_theta =
           std::atan2(std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2)), bounds(i, 0));
-      double bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
-      double phi_diff = phi_mpi_pi(bound_phi - refphi);
+      float bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
+      float phi_diff = phi_mpi_pi(bound_phi - refphi);
 
-      std::tuple<double, double, double, double> next_point;
+      std::tuple<float, float, float, float> next_point;
       if (ref_location == Location::barrel) {
         if (doR) {
-          double tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
+          float tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
           if (bound_theta > theta) {
             auto& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
             next_point = h.pointFromRadius(tar_layer_radius);
@@ -216,7 +216,7 @@ namespace lstgeometry {
             next_point = h.pointFromRadius(tar_layer_radius);
           }
         } else {
-          double tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(1);
+          float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(1);
           if (bound_theta > theta) {
             if (phi_diff > 0) {
               next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
@@ -232,7 +232,7 @@ namespace lstgeometry {
           }
         }
       } else {
-        double tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(ref_layer + 1);
+        float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(ref_layer + 1);
         if (bound_theta > theta) {
           if (phi_diff > 0) {
             next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
@@ -259,10 +259,10 @@ namespace lstgeometry {
                                                      Modules const& modules,
                                                      Sensors const& sensors,
                                                      DetectorGeometry const& det_geom,
-                                                     double ptCut) {
+                                                     float ptCut) {
     auto& sensor = sensors.at(ref_detid);
 
-    double refphi = std::atan2(sensor.centerY, sensor.centerX);
+    float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
     auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
@@ -312,7 +312,7 @@ namespace lstgeometry {
         ref_polygon = std::move(difference);
       }
 
-      double area = 0.;
+      float area = 0.;
       for (auto& ref_polygon_piece : ref_polygon)
         area += boost::geometry::area(ref_polygon_piece);
 
@@ -322,9 +322,9 @@ namespace lstgeometry {
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
           auto& sensor_target = sensors.at(tar_detid);
-          double tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
+          float tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
-          if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<double> / 2.)
+          if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);

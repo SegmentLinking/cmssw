@@ -269,7 +269,7 @@ namespace lstgeometry {
     float maxr = getMaxR(detId);
     float minphi = getMinPhi(detId);
     float maxphi = getMaxPhi(detId);
-    float A = k2Rinv1GeVf * kB / 2.;
+    float A = kC * kB / 2.;
     float pos_q_phi_lo_bound = phi_mpi_pi(A * minr / ptmax + minphi);
     float pos_q_phi_hi_bound = phi_mpi_pi(A * maxr / ptmin + maxphi);
     float neg_q_phi_lo_bound = phi_mpi_pi(-A * maxr / ptmin + minphi);

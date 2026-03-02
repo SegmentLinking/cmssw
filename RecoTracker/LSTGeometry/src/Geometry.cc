@@ -11,7 +11,7 @@ Geometry::Geometry(Modules &modules,
                    Sensors &sensors_input,
                    std::vector<float> const &average_r,
                    std::vector<float> const &average_z,
-                   double pt_cut) {
+                   float pt_cut) {
   for (auto &[_, mod] : modules)
     transformSensorCorners(mod);
 

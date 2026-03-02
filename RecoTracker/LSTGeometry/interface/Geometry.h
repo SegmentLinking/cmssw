@@ -20,7 +20,7 @@ namespace lstgeometry {
              Sensors &sensors_input,
              std::vector<float> const &average_r,
              std::vector<float> const &average_z,
-             double ptCut);
+             float ptCut);
   };
 
 }  // namespace lstgeometry

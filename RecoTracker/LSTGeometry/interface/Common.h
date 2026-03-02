@@ -27,8 +27,7 @@ namespace lstgeometry {
 
   enum Side { NegZ = 1, PosZ = 2, Center = 3 };
 
-  // TODO: These should be moved to ../Common.h
-  constexpr float k2Rinv1GeVf = 0.00299792458;
+  constexpr float kC = 0.00299792458;
   constexpr float kB = 3.8112;
 
   // For pixel maps

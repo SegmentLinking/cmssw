@@ -4,8 +4,8 @@
 namespace lstgeometry {
 
   struct SlopeData {
-    double drdz_slope;
-    double dxdy_slope;
+    float drdz_slope;
+    float dxdy_slope;
   };
 
 }  // namespace lstgeometry

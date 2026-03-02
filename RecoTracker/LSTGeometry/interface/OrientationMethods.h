@@ -22,10 +22,10 @@ namespace lstgeometry {
   }
 
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
-  SlopeData calculateSlope(double dx, double dy, double dz) {
-    double dr = sqrt(dx * dx + dy * dy);
-    double drdz_slope = dz != 0 ? dr / dz : kDefaultSlope;
-    double dxdy_slope = dy != 0 ? -dx / dy : kDefaultSlope;
+  SlopeData calculateSlope(float dx, float dy, float dz) {
+    float dr = sqrt(dx * dx + dy * dy);
+    float drdz_slope = dz != 0 ? dr / dz : kDefaultSlope;
+    float dxdy_slope = dy != 0 ? -dx / dy : kDefaultSlope;
     return SlopeData{drdz_slope, dxdy_slope};
   }
 
@@ -38,9 +38,9 @@ namespace lstgeometry {
     std::cout << "Number of sensors: " << sensors.size() << std::endl;  /////////////////////// remove
 
     for (const auto& [detId, sensor] : sensors) {
-      double dx = roundCoordinate(sensor.corners(1, 1) - sensor.corners(0, 1));
-      double dy = roundCoordinate(sensor.corners(1, 2) - sensor.corners(0, 2));
-      double dz = roundCoordinate(sensor.corners(1, 0) - sensor.corners(0, 0));
+      float dx = roundCoordinate(sensor.corners(1, 1) - sensor.corners(0, 1));
+      float dy = roundCoordinate(sensor.corners(1, 2) - sensor.corners(0, 2));
+      float dz = roundCoordinate(sensor.corners(1, 0) - sensor.corners(0, 0));
 
       SlopeData slope = calculateSlope(dx, dy, dz);
 
@@ -52,8 +52,8 @@ namespace lstgeometry {
 
       std::cout << "Processing detId " << detId
                 << ", location: " << (location == Location::barrel ? "barrel" : "endcap")
-                << ", is_tilted: " << is_tilted << ", isstrip: " << is_strip
-                << ", isLower: " << sensor.isLower << ", moduleId: " << module.moduleId << ", layer: " << module.layer
+                << ", is_tilted: " << is_tilted << ", isstrip: " << is_strip << ", isLower: " << sensor.isLower
+                << ", moduleId: " << module.moduleId << ", layer: " << module.layer
                 << ", isInverted: " << isInverted(module.moduleId, module.location, module.side, module.layer)
                 << ", drdz_slope: " << slope.drdz_slope << ", dxdy_slope: " << slope.dxdy_slope
                 << std::endl;  /////////////////////// remove
