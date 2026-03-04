@@ -3,7 +3,7 @@
 
 namespace lstgeometry {
 
-  PixelMap buildPixelMap(Modules const& modules, DetectorGeometry const& det_geom, float pt_cut) {
+  PixelMap buildPixelMap(Modules const& modules, Sensors const& sensors, DetectorGeometry const& det_geom, float pt_cut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
@@ -20,11 +20,9 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto detId : det_geom.getDetIds()) {
-      // Skip if the detId is not in the modules
-      if (!modules.contains(detId))
-        continue;
+      auto& sensor = sensors.at(detId);
 
-      auto module = modules.at(detId);
+      auto module = modules.at(sensor.moduleDetId);
       // Phase-2 enum differs from the legacy one used here
       unsigned int subdet = module.subdet == SubDetector::P2OTB ? 5 : 4;
       auto layer = module.layer;
@@ -32,8 +30,8 @@ namespace lstgeometry {
         continue;
       auto location = module.location;
 
-      // Skip if the module is not PS module and is not lower module
-      if (module.moduleType == ModuleType::Ph2SS)
+      // Skip if the module is not PS module and is not lower sensor
+      if (module.moduleType == ModuleType::Ph2SS || !sensor.isLower)
         continue;
 
       // For this module, now compute which super bins they belong to

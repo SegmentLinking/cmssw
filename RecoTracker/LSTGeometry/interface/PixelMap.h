@@ -8,6 +8,7 @@
 
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
 
@@ -17,7 +18,7 @@ namespace lstgeometry {
                                                   boost::hash<LayerSubdetChargeKey>>;
   using PixelMap = LayerSubdetChargeMap;
 
-  PixelMap buildPixelMap(Modules const& modules, DetectorGeometry const& det_geom, float pt_cut);
+  PixelMap buildPixelMap(Modules const& modules, Sensors const& sensors, DetectorGeometry const& det_geom, float pt_cut);
 
 }  // namespace lstgeometry
 

@@ -27,7 +27,7 @@ Geometry::Geometry(Modules &modules,
   auto det_geom = DetectorGeometry(sensors_input, average_r, average_z);
   det_geom.buildByLayer(modules, sensors_input);
 
-  pixel_map = buildPixelMap(modules, det_geom, pt_cut);
+  pixel_map = buildPixelMap(modules, sensors_input, det_geom, pt_cut);
 
   module_map = buildModuleMap(modules, sensors_input, det_geom, pt_cut);
 
