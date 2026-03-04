@@ -13,7 +13,7 @@
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
-#include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
+#include "RecoTracker/LSTGeometry/interface/Slope.h"
 
 namespace lstgeometry {
 
@@ -44,10 +44,7 @@ namespace lstgeometry {
     }
   }
 
-  void writeSlopes(std::unordered_map<unsigned int, SlopeData> const& slopes,
-                   Sensors const& sensors,
-                   std::string const& base_filename,
-                   bool binary = true) {
+  void writeSlopes(Slopes const& slopes, Sensors const& sensors, std::string const& base_filename, bool binary = true) {
     std::filesystem::path filepath(base_filename);
     std::filesystem::create_directories(filepath.parent_path());
 
@@ -56,8 +53,8 @@ namespace lstgeometry {
 
     if (binary) {
       for (auto& [detid, slope] : slopes) {
-        float drdz_slope = slope.drdz_slope;
-        float dxdy_slope = slope.dxdy_slope;
+        float drdz_slope = slope.drdz;
+        float dxdy_slope = slope.dxdy;
         float phi = sensors.at(detid).centerPhi;
         file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
         if (drdz_slope != kDefaultSlope) {
@@ -70,8 +67,8 @@ namespace lstgeometry {
       }
     } else {
       for (auto& [detid, slope] : slopes) {
-        float drdz_slope = slope.drdz_slope;
-        float dxdy_slope = slope.dxdy_slope;
+        float drdz_slope = slope.drdz;
+        float dxdy_slope = slope.dxdy;
         float phi = sensors.at(detid).centerPhi;
         file << detid << ",";
         if (drdz_slope != kDefaultSlope) {

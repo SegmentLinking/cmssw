@@ -1,7 +1,7 @@
 #ifndef RecoTracker_LSTGeometry_interface_Geometry_h
 #define RecoTracker_LSTGeometry_interface_Geometry_h
 
-#include "RecoTracker/LSTGeometry/interface/SlopeData.h"
+#include "RecoTracker/LSTGeometry/interface/Slope.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
@@ -11,8 +11,8 @@ namespace lstgeometry {
 
   struct Geometry {
     Sensors sensors;
-    std::unordered_map<unsigned int, SlopeData> barrel_slopes;
-    std::unordered_map<unsigned int, SlopeData> endcap_slopes;
+    Slopes barrel_slopes;
+    Slopes endcap_slopes;
     PixelMap pixel_map;
     ModuleMap module_map;
 

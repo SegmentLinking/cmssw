@@ -37,13 +37,13 @@ void lst::TiltedGeometry::load(std::string const& filename) {
   }
 }
 
-void lst::TiltedGeometry::load(std::unordered_map<unsigned int, lstgeometry::SlopeData> const& slopes) {
+void lst::TiltedGeometry::load(lstgeometry::Slopes const& slopes) {
   drdzs_.clear();
   dxdys_.clear();
 
-  for (const auto& [detId, slopeData] : slopes) {
-    drdzs_[detId] = slopeData.drdz_slope;
-    dxdys_[detId] = slopeData.dxdy_slope;
+  for (const auto& [detId, slope] : slopes) {
+    drdzs_[detId] = slope.drdz;
+    dxdys_[detId] = slope.dxdy;
   }
 }
 

@@ -1,9 +1,7 @@
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
 #include "RecoTracker/LSTGeometry/interface/CornerMethods.h"
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
-#include "RecoTracker/LSTGeometry/interface/OrientationMethods.h"
-
-#include <iostream>  /////////////////////// remove
+#include "RecoTracker/LSTGeometry/interface/Slope.h"
 
 using namespace lstgeometry;
 
@@ -17,10 +15,7 @@ Geometry::Geometry(Modules &modules,
 
   assignCornersToSensors(modules, sensors_input);
 
-  // std::cout << "Corners are " << std::endl;
-  // std::cout << sensors_input.at(440165400 + 1).corners << std::endl;  /////////////////////// remove
-
-  auto slopes = processCorners(modules, sensors_input);
+  auto slopes = computeSlopes(modules, sensors_input);
   barrel_slopes = std::move(std::get<0>(slopes));
   endcap_slopes = std::move(std::get<1>(slopes));
 

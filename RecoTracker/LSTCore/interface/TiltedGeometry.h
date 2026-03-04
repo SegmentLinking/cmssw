@@ -18,7 +18,7 @@ namespace lst {
     TiltedGeometry(std::string const& filename);
 
     void load(std::string const&);
-    void load(std::unordered_map<unsigned int, lstgeometry::SlopeData> const&);
+    void load(lstgeometry::Slopes const&);
 
     float getDrDz(unsigned int detid) const;
     float getDxDy(unsigned int detid) const;

@@ -3,7 +3,10 @@
 
 namespace lstgeometry {
 
-  PixelMap buildPixelMap(Modules const& modules, Sensors const& sensors, DetectorGeometry const& det_geom, float pt_cut) {
+  PixelMap buildPixelMap(Modules const& modules,
+                         Sensors const& sensors,
+                         DetectorGeometry const& det_geom,
+                         float pt_cut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
 
