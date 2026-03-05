@@ -21,10 +21,6 @@ namespace lstgeometry {
     float tiltAngle;
     float skewAngle;
     float yawAngle;
-    float meanWidth;
-    float length;
-    float spacing;
-    MatrixF8x3 transformedCorners;
   };
 
   using Modules = std::unordered_map<unsigned int, Module>;

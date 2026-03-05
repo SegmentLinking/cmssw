@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "DataFormats/GeometrySurface/interface/Surface.h"
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
 
@@ -23,7 +24,7 @@ namespace lstgeometry {
 
     Sensor() = default;
     Sensor(
-        unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, bool isLower, ModuleType moduleType);
+        unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, bool isLower, ModuleType moduleType, Surface const& surface);
   };
 
   using Sensors = std::unordered_map<unsigned int, Sensor>;

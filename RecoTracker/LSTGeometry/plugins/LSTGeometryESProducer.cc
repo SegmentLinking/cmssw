@@ -73,7 +73,6 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     const unsigned int detid = detId();
 
     const auto &surface = det->surface();
-    const Bounds *b = &(surface).bounds();
     const auto &position = surface.position();
 
     const float rho_cm = position.perp();
@@ -95,43 +94,12 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       const unsigned int moduleDetId = detid & ~0b11;  // I don't think there is there a CMSSW method for this
       // Can't use TrackerTopology::isLower since it doesn't consider if the module is inverted
       const bool isLow = isLower(moduleId, location, side, layer, detid);
-      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType);
-
-      ///////////// tmp
-      // const RectangularPlaneBounds *sensor_bounds = dynamic_cast<const RectangularPlaneBounds *>(b);
-      // float wid = sensor_bounds->width();
-      // float len = sensor_bounds->length();
-      // auto c1 = GloballyPositioned<float>::LocalPoint(wid / 2, len / 2, 0);
-      // auto c2 = GloballyPositioned<float>::LocalPoint(-wid / 2, len / 2, 0);
-      // auto c3 = GloballyPositioned<float>::LocalPoint(-wid / 2, -len / 2, 0);
-      // auto c4 = GloballyPositioned<float>::LocalPoint(wid / 2, -len / 2, 0);
-      // auto c1g = surface.toGlobal(c1);
-      // auto c2g = surface.toGlobal(c2);
-      // auto c3g = surface.toGlobal(c3);
-      // auto c4g = surface.toGlobal(c4);
-      // if (detid == 440165400 + 1) {
-      //   std::cout << "Corners for detid " << detid << ": " << std::endl;
-      //   std::cout << c1g << std::endl;
-      //   std::cout << c2g << std::endl;
-      //   std::cout << c3g << std::endl;
-      //   std::cout << c4g << std::endl;
-      // }
-      ///
+      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType, surface);
 
       continue;
     }
 
-    const RectangularPlaneBounds *b2 = dynamic_cast<const RectangularPlaneBounds *>(b);
-    if (!b2) {
-      throw cms::Exception("UnimplementedFeature") << "unsupported Bounds class";
-    }
-
     float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
-
-    float meanWidth_cm = b2->width();
-    float length_cm = b2->length();
-
-    float sensorSpacing_cm = det->components()[0]->toLocal(det->components()[1]->position()).mag();
 
     // Fix angles of some modules
     if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<float> / 2) < 1e-3) {
@@ -160,11 +128,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
                                phi_rad,
                                tiltAngle_rad,
                                0.0,
-                               0.0,
-                               meanWidth_cm,
-                               length_cm,
-                               sensorSpacing_cm,
-                               lstgeometry::MatrixF8x3::Zero()};
+                               0.0};
     modules[detid] = std::move(module);
   }
 
