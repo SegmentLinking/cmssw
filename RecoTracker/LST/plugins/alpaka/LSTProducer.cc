@@ -34,7 +34,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
-          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps_"+ptCutStr_)))},
+          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps_"+ptCutStr_))},
           lstOutputToken_{produces()} {}
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
