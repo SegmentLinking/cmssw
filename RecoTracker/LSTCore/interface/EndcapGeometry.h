@@ -1,7 +1,8 @@
 #ifndef RecoTracker_LSTCore_interface_EndcapGeometry_h
 #define RecoTracker_LSTCore_interface_EndcapGeometry_h
 
-#include "RecoTracker/LSTGeometry/interface/Geometry.h"
+#include "RecoTracker/LSTGeometry/interface/Slope.h"
+#include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 #include <map>
 #include <string>
@@ -20,7 +21,8 @@ namespace lst {
     unsigned int nEndCapMap;
 
     EndcapGeometry() = default;
-    EndcapGeometry(std::string const& filename);
+    EndcapGeometry(std::string const&);
+    EndcapGeometry(lstgeometry::Slopes const&, lstgeometry::Sensors const&);
 
     void load(std::string const&);
     void load(lstgeometry::Slopes const&, lstgeometry::Sensors const&);

@@ -132,7 +132,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
   PixelMap pixelMapping;
   ModuleConnectionMap moduleConnectionMap;
 
-  endcapGeometry.load(lstg.endcap_slopes, lstg.sensors);
+  endcapGeometry.load(lstg.endcap_slopes, *lstg.sensors);
   auto endcapGeometryDev =
       std::make_shared<EndcapGeometryDevHostCollection>(cms::alpakatools::host(), endcapGeometry.nEndCapMap);
   std::memcpy(endcapGeometryDev->view().geoMapDetId().data(),
@@ -170,7 +170,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
 
   ModuleMetaData mmd;
   unsigned int counter = 0;
-  for (auto const& [detId, sensor] : lstg.sensors) {
+  for (auto const& [detId, sensor] : *lstg.sensors) {
     mmd.detIdToIndex[detId] = counter;
     mmd.module_x[detId] = sensor.centerX;
     mmd.module_y[detId] = sensor.centerY;

@@ -18,9 +18,6 @@ namespace lstgeometry {
     float centerRho;
     float centerZ;
     float centerPhi;
-    float tiltAngle;
-    float skewAngle;
-    float yawAngle;
   };
 
   using Modules = std::unordered_map<unsigned int, Module>;

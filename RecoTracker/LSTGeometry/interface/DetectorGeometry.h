@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <vector>
 #include <functional>
+#include <memory>
 #include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
@@ -16,7 +17,7 @@ namespace lstgeometry {
 
   class DetectorGeometry {
   private:
-    Sensors sensors_;  // TODO: Refactor to avoid a copy
+    std::shared_ptr<Sensors> sensors_;
     std::vector<float> avg_radii_;
     std::vector<float> avg_z_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
@@ -25,7 +26,7 @@ namespace lstgeometry {
         endcap_lower_det_ids_;
 
   public:
-    DetectorGeometry(Sensors sensors, std::vector<float> avg_radii, std::vector<float> avg_z);
+    DetectorGeometry(std::shared_ptr<Sensors> sensors, std::vector<float> avg_radii, std::vector<float> avg_z);
 
     MatrixF4x3 const& getCorners(unsigned int detId) const;
 

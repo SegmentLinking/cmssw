@@ -16,6 +16,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace lst {
+  // TODO: At some point it might be good to move some of these things to LSTGeometry
+
   struct ModuleMetaData {
     std::map<unsigned int, uint16_t> detIdToIndex;
     std::map<unsigned int, float> module_x;

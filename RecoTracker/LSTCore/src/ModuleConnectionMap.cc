@@ -5,8 +5,6 @@
 #include <sstream>
 #include <algorithm>
 
-lst::ModuleConnectionMap::ModuleConnectionMap() {}
-
 lst::ModuleConnectionMap::ModuleConnectionMap(std::string const& filename) { load(filename); }
 
 lst::ModuleConnectionMap::ModuleConnectionMap(std::map<unsigned int, std::vector<unsigned int>> const& map) {

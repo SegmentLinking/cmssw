@@ -12,8 +12,8 @@ namespace lst {
     std::map<unsigned int, std::vector<unsigned int>> moduleConnections_;
 
   public:
-    ModuleConnectionMap();
-    ModuleConnectionMap(std::string const& filename);
+    ModuleConnectionMap() = default;
+    ModuleConnectionMap(std::string const&);
     ModuleConnectionMap(std::map<unsigned int, std::vector<unsigned int>> const&);
 
     void load(std::string const&);

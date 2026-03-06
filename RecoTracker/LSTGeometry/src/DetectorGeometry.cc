@@ -61,15 +61,17 @@ namespace lstgeometry {
     return std::make_pair(eta_bin, phi_bin);
   }
 
-  DetectorGeometry::DetectorGeometry(Sensors sensors, std::vector<float> avg_radii, std::vector<float> avg_z)
+  DetectorGeometry::DetectorGeometry(std::shared_ptr<Sensors> sensors,
+                                     std::vector<float> avg_radii,
+                                     std::vector<float> avg_z)
       : sensors_(sensors), avg_radii_(avg_radii), avg_z_(avg_z) {}
 
-  MatrixF4x3 const& DetectorGeometry::getCorners(unsigned int detId) const { return sensors_.at(detId).corners; }
+  MatrixF4x3 const& DetectorGeometry::getCorners(unsigned int detId) const { return sensors_->at(detId).corners; }
 
   std::vector<unsigned int> DetectorGeometry::getDetIds(
       std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter) const {
     std::vector<unsigned int> detIds;
-    for (const auto& entry : sensors_) {
+    for (const auto& entry : *sensors_) {
       if (filter(entry)) {
         detIds.push_back(entry.first);
       }

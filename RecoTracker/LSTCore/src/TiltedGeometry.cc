@@ -7,6 +7,8 @@
 
 lst::TiltedGeometry::TiltedGeometry(std::string const& filename) { load(filename); }
 
+lst::TiltedGeometry::TiltedGeometry(lstgeometry::Slopes const& slopes) { load(slopes); }
+
 void lst::TiltedGeometry::load(std::string const& filename) {
   drdzs_.clear();
   dxdys_.clear();

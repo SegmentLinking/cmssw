@@ -7,6 +7,10 @@
 
 lst::EndcapGeometry::EndcapGeometry(std::string const& filename) { load(filename); }
 
+lst::EndcapGeometry::EndcapGeometry(lstgeometry::Slopes const& slopes, lstgeometry::Sensors const& sensors) {
+  load(slopes, sensors);
+}
+
 void lst::EndcapGeometry::load(std::string const& filename) {
   dxdy_slope_.clear();
   centroid_phis_.clear();

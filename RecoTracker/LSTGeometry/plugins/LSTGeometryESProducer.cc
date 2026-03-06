@@ -15,7 +15,6 @@
 #include <cmath>
 #include <vector>
 #include <unordered_map>
-#include <iostream>  /////////////////////// remove
 
 class LSTGeometryESProducer : public edm::ESProducer {
 public:
@@ -53,7 +52,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
   lstgeometry::Modules modules;
-  lstgeometry::Sensors sensors;
+  auto sensors = std::make_shared<lstgeometry::Sensors>();
 
   std::vector<float> avg_r_cm(6, 0.0);
   std::vector<float> avg_z_cm(5, 0.0);
@@ -94,18 +93,9 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       const unsigned int moduleDetId = detid & ~0b11;  // I don't think there is there a CMSSW method for this
       // Can't use TrackerTopology::isLower since it doesn't consider if the module is inverted
       const bool isLow = isLower(moduleId, location, side, layer, detid);
-      sensors[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType, surface);
+      (*sensors)[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType, surface);
 
       continue;
-    }
-
-    float tiltAngle_rad = lstgeometry::roundAngle(std::asin(det->rotation().zz()));
-
-    // Fix angles of some modules
-    if (std::fabs(std::fabs(tiltAngle_rad) - std::numbers::pi_v<float> / 2) < 1e-3) {
-      tiltAngle_rad = std::numbers::pi_v<float> / 2;
-    } else if (std::fabs(tiltAngle_rad) > 1e-3) {
-      tiltAngle_rad = std::copysign(tiltAngle_rad, z_cm);
     }
 
     if (location == lstgeometry::Location::barrel) {
@@ -116,19 +106,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       avg_z_counter[layer - 1] += 1;
     }
 
-    lstgeometry::Module module{moduleType,
-                               subdet,
-                               location,
-                               side,
-                               moduleId,
-                               layer,
-                               ring,
-                               rho_cm,
-                               z_cm,
-                               phi_rad,
-                               tiltAngle_rad,
-                               0.0,
-                               0.0};
+    lstgeometry::Module module{moduleType, subdet, location, side, moduleId, layer, ring, rho_cm, z_cm, phi_rad};
     modules[detid] = std::move(module);
   }
 

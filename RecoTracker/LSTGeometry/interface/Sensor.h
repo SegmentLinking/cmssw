@@ -23,8 +23,13 @@ namespace lstgeometry {
     float centerY;
 
     Sensor() = default;
-    Sensor(
-        unsigned int moduleDetId, float centerRho, float centerZ, float centerPhi, bool isLower, ModuleType moduleType, Surface const& surface);
+    Sensor(unsigned int moduleDetId,
+           float centerRho,
+           float centerZ,
+           float centerPhi,
+           bool isLower,
+           ModuleType moduleType,
+           Surface const& surface);
   };
 
   using Sensors = std::unordered_map<unsigned int, Sensor>;
