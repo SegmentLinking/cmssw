@@ -1,5 +1,7 @@
 #include <alpaka/alpaka.hpp>
 
+#include <sstream>
+
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -25,13 +27,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     LSTProducer(edm::ParameterSet const& config)
         : EDProducer(config),
-          lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
-          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps"))},
           verbose_(config.getParameter<bool>("verbose")),
           ptCut_(config.getParameter<double>("ptCut")),
+          ptCutStr_(getPtCutStr(ptCut_)),
           clustSizeCut_(static_cast<uint16_t>(config.getParameter<uint32_t>("clustSizeCut"))),
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
+          lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
+          lstESToken_{esConsumes(edm::ESInputTag("", "LSTModuleMaps_"+ptCutStr_)))},
           lstOutputToken_{produces()} {}
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
@@ -66,14 +69,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
   private:
-    const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
-    const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const bool verbose_;
     const double ptCut_;
+    const std::string ptCutStr_;
     const uint16_t clustSizeCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
+    const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
+    const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
+
+    static std::string getPtCutStr(double ptCut) {
+      std::ostringstream ptCutOSS;
+      ptCutOSS << std::setprecision(1) << ptCut;
+      return ptCutOSS.str();
+    }
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

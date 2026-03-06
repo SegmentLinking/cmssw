@@ -60,7 +60,7 @@ options.parseArguments()
 process.dump = cms.EDAnalyzer(
     "DumpLSTGeometry",
     outputDirectory = cms.untracked.string(options.outputDirectory),
-    ptCut = cms.string(str(options.ptCut)),
+    ptCut = cms.double(options.ptCut),
     outputAsBinary = cms.untracked.bool(options.binaryOutput),
 )
 

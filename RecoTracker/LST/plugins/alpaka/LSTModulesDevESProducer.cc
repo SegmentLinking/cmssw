@@ -1,3 +1,5 @@
+#include <sstream>
+
 // LST includes
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
@@ -21,8 +23,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     LSTModulesDevESProducer(edm::ParameterSet const& iConfig)
         : ESProducer(iConfig), ptCut_(iConfig.getParameter<double>("ptCut")) {
-      auto cc = setWhatProduced(this, "LSTModuleMaps");
-      lstGeoToken_ = cc.consumes<lstgeometry::Geometry>(edm::ESInputTag("", "LSTGeometry"));
+      std::ostringstream ptCutOSS;
+      ptCutOSS << std::setprecision(1) << ptCut_;
+      std::string ptCutStr = ptCutOSS.str();
+
+      auto cc = setWhatProduced(this, "LSTModuleMaps_" + ptCutStr);
+      lstGeoToken_ = cc.consumes<lstgeometry::Geometry>(edm::ESInputTag("", "LSTGeometry_" + ptCutStr));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {

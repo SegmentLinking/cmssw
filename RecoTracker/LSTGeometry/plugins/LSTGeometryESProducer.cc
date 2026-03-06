@@ -15,6 +15,7 @@
 #include <cmath>
 #include <vector>
 #include <unordered_map>
+#include <sstream>
 
 class LSTGeometryESProducer : public edm::ESProducer {
 public:
@@ -36,7 +37,11 @@ private:
 
 LSTGeometryESProducer::LSTGeometryESProducer(const edm::ParameterSet &iConfig)
     : ptCut_(iConfig.getParameter<double>("ptCut")) {
-  auto cc = setWhatProduced(this, "LSTGeometry");
+  std::ostringstream ptCutOSS;
+  ptCutOSS << std::setprecision(1) << ptCut_;
+  std::string ptCutStr = ptCutOSS.str();
+
+  auto cc = setWhatProduced(this, "LSTGeometry_" + ptCutStr);
   geomToken_ = cc.consumes();
   ttopoToken_ = cc.consumes();
 }
