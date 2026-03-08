@@ -72,7 +72,8 @@ int main(int argc, char **argv) {
       "I,job_index",
       "job_index of split jobs (--nsplit_jobs must be set. index starts from 0. i.e. 0, 1, 2, 3, etc...)",
       cxxopts::value<int>())("3,tc_pls_triplets", "Allow triplet pLSs in TC collection")(
-      "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")("h,help", "Print help")(
+      "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")(
+      "r,reduce-mem", "Enable reduced memory mode (exact buffer sizing via counting kernels)")("h,help", "Print help")(
       "md", "Write MD branches in output ntuple.")("ls", "Write LS branches in output ntuple.")(
       "t3", "Write T3 branches in output ntuple.")("t5", "Write T5 branches in output ntuple.")(
       "pls", "Write pLS branches in output ntuple.")("pt3", "Write pT3 branches in output ntuple.")(
@@ -256,6 +257,10 @@ int main(int argc, char **argv) {
   ana.no_pls_dupclean = result["no_pls_dupclean"].as<bool>();
 
   //_______________________________________________________________________________
+  // --reduce-mem
+  ana.reduce_mem = result["reduce-mem"].as<bool>();
+
+  //_______________________________________________________________________________
   // --md
   ana.md_branches = result["md"].as<bool>() || result["allobj"].as<bool>();
 
@@ -331,6 +336,7 @@ int main(int argc, char **argv) {
   std::cout << " ana.nmatch_threshold: " << ana.nmatch_threshold << std::endl;
   std::cout << " ana.tc_pls_triplets: " << ana.tc_pls_triplets << std::endl;
   std::cout << " ana.no_pls_dupclean: " << ana.no_pls_dupclean << std::endl;
+  std::cout << " ana.reduce_mem: " << ana.reduce_mem << std::endl;
   std::cout << "=========================================================" << std::endl;
 
   // Create the TChain that holds the TTree's of the baby ntuples
@@ -439,7 +445,8 @@ void run_lst() {
   std::vector<LSTEvent *> events;
   std::vector<ALPAKA_ACCELERATOR_NAMESPACE::Queue *> event_queues;
   for (int s = 0; s < ana.streams; s++) {
-    LSTEvent *event = new LSTEvent(ana.verbose >= 2, ana.ptCut, ana.clustSizeCut, queues[s], &deviceESData);
+    LSTEvent *event =
+        new LSTEvent(ana.verbose >= 2, ana.ptCut, ana.clustSizeCut, queues[s], &deviceESData, ana.reduce_mem);
     events.push_back(event);
     event_queues.push_back(&queues[s]);
   }
@@ -466,7 +473,7 @@ void run_lst() {
 #pragma omp for  // nowait// private(event)
     for (int evt = 0; evt < static_cast<int>(out_lstInputHC.size()); evt++) {
       if (ana.verbose >= 1)
-        std::cout << "Running Event number = " << evt << " " << omp_get_thread_num() << std::endl;
+        printf("Running Event number = %d  Stream = %d\n", evt, omp_get_thread_num());
 
       events.at(omp_get_thread_num())->initSync();
 
