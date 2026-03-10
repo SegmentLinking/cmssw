@@ -19,9 +19,10 @@ namespace lst {
                       SOA_COLUMN(Params_T5::ArrayFxEmbed, t5Embed),                // t5 embedding vector
                       SOA_COLUMN(FPX, eta),
                       SOA_COLUMN(FPX, phi),
-                      SOA_COLUMN(FPX, score_rphisum),  // r-phi based score
-                      SOA_COLUMN(char, isDup),         // duplicate flag
-                      SOA_COLUMN(bool, tightCutFlag),  // tight pass to be a TC
+                      SOA_COLUMN(FPX, score_rphisum),     // r-phi based score
+                      SOA_COLUMN(char, isDup),            // duplicate flag
+                      SOA_COLUMN(unsigned int, nLayers),  // number of active layers (5 base, up to 7 after extension)
+                      SOA_COLUMN(bool, tightCutFlag),     // tight pass to be a TC
                       SOA_COLUMN(float, regressionRadius),
                       SOA_COLUMN(float, regressionCenterX),
                       SOA_COLUMN(float, regressionCenterY),
