@@ -10,6 +10,7 @@
 
 namespace lstgeometry {
 
+  // A sensor is a component of a module. The common properties of the 2 sensors are stored in the Module struct, and the sensor-specific properties are stored in the Sensor struct.
   struct Sensor {
     unsigned int moduleDetId;
     float centerRho;

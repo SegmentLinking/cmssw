@@ -1,6 +1,7 @@
 #ifndef RecoTracker_LSTGeometry_interface_Geometry_h
 #define RecoTracker_LSTGeometry_interface_Geometry_h
 
+#include <array>
 #include <memory>
 
 #include "RecoTracker/LSTGeometry/interface/Slope.h"
@@ -20,8 +21,8 @@ namespace lstgeometry {
 
     Geometry(Modules &modules,
              std::shared_ptr<Sensors> sensors,
-             std::vector<float> const &average_r,
-             std::vector<float> const &average_z,
+             std::array<float, kBarrelLayers> const &average_r_barrel,
+             std::array<float, kEndcapLayers> const &average_z_endcap,
              float ptCut);
   };
 

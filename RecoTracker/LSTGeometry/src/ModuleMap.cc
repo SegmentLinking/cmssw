@@ -5,8 +5,8 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-#include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
 #include "RecoTracker/LSTGeometry/interface/Helix.h"
+#include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
 
 namespace lstgeometry {
 
@@ -186,8 +186,7 @@ namespace lstgeometry {
     auto bounds = det_geom.getCorners(ref_detid);
     auto const& sensor = sensors.at(ref_detid);
     int charge = 1;
-    float theta =
-        std::atan2(std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY), sensor.centerZ);
+    float z_r = sensor.centerZ / std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY);
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
     auto const& refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
     unsigned short ref_layer = refmodule.layer;
@@ -199,8 +198,7 @@ namespace lstgeometry {
       auto helix_m10 = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
       auto helix_p10_pos = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       auto helix_m10_pos = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
-      float bound_theta =
-          std::atan2(std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2)), bounds(i, 0));
+      float bound_z_r = bounds(i, 0) / std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2));
       float bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
       float phi_diff = phi_mpi_pi(bound_phi - refphi);
 
@@ -208,7 +206,7 @@ namespace lstgeometry {
       if (ref_location == Location::barrel) {
         if (doR) {
           float tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
-          if (bound_theta > theta) {
+          if (bound_z_r > z_r) {
             auto const& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
             next_point = h.pointFromRadius(tar_layer_radius);
           } else {
@@ -217,7 +215,7 @@ namespace lstgeometry {
           }
         } else {
           float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(1);
-          if (bound_theta > theta) {
+          if (bound_z_r > z_r) {
             if (phi_diff > 0) {
               next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
             } else {
@@ -233,7 +231,7 @@ namespace lstgeometry {
         }
       } else {
         float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(ref_layer + 1);
-        if (bound_theta > theta) {
+        if (bound_z_r > z_r) {
           if (phi_diff > 0) {
             next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
           } else {

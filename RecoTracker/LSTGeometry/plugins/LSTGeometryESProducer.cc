@@ -8,14 +8,15 @@
 #include "DataFormats/GeometrySurface/interface/RectangularPlaneBounds.h"
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
+#include "RecoTracker/LSTGeometry/interface/Geometry.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/Geometry.h"
 
+#include <array>
 #include <cmath>
-#include <vector>
-#include <unordered_map>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 class LSTGeometryESProducer : public edm::ESProducer {
 public:
@@ -59,10 +60,10 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
   lstgeometry::Modules modules;
   auto sensors = std::make_shared<lstgeometry::Sensors>();
 
-  std::vector<float> avg_r_cm(6, 0.0);
-  std::vector<float> avg_z_cm(5, 0.0);
-  std::vector<unsigned int> avg_r_counter(6, 0);
-  std::vector<unsigned int> avg_z_counter(5, 0);
+  std::array<float, lstgeometry::kBarrelLayers> avg_r_barrel{};
+  std::array<float, lstgeometry::kEndcapLayers> avg_z_endcap{};
+  std::array<unsigned int, lstgeometry::kBarrelLayers> avg_r_barrel_counter{};
+  std::array<unsigned int, lstgeometry::kEndcapLayers> avg_z_endcap_counter{};
 
   for (auto &det : trackerGeom_->dets()) {
     const DetId detId = det->geographicalId();
@@ -95,7 +96,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     if (det->isLeaf()) {
       // Leafs are the sensors
-      const unsigned int moduleDetId = detid & ~0b11;  // I don't think there is there a CMSSW method for this
+      const unsigned int moduleDetId = detid & ~0b11;
       // Can't use TrackerTopology::isLower since it doesn't consider if the module is inverted
       const bool isLow = isLower(moduleId, location, side, layer, detid);
       (*sensors)[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType, surface);
@@ -104,25 +105,25 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     }
 
     if (location == lstgeometry::Location::barrel) {
-      avg_r_cm[layer - 1] += rho_cm;
-      avg_r_counter[layer - 1] += 1;
+      avg_r_barrel[layer - 1] += rho_cm;
+      avg_r_barrel_counter[layer - 1] += 1;
     } else {
-      avg_z_cm[layer - 1] += std::fabs(z_cm);
-      avg_z_counter[layer - 1] += 1;
+      avg_z_endcap[layer - 1] += std::fabs(z_cm);
+      avg_z_endcap_counter[layer - 1] += 1;
     }
 
-    lstgeometry::Module module{moduleType, subdet, location, side, moduleId, layer, ring, rho_cm, z_cm, phi_rad};
+    lstgeometry::Module module{moduleType, subdet, location, side, moduleId, layer, ring};
     modules[detid] = std::move(module);
   }
 
-  for (size_t i = 0; i < avg_r_cm.size(); ++i) {
-    avg_r_cm[i] /= avg_r_counter[i];
+  for (size_t i = 0; i < avg_r_barrel.size(); ++i) {
+    avg_r_barrel[i] /= avg_r_barrel_counter[i];
   }
-  for (size_t i = 0; i < avg_z_cm.size(); ++i) {
-    avg_z_cm[i] /= avg_z_counter[i];
+  for (size_t i = 0; i < avg_z_endcap.size(); ++i) {
+    avg_z_endcap[i] /= avg_z_endcap_counter[i];
   }
 
-  auto lstGeometry = std::make_unique<lstgeometry::Geometry>(modules, sensors, avg_r_cm, avg_z_cm, ptCut_);
+  auto lstGeometry = std::make_unique<lstgeometry::Geometry>(modules, sensors, avg_r_barrel, avg_z_endcap, ptCut_);
 
   return lstGeometry;
 }

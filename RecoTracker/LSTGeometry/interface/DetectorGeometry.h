@@ -18,15 +18,17 @@ namespace lstgeometry {
   class DetectorGeometry {
   private:
     std::shared_ptr<Sensors> sensors_;
-    std::vector<float> avg_radii_;
-    std::vector<float> avg_z_;
+    std::array<float, kBarrelLayers> avg_radii_;
+    std::array<float, kEndcapLayers> avg_z_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
         barrel_lower_det_ids_;
     std::unordered_map<LayerEtaBinPhiBinKey, std::vector<unsigned int>, boost::hash<LayerEtaBinPhiBinKey>>
         endcap_lower_det_ids_;
 
   public:
-    DetectorGeometry(std::shared_ptr<Sensors> sensors, std::vector<float> avg_radii, std::vector<float> avg_z);
+    DetectorGeometry(std::shared_ptr<Sensors> sensors,
+                     std::array<float, kBarrelLayers> const& avg_radii,
+                     std::array<float, kEndcapLayers> const& avg_z);
 
     MatrixF4x3 const& getCorners(unsigned int detId) const;
 

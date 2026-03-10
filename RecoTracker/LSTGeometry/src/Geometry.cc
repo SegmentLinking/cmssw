@@ -6,15 +6,15 @@ using namespace lstgeometry;
 
 Geometry::Geometry(Modules &modules,
                    std::shared_ptr<Sensors> sensors,
-                   std::vector<float> const &average_r,
-                   std::vector<float> const &average_z,
+                   std::array<float, kBarrelLayers> const &average_r_barrel,
+                   std::array<float, kEndcapLayers> const &average_z_endcap,
                    float pt_cut)
     : sensors(sensors) {
   auto slopes = computeSlopes(modules, *sensors);
   barrel_slopes = std::move(std::get<0>(slopes));
   endcap_slopes = std::move(std::get<1>(slopes));
 
-  auto det_geom = DetectorGeometry(sensors, average_r, average_z);
+  auto det_geom = DetectorGeometry(sensors, average_r_barrel, average_z_endcap);
   det_geom.buildByLayer(modules, *sensors);
 
   pixel_map = buildPixelMap(modules, *sensors, det_geom, pt_cut);

@@ -14,7 +14,7 @@ namespace lstgeometry {
 
     // Initialize empty lists for the pixel map
     for (unsigned int layer : {1, 2}) {
-      for (unsigned int subdet : {4, 5}) {
+      for (unsigned int subdet : {SubDet::Barrel, SubDet::Endcap}) {
         for (int charge : {-1, 0, 1}) {
           maps.try_emplace({layer, subdet, charge}, nSuperbin);
         }
@@ -27,7 +27,7 @@ namespace lstgeometry {
 
       auto const& module = modules.at(sensor.moduleDetId);
       // Phase-2 enum differs from the legacy one used here
-      unsigned int subdet = module.subdet == SubDetector::P2OTB ? 5 : 4;
+      unsigned int subdet = module.subdet == SubDetector::P2OTB ? SubDet::Barrel : SubDet::Endcap;
       auto layer = module.layer;
       if (layer > 2)
         continue;

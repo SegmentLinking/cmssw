@@ -4,9 +4,9 @@
 #include <unordered_set>
 #include <unordered_map>
 
+#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 #include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
-#include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
 
 namespace lstgeometry {
 

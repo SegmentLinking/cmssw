@@ -29,41 +29,18 @@ namespace lstgeometry {
 
   std::pair<unsigned int, unsigned int> DetectorGeometry::getEtaPhiBins(float eta, float phi) {
     float theta = 2. * std::atan(std::exp(-eta));
+    unsigned int eta_bin = std::clamp(static_cast<unsigned int>(theta / kEtaBinRad), 0u, kNEtaBins - 1);
 
-    unsigned int eta_bin = 0;
-    if (theta <= kEtaBinRad) {
-      eta_bin = 0;
-    } else if (theta >= (kNEtaBins - 1) * kEtaBinRad) {
-      eta_bin = kNEtaBins - 1;
-    } else {
-      for (unsigned int i = 1; i < kNEtaBins - 1; i++) {
-        if (theta >= i * kEtaBinRad && theta <= (i + 1) * kEtaBinRad) {
-          eta_bin = i;
-          break;
-        }
-      }
-    }
-
-    unsigned int phi_bin = 0;
     float pi = std::numbers::pi_v<float>;
-
-    if (phi <= -pi + kPhiBinWidth / 2. || phi >= pi - kPhiBinWidth / 2.) {
-      phi_bin = 0;
-    } else {
-      for (unsigned int i = 1; i < kNPhiBins; i++) {
-        if (phi >= -pi + ((2 * i - 1) * kPhiBinWidth) / 2. && phi <= -pi + ((2 * i + 1) * kPhiBinWidth) / 2.) {
-          phi_bin = i;
-          break;
-        }
-      }
-    }
+    unsigned int raw = static_cast<unsigned int>((phi + pi) / kPhiBinWidth);
+    unsigned int phi_bin = (raw == 0 || raw >= kNPhiBins) ? 0u : raw;
 
     return std::make_pair(eta_bin, phi_bin);
   }
 
   DetectorGeometry::DetectorGeometry(std::shared_ptr<Sensors> sensors,
-                                     std::vector<float> avg_radii,
-                                     std::vector<float> avg_z)
+                                     std::array<float, kBarrelLayers> const& avg_radii,
+                                     std::array<float, kEndcapLayers> const& avg_z)
       : sensors_(sensors), avg_radii_(avg_radii), avg_z_(avg_z) {}
 
   MatrixF4x3 const& DetectorGeometry::getCorners(unsigned int detId) const { return sensors_->at(detId).corners; }
@@ -71,6 +48,7 @@ namespace lstgeometry {
   std::vector<unsigned int> DetectorGeometry::getDetIds(
       std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter) const {
     std::vector<unsigned int> detIds;
+    detIds.reserve(sensors_->size());
     for (auto const& entry : *sensors_) {
       if (filter(entry)) {
         detIds.push_back(entry.first);
@@ -87,16 +65,16 @@ namespace lstgeometry {
     // Initialize all vectors
     for (unsigned int etabin = 0; etabin < kNEtaBins; etabin++) {
       for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
-        for (unsigned int layer = 1; layer < 7; layer++) {
+        for (unsigned int layer = 1; layer <= kBarrelLayers; layer++) {
           barrel_lower_det_ids_[{layer, etabin, phibin}] = {};
         }
-        for (unsigned int layer = 1; layer < 6; layer++) {
+        for (unsigned int layer = 1; layer <= kEndcapLayers; layer++) {
           endcap_lower_det_ids_[{layer, etabin, phibin}] = {};
         }
       }
     }
 
-    for (unsigned int layer = 1; layer < 7; layer++) {
+    for (unsigned int layer = 1; layer <= kBarrelLayers; layer++) {
       auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
         auto const& s = sensors.at(x.first);
         auto const& m = modules_info.at(s.moduleDetId);
@@ -116,7 +94,7 @@ namespace lstgeometry {
         }
       }
     }
-    for (unsigned int layer = 1; layer < 6; layer++) {
+    for (unsigned int layer = 1; layer <= kEndcapLayers; layer++) {
       auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
         auto const& s = sensors.at(x.first);
         auto const& m = modules_info.at(s.moduleDetId);

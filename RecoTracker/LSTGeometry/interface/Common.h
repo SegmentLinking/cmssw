@@ -25,10 +25,14 @@ namespace lstgeometry {
   using SubDetector = GeomDetEnumerators::SubDetector;
   using Location = GeomDetEnumerators::Location;
 
+  enum SubDet { InnerPixel = 0, Barrel = 5, Endcap = 4 };
   enum Side { NegZ = 1, PosZ = 2, Center = 3 };
 
   constexpr float kB = 3.8;
   constexpr float kC = 0.00299792458;
+
+  constexpr unsigned int kBarrelLayers = 6;
+  constexpr unsigned int kEndcapLayers = 5;
 
   // For pixel maps
   constexpr unsigned int kNEta = 25;
