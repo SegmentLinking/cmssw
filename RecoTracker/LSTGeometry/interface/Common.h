@@ -27,8 +27,8 @@ namespace lstgeometry {
 
   enum Side { NegZ = 1, PosZ = 2, Center = 3 };
 
+  constexpr float kB = 3.8;
   constexpr float kC = 0.00299792458;
-  constexpr float kB = 3.8112;
 
   // For pixel maps
   constexpr unsigned int kNEta = 25;

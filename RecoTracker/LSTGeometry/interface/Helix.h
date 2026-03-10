@@ -15,8 +15,8 @@ namespace lstgeometry {
     Helix(float center_x, float center_y, float center_z, float radius, float phi, float lam, int charge);
     Helix(float pt, float vx, float vy, float vz, float mx, float my, float mz, int charge);
 
-    std::tuple<float, float, float, float> pointFromRadius(float target_r);
-    std::tuple<float, float, float, float> pointFromZ(float target_z);
+    std::tuple<float, float, float, float> pointFromRadius(float target_r) const;
+    std::tuple<float, float, float, float> pointFromZ(float target_z) const;
   };
 
 }  // namespace lstgeometry

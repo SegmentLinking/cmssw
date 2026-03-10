@@ -25,14 +25,14 @@ namespace lstgeometry {
     Slopes barrel_slopes;
     Slopes endcap_slopes;
 
-    for (const auto& [detId, sensor] : sensors) {
+    for (auto const& [detId, sensor] : sensors) {
       float dx = roundCoordinate(sensor.corners(1, 1) - sensor.corners(0, 1));
       float dy = roundCoordinate(sensor.corners(1, 2) - sensor.corners(0, 2));
       float dz = roundCoordinate(sensor.corners(1, 0) - sensor.corners(0, 0));
 
       Slope slope(dx, dy, dz);
 
-      auto& module = modules.at(sensor.moduleDetId);
+      auto const& module = modules.at(sensor.moduleDetId);
 
       auto location = module.location;
       bool is_tilted = module.side != Side::Center;

@@ -23,9 +23,9 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto detId : det_geom.getDetIds()) {
-      auto& sensor = sensors.at(detId);
+      auto const& sensor = sensors.at(detId);
 
-      auto module = modules.at(sensor.moduleDetId);
+      auto const& module = modules.at(sensor.moduleDetId);
       // Phase-2 enum differs from the legacy one used here
       unsigned int subdet = module.subdet == SubDetector::P2OTB ? 5 : 4;
       auto layer = module.layer;

@@ -71,7 +71,7 @@ namespace lstgeometry {
   std::vector<unsigned int> DetectorGeometry::getDetIds(
       std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter) const {
     std::vector<unsigned int> detIds;
-    for (const auto& entry : *sensors_) {
+    for (auto const& entry : *sensors_) {
       if (filter(entry)) {
         detIds.push_back(entry.first);
       }
@@ -97,9 +97,9 @@ namespace lstgeometry {
     }
 
     for (unsigned int layer = 1; layer < 7; layer++) {
-      auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
-        auto& s = sensors.at(x.first);
-        auto& m = modules_info.at(s.moduleDetId);
+      auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
+        auto const& s = sensors.at(x.first);
+        auto const& m = modules_info.at(s.moduleDetId);
         return m.location == Location::barrel && m.layer == layer && s.isLower;
       });
       for (auto detid : detids) {
@@ -117,9 +117,9 @@ namespace lstgeometry {
       }
     }
     for (unsigned int layer = 1; layer < 6; layer++) {
-      auto detids = getDetIds([&modules_info, &sensors, &layer](const auto& x) {
-        auto& s = sensors.at(x.first);
-        auto& m = modules_info.at(s.moduleDetId);
+      auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
+        auto const& s = sensors.at(x.first);
+        auto const& m = modules_info.at(s.moduleDetId);
         return m.location == Location::endcap && m.layer == layer && s.isLower;
       });
       for (auto detid : detids) {

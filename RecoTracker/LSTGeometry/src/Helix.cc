@@ -29,7 +29,7 @@ namespace lstgeometry {
     lambda = std::atan((mz - vz) / (radius * t));
   }
 
-  std::tuple<float, float, float, float> Helix::pointFromRadius(float target_r) {
+  std::tuple<float, float, float, float> Helix::pointFromRadius(float target_r) const {
     auto objective_function = [this, target_r](float t) {
       float x = this->center_x - this->charge * this->radius * std::sin(this->phi - this->charge * t);
       float y = this->center_y + this->charge * this->radius * std::cos(this->phi - this->charge * t);
@@ -47,7 +47,7 @@ namespace lstgeometry {
     return std::make_tuple(x, y, z, r);
   }
 
-  std::tuple<float, float, float, float> Helix::pointFromZ(float target_z) {
+  std::tuple<float, float, float, float> Helix::pointFromZ(float target_z) const {
     auto objective_function = [this, target_z](float t) {
       float z = this->center_z + this->radius * std::tan(this->lambda) * t;
       return std::fabs(z - target_z);

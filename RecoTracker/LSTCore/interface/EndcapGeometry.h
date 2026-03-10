@@ -1,8 +1,8 @@
 #ifndef RecoTracker_LSTCore_interface_EndcapGeometry_h
 #define RecoTracker_LSTCore_interface_EndcapGeometry_h
 
-#include "RecoTracker/LSTGeometry/interface/Slope.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
+#include "RecoTracker/LSTGeometry/interface/Slope.h"
 
 #include <map>
 #include <string>

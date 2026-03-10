@@ -87,7 +87,7 @@ namespace lstgeometry {
                                                        Modules const& modules,
                                                        Sensors const& sensors,
                                                        DetectorGeometry const& det_geom) {
-    auto& sensor = sensors.at(ref_detid);
+    auto const& sensor = sensors.at(ref_detid);
 
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
@@ -129,7 +129,7 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           std::vector<Polygon> difference;
-          for (auto& ref_polygon_piece : ref_polygon) {
+          for (auto const& ref_polygon_piece : ref_polygon) {
             std::vector<Polygon> tmp_difference;
             boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
             difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
@@ -139,7 +139,7 @@ namespace lstgeometry {
         }
 
         float area = 0.;
-        for (auto& ref_polygon_piece : ref_polygon)
+        for (auto const& ref_polygon_piece : ref_polygon)
           area += boost::geometry::area(ref_polygon_piece);
 
         if (area <= 1e-6)
@@ -149,7 +149,7 @@ namespace lstgeometry {
             det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
-          auto& sensor_target = sensors.at(tar_detid);
+          auto const& sensor_target = sensors.at(tar_detid);
           float tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
           if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
@@ -158,7 +158,7 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           bool intersects = false;
-          for (auto& ref_polygon_piece : ref_polygon) {
+          for (auto const& ref_polygon_piece : ref_polygon) {
             if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
               intersects = true;
               break;
@@ -184,12 +184,12 @@ namespace lstgeometry {
                                float ptCut,
                                bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
-    auto& sensor = sensors.at(ref_detid);
+    auto const& sensor = sensors.at(ref_detid);
     int charge = 1;
     float theta =
         std::atan2(std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY), sensor.centerZ);
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
-    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
+    auto const& refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
     MatrixF4x3 next_layer_bound_points;
@@ -209,10 +209,10 @@ namespace lstgeometry {
         if (doR) {
           float tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
           if (bound_theta > theta) {
-            auto& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
+            auto const& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
             next_point = h.pointFromRadius(tar_layer_radius);
           } else {
-            auto& h = phi_diff > 0 ? helix_m10 : helix_m10_pos;
+            auto const& h = phi_diff > 0 ? helix_m10 : helix_m10_pos;
             next_point = h.pointFromRadius(tar_layer_radius);
           }
         } else {
@@ -260,11 +260,11 @@ namespace lstgeometry {
                                                      Sensors const& sensors,
                                                      DetectorGeometry const& det_geom,
                                                      float ptCut) {
-    auto& sensor = sensors.at(ref_detid);
+    auto const& sensor = sensors.at(ref_detid);
 
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
-    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
+    auto const& refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
 
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
@@ -303,7 +303,7 @@ namespace lstgeometry {
         Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
         std::vector<Polygon> difference;
-        for (auto& ref_polygon_piece : ref_polygon) {
+        for (auto const& ref_polygon_piece : ref_polygon) {
           std::vector<Polygon> tmp_difference;
           boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
           difference.insert(difference.end(), tmp_difference.begin(), tmp_difference.end());
@@ -313,7 +313,7 @@ namespace lstgeometry {
       }
 
       float area = 0.;
-      for (auto& ref_polygon_piece : ref_polygon)
+      for (auto const& ref_polygon_piece : ref_polygon)
         area += boost::geometry::area(ref_polygon_piece);
 
       if (area > 1e-6) {
@@ -321,7 +321,7 @@ namespace lstgeometry {
             det_geom.getEndcapLayerDetIds(1, etaphibins.first, etaphibins.second);
 
         for (unsigned int tar_detid : new_tar_detids_to_be_considered) {
-          auto& sensor_target = sensors.at(tar_detid);
+          auto const& sensor_target = sensors.at(tar_detid);
           float tarphi = std::atan2(sensor_target.centerY, sensor_target.centerX);
 
           if (std::fabs(phi_mpi_pi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
@@ -330,7 +330,7 @@ namespace lstgeometry {
           Polygon tar_polygon = getEtaPhiPolygon(det_geom.getCorners(tar_detid), refphi, zshift);
 
           bool intersects = false;
-          for (auto& ref_polygon_piece : ref_polygon) {
+          for (auto const& ref_polygon_piece : ref_polygon) {
             if (boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
               intersects = true;
               break;
@@ -355,7 +355,7 @@ namespace lstgeometry {
     ModuleMap merged;
 
     for (auto* connections : connections_list) {
-      for (const auto& [detid, list] : *connections) {
+      for (auto const& [detid, list] : *connections) {
         auto& target = merged[detid];
         target.insert(list.begin(), list.end());
       }
@@ -368,9 +368,9 @@ namespace lstgeometry {
                            Sensors const& sensors,
                            DetectorGeometry const& det_geo,
                            float pt_cut) {
-    auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](const auto& x) {
-      auto& s = sensors.at(x.first);
-      auto& m = modules.at(s.moduleDetId);
+    auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](auto const& x) {
+      auto const& s = sensors.at(x.first);
+      auto const& m = modules.at(s.moduleDetId);
       // exclude the outermost modules that do not have connections to other modules
       return ((m.location == Location::barrel && s.isLower && m.layer != 6) ||
               (m.location == Location::endcap && s.isLower && m.layer != 5 && !(m.ring == 15 && m.layer == 1) &&

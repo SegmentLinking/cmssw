@@ -25,7 +25,7 @@ namespace lstgeometry {
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
     if (binary) {
-      for (auto& [detid, sensor] : sensors) {
+      for (auto const& [detid, sensor] : sensors) {
         float x = sensor.centerX;
         float y = sensor.centerY;
         float z = sensor.centerZ;
@@ -37,7 +37,7 @@ namespace lstgeometry {
         file.write(reinterpret_cast<const char*>(&moduleType), sizeof(moduleType));
       }
     } else {
-      for (auto& [detid, sensor] : sensors) {
+      for (auto const& [detid, sensor] : sensors) {
         file << detid << "," << sensor.centerX << "," << sensor.centerY << "," << sensor.centerZ << ","
              << static_cast<unsigned int>(sensor.moduleType) << std::endl;
       }
@@ -52,7 +52,7 @@ namespace lstgeometry {
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
     if (binary) {
-      for (auto& [detid, slope] : slopes) {
+      for (auto const& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz;
         float dxdy_slope = slope.dxdy;
         float phi = sensors.at(detid).centerPhi;
@@ -66,7 +66,7 @@ namespace lstgeometry {
         }
       }
     } else {
-      for (auto& [detid, slope] : slopes) {
+      for (auto const& [detid, slope] : slopes) {
         float drdz_slope = slope.drdz;
         float dxdy_slope = slope.dxdy;
         float phi = sensors.at(detid).centerPhi;
@@ -90,7 +90,7 @@ namespace lstgeometry {
     std::ofstream file(filename, binary ? std::ios::binary : std::ios::out);
 
     if (binary) {
-      for (auto& [detid, set] : connections) {
+      for (auto const& [detid, set] : connections) {
         file.write(reinterpret_cast<const char*>(&detid), sizeof(detid));
         unsigned int length = set.size();
         file.write(reinterpret_cast<const char*>(&length), sizeof(length));
@@ -99,7 +99,7 @@ namespace lstgeometry {
         }
       }
     } else {
-      for (auto& [detid, set] : connections) {
+      for (auto const& [detid, set] : connections) {
         file << detid << "," << set.size();
         for (unsigned int i : set) {
           file << "," << i;
@@ -114,8 +114,8 @@ namespace lstgeometry {
     std::filesystem::create_directories(filepath.parent_path());
 
     if (binary) {
-      for (auto& [layersubdetcharge, map] : maps) {
-        auto& [layer, subdet, charge] = layersubdetcharge;
+      for (auto const& [layersubdetcharge, map] : maps) {
+        auto const& [layer, subdet, charge] = layersubdetcharge;
 
         std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
         std::string filename = std::format("{}{}_layer{}_subdet{}.bin", base_filename, charge_str, layer, subdet);
@@ -134,8 +134,8 @@ namespace lstgeometry {
         }
       }
     } else {
-      for (auto& [layersubdetcharge, map] : maps) {
-        auto& [layer, subdet, charge] = layersubdetcharge;
+      for (auto const& [layersubdetcharge, map] : maps) {
+        auto const& [layer, subdet, charge] = layersubdetcharge;
 
         std::string charge_str = charge > 0 ? "_pos" : (charge < 0 ? "_neg" : "");
         std::string filename = std::format("{}{}_layer{}_subdet{}.txt", base_filename, charge_str, layer, subdet);

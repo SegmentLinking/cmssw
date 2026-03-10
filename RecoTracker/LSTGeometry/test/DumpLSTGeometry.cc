@@ -38,7 +38,7 @@ DumpLSTGeometry::DumpLSTGeometry(const edm::ParameterSet& config)
       lstGeoToken_{esConsumes(edm::ESInputTag("", "LSTGeometry_" + ptCutStr_))} {}
 
 void DumpLSTGeometry::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup) {
-  const auto& lstg = iSetup.getData(lstGeoToken_);
+  auto const& lstg = iSetup.getData(lstGeoToken_);
 
   lstgeometry::writeSensorCentroids(*lstg.sensors, outputDirectory_ + "sensor_centroids", binaryOutput_);
   lstgeometry::writeSlopes(

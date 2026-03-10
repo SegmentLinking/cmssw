@@ -31,7 +31,7 @@ namespace lstgeometry {
     MatrixF4x3 const& getCorners(unsigned int detId) const;
 
     std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter =
-                                            [](const auto&) { return true; }) const;
+                                            [](auto const&) { return true; }) const;
 
     void buildByLayer(Modules const& modules_info, Sensors const& sensors);
 

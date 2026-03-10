@@ -160,11 +160,11 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
     }
 
     if (charge == 0) {
-      pLStoLayer[0][layer - 1 + (subdet == 4 ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
+      pLStoLayer[0][layer - 1 + (subdet == Endcap ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
     } else if (charge > 0) {
-      pLStoLayer[1][layer - 1 + (subdet == 4 ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
+      pLStoLayer[1][layer - 1 + (subdet == Endcap ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
     } else {
-      pLStoLayer[2][layer - 1 + (subdet == 4 ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
+      pLStoLayer[2][layer - 1 + (subdet == Endcap ? 2 : 0)] = lst::ModuleConnectionMap(final_pixelmap);
     }
   }
 
@@ -178,7 +178,7 @@ std::unique_ptr<lst::LSTESData<alpaka_common::DevHost>> lst::fillESDataHost(lstg
     mmd.module_type[detId] = static_cast<unsigned int>(sensor.moduleType);
     counter++;
   }
-  mmd.detIdToIndex[1] = counter;  //pixel module is the last module in the module list
+  mmd.detIdToIndex[kPixelModuleId] = counter;  //pixel module is the last module in the module list
   counter++;
   nModules = counter;
 

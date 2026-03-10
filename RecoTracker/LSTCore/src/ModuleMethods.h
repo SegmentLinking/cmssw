@@ -17,6 +17,7 @@
 
 namespace lst {
   // TODO: At some point it might be good to move some of these things to LSTGeometry
+  // or replace the functions with values computed from standard geometry/topology methods
 
   struct ModuleMetaData {
     std::map<unsigned int, uint16_t> detIdToIndex;
@@ -215,7 +216,7 @@ namespace lst {
       }
     }
 
-    mmd.detIdToIndex[1] = counter;  //pixel module is the last module in the module list
+    mmd.detIdToIndex[kPixelModuleId] = counter;  //pixel module is the last module in the module list
     counter++;
     nModules = counter;
   }
@@ -381,7 +382,7 @@ namespace lst {
     *host_nLowerModules = nLowerModules;
 
     // Fill pixel part
-    pixelMapping.pixelModuleIndex = mmd.detIdToIndex.at(1);
+    pixelMapping.pixelModuleIndex = mmd.detIdToIndex.at(kPixelModuleId);
 
     auto modulesPixel_view = modulesHC->view().modulesPixel();
     auto connectedPixels =
