@@ -15,7 +15,9 @@
 #include "Triplet.h"
 #include "Quadruplet.h"
 
+#include <algorithm>
 #include <format>
+#include <numeric>
 
 using Device = ALPAKA_ACCELERATOR_NAMESPACE::Device;
 using Queue = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
@@ -75,6 +77,7 @@ void LSTEvent::resetEventSync() {
   pixelTripletsDC_.reset();
   pixelQuintupletsDC_.reset();
   quadrupletsDC_.reset();
+  etaSortedPLSIndex_.reset();
 
   lstInputHC_.reset();
   hitsHC_.reset();
@@ -569,6 +572,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   if (!no_pls_dupclean) {
     auto const checkHitspLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({max_blocks * 4, max_blocks / 4}, {16, 16});
 
+    buildEtaSortedPLSIndex();
     alpaka::exec<Acc2D>(queue_,
                         checkHitspLS_workDiv,
                         CheckHitspLS{},
@@ -576,7 +580,8 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                         segmentsDC_->const_view().segmentsOccupancy(),
                         lstInputDC_->const_view().pixelSeeds(),
                         pixelSegmentsDC_->view(),
-                        true);
+                        true,
+                        etaSortedPLSIndex_->data());
   }
 
   // Counting kernel
@@ -1005,10 +1010,38 @@ void LSTEvent::createQuintuplets() {
   }
 }
 
+void LSTEvent::buildEtaSortedPLSIndex() {
+  if (etaSortedPLSIndex_)
+    return;  // already built
+
+  auto nSeg_buf_h = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
+  auto nSeg_view_d = cms::alpakatools::make_device_view(
+      queue_, segmentsDC_->const_view().segmentsOccupancy().nSegments()[pixelModuleIndex_]);
+  alpaka::memcpy(queue_, nSeg_buf_h, nSeg_view_d);
+  alpaka::wait(queue_);
+  unsigned int nPixelSegments = std::min(*nSeg_buf_h.data(), n_max_pixel_segments_per_module);
+
+  auto eta_buf_h = cms::alpakatools::make_host_buffer<float[]>(queue_, nPixelSegments);
+  auto eta_view_d =
+      cms::alpakatools::make_device_view(queue_, lstInputDC_->const_view().pixelSeeds().eta(), nPixelSegments);
+  alpaka::memcpy(queue_, eta_buf_h, eta_view_d, nPixelSegments);
+  alpaka::wait(queue_);
+
+  auto order_buf_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, nPixelSegments);
+  auto* order = order_buf_h.data();
+  std::iota(order, order + nPixelSegments, 0u);
+  auto const* eta = eta_buf_h.data();
+  std::sort(order, order + nPixelSegments, [eta](unsigned int a, unsigned int b) { return eta[a] < eta[b]; });
+
+  etaSortedPLSIndex_.emplace(cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nPixelSegments));
+  alpaka::memcpy(queue_, *etaSortedPLSIndex_, order_buf_h, nPixelSegments);
+}
+
 void LSTEvent::pixelLineSegmentCleaning(bool no_pls_dupclean) {
   if (!no_pls_dupclean) {
     auto const checkHitspLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({max_blocks * 4, max_blocks / 4}, {16, 16});
 
+    buildEtaSortedPLSIndex();
     alpaka::exec<Acc2D>(queue_,
                         checkHitspLS_workDiv,
                         CheckHitspLS{},
@@ -1016,7 +1049,8 @@ void LSTEvent::pixelLineSegmentCleaning(bool no_pls_dupclean) {
                         segmentsDC_->const_view().segmentsOccupancy(),
                         lstInputDC_->const_view().pixelSeeds(),
                         pixelSegmentsDC_->view(),
-                        false);
+                        false,
+                        etaSortedPLSIndex_->data());
   }
 }
 
