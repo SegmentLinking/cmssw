@@ -28,7 +28,7 @@ namespace lstgeometry {
   enum SubDet { InnerPixel = 0, Barrel = 5, Endcap = 4 };
   enum Side { NegZ = 1, PosZ = 2, Center = 3 };
 
-  constexpr float kB = 3.8112;
+  constexpr float kB = 3.8;
   constexpr float kC = 0.00299792458;
 
   constexpr unsigned int kBarrelLayers = 6;

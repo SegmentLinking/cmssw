@@ -201,7 +201,7 @@ namespace lstgeometry {
       if (ref_location == Location::barrel) {
         if (doR) {
           float tar_layer_radius = det_geom.getBarrelLayerAverageRadius(ref_layer + 1);
-          if (bound_z_r > z_r) {
+          if (bound_z_r < z_r) {
             auto const& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
             next_point = h.pointFromRadius(tar_layer_radius);
           } else {
@@ -210,7 +210,7 @@ namespace lstgeometry {
           }
         } else {
           float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(1);
-          if (bound_z_r > z_r) {
+          if (bound_z_r < z_r) {
             if (phi_diff > 0) {
               next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
             } else {
@@ -226,7 +226,7 @@ namespace lstgeometry {
         }
       } else {
         float tar_layer_z = det_geom.getEndcapLayerAverageAbsZ(ref_layer + 1);
-        if (bound_z_r > z_r) {
+        if (bound_z_r < z_r) {
           if (phi_diff > 0) {
             next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
           } else {
