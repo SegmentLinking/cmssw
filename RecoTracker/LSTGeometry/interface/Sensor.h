@@ -10,27 +10,40 @@
 
 namespace lstgeometry {
 
-  // A sensor is a component of a module. The common properties of the 2 sensors are stored in the Module struct, and the sensor-specific properties are stored in the Sensor struct.
   struct Sensor {
-    unsigned int moduleDetId;
+    // Module-level properties
+    ModuleType moduleType;
+    SubDetector subdet;
+    Location location;
+    Side side;
+    unsigned int moduleId;
+    unsigned int layer;
+    unsigned int ring;
+    bool inverted;
+    // Sensor-level properties
     float centerRho;
     float centerZ;
     float centerPhi;
-    bool isLower;
+    bool lower;
+    bool strip;
     MatrixF4x3 corners;
-    // Redundant, but convenient to have them
-    ModuleType moduleType;
+    // Redundant, but convenient to avoid repeated computations
     float centerX;
     float centerY;
 
     Sensor() = default;
-    Sensor(unsigned int moduleDetId,
+    Sensor(unsigned int detId,
+           ModuleType moduleType,
+           SubDetector subdet,
+           Location location,
+           Side side,
+           unsigned int moduleId,
+           unsigned int layer,
+           unsigned int ring,
            float centerRho,
            float centerZ,
            float centerPhi,
-           bool isLower,
-           ModuleType moduleType,
-           Surface const& surface);
+           Surface const &surface);
   };
 
   using Sensors = std::unordered_map<unsigned int, Sensor>;

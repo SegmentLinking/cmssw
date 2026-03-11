@@ -5,17 +5,13 @@
 #include <unordered_map>
 
 #include "RecoTracker/LSTGeometry/interface/DetectorGeometry.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
 
   using ModuleMap = std::unordered_map<unsigned int, std::unordered_set<unsigned int>>;
 
-  ModuleMap buildModuleMap(Modules const& modules,
-                           Sensors const& sensors,
-                           DetectorGeometry const& det_geom,
-                           float pt_cut);
+  ModuleMap buildModuleMap(Sensors const& sensors, DetectorGeometry const& det_geom, float pt_cut);
 
 }  // namespace lstgeometry
 

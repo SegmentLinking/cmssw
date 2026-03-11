@@ -10,7 +10,6 @@
 #include <filesystem>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 #include "RecoTracker/LSTGeometry/interface/PixelMap.h"
 #include "RecoTracker/LSTGeometry/interface/Slope.h"

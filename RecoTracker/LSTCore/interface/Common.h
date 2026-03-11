@@ -44,8 +44,6 @@ namespace lst {
   constexpr uint16_t kTCEmptyLowerModule = 0xFFFF;     // Sentinel for empty lowerModule index
   constexpr unsigned int kTCEmptyHitIdx = 0xFFFFFFFF;  // Sentinel for empty hit slots
 
-  constexpr unsigned int kPixelModuleId = 1;
-
   constexpr float kB = lstgeometry::kB;
   constexpr float kC = lstgeometry::kC;
 

@@ -57,7 +57,7 @@ namespace lstgeometry {
     return detIds;
   }
 
-  void DetectorGeometry::buildByLayer(Modules const& modules_info, Sensors const& sensors) {
+  void DetectorGeometry::buildByLayer(Sensors const& sensors) {
     // Clear just in case they were already built
     barrel_lower_det_ids_.clear();
     endcap_lower_det_ids_.clear();
@@ -75,10 +75,9 @@ namespace lstgeometry {
     }
 
     for (unsigned int layer = 1; layer <= kBarrelLayers; layer++) {
-      auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
+      auto detids = getDetIds([&sensors, &layer](auto const& x) {
         auto const& s = sensors.at(x.first);
-        auto const& m = modules_info.at(s.moduleDetId);
-        return m.location == Location::barrel && m.layer == layer && s.isLower;
+        return s.location == Location::barrel && s.layer == layer && s.lower;
       });
       for (auto detid : detids) {
         auto corners = getCorners(detid);
@@ -95,10 +94,9 @@ namespace lstgeometry {
       }
     }
     for (unsigned int layer = 1; layer <= kEndcapLayers; layer++) {
-      auto detids = getDetIds([&modules_info, &sensors, &layer](auto const& x) {
+      auto detids = getDetIds([&sensors, &layer](auto const& x) {
         auto const& s = sensors.at(x.first);
-        auto const& m = modules_info.at(s.moduleDetId);
-        return m.location == Location::endcap && m.layer == layer && s.isLower;
+        return s.location == Location::endcap && s.layer == layer && s.lower;
       });
       for (auto detid : detids) {
         auto corners = getCorners(detid);

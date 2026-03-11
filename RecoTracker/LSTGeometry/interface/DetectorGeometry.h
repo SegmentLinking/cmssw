@@ -8,7 +8,6 @@
 #include <boost/functional/hash.hpp>
 
 #include "RecoTracker/LSTGeometry/interface/Common.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
@@ -35,7 +34,7 @@ namespace lstgeometry {
     std::vector<unsigned int> getDetIds(std::function<bool(const std::pair<const unsigned int, Sensor>&)> filter =
                                             [](auto const&) { return true; }) const;
 
-    void buildByLayer(Modules const& modules_info, Sensors const& sensors);
+    void buildByLayer(Sensors const& sensors);
 
     std::vector<unsigned int> const& getBarrelLayerDetIds(unsigned int layer,
                                                           unsigned int etabin,

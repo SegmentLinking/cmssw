@@ -84,14 +84,13 @@ namespace lstgeometry {
   }
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
-                                                       Modules const& modules,
                                                        Sensors const& sensors,
                                                        DetectorGeometry const& det_geom) {
     auto const& sensor = sensors.at(ref_detid);
 
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
-    auto refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
+    auto refmodule = sensors.at(ref_detid);
 
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
@@ -177,18 +176,14 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  MatrixF4x3 boundsAfterCurved(unsigned int ref_detid,
-                               Modules const& modules,
-                               Sensors const& sensors,
-                               DetectorGeometry const& det_geom,
-                               float ptCut,
-                               bool doR = true) {
+  MatrixF4x3 boundsAfterCurved(
+      unsigned int ref_detid, Sensors const& sensors, DetectorGeometry const& det_geom, float ptCut, bool doR = true) {
     auto bounds = det_geom.getCorners(ref_detid);
     auto const& sensor = sensors.at(ref_detid);
     int charge = 1;
     float z_r = sensor.centerZ / std::sqrt(sensor.centerX * sensor.centerX + sensor.centerY * sensor.centerY);
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
-    auto const& refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
+    auto const& refmodule = sensors.at(ref_detid);
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
     MatrixF4x3 next_layer_bound_points;
@@ -254,7 +249,6 @@ namespace lstgeometry {
   }
 
   std::vector<unsigned int> getCurvedLineConnections(unsigned int ref_detid,
-                                                     Modules const& modules,
                                                      Sensors const& sensors,
                                                      DetectorGeometry const& det_geom,
                                                      float ptCut) {
@@ -262,7 +256,7 @@ namespace lstgeometry {
 
     float refphi = std::atan2(sensor.centerY, sensor.centerX);
 
-    auto const& refmodule = modules.at(sensors.at(ref_detid).moduleDetId);
+    auto const& refmodule = sensors.at(ref_detid);
 
     unsigned short ref_layer = refmodule.layer;
     auto ref_location = refmodule.location;
@@ -275,7 +269,7 @@ namespace lstgeometry {
             ? det_geom.getBarrelLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second)
             : det_geom.getEndcapLayerDetIds(ref_layer + 1, etaphibins.first, etaphibins.second);
 
-    auto next_layer_bound_points = boundsAfterCurved(ref_detid, modules, sensors, det_geom, ptCut);
+    auto next_layer_bound_points = boundsAfterCurved(ref_detid, sensors, det_geom, ptCut);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
@@ -362,25 +356,21 @@ namespace lstgeometry {
     return merged;
   }
 
-  ModuleMap buildModuleMap(Modules const& modules,
-                           Sensors const& sensors,
-                           DetectorGeometry const& det_geo,
-                           float pt_cut) {
-    auto detids_etaphi_layer_ref = det_geo.getDetIds([&modules, &sensors](auto const& x) {
+  ModuleMap buildModuleMap(Sensors const& sensors, DetectorGeometry const& det_geo, float pt_cut) {
+    auto detids_etaphi_layer_ref = det_geo.getDetIds([&sensors](auto const& x) {
       auto const& s = sensors.at(x.first);
-      auto const& m = modules.at(s.moduleDetId);
       // exclude the outermost modules that do not have connections to other modules
-      return ((m.location == Location::barrel && s.isLower && m.layer != 6) ||
-              (m.location == Location::endcap && s.isLower && m.layer != 5 && !(m.ring == 15 && m.layer == 1) &&
-               !(m.ring == 15 && m.layer == 2) && !(m.ring == 12 && m.layer == 3) && !(m.ring == 12 && m.layer == 4)));
+      return ((s.location == Location::barrel && s.lower && s.layer != 6) ||
+              (s.location == Location::endcap && s.lower && s.layer != 5 && !(s.ring == 15 && s.layer == 1) &&
+               !(s.ring == 15 && s.layer == 2) && !(s.ring == 12 && s.layer == 3) && !(s.ring == 12 && s.layer == 4)));
     });
 
     std::unordered_map<unsigned int, std::vector<unsigned int>> straight_line_connections;
     std::unordered_map<unsigned int, std::vector<unsigned int>> curved_line_connections;
 
     for (auto ref_detid : detids_etaphi_layer_ref) {
-      straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, modules, sensors, det_geo);
-      curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, modules, sensors, det_geo, pt_cut);
+      straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, sensors, det_geo);
+      curved_line_connections[ref_detid] = getCurvedLineConnections(ref_detid, sensors, det_geo, pt_cut);
     }
     return mergeLineConnections({&straight_line_connections, &curved_line_connections});
   }

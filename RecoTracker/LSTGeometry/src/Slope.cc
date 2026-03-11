@@ -12,16 +12,8 @@ namespace lstgeometry {
     dxdy = dy != 0 ? -dx / dy : kDefaultSlope;
   }
 
-  bool isStripLayer(Module module, bool isLower) {
-    if (module.moduleType == ModuleType::Ph2SS)
-      return true;
-    if (isInverted(module.moduleId, module.location, module.side, module.layer))
-      return isLower;
-    return !isLower;
-  }
-
   // Use each sensor's corners to calculate and categorize drdz and dxdy slopes.
-  std::tuple<Slopes, Slopes> computeSlopes(Modules const& modules, Sensors const& sensors) {
+  std::tuple<Slopes, Slopes> computeSlopes(Sensors const& sensors) {
     Slopes barrel_slopes;
     Slopes endcap_slopes;
 
@@ -32,11 +24,9 @@ namespace lstgeometry {
 
       Slope slope(dx, dy, dz);
 
-      auto const& module = modules.at(sensor.moduleDetId);
-
-      auto location = module.location;
-      bool is_tilted = module.side != Side::Center;
-      bool is_strip = isStripLayer(module, sensor.isLower);
+      auto location = sensor.location;
+      bool is_tilted = sensor.side != Side::Center;
+      bool is_strip = sensor.strip;
 
       if (!is_strip)
         continue;

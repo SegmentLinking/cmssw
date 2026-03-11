@@ -3,7 +3,6 @@
 
 #include <unordered_map>
 
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 namespace lstgeometry {
@@ -18,7 +17,7 @@ namespace lstgeometry {
 
   using Slopes = std::unordered_map<unsigned int, Slope>;
 
-  std::tuple<Slopes, Slopes> computeSlopes(Modules const& modules, Sensors const& sensors);
+  std::tuple<Slopes, Slopes> computeSlopes(Sensors const& sensors);
 
 }  // namespace lstgeometry
 

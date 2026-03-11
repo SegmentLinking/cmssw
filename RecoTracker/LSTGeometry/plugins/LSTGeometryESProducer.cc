@@ -9,7 +9,6 @@
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
 #include "RecoTracker/LSTGeometry/interface/Geometry.h"
-#include "RecoTracker/LSTGeometry/interface/Module.h"
 #include "RecoTracker/LSTGeometry/interface/Sensor.h"
 
 #include <array>
@@ -57,7 +56,6 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
   trackerGeom_ = &iRecord.get(geomToken_);
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
-  lstgeometry::Modules modules;
   auto sensors = std::make_shared<lstgeometry::Sensors>();
 
   std::array<float, lstgeometry::kBarrelLayers> avg_r_barrel{};
@@ -96,10 +94,8 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     if (det->isLeaf()) {
       // Leafs are the sensors
-      const unsigned int moduleDetId = detid & ~0b11;
-      // Can't use TrackerTopology::isLower since it doesn't consider if the module is inverted
-      const bool isLow = isLower(moduleId, location, side, layer, detid);
-      (*sensors)[detid] = lstgeometry::Sensor(moduleDetId, rho_cm, z_cm, phi_rad, isLow, moduleType, surface);
+      (*sensors)[detid] = lstgeometry::Sensor(
+          detid, moduleType, subdet, location, side, moduleId, layer, ring, rho_cm, z_cm, phi_rad, surface);
 
       continue;
     }
@@ -111,9 +107,6 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
       avg_z_endcap[layer - 1] += std::fabs(z_cm);
       avg_z_endcap_counter[layer - 1] += 1;
     }
-
-    lstgeometry::Module module{moduleType, subdet, location, side, moduleId, layer, ring};
-    modules[detid] = std::move(module);
   }
 
   for (size_t i = 0; i < avg_r_barrel.size(); ++i) {
@@ -123,7 +116,7 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     avg_z_endcap[i] /= avg_z_endcap_counter[i];
   }
 
-  auto lstGeometry = std::make_unique<lstgeometry::Geometry>(modules, sensors, avg_r_barrel, avg_z_endcap, ptCut_);
+  auto lstGeometry = std::make_unique<lstgeometry::Geometry>(sensors, avg_r_barrel, avg_z_endcap, ptCut_);
 
   return lstGeometry;
 }

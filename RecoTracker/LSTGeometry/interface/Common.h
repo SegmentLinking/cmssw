@@ -49,11 +49,6 @@ namespace lstgeometry {
   float roundCoordinate(float coord, float tol = 1e-3);
   std::pair<float, float> getEtaPhi(float x, float y, float z, float refphi = 0);
 
-  // Not sure if there is functionality for this already in CMSSW
-  bool isInverted(unsigned int moduleId, Location location, Side side, unsigned int layer);
-  // This differs from TrackerTopology::isLower since it considers if the module is inverted
-  bool isLower(unsigned int moduleId, Location location, Side side, unsigned int layer, unsigned int detId);
-
 }  // namespace lstgeometry
 
 #endif
