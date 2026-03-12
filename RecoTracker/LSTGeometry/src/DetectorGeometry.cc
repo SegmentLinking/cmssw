@@ -32,8 +32,10 @@ namespace lstgeometry {
     unsigned int eta_bin = std::clamp(static_cast<unsigned int>(theta / kEtaBinRad), 0u, kNEtaBins - 1);
 
     float pi = std::numbers::pi_v<float>;
-    unsigned int raw = static_cast<unsigned int>((phi + pi) / kPhiBinWidth);
-    unsigned int phi_bin = (raw == 0 || raw >= kNPhiBins) ? 0u : raw;
+    unsigned int phi_bin =
+        std::clamp(static_cast<unsigned int>((phi + pi + kPhiBinWidth / 2.) / kPhiBinWidth), 0u, kNPhiBins - 1);
+    if (phi >= pi - kPhiBinWidth / 2)
+      phi_bin = 0;  // The 0 bin wraps around
 
     return std::make_pair(eta_bin, phi_bin);
   }

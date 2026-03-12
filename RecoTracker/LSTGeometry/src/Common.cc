@@ -35,7 +35,7 @@ namespace lstgeometry {
 
   std::pair<float, float> getEtaPhi(float x, float y, float z, float refphi) {
     float phi = phi_mpi_pi(std::atan2(y, x) - refphi);
-    float eta = std::asinh(std::sqrt(x * x + y * y) / z);
+    float eta = std::asinh(z / std::sqrt(x * x + y * y));
     return std::make_pair(eta, phi);
   }
 
