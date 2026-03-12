@@ -45,14 +45,9 @@
   <use name="DataFormats/BeamSpot"/>
   <use name="DataFormats/Portable"/>
   <use name="DataFormats/SoATemplate"/>
-  <use name="DataFormats/TrackReco"/>
-  <use name="DataFormats/VertexReco"/>
-  <use name="FWCore/Framework"/>
-  <use name="FWCore/ParameterSet"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="PhysicsTools/PyTorchAlpaka"/>
-  <use name="RecoTracker/FinalTrackSelectors"/>
   <use name="pytorch-cuda" for="alpaka/cuda"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>

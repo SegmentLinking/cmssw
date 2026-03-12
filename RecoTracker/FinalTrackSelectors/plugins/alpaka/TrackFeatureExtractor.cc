@@ -27,57 +27,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         : EDProducer<>(iConfig),
           tracks_token_(consumes<edm::InEvent>(iConfig.getParameter<edm::InputTag>("src"))),
           beamspot_token_(consumes<edm::InEvent>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
-          vertices_token_(consumes<edm::InEvent>(iConfig.getParameter<edm::InputTag>("vertices"))),
           features_token_{produces()} {}
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
       desc.add<edm::InputTag>("src", edm::InputTag("hltInitialStepTracks"));
       desc.add<edm::InputTag>("beamSpot", edm::InputTag("hltOnlineBeamSpot"));
-      desc.add<edm::InputTag>("vertices", edm::InputTag("hltPhase2PixelVertices"));
       descriptions.addWithDefaultLabel(desc);
     }
 
     void produce(device::Event& iEvent, const device::EventSetup& iSetup) override {
       auto const& tracks = iEvent.get(tracks_token_);
       auto const& beamspot = iEvent.get(beamspot_token_);
-      auto const& vertices = iEvent.get(vertices_token_);
 
       const auto nTracks = tracks.size();
 
       // Create HOST collection first, fill it, then copy to device
       PortableHostCollection<TrackFeaturesSoA> features_host(nTracks);
-      
-      auto features_view = features_host.view();
 
-      const reco::Vertex* bestVertex = nullptr;
-      if (!vertices.empty()) {
-        bestVertex = &vertices[0];
-      }
+      auto features_view = features_host.view();
 
       for (size_t i = 0; i < nTracks; ++i) {
         const auto& track = tracks[i];
-        const auto& innerMom = track.innerMomentum();
-        const auto& outerMom = track.outerMomentum();
-
-        features_view[i].pt() = track.pt();
-        features_view[i].innerMomentumX() = innerMom.x();
-        features_view[i].innerMomentumY() = innerMom.y();
-        features_view[i].innerMomentumZ() = innerMom.z();
-        features_view[i].innerMomentumRho() = innerMom.Rho();
-        features_view[i].outerMomentumX() = outerMom.x();
-        features_view[i].outerMomentumY() = outerMom.y();
-        features_view[i].outerMomentumZ() = outerMom.z();
-        features_view[i].outerMomentumRho() = outerMom.Rho();
-        features_view[i].ptError() = track.ptError();
-
-        if (bestVertex) {
-          features_view[i].dxyBestVertex() = track.dxy(bestVertex->position());
-          features_view[i].dzBestVertex() = track.dz(bestVertex->position());
-        } else {
-          features_view[i].dxyBestVertex() = 0.0f;
-          features_view[i].dzBestVertex() = 0.0f;
-        }
 
         features_view[i].dxyBeamSpot() = track.dxy(beamspot.position());
         features_view[i].dzBeamSpot() = track.dz(beamspot.position());
@@ -94,17 +65,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const auto& hitPattern = track.hitPattern();
         features_view[i].lostInnerHits() = hitPattern.numberOfLostTrackerHits(reco::HitPattern::MISSING_INNER_HITS);
         features_view[i].lostOuterHits() = hitPattern.numberOfLostTrackerHits(reco::HitPattern::MISSING_OUTER_HITS);
-        features_view[i].layersOffInner() = hitPattern.trackerLayersTotallyOffOrBad(reco::HitPattern::MISSING_INNER_HITS);
-        features_view[i].layersOffOuter() = hitPattern.trackerLayersTotallyOffOrBad(reco::HitPattern::MISSING_OUTER_HITS);
         features_view[i].layersWithoutMeas() = hitPattern.trackerLayersWithoutMeasurement(reco::HitPattern::TRACK_HITS);
         features_view[i].validPixelHits() = hitPattern.numberOfValidPixelHits();
         features_view[i].validStripHits() = hitPattern.numberOfValidStripHits();
       }
 
       // Create device collection and copy from host
-      TrackFeaturesDeviceCollection features_device(nTracks, iEvent.queue());
+      TrackFeaturesDeviceCollection features_device(iEvent.queue(), nTracks);
       alpaka::memcpy(iEvent.queue(), features_device.buffer(), features_host.const_buffer());
-      
+
       iEvent.emplace(features_token_, std::move(features_device));
     }
 
@@ -115,7 +84,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDPutToken<TrackFeaturesDeviceCollection> features_token_;
   };
 
-}
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
 DEFINE_FWK_ALPAKA_MODULE(TrackFeatureExtractor);
