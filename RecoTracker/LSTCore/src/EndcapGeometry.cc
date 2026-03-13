@@ -7,6 +7,10 @@
 
 lst::EndcapGeometry::EndcapGeometry(std::string const& filename) { load(filename); }
 
+lst::EndcapGeometry::EndcapGeometry(lstgeometry::Slopes const& slopes, lstgeometry::Sensors const& sensors) {
+  load(slopes, sensors);
+}
+
 void lst::EndcapGeometry::load(std::string const& filename) {
   dxdy_slope_.clear();
   centroid_phis_.clear();
@@ -34,6 +38,18 @@ void lst::EndcapGeometry::load(std::string const& filename) {
         throw std::runtime_error("Failed to read Endcap Geometry binary data.");
       }
     }
+  }
+
+  fillGeoMapArraysExplicit();
+}
+
+void lst::EndcapGeometry::load(lstgeometry::Slopes const& slopes, lstgeometry::Sensors const& sensors) {
+  dxdy_slope_.clear();
+  centroid_phis_.clear();
+
+  for (const auto& [detId, slope] : slopes) {
+    dxdy_slope_[detId] = slope.dxdy;
+    centroid_phis_[detId] = sensors.at(detId).centerPhi;
   }
 
   fillGeoMapArraysExplicit();

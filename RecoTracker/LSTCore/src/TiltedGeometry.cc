@@ -7,6 +7,8 @@
 
 lst::TiltedGeometry::TiltedGeometry(std::string const& filename) { load(filename); }
 
+lst::TiltedGeometry::TiltedGeometry(lstgeometry::Slopes const& slopes) { load(slopes); }
+
 void lst::TiltedGeometry::load(std::string const& filename) {
   drdzs_.clear();
   dxdys_.clear();
@@ -34,6 +36,16 @@ void lst::TiltedGeometry::load(std::string const& filename) {
         throw std::runtime_error("Failed to read Tilted Geometry binary data.");
       }
     }
+  }
+}
+
+void lst::TiltedGeometry::load(lstgeometry::Slopes const& slopes) {
+  drdzs_.clear();
+  dxdys_.clear();
+
+  for (const auto& [detId, slope] : slopes) {
+    drdzs_[detId] = slope.drdz;
+    dxdys_[detId] = slope.dxdy;
   }
 }
 

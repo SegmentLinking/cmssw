@@ -16,6 +16,9 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace lst {
+  // TODO: At some point it might be good to move some of these things to LSTGeometry
+  // or replace the functions with values computed from standard geometry/topology methods
+
   struct ModuleMetaData {
     std::map<unsigned int, uint16_t> detIdToIndex;
     std::map<unsigned int, float> module_x;
@@ -213,24 +216,21 @@ namespace lst {
       }
     }
 
-    mmd.detIdToIndex[1] = counter;  //pixel module is the last module in the module list
+    mmd.detIdToIndex[kPixelModuleId] = counter;  //pixel module is the last module in the module list
     counter++;
     nModules = counter;
   }
 
-  inline std::shared_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
-                                                                    const char* moduleMetaDataFilePath,
-                                                                    uint16_t& nModules,
-                                                                    uint16_t& nLowerModules,
-                                                                    unsigned int& nPixels,
-                                                                    PixelMap& pixelMapping,
-                                                                    const EndcapGeometry& endcapGeometry,
-                                                                    const TiltedGeometry& tiltedGeometry,
-                                                                    const ModuleConnectionMap& moduleConnectionMap) {
-    ModuleMetaData mmd;
-
-    loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
-
+  inline std::shared_ptr<ModulesHostCollection> constructModuleCollection(
+      MapPLStoLayer const& pLStoLayer,
+      ModuleMetaData& mmd,
+      uint16_t& nModules,
+      uint16_t& nLowerModules,
+      unsigned int& nPixels,
+      PixelMap& pixelMapping,
+      const EndcapGeometry& endcapGeometry,
+      const TiltedGeometry& tiltedGeometry,
+      const ModuleConnectionMap& moduleConnectionMap) {
     // TODO: this whole section could use some refactoring
     auto [totalSizes,
           connectedModuleDetIds,
@@ -382,7 +382,7 @@ namespace lst {
     *host_nLowerModules = nLowerModules;
 
     // Fill pixel part
-    pixelMapping.pixelModuleIndex = mmd.detIdToIndex.at(1);
+    pixelMapping.pixelModuleIndex = mmd.detIdToIndex.at(kPixelModuleId);
 
     auto modulesPixel_view = modulesHC->view().modulesPixel();
     auto connectedPixels =
@@ -402,5 +402,29 @@ namespace lst {
 
     return modulesHC;
   }
+
+  inline std::shared_ptr<ModulesHostCollection> loadModulesFromFile(MapPLStoLayer const& pLStoLayer,
+                                                                    const char* moduleMetaDataFilePath,
+                                                                    uint16_t& nModules,
+                                                                    uint16_t& nLowerModules,
+                                                                    unsigned int& nPixels,
+                                                                    PixelMap& pixelMapping,
+                                                                    const EndcapGeometry& endcapGeometry,
+                                                                    const TiltedGeometry& tiltedGeometry,
+                                                                    const ModuleConnectionMap& moduleConnectionMap) {
+    ModuleMetaData mmd;
+
+    loadCentroidsFromFile(moduleMetaDataFilePath, mmd, nModules);
+    return constructModuleCollection(pLStoLayer,
+                                     mmd,
+                                     nModules,
+                                     nLowerModules,
+                                     nPixels,
+                                     pixelMapping,
+                                     endcapGeometry,
+                                     tiltedGeometry,
+                                     moduleConnectionMap);
+  }
+
 }  // namespace lst
 #endif
