@@ -863,6 +863,80 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Reduced-memory version of CountMiniDoubletConnections: runs full segment algorithm
+  // for exact segment counts instead of the delta-phi precut.
+  // Only launched when reduceMem is enabled.
+  struct CountMiniDoubletConnectionsDense {
+    ALPAKA_FN_ACC void operator()(Acc3D const& acc,
+                                  ModulesConst modules,
+                                  MiniDoublets mds,
+                                  MiniDoubletsOccupancyConst mdsOccupancy,
+                                  ObjectRangesConst ranges,
+                                  const float ptCut) const {
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
+                        (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
+      const auto& mdRanges = ranges.mdRanges();
+
+      for (uint16_t innerLowerModuleIndex : cms::alpakatools::uniform_groups_z(acc, modules.nLowerModules())) {
+        const unsigned int nInnerMDs = mdsOccupancy.nMDs()[innerLowerModuleIndex];
+        if (nInnerMDs == 0)
+          continue;
+
+        const uint16_t nConnectedModules = modules.nConnectedModules()[innerLowerModuleIndex];
+        if (nConnectedModules == 0)
+          continue;
+
+        for (uint16_t outerLowerModuleArrayIdx : cms::alpakatools::uniform_elements_y(acc, nConnectedModules)) {
+          const uint16_t outerLowerModuleIndex = modules.moduleMap()[innerLowerModuleIndex][outerLowerModuleArrayIdx];
+          const unsigned int nOuterMDs = mdsOccupancy.nMDs()[outerLowerModuleIndex];
+          if (nOuterMDs == 0)
+            continue;
+
+          const unsigned int limit = nInnerMDs * nOuterMDs;
+
+          for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
+            const unsigned int innerMDArrayIdx = hitIndex / nOuterMDs;
+            const unsigned int outerMDArrayIdx = hitIndex % nOuterMDs;
+
+            const unsigned int innerMDIndex = mdRanges[innerLowerModuleIndex][0] + innerMDArrayIdx;
+            const unsigned int outerMDIndex = mdRanges[outerLowerModuleIndex][0] + outerMDArrayIdx;
+
+            // Run full segment algo for exact count
+            float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
+#ifdef CUT_VALUE_DEBUG
+            float dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD, zLo, zHi, rtLo, rtHi;
+#endif
+            if (runSegmentDefaultAlgo(acc,
+                                      modules,
+                                      mds,
+                                      innerLowerModuleIndex,
+                                      outerLowerModuleIndex,
+                                      innerMDIndex,
+                                      outerMDIndex,
+                                      dPhi,
+                                      dPhiMin,
+                                      dPhiMax,
+                                      dPhiChange,
+                                      dPhiChangeMin,
+                                      dPhiChangeMax,
+#ifdef CUT_VALUE_DEBUG
+                                      dAlphaInnerMDSegment,
+                                      dAlphaOuterMDSegment,
+                                      dAlphaInnerMDOuterMD,
+                                      zLo,
+                                      zHi,
+                                      rtLo,
+                                      rtHi,
+#endif
+                                      ptCut)) {
+              alpaka::atomicAdd(acc, &mds.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
+            }
+          }
+        }
+      }
+    }
+  };
+
   struct CreateSegmentArrayRanges {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,

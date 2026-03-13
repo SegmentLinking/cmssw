@@ -32,6 +32,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           clustSizeCut_(static_cast<uint16_t>(config.getParameter<uint32_t>("clustSizeCut"))),
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
+          reduceMem_(config.getParameter<bool>("reduceMem")),
           lstOutputToken_{produces()} {}
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
@@ -47,7 +48,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               &lstESDeviceData,
               &lstInputDC,
               nopLSDupClean_,
-              tcpLSTriplets_);
+              tcpLSTriplets_,
+              reduceMem_);
 
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
@@ -63,6 +65,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<std::string>("ptCutLabel", "0.8");
       desc.add<bool>("nopLSDupClean", false);
       desc.add<bool>("tcpLSTriplets", false);
+      desc.add<bool>("reduceMem", false);
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -74,6 +77,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const uint16_t clustSizeCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
+    const bool reduceMem_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
   };
 

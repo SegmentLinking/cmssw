@@ -132,6 +132,9 @@ public:
   // Boolean to disable pLS duplicate cleaning
   bool no_pls_dupclean;
 
+  // Boolean to enable reduced memory mode (exact buffer sizing via counting kernels)
+  bool reduce_mem;
+
   // Boolean to enable MD branches
   bool md_branches;
 

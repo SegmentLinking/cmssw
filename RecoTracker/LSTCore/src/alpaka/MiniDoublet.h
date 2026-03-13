@@ -364,29 +364,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoBarrel(TAcc const& acc,
-                                                     ModulesConst modules,
-                                                     uint16_t lowerModuleIndex,
-                                                     uint16_t upperModuleIndex,
-                                                     unsigned int lowerHitIndex,
-                                                     unsigned int upperHitIndex,
-                                                     float& dz,
-                                                     float& dPhi,
-                                                     float& dPhiChange,
-                                                     float& shiftedX,
-                                                     float& shiftedY,
-                                                     float& shiftedZ,
-                                                     float& noShiftedDphi,
-                                                     float& noShiftedDphiChange,
-                                                     float xLower,
-                                                     float yLower,
-                                                     float zLower,
-                                                     float rtLower,
-                                                     float xUpper,
-                                                     float yUpper,
-                                                     float zUpper,
-                                                     float rtUpper,
-                                                     const float ptCut) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runMiniDoubletDefaultAlgoBarrel(TAcc const& acc,
+                                                                      ModulesConst modules,
+                                                                      uint16_t lowerModuleIndex,
+                                                                      uint16_t upperModuleIndex,
+                                                                      unsigned int lowerHitIndex,
+                                                                      unsigned int upperHitIndex,
+                                                                      float& dz,
+                                                                      float& dPhi,
+                                                                      float& dPhiChange,
+                                                                      float& shiftedX,
+                                                                      float& shiftedY,
+                                                                      float& shiftedZ,
+                                                                      float& noShiftedDphi,
+                                                                      float& noShiftedDphiChange,
+                                                                      float xLower,
+                                                                      float yLower,
+                                                                      float zLower,
+                                                                      float rtLower,
+                                                                      float xUpper,
+                                                                      float yUpper,
+                                                                      float zUpper,
+                                                                      float rtUpper,
+                                                                      const float ptCut) {
     dz = zLower - zUpper;
     const float dzCut = modules.moduleType()[lowerModuleIndex] == PS ? 2.f : 10.f;
     const float sign = ((dz > 0) - (dz < 0)) * ((zLower > 0) - (zLower < 0));
@@ -492,29 +492,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgoEndcap(TAcc const& acc,
-                                                     ModulesConst modules,
-                                                     uint16_t lowerModuleIndex,
-                                                     uint16_t upperModuleIndex,
-                                                     unsigned int lowerHitIndex,
-                                                     unsigned int upperHitIndex,
-                                                     float& drt,
-                                                     float& dPhi,
-                                                     float& dPhiChange,
-                                                     float& shiftedX,
-                                                     float& shiftedY,
-                                                     float& shiftedZ,
-                                                     float& noShiftedDphi,
-                                                     float& noShiftedDphichange,
-                                                     float xLower,
-                                                     float yLower,
-                                                     float zLower,
-                                                     float rtLower,
-                                                     float xUpper,
-                                                     float yUpper,
-                                                     float zUpper,
-                                                     float rtUpper,
-                                                     const float ptCut) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runMiniDoubletDefaultAlgoEndcap(TAcc const& acc,
+                                                                      ModulesConst modules,
+                                                                      uint16_t lowerModuleIndex,
+                                                                      uint16_t upperModuleIndex,
+                                                                      unsigned int lowerHitIndex,
+                                                                      unsigned int upperHitIndex,
+                                                                      float& drt,
+                                                                      float& dPhi,
+                                                                      float& dPhiChange,
+                                                                      float& shiftedX,
+                                                                      float& shiftedY,
+                                                                      float& shiftedZ,
+                                                                      float& noShiftedDphi,
+                                                                      float& noShiftedDphichange,
+                                                                      float xLower,
+                                                                      float yLower,
+                                                                      float zLower,
+                                                                      float rtLower,
+                                                                      float xUpper,
+                                                                      float yUpper,
+                                                                      float zUpper,
+                                                                      float rtUpper,
+                                                                      const float ptCut) {
     // There are series of cuts that applies to mini-doublet in a "endcap" region
     // Cut #1 : dz cut. The dz difference can't be larger than 1cm. (max separation is 4mm for modules in the endcap)
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3093
@@ -604,32 +604,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   }
 
   template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC bool runMiniDoubletDefaultAlgo(TAcc const& acc,
-                                               ModulesConst modules,
-                                               uint16_t lowerModuleIndex,
-                                               uint16_t upperModuleIndex,
-                                               unsigned int lowerHitIndex,
-                                               unsigned int upperHitIndex,
-                                               float& dz,
-                                               float& dPhi,
-                                               float& dPhiChange,
-                                               float& shiftedX,
-                                               float& shiftedY,
-                                               float& shiftedZ,
-                                               float& noShiftedDphi,
-                                               float& noShiftedDphiChange,
-                                               float xLower,
-                                               float yLower,
-                                               float zLower,
-                                               float rtLower,
-                                               float xUpper,
-                                               float yUpper,
-                                               float zUpper,
-                                               float rtUpper,
-                                               const float ptCut,
-                                               uint16_t clustSizeLower,
-                                               uint16_t clustSizeUpper,
-                                               const uint16_t clustSizeCut) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runMiniDoubletDefaultAlgo(TAcc const& acc,
+                                                                ModulesConst modules,
+                                                                uint16_t lowerModuleIndex,
+                                                                uint16_t upperModuleIndex,
+                                                                unsigned int lowerHitIndex,
+                                                                unsigned int upperHitIndex,
+                                                                float& dz,
+                                                                float& dPhi,
+                                                                float& dPhiChange,
+                                                                float& shiftedX,
+                                                                float& shiftedY,
+                                                                float& shiftedZ,
+                                                                float& noShiftedDphi,
+                                                                float& noShiftedDphiChange,
+                                                                float xLower,
+                                                                float yLower,
+                                                                float zLower,
+                                                                float rtLower,
+                                                                float xUpper,
+                                                                float yUpper,
+                                                                float zUpper,
+                                                                float rtUpper,
+                                                                const float ptCut,
+                                                                uint16_t clustSizeLower,
+                                                                uint16_t clustSizeUpper,
+                                                                const uint16_t clustSizeCut) {
     if (clustSizeLower > clustSizeCut or clustSizeUpper > clustSizeCut) {
       return false;
     }
@@ -817,6 +817,113 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
     return -1;
   }
+
+  // Counting kernel: runs full MD algorithm to get exact counts per module.
+  // Only launched when reduceMem is enabled.
+  struct CountMiniDoublets {
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  ModulesConst modules,
+                                  HitsBaseConst hitsBase,
+                                  HitsExtendedConst hitsExtended,
+                                  HitsRangesConst hitsRanges,
+                                  ObjectRanges ranges,
+                                  const float ptCut,
+                                  const uint16_t clustSizeCut) const {
+      for (uint16_t lowerModuleIndex : cms::alpakatools::uniform_elements_y(acc, modules.nLowerModules())) {
+        uint16_t upperModuleIndex = modules.partnerModuleIndices()[lowerModuleIndex];
+        int nLowerHits = hitsRanges.hitRangesnLower()[lowerModuleIndex];
+        int nUpperHits = hitsRanges.hitRangesnUpper()[lowerModuleIndex];
+        if (hitsRanges.hitRangesLower()[lowerModuleIndex] == -1)
+          continue;
+        unsigned int upHitArrayIndex = hitsRanges.hitRangesUpper()[lowerModuleIndex];
+        unsigned int loHitArrayIndex = hitsRanges.hitRangesLower()[lowerModuleIndex];
+        int limit = nUpperHits * nLowerHits;
+
+        for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
+          int lowerHitIndex = hitIndex / nUpperHits;
+          int upperHitIndex = hitIndex % nUpperHits;
+          if (upperHitIndex >= nUpperHits)
+            continue;
+          if (lowerHitIndex >= nLowerHits)
+            continue;
+          unsigned int lowerHitArrayIndex = loHitArrayIndex + lowerHitIndex;
+          float xLower = hitsBase.xs()[lowerHitArrayIndex];
+          float yLower = hitsBase.ys()[lowerHitArrayIndex];
+          float zLower = hitsBase.zs()[lowerHitArrayIndex];
+          float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
+          unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
+          float xUpper = hitsBase.xs()[upperHitArrayIndex];
+          float yUpper = hitsBase.ys()[upperHitArrayIndex];
+          float zUpper = hitsBase.zs()[upperHitArrayIndex];
+          float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
+          uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
+          uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
+
+          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
+          bool success = runMiniDoubletDefaultAlgo(acc,
+                                                   modules,
+                                                   lowerModuleIndex,
+                                                   upperModuleIndex,
+                                                   lowerHitArrayIndex,
+                                                   upperHitArrayIndex,
+                                                   dz,
+                                                   dphi,
+                                                   dphichange,
+                                                   shiftedX,
+                                                   shiftedY,
+                                                   shiftedZ,
+                                                   noShiftedDphi,
+                                                   noShiftedDphiChange,
+                                                   xLower,
+                                                   yLower,
+                                                   zLower,
+                                                   rtLower,
+                                                   xUpper,
+                                                   yUpper,
+                                                   zUpper,
+                                                   rtUpper,
+                                                   ptCut,
+                                                   clustSizeLower,
+                                                   clustSizeUpper,
+                                                   clustSizeCut);
+          if (success) {
+            alpaka::atomicAdd(
+                acc, &ranges.miniDoubletModuleOccupancy()[lowerModuleIndex], 1, alpaka::hierarchy::Threads{});
+          }
+        }
+      }
+    }
+  };
+
+  // Reduced-memory version of CreateMDArrayRangesGPU: reads pre-computed exact counts
+  // from CountMiniDoublets instead of using matrix-based caps.
+  // Only launched when reduceMem is enabled.
+  struct CreateMDArrayRangesReducedMem {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc, ModulesConst modules, ObjectRanges ranges) const {
+      // implementation is 1D with a single block
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
+
+      int& nTotalMDs = alpaka::declareSharedVar<int, __COUNTER__>(acc);
+      if (cms::alpakatools::once_per_block(acc)) {
+        nTotalMDs = 0;
+      }
+      alpaka::syncBlockThreads(acc);
+
+      for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
+        // Exact count was pre-computed by CountMiniDoublets
+        int occupancy = ranges.miniDoubletModuleOccupancy()[i];
+        unsigned int nTotMDs = alpaka::atomicAdd(acc, &nTotalMDs, occupancy, alpaka::hierarchy::Threads{});
+
+        ranges.miniDoubletModuleIndices()[i] = nTotMDs;
+      }
+
+      alpaka::syncBlockThreads(acc);
+      if (cms::alpakatools::once_per_block(acc)) {
+        ranges.miniDoubletModuleIndices()[modules.nLowerModules()] = nTotalMDs;
+        ranges.nTotalMDs() = nTotalMDs;
+      }
+    }
+  };
 
   struct CreateMDArrayRangesGPU {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
