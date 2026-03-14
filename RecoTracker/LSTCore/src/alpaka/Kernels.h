@@ -242,12 +242,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           unsigned int quintupletModuleIndices_lowmod2 = ranges.quintupletModuleIndices()[lowmod2];
 
+          // Module-level eta pre-check: skip module pairs where Q5s are far apart in eta.
+          // Within a module, Q5 etas are tightly clustered (<0.1), so 0.3 margin is very safe.
+          if (alpaka::math::abs(acc,
+                                __H2F(quintuplets.eta()[quintupletModuleIndices_lowmod1]) -
+                                    __H2F(quintuplets.eta()[quintupletModuleIndices_lowmod2])) > 0.3f)
+            continue;
+
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;
             if (quintuplets.isDup()[ix] & 1)
               continue;
 
-            bool isPT5_ix = quintuplets.partOfPT5()[ix];
+            const bool isPT5_ix = quintuplets.partOfPT5()[ix];
+            const float eta1 = __H2F(quintuplets.eta()[ix]);
+            const float phi1 = __H2F(quintuplets.phi()[ix]);
+            const float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
 
             for (unsigned int jx1 = 0; jx1 < nQuintuplets_lowmod2; jx1++) {
               unsigned int jx = quintupletModuleIndices_lowmod2 + jx1;
@@ -257,31 +267,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               if (quintuplets.isDup()[jx] & 1)
                 continue;
 
-              bool isPT5_jx = quintuplets.partOfPT5()[jx];
+              const bool isPT5_jx = quintuplets.partOfPT5()[jx];
 
               if (isPT5_ix && isPT5_jx)
                 continue;
 
-              float eta1 = __H2F(quintuplets.eta()[ix]);
-              float phi1 = __H2F(quintuplets.phi()[ix]);
-              float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
-
-              float eta2 = __H2F(quintuplets.eta()[jx]);
-              float phi2 = __H2F(quintuplets.phi()[jx]);
-              float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
-
-              float dEta = alpaka::math::abs(acc, eta1 - eta2);
-              float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
+              const float eta2 = __H2F(quintuplets.eta()[jx]);
+              const float dEta = alpaka::math::abs(acc, eta1 - eta2);
               if (dEta > 0.1f)
                 continue;
 
+              const float phi2 = __H2F(quintuplets.phi()[jx]);
+              const float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
               if (alpaka::math::abs(acc, dPhi) > 0.1f)
                 continue;
 
-              float dR2 = dEta * dEta + dPhi * dPhi;
-              int nMatched = checkHitsT5(ix, jx, quintuplets);
-              const int minNHitsForDup_T5 = 5;
+              const float dR2 = dEta * dEta + dPhi * dPhi;
+              const int nMatched = checkHitsT5(ix, jx, quintuplets);
+              constexpr int minNHitsForDup_T5 = 5;
 
               float d2 = 0.f;
               CMS_UNROLL_LOOP
@@ -291,12 +294,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
 
               if (((dR2 < 0.001f || nMatched >= minNHitsForDup_T5) && d2 < 1.0f) || (dR2 < 0.02f && d2 < 0.1f)) {
+                const float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
                 if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
+                  break;  // ix is now dup, no need to compare further
                 } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintuplets, (ix < jx ? ix : jx), true);
+                  if (ix < jx)
+                    break;  // ix was marked dup
                 }
               }
             }
@@ -458,9 +465,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc, PixelQuintuplets pixelQuintuplets) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
+        float eta1 = __H2F(pixelQuintuplets.eta()[ix]);
+        float phi1 = __H2F(pixelQuintuplets.phi()[ix]);
         float score1 = __H2F(pixelQuintuplets.score()[ix]);
         for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, nPixelQuintuplets)) {
           if (ix == jx)
+            continue;
+
+          float eta2 = __H2F(pixelQuintuplets.eta()[jx]);
+          if (alpaka::math::abs(acc, eta1 - eta2) > 0.1f)
+            continue;
+
+          float phi2 = __H2F(pixelQuintuplets.phi()[jx]);
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > 0.1f)
             continue;
 
           int nMatched = checkHitspT5(ix, jx, pixelQuintuplets);
@@ -477,53 +494,64 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // pLS dedup using eta-sorted indices. On CPU the sorted order enables early termination
+  // via break; on GPU each thread that breaks simply exits its own iteration.
   struct CheckHitspLS {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   PixelSeedsConst pixelSeeds,
                                   PixelSegments pixelSegments,
-                                  bool secondpass) const {
+                                  bool secondpass,
+                                  unsigned int const* __restrict__ etaOrder) const {
       int pixelModuleIndex = modules.nLowerModules();
       unsigned int nPixelSegments = segmentsOccupancy.nSegments()[pixelModuleIndex];
 
       if (nPixelSegments > n_max_pixel_segments_per_module)
         nPixelSegments = n_max_pixel_segments_per_module;
 
-      for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelSegments)) {
+      for (unsigned int si : cms::alpakatools::uniform_elements_y(acc, nPixelSegments)) {
+        unsigned int ix = etaOrder[si];
         if (secondpass && (!pixelSeeds.isQuad()[ix] || (pixelSegments.isDup()[ix] & 1)))
           continue;
 
-        auto const& phits1 = pixelSegments.pLSHitsIdxs()[ix];
         float eta_pix1 = pixelSeeds.eta()[ix];
         float phi_pix1 = pixelSeeds.phi()[ix];
 
-        for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, ix + 1, nPixelSegments)) {
+        for (unsigned int sj : cms::alpakatools::uniform_elements_x(acc, si + 1, nPixelSegments)) {
+          unsigned int jx = etaOrder[sj];
           float eta_pix2 = pixelSeeds.eta()[jx];
-          float phi_pix2 = pixelSeeds.phi()[jx];
 
-          if (alpaka::math::abs(acc, eta_pix2 - eta_pix1) > 0.1f)
-            continue;
+          if (eta_pix2 - eta_pix1 > 0.1f)
+            break;
 
           if (secondpass && (!pixelSeeds.isQuad()[jx] || (pixelSegments.isDup()[jx] & 1)))
             continue;
 
-          int8_t quad_diff = pixelSeeds.isQuad()[ix] - pixelSeeds.isQuad()[jx];
-          float score_diff = pixelSegments.score()[ix] - pixelSegments.score()[jx];
-          // Always keep quads over trips. If they are the same, we want the object with better score
+          float phi_pix2 = pixelSeeds.phi()[jx];
+
+          // Use min/max of original indices so hit comparison direction is consistent
+          // (lower index = phits1), since the eta-sorted iteration order doesn't
+          // guarantee ix < jx in original indices.
+          unsigned int lo = (ix < jx) ? ix : jx;
+          unsigned int hi = (ix < jx) ? jx : ix;
+
+          int8_t quad_diff = pixelSeeds.isQuad()[lo] - pixelSeeds.isQuad()[hi];
+          float score_diff = pixelSegments.score()[lo] - pixelSegments.score()[hi];
           int idxToRemove;
           if (quad_diff > 0)
-            idxToRemove = jx;
+            idxToRemove = hi;
           else if (quad_diff < 0)
-            idxToRemove = ix;
+            idxToRemove = lo;
           else if (score_diff < 0)
-            idxToRemove = jx;
+            idxToRemove = hi;
           else if (score_diff > 0)
-            idxToRemove = ix;
+            idxToRemove = lo;
           else
-            idxToRemove = ix;
+            idxToRemove = lo;
 
-          auto const& phits2 = pixelSegments.pLSHitsIdxs()[jx];
+          auto const& phits1 = pixelSegments.pLSHitsIdxs()[lo];
+          auto const& phits2 = pixelSegments.pLSHitsIdxs()[hi];
 
           int npMatched = 0;
           for (int i = 0; i < Params_pLS::kHits; i++) {
@@ -536,7 +564,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             }
             if (pmatched) {
               npMatched++;
-              // Only one hit is enough
               if (secondpass)
                 break;
             }
@@ -546,7 +573,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             rmPixelSegmentFromMemory(pixelSegments, idxToRemove, secondpass);
           }
           if (secondpass) {
-            float dEta = alpaka::math::abs(acc, eta_pix1 - eta_pix2);
+            float dEta = alpaka::math::abs(acc, eta_pix2 - eta_pix1);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi_pix1, phi_pix2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;

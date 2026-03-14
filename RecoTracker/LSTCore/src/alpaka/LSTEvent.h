@@ -35,6 +35,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/EndcapGeometryDevDeviceCollection.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -98,6 +99,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     EndcapGeometryDevDeviceCollection const& endcapGeometry_;
     bool objectsStatistics_ = false;
     double memoryAllocatedMB_ = 0;
+    std::optional<cms::alpakatools::device_buffer<Device, unsigned int[]>> etaSortedPLSIndex_;
+
+    void buildEtaSortedPLSIndex();
 
   public:
     // Constructor used for CMSSW integration. Uses an external queue.

@@ -19,6 +19,14 @@
 #include "NeuralNetwork.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
+
+  // Compute angle from vector (x1,y1) to vector (x2,y2) using a single atan2.
+  // Equivalent to cms::alpakatools::deltaPhi(acc, x1, y1, x2, y2) which uses 2 atan2 calls.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float fastDeltaPhi(TAcc const& acc, float x1, float y1, float x2, float y2) {
+    return alpaka::math::atan2(acc, x1 * y2 - x2 * y1, x1 * x2 + y1 * y2);
+  }
+
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addQuintupletToMemory(TripletsConst triplets,
                                                             Quintuplets quintuplets,
                                                             unsigned int innerTripletIndex,
@@ -790,12 +798,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              float sdOut_dr,
                                                              float dr,
                                                              float lIn) {
+    // All asin arguments below are sd_dr * k2Rinv1GeVf / pt (< 0.02), so asin(x) ~ x.
     if (lIn == 0) {
       betaOut += alpaka::math::copysign(
-          acc,
-          alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-          betaOut);
+          acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax), betaOut);
       return;
     }
 
@@ -805,19 +811,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                             8.f * kPt_betaMax)))  //and the pt_beta is well-defined; less strict for endcap-endcap
     {
       const float betaInUpd =
-          betaIn +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-              betaIn);  //FIXME: need a faster version
+          betaIn + alpaka::math::copysign(
+                       acc,
+                       alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax),
+                       betaIn);
       const float betaOutUpd =
-          betaOut +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-              betaOut);  //FIXME: need a faster version
+          betaOut + alpaka::math::copysign(
+                        acc,
+                        alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax),
+                        betaOut);
       betaAv = 0.5f * (betaInUpd + betaOutUpd);
 
       //1st update
@@ -825,13 +827,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           1.f / alpaka::math::abs(acc, dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaAv));  //get a better pt estimate
 
       betaIn += alpaka::math::copysign(
-          acc,
-          alpaka::math::asin(acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf * pt_beta_inv, kSinAlphaMax)),
-          betaIn);  //FIXME: need a faster version
+          acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf * pt_beta_inv, kSinAlphaMax), betaIn);
       betaOut += alpaka::math::copysign(
-          acc,
-          alpaka::math::asin(acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf * pt_beta_inv, kSinAlphaMax)),
-          betaOut);  //FIXME: need a faster version
+          acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf * pt_beta_inv, kSinAlphaMax), betaOut);
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
       //2nd update
@@ -842,20 +840,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float pt_betaIn = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaIn);
 
       const float betaInUpd =
-          betaIn +
-          alpaka::math::copysign(
-              acc,
-              alpaka::math::asin(
-                  acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
-              betaIn);  //FIXME: need a faster version
+          betaIn + alpaka::math::copysign(
+                       acc,
+                       alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax),
+                       betaIn);
       const float betaOutUpd =
           betaOut +
           alpaka::math::copysign(
               acc,
-              alpaka::math::asin(
-                  acc,
-                  alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax)),
-              betaIn);  //FIXME: need a faster version
+              alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn), kSinAlphaMax),
+              betaIn);
       betaAv = (alpaka::math::abs(acc, betaOut) > 0.2f * alpaka::math::abs(acc, betaIn))
                    ? (0.5f * (betaInUpd + betaOutUpd))
                    : betaInUpd;
@@ -863,15 +857,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       //1st update
       pt_beta = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);  //get a better pt estimate
       betaIn += alpaka::math::copysign(
-          acc,
-          alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-          betaIn);  //FIXME: need a faster version
+          acc, alpaka::math::min(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax), betaIn);
       betaOut += alpaka::math::copysign(
-          acc,
-          alpaka::math::asin(
-              acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax)),
-          betaIn);  //FIXME: need a faster version
+          acc, alpaka::math::min(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta), kSinAlphaMax), betaIn);
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
       //2nd update
@@ -913,7 +901,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float diffX = mds.anchorX()[thirdMDIndex] - mds.anchorX()[firstMDIndex];
     float diffY = mds.anchorY()[thirdMDIndex] - mds.anchorY()[firstMDIndex];
 
-    float dPhi = cms::alpakatools::deltaPhi(acc, midPointX, midPointY, diffX, diffY);
+    float dPhi = fastDeltaPhi(acc, midPointX, midPointY, diffX, diffY);
 
     // First obtaining the raw betaIn and betaOut values without any correction and just purely based on the mini-doublet hit positions
     float alpha_InLo = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
@@ -1021,18 +1009,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confimm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
-    const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_InLo),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_OutLo),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaInAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, alpha_InLo), alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, alpha_OutLo), alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
-    const float sinDPhi = alpaka::math::sin(acc, dPhi);
+    const float sinDPhi = dPhi;  // dPhi is small (passed dPhiCut), so sin(dPhi) ~ dPhi
 
     float dBetaROut = 0;
     if (isEC_lastLayer) {
@@ -1090,7 +1074,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float diffX = mds.anchorX()[thirdMDIndex] - mds.anchorX()[firstMDIndex];
     float diffY = mds.anchorY()[thirdMDIndex] - mds.anchorY()[firstMDIndex];
 
-    float dPhi = cms::alpakatools::deltaPhi(acc, midPointX, midPointY, diffX, diffY);
+    float dPhi = fastDeltaPhi(acc, midPointX, midPointY, diffX, diffY);
 
     float sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
     float sdIn_alpha_min = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
@@ -1187,18 +1171,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confirm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
-    const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdIn_alpha),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdOut_alpha),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaInAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdIn_alpha), alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdOut_alpha), alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
-    const float sinDPhi = alpaka::math::sin(acc, dPhi);
+    const float sinDPhi = dPhi;  // dPhi is small (passed dPhiCut), so sin(dPhi) ~ dPhi
 
     const float dBetaRIn2 = 0;  // TODO-RH
     float dBetaROut = 0;
@@ -1332,14 +1312,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confirm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
-    const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdIn_alpha),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdOut_alpha),
-                          alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax)));
+    const float alphaInAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdIn_alpha), alpaka::math::min(acc, rt_InLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdOut_alpha), alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / 3.0f, kSinAlphaMax));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
