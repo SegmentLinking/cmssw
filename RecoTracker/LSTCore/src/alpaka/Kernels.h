@@ -247,7 +247,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (quintuplets.isDup()[ix] & 1)
               continue;
 
-            bool isPT5_ix = quintuplets.partOfPT5()[ix];
+            const bool isPT5_ix = quintuplets.partOfPT5()[ix];
+            const float eta1 = __H2F(quintuplets.eta()[ix]);
+            const float phi1 = __H2F(quintuplets.phi()[ix]);
+            const float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
 
             for (unsigned int jx1 = 0; jx1 < nQuintuplets_lowmod2; jx1++) {
               unsigned int jx = quintupletModuleIndices_lowmod2 + jx1;
@@ -257,30 +260,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               if (quintuplets.isDup()[jx] & 1)
                 continue;
 
-              bool isPT5_jx = quintuplets.partOfPT5()[jx];
+              const bool isPT5_jx = quintuplets.partOfPT5()[jx];
 
               if (isPT5_ix && isPT5_jx)
                 continue;
 
-              float eta1 = __H2F(quintuplets.eta()[ix]);
-              float phi1 = __H2F(quintuplets.phi()[ix]);
-              float score_rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
-
-              float eta2 = __H2F(quintuplets.eta()[jx]);
-              float phi2 = __H2F(quintuplets.phi()[jx]);
-              float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
-
-              float dEta = alpaka::math::abs(acc, eta1 - eta2);
-              float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
+              const float eta2 = __H2F(quintuplets.eta()[jx]);
+              const float dEta = alpaka::math::abs(acc, eta1 - eta2);
               if (dEta > 0.1f)
                 continue;
 
+              const float phi2 = __H2F(quintuplets.phi()[jx]);
+              const float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
               if (alpaka::math::abs(acc, dPhi) > 0.1f)
                 continue;
 
-              float dR2 = dEta * dEta + dPhi * dPhi;
-              int nMatched = checkHitsT5(ix, jx, quintuplets);
+              const float dR2 = dEta * dEta + dPhi * dPhi;
+              const int nMatched = checkHitsT5(ix, jx, quintuplets);
               const int minNHitsForDup_T5 = 5;
 
               float d2 = 0.f;
@@ -291,6 +287,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
 
               if (((dR2 < 0.001f || nMatched >= minNHitsForDup_T5) && d2 < 1.0f) || (dR2 < 0.02f && d2 < 0.1f)) {
+                const float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
                 if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
                 } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
