@@ -735,88 +735,186 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           ModuleSegData outerMod = loadModuleSegData(modules, outerLowerModuleIndex, ptCut);
 
-          for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
-            unsigned int innerMDArrayIdx = hitIndex / nOuterMDs;
-            unsigned int outerMDArrayIdx = hitIndex % nOuterMDs;
+          if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
+            // CPU path: bypass Alpaka iterator, use nested loops to hoist inner-MD data.
+            unsigned int innerMDBase = ranges.mdRanges()[innerLowerModuleIndex][0];
+            unsigned int outerMDBase = ranges.mdRanges()[outerLowerModuleIndex][0];
 
-            unsigned int innerMDIndex = ranges.mdRanges()[innerLowerModuleIndex][0] + innerMDArrayIdx;
-            unsigned int outerMDIndex = ranges.mdRanges()[outerLowerModuleIndex][0] + outerMDArrayIdx;
+            for (unsigned int inner = 0; inner < nInnerMDs; ++inner) {
+              unsigned int innerMDIndex = innerMDBase + inner;
+              unsigned int innerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[innerMDIndex];
 
-            float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
+              for (unsigned int outer = 0; outer < nOuterMDs; ++outer) {
+                unsigned int outerMDIndex = outerMDBase + outer;
+                unsigned int outerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[outerMDIndex];
 
+                float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
 #ifdef CUT_VALUE_DEBUG
-            float zLo, zHi, rtLo, rtHi, dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
+                float zLo, zHi, rtLo, rtHi, dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
 #endif
-
-            unsigned int innerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[innerMDIndex];
-            unsigned int outerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[outerMDIndex];
-            dPhiMin = 0;
-            dPhiMax = 0;
-            dPhiChangeMin = 0;
-            dPhiChangeMax = 0;
-            bool pass = runSegmentDefaultAlgo(acc,
-                                              innerMod,
-                                              outerMod,
-                                              mds,
-                                              innerMDIndex,
-                                              outerMDIndex,
-                                              dPhi,
-                                              dPhiMin,
-                                              dPhiMax,
-                                              dPhiChange,
-                                              dPhiChangeMin,
-                                              dPhiChangeMax,
+                dPhiMin = 0;
+                dPhiMax = 0;
+                dPhiChangeMin = 0;
+                dPhiChangeMax = 0;
+                bool pass = runSegmentDefaultAlgo(acc,
+                                                  innerMod,
+                                                  outerMod,
+                                                  mds,
+                                                  innerMDIndex,
+                                                  outerMDIndex,
+                                                  dPhi,
+                                                  dPhiMin,
+                                                  dPhiMax,
+                                                  dPhiChange,
+                                                  dPhiChangeMin,
+                                                  dPhiChangeMax,
 #ifdef CUT_VALUE_DEBUG
-                                              dAlphaInnerMDSegment,
-                                              dAlphaOuterMDSegment,
-                                              dAlphaInnerMDOuterMD,
-                                              zLo,
-                                              zHi,
-                                              rtLo,
-                                              rtHi,
+                                                  dAlphaInnerMDSegment,
+                                                  dAlphaOuterMDSegment,
+                                                  dAlphaInnerMDOuterMD,
+                                                  zLo,
+                                                  zHi,
+                                                  rtLo,
+                                                  rtHi,
 #endif
-                                              ptCut);
+                                                  ptCut);
 
-            if (pass) {
-              unsigned int totOccupancySegments =
-                  alpaka::atomicAdd(acc,
-                                    &segmentsOccupancy.totOccupancySegments()[innerLowerModuleIndex],
-                                    1u,
-                                    alpaka::hierarchy::Threads{});
-              if (static_cast<int>(totOccupancySegments) >= ranges.segmentModuleOccupancy()[innerLowerModuleIndex]) {
+                if (pass) {
+                  unsigned int totOccupancySegments =
+                      alpaka::atomicAdd(acc,
+                                        &segmentsOccupancy.totOccupancySegments()[innerLowerModuleIndex],
+                                        1u,
+                                        alpaka::hierarchy::Threads{});
+                  if (static_cast<int>(totOccupancySegments) >=
+                      ranges.segmentModuleOccupancy()[innerLowerModuleIndex]) {
 #ifdef WARNINGS
-                printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
-                       innerLowerModuleIndex,
-                       totOccupancySegments);
+                    printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
+                           innerLowerModuleIndex,
+                           totOccupancySegments);
 #endif
-              } else {
-                unsigned int segmentModuleIdx = alpaka::atomicAdd(
-                    acc, &segmentsOccupancy.nSegments()[innerLowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
-                unsigned int segmentIdx = ranges.segmentModuleIndices()[innerLowerModuleIndex] + segmentModuleIdx;
+                  } else {
+                    unsigned int segmentModuleIdx =
+                        alpaka::atomicAdd(acc,
+                                          &segmentsOccupancy.nSegments()[innerLowerModuleIndex],
+                                          1u,
+                                          alpaka::hierarchy::Threads{});
+                    unsigned int segmentIdx =
+                        ranges.segmentModuleIndices()[innerLowerModuleIndex] + segmentModuleIdx;
 
-                addSegmentToMemory(segments,
-                                   innerMDIndex,
-                                   outerMDIndex,
-                                   innerLowerModuleIndex,
-                                   outerLowerModuleIndex,
-                                   innerMiniDoubletAnchorHitIndex,
-                                   outerMiniDoubletAnchorHitIndex,
-                                   dPhiChange,
-                                   dPhiChangeMin,
-                                   dPhiChangeMax,
+                    addSegmentToMemory(segments,
+                                       innerMDIndex,
+                                       outerMDIndex,
+                                       innerLowerModuleIndex,
+                                       outerLowerModuleIndex,
+                                       innerMiniDoubletAnchorHitIndex,
+                                       outerMiniDoubletAnchorHitIndex,
+                                       dPhiChange,
+                                       dPhiChangeMin,
+                                       dPhiChangeMax,
 #ifdef CUT_VALUE_DEBUG
-                                   dPhi,
-                                   dPhiMin,
-                                   dPhiMax,
-                                   zHi,
-                                   zLo,
-                                   rtHi,
-                                   rtLo,
-                                   dAlphaInnerMDSegment,
-                                   dAlphaOuterMDSegment,
-                                   dAlphaInnerMDOuterMD,
+                                       dPhi,
+                                       dPhiMin,
+                                       dPhiMax,
+                                       zHi,
+                                       zLo,
+                                       rtHi,
+                                       rtLo,
+                                       dAlphaInnerMDSegment,
+                                       dAlphaOuterMDSegment,
+                                       dAlphaInnerMDOuterMD,
 #endif
-                                   segmentIdx);
+                                       segmentIdx);
+                  }
+                }
+              }
+            }
+          } else {
+            for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
+              unsigned int innerMDArrayIdx = hitIndex / nOuterMDs;
+              unsigned int outerMDArrayIdx = hitIndex % nOuterMDs;
+
+              unsigned int innerMDIndex = ranges.mdRanges()[innerLowerModuleIndex][0] + innerMDArrayIdx;
+              unsigned int outerMDIndex = ranges.mdRanges()[outerLowerModuleIndex][0] + outerMDArrayIdx;
+
+              float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
+#ifdef CUT_VALUE_DEBUG
+              float zLo, zHi, rtLo, rtHi, dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
+#endif
+              unsigned int innerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[innerMDIndex];
+              unsigned int outerMiniDoubletAnchorHitIndex = mds.anchorHitIndices()[outerMDIndex];
+              dPhiMin = 0;
+              dPhiMax = 0;
+              dPhiChangeMin = 0;
+              dPhiChangeMax = 0;
+              bool pass = runSegmentDefaultAlgo(acc,
+                                                innerMod,
+                                                outerMod,
+                                                mds,
+                                                innerMDIndex,
+                                                outerMDIndex,
+                                                dPhi,
+                                                dPhiMin,
+                                                dPhiMax,
+                                                dPhiChange,
+                                                dPhiChangeMin,
+                                                dPhiChangeMax,
+#ifdef CUT_VALUE_DEBUG
+                                                dAlphaInnerMDSegment,
+                                                dAlphaOuterMDSegment,
+                                                dAlphaInnerMDOuterMD,
+                                                zLo,
+                                                zHi,
+                                                rtLo,
+                                                rtHi,
+#endif
+                                                ptCut);
+
+              if (pass) {
+                unsigned int totOccupancySegments =
+                    alpaka::atomicAdd(acc,
+                                      &segmentsOccupancy.totOccupancySegments()[innerLowerModuleIndex],
+                                      1u,
+                                      alpaka::hierarchy::Threads{});
+                if (static_cast<int>(totOccupancySegments) >=
+                    ranges.segmentModuleOccupancy()[innerLowerModuleIndex]) {
+#ifdef WARNINGS
+                  printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
+                         innerLowerModuleIndex,
+                         totOccupancySegments);
+#endif
+                } else {
+                  unsigned int segmentModuleIdx =
+                      alpaka::atomicAdd(acc,
+                                        &segmentsOccupancy.nSegments()[innerLowerModuleIndex],
+                                        1u,
+                                        alpaka::hierarchy::Threads{});
+                  unsigned int segmentIdx =
+                      ranges.segmentModuleIndices()[innerLowerModuleIndex] + segmentModuleIdx;
+
+                  addSegmentToMemory(segments,
+                                     innerMDIndex,
+                                     outerMDIndex,
+                                     innerLowerModuleIndex,
+                                     outerLowerModuleIndex,
+                                     innerMiniDoubletAnchorHitIndex,
+                                     outerMiniDoubletAnchorHitIndex,
+                                     dPhiChange,
+                                     dPhiChangeMin,
+                                     dPhiChangeMax,
+#ifdef CUT_VALUE_DEBUG
+                                     dPhi,
+                                     dPhiMin,
+                                     dPhiMax,
+                                     zHi,
+                                     zLo,
+                                     rtHi,
+                                     rtLo,
+                                     dAlphaInnerMDSegment,
+                                     dAlphaOuterMDSegment,
+                                     dAlphaInnerMDOuterMD,
+#endif
+                                     segmentIdx);
+                }
               }
             }
           }

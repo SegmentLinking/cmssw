@@ -720,78 +720,164 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           mod.miniTilt2 = 0.f;
         }
 
-        for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
-          int lowerHitIndex = hitIndex / nUpperHits;
-          int upperHitIndex = hitIndex % nUpperHits;
-          if (upperHitIndex >= nUpperHits)
-            continue;
-          if (lowerHitIndex >= nLowerHits)
-            continue;
-          unsigned int lowerHitArrayIndex = loHitArrayIndex + lowerHitIndex;
-          float xLower = hitsBase.xs()[lowerHitArrayIndex];
-          float yLower = hitsBase.ys()[lowerHitArrayIndex];
-          float zLower = hitsBase.zs()[lowerHitArrayIndex];
-          float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
-          unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
-          float xUpper = hitsBase.xs()[upperHitArrayIndex];
-          float yUpper = hitsBase.ys()[upperHitArrayIndex];
-          float zUpper = hitsBase.zs()[upperHitArrayIndex];
-          float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
-          uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
-          uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
+        if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc2D>) {
+          // CPU path: bypass Alpaka iterator and SoA view aliasing.
+          // Extract raw column pointers with __restrict__ so GCC can prove no aliasing.
+          // Nested loops hoist lower-hit data outside the inner loop.
+          const float* __restrict__ hit_xs = hitsBase.xs().data();
+          const float* __restrict__ hit_ys = hitsBase.ys().data();
+          const float* __restrict__ hit_zs = hitsBase.zs().data();
+          const float* __restrict__ hit_rts = hitsExtended.rts().data();
+          const uint16_t* __restrict__ hit_clust = hitsBase.clustsize().data();
 
-          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
-          bool success = runMiniDoubletDefaultAlgo(acc,
-                                                   mod,
-                                                   dz,
-                                                   dphi,
-                                                   dphichange,
-                                                   shiftedX,
-                                                   shiftedY,
-                                                   shiftedZ,
-                                                   noShiftedDphi,
-                                                   noShiftedDphiChange,
-                                                   xLower,
-                                                   yLower,
-                                                   zLower,
-                                                   rtLower,
-                                                   xUpper,
-                                                   yUpper,
-                                                   zUpper,
-                                                   rtUpper,
-                                                   ptCut,
-                                                   clustSizeLower,
-                                                   clustSizeUpper,
-                                                   clustSizeCut);
-          if (success) {
-            int totOccupancyMDs = alpaka::atomicAdd(
-                acc, &mdsOccupancy.totOccupancyMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
-            if (totOccupancyMDs >= (ranges.miniDoubletModuleOccupancy()[lowerModuleIndex])) {
+          for (int lo = 0; lo < nLowerHits; ++lo) {
+            unsigned int lowerHitArrayIndex = loHitArrayIndex + lo;
+            float xLower = hit_xs[lowerHitArrayIndex];
+            float yLower = hit_ys[lowerHitArrayIndex];
+            float zLower = hit_zs[lowerHitArrayIndex];
+            float rtLower = hit_rts[lowerHitArrayIndex];
+            uint16_t clustSizeLower = hit_clust[lowerHitArrayIndex];
+
+            for (int up = 0; up < nUpperHits; ++up) {
+              unsigned int upperHitArrayIndex = upHitArrayIndex + up;
+              float xUpper = hit_xs[upperHitArrayIndex];
+              float yUpper = hit_ys[upperHitArrayIndex];
+              float zUpper = hit_zs[upperHitArrayIndex];
+              float rtUpper = hit_rts[upperHitArrayIndex];
+              uint16_t clustSizeUpper = hit_clust[upperHitArrayIndex];
+
+              float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
+              bool success = runMiniDoubletDefaultAlgo(acc,
+                                                       mod,
+                                                       dz,
+                                                       dphi,
+                                                       dphichange,
+                                                       shiftedX,
+                                                       shiftedY,
+                                                       shiftedZ,
+                                                       noShiftedDphi,
+                                                       noShiftedDphiChange,
+                                                       xLower,
+                                                       yLower,
+                                                       zLower,
+                                                       rtLower,
+                                                       xUpper,
+                                                       yUpper,
+                                                       zUpper,
+                                                       rtUpper,
+                                                       ptCut,
+                                                       clustSizeLower,
+                                                       clustSizeUpper,
+                                                       clustSizeCut);
+              if (success) {
+                int totOccupancyMDs = alpaka::atomicAdd(
+                    acc, &mdsOccupancy.totOccupancyMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+                if (totOccupancyMDs >= (ranges.miniDoubletModuleOccupancy()[lowerModuleIndex])) {
 #ifdef WARNINGS
-              printf(
-                  "Mini-doublet excess alert! Module index = %d, Occupancy = %d\n", lowerModuleIndex, totOccupancyMDs);
+                  printf("Mini-doublet excess alert! Module index = %d, Occupancy = %d\n",
+                         lowerModuleIndex,
+                         totOccupancyMDs);
 #endif
-            } else {
-              int mdModuleIndex =
-                  alpaka::atomicAdd(acc, &mdsOccupancy.nMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
-              unsigned int mdIndex = ranges.miniDoubletModuleIndices()[lowerModuleIndex] + mdModuleIndex;
+                } else {
+                  int mdModuleIndex =
+                      alpaka::atomicAdd(acc, &mdsOccupancy.nMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+                  unsigned int mdIndex = ranges.miniDoubletModuleIndices()[lowerModuleIndex] + mdModuleIndex;
 
-              addMDToMemory(acc,
-                            mds,
-                            hitsBase,
-                            hitsExtended,
-                            mod,
-                            lowerHitArrayIndex,
-                            upperHitArrayIndex,
-                            dz,
-                            dphi,
-                            dphichange,
-                            shiftedX,
-                            shiftedY,
-                            shiftedZ,
-                            noShiftedDphi,
-                            noShiftedDphiChange,
-                            mdIndex);
+                  addMDToMemory(acc,
+                                mds,
+                                hitsBase,
+                                hitsExtended,
+                                mod,
+                                lowerHitArrayIndex,
+                                upperHitArrayIndex,
+                                dz,
+                                dphi,
+                                dphichange,
+                                shiftedX,
+                                shiftedY,
+                                shiftedZ,
+                                noShiftedDphi,
+                                noShiftedDphiChange,
+                                mdIndex);
+                }
+              }
+            }
+          }
+        } else {
+          for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
+            int lowerHitIndex = hitIndex / nUpperHits;
+            int upperHitIndex = hitIndex % nUpperHits;
+            if (upperHitIndex >= nUpperHits)
+              continue;
+            if (lowerHitIndex >= nLowerHits)
+              continue;
+            unsigned int lowerHitArrayIndex = loHitArrayIndex + lowerHitIndex;
+            float xLower = hitsBase.xs()[lowerHitArrayIndex];
+            float yLower = hitsBase.ys()[lowerHitArrayIndex];
+            float zLower = hitsBase.zs()[lowerHitArrayIndex];
+            float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
+            unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
+            float xUpper = hitsBase.xs()[upperHitArrayIndex];
+            float yUpper = hitsBase.ys()[upperHitArrayIndex];
+            float zUpper = hitsBase.zs()[upperHitArrayIndex];
+            float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
+            uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
+            uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
+
+            float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
+            bool success = runMiniDoubletDefaultAlgo(acc,
+                                                     mod,
+                                                     dz,
+                                                     dphi,
+                                                     dphichange,
+                                                     shiftedX,
+                                                     shiftedY,
+                                                     shiftedZ,
+                                                     noShiftedDphi,
+                                                     noShiftedDphiChange,
+                                                     xLower,
+                                                     yLower,
+                                                     zLower,
+                                                     rtLower,
+                                                     xUpper,
+                                                     yUpper,
+                                                     zUpper,
+                                                     rtUpper,
+                                                     ptCut,
+                                                     clustSizeLower,
+                                                     clustSizeUpper,
+                                                     clustSizeCut);
+            if (success) {
+              int totOccupancyMDs = alpaka::atomicAdd(
+                  acc, &mdsOccupancy.totOccupancyMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+              if (totOccupancyMDs >= (ranges.miniDoubletModuleOccupancy()[lowerModuleIndex])) {
+#ifdef WARNINGS
+                printf("Mini-doublet excess alert! Module index = %d, Occupancy = %d\n",
+                       lowerModuleIndex,
+                       totOccupancyMDs);
+#endif
+              } else {
+                int mdModuleIndex =
+                    alpaka::atomicAdd(acc, &mdsOccupancy.nMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
+                unsigned int mdIndex = ranges.miniDoubletModuleIndices()[lowerModuleIndex] + mdModuleIndex;
+
+                addMDToMemory(acc,
+                              mds,
+                              hitsBase,
+                              hitsExtended,
+                              mod,
+                              lowerHitArrayIndex,
+                              upperHitArrayIndex,
+                              dz,
+                              dphi,
+                              dphichange,
+                              shiftedX,
+                              shiftedY,
+                              shiftedZ,
+                              noShiftedDphi,
+                              noShiftedDphiChange,
+                              mdIndex);
+              }
             }
           }
         }
