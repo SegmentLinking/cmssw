@@ -329,9 +329,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
           unsigned int innerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][0];
           if (type == LSTObjType::T5) {
-            unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
-            float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
-            float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
+            float eta2 = __H2F(quintuplets.eta()[innerTrackletIdx]);
+            float phi2 = __H2F(quintuplets.phi()[innerTrackletIdx]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
             float dR2 = dEta * dEta + dPhi * dPhi;
@@ -339,7 +338,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (dR2 < 0.02f) {
               float d2 = 0.f;
               CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
-                const float diff = plsEmbed[k] - quintuplets.t5Embed()[quintupletIndex][k];
+                const float diff = plsEmbed[k] - quintuplets.t5Embed()[innerTrackletIdx][k];
                 d2 += diff * diff;
               }
               // Compare squared embedding distance to the cut value for the eta bin.
@@ -347,24 +346,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 pixelSegments.isDup()[pixelArrayIndex] = true;
               }
             }
-          }
-          if (type == LSTObjType::pT3) {
+          } else if (type == LSTObjType::pT3) {
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[innerTrackletIdx];
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hitsBase);
             if (npMatched > 0)
               pixelSegments.isDup()[pixelArrayIndex] = true;
 
-            int pT3Index = innerTrackletIdx;
-            float eta2 = __H2F(pixelTriplets.eta_pix()[pT3Index]);
-            float phi2 = __H2F(pixelTriplets.phi_pix()[pT3Index]);
+            float eta2 = __H2F(pixelTriplets.eta_pix()[innerTrackletIdx]);
+            float phi2 = __H2F(pixelTriplets.phi_pix()[innerTrackletIdx]);
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
             if (dR2 < 0.000001f)
               pixelSegments.isDup()[pixelArrayIndex] = true;
-          }
-          if (type == LSTObjType::pT5) {
+          } else if (type == LSTObjType::pT5) {
             unsigned int pLSIndex = innerTrackletIdx;
             int npMatched = checkPixelHits(prefix + pixelArrayIndex, pLSIndex, mds, segments, hitsBase);
             if (npMatched > 0) {

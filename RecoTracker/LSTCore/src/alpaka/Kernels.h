@@ -277,7 +277,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
               const float dR2 = dEta * dEta + dPhi * dPhi;
               const int nMatched = checkHitsT5(ix, jx, quintuplets);
-              const int minNHitsForDup_T5 = 5;
+              constexpr int minNHitsForDup_T5 = 5;
 
               float d2 = 0.f;
               CMS_UNROLL_LOOP
@@ -455,9 +455,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc, PixelQuintuplets pixelQuintuplets) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
+        float eta1 = __H2F(pixelQuintuplets.eta()[ix]);
+        float phi1 = __H2F(pixelQuintuplets.phi()[ix]);
         float score1 = __H2F(pixelQuintuplets.score()[ix]);
         for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, nPixelQuintuplets)) {
           if (ix == jx)
+            continue;
+
+          float eta2 = __H2F(pixelQuintuplets.eta()[jx]);
+          if (alpaka::math::abs(acc, eta1 - eta2) > 0.2f)
+            continue;
+
+          float phi2 = __H2F(pixelQuintuplets.phi()[jx]);
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > 0.2f)
             continue;
 
           int nMatched = checkHitspT5(ix, jx, pixelQuintuplets);

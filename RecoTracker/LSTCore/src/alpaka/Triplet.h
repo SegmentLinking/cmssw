@@ -25,9 +25,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float sdIn_alpha;       // dPhiChange of inner segment
     float sdIn_alphaRHmin;  // dPhiChangeMin (for endcap path)
     float sdIn_alphaRHmax;  // dPhiChangeMax (for endcap path)
-    float anchorPhi1;       // anchorPhi of first MD
-    short innerSubdet;      // subdet of inner-inner module
-    short middleSubdet;     // subdet of middle module
+    // Precomputed sin/cos for algebraic betaIn check (avoids per-candidate atan2).
+    float sin_alpha, cos_alpha;
+    float sin_alphaRHmin, cos_alphaRHmin;  // for endcap EEE path
+    float sin_alphaRHmax, cos_alphaRHmax;  // for endcap EEE path
+    short innerSubdet;                     // subdet of inner-inner module
+    short middleSubdet;                    // subdet of middle module
   };
 
   // Pre-loaded hit coordinates for passRZConstraint.
@@ -58,11 +61,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     d.drt_InSeg = d.rt2 - d.rt1;
     d.rt_InSeg = alpaka::math::sqrt(acc, (d.x2 - d.x1) * (d.x2 - d.x1) + (d.y2 - d.y1) * (d.y2 - d.y1));
     d.sdIn_alpha = __H2F(segments.dPhiChanges()[innerSegmentIndex]);
-    d.anchorPhi1 = mds.anchorPhi()[firstMDIndex];
+    d.sin_alpha = alpaka::math::sin(acc, d.sdIn_alpha);
+    d.cos_alpha = alpaka::math::cos(acc, d.sdIn_alpha);
     d.innerSubdet = modules.subdets()[innerInnerLowerModuleIndex];
     d.middleSubdet = modules.subdets()[middleLowerModuleIndex];
     d.sdIn_alphaRHmin = __H2F(segments.dPhiChangeMins()[innerSegmentIndex]);
     d.sdIn_alphaRHmax = __H2F(segments.dPhiChangeMaxs()[innerSegmentIndex]);
+    if (d.innerSubdet == Endcap and d.middleSubdet == Endcap) {
+      d.sin_alphaRHmin = alpaka::math::sin(acc, d.sdIn_alphaRHmin);
+      d.cos_alphaRHmin = alpaka::math::cos(acc, d.sdIn_alphaRHmin);
+      d.sin_alphaRHmax = alpaka::math::sin(acc, d.sdIn_alphaRHmax);
+      d.cos_alphaRHmax = alpaka::math::cos(acc, d.sdIn_alphaRHmax);
+    }
     return d;
   }
 
@@ -235,13 +245,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     else if (y3 > y2 && y2 > y1)
       py = alpaka::math::abs(acc, py);
 
-    float AO = alpaka::math::sqrt(
-        acc, (x_other - x_center) * (x_other - x_center) + (y_other - y_center) * (y_other - y_center));
-    float BO =
-        alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
+    // All 3 hits lie on the fitted circle, so AO = BO = R; eliminates 2 sqrt calls.
+    float R = circleRadius / 100;
     float AB2 = (x_other - x_init) * (x_other - x_init) + (y_other - y_init) * (y_other - y_init);
-    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO));
-    float ds = circleRadius / 100 * dPhi;
+    float dPhi = alpaka::math::acos(acc, 1 - AB2 / (2 * R * R));
+    float ds = R * dPhi;
     float pz = dz / ds * pt;
 
     float p = alpaka::math::sqrt(acc, px * px + py * py + pz * pz);
@@ -265,8 +273,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       float A = paraB * paraB + paraC * paraC;
       float B = 2 * paraA * paraB;
       float C = paraA * paraA - paraC * paraC;
-      float sol1 = (-B + alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
-      float sol2 = (-B - alpaka::math::sqrt(acc, B * B - 4 * A * C)) / (2 * A);
+      // Shared discriminant: compute sqrt once instead of twice.
+      float disc = alpaka::math::sqrt(acc, B * B - 4 * A * C);
+      float sol1 = (-B + disc) / (2 * A);
+      float sol2 = (-B - disc) / (2 * A);
       float solz1 = alpaka::math::asin(acc, sol1) / rou * pz / p + z_init;
       float solz2 = alpaka::math::asin(acc, sol2) / rou * pz / p + z_init;
       float diffz1 = (solz1 - z_target) * 100;
@@ -277,8 +287,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                      : ((alpaka::math::abs(acc, diffz1) < alpaka::math::abs(acc, diffz2)) ? diffz1 : diffz2);
     } else {  // for endcap
       float s = (z_target - z_init) * p / pz;
-      float x = x_init + px / a * alpaka::math::sin(acc, rou * s) - py / a * (1 - alpaka::math::cos(acc, rou * s));
-      float y = y_init + py / a * alpaka::math::sin(acc, rou * s) + px / a * (1 - alpaka::math::cos(acc, rou * s));
+      // Shared sin/cos: compute once instead of twice each.
+      float sinRS = alpaka::math::sin(acc, rou * s);
+      float cosRS = alpaka::math::cos(acc, rou * s);
+      float x = x_init + px / a * sinRS - py / a * (1 - cosRS);
+      float y = y_init + py / a * sinRS + px / a * (1 - cosRS);
       residual = (r_target - alpaka::math::sqrt(acc, x * x + y * y)) * 100;
     }
 
@@ -386,20 +399,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             acc, alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
         (0.02f / innerSegData.drt_InSeg);
 
-    const float betaIn =
-        innerSegData.sdIn_alpha -
-        cms::alpakatools::reducePhiRange(acc, cms::alpakatools::phi(acc, dx, dy) - innerSegData.anchorPhi1);
+    // Algebraic betaIn check: |sin(betaIn)| < sin(betaInCut) is exact equivalent of
+    // |betaIn| < betaInCut (for |betaIn| < pi/2, betaInCut < pi/2). Avoids per-candidate atan2.
+    // cross = x1*y3 - y1*x3, dot = x3*x1 + y3*y1 - rt1^2 (angle from hit1 to dir_13)
+    const float crossPC = innerSegData.x1 * y3 - innerSegData.y1 * x3;
+    const float dotPC = x3 * innerSegData.x1 + y3 * innerSegData.y1 - innerSegData.rt1 * innerSegData.rt1;
+    const float r2 = crossPC * crossPC + dotPC * dotPC;
+    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
+    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
 
-    float betaInRHmin = betaIn;
     if (innerSegData.innerSubdet == Endcap and innerSegData.middleSubdet == Endcap and outerSubdet == Endcap) {
-      betaInRHmin = betaIn + innerSegData.sdIn_alphaRHmin - innerSegData.sdIn_alpha;
-      float betaInRHmax = betaIn + innerSegData.sdIn_alphaRHmax - innerSegData.sdIn_alpha;
-      if (alpaka::math::abs(acc, betaInRHmin) > alpaka::math::abs(acc, betaInRHmax)) {
-        std::swap(betaInRHmin, betaInRHmax);
+      // EEE: check both alpha variants, pass if the one with smaller |betaIn| is within cut
+      const float sinValMin = innerSegData.sin_alphaRHmin * dotPC - innerSegData.cos_alphaRHmin * crossPC;
+      const float sinValMax = innerSegData.sin_alphaRHmax * dotPC - innerSegData.cos_alphaRHmax * crossPC;
+      const float sqMin = sinValMin * sinValMin;
+      const float sqMax = sinValMax * sinValMax;
+
+      if (sqMin <= sqMax) {
+        return sqMin < sinBetaInCutSq * r2 and
+               (innerSegData.cos_alphaRHmin * dotPC + innerSegData.sin_alphaRHmin * crossPC > 0.f);
+      } else {
+        return sqMax < sinBetaInCutSq * r2 and
+               (innerSegData.cos_alphaRHmax * dotPC + innerSegData.sin_alphaRHmax * crossPC > 0.f);
       }
     }
 
-    return alpaka::math::abs(acc, betaInRHmin) < betaInCut;
+    const float sinVal = innerSegData.sin_alpha * dotPC - innerSegData.cos_alpha * crossPC;
+    return sinVal * sinVal < sinBetaInCutSq * r2 and
+           (innerSegData.cos_alpha * dotPC + innerSegData.sin_alpha * crossPC > 0.f);
   }
 
   template <alpaka::concepts::Acc TAcc>

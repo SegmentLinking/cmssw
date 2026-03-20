@@ -407,8 +407,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     zOut = mds.anchorZ()[outerMDIndex];
     rtOut = mds.anchorRt()[outerMDIndex];
 
-    float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
-    float dzDrtScale = alpaka::math::tan(acc, sdSlope) / sdSlope;  //FIXME: need appropriate value
+    const float sdSinBarrel = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    float sdSlope = alpaka::math::asin(acc, sdSinBarrel);
+    // Exact: tan(asin(s))/asin(s) = s/(asin(s)*sqrt(1-s^2)), eliminates tan call
+    float dzDrtScale = sdSinBarrel / (sdSlope * alpaka::math::sqrt(acc, 1.f - sdSinBarrel * sdSinBarrel));
 
     const float zGeom = innerMod.layer <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
@@ -418,6 +420,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     if ((zOut < zLo) || (zOut > zHi))
       return false;
+
+    // Trig-free loose pre-check: sin(asin(s)+M) < s+M, so (s+M)^2 overestimates sin^2(sdCut).
+    // Rejects obvious failures before expensive anchorPhi reads + reducePhiRange.
+    {
+      const float cross = xIn * yOut - xOut * yIn;
+      const float dot = xIn * xOut + yIn * yOut;
+      if (dot <= 0.f)
+        return false;
+      const float sqrtTerm = alpaka::math::sqrt(acc, innerMod.sdMuls * innerMod.sdMuls + 0.01f / (rtOut * rtOut));
+      const float looseCut = sdSinBarrel + sqrtTerm;
+      const float looseCutSq = looseCut * looseCut;
+      const float crossSq = cross * cross;
+      if (crossSq >= looseCutSq * (crossSq + dot * dot))
+        return false;
+      const float dotChange = dot - (rtIn * rtIn);
+      if (dotChange <= 0.f || crossSq >= looseCutSq * (crossSq + dotChange * dotChange))
+        return false;
+    }
 
     dPhi = cms::alpakatools::reducePhiRange(acc, mds.anchorPhi()[outerMDIndex] - mds.anchorPhi()[innerMDIndex]);
 
@@ -466,7 +486,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
     if (alpaka::math::abs(acc, dAlphaOuterMDSegment) >= dAlphaOuterMDSegmentThreshold)
       return false;
-    return alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold;
+    if (alpaka::math::abs(acc, dAlphaInnerMDOuterMD) >= dAlphaInnerMDOuterMDThreshold)
+      return false;
+
+    return true;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -508,7 +531,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     bool outerLayerEndcapTwoS = (outerMod.subdet == Endcap) && (outerMod.moduleType == TwoS);
 
-    float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    const float sdSinEC = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
     float disks2SMinRadius = 60.f;
 
     float rtGeom = ((rtIn < disks2SMinRadius && rtOut < disks2SMinRadius)
@@ -522,7 +545,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dz = zOut - zIn;
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    float drtDzScale = sdSlope / alpaka::math::tan(acc, sdSlope);
+    float sdSlope = alpaka::math::asin(acc, sdSinEC);
+    // Exact: asin(s)/tan(asin(s)) = asin(s)*sqrt(1-s^2)/s, eliminates tan call
+    float drtDzScale = sdSlope * alpaka::math::sqrt(acc, 1.f - sdSinEC * sdSinEC) / sdSinEC;
 
     //rt should increase
     rtLo = alpaka::math::max(acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);
@@ -531,6 +556,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     // Completeness
     if ((rtOut < rtLo) || (rtOut > rtHi))
+      return false;
+
+    // Phi pre-check: |tan(dPhi)| > tan(sdSlope) is exact for |dPhi| > sdSlope.
+    // Since final cut uses sdCut = sdSlope + eps > sdSlope, this is looser.
+    const float crossPhi = xIn * yOut - xOut * yIn;
+    const float dotPhi = xIn * xOut + yIn * yOut;
+    const float tanSlopeSq = sdSinEC * sdSinEC / (1.f - sdSinEC * sdSinEC);
+    if (dotPhi <= 0.f || crossPhi * crossPhi > tanSlopeSq * dotPhi * dotPhi)
       return false;
 
     dPhi = cms::alpakatools::reducePhiRange(acc, mds.anchorPhi()[outerMDIndex] - mds.anchorPhi()[innerMDIndex]);
@@ -588,7 +621,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
     if (alpaka::math::abs(acc, dAlphaOuterMDSegment) >= dAlphaOuterMDSegmentThreshold)
       return false;
-    return alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold;
+    if (alpaka::math::abs(acc, dAlphaInnerMDOuterMD) >= dAlphaInnerMDOuterMDThreshold)
+      return false;
+
+    return true;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -797,17 +833,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                unsigned int innerMD,
                                                                unsigned int outerMD,
                                                                const float ptCut) {
-    const float dPhi = cms::alpakatools::reducePhiRange(acc, mds.anchorPhi()[outerMD] - mds.anchorPhi()[innerMD]);
     const float rtOut = mds.anchorRt()[outerMD];
-    const float sdSlope = alpaka::math::asin(acc, alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    const float sdSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+
+    const float cosSlope = alpaka::math::sqrt(acc, 1.f - sdSin * sdSin);
 
     if (innerMod.subdet == Barrel && outerMod.subdet == Barrel) {
-      // Inline barrel delta-phi cuts using hoisted sdMuls
-      const float sdMuls = innerMod.sdMuls;
-      const float sdPVoff = 0.1f / rtOut;
-      const float sdCut = sdSlope + alpaka::math::sqrt(acc, sdMuls * sdMuls + sdPVoff * sdPVoff);
+      // Barrel counting: trig-free loose checks only.
+      // All bounds are strictly looser than creation kernel cuts.
+      const float rtIn = mds.anchorRt()[innerMD];
+      const float zIn = mds.anchorZ()[innerMD];
+      const float zOut = mds.anchorZ()[outerMD];
 
-      if (alpaka::math::abs(acc, dPhi) > sdCut)
+      // z-window: 1/cosSlope >= tan(sdSlope)/sdSlope, so looser than creation.
+      const float dzDrtScale = 1.f / cosSlope;
+      const float zGeom = innerMod.layer <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
+      const float zLo = zIn + (zIn - kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn > 0.f ? 1.f : dzDrtScale) - zGeom;
+      const float zHi = zIn + (zIn + kDeltaZLum) * (rtOut / rtIn - 1.f) * (zIn < 0.f ? 1.f : dzDrtScale) + zGeom;
+      if (zOut < zLo || zOut > zHi)
         return false;
 
       const float xIn = mds.anchorX()[innerMD];
@@ -815,11 +858,63 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float xOut = mds.anchorX()[outerMD];
       const float yOut = mds.anchorY()[outerMD];
 
-      const float dPhiChange = cms::alpakatools::reducePhiRange(
-          acc, cms::alpakatools::phi(acc, xOut - xIn, yOut - yIn) - mds.anchorPhi()[innerMD]);
+      const float cross = xIn * yOut - xOut * yIn;
+      const float dot = xIn * xOut + yIn * yOut;
+      if (dot <= 0.f)
+        return false;
 
-      return alpaka::math::abs(acc, dPhiChange) < sdCut;
+      // sin(asin(s)+M) < s+M, so (s+M)^2 overestimates sin^2(sdCut), looser than creation.
+      const float sqrtTerm = alpaka::math::sqrt(acc, innerMod.sdMuls * innerMod.sdMuls + 0.01f / (rtOut * rtOut));
+      const float looseCut = sdSin + sqrtTerm;
+      const float looseCutSq = looseCut * looseCut;
+      const float crossSq = cross * cross;
+
+      // dPhi check
+      if (crossSq >= looseCutSq * (crossSq + dot * dot))
+        return false;
+
+      // dPhiChange check
+      const float dotChange = dot - (rtIn * rtIn);
+      if (dotChange <= 0.f || crossSq >= looseCutSq * (crossSq + dotChange * dotChange))
+        return false;
+
+      return true;
     } else {
+      // Endcap counting: z-sign + rt-range + phi pre-checks, then exact cuts on survivors.
+      const float zIn = mds.anchorZ()[innerMD];
+      const float zOut = mds.anchorZ()[outerMD];
+      if (zIn * zOut < 0.f)
+        return false;
+
+      // rt-range pre-filter: cosSlope <= asin(s)/tan(asin(s)), so looser than creation.
+      const float rtIn = mds.anchorRt()[innerMD];
+      const float dz = zOut - zIn;
+      const float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
+      const float drtDzScale = cosSlope;
+      const float rtGeom =
+          ((rtIn < 60.f && rtOut < 60.f)
+               ? (2.f * kPixelPSZpitch)
+               : ((rtIn < 60.f || rtOut < 60.f) ? (kPixelPSZpitch + kStrip2SZpitch) : (2.f * kStrip2SZpitch)));
+      const float rtLo =
+          alpaka::math::max(acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);
+      const float rtHi = rtIn * (zOut - dLum) / (zIn - dLum) + rtGeom;
+      if (rtOut < rtLo || rtOut > rtHi)
+        return false;
+
+      // Phi pre-check: |tan(dPhi)| > tan(sdSlope) is exact for |dPhi| > sdSlope.
+      // Since the final dPhiChange cut implies |dPhi| < sdSlope, this is looser than creation.
+      const float xIn = mds.anchorX()[innerMD];
+      const float yIn = mds.anchorY()[innerMD];
+      const float xOut = mds.anchorX()[outerMD];
+      const float yOut = mds.anchorY()[outerMD];
+      const float crossPhi = xIn * yOut - xOut * yIn;
+      const float dotPhi = xIn * xOut + yIn * yOut;
+      const float tanSlopeSq = sdSin * sdSin / (1.f - sdSin * sdSin);
+      if (dotPhi <= 0.f || crossPhi * crossPhi > tanSlopeSq * dotPhi * dotPhi)
+        return false;
+
+      const float sdSlope = alpaka::math::asin(acc, sdSin);
+      const float dPhi = cms::alpakatools::reducePhiRange(acc, mds.anchorPhi()[outerMD] - mds.anchorPhi()[innerMD]);
       return passDeltaPhiCutsEndcap(acc, mds, innerMD, outerMD, dPhi, rtOut, sdSlope, ptCut);
     }
   }

@@ -576,6 +576,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     uint16_t middleModuleIndex = triplets.lowerModuleIndices()[tripletIndex][1];
     uint16_t upperModuleIndex = triplets.lowerModuleIndices()[tripletIndex][2];
 
+    // Cheap radius check first, before expensive tracklet compatibility checks.
+    pixelRadius = pixelData.ptIn * kR1GeVf;
+    pixelRadiusError = pixelData.ptErr * kR1GeVf;
+    tripletRadius = triplets.radius()[tripletIndex];
+
+    if (not passRadiusCriterion(acc,
+                                modules,
+                                pixelRadius,
+                                pixelRadiusError,
+                                tripletRadius,
+                                lowerModuleIndex,
+                                middleModuleIndex,
+                                upperModuleIndex))
+      return false;
+
     if (not runPixelTrackletDefaultAlgopT3(acc,
                                            modules,
                                            mds,
@@ -598,10 +613,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                            ptCut))
       return false;
 
-    pixelRadius = pixelData.ptIn * kR1GeVf;
-    pixelRadiusError = pixelData.ptErr * kR1GeVf;
-    tripletRadius = triplets.radius()[tripletIndex];
-
     unsigned int tripletInnerSegmentIndex = triplets.segmentIndices()[tripletIndex][0];
     unsigned int tripletOuterSegmentIndex = triplets.segmentIndices()[tripletIndex][1];
 
@@ -616,16 +627,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float g = triplets.centerX()[tripletIndex];
     float f = triplets.centerY()[tripletIndex];
-
-    if (not passRadiusCriterion(acc,
-                                modules,
-                                pixelRadius,
-                                pixelRadiusError,
-                                tripletRadius,
-                                lowerModuleIndex,
-                                middleModuleIndex,
-                                upperModuleIndex))
-      return false;
 
     uint16_t lowerModuleIndices[Params_T3::kLayers] = {lowerModuleIndex, middleModuleIndex, upperModuleIndex};
 

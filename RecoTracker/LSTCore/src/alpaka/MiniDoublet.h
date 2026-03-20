@@ -98,8 +98,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     mds.anchorHighEdgeY()[idx] = hitsExtended.highEdgeYs()[anchorHitIndex];
     mds.anchorLowEdgeX()[idx] = hitsExtended.lowEdgeXs()[anchorHitIndex];
     mds.anchorLowEdgeY()[idx] = hitsExtended.lowEdgeYs()[anchorHitIndex];
-    mds.anchorHighEdgePhi()[idx] = alpaka::math::atan2(acc, mds.anchorHighEdgeY()[idx], mds.anchorHighEdgeX()[idx]);
-    mds.anchorLowEdgePhi()[idx] = alpaka::math::atan2(acc, mds.anchorLowEdgeY()[idx], mds.anchorLowEdgeX()[idx]);
+    // Edge phi only read downstream when outerLayerEndcapTwoS is true; skip atan2 for other modules.
+    if (mod.isEndcapTwoS) {
+      mds.anchorHighEdgePhi()[idx] = alpaka::math::atan2(acc, mds.anchorHighEdgeY()[idx], mds.anchorHighEdgeX()[idx]);
+      mds.anchorLowEdgePhi()[idx] = alpaka::math::atan2(acc, mds.anchorLowEdgeY()[idx], mds.anchorLowEdgeX()[idx]);
+    }
 
     mds.outerX()[idx] = hitsBase.xs()[outerHitIndex];
     mds.outerY()[idx] = hitsBase.ys()[outerHitIndex];
@@ -275,10 +278,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     const bool isEndcap = (mod.subdet == Endcap);
 
-    float angleA = alpaka::math::abs(acc, alpaka::math::atan(acc, rtp / zp));  // theta of pixel hit in r-z plane
+    // Algebraic trig: sin(atan(r/z)) = r/hypot, cos(atan(r/z)) = |z|/hypot
+    const float hypot_rz = alpaka::math::sqrt(acc, rtp * rtp + zp * zp);
+    const float sinA = rtp / hypot_rz;
+    const float cosA = alpaka::math::abs(acc, zp) / hypot_rz;
+
+    // sin(A+B) via angle-addition identity; endcap: B=pi/2 so sin(A+pi/2)=cosA
     // The tilt module on the positive z-axis has negative drdz slope in r-z plane and vice versa
-    float angleB =
-        ((isEndcap) ? kPi / 2.f : alpaka::math::atan(acc, mod.drdz));  // angle of tilted module; endcap = 90 degrees
+    float sinApB;
+    if (isEndcap) {
+      sinApB = cosA;
+    } else {
+      const float inv_hypot_drdz = 1.f / alpaka::math::sqrt(acc, 1.f + mod.drdz * mod.drdz);
+      sinApB = sinA * inv_hypot_drdz + cosA * mod.drdz * inv_hypot_drdz;
+    }
 
     float moduleSeparation = mod.moduleSep;
 
@@ -287,28 +300,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       moduleSeparation *= -1;
     }
 
-    float drprime =
-        (moduleSeparation / alpaka::math::sin(acc, angleA + angleB)) * alpaka::math::sin(acc, angleA);  // radial shift
+    float drprime = moduleSeparation * sinA / sinApB;
 
-    // Compute arctan of the slope and take care of the slope = infinity case
+    // Algebraic: sin(atan(slope)) = |slope|/sqrt(1+slope^2), cos(atan(slope)) = 1/sqrt(1+slope^2)
+    float drprime_x, drprime_y;
     const float slope = mod.slope;
-    float absArctanSlope =
-        ((slope != kVerticalModuleSlope && edm::isFinite(slope)) ? fabs(alpaka::math::atan(acc, slope)) : kPi / 2.f);
-
-    // angleM is the angle of rotation of the module in x-y plane (0 if strips along x-axis, 90 if along y-axis)
-    float angleM;
-    if (xp > 0 and yp > 0) {
-      angleM = absArctanSlope;
-    } else if (xp > 0 and yp < 0) {
-      angleM = kPi - absArctanSlope;
-    } else if (xp < 0 and yp < 0) {
-      angleM = kPi + absArctanSlope;
+    if (slope != kVerticalModuleSlope && edm::isFinite(slope)) {
+      const float inv_hypot_slope = 1.f / alpaka::math::sqrt(acc, 1.f + slope * slope);
+      drprime_x = drprime * ((xp > 0.f) - (xp < 0.f)) * alpaka::math::abs(acc, slope) * inv_hypot_slope;
+      drprime_y = drprime * ((yp > 0.f) - (yp < 0.f)) * inv_hypot_slope;
     } else {
-      angleM = 2.f * kPi - absArctanSlope;
+      drprime_x = drprime * ((xp > 0.f) - (xp < 0.f));
+      drprime_y = 0.f;
     }
-
-    float drprime_x = drprime * alpaka::math::sin(acc, angleM);
-    float drprime_y = drprime * alpaka::math::cos(acc, angleM);
 
     float xa = xp + drprime_x;  // anchor x (the guessed position on the strip module plane)
     float ya = yp + drprime_y;  // anchor y
@@ -326,9 +330,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       yn = (xn - xa) * slope + ya;
     }
 
-    float absdzprime = alpaka::math::abs(  // z-shift from module separation
-        acc,
-        moduleSeparation / alpaka::math::sin(acc, angleA + angleB) * alpaka::math::cos(acc, angleA));
+    float absdzprime = alpaka::math::abs(acc, moduleSeparation * cosA / sinApB);
 
     float abszn;
     if (mod.moduleLayerType == Pixel) {
@@ -419,9 +421,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       r2sq = rtUpper * rtUpper;
     }
 
+    // Cross-product pre-checks: Pade [2,2] approximant overestimates tan^2(miniCut)
+    const float crossDP = x1 * y2 - x2 * y1;
+    const float dotDP = x1 * x2 + y1 * y2;
+    const float miniCutSq = miniCut * miniCut;
+    const float tanMiniCutSq = miniCutSq / (1.f - (2.f / 3.f) * miniCutSq);
+    if (dotDP <= 0.f || crossDP * crossDP >= tanMiniCutSq * dotDP * dotDP)
+      return false;
+
+    const float rInnerSq = alpaka::math::min(acc, r1sq, r2sq);
+    const float dotDC = dotDP - rInnerSq;
+    if (dotDC <= 0.f || crossDP * crossDP >= tanMiniCutSq * dotDC * dotDC)
+      return false;
+
     // Cut #2: dphi difference
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3085
-    dPhi = cms::alpakatools::deltaPhi(acc, x1, y1, x2, y2);
+    dPhi = alpaka::math::atan2(acc, crossDP, dotDP);
     noShiftedDphi = mod.isTilted ? cms::alpakatools::deltaPhi(acc, xLower, yLower, xUpper, yUpper) : dPhi;
 
     if (alpaka::math::abs(acc, dPhi) >= miniCut)
@@ -431,7 +446,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Ref to original code: https://github.com/slava77/cms-tkph2-ntuple/blob/184d2325147e6930030d3d1f780136bc2dd29ce6/doubletAnalysis.C#L3076
     // dPhiChange should be calculated so that the upper hit has higher rt.
     // The strip hit shifting should guarantee rt ordering, but we check explicitly for safety.
-    dPhiChange = (r1sq < r2sq) ? deltaPhiChange(acc, x1, y1, x2, y2) : deltaPhiChange(acc, x2, y2, x1, y1);
+    if (r1sq < r2sq) {
+      dPhiChange = alpaka::math::atan2(acc, crossDP, dotDP - r1sq);
+    } else {
+      dPhiChange = alpaka::math::atan2(acc, -crossDP, dotDP - r2sq);
+    }
     if (mod.isTilted) {
       noShiftedDphiChange = rtLower < rtUpper ? deltaPhiChange(acc, xLower, yLower, xUpper, yUpper)
                                               : deltaPhiChange(acc, xUpper, yUpper, xLower, yLower);
@@ -517,8 +536,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       dpY2 = yn;
     }
 
+    const float crossDP = dpX1 * dpY2 - dpX2 * dpY1;
+    const float dotDP = dpX1 * dpX2 + dpY1 * dpY2;
+
+    // Algebraic dPhiChange pre-check using only arithmetic (looser than actual cut):
+    // - Underestimates |dPhi| via Taylor lower bound: atan(z) >= z - z^3/3 for z in [0,1]
+    // - Overestimates asin(x) via cubic upper bound: asin(x) <= x + 0.2*x^3 for x in [0,0.5]
+    // - Overestimates sqrt(A^2+B^2) via alpha-max-beta-min: <= max(A,B) + 0.415*min(A,B)
+    //   where 0.415 > sqrt(2)-1 = 0.4142.
+    if (dotDP > 0.f) {
+      float absCrossDP = alpaka::math::abs(acc, crossDP);
+
+      if (absCrossDP >= dotDP)
+        return false;
+
+      float z = absCrossDP / dotDP;
+      float approxDPhiLower = z * (1.f - 0.33333333f * z * z);
+
+      float rt = mod.moduleLayerType == Pixel ? rtLower : rtUpper;
+      float x = alpaka::math::min(acc, rt * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+      float fast_miniSlope = x * (1.f + 0.2f * x * x);
+
+      float miniLum = z / alpaka::math::abs(acc, dz) * kDeltaZLum;
+      float maxAB = alpaka::math::max(acc, mod.sqrtTermFlat, miniLum);
+      float minAB = alpaka::math::min(acc, mod.sqrtTermFlat, miniLum);
+      float fast_miniCutEC = fast_miniSlope + maxAB + 0.415f * minAB;
+
+      if (approxDPhiLower >= fast_miniCutEC)
+        return false;
+    } else {
+      return false;
+    }
+
     // Cut #3: dphi
-    dPhi = cms::alpakatools::deltaPhi(acc, dpX1, dpY1, dpX2, dpY2);
+    dPhi = alpaka::math::atan2(acc, crossDP, dotDP);
 
     // dz needs to change if it is a PS module where the strip hits are shifted in order to properly account for the case when a tilted module falls under "endcap logic"
     // if it was an endcap it will have zero effect
