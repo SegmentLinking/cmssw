@@ -51,7 +51,7 @@ from Configuration.Eras.Modifier_run3_common_cff import run3_common
 run3_common.toModify(hltTrackValidator, _modifyForRun3)
 
 def _modifyForPhase2(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
+    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltSeedTracks", "hltInitialStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
 
 from Configuration.Eras.Modifier_phase2_tracker_cff import phase2_tracker
 phase2_tracker.toModify(hltTrackValidator, _modifyForPhase2)
@@ -74,13 +74,13 @@ from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 
 def _modifyForHLTPhase2LegacyTracking(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks"]
+    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltSeedTracks", "hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity", "hltPixelLessTracks", "hltWithPixelTracks", "hltInitialStepSeedTracks", "hltHighPtTripletStepSeedTracks"]
 hltPhase2LegacyTracking.toModify(hltTrackValidator, _modifyForHLTPhase2LegacyTracking)
 
 def _modifyForNGTScouting(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks"]
+    trackvalidator.label = ["hltGeneralTracks", "hltSeedTracks"]
 (ngtScouting & ~trackingLST).toModify(hltTrackValidator, _modifyForNGTScouting)
 
 def _modifyForNGTScoutingLST(trackvalidator):
-    trackvalidator.label = ["hltGeneralTracks", "hltPhase2PixelTracks", "hltInitialStepTracksT4T5TCLST", "hltPixelLessTracks", "hltWithPixelTracks"]
+    trackvalidator.label = ["hltGeneralTracks", "hltSeedTracks", "hltInitialStepTracksT4T5TCLST", "hltPixelLessTracks", "hltWithPixelTracks"]
 (ngtScouting & trackingLST).toModify(hltTrackValidator, _modifyForNGTScoutingLST)

@@ -1,6 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
 from ..modules.hltGeneralTracks_cfi import *
+from ..modules.hltSeedTracks_cfi import *
+from ..modules.hltMergedSeeds_cfi import *
 from ..modules.hltTrackerClusterCheck_cfi import *
 from ..sequences.HLTHighPtTripletStepSequence_cfi import *
 from ..sequences.HLTPhase2PixelTracksAndVerticesSequence_cfi import *
@@ -15,10 +17,12 @@ _HLTTrackingSequenceLegacy = cms.Sequence(
     +HLTPhase2PixelTracksAndVerticesSequence
     +HLTInitialStepSequence
     +HLTHighPtTripletStepSequence
+    +hltMergedSeeds
+    +hltSeedTracks
     +hltGeneralTracks
 )
 
-HLTTrackingSequence = _HLTTrackingSequenceLegacy.copyAndExclude([HLTHighPtTripletStepSequence])
+HLTTrackingSequence = _HLTTrackingSequenceLegacy.copyAndExclude([HLTHighPtTripletStepSequence, hltMergedSeeds])
 
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
 from Configuration.ProcessModifiers.trackingLST_cff import trackingLST

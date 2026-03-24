@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 from ..modules.hltInputLST_cfi import *
 from ..modules.hltInitialStepMkFitSeeds_cfi import *
+from ..modules.hltInitialStepSeedTracks_cfi import *
 from ..modules.hltInitialStepSeedTracksLST_cfi import *
 from ..modules.hltInitialStepSeeds_cfi import *
 from ..modules.hltInitialStepTrackCandidates_cfi import *
@@ -32,18 +33,14 @@ HLTInitialStepSequence = cms.Sequence(
 
 
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
-hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
-    HLTInitialStepSequence.copyAndExclude([
-        hltInitialStepSeedTracksLST,
-        hltSiPhase2RecHits,
-        hltInputLST,
-        hltLST,
-        hltInitialStepTrajectorySeedsLST,
-        HLTMkFitInputSequence,
-        hltInitialStepMkFitSeeds,
-        hltInitialStepTrackCandidatesMkFit
-    ])
-)
+hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,cms.Sequence(
+     hltInitialStepSeeds
+    +hltInitialStepSeedTracks
+    +hltInitialStepTrackCandidates
+    +hltInitialStepTracks
+    +hltInitialStepTrackCutClassifier
+    +hltInitialStepTrackSelectionHighPurity
+))
 
 
 _HLTInitialStepSequenceLST = cms.Sequence(
