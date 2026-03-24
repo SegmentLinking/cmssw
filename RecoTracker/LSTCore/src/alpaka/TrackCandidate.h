@@ -205,6 +205,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
         for (unsigned int pixelQuintupletIndex : cms::alpakatools::uniform_elements_x(acc, nPixelQuintuplets)) {
+          if (pixelQuintuplets.isDup()[pixelQuintupletIndex])
+            continue;
+
           unsigned int pLS_jx = pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex];
           float eta2 = pixelSeeds.eta()[pLS_jx - prefix];
           float phi2 = pixelSeeds.phi()[pLS_jx - prefix];
@@ -212,8 +215,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
           float dR2 = dEta * dEta + dPhi * dPhi;
-          if (dR2 < 1e-5f)
+          if (dR2 < 1e-5f) {
             pixelTriplets.isDup()[pixelTripletIndex] = true;
+          } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
+            // Check OT hit overlap: pT3 OT hits vs pT5 OT hits
+            int nOTMatched = 0;
+            for (int i = Params_pLS::kHits; i < Params_pT3::kHits; ++i) {
+              unsigned int hit_i = pixelTriplets.hitIndices()[pixelTripletIndex][i];
+              for (int j = Params_pLS::kHits; j < Params_pT5::kHits; ++j) {
+                if (hit_i == pixelQuintuplets.hitIndices()[pixelQuintupletIndex][j]) {
+                  nOTMatched++;
+                  break;
+                }
+              }
+            }
+            if (nOTMatched >= 4)
+              pixelTriplets.isDup()[pixelTripletIndex] = true;
+          }
         }
       }
     }
@@ -275,9 +293,38 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
               if ((dR2 < 0.02f && d2 < 0.1f) || (dR2 < 1e-3f && d2 < 1.0f)) {
                 quintuplets.isDup()[iT5] = true;
+              } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
+                // OT hit matching: T5 hits vs pT5 OT hits
+                int nOTMatched = 0;
+                for (int i = 0; i < Params_T5::kHits; ++i) {
+                  unsigned int hit_i = quintuplets.hitIndices()[iT5][i];
+                  for (int j = Params_pLS::kHits; j < Params_pT5::kHits; ++j) {
+                    if (hit_i == pixelQuintuplets.hitIndices()[jx][j]) {
+                      nOTMatched++;
+                      break;
+                    }
+                  }
+                }
+                if (nOTMatched >= 4)
+                  quintuplets.isDup()[iT5] = true;
               }
             } else if (dR2 < 1e-3f) {
               quintuplets.isDup()[iT5] = true;
+            } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
+              // OT hit matching: T5 hits [0..9] vs pT3 OT hits
+              unsigned int ptidx = jx - pixelQuintuplets.nPixelQuintuplets();
+              int nOTMatched = 0;
+              for (int i = 0; i < Params_T5::kHits; ++i) {
+                unsigned int hit_i = quintuplets.hitIndices()[iT5][i];
+                for (int j = Params_pLS::kHits; j < Params_pT3::kHits; ++j) {
+                  if (hit_i == pixelTriplets.hitIndices()[ptidx][j]) {
+                    nOTMatched++;
+                    break;
+                  }
+                }
+              }
+              if (nOTMatched >= 4)
+                quintuplets.isDup()[iT5] = true;
             }
 
             if (quintuplets.isDup()[iT5])
@@ -443,6 +490,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float dR2 = dEta * dEta + dPhi * dPhi;
               if (dR2 < 1e-3f) {
                 quadruplets.isDup()[iT4] = true;
+              } else if (dEta < 0.2f && alpaka::math::abs(acc, dPhi) < 0.2f) {
+                // OT hit matching: T4 hits vs T5 hits
+                int nMatched = 0;
+                for (int i = 0; i < Params_T4::kHits; ++i) {
+                  unsigned int hit_i = quadruplets.hitIndices()[iT4][i];
+                  for (int j = 0; j < Params_T5::kHits; ++j) {
+                    if (hit_i == quintuplets.hitIndices()[quintupletIndex][j]) {
+                      nMatched++;
+                      break;
+                    }
+                  }
+                }
+                if (nMatched >= 2)
+                  quadruplets.isDup()[iT4] = true;
               }
             }
             if (type == LSTObjType::pT3) {
@@ -467,8 +528,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
               float dR2 = dEta * dEta + dPhi * dPhi;
-              if (dR2 < 1e-3f)
+              if (dR2 < 1e-3f) {
                 quadruplets.isDup()[iT4] = true;
+              } else if (dEta < 0.2f && alpaka::math::abs(acc, dPhi) < 0.2f) {
+                // OT hit matching: T4 hits vs pT3 OT hits
+                int nMatched = 0;
+                for (int i = 0; i < Params_T4::kHits; ++i) {
+                  unsigned int hit_i = quadruplets.hitIndices()[iT4][i];
+                  for (int j = Params_pLS::kHits; j < Params_pT3::kHits; ++j) {
+                    if (hit_i == pixelTriplets.hitIndices()[pT3Index][j]) {
+                      nMatched++;
+                      break;
+                    }
+                  }
+                }
+                if (nMatched >= 2)
+                  quadruplets.isDup()[iT4] = true;
+              }
             }
             if (type == LSTObjType::pT5) {
               unsigned int quintupletIndex = outerTrackletIdx;
@@ -494,6 +570,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float dR2 = dEta * dEta + dPhi * dPhi;
               if (dR2 < 1e-3f) {
                 quadruplets.isDup()[iT4] = true;
+              } else if (dEta < 0.2f && alpaka::math::abs(acc, dPhi) < 0.2f) {
+                // OT hit matching: T4 hits vs pT5 OT hits
+                int nMatched = 0;
+                for (int i = 0; i < Params_T4::kHits; ++i) {
+                  unsigned int hit_i = quadruplets.hitIndices()[iT4][i];
+                  for (int j = 0; j < Params_T5::kHits; ++j) {
+                    if (hit_i == quintuplets.hitIndices()[quintupletIndex][j]) {
+                      nMatched++;
+                      break;
+                    }
+                  }
+                }
+                if (nMatched >= 2)
+                  quadruplets.isDup()[iT4] = true;
               }
             }
           }
