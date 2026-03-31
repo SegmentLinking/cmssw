@@ -46,7 +46,7 @@ permissions:
 jobs:
   test:
     name: HLT Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/hlt.yml@main
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/hlt.yml@devel
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
