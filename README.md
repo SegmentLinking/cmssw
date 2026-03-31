@@ -9,10 +9,11 @@ This fork is used for internal development and validation of the Line Segment Tr
 The CI is triggered by the presence of the string `run-ci:` in PR comments. The comment must exclusively contain CI instructions and it accepts the following items.
 
 - `run-ci`: (string or list) This is what indicates which workflows you want to run. The available options are:
-  - `all`: Run all available workflows.
+  - `all`: Run all available workflows (excluding hlt).
   - `standalone`: Run the standalone tests.
   - `cmssw`: Run the CMSSW 29834.1 workflow.
   - `checks`: Run the SCRAM checks.
+  - `hlt`: Run the HLT tests.
 
 - `required-prs`: (int or list) PR number or list of PR numbers indicating required PRs that must be merged before checks and tests are run.
 
@@ -25,6 +26,7 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 
 - `packages`: (string or list) Package or list of extra packages to be added. By default, `RecoTracker/LSTCore` and `RecoTracker/LST` are added, along with packages that were changed in the PR. However, in cases where the master branch contains changes not reflected in the latest IB, it may be necessary to manually specify additional packages to ensure the tests run correctly.
 
+- `procmodifiers`: (string or list) Process modifiers to use for the HLT tests. Empty by default.
 
 ### Examples
 
