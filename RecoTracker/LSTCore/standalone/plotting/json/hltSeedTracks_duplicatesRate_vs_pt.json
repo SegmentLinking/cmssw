@@ -1,0 +1,76 @@
+{
+    "Duplicate rate vs pt for HLT seed tracks": {
+        "comment": "Duplicate rate vs pt for HLT seed tracks",
+        "inputs": {
+            "Legacy tracking": {
+                "label": "Legacy tracking",
+                "legendEntry": "Legacy tracking",
+                "filename": "/home/vourma/Desktop/plotting/legacyWithTriplets.root",
+                "folder": "DQMData/Run 1/HLT/Run summary/Tracking/ValidationWRTtp/hltSeed_hltAssociatorByHits",
+                "plot": "duplicatesRate_Pt"
+            },
+            "New tracking (Patatrack)": {
+                "label": "New tracking (Patatrack)",
+                "legendEntry": "New tracking (Patatrack)",
+                "filename": "/home/vourma/Desktop/plotting/newWithPatatrackSeeds.root",
+                "folder": "DQMData/Run 1/HLT/Run summary/Tracking/ValidationWRTtp/hltSeed_hltAssociatorByHits",
+                "plot": "duplicatesRate_Pt"
+            },
+            "New tracking (LST-extended)": {
+                "label": "New tracking (LST-extended)",
+                "legendEntry": "New tracking (LST-extended)",
+                "filename": "/home/vourma/Desktop/plotting/newWithLSTSeeds.root",
+                "folder": "DQMData/Run 1/HLT/Run summary/Tracking/ValidationWRTtp/hltSeed_hltAssociatorByHits",
+                "plot": "duplicatesRate_Pt"
+            }
+        },
+        "plot": {
+            "x": [
+                0.8,
+                100.0,
+                "Track p_{T} [GeV]"
+            ],
+            "y": [
+                0.0001,
+                1.0,
+                "Duplicate rate"
+            ],
+            "yRatio": [
+                0.01,
+                10.0
+            ],
+            "option": "logX logY logRatioY",
+            "legendTitle": "HLT seed tracks",
+            "caption": "t#bar{t}, PU 200 (14 TeV)",
+            "logo": [
+                "CMS",
+                "Simulation Preliminary"
+            ],
+            "colorMap": [
+                "#3f90da",
+                "#bd1f01",
+                "#832db6"
+            ],
+            "markerMap": [
+                20,
+                21,
+                22
+            ],
+            "legendRange": [
+                0.4,
+                0.52,
+                0.5,
+                0.32
+            ],
+            "yTitleOffset": 1.05
+        },
+        "output": {
+            "directory": "plots",
+            "filenamePlot": "hltSeedTracks_duplicatesRate_vs_pt",
+            "fileType": [
+                "png",
+                "pdf"
+            ]
+        }
+    }
+}

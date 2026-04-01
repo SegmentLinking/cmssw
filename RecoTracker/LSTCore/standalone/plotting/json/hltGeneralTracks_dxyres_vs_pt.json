@@ -1,0 +1,69 @@
+{
+    "dxy resolution vs pt for final HLT tracks": {
+        "comment": "dxy resolution vs pt for final HLT tracks",
+        "inputs": {
+            "Legacy tracking": {
+                "label": "Legacy tracking",
+                "legendEntry": "Legacy tracking",
+                "filename": "/home/vourma/Desktop/plotting/legacyWithTriplets.root",
+                "folder": "DQMData/Run 1/HLT/Run summary/Tracking/ValidationWRTtp/hltGeneral_hltAssociatorByHits",
+                "plot": "dxyres_vs_pt_Sigma"
+            },
+            "New tracking": {
+                "label": "New tracking",
+                "legendEntry": "New tracking",
+                "filename": "/home/vourma/Desktop/plotting/newWithLSTSeeds.root",
+                "folder": "DQMData/Run 1/HLT/Run summary/Tracking/ValidationWRTtp/hltGeneral_hltAssociatorByHits",
+                "plot": "dxyres_vs_pt_Sigma"
+            }
+        },
+        "plot": {
+            "x": [
+                0.8,
+                100.0,
+                "Simulated track p_{T} [GeV]"
+            ],
+            "y": [
+                0.0002,
+                0.05,
+                "#sigma(#delta d_{xy})"
+            ],
+            "yRatio": [
+                0.8,
+                1.2
+            ],
+            "option": "logX logY",
+            "legendTitle": "Final HLT tracks",
+            "caption": "t#bar{t}, PU 200 (14 TeV)",
+            "logo": [
+                "CMS",
+                "Simulation Preliminary"
+            ],
+            "colorMap": [
+                "#3f90da",
+                "#bd1f01",
+                "#832db6"
+            ],
+            "markerMap": [
+                20,
+                21,
+                22
+            ],
+            "legendRange": [
+                0.38,
+                0.8,
+                0.48,
+                0.6
+            ],
+            "yTitleOffset": 0.98
+        },
+        "output": {
+            "directory": "plots",
+            "filenamePlot": "hltGeneralTracks_dxyres_vs_pt",
+            "fileType": [
+                "png",
+                "pdf"
+            ]
+        }
+    }
+}
