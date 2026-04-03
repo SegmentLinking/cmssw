@@ -18,9 +18,8 @@ from ..sequences.HLTBeamSpotSequence_cfi import HLTBeamSpotSequence
 
 HLTPhase2PixelTracksAndVerticesSequence = cms.Sequence(
     HLTBeamSpotSequence
-    +hltPhase2PixelTracksAndHighPtStepTrackingRegions # needed by highPtTripletStep iteration
-    +hltPhase2PixelFitterByHelixProjections # needed by tracker muons
-    +hltPhase2PixelTrackFilterByKinematics  # needed by tracker muons
+    +hltPhase2PixelFitterByHelixProjections # Currently needed by tracker muons
+    +hltPhase2PixelTrackFilterByKinematics  # Currently needed by tracker muons
     +hltPhase2OtRecHitsSoA
     +hltPhase2PixelRecHitsExtendedSoA
     +hltPhase2PixelTracksSoA
@@ -33,7 +32,6 @@ HLTPhase2PixelTracksAndVerticesSequence = cms.Sequence(
 from ..modules.hltPhase2TrimmedPixelVertices_cfi import hltPhase2TrimmedPixelVertices
 _HLTPhase2PixelTracksAndVerticesSequenceTrimming = cms.Sequence(
     HLTBeamSpotSequence
-    +hltPhase2PixelTracksAndHighPtStepTrackingRegions
     +hltPhase2PixelFitterByHelixProjections
     +hltPhase2PixelTrackFilterByKinematics
     +hltPhase2OtRecHitsSoA
