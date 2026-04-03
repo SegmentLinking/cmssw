@@ -1,35 +1,100 @@
 #include "FWCore/AbstractServices/interface/IntrusiveMonitorBase.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/ServiceMaker.h"
+#include "FWCore/Utilities/interface/thread_safety_macros.h"
 
 #include "PerfTools/AllocMonitor/interface/AllocMonitorBase.h"
 #include "PerfTools/AllocMonitor/interface/AllocMonitorRegistry.h"
 
+#include "MonitorStackNode.h"
 #include "ThreadAllocInfo.h"
 #include "ThreadTracker.h"
 
 namespace {
   using namespace edm::service::moduleAlloc;
-  class MonitorAdaptor : public cms::perftools::AllocMonitorBase {
+
+  class StackData {
   public:
-    static void startOnThread() { threadAllocInfo().reset(); }
-    static ThreadAllocInfo const& stopOnThread() {
-      auto& t = threadAllocInfo();
-      if (not t.active_) {
-        t.reset();
-      } else {
-        t.deactivate();
+    StackData(std::string_view name, bool nameIsString, ThreadAllocInfo const& previousInfo, StackData* previousNodeData)
+        : previousInfo_(previousInfo) {
+      if (nameIsString and previousNodeData) {
+        auto& n = previousNodeData->nestedNameSizes_;
+        n.sum_ += name.size();
+        n.count_ += 1;
       }
-      return t;
     }
 
+    ThreadAllocInfo const& previousAllocInfo() const { return previousInfo_; }
+
+    struct NestedNameSizes {
+      size_t sum_ = 0;
+      size_t count_ = 0;
+    };
+    NestedNameSizes const& nestedNameSizes() const { return nestedNameSizes_; }
+
+  private:
+    NestedNameSizes nestedNameSizes_;
+    ThreadAllocInfo previousInfo_;
+  };
+  using MonitorStackNode = cms::perftools::allocMon::MonitorStackNode<StackData>;
+  std::unique_ptr<MonitorStackNode>& currentMonitorStackNode() {
+    static thread_local std::unique_ptr<MonitorStackNode> ptr;
+    return ptr;
+  }
+
+  class PreviousStateRestoreGuard {
+  public:
+    PreviousStateRestoreGuard(std::unique_ptr<MonitorStackNode> node, ThreadAllocInfo& info)
+        : currentNode_(std::move(node)), info_(info) {}
+    ~PreviousStateRestoreGuard() noexcept {
+      currentMonitorStackNode() = currentNode_->popPreviousNode();
+      info_ = currentNode_->get().previousAllocInfo();
+      assert(not info_.active_);
+
+      // deallocate outside of measurement
+      currentNode_.reset();
+
+      info_.activate();
+    }
+
+    ThreadAllocInfo const& currentAllocInfo() const { return info_; }
+    MonitorStackNode const* currentNode() const { return currentNode_.get(); }
+
+  private:
+    std::unique_ptr<MonitorStackNode> currentNode_;
+    ThreadAllocInfo& info_;
+  };
+
+  class MonitorAdaptor : public cms::perftools::AllocMonitorBase {
+  public:
+    static void startOnThread(std::string_view name, bool nameIsString) {
+      auto& t = threadAllocInfo();
+      // deactivate before allocating the MonitorStackNode
+      // keep the previous measurement deactivated until the guard activates it again in ~PreviousStateRestoreGuard
+      t.deactivate();
+      // push a node to the top of the MonitorStackNode list
+      auto prevNodePtr = currentMonitorStackNode().get();
+      auto node = std::make_unique<MonitorStackNode>(
+          name,
+          std::move(currentMonitorStackNode()),
+          StackData(name, nameIsString, t, prevNodePtr ? &(prevNodePtr->get()) : nullptr));
+      currentMonitorStackNode() = std::move(node);
+      t.reset();
+    }
+    static PreviousStateRestoreGuard stopOnThread() {
+      auto& t = threadAllocInfo();
+      t.deactivate();
+      // pop the top node from the MonitorStackNode list
+      return {std::move(currentMonitorStackNode()), t};
+    }
+
+  private:
     static ThreadAllocInfo& threadAllocInfo() {
       using namespace cms::perftools::allocMon;
       static ThreadAllocInfo s_info[ThreadTracker::kTotalEntries];
       return s_info[ThreadTracker::instance().thread_index()];
     }
 
-  private:
     void allocCalled(size_t iRequested, size_t iActual, void const*) final {
       auto& allocInfo = threadAllocInfo();
       if (not allocInfo.active_) {
@@ -69,21 +134,43 @@ public:
   IntrusiveAllocMonitor() {
     (void)cms::perftools::AllocMonitorRegistry::instance().createAndRegisterMonitor<MonitorAdaptor>();
   };
-  ~IntrusiveAllocMonitor() override = default;
+  ~IntrusiveAllocMonitor() noexcept override = default;
 
-  void start() final { MonitorAdaptor::startOnThread(); }
-  void stop(std::string_view name) final {
-    MonitorAdaptor::stopOnThread();
-    auto& info = MonitorAdaptor::threadAllocInfo();
-    edm::LogSystem("IntrusiveAllocMonitor")
-        .format("{}: requested {} added {} max alloc {} peak {} nAlloc {} nDealloc {}",
-                name,
-                info.requested_,
-                info.presentActual_,
-                info.maxSingleAlloc_,
-                info.maxActual_,
-                info.nAllocations_,
-                info.nDeallocations_);
+  void start(std::string_view name, bool nameIsString) final { MonitorAdaptor::startOnThread(name, nameIsString); }
+  void stop(std::string_view nameArg) noexcept final {
+    // If an exception is thrown here, can't do much more than ignore it
+    CMS_SA_ALLOW try {
+      auto guard = MonitorAdaptor::stopOnThread();
+      // The guard keeps the monitoring paused during the all string operations below
+      edm::LogSystem log("IntrusiveAllocMonitor");
+      auto const& info = guard.currentAllocInfo();
+      log.format("measured: requested {} added {} max alloc {} peak {} nAlloc {} nDealloc {}",
+                 info.requested_,
+                 info.presentActual_,
+                 info.maxSingleAlloc_,
+                 info.maxActual_,
+                 info.nAllocations_,
+                 info.nDeallocations_);
+
+      MonitorStackNode const* node = guard.currentNode();
+      if (node != nullptr) {
+        // sanity check
+        assert(nameArg == node->name());
+      }
+      int depth = 0;
+      while (node != nullptr) {
+        log.format("\n[{}] {}", depth, node->name());
+        node = node->previousNode();
+        ++depth;
+      }
+      auto const& nestedNames = guard.currentNode()->get().nestedNameSizes();
+      if (nestedNames.count_ > 0) {
+        log.format("\nThis includes at least {} bytes in {} allocations from string names in nested measurements",
+                   nestedNames.sum_,
+                   nestedNames.count_);
+      }
+    } catch (...) {
+    }
   }
 };
 

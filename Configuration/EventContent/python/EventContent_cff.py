@@ -118,10 +118,11 @@ HLTDebugFEVT.outputCommands.extend(HLTScoutingExtra.outputCommands)
 from DQMOffline.Configuration.DQMOffline_EventContent_cff import *
 #
 #
-# NANOAOD
+# NANOAOD (incl. the NANO(EDM)AOD event contents for Run-3 L1-Scouting data)
 #
 #
 from PhysicsTools.NanoAOD.NanoAODEDMEventContent_cff import *
+from PhysicsTools.NanoAOD.L1SCOUTNanoAODEDMEventContent_cff import *
 #
 #
 # FastSim
@@ -582,6 +583,10 @@ run3_GEM.toModify(FEVTEventContent,
     outputCommands = FEVTEventContent.outputCommands + ['keep *_muonGEMDigis_*_*'])
 pp_on_AA.toModify(FEVTEventContent, 
     outputCommands = FEVTEventContent.outputCommands + ['keep FEDRawDataCollection_rawDataRepacker_*_*'])
+approxSiStripClusters.toModify(FEVTEventContent,
+    outputCommands = FEVTEventContent.outputCommands + [
+        'keep FEDRawDataCollection_rawPrimeDataRepacker_*_*',
+        'keep *_hltSiStripClusters2ApproxClusters_*_*'])
 phase2_timing_layer.toModify(FEVTEventContent, 
     outputCommands = FEVTEventContent.outputCommands + RecoLocalFastTimeFEVT.outputCommands)
 phase2_timing_layer.toModify(FEVTEventContent, 
@@ -718,6 +723,12 @@ phase2_tracker.toModify(FEVTDEBUGHLTEventContent,
                             'keep *_hltInitialStepTracksT4T5TCLST_*_*',
                             'keep *_hltOfflinePrimaryVertices_*_*',
                         ])
+
+from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+(phase2_tracker & ~hltPhase2LegacyTracking).toModify(FEVTDEBUGHLTEventContent,
+                                                     outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[
+                                                         'keep *_hltPhase2PixelTracksCAExtension_*_*',
+                                                     ])
 
 phase2_common.toModify(FEVTDEBUGHLTEventContent,
                        outputCommands = FEVTDEBUGHLTEventContent.outputCommands+[

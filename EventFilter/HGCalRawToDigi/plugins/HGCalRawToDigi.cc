@@ -25,7 +25,7 @@
 #include "oneapi/tbb.h"
 
 #include "EventFilter/HGCalRawToDigi/interface/HGCalUnpacker.h"
-class HGCalRawToDigi : public edm::stream::EDProducer<> {
+class HGCalRawToDigi : public edm::stream::EDProducer<edm::stream::WatchRuns> {
 public:
   explicit HGCalRawToDigi(const edm::ParameterSet&);
   uint16_t callUnpacker(unsigned fedId,
@@ -91,9 +91,9 @@ void HGCalRawToDigi::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) 
   //const auto& cellIndexer = iSetup.getData(cellIndexToken_);
   const auto& config = iSetup.getData(configToken_);
 
-  hgcaldigi::HGCalDigiHost digis(moduleIndexer.maxDataSize(), cms::alpakatools::host());
-  hgcaldigi::HGCalECONDPacketInfoHost econdPacketInfo(moduleIndexer.maxModulesCount(), cms::alpakatools::host());
-  hgcaldigi::HGCalFEDPacketInfoHost fedPacketInfo(moduleIndexer.fedCount(), cms::alpakatools::host());
+  hgcaldigi::HGCalDigiHost digis(cms::alpakatools::host(), moduleIndexer.maxDataSize());
+  hgcaldigi::HGCalECONDPacketInfoHost econdPacketInfo(cms::alpakatools::host(), moduleIndexer.maxModulesCount());
+  hgcaldigi::HGCalFEDPacketInfoHost fedPacketInfo(cms::alpakatools::host(), moduleIndexer.fedCount());
 
   // retrieve the FED raw data
   const auto& fedBuffer = iEvent.get(fedRawToken_);

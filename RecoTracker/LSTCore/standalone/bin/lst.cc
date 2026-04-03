@@ -3,6 +3,8 @@
 
 #include <typeinfo>
 
+#include <boost/core/demangle.hpp>
+
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using LSTInputDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTInputDeviceCollection;
 using namespace ::lst;
@@ -302,8 +304,8 @@ int main(int argc, char **argv) {
   ana.t4dnn_branches = result["t4dnn"].as<bool>() || result["allobj"].as<bool>();
 
   //_______________________________________________________________________________
-  // --jet
-  ana.jet_branches = result["jet"].as<bool>() || result["allobj"].as<bool>();
+  // --jet (Not triggered by allobj since most files don't have jet info)
+  ana.jet_branches = result["jet"].as<bool>();
 
   //_______________________________________________________________________________
   // --sim
@@ -415,6 +417,7 @@ void run_lst() {
                                    trk.getVF("see_stateTrajGlbPz"),
                                    trk.getVI("see_q"),
                                    trk.getVVI("see_hitIdx"),
+                                   trk.getVVI("see_hitType"),
                                    trk.getVU("see_algo"),
                                    trk.getVU("ph2_detId"),
                                    trk_ph2_clustSize,
@@ -560,3 +563,19 @@ void run_lst() {
 
   delete ana.output_tfile;
 }
+
+// Dummy implementation of edm::typeDemangle (without extra replacements)
+// to avoid having to link extra libraries
+namespace edm {
+  std::string typeDemangle(char const *mangledName) { return boost::core::demangle(mangledName); }
+}  // namespace edm
+
+// Dummy implementation of SoACommon.cc from DataFormats/SoATemplate/src
+// to avoid having to link extra libraries
+namespace cms::soa::detail {
+  [[noreturn]] void throwRuntimeError(const char *message) { throw std::runtime_error(message); }
+
+  [[noreturn]] void throwOutOfRangeError(const char *message, cms::soa::size_type index, cms::soa::size_type range) {
+    throw std::out_of_range(std::format("{}: index {} out of range {}", message, index, range));
+  }
+}  // namespace cms::soa::detail

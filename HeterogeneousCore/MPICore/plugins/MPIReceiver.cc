@@ -9,6 +9,7 @@
 #include <TClass.h>
 
 // CMSSW include files
+#include "DataFormats/Common/interface/PathStateToken.h"
 #include "FWCore/Concurrency/interface/Async.h"
 #include "FWCore/Concurrency/interface/chain_first.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -23,7 +24,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "FWCore/ServiceRegistry/interface/ServiceMaker.h"
 #include "FWCore/Utilities/interface/Exception.h"
-#include "HeterogeneousCore/MPICore/interface/api.h"
+#include "HeterogeneousCore/MPICore/interface/MPIChannel.h"
 #include "HeterogeneousCore/MPICore/interface/MPIToken.h"
 #include "HeterogeneousCore/TrivialSerialisation/interface/AnyBuffer.h"
 #include "HeterogeneousCore/TrivialSerialisation/interface/SerialiserBase.h"
@@ -34,13 +35,18 @@ public:
   MPIReceiver(edm::ParameterSet const& config)
       : upstream_(consumes<MPIToken>(config.getParameter<edm::InputTag>("upstream"))),
         token_(produces<MPIToken>()),
-        instance_(config.getParameter<int32_t>("instance"))  //
-  {
+        instance_(config.getParameter<int32_t>("instance")),
+        activity_(config.getParameter<bool>("activity")),
+        enableTrivialSerialisation_(config.getUntrackedParameter<bool>("enableTrivialSerialisation")) {
     // instance 0 is reserved for the MPIController / MPISource pair
     // instance values greater than 255 may not fit in the MPI tag
     if (instance_ < 1 or instance_ > 255) {
       throw cms::Exception("InvalidValue")
           << "Invalid MPIReceiver instance value, please use a value between 1 and 255";
+    }
+
+    if (activity_) {
+      pathStateToken_ = produces<edm::PathStateToken>();
     }
 
     auto const& products = config.getParameter<std::vector<edm::ParameterSet>>("products");
@@ -63,7 +69,7 @@ public:
   void acquire(edm::Event const& event, edm::EventSetup const&, edm::WaitingTaskWithArenaHolder holder) final {
     const MPIToken& token = event.get(upstream_);
 
-    //also try unique or optional
+    // also try unique or optional
     received_meta_ = std::make_shared<ProductMetadataBuilder>();
 
     edm::Service<edm::Async> as;
@@ -86,8 +92,10 @@ public:
       event.emplace(token_, token);
       return;
     }
+    if (activity_) {
+      event.emplace(pathStateToken_);
+    }
 
-    int buffer_offset = 0;
     std::unique_ptr<TBufferFile> serialized_buffer;
     if (received_meta_->hasSerialized()) {
       serialized_buffer = token.channel()->receiveSerializedBuffer(instance_, received_meta_->serializedBufferSize());
@@ -95,7 +103,7 @@ public:
       {
         edm::LogSystem msg("MPISender");
         msg << "Received serialised product:\n";
-        for (int i = 0; i < serialized_buffer->Length(); ++i) {
+        for (int i = 0; i < received_meta_->serializedBufferSize(); ++i) {
           msg << "0x" << std::hex << std::setw(2) << std::setfill('0')
               << (unsigned int)(unsigned char)serialized_buffer->Buffer()[i] << (i % 16 == 15 ? '\n' : ' ');
         }
@@ -113,18 +121,21 @@ public:
       else if (product_meta.kind == ProductMetadata::Kind::Serialized) {
         std::unique_ptr<edm::WrapperBase> wrapper(
             reinterpret_cast<edm::WrapperBase*>(entry.wrappedType.getClass()->New()));
-        auto productBuffer = TBufferFile(TBuffer::kRead, product_meta.sizeMeta);
-        // assert(!wrapper->hasTrivialCopyTraits() && "mismatch between expected and actual metadata type");
-        assert(buffer_offset < serialized_buffer->BufferSize() && "serialized data buffer is shorter than expected");
-        productBuffer.SetBuffer(serialized_buffer->Buffer() + buffer_offset, product_meta.sizeMeta, false);
-        buffer_offset += product_meta.sizeMeta;
-        entry.wrappedType.getClass()->Streamer(wrapper.get(), productBuffer);
+        assert(static_cast<int32_t>(serialized_buffer->Length() + product_meta.sizeMeta) <=
+                   received_meta_->serializedBufferSize() &&
+               "serialized data buffer is shorter than expected");
+        entry.wrappedType.getClass()->Streamer(wrapper.get(), *serialized_buffer);
         // put the data into the Event
         event.put(entry.token, std::move(wrapper));
       }
 
       else if (product_meta.kind == ProductMetadata::Kind::TrivialCopy) {
-        // assert(wrapper->hasTrivialCopyTraits() && "mismatch between expected and actual metadata type");
+        if (not enableTrivialSerialisation_) {
+          edm::LogError("MPIReceiver")
+              << "Received a trivially-serialised product, but enableTrivialSerialisation is set to false in this "
+                 "MPIReceiver. Please check that the MPISender and MPIReceiver have consistent settings.";
+          MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+        }
         std::unique_ptr<ngt::SerialiserBase> serialiser =
             ngt::SerialiserFactory::get()->tryToCreate(entry.type.typeInfo().name());
         if (not serialiser) {
@@ -134,7 +145,6 @@ public:
         ngt::AnyBuffer buffer = writer->uninitialized_parameters();  // constructs buffer with typeid
         assert(buffer.size_bytes() == product_meta.sizeMeta);
         std::memcpy(buffer.data(), product_meta.trivialCopyOffset, product_meta.sizeMeta);
-        // why both of these methods are called initialize? I find this rather confusing
         writer->initialize(buffer);
         token.channel()->receiveInitializedTrivialCopy(instance_, *writer);
         writer->finalize();
@@ -144,7 +154,7 @@ public:
     }
 
     if (received_meta_->hasSerialized()) {
-      assert(buffer_offset == received_meta_->serializedBufferSize() &&
+      assert(serialized_buffer->Length() == received_meta_->serializedBufferSize() &&
              "serialized data buffer is not equal to the expected length");
     }
 
@@ -167,12 +177,18 @@ public:
         ->setComment(
             "MPI communication channel. Can be an \"MPIController\", \"MPISource\", \"MPISender\" or \"MPIReceiver\". "
             "Passing an \"MPIController\" or \"MPISource\" only identifies the pair of local and remote application "
-            "that communicate. Passing an \"MPISender\" or \"MPIReceiver\" in addition in addition imposes a "
-            "scheduling dependency.");
+            "that communicate. Passing an \"MPISender\" or \"MPIReceiver\" in addition imposes a scheduling "
+            "dependency.");
     desc.addVPSet("products", product, {})
         ->setComment("Products to be received by a separate CMSSW job and produced into the event.");
     desc.add<int32_t>("instance", 0)
-        ->setComment("A value between 1 and 255 used to identify a matching pair of \"MPISender\"/\"MPIRecevier\".");
+        ->setComment("A value between 1 and 255 used to identify a matching pair of \"MPISender\"/\"MPIReceiver\".");
+    desc.add<bool>("activity", false)
+        ->setComment("Whether this receiver will get activity information from the sender.");
+    desc.addUntracked<bool>("enableTrivialSerialisation", true)
+        ->setComment(
+            "If true (default), use the trivial serialisation mechanism for supported types. If false, always use "
+            "ROOT serialisation for all types. Useful for benchmarking.");
 
     descriptions.addWithDefaultLabel(desc);
   }
@@ -188,8 +204,10 @@ private:
   edm::EDPutTokenT<MPIToken> const token_;  // copy of the MPIToken that may be used to implement an ordering relation
   std::vector<Entry> products_;             // data to be read over the channel and put into the Event
   int32_t const instance_;                  // instance used to identify the source-destination pair
-
+  bool activity_;                           // indicator whether the PathStateToken will be received by the module
+  edm::EDPutTokenT<edm::PathStateToken> pathStateToken_;
   std::shared_ptr<ProductMetadataBuilder> received_meta_;
+  bool enableTrivialSerialisation_ = true;
 };
 
 #include "FWCore/Framework/interface/MakerMacros.h"

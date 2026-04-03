@@ -33,19 +33,19 @@ hltSiPixelPhase1CompareDigiErrors = siPixelPhase1RawDataErrorComparator.clone(
     topFolderName = 'HLT/HeterogeneousComparisons/PixelErrors'
 )
 
-hltSiPixelPhase1CompareRecHits = siPixelPhase1CompareRecHits.clone(
+hltSiPixelPhase1CompareRecHits = siPixelCompareRecHitsSoA.clone(
     pixelHitsReferenceSoA = 'hltSiPixelRecHitsSoASerialSync',
     pixelHitsTargetSoA  = 'hltSiPixelRecHitsSoA',
     topFolderName = 'HLT/HeterogeneousComparisons/PixelRecHits'
 )
 
-hltSiPixelPhase1CompareTracks = siPixelPhase1CompareTracks.clone(
+hltSiPixelPhase1CompareTracks = siPixelCompareTracksSoA.clone(
     pixelTrackReferenceSoA = 'hltPixelTracksSoASerialSync',
     pixelTrackTargetSoA = 'hltPixelTracksSoA',
     topFolderName = 'HLT/HeterogeneousComparisons/PixelTracks'
 )
 
-hltSiPixelCompareVertices = siPixelCompareVertices.clone(
+hltSiPixelCompareVertices = siPixelCompareVerticesSoA.clone(
     pixelVertexReferenceSoA = 'hltPixelVerticesSoASerialSync',
     pixelVertexTargetSoA = 'hltPixelVerticesSoA',
     beamSpotSrc = 'hltOnlineBeamSpot',
@@ -57,11 +57,29 @@ hltSiPixelCompareVertices = siPixelCompareVertices.clone(
 from DQM.EcalMonitorTasks.EcalMonitorTask_cfi import *
 from DQM.EcalMonitorTasks.ecalGpuTask_cfi import ecalGpuTask as _ecalGpuTask
 
-hltEcalGpuTask =  _ecalGpuTask.clone(
+_hltdir = 'HLT/HeterogeneousComparisons/'
+_remove = '%(prefix)sGpuTask/'
+
+def cloneMEsWithPathFix(srcMEs, prefix):
+    clones = {}
+    for name, me in srcMEs.parameters_().items():
+        if hasattr(me, 'path'):
+            old = me.path.value()
+            # remove the unwanted component if present
+            new = old.replace(_remove, '')
+            # prepend the HLT directory if not already there
+            new = prefix + new
+            clones[name] = me.clone(path = new)
+        else:
+            clones[name] = me.clone()
+    return clones
+
+hltEcalGpuTask = _ecalGpuTask.clone(
     params = _ecalGpuTask.params.clone(
         runGpuTask = True,
         enableRecHit = False
-    )
+    ),
+    MEs = cloneMEsWithPathFix(_ecalGpuTask.MEs, _hltdir)
 )
 
 hltEcalMonitorTask = ecalMonitorTask.clone(
@@ -97,11 +115,11 @@ hltHcalGPUComparisonTask = hcalGPUComparisonTask.clone(
 HLTHeterogeneousMonitoringSequence = cms.Sequence(
     hltPfHcalGPUComparisonTask +
     hltSiPixelPhase1CompareDigiErrors +
-    #hltSiPixelPhase1CompareRecHits +   # waiting a resolution of #49349
+    hltSiPixelPhase1CompareRecHits +
     hltSiPixelPhase1CompareTracks +
     hltSiPixelCompareVertices +
     hltEcalMonitorTask +
-    hltHcalGPUComparisonTask    
+    hltHcalGPUComparisonTask
 )
 
 from Configuration.Eras.Modifier_phase2_common_cff import phase2_common

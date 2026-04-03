@@ -94,17 +94,14 @@ run3_common.toModify(dedxHitInfo,
 dedxAllHitInfo = dedxHitInfo.clone(minTrackPt = 0)
 from Configuration.Eras.Modifier_run3_upc_cff import run3_upc
 run3_upc.toModify(dedxHitInfo, lowPtTracksPrescalePass = 50, lowPtTracksPrescaleFail = 50, minTrackPtPrescale = 0, usePixelForPrescales = True, storeMomentumAtHit = True)
+from Configuration.Eras.Modifier_run3_oxygen_cff import run3_oxygen
+(run3_upc & ~run3_oxygen).toModify(dedxHitInfo, lowPtTracksPrescalePass = 4, lowPtTracksPrescaleFail = 4)
 
 from RecoTracker.DeDx.dedxHitCalibrator_cfi import dedxHitCalibrator as _dedxHitCalibrator
 from SimGeneral.MixingModule.SiStripSimParameters_cfi import SiStripSimBlock as _SiStripSimBlock
-from RecoLocalTracker.SiPixelClusterizer.SiPixelClusterizer_cfi import siPixelClusters as _siPixelClusters
 dedxHitCalibrator = _dedxHitCalibrator.clone(
     dedxHitInfo = 'dedxAllHitInfo',
     MeVPerElectron = 1000*_SiStripSimBlock.GevPerElectron.value(),
-    VCaltoElectronGain = _siPixelClusters.VCaltoElectronGain,
-    VCaltoElectronGain_L1 = _siPixelClusters.VCaltoElectronGain_L1,
-    VCaltoElectronOffset = _siPixelClusters.VCaltoElectronOffset,
-    VCaltoElectronOffset_L1 = _siPixelClusters.VCaltoElectronOffset_L1
 )
 
 dedxAllLikelihood = _mod.DeDxEstimatorProducer.clone(

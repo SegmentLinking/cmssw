@@ -8,12 +8,12 @@ RNTupleTempSource: This is an InputSource
 ----------------------------------------------------------------------*/
 
 #include "DataFormats/Provenance/interface/BranchType.h"
-#include "FWCore/Catalog/interface/InputFileCatalog.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/ProcessingController.h"
 #include "FWCore/Framework/interface/ProductSelectorRules.h"
 #include "FWCore/Framework/interface/InputSource.h"
 #include "FWCore/Utilities/interface/propagate_const.h"
+#include "FWStorage/Catalog/interface/InputFileCatalog.h"
 #include "IOPool/Common/interface/RootServiceChecker.h"
 
 #include <array>
@@ -34,6 +34,7 @@ namespace edm::rntuple_temp {
   public:
     struct Optimizations {
       bool useClusterCache = true;
+      bool enableIMT = true;
     };
     explicit RNTupleTempSource(ParameterSet const& pset, InputSourceDescription const& desc);
     ~RNTupleTempSource() override;

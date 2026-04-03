@@ -9,7 +9,6 @@
 #include "RootDelayedReaderBase.h"
 
 #include "DataFormats/Common/interface/setIsMergeable.h"
-#include "DataFormats/Common/interface/ThinnedAssociation.h"
 #include "DataFormats/Provenance/interface/ProductDescription.h"
 #include "DataFormats/Provenance/interface/BranchIDListHelper.h"
 #include "DataFormats/Provenance/interface/BranchType.h"
@@ -23,7 +22,7 @@
 #include "DataFormats/Provenance/interface/StoredMergeableRunProductMetadata.h"
 #include "DataFormats/Provenance/interface/StoredProcessBlockHelper.h"
 #include "DataFormats/Provenance/interface/StoredProductProvenance.h"
-#include "DataFormats/Provenance/interface/ThinnedAssociationsHelper.h"
+
 #include "DataFormats/Provenance/interface/RunID.h"
 #include "FWCore/Common/interface/ProcessBlockHelper.h"
 #include "FWCore/Framework/interface/FileBlock.h"
@@ -85,13 +84,15 @@ namespace edm::rntuple_temp {
   // Algorithm classes for making ProvenanceReader:
   class MakeReducedProvenanceReader : public MakeProvenanceReader {
   public:
-    MakeReducedProvenanceReader(std::vector<ParentageID> const& parentageIDLookup)
-        : parentageIDLookup_(parentageIDLookup) {}
+    MakeReducedProvenanceReader(std::vector<ParentageID> const& parentageIDLookup,
+                                ROOT::RNTupleView<void>& productProvenanceView)
+        : parentageIDLookup_(parentageIDLookup), productProvenanceView_(productProvenanceView) {}
     std::unique_ptr<ProvenanceReaderBase> makeReader(RootRNTuple& eventTree,
                                                      DaqProvenanceHelper const* daqProvenanceHelper) const override;
 
   private:
     std::vector<ParentageID> const& parentageIDLookup_;
+    ROOT::RNTupleView<void>& productProvenanceView_;
   };
 
   namespace {
@@ -175,14 +176,15 @@ namespace edm::rntuple_temp {
         branchIDLists_(),
         branchIDListHelper_(crossFileInfo.branchIDListHelper),
         processBlockHelper_(crossFileInfo.processBlockHelper),
-        fileThinnedAssociationsHelper_(),
-        thinnedAssociationsHelper_(crossFileInfo.thinnedAssociationsHelper),
         processingMode_(processingOptions.processingMode),
         runHelper_(crossFileInfo.runHelper),
         newBranchToOldBranch_(),
         eventToProcessBlockIndexesView_(inputType == InputType::Primary
                                             ? eventTree_.view(poolNames::eventToProcessBlockIndexesBranchName())
                                             : std::optional<ROOT::RNTupleView<void>>()),
+        productProvenanceView_(eventTree_.view(BranchTypeToProductProvenanceBranchName(eventTree_.branchType()))),
+        eventSelectionIDsView_(eventTree_.view(poolNames::eventSelectionsBranchName())),
+        branchListIndexesView_(eventTree_.view(poolNames::branchListIndexesBranchName())),
         productDependencies_(new ProductDependencies),
         duplicateChecker_(crossFileInfo.duplicateChecker),
         provenanceReaderMaker_(),
@@ -191,6 +193,7 @@ namespace edm::rntuple_temp {
         daqProvenanceHelper_(),
         edProductClass_(TypeWithDict::byName("edm::WrapperBase").getClass()),
         inputType_(inputType) {
+    assert(productProvenanceView_);
     hasNewlyDroppedBranch_.fill(false);
 
     treePointers_.resize(3);
@@ -260,12 +263,6 @@ namespace edm::rntuple_temp {
     auto branchIDListsAPtr = std::make_unique<BranchIDLists>();
     metaDataEntry->BindRawPtr(poolNames::branchIDListBranchName(), branchIDListsAPtr.get());
 
-    if (inputType != InputType::SecondarySource) {
-      fileThinnedAssociationsHelper_ =
-          std::make_unique<ThinnedAssociationsHelper>();  // propagate_const<T> has no reset() function
-      metaDataEntry->BindRawPtr(poolNames::thinnedAssociationsHelperBranchName(), fileThinnedAssociationsHelper_.get());
-    }
-
     metaDataEntry->BindRawPtr(poolNames::productDependenciesBranchName(), productDependencies_.get());
 
     // Here we read the metadata tree
@@ -309,13 +306,6 @@ namespace edm::rntuple_temp {
       //  throw Exception(errors::EventCorruption) << "Failed to find branchIDLists branch in metaData tree.\n";
       // }
       mutableBranchIDLists.reset(branchIDListsAPtr.release());
-    }
-
-    if (fileFormatVersion().hasThinnedAssociations()) {
-      //if (metaDataTree->FindBranch(poolNames::thinnedAssociationsHelperBranchName().c_str()) == nullptr) {
-      //  throw Exception(errors::EventCorruption)
-      //      << "Failed to find thinnedAssociationsHelper branch in metaData tree.\n";
-      //}
     }
 
     if (!fileOptions.bypassVersionCheck) {
@@ -403,7 +393,7 @@ namespace edm::rntuple_temp {
           if (fileFormatVersion().splitProductIDs()) {
             throw Exception(errors::UnimplementedFeature)
                 << "Cannot change friendly class name algorithm without more development work\n"
-                << "to update BranchIDLists and ThinnedAssociationsHelper.  Contact the framework group.\n";
+                << "to update BranchIDLists.  Contact the framework group.\n";
           }
           ProductDescription newBD(prod);
           newBD.updateFriendlyClassName();
@@ -419,12 +409,8 @@ namespace edm::rntuple_temp {
                             *storedProcessBlockHelper_,
                             crossFileInfo.processBlockHelper);
 
-      if (inputType == InputType::SecondaryFile) {
-        crossFileInfo.thinnedAssociationsHelper->updateFromSecondaryInput(*fileThinnedAssociationsHelper_,
-                                                                          *productChoices.associationsFromSecondary);
-      } else if (inputType == InputType::Primary) {
+      if (inputType == InputType::Primary) {
         crossFileInfo.processBlockHelper->initializeFromPrimaryInput(*storedProcessBlockHelper_);
-        crossFileInfo.thinnedAssociationsHelper->updateFromPrimaryInput(*fileThinnedAssociationsHelper_);
       }
 
       if (inputType == InputType::Primary) {
@@ -583,11 +569,6 @@ namespace edm::rntuple_temp {
 
   void RootFile::setPosition(IndexIntoFile::IndexIntoFileItr const& position) {
     indexIntoFileIter_.copyPosition(position);
-  }
-
-  void RootFile::initAssociationsFromSecondary(std::vector<BranchID> const& associationsFromSecondary) {
-    thinnedAssociationsHelper_->initAssociationsFromSecondary(associationsFromSecondary,
-                                                              *fileThinnedAssociationsHelper_);
   }
 
   bool RootFile::skipThisEntry() {
@@ -1098,22 +1079,17 @@ namespace edm::rntuple_temp {
     // We could consider doing delayed reading, but because we have to
     // store this History object in a different tree than the event
     // data tree, this is too hard to do in this first version.
-    if (fileFormatVersion().eventHistoryBranch()) {
-      assert(false);
-    } else if (fileFormatVersion().eventHistoryTree()) {
-      assert(false);
-      // for backward compatibility.
-    } else if (fileFormatVersion().noMetaDataTrees()) {
-      // Current format
-      auto eventSelectionIDsView = eventTree_.view(poolNames::eventSelectionsBranchName());
-      assert(eventSelectionIDsView.has_value());
-      eventSelectionIDsView->BindRawPtr(&eventSelectionIDs);
-      eventTree_.fillEntry(*eventSelectionIDsView);
-      auto branchListIndexesView = eventTree_.view(poolNames::branchListIndexesBranchName());
-      assert(branchListIndexesView.has_value());
-      branchListIndexesView->BindRawPtr(&branchListIndexes);
-      eventTree_.fillEntry(*branchListIndexesView);
-    }
+    assert(not fileFormatVersion().eventHistoryBranch());
+    assert(not fileFormatVersion().eventHistoryTree());
+    // Current format
+    assert(fileFormatVersion().noMetaDataTrees());
+    assert(eventSelectionIDsView_.has_value());
+    assert(branchListIndexesView_.has_value());
+    eventSelectionIDsView_->BindRawPtr(&eventSelectionIDs);
+    eventTree_.fillEntry(*eventSelectionIDsView_);
+    branchListIndexesView_->BindRawPtr(&branchListIndexes);
+    eventTree_.fillEntry(*branchListIndexesView_);
+
     if (daqProvenanceHelper_) {
       evtAux.setProcessHistoryID(daqProvenanceHelper_->mapProcessHistoryID(evtAux.processHistoryID()));
     }
@@ -1673,56 +1649,9 @@ namespace edm::rntuple_temp {
       ProductDescription const& prod = product.second;
       if (inputType != InputType::Primary && prod.branchType() == InProcess) {
         markBranchToBeDropped(dropDescendants, prod, branchesToDrop, droppedToKeptAlias);
-      } else if (prod.unwrappedType() == typeid(ThinnedAssociation) && prod.present()) {
-        // Special handling for ThinnedAssociations
-        if (inputType != InputType::SecondarySource) {
-          associationDescriptions.push_back(&prod);
-        } else {
-          markBranchToBeDropped(dropDescendants, prod, branchesToDrop, droppedToKeptAlias);
-        }
       } else if (!productSelector.selected(prod)) {
         markBranchToBeDropped(dropDescendants, prod, branchesToDrop, droppedToKeptAlias);
       }
-    }
-
-    if (inputType != InputType::SecondarySource) {
-      // Decide whether to keep the thinned associations and corresponding
-      // entries in the helper. For secondary source they are all dropped,
-      // but in other cases we look for thinned collections the associations
-      // redirect a Ref or Ptr to when dereferencing them.
-
-      // Need a list of kept products in order to determine which thinned associations
-      // are kept.
-      std::set<BranchID> keptProductsInEvent;
-      for (auto const& product : prodList) {
-        ProductDescription const& prod = product.second;
-        if (branchesToDrop.find(prod.branchID()) == branchesToDrop.end() && prod.present() &&
-            prod.branchType() == InEvent) {
-          keptProductsInEvent.insert(prod.branchID());
-        }
-      }
-
-      // Decide which ThinnedAssociations to keep and store the decision in keepAssociation
-      std::map<BranchID, bool> keepAssociation;
-      fileThinnedAssociationsHelper_->selectAssociationProducts(
-          associationDescriptions, keptProductsInEvent, keepAssociation);
-
-      for (auto association : associationDescriptions) {
-        if (!keepAssociation[association->branchID()]) {
-          markBranchToBeDropped(dropDescendants, *association, branchesToDrop, droppedToKeptAlias);
-        }
-      }
-
-      // Also delete the dropped associations from the ThinnedAssociationsHelper
-      auto temp = std::make_unique<ThinnedAssociationsHelper>();
-      for (auto const& associationBranches : fileThinnedAssociationsHelper_->data()) {
-        auto iter = keepAssociation.find(associationBranches.association());
-        if (iter != keepAssociation.end() && iter->second) {
-          temp->addAssociation(associationBranches);
-        }
-      }
-      // propagate_const<T> has no reset() function
-      fileThinnedAssociationsHelper_ = std::unique_ptr<ThinnedAssociationsHelper>(temp.release());
     }
 
     // On this pass, actually drop the branches.
@@ -1733,8 +1662,7 @@ namespace edm::rntuple_temp {
       bool drop = branchesToDrop.find(prod.branchID()) != branchesToDropEnd;
       if (drop) {
         if (!prod.dropped()) {
-          if (productSelector.selected(prod) && prod.unwrappedType() != typeid(ThinnedAssociation) &&
-              prod.branchType() != InProcess) {
+          if (productSelector.selected(prod) && prod.branchType() != InProcess) {
             LogWarning("RootFile") << "Branch '" << prod.branchName() << "' is being dropped from the input\n"
                                    << "of file '" << file_ << "' because it is dependent on a branch\n"
                                    << "that was explicitly dropped.\n";
@@ -1865,9 +1793,8 @@ namespace edm::rntuple_temp {
   }
 
   std::unique_ptr<MakeProvenanceReader> RootFile::makeProvenanceReaderMaker(InputType inputType) {
-    //if (fileFormatVersion_.storedProductProvenanceUsed()) {
     readParentageTree(inputType);
-    return std::make_unique<MakeReducedProvenanceReader>(parentageIDLookup_);
+    return std::make_unique<MakeReducedProvenanceReader>(parentageIDLookup_, *productProvenanceView_);
   }
 
   std::shared_ptr<ProductProvenanceRetriever> RootFile::makeProductProvenanceRetriever(unsigned int iStreamID) {
@@ -1886,6 +1813,7 @@ namespace edm::rntuple_temp {
   class ReducedProvenanceReader : public ProvenanceReaderBase {
   public:
     ReducedProvenanceReader(RootRNTuple* iRootRNTuple,
+                            ROOT::RNTupleView<void>* iProductProvenanceView,
                             std::vector<ParentageID> const& iParentageIDLookup,
                             DaqProvenanceHelper const* daqProvenanceHelper);
 
@@ -1900,9 +1828,8 @@ namespace edm::rntuple_temp {
                              std::atomic<const std::set<ProductProvenance>*>& writeTo) const noexcept override;
 
     edm::propagate_const<RootRNTuple*> rootTree_;
-    ROOT::DescriptorId_t provID_;
+    edm::propagate_const<ROOT::RNTupleView<void>*> provView_;
     StoredProductProvenanceVector provVector_;
-    StoredProductProvenanceVector const* pProvVector_;
     std::vector<ParentageID> const& parentageIDLookup_;
     DaqProvenanceHelper const* daqProvenanceHelper_;
     std::shared_ptr<std::recursive_mutex> mutex_;
@@ -1910,12 +1837,12 @@ namespace edm::rntuple_temp {
   };
 
   ReducedProvenanceReader::ReducedProvenanceReader(RootRNTuple* iRootRNTuple,
+                                                   ROOT::RNTupleView<void>* iProductProvenanceView,
                                                    std::vector<ParentageID> const& iParentageIDLookup,
                                                    DaqProvenanceHelper const* daqProvenanceHelper)
       : ProvenanceReaderBase(),
         rootTree_(iRootRNTuple),
-        provID_(rootTree_->descriptorFor(BranchTypeToProductProvenanceBranchName(rootTree_->branchType()))),
-        pProvVector_(&provVector_),
+        provView_(iProductProvenanceView),
         parentageIDLookup_(iParentageIDLookup),
         daqProvenanceHelper_(daqProvenanceHelper),
         mutex_(SharedResourcesRegistry::instance()->createAcquirerForSourceDelayedReader().second),
@@ -1999,14 +1926,14 @@ namespace edm::rntuple_temp {
   //
   void ReducedProvenanceReader::unsafe_fillProvenance(unsigned int transitionIndex) const {
     ReducedProvenanceReader* me = const_cast<ReducedProvenanceReader*>(this);
-    me->rootTree_->fillEntry(me->provID_, me->rootTree_->entryNumberForIndex(transitionIndex), &me->provVector_);
+    me->rootTree_->fillEntry(*(me->provView_), me->rootTree_->entryNumberForIndex(transitionIndex), &me->provVector_);
   }
 
   std::set<ProductProvenance> ReducedProvenanceReader::readProvenance(unsigned int transitionIndex) const {
     if (provVector_.empty()) {
       std::lock_guard<std::recursive_mutex> guard(*mutex_);
       ReducedProvenanceReader* me = const_cast<ReducedProvenanceReader*>(this);
-      me->rootTree_->fillEntry(me->provID_, me->rootTree_->entryNumberForIndex(transitionIndex), &me->provVector_);
+      me->rootTree_->fillEntry(*(me->provView_), me->rootTree_->entryNumberForIndex(transitionIndex), &me->provVector_);
     }
     std::set<ProductProvenance> retValue;
     if (daqProvenanceHelper_) {
@@ -2036,6 +1963,7 @@ namespace edm::rntuple_temp {
 
   std::unique_ptr<ProvenanceReaderBase> MakeReducedProvenanceReader::makeReader(
       RootRNTuple& rootTree, DaqProvenanceHelper const* daqProvenanceHelper) const {
-    return std::make_unique<ReducedProvenanceReader>(&rootTree, parentageIDLookup_, daqProvenanceHelper);
+    return std::make_unique<ReducedProvenanceReader>(
+        &rootTree, &productProvenanceView_, parentageIDLookup_, daqProvenanceHelper);
   }
 }  // namespace edm::rntuple_temp

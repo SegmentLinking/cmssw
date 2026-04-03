@@ -7,7 +7,7 @@
 // MPI headers
 #include <mpi.h>
 
-/* register the MPI message types forthe EDM communication
+/* register the MPI message types for the EDM communication
  */
 void EDM_MPI_build_types();
 
@@ -102,6 +102,7 @@ struct EDM_MPI_EventAuxiliary_t : public EDM_MPI_Header_t {
   uint32_t run;               // edm::RunNumber_t
   uint32_t lumi;              // edm::LuminosityBlockNumber_t
   uint32_t event;             // edm::EventNumber_t
+  uint32_t streamId;          // edm::StreamID
 };
 
 // corresponding MPI type

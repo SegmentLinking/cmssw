@@ -310,6 +310,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           dvgi.xx() = 0;
           dvgi.yy() = 0;
           dvgi.adc() = 0;
+          dvgi.rawADC() = 0;
 
           // initialise the errors
           err[gIndex].pixelErrors() = SiPixelErrorCompact{0, 0, 0, 0};
@@ -421,6 +422,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           dvgi.xx() = globalPix.row;  // origin shifting by 1 0-159
           dvgi.yy() = globalPix.col;  // origin shifting by 1 0-415
           dvgi.adc() = sipixelconstants::getADC(ww);
+          dvgi.rawADC() = dvgi.adc();
           dvgi.pdigi() = ::pixelDetails::pack(globalPix.row, globalPix.col, dvgi.adc());
           dvgi.moduleId() = detId.moduleId;
           dvgi.rawIdArr() = rawId;
@@ -463,11 +465,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "decoding " << wordCounter << " digis." << std::endl;
 #endif
       constexpr int numberOfModules = TrackerTraits::numberOfModules;
-      digis_d = SiPixelDigisSoACollection(wordCounter, queue);
+      digis_d = SiPixelDigisSoACollection(queue, wordCounter);
       if (includeErrors) {
-        digiErrors_d = SiPixelDigiErrorsSoACollection(wordCounter, queue);
+        digiErrors_d = SiPixelDigiErrorsSoACollection(queue, wordCounter);
       }
-      clusters_d = SiPixelClustersSoACollection(numberOfModules, queue);
+      clusters_d = SiPixelClustersSoACollection(queue, numberOfModules);
       // protect in case of empty event....
       if (wordCounter) {
         const int threadsPerBlockOrElementsPerThread =
@@ -577,7 +579,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           const auto workDivFindClus = cms::alpakatools::make_workdiv<Acc1D>(blocks, elementsPerBlockFindClus);
 
           // allocate a transient collection for the fake pixels recovered by the digi morphing algorithm
-          auto fakes_d = SiPixelDigisSoACollection(blocks * digiMorphingConfig.maxFakesInModule, queue);
+          auto fakes_d = SiPixelDigisSoACollection(queue, blocks * digiMorphingConfig.maxFakesInModule);
 #ifdef GPU_DEBUG
           alpaka::wait(queue);
           std::cout << "FindClus kernel launch with " << blocks << " blocks of " << elementsPerBlockFindClus
@@ -667,7 +669,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       using pixelTopology::Phase2;
       nDigis = numDigis;
       constexpr int numberOfModules = pixelTopology::Phase2::numberOfModules;
-      clusters_d = SiPixelClustersSoACollection(numberOfModules, queue);
+      clusters_d = SiPixelClustersSoACollection(queue, numberOfModules);
       const auto threadsPerBlockOrElementsPerThread = 512;
       const auto blocks =
           cms::alpakatools::divide_up_by(std::max<int>(numDigis, numberOfModules), threadsPerBlockOrElementsPerThread);
@@ -695,7 +697,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cout << "FindClus kernel launch with " << numberOfModules << " blocks of " << elementsPerBlockFindClus
                 << " threadsPerBlockOrElementsPerThread\n";
 #endif
-      auto unused = SiPixelDigisSoACollection(0, queue);
+      auto unused = SiPixelDigisSoACollection(queue, 0);
 
       alpaka::exec<Acc1D>(queue,
                           workDivMaxNumModules,

@@ -27,27 +27,27 @@ options.register('fileIn',
                  "D120E.txt",
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
-                  "geometry of operations: D120E.txt, D120H.txt, D122E.txt, D122H.txt")
+                  "Input File name: D120E.txt, D120H.txt, D122E.txt, D122H.txt")
 options.register('fileOut',
                  "",
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
-                  "geometry of operations: '', 'D120E.out', 'D120H.out', 'D122E.out', 'D122H.out'")
+                  "Outout File name: D120E.out, D120H.out, D122E.out, D122H.out")
 options.register('detector',
                  "HGCalEESensitive",
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
-                  "geometry of operations: HGCalEESensitive, HGCalHESiliconSensitive")
+                  "detector name: HGCalEESensitive, HGCalHESiliconSensitive")
 options.register('outMode',
                  0,
                  VarParsing.VarParsing.multiplicity.singleton,
                  VarParsing.VarParsing.varType.float,
-                 "Resolution for checking overlaps: 0, 1")
+                 "Output mode: 0, 1")
 options.register('cog',
                  0,
                  VarParsing.VarParsing.multiplicity.singleton,
                  VarParsing.VarParsing.varType.float,
-                 "Resolution for checking overlaps: 0, 10")
+                 "Use of cell center: 0, 10")
 
 ### get and parse the command line arguments
 options.parseArguments()
