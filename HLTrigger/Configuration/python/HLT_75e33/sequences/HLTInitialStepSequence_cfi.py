@@ -2,7 +2,6 @@ import FWCore.ParameterSet.Config as cms
 
 from ..modules.hltInputLST_cfi import *
 from ..modules.hltInitialStepMkFitSeeds_cfi import *
-from ..modules.hltInitialStepSeedTracksLST_cfi import *
 from ..modules.hltInitialStepSeeds_cfi import *
 from ..modules.hltInitialStepTrackCandidates_cfi import *
 from ..modules.hltInitialStepTrackCandidatesMkFit_cfi import *
@@ -15,7 +14,6 @@ from ..sequences.HLTMkFitInputSequence_cfi import *
 
 HLTInitialStepSequence = cms.Sequence(
      hltInitialStepSeeds
-    +hltInitialStepSeedTracksLST
     +hltInputLST
     +hltLST
     +hltInitialStepTrajectorySeedsLST
@@ -32,7 +30,6 @@ HLTInitialStepSequence = cms.Sequence(
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
     HLTInitialStepSequence.copyAndExclude([
-        hltInitialStepSeedTracksLST,
         hltInputLST,
         hltLST,
         hltInitialStepTrajectorySeedsLST,
@@ -45,7 +42,6 @@ hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
 
 _HLTInitialStepSequenceLST = cms.Sequence(
     hltInitialStepSeeds
-    +hltInitialStepSeedTracksLST
     +hltInputLST
     +hltLST
     +hltInitialStepTrackCandidates
@@ -61,7 +57,6 @@ trackingLST.toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST)
 from ..modules.hltInitialStepTracksT4T5TCLST_cfi import *
 _HLTInitialStepSequenceNGTScouting = cms.Sequence(
     hltInitialStepSeeds
-    +hltInitialStepSeedTracksLST
     +hltInputLST
     +hltLST
     +hltInitialStepTrackCandidates
@@ -75,7 +70,6 @@ ngtScouting.toReplaceWith(HLTInitialStepSequence,_HLTInitialStepSequenceNGTScout
 from ..modules.hltInitialStepTrackCandidatesMkFitFit_cfi import *
 _HLTInitialStepSequenceMkFitFit = cms.Sequence(
     hltInitialStepSeeds
-    +hltInitialStepSeedTracksLST
     +hltInputLST
     +hltLST
     +hltInitialStepTrajectorySeedsLST
