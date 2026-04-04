@@ -131,9 +131,32 @@ void SeedGeneratorFromProtoTracksEDProducer::produce(edm::Event& ev, const edm::
       continue;
 
     if (useProtoTrackKinematics) {
-      SeedFromProtoTrack seedFromProtoTrack(config_, proto, es);
-      if (seedFromProtoTrack.isValid())
-        (*result).push_back(seedFromProtoTrack.trajectorySeed());
+      if (removeOTRechits_) {
+        std::vector<Hit> hits;
+        for (unsigned int iHit = 0, nHits = proto.recHitsSize(); iHit < nHits; ++iHit) {
+          TrackingRecHitRef refHit = proto.recHit(iHit);
+          if (refHit->isValid())
+            hits.push_back((Hit)&(*refHit));
+        }
+        sort(hits.begin(), hits.end(), HitLessByRadius());
+        hits.erase(std::remove_if(hits.begin(),
+                                  hits.end(),
+                                  [](const Hit& hit) {
+                                    unsigned int subdetId = hit->geographicalId().subdetId();
+                                    return subdetId != PixelSubdetector::PixelBarrel &&
+                                           subdetId != PixelSubdetector::PixelEndcap;
+                                  }),
+                   hits.end());
+        if (hits.size() > 2) {
+          SeedFromProtoTrack seedFromProtoTrack(config_, proto, SeedingHitSet(hits), es);
+          if (seedFromProtoTrack.isValid())
+            (*result).push_back(seedFromProtoTrack.trajectorySeed());
+        }
+      } else {
+        SeedFromProtoTrack seedFromProtoTrack(config_, proto, es);
+        if (seedFromProtoTrack.isValid())
+          (*result).push_back(seedFromProtoTrack.trajectorySeed());
+      }
     } else {
       std::vector<Hit> hits;
       for (unsigned int iHit = 0, nHits = proto.recHitsSize(); iHit < nHits; ++iHit) {
