@@ -174,35 +174,37 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         recHits.push_back(hit.clone());
     }
 
-    // The pixel hits are packed into first kPixelLayerSlots layer slots.
-    for (unsigned int layerSlot = lst::Params_TC::kPixelLayerSlots; layerSlot < lst::Params_TC::kLayers; ++layerSlot) {
-      for (unsigned int hitSlot = 0; hitSlot < lst::Params_TC::kHitsPerLayer; ++hitSlot) {
-        unsigned int hitIdx = lstOutput_view.hitIndices()[i][layerSlot][hitSlot];
-        if (hitIdx == lst::kTCEmptyHitIdx)
-          continue;
-        recHits.push_back(OTHits[hitIdx]->clone());
-      }
-    }
-
-    recHits.sort([](const auto& a, const auto& b) {
-      const auto asub = a.det()->subDetector();
-      const auto bsub = b.det()->subDetector();
-      if (GeomDetEnumerators::isInnerTracker(asub) && GeomDetEnumerators::isOuterTracker(bsub)) {
-        return true;
-      } else if (GeomDetEnumerators::isOuterTracker(asub) && GeomDetEnumerators::isInnerTracker(bsub)) {
-        return false;
-      } else if (asub != bsub) {
-        return asub < bsub;
-      } else {
-        const auto& apos = a.surface();
-        const auto& bpos = b.surface();
-        if (GeomDetEnumerators::isBarrel(asub)) {
-          return apos->rSpan().first < bpos->rSpan().first;
-        } else {
-          return std::abs(apos->zSpan().first) < std::abs(bpos->zSpan().first);
+    if (iType != lst::LSTObjType::pLS) {
+      // The pixel hits are packed into first kPixelLayerSlots layer slots.
+      for (unsigned int layerSlot = lst::Params_TC::kPixelLayerSlots; layerSlot < lst::Params_TC::kLayers; ++layerSlot) {
+        for (unsigned int hitSlot = 0; hitSlot < lst::Params_TC::kHitsPerLayer; ++hitSlot) {
+          unsigned int hitIdx = lstOutput_view.hitIndices()[i][layerSlot][hitSlot];
+          if (hitIdx == lst::kTCEmptyHitIdx)
+            continue;
+          recHits.push_back(OTHits[hitIdx]->clone());
         }
       }
-    });
+
+      recHits.sort([](const auto& a, const auto& b) {
+        const auto asub = a.det()->subDetector();
+        const auto bsub = b.det()->subDetector();
+        if (GeomDetEnumerators::isInnerTracker(asub) && GeomDetEnumerators::isOuterTracker(bsub)) {
+          return true;
+        } else if (GeomDetEnumerators::isOuterTracker(asub) && GeomDetEnumerators::isInnerTracker(bsub)) {
+          return false;
+        } else if (asub != bsub) {
+          return asub < bsub;
+        } else {
+          const auto& apos = a.surface();
+          const auto& bpos = b.surface();
+          if (GeomDetEnumerators::isBarrel(asub)) {
+            return apos->rSpan().first < bpos->rSpan().first;
+          } else {
+            return std::abs(apos->zSpan().first) < std::abs(bpos->zSpan().first);
+          }
+        }
+      });
+    }
 
     seeds.clear();
     if (iType != lst::LSTObjType::pLS) {
