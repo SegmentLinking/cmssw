@@ -58,6 +58,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
 
+  // Small-angle asin approximation: asin(min(x, kSinAlphaMax)) ~ min(x, kSinAlphaMax).
+  // Valid when x < ~0.1 (error < 0.02%). Used in threshold computations throughout LST
+  // where the argument is bounded by geometry (e.g., segment dr, rt * k2Rinv1GeVf / ptCut).
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float fastAsin(TAcc const& acc, float x) {
+    return alpaka::math::min(acc, x, kSinAlphaMax);
+  }
+
   namespace dnn {
 
     // Common constants for both DNNs
