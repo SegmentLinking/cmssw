@@ -242,6 +242,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           unsigned int quintupletModuleIndices_lowmod2 = ranges.quintupletModuleIndices()[lowmod2];
 
+          // Module-level eta pre-check: Q5s within a module cluster in eta (<0.1 spread),
+          // so comparing the first Q5 in each module with 0.3 margin safely skips distant pairs.
+          if (alpaka::math::abs(acc,
+                                __H2F(quintuplets.eta()[quintupletModuleIndices_lowmod1]) -
+                                    __H2F(quintuplets.eta()[quintupletModuleIndices_lowmod2])) > 0.3f)
+            continue;
+
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;
             if (quintuplets.isDup()[ix] & 1)
@@ -290,10 +297,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 const float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
                 if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
+                  break;  // ix is now dup, no need to compare further
                 } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintuplets, (ix < jx ? ix : jx), true);
+                  if (ix < jx)
+                    break;  // ix was marked dup
                 }
               }
             }
