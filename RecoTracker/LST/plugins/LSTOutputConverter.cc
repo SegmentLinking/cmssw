@@ -155,6 +155,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   TrajectorySeedCollection seeds;
   using Hit = SeedingHitSet::ConstRecHitPointer;
   std::vector<Hit> hitsForSeed;
+  GlobalTrackingRegion region;
+  seedCreator_->init(region, iSetup, nullptr);
 
   LogDebug("LSTOutputConverter") << "nTrackCandidates " << nTrackCandidates;
   for (unsigned int i = 0; i < nTrackCandidates; i++) {
@@ -236,8 +238,6 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           hitsForSeed.emplace_back(dynamic_cast<Hit>(&hit));
           n++;
         }
-        GlobalTrackingRegion region;
-        seedCreator_->init(region, iSetup, nullptr);
         seedCreator_->makeSeed(seeds, hitsForSeed);
         if (seeds.empty()) {
           edm::LogInfo("LSTOutputConverter") << "failed to convert a LST object to a seed" << i << " " << iType << " "
