@@ -453,9 +453,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     rtOut = mds.anchorRt()[outerMDIndex];
 
     const float sdSlopeSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
-    float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
-    // Exact: tan(asin(s))/asin(s) = s/(asin(s)*sqrt(1-s^2)), eliminates tan call
-    float dzDrtScale = sdSlopeSin / (sdSlope * alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin));
+    const float sdSlopeCos = alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin);
+    // 1/cos(asin(s)) >= tan(asin(s))/asin(s): strictly wider z-window, defers asin past the z cut
+    const float dzDrtScale = 1.f / sdSlopeCos;
 
     const float zGeom = innerMod.layer <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
@@ -466,6 +466,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if ((zOut < zLo) || (zOut > zHi))
       return false;
 
+    const float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
     const float sdPVoff = 0.1f / rtOut;
     const float sdMulsAndPVoff = alpaka::math::sqrt(acc, innerMod.sdMuls * innerMod.sdMuls + sdPVoff * sdPVoff);
     const float sdCut = sdSlope + sdMulsAndPVoff;
@@ -562,6 +563,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     bool outerLayerEndcapTwoS = (outerMod.subdet == Endcap) && (outerMod.moduleType == TwoS);
 
     const float sdSlopeSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    const float sdSlopeCos = alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin);
     float rtGeom = ((rtIn < kDisks2SMinRadius && rtOut < kDisks2SMinRadius)
                         ? (2.f * kPixelPSZpitch)
                         : ((rtIn < kDisks2SMinRadius || rtOut < kDisks2SMinRadius) ? (kPixelPSZpitch + kStrip2SZpitch)
@@ -573,9 +575,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dz = zOut - zIn;
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
-    // Exact: asin(s)/tan(asin(s)) = asin(s)*sqrt(1-s^2)/s, eliminates tan call
-    float drtDzScale = sdSlope * alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin) / sdSlopeSin;
+    // cos(asin(s)) <= asin(s)*cos(asin(s))/s: strictly wider rt-window, defers asin past the rt cut
+    const float drtDzScale = sdSlopeCos;
 
     //rt should increase
     rtLo = alpaka::math::max(acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);
@@ -585,6 +586,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Completeness
     if ((rtOut < rtLo) || (rtOut > rtHi))
       return false;
+
+    float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
 
     if (!passDeltaPhiCutsEndcap(
             acc, mds, innerMDIndex, outerMDIndex, xIn, yIn, xOut, yOut, rtIn, rtOut, sdSlopeSin, dPhi, sdSlope))
