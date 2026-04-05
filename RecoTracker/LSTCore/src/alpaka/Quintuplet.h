@@ -792,9 +792,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              float lIn) {
     if (lIn == 0) {
       betaOut += alpaka::math::copysign(
-          acc,
-          clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
-          betaOut);
+          acc, clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)), betaOut);
       return;
     }
 
@@ -805,30 +803,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     {
       const float betaInUpd =
           betaIn +
-          alpaka::math::copysign(
-              acc,
-              clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
-              betaIn);  //FIXME: need a faster version
+          alpaka::math::copysign(acc,
+                                 clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
+                                 betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
-          betaOut +
-          alpaka::math::copysign(
-              acc,
-              clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
-              betaOut);
+          betaOut + alpaka::math::copysign(
+                        acc, clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)), betaOut);
       betaAv = 0.5f * (betaInUpd + betaOutUpd);
 
       //1st update
       const float pt_beta_inv =
           1.f / alpaka::math::abs(acc, dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaAv));  //get a better pt estimate
 
-      betaIn += alpaka::math::copysign(
-          acc,
-          clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf * pt_beta_inv),
-          betaIn);  //FIXME: need a faster version
-      betaOut += alpaka::math::copysign(
-          acc,
-          clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf * pt_beta_inv),
-          betaOut);  //FIXME: need a faster version
+      betaIn += alpaka::math::copysign(acc,
+                                       clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf * pt_beta_inv),
+                                       betaIn);  //FIXME: need a faster version
+      betaOut += alpaka::math::copysign(acc,
+                                        clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf * pt_beta_inv),
+                                        betaOut);  //FIXME: need a faster version
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
       //2nd update
@@ -840,16 +832,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
       const float betaInUpd =
           betaIn +
-          alpaka::math::copysign(
-              acc,
-              clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn)),
-              betaIn);  //FIXME: need a faster version
+          alpaka::math::copysign(acc,
+                                 clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn)),
+                                 betaIn);  //FIXME: need a faster version
       const float betaOutUpd =
           betaOut +
-          alpaka::math::copysign(
-              acc,
-              clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn)),
-              betaIn);  //FIXME: need a faster version
+          alpaka::math::copysign(acc,
+                                 clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_betaIn)),
+                                 betaIn);  //FIXME: need a faster version
       betaAv = (alpaka::math::abs(acc, betaOut) > 0.2f * alpaka::math::abs(acc, betaIn))
                    ? (0.5f * (betaInUpd + betaOutUpd))
                    : betaInUpd;
@@ -857,13 +847,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       //1st update
       pt_beta = dr * k2Rinv1GeVf / alpaka::math::sin(acc, betaAv);  //get a better pt estimate
       betaIn += alpaka::math::copysign(
-          acc,
-          clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
-          betaIn);
-      betaOut += alpaka::math::copysign(
-          acc,
-          clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
-          betaIn);  //FIXME: need a faster version
+          acc, clampedApproxSin(acc, sdIn_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)), betaIn);
+      betaOut += alpaka::math::copysign(acc,
+                                        clampedApproxSin(acc, sdOut_dr * k2Rinv1GeVf / alpaka::math::abs(acc, pt_beta)),
+                                        betaIn);  //FIXME: need a faster version
       //update the av and pt
       betaAv = 0.5f * (betaIn + betaOut);
       //2nd update
@@ -1014,13 +1001,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_InLo),
-                          clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_OutLo),
-                          clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
+        alpaka::math::max(acc, alpaka::math::abs(acc, alpha_InLo), clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, alpha_OutLo), clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1180,13 +1163,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdIn_alpha),
-                          clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdOut_alpha),
-                          clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
+        alpaka::math::max(acc, alpaka::math::abs(acc, sdIn_alpha), clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdOut_alpha), clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1325,13 +1304,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_maxPtBeta * min_ptBeta_maxPtBeta);
 
     const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdIn_alpha),
-                          clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, sdOut_alpha),
-                          clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
+        alpaka::math::max(acc, alpaka::math::abs(acc, sdIn_alpha), clampedApproxSin(acc, rt_InLo * k2Rinv1GeVf / 3.0f));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, sdOut_alpha), clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InLo);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);

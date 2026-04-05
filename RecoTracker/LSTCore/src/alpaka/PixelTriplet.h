@@ -879,8 +879,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ptSLo = alpaka::math::max(acc, ptCut, ptSLo - 10.0f * alpaka::math::max(acc, ptErr, 0.005f * ptSLo));
     ptSLo = alpaka::math::min(acc, 10.0f, ptSLo);
 
-    float alpha1GeV_OutLo =
-        clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / ptCut);
+    float alpha1GeV_OutLo = clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / ptCut);
     const float rtRatio_OutLoInOut =
         rt_OutLo / rt_InOut;  // Outer segment beginning rt divided by inner segment beginning rt;
 
@@ -1038,13 +1037,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, alpaka::math::abs(acc, pt_beta), kPt_betaMax);  //need to confirm the range-out value of 7 GeV
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_ptBetaMax * min_ptBeta_ptBetaMax);
     const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_InLo),
-                          clampedApproxSin(acc, rt_InUp * k2Rinv1GeVf / 3.0f));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_OutLo),
-                          clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
+        alpaka::math::max(acc, alpaka::math::abs(acc, alpha_InLo), clampedApproxSin(acc, rt_InUp * k2Rinv1GeVf / 3.0f));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, alpha_OutLo), clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InUp);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1067,8 +1062,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaROut2 = dBetaROut * dBetaROut;
 
     //FIXME: need faster version
-    betaOutCut = clampedApproxSin(acc, drt_tl_axis * k2Rinv1GeVf / ptCut) +
-                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
+    betaOutCut = clampedApproxSin(acc, drt_tl_axis * k2Rinv1GeVf / ptCut) + (0.02f / sdOut_d) +
+                 alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
     if (alpaka::math::abs(acc, betaOut) >= betaOutCut)
@@ -1185,8 +1180,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if ((rt_OutLo < rtLo_point) || (rt_OutLo > rtHi_point))
       return false;
 
-    const float alpha1GeV_OutLo =
-        clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / ptCut);
+    const float alpha1GeV_OutLo = clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / ptCut);
     const float pvOffset = 0.1f / rt_OutLo;
     dPhiCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, muls2 + pvOffset * pvOffset);
 
@@ -1293,13 +1287,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaMuls2 = thetaMuls2 * 16.f / (min_ptBeta_ptBetaMax * min_ptBeta_ptBetaMax);
 
     const float alphaInAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_InLo),
-                          clampedApproxSin(acc, rt_InUp * k2Rinv1GeVf / 3.0f));
-    const float alphaOutAbsReg =
-        alpaka::math::max(acc,
-                          alpaka::math::abs(acc, alpha_OutLo),
-                          clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
+        alpaka::math::max(acc, alpaka::math::abs(acc, alpha_InLo), clampedApproxSin(acc, rt_InUp * k2Rinv1GeVf / 3.0f));
+    const float alphaOutAbsReg = alpaka::math::max(
+        acc, alpaka::math::abs(acc, alpha_OutLo), clampedApproxSin(acc, rt_OutLo * k2Rinv1GeVf / 3.0f));
     const float dBetaInLum = lIn < 11 ? 0.0f : alpaka::math::abs(acc, alphaInAbsReg * kDeltaZLum / z_InUp);
     const float dBetaOutLum = lOut < 11 ? 0.0f : alpaka::math::abs(acc, alphaOutAbsReg * kDeltaZLum / z_OutLo);
     const float dBetaLum2 = (dBetaInLum + dBetaOutLum) * (dBetaInLum + dBetaOutLum);
@@ -1322,8 +1312,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dBetaROut2 = dBetaROut * dBetaROut;
 
     //FIXME: need faster version
-    betaOutCut = clampedApproxSin(acc, drt_tl_axis * k2Rinv1GeVf / ptCut) +
-                 (0.02f / sdOut_d) + alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
+    betaOutCut = clampedApproxSin(acc, drt_tl_axis * k2Rinv1GeVf / ptCut) + (0.02f / sdOut_d) +
+                 alpaka::math::sqrt(acc, dBetaLum2 + dBetaMuls2);
 
     //Cut #6: The real beta cut
     if (alpaka::math::abs(acc, betaOut) >= betaOutCut)

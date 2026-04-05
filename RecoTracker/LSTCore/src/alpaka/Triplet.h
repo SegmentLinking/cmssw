@@ -394,9 +394,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dy = y3 - innerSegData.y1;
     const float drt_tl_axis = alpaka::math::sqrt(acc, dx * dx + dy * dy);
 
-    const float betaInCut =
-        clampedApproxSin(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) +
-        (0.02f / innerSegData.drt_InSeg);
+    const float betaInCut = clampedApproxSin(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) +
+                            (0.02f / innerSegData.drt_InSeg);
 
     // Algebraic betaIn check, avoiding per-candidate atan2.
     // betaIn = sdIn_alpha - atan2(cross, dot), where cross/dot are the 2D cross/dot
