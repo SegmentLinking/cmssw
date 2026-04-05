@@ -40,6 +40,8 @@ private:
   const edm::EDGetTokenT<TrajectorySeedCollection> lstPixelSeedToken_;
   const bool includeT5s_;
   const bool includeNonpLSTSs_;
+  const bool produceSeeds_;
+  const bool produceTrackCandidates_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorAlongToken_;
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
@@ -66,6 +68,8 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       lstPixelSeedToken_{consumes(iConfig.getParameter<edm::InputTag>("lstPixelSeeds"))},
       includeT5s_(iConfig.getParameter<bool>("includeT5s")),
       includeNonpLSTSs_(iConfig.getParameter<bool>("includeNonpLSTSs")),
+      produceSeeds_(iConfig.getParameter<bool>("produceSeeds")),
+      produceTrackCandidates_(iConfig.getParameter<bool>("produceTrackCandidates")),
       mfToken_(esConsumes()),
       propagatorAlongToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
       propagatorOppositeToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
@@ -101,6 +105,8 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.add<edm::InputTag>("lstPixelSeeds", edm::InputTag("lstInputProducer"));
   desc.add<bool>("includeT5s", true);
   desc.add<bool>("includeNonpLSTSs", false);
+  desc.add<bool>("produceSeeds", true);
+  desc.add<bool>("produceTrackCandidates", true);
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
   desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
 
@@ -197,9 +203,12 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
 
     TrajectorySeedCollection seeds;
     if (iType != lst::LSTObjType::pLS) {
-      // Construct a full-length TrajectorySeed always for T5s,
-      // only when required by a flag for other pT objects.
-      if (includeNonpLSTSs_ || (iType == lst::LSTObjType::T5 || iType == lst::LSTObjType::T4)) {
+      // For T5/T4: makeSeed is needed whenever seeds or TCs are produced, since the resulting
+      // seed is the only source of initial state for T5/T4 track candidates.
+      // For other pT objects: makeSeed is only needed for seed output.
+      bool const isT5orT4 = (iType == lst::LSTObjType::T5 || iType == lst::LSTObjType::T4);
+      if ((isT5orT4 && (produceSeeds_ || produceTrackCandidates_)) ||
+          (!isT5orT4 && produceSeeds_ && includeNonpLSTSs_)) {
         using Hit = SeedingHitSet::ConstRecHitPointer;
         std::vector<Hit> hitsForSeed;
         hitsForSeed.reserve(recHits.size());
@@ -245,9 +254,14 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
                                        << ss.pt() << " " << ss.parameters().vector() << " " << ss.error(0);
       }
     } else {
-      outputTS.emplace_back(seed);
-      outputpLSTS.emplace_back(seed);
+      if (produceSeeds_) {
+        outputTS.emplace_back(seed);
+        outputpLSTS.emplace_back(seed);
+      }
     }
+
+    if (!produceTrackCandidates_)
+      continue;
 
     TrajectoryStateOnSurface tsos =
         trajectoryStateTransform::transientState(seed.startingState(), (seed.recHits().end() - 1)->surface(), &mf);
