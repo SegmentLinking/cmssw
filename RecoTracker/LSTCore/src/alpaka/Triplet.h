@@ -395,7 +395,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float drt_tl_axis = alpaka::math::sqrt(acc, dx * dx + dy * dy);
 
     const float betaInCut =
-        fastAsin(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) +
+        clampedApproxSin(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) +
         (0.02f / innerSegData.drt_InSeg);
 
     // Algebraic betaIn check, avoiding per-candidate atan2.
@@ -496,9 +496,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                               acc,
                               cms::alpakatools::phi(acc, hitCoords.x3 - hitCoords.x1, hitCoords.y3 - hitCoords.y1) -
                                   mds.anchorPhi()[firstMDIndex]);
-    betaInCut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / drt_InSeg);
+    betaInCut = clampedApproxSin(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) + (0.02f / drt_InSeg);
 
     bool inference =
         lst::t3dnn::runInference(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);

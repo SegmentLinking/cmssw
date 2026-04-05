@@ -145,8 +145,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     //more accurate then outer rt - inner rt
     float segmentDr = alpaka::math::sqrt(acc, (yOut - yIn) * (yOut - yIn) + (xOut - xIn) * (xOut - xIn));
 
-    const float dAlpha_Bfield =
-        alpaka::math::asin(acc, alpaka::math::min(acc, segmentDr * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    const float dAlpha_Bfield = clampedApproxSin(acc, segmentDr * k2Rinv1GeVf / ptCut);
 
     float sdLumForInnerMini2;
     float sdLumForOuterMini2;
