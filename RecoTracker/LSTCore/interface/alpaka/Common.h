@@ -58,6 +58,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f},
       {0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.4f, 0.18f, /*10*/ 0.18f, 0.18f, 0.18f, 0.18f, 0.18f}};
 
+  // Small-angle asin approximation clamped to kSinAlphaMax: asin(x) ~ x for small x.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float clampedApproxSin(TAcc const& acc, float x) {
+    return alpaka::math::min(acc, x, kSinAlphaMax);
+  }
+
+  // Small-angle sin approximation: sin(x) ~ x for x after tight angular cuts.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float fastSin(float x) { return x; }
+
+  // Small-angle Pade approximant of tan(x)/x.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float fastTanOverX(float x) { return 1.f + x * x / 3.f; }
+
   namespace dnn {
 
     // Common constants for both DNNs

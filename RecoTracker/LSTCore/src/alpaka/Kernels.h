@@ -222,6 +222,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   struct RemoveDupQuintupletsBeforeTC {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  ModulesConst modules,
                                   Quintuplets quintuplets,
                                   QuintupletsOccupancyConst quintupletsOccupancy,
                                   ObjectRangesConst ranges) const {
@@ -241,6 +242,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           unsigned int quintupletModuleIndices_lowmod2 = ranges.quintupletModuleIndices()[lowmod2];
+
+          // Module-level eta/phi pre-check: skip module pairs that are too far apart.
+          if (alpaka::math::abs(acc, modules.eta()[lowmod1] - modules.eta()[lowmod2]) > 0.3f)
+            continue;
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, modules.phi()[lowmod1], modules.phi()[lowmod2])) >
+              0.5f)
+            continue;
 
           for (unsigned int ix1 = 0; ix1 < nQuintuplets_lowmod1; ix1 += 1) {
             unsigned int ix = quintupletModuleIndices_lowmod1 + ix1;
@@ -290,10 +298,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 const float score_rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
                 if (isPT5_jx || score_rphisum1 > score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, ix, true);
+                  break;  // ix is now dup, no need to compare further
                 } else if (isPT5_ix || score_rphisum1 < score_rphisum2) {
                   rmQuintupletFromMemory(quintuplets, jx, true);
                 } else {
                   rmQuintupletFromMemory(quintuplets, (ix < jx ? ix : jx), true);
+                  if (ix < jx)
+                    break;  // ix was marked dup
                 }
               }
             }
@@ -352,6 +363,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   struct RemoveDupQuadrupletsBeforeTC {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  ModulesConst modules,
                                   Quadruplets quadruplets,
                                   QuadrupletsOccupancyConst quadrupletsOccupancy,
                                   ObjectRangesConst ranges) const {
@@ -368,6 +380,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           uint16_t lowmod2 = ranges.indicesOfEligibleT4Modules()[lowmodIdx2];
           unsigned int nQuadruplets_lowmod2 = quadrupletsOccupancy.nQuadruplets()[lowmod2];
           if (nQuadruplets_lowmod2 == 0)
+            continue;
+
+          // Module-level eta/phi pre-check: skip module pairs that are too far apart.
+          if (alpaka::math::abs(acc, modules.eta()[lowmod1] - modules.eta()[lowmod2]) > 0.3f)
+            continue;
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, modules.phi()[lowmod1], modules.phi()[lowmod2])) >
+              0.5f)
             continue;
 
           unsigned int quadrupletModuleIndices_lowmod2 = ranges.quadrupletModuleIndices()[lowmod2];

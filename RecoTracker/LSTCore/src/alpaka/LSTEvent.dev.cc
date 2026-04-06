@@ -531,6 +531,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   alpaka::exec<Acc2D>(queue_,
                       removeDupQuintupletsBeforeTC_workDiv,
                       RemoveDupQuintupletsBeforeTC{},
+                      modules_.const_view().modules(),
                       quintupletsDC_->view().quintuplets(),
                       quintupletsDC_->view().quintupletsOccupancy(),
                       rangesDC_->const_view());
@@ -562,6 +563,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   alpaka::exec<Acc2D>(queue_,
                       removeDupQuadrupletsBeforeTC_workDiv,
                       RemoveDupQuadrupletsBeforeTC{},
+                      modules_.const_view().modules(),
                       quadrupletsDC_->view().quadruplets(),
                       quadrupletsDC_->view().quadrupletsOccupancy(),
                       rangesDC_->const_view());
