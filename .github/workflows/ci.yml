@@ -64,13 +64,27 @@ jobs:
           fi
           echo "Release: $RELEASE"
           echo "release=$RELEASE" >> $GITHUB_ENV
-          PROCMODIFIERS=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv")
-          # Set to empty if null
-          if [[ -z "$PROCMODIFIERS" || "$PROCMODIFIERS" == "null" ]]; then
-            PROCMODIFIERS=""
+          # First try to get procmodifiers specific to pr and target branches
+          PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.pr | @csv")
+          PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.target | @csv")
+          # If empty or null, try to get general procmodifiers
+          if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
+            PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv")
           fi
-          echo "ProcModifiers: $PROCMODIFIERS"
-          echo "procmodifiers=$PROCMODIFIERS" >> $GITHUB_ENV
+          if [[ -z "$PROCMODIFIERS_TARGET" || "$PROCMODIFIERS_TARGET" == "null" ]]; then
+            PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv")
+          fi
+          # Set to empty if null
+          if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
+            PROCMODIFIERS_PR=""
+          fi
+          if [[ -z "$PROCMODIFIERS_TARGET" || "$PROCMODIFIERS_TARGET" == "null" ]]; then
+            PROCMODIFIERS_TARGET=""
+          fi
+          echo "ProcModifiers (PR): $PROCMODIFIERS_PR"
+          echo "ProcModifiers (Target): $PROCMODIFIERS_TARGET"
+          echo "procmodifiers-pr=$PROCMODIFIERS_PR" >> $GITHUB_ENV
+          echo "procmodifiers-target=$PROCMODIFIERS_TARGET" >> $GITHUB_ENV
           PACKAGES=$(echo "$COMMENT_BODY" | yq -M ".packages | @csv")
           # Set to empty if null
           if [[ -z "$PACKAGES" || "$PACKAGES" == "null" ]]; then
@@ -165,7 +179,8 @@ jobs:
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}',
-                'procmodifiers': '${{ env.procmodifiers }}'
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
               }
             });
       - name: Leave thumbs up if everything went well

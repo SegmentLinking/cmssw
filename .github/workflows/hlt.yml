@@ -30,8 +30,12 @@ on:
         description: Comma-separated list of extra packages to add
         required: false
         type: string
-      procmodifiers:
-        description: Comma-separated list of process modifiers to apply
+      procmodifiers-pr:
+        description: Comma-separated list of process modifiers to apply to the PR branch
+        required: false
+        type: string
+      procmodifiers-target:
+        description: Comma-separated list of process modifiers to apply to the target branch
         required: false
         type: string
 
@@ -54,7 +58,8 @@ jobs:
       low-pt: ${{ inputs.low-pt }}
       release: ${{ inputs.release }}
       packages: ${{ inputs.packages }}
-      procmodifiers: ${{ inputs.procmodifiers }}
+      procmodifiers-pr: ${{ inputs.procmodifiers-pr }}
+      procmodifiers-target: ${{ inputs.procmodifiers-target }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
