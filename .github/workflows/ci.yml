@@ -69,10 +69,10 @@ jobs:
           PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.target | @csv")
           # If empty or null, try to get general procmodifiers
           if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
-            PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv")
+            PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv" 2>/dev/null || echo "")
           fi
           if [[ -z "$PROCMODIFIERS_TARGET" || "$PROCMODIFIERS_TARGET" == "null" ]]; then
-            PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv")
+            PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv" 2>/dev/null || echo "")
           fi
           # Set to empty if null
           if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
