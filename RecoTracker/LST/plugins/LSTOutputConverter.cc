@@ -171,7 +171,14 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         unsigned int hitIdx = lstOutput_view.hitIndices()[i][layerSlot][hitSlot];
         if (hitIdx == lst::kTCEmptyHitIdx)
           continue;
-        recHits.push_back(OTHits[hitIdx]->clone());
+        bool hitOK = true;
+        for (auto const& hit : recHits)
+          if (hit.sharesInput(OTHits[hitIdx], TrackingRecHit::all)) {
+            hitOK = false;
+            break;
+          }
+        if (hitOK)
+          recHits.push_back(OTHits[hitIdx]->clone());
       }
     }
 
