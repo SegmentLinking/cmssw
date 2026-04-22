@@ -9,7 +9,7 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/Event.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EventSetup.h"
-#include "HeterogeneousCore/AlpakaCore/interface/alpaka/stream/EDProducer.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/stream/FixedQueueEDProducer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 #include "PhysicsTools/PyTorchAlpaka/interface/TensorCollection.h"
@@ -17,10 +17,10 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
-  class TrackTorchClassifierAlpaka : public stream::EDProducer<> {
+  class TrackTorchClassifierAlpaka : public stream::FixedQueueEDProducer<> {
   public:
     TrackTorchClassifierAlpaka(const edm::ParameterSet& iConfig)
-        : EDProducer<>(iConfig),
+        : FixedQueueEDProducer<>(iConfig),
           features_token_(consumes(iConfig.getParameter<edm::InputTag>("features"))),
           scores_token_{produces()},
           model_(iConfig.getParameter<edm::FileInPath>("modelPath").fullPath()) {}
