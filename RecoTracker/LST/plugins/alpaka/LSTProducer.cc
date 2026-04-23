@@ -43,7 +43,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& lstESDeviceData = iSetup.getData(lstESToken_);
 
       lst.run(iEvent.queue(),
-              verbose_,
+              true,
               ptCut_,
               clustSizeCut_,
               &lstESDeviceData,

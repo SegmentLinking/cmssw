@@ -12,6 +12,8 @@
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   class LSTModulesDevESProducer : public ESProducer {
@@ -35,8 +37,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     std::unique_ptr<lst::LSTESData<DevHost>> produce(TrackerRecoGeometryRecord const& iRecord) {
-      const auto& lstg = iRecord.get(lstGeoToken_);
-      return lst::fillESDataHost(lstg);
+      // const auto& lstg = iRecord.get(lstGeoToken_);
+      // auto lstESData = lst::fillESDataHost(lstg);
+      // std::cout << "Using LSTGeometry ES product" << std::endl;
+
+      auto ptLabel = lst::floatToStr(ptCut_, 1);
+      auto lstESData = lst::loadAndFillESDataHost(ptLabel);
+      std::cout << "Using LSTESData from file with ptCut " << ptLabel << std::endl;
+      
+      float modulesSize = alpaka::getExtentProduct(lstESData->modules->buffer()) / 1e6;
+      float endcapSize = alpaka::getExtentProduct(lstESData->endcapGeometry->buffer()) / 1e6;
+      std::cout
+          << "LSTESData for ptCut " << ptCut_ << " will use " << (modulesSize + endcapSize) << " MB of VRAM\n"
+          << "(Modules: " << modulesSize << " MB, EndcapGeometry: " << endcapSize << " MB)";
+      
+      return lstESData;
     }
   };
 

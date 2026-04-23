@@ -15,7 +15,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #ifdef LST_STANDALONE
     printf("%s\n", warning.data());
 #else
-    edm::LogWarning("LST") << warning;
+    printf("%s\n", warning.data());
 #endif
   }
 
