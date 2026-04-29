@@ -427,11 +427,12 @@ trackingPhase2PU140.toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_
 
 _HighPtTripletStepTask_LST = HighPtTripletStepTask.copy()
 from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits
+from RecoTracker.LSTGeometry.lstGeometryESProducer_cfi import lstGeometryESProducer
 from RecoTracker.LST.lstSeedTracks_cff import lstInitialStepSeedTracks,lstHighPtTripletStepSeedTracks
 from RecoTracker.LST.lstInputProducer_cfi import lstInputProducer
 from RecoTracker.LST.lstProducerTask_cff import *
 
-_HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstInputProducer,
+_HighPtTripletStepTask_LST.add(siPhase2RecHits, lstInitialStepSeedTracks, lstHighPtTripletStepSeedTracks, lstGeometryESProducer, lstInputProducer,
                                lstProducerTask, highPtTripletStepLSTpTracks, highPtTripletStepLSTT4T5Tracks, highPtTripletStepSelectorLSTT4T5)
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 
