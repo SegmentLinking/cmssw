@@ -9,14 +9,14 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
-#include "RecoTracker/FinalTrackSelectors/interface/TrackFeaturesSoA.h"
+#include "RecoTracker/FinalTrackSelectors/interface/TrackTorchClassifierFeaturesSoA.h"
 
 // This module consumes the HOST copy of the Alpaka device scores
 // The framework automatically creates host copies of device PortableCollections
-class TrackTorchClassifierAlpakaOutput : public edm::stream::EDProducer<> {
+class TrackTorchClassifierFromSoA : public edm::stream::EDProducer<> {
 public:
-  explicit TrackTorchClassifierAlpakaOutput(const edm::ParameterSet& iConfig);
-  ~TrackTorchClassifierAlpakaOutput() override = default;
+  explicit TrackTorchClassifierFromSoA(const edm::ParameterSet& iConfig);
+  ~TrackTorchClassifierFromSoA() override = default;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
@@ -24,8 +24,8 @@ private:
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
 
   const edm::EDGetTokenT<reco::TrackCollection> tracks_token_;
-  const edm::EDGetTokenT<PortableHostCollection<TrackScoresSoA>> scores_token_;
-  const edm::EDGetTokenT<PortableHostCollection<TrackFeaturesSoA>> features_token_;
+  const edm::EDGetTokenT<PortableHostCollection<TrackTorchClassifierScoresSoA>> scores_token_;
+  const edm::EDGetTokenT<PortableHostCollection<TrackTorchClassifierFeaturesSoA>> features_token_;
   const float min_score_;
   const float dxy_threshold_;
   const float high_dxy_min_score_;
@@ -34,18 +34,17 @@ private:
   const edm::EDPutTokenT<std::vector<float>> scores_output_token_;
 };
 
-TrackTorchClassifierAlpakaOutput::TrackTorchClassifierAlpakaOutput(const edm::ParameterSet& iConfig)
-    : tracks_token_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("src"))),
-      scores_token_(consumes<PortableHostCollection<TrackScoresSoA>>(iConfig.getParameter<edm::InputTag>("scores"))),
-      features_token_(
-          consumes<PortableHostCollection<TrackFeaturesSoA>>(iConfig.getParameter<edm::InputTag>("features"))),
+TrackTorchClassifierFromSoA::TrackTorchClassifierFromSoA(const edm::ParameterSet& iConfig)
+    : tracks_token_(consumes(iConfig.getParameter<edm::InputTag>("src"))),
+      scores_token_(consumes(iConfig.getParameter<edm::InputTag>("scores"))),
+      features_token_(consumes(iConfig.getParameter<edm::InputTag>("features"))),
       min_score_(iConfig.getParameter<double>("minScore")),
       dxy_threshold_(iConfig.getParameter<double>("dxyThreshold")),
       high_dxy_min_score_(iConfig.getParameter<double>("highDxyMinScore")),
       filtered_tracks_token_(produces<reco::TrackCollection>()),
       scores_output_token_(produces<std::vector<float>>("MVAScores")) {}
 
-void TrackTorchClassifierAlpakaOutput::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+void TrackTorchClassifierFromSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<edm::InputTag>("src", edm::InputTag("hltInitialStepTracks"));
   desc.add<edm::InputTag>("scores", edm::InputTag("hltInitialStepTrackTorchClassifier"));
@@ -56,7 +55,7 @@ void TrackTorchClassifierAlpakaOutput::fillDescriptions(edm::ConfigurationDescri
   descriptions.addWithDefaultLabel(desc);
 }
 
-void TrackTorchClassifierAlpakaOutput::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+void TrackTorchClassifierFromSoA::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const auto& tracks = iEvent.get(tracks_token_);
   const auto& scores_host = iEvent.get(scores_token_);
   const auto& features_host = iEvent.get(features_token_);
@@ -86,4 +85,4 @@ void TrackTorchClassifierAlpakaOutput::produce(edm::Event& iEvent, const edm::Ev
   iEvent.put(scores_output_token_, std::move(all_scores));
 }
 
-DEFINE_FWK_MODULE(TrackTorchClassifierAlpakaOutput);
+DEFINE_FWK_MODULE(TrackTorchClassifierFromSoA);

@@ -5,4 +5,3 @@ trackdnn_source = cms.ESSource("EmptyESSource",
     firstValid = cms.vuint32(1), 
     iovIsRunNotTime = cms.bool(True)
 )
-

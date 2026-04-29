@@ -10,4 +10,4 @@ hltInitialStepTrackSelectionHighPurity = cms.EDProducer("TrackCollectionFilterCl
 )
 
 from Configuration.ProcessModifiers.trackTorchClassifier_cff import trackTorchClassifier
-trackTorchClassifier.toModify(hltInitialStepTrackSelectionHighPurity, originalSource = cms.InputTag("hltInitialStepTrackTorchClassifierOutput"))
+trackTorchClassifier.toModify(hltInitialStepTrackSelectionHighPurity, originalSource = "hltInitialStepTrackTorchClassifierOutput")

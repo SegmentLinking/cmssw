@@ -1,9 +1,9 @@
-#ifndef RecoTracker_FinalTrackSelectors_TrackFeaturesSoA_h
-#define RecoTracker_FinalTrackSelectors_TrackFeaturesSoA_h
+#ifndef RecoTracker_FinalTrackSelectors_TrackTorchClassifierFeaturesSoA_h
+#define RecoTracker_FinalTrackSelectors_TrackTorchClassifierFeaturesSoA_h
 
 #include "DataFormats/SoATemplate/interface/SoALayout.h"
 
-GENERATE_SOA_LAYOUT(TrackFeaturesSoALayout,
+GENERATE_SOA_LAYOUT(TrackTorchClassifierFeaturesSoALayout,
                     SOA_COLUMN(float, dxyBeamSpot),
                     SOA_COLUMN(float, dzBeamSpot),
                     SOA_COLUMN(float, dxyError),
@@ -20,11 +20,11 @@ GENERATE_SOA_LAYOUT(TrackFeaturesSoALayout,
                     SOA_COLUMN(float, validPixelHits),
                     SOA_COLUMN(float, validStripHits))
 
-using TrackFeaturesSoA = TrackFeaturesSoALayout<>;
+using TrackTorchClassifierFeaturesSoA = TrackTorchClassifierFeaturesSoALayout<>;
 
 // Define the SoA layout for track scores (output)
-GENERATE_SOA_LAYOUT(TrackScoresSoALayout, SOA_COLUMN(float, score))
+GENERATE_SOA_LAYOUT(TrackTorchClassifierScoresSoALayout, SOA_COLUMN(float, score))
 
-using TrackScoresSoA = TrackScoresSoALayout<>;
+using TrackTorchClassifierScoresSoA = TrackTorchClassifierScoresSoALayout<>;
 
-#endif  // RecoTracker_FinalTrackSelectors_TrackFeaturesSoA_h
+#endif  // RecoTracker_FinalTrackSelectors_TrackTorchClassifierFeaturesSoA_h

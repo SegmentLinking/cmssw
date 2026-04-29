@@ -3,6 +3,6 @@
 
 #include "DataFormats/Common/interface/Wrapper.h"
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
-#include "RecoTracker/FinalTrackSelectors/interface/TrackFeaturesSoA.h"
+#include "RecoTracker/FinalTrackSelectors/interface/TrackTorchClassifierFeaturesSoA.h"
 
 #endif

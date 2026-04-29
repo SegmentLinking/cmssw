@@ -2,11 +2,11 @@
 #define RecoTracker_FinalTrackSelectors_alpaka_TrackFeaturesDeviceCollection_h
 
 #include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
-#include "RecoTracker/FinalTrackSelectors/interface/TrackFeaturesSoA.h"
+#include "RecoTracker/FinalTrackSelectors/interface/TrackTorchClassifierFeaturesSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-  using TrackFeaturesDeviceCollection = PortableCollection<TrackFeaturesSoA>;
+  using TrackFeaturesDeviceCollection = PortableCollection<TrackTorchClassifierFeaturesSoA>;
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
 
 #endif  // RecoTracker_FinalTrackSelectors_alpaka_TrackFeaturesDeviceCollection_h

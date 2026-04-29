@@ -17,7 +17,7 @@
 
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
 #include "RecoTracker/FinalTrackSelectors/interface/alpaka/TrackFeaturesDeviceCollection.h"
-#include "RecoTracker/FinalTrackSelectors/interface/TrackFeaturesSoA.h"
+#include "RecoTracker/FinalTrackSelectors/interface/TrackTorchClassifierFeaturesSoA.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -25,9 +25,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     TrackFeatureExtractor(const edm::ParameterSet& iConfig)
         : FixedQueueEDProducer<>(iConfig),
-          tracks_token_(consumes<edm::InEvent>(iConfig.getParameter<edm::InputTag>("src"))),
-          beamspot_token_(consumes<edm::InEvent>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
-          features_token_{produces()} {}
+          tracksInput_token_(consumes(iConfig.getParameter<edm::InputTag>("src"))),
+          beamspot_token_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
+          featuresPut_token_{produces()} {}
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
@@ -37,13 +37,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     void produce(device::Event& iEvent, const device::EventSetup& iSetup) override {
-      auto const& tracks = iEvent.get(tracks_token_);
+      auto const& tracks = iEvent.get(tracksInput_token_);
       auto const& beamspot = iEvent.get(beamspot_token_);
 
       const auto nTracks = tracks.size();
 
       // Create HOST collection first, fill it, then copy to device
-      PortableHostCollection<TrackFeaturesSoA> features_host(nTracks);
+      PortableHostCollection<TrackTorchClassifierFeaturesSoA> features_host(nTracks);
 
       auto features_view = features_host.view();
 
@@ -74,14 +74,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       TrackFeaturesDeviceCollection features_device(iEvent.queue(), nTracks);
       alpaka::memcpy(iEvent.queue(), features_device.buffer(), features_host.const_buffer());
 
-      iEvent.emplace(features_token_, std::move(features_device));
+      iEvent.emplace(featuresPut_token_, std::move(features_device));
     }
 
   private:
-    const edm::EDGetTokenT<reco::TrackCollection> tracks_token_;
+    const edm::EDGetTokenT<reco::TrackCollection> tracksInput_token_;
     const edm::EDGetTokenT<reco::BeamSpot> beamspot_token_;
-    const edm::EDGetTokenT<reco::VertexCollection> vertices_token_;
-    const device::EDPutToken<TrackFeaturesDeviceCollection> features_token_;
+    const device::EDPutToken<TrackFeaturesDeviceCollection> featuresPut_token_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

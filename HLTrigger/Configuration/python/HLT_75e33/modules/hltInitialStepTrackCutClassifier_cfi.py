@@ -48,18 +48,8 @@ hltPhase2LegacyTracking.toModify(hltInitialStepTrackCutClassifier,
     mva = dict(passThroughForAll=False, passThroughForDisplaced=False)
 )
 
-trackingLST.toModify(hltInitialStepTrackCutClassifier,
-    mva = dict(passThroughForAll=False, passThroughForDisplaced=True)
-)
-
-
-from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
-hltPhase2LegacyTracking.toModify(hltInitialStepTrackCutClassifier,
-    mva = dict(passThroughForAll=False, passThroughForDisplaced=False)
-)
-
 
 from Configuration.ProcessModifiers.trackTorchClassifier_cff import trackTorchClassifier
 trackTorchClassifier.toModify(hltInitialStepTrackCutClassifier,
-    src = cms.InputTag("hltInitialStepTrackTorchClassifierOutput")
+    src = "hltInitialStepTrackTorchClassifierOutput"
 )

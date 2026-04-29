@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-hltInitialStepTrackTorchClassifierOutput = cms.EDProducer("TrackTorchClassifierAlpakaOutput",
+hltInitialStepTrackTorchClassifierOutput = cms.EDProducer("TrackTorchClassifierFromSoA",
     src = cms.InputTag("hltInitialStepTracks"),
     scores = cms.InputTag("hltInitialStepTrackTorchClassifier"),
     features = cms.InputTag("hltInitialStepTrackFeatureExtractor"),
