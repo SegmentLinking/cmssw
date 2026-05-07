@@ -13,13 +13,12 @@ hltInitialStepSeeds = cms.EDProducer("SeedGeneratorFromProtoTracksEDProducer",
     usePV = cms.bool(False),
     useProtoTrackKinematics = cms.bool(False),
     includeFourthHit = cms.bool(True),
-    removeOTRechits = cms.bool(True)
+    removeOTRechits = cms.bool(False)
 )
 
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 hltPhase2LegacyTracking.toModify(hltInitialStepSeeds,
-    includeFourthHit = False,
-    removeOTRechits = False
+    includeFourthHit = False
 )
 
 from Configuration.ProcessModifiers.phase2_hlt_vertexTrimming_cff import phase2_hlt_vertexTrimming
