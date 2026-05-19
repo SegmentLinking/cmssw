@@ -394,26 +394,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dy = y3 - innerSegData.y1;
     const float drt_tl_axis = alpaka::math::sqrt(acc, dx * dx + dy * dy);
 
-    const float betaInCut =
-        alpaka::math::asin(
-            acc, alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / innerSegData.drt_InSeg);
+    const float betaInCut = clampedApproxSin(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) +
+                            (0.02f / innerSegData.drt_InSeg);
 
     // Algebraic betaIn check, avoiding per-candidate atan2.
-    // betaIn = sdIn_alpha - (phi(dx,dy) - anchorPhi1)
-    //        = sdIn_alpha - atan2(x1*y3 - y1*x3, x1*x3 + y1*y3 - rt1^2)
-    // Let a = sdIn_alpha, b = atan2(cross, dot) where cross and dot are the
-    // 2D cross/dot products of r1 with the (hit1->hit3) displacement, so betaIn = a - b.
-    // Using sin(a-b) = sin(a)*cos(b) - cos(a)*sin(b) with sin(b)=cross/r, cos(b)=dot/r:
-    //   sinBetaIn = (sin(a)*dot - cos(a)*cross) / r,  r = sqrt(cross^2 + dot^2)
-    // sin(a)/cos(a) are precomputed in T3InnerSegData to avoid per-candidate trig.
-    // The cut |betaIn| < betaInCut becomes sinBetaIn^2 < sin(betaInCut)^2 * r^2,
-    // with a cos(betaIn) > 0 sign check (from cos(a-b) identity)
+    // betaIn = sdIn_alpha - atan2(cross, dot), where cross/dot are the 2D cross/dot
+    // products of r1 with the (hit1->hit3) displacement.
+    // |betaIn| < betaInCut becomes sin^2(betaIn) < betaInCut^2 * r^2 (since
+    // betaInCut is small, betaInCut^2 >= sin^2(betaInCut), making this strictly looser).
     const float crossBetaIn = innerSegData.x1 * y3 - innerSegData.y1 * x3;
     const float dotBetaIn = x3 * innerSegData.x1 + y3 * innerSegData.y1 - innerSegData.rt1 * innerSegData.rt1;
     const float r2 = crossBetaIn * crossBetaIn + dotBetaIn * dotBetaIn;
-    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
-    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
+    const float betaInCutSq = betaInCut * betaInCut;
 
     if (innerSegData.innerSubdet == Endcap and innerSegData.middleSubdet == Endcap and outerSubdet == Endcap) {
       // EEE: check both alpha variants, pass if the one with smaller |betaIn| is within cut
@@ -423,16 +415,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       const float sqMax = sinBetaInMax * sinBetaInMax;
 
       if (sqMin <= sqMax) {
-        return sqMin < sinBetaInCutSq * r2 and
+        return sqMin < betaInCutSq * r2 and
                (innerSegData.cos_alphaRHmin * dotBetaIn + innerSegData.sin_alphaRHmin * crossBetaIn > 0.f);
       } else {
-        return sqMax < sinBetaInCutSq * r2 and
+        return sqMax < betaInCutSq * r2 and
                (innerSegData.cos_alphaRHmax * dotBetaIn + innerSegData.sin_alphaRHmax * crossBetaIn > 0.f);
       }
     }
 
     const float sinBetaIn = innerSegData.sin_alpha * dotBetaIn - innerSegData.cos_alpha * crossBetaIn;
-    return sinBetaIn * sinBetaIn < sinBetaInCutSq * r2 and
+    return sinBetaIn * sinBetaIn < betaInCutSq * r2 and
            (innerSegData.cos_alpha * dotBetaIn + innerSegData.sin_alpha * crossBetaIn > 0.f);
   }
 
@@ -503,9 +495,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                               acc,
                               cms::alpakatools::phi(acc, hitCoords.x3 - hitCoords.x1, hitCoords.y3 - hitCoords.y1) -
                                   mds.anchorPhi()[firstMDIndex]);
-    betaInCut =
-        alpaka::math::asin(acc, alpaka::math::min(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / drt_InSeg);
+    betaInCut = clampedApproxSin(acc, (-rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut) + (0.02f / drt_InSeg);
 
     bool inference =
         lst::t3dnn::runInference(acc, mds, firstMDIndex, secondMDIndex, thirdMDIndex, circleRadius, betaIn, t3Scores);
