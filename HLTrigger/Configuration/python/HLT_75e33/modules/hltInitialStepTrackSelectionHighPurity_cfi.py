@@ -8,3 +8,6 @@ hltInitialStepTrackSelectionHighPurity = cms.EDProducer("TrackCollectionFilterCl
     originalQualVals = cms.InputTag("hltInitialStepTrackCutClassifier","QualityMasks"),
     originalSource = cms.InputTag("hltInitialStepTracks")
 )
+
+from Configuration.ProcessModifiers.trackTorchClassifier_cff import trackTorchClassifier
+trackTorchClassifier.toModify(hltInitialStepTrackSelectionHighPurity, originalSource = "hltInitialStepTrackTorchClassifierOutput")
