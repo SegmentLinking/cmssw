@@ -9,6 +9,7 @@ namespace lstgeometry {
   PixelMap buildPixelMap(Sensors const& sensors, float pt_cut) {
     // Charge 0 is the union of charge 1 and charge -1
     PixelMap maps;
+    maps.reserve(12);
 
     std::size_t nSuperbin = kPtBounds.size() * kNPhi * kNEta * kNZ;
 
@@ -33,6 +34,9 @@ namespace lstgeometry {
       // Skip if the module is not PS module and is not lower sensor
       if (sensor.moduleType == ModuleType::Ph2SS || !sensor.extra->lower)
         continue;
+
+      auto& pos_map = maps.at({layer, subdet, 1});
+      auto& neg_map = maps.at({layer, subdet, -1});
 
       // For this module, now compute which super bins they belong to
       // To compute which super bins it belongs to, one needs to provide at least pt and z window to compute compatible eta and phi range
@@ -80,44 +84,52 @@ namespace lstgeometry {
 
           // <= to cover some inefficiencies
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
+            unsigned int superbinEtaBase = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + iz;
             // if the range is crossing the -pi v. pi boundary special care is needed
             if (iphimin_pos <= iphimax_pos) {
               for (unsigned int iphi = iphimin_pos; iphi < iphimax_pos; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, 1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                pos_map[isuperbin].push_back(detId);
               }
             } else {
               for (unsigned int iphi = 0; iphi < iphimax_pos; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, 1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                pos_map[isuperbin].push_back(detId);
               }
               for (unsigned int iphi = iphimin_pos; iphi < kNPhi; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, 1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                pos_map[isuperbin].push_back(detId);
               }
             }
             if (iphimin_neg <= iphimax_neg) {
               for (unsigned int iphi = iphimin_neg; iphi < iphimax_neg; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, -1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                neg_map[isuperbin].push_back(detId);
               }
             } else {
               for (unsigned int iphi = 0; iphi < iphimax_neg; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, -1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                neg_map[isuperbin].push_back(detId);
               }
               for (unsigned int iphi = iphimin_neg; iphi < kNPhi; iphi++) {
-                unsigned int isuperbin = (ipt * kNPhi * kNEta * kNZ) + (ieta * kNPhi * kNZ) + (iphi * kNZ) + iz;
-                maps[{layer, subdet, -1}][isuperbin].push_back(detId);
-                maps[{layer, subdet, 0}][isuperbin].push_back(detId);
+                unsigned int isuperbin = superbinEtaBase + iphi * kNZ;
+                neg_map[isuperbin].push_back(detId);
               }
             }
           }
+        }
+      }
+    }
+
+    for (unsigned int layer : {1, 2}) {
+      for (unsigned int subdet : {SubDet::Barrel, SubDet::Endcap}) {
+        auto const& pos_map = maps.at({layer, subdet, 1});
+        auto const& neg_map = maps.at({layer, subdet, -1});
+        auto& zero_map = maps.at({layer, subdet, 0});
+        for (std::size_t isuperbin = 0; isuperbin < nSuperbin; ++isuperbin) {
+          zero_map[isuperbin].reserve(pos_map[isuperbin].size() + neg_map[isuperbin].size());
+          zero_map[isuperbin].insert(zero_map[isuperbin].end(), pos_map[isuperbin].begin(), pos_map[isuperbin].end());
+          zero_map[isuperbin].insert(zero_map[isuperbin].end(), neg_map[isuperbin].begin(), neg_map[isuperbin].end());
         }
       }
     }
