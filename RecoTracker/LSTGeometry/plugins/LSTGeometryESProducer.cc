@@ -1,10 +1,12 @@
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <unordered_map>
 #include <vector>
 
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
@@ -50,16 +52,19 @@ void LSTGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &des
 }
 
 std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const TrackerRecoGeometryRecord &iRecord) {
+  const auto produceStart = std::chrono::steady_clock::now();
   trackerGeom_ = &iRecord.get(geomToken_);
   trackerTopo_ = &iRecord.get(ttopoToken_);
 
   lstgeometry::Sensors sensors;
+  sensors.reserve(trackerGeom_->dets().size());
 
   std::array<float, lstgeometry::kBarrelLayers> avg_r_barrel{};
   std::array<float, lstgeometry::kEndcapLayers> avg_z_endcap{};
   std::array<unsigned int, lstgeometry::kBarrelLayers> avg_r_barrel_counter{};
   std::array<unsigned int, lstgeometry::kEndcapLayers> avg_z_endcap_counter{};
 
+  const auto loopStart = std::chrono::steady_clock::now();
   for (auto &det : trackerGeom_->dets()) {
     const DetId detId = det->geographicalId();
     const auto moduleType = trackerGeom_->getDetectorType(detId);
@@ -119,8 +124,16 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
     if (avg_z_endcap_counter[i] > 0)
       avg_z_endcap[i] /= avg_z_endcap_counter[i];
   }
+  const auto sensorsDone = std::chrono::steady_clock::now();
 
   auto lstGeometry = std::make_unique<lstgeometry::Geometry>(std::move(sensors), avg_r_barrel, avg_z_endcap, ptCut_);
+  const auto produceDone = std::chrono::steady_clock::now();
+
+  edm::LogInfo("LSTGeometryESProducer")
+      << "Temporary timing: LSTGeometryESProducer det loop "
+      << std::chrono::duration<double, std::milli>(sensorsDone - loopStart).count() << " ms, Geometry construction "
+      << std::chrono::duration<double, std::milli>(produceDone - sensorsDone).count() << " ms, total "
+      << std::chrono::duration<double, std::milli>(produceDone - produceStart).count() << " ms";
 
   return lstGeometry;
 }

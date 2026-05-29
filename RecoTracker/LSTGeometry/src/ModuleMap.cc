@@ -1,9 +1,15 @@
+#include <array>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
 #include <iterator>
 #include <vector>
 #include <tuple>
 #include <initializer_list>
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
+
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "RecoTracker/LSTGeometry/interface/Helix.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
@@ -13,21 +19,52 @@ namespace lstgeometry {
   using Point = boost::geometry::model::d2::point_xy<float>;
   using Polygon = boost::geometry::model::polygon<Point>;
 
-  Polygon getEtaPhiPolygon(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
-    MatrixF4x2 mod_boundaries_etaphi;
+  struct EtaPhiBounds {
+    float minEta = std::numeric_limits<float>::max();
+    float maxEta = std::numeric_limits<float>::lowest();
+    float minPhi = std::numeric_limits<float>::max();
+    float maxPhi = std::numeric_limits<float>::lowest();
+  };
+
+  MatrixF4x2 getEtaPhiCorners(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
+    MatrixF4x2 corners_etaphi;
     for (int i = 0; i < 4; ++i) {
       auto ref_etaphi = getEtaPhi(corners(i, 1), corners(i, 2), corners(i, 0) + zshift, refphi);
-      mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
-      mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
+      corners_etaphi(i, 0) = ref_etaphi.first;
+      corners_etaphi(i, 1) = ref_etaphi.second;
     }
+    return corners_etaphi;
+  }
 
+  EtaPhiBounds getEtaPhiBounds(MatrixF4x2 const& corners_etaphi) {
+    EtaPhiBounds bounds;
+    for (int i = 0; i < 4; ++i) {
+      bounds.minEta = std::min(bounds.minEta, corners_etaphi(i, 0));
+      bounds.maxEta = std::max(bounds.maxEta, corners_etaphi(i, 0));
+      bounds.minPhi = std::min(bounds.minPhi, corners_etaphi(i, 1));
+      bounds.maxPhi = std::max(bounds.maxPhi, corners_etaphi(i, 1));
+    }
+    return bounds;
+  }
+
+  bool etaPhiBoundsOverlap(EtaPhiBounds const& lhs, EtaPhiBounds const& rhs) {
+    return lhs.minEta <= rhs.maxEta && lhs.maxEta >= rhs.minEta && lhs.minPhi <= rhs.maxPhi &&
+           lhs.maxPhi >= rhs.minPhi;
+  }
+
+  Polygon getEtaPhiPolygon(MatrixF4x2 const& corners_etaphi) {
     Polygon poly;
+    poly.outer().reserve(5);
     // <= because we need to close the polygon with the first point
     for (int i = 0; i <= 4; ++i) {
-      boost::geometry::append(poly, Point(mod_boundaries_etaphi(i % 4, 0), mod_boundaries_etaphi(i % 4, 1)));
+      boost::geometry::append(poly, Point(corners_etaphi(i % 4, 0), corners_etaphi(i % 4, 1)));
     }
     boost::geometry::correct(poly);
     return poly;
+  }
+
+  Polygon getEtaPhiPolygon(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
+    return getEtaPhiPolygon(getEtaPhiCorners(corners, refphi, zshift));
   }
 
   bool moduleOverlapsInEtaPhi(MatrixF4x3 const& ref_mod_boundaries,
@@ -50,19 +87,8 @@ namespace lstgeometry {
     if (std::fabs(phi_mpi_pi(ref_center_phi - tar_center_phi)) > std::numbers::pi_v<float> / 2.)
       return false;
 
-    MatrixF4x2 ref_mod_boundaries_etaphi;
-    MatrixF4x2 tar_mod_boundaries_etaphi;
-
-    for (int i = 0; i < 4; ++i) {
-      auto ref_etaphi =
-          getEtaPhi(ref_mod_boundaries(i, 1), ref_mod_boundaries(i, 2), ref_mod_boundaries(i, 0) + zshift, refphi);
-      auto tar_etaphi =
-          getEtaPhi(tar_mod_boundaries(i, 1), tar_mod_boundaries(i, 2), tar_mod_boundaries(i, 0) + zshift, refphi);
-      ref_mod_boundaries_etaphi(i, 0) = ref_etaphi.first;
-      ref_mod_boundaries_etaphi(i, 1) = ref_etaphi.second;
-      tar_mod_boundaries_etaphi(i, 0) = tar_etaphi.first;
-      tar_mod_boundaries_etaphi(i, 1) = tar_etaphi.second;
-    }
+    MatrixF4x2 ref_mod_boundaries_etaphi = getEtaPhiCorners(ref_mod_boundaries, refphi, zshift);
+    MatrixF4x2 tar_mod_boundaries_etaphi = getEtaPhiCorners(tar_mod_boundaries, refphi, zshift);
 
     // Quick cut
     RowVectorF2 diff = ref_mod_boundaries_etaphi.row(0) - tar_mod_boundaries_etaphi.row(0);
@@ -71,19 +97,11 @@ namespace lstgeometry {
     if (std::fabs(phi_mpi_pi(diff(1))) > 1.)
       return false;
 
-    Polygon ref_poly, tar_poly;
+    if (!etaPhiBoundsOverlap(getEtaPhiBounds(ref_mod_boundaries_etaphi), getEtaPhiBounds(tar_mod_boundaries_etaphi)))
+      return false;
 
-    // <= 4 because we need to close the polygon with the first point
-    for (int i = 0; i <= 4; ++i) {
-      boost::geometry::append(ref_poly,
-                              Point(ref_mod_boundaries_etaphi(i % 4, 0), ref_mod_boundaries_etaphi(i % 4, 1)));
-      boost::geometry::append(tar_poly,
-                              Point(tar_mod_boundaries_etaphi(i % 4, 0), tar_mod_boundaries_etaphi(i % 4, 1)));
-    }
-    boost::geometry::correct(ref_poly);
-    boost::geometry::correct(tar_poly);
-
-    return boost::geometry::intersects(ref_poly, tar_poly);
+    return boost::geometry::intersects(getEtaPhiPolygon(ref_mod_boundaries_etaphi),
+                                       getEtaPhiPolygon(tar_mod_boundaries_etaphi));
   }
 
   std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
@@ -101,6 +119,7 @@ namespace lstgeometry {
         binned_detids.at(std::make_tuple(ref_location, ref_layer + 1, thetaphibins.first, thetaphibins.second));
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
+    list_of_detids_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
       auto const& tar_sensor = sensors.at(tar_detid);
       if (moduleOverlapsInEtaPhi(ref_sensor.extra->corners,
@@ -286,6 +305,7 @@ namespace lstgeometry {
     auto next_layer_bound_points = boundsAfterCurved(ref_detid, sensors, average_r_barrel, average_z_endcap, ptCut);
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
+    list_of_detids_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
     for (unsigned int tar_detid : tar_detids_to_be_considered) {
       auto const& tar_sensor = sensors.at(tar_detid);
       if (moduleOverlapsInEtaPhi(next_layer_bound_points,
@@ -388,7 +408,13 @@ namespace lstgeometry {
                            float pt_cut) {
     std::unordered_map<unsigned int, std::vector<unsigned int>> straight_line_connections;
     std::unordered_map<unsigned int, std::vector<unsigned int>> curved_line_connections;
+    straight_line_connections.reserve(sensors.size());
+    curved_line_connections.reserve(sensors.size());
 
+    const auto start = std::chrono::steady_clock::now();
+    double straightMs = 0.;
+    double curvedMs = 0.;
+    unsigned int nRefSensors = 0;
     for (auto const& [ref_detid, s] : sensors) {
       // exclude the outermost modules that do not have connections to other modules
       if (!((s.extra->location == Location::barrel && s.extra->lower && s.extra->layer != 6) ||
@@ -396,11 +422,27 @@ namespace lstgeometry {
              !(s.extra->ring == 15 && s.extra->layer == 1) && !(s.extra->ring == 15 && s.extra->layer == 2) &&
              !(s.extra->ring == 12 && s.extra->layer == 3) && !(s.extra->ring == 12 && s.extra->layer == 4))))
         continue;
+      ++nRefSensors;
+      const auto straightStart = std::chrono::steady_clock::now();
       straight_line_connections[ref_detid] = getStraightLineConnections(ref_detid, sensors, binned_detids);
+      const auto straightDone = std::chrono::steady_clock::now();
       curved_line_connections[ref_detid] =
           getCurvedLineConnections(ref_detid, sensors, binned_detids, average_r_barrel, average_z_endcap, pt_cut);
+      const auto curvedDone = std::chrono::steady_clock::now();
+      straightMs += std::chrono::duration<double, std::milli>(straightDone - straightStart).count();
+      curvedMs += std::chrono::duration<double, std::milli>(curvedDone - straightDone).count();
     }
-    return mergeLineConnections({&straight_line_connections, &curved_line_connections});
+    const auto connectionsDone = std::chrono::steady_clock::now();
+    auto moduleMap = mergeLineConnections({&straight_line_connections, &curved_line_connections});
+    const auto mergeDone = std::chrono::steady_clock::now();
+
+    edm::LogInfo("LSTGeometryESProducer")
+        << "Temporary timing: buildModuleMap refs " << nRefSensors << ", straight " << straightMs << " ms, curved "
+        << curvedMs << " ms, loop total "
+        << std::chrono::duration<double, std::milli>(connectionsDone - start).count() << " ms, merge "
+        << std::chrono::duration<double, std::milli>(mergeDone - connectionsDone).count() << " ms";
+
+    return moduleMap;
   }
 
 }  // namespace lstgeometry

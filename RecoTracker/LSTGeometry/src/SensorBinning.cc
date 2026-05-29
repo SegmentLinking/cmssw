@@ -69,6 +69,7 @@ namespace lstgeometry {
 
   BinnedDetIds binDetIds(Sensors const& sensors) {
     BinnedDetIds binned_detids;
+    binned_detids.reserve((kBarrelLayers + kEndcapLayers) * kNThetaBins * kNPhiBins);
 
     // Initialize all vectors
     for (unsigned int thetabin = 0; thetabin < kNThetaBins; thetabin++) {
@@ -85,9 +86,17 @@ namespace lstgeometry {
     for (auto const& [detid, sensor] : sensors) {
       if (!sensor.extra->lower)
         continue;
-      // We need to loop over all bins instead of using getThetaPhiBins because of the overlapping bins
-      for (unsigned int thetabin = 0; thetabin < kNThetaBins; thetabin++) {
-        for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
+      // Only the central bin and its direct neighbors can be touched by the overlapping bin windows.
+      auto [centerThetaBin, centerPhiBin] = getThetaPhiBins(sensor.extra->centerTheta, sensor.centerPhi);
+      for (int thetaOffset = -1; thetaOffset <= 1; ++thetaOffset) {
+        int thetaBin = static_cast<int>(centerThetaBin) + thetaOffset;
+        if (thetaBin < 0 || thetaBin >= static_cast<int>(kNThetaBins))
+          continue;
+        for (int phiOffset = -1; phiOffset <= 1; ++phiOffset) {
+          unsigned int phibin =
+              static_cast<unsigned int>((static_cast<int>(centerPhiBin) + static_cast<int>(kNPhiBins) + phiOffset) %
+                                        static_cast<int>(kNPhiBins));
+          unsigned int thetabin = static_cast<unsigned int>(thetaBin);
           if (isInThetaPhiBin(sensor.extra->centerTheta, sensor.centerPhi, thetabin, phibin)) {
             binned_detids[{sensor.extra->location, sensor.extra->layer, thetabin, phibin}].push_back(detid);
           }
