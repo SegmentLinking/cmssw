@@ -69,19 +69,6 @@ namespace lstgeometry {
 
   BinnedDetIds binDetIds(Sensors const& sensors) {
     BinnedDetIds binned_detids;
-    binned_detids.reserve((kBarrelLayers + kEndcapLayers) * kNThetaBins * kNPhiBins);
-
-    // Initialize all vectors
-    for (unsigned int thetabin = 0; thetabin < kNThetaBins; thetabin++) {
-      for (unsigned int phibin = 0; phibin < kNPhiBins; phibin++) {
-        for (unsigned int layer = 1; layer <= kBarrelLayers; layer++) {
-          binned_detids[{Location::barrel, layer, thetabin, phibin}] = {};
-        }
-        for (unsigned int layer = 1; layer <= kEndcapLayers; layer++) {
-          binned_detids[{Location::endcap, layer, thetabin, phibin}] = {};
-        }
-      }
-    }
 
     for (auto const& [detid, sensor] : sensors) {
       if (!sensor.extra->lower)
@@ -98,7 +85,8 @@ namespace lstgeometry {
                                         static_cast<int>(kNPhiBins));
           unsigned int thetabin = static_cast<unsigned int>(thetaBin);
           if (isInThetaPhiBin(sensor.extra->centerTheta, sensor.centerPhi, thetabin, phibin)) {
-            binned_detids[{sensor.extra->location, sensor.extra->layer, thetabin, phibin}].push_back(detid);
+            binnedDetIdsAt(binned_detids, sensor.extra->location, sensor.extra->layer, thetabin, phibin)
+                .push_back(detid);
           }
         }
       }
