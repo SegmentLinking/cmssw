@@ -121,17 +121,6 @@ namespace lstgeometry {
       }
     }
 
-    for (auto& [key, vec_of_vecs] : maps) {
-      if (std::get<2>(key) == 0)
-        continue;
-      for (auto& vec : vec_of_vecs) {
-        if (vec.empty())
-          continue;
-        std::sort(vec.begin(), vec.end());
-        vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
-      }
-    }
-
     for (unsigned int layer : {1, 2}) {
       for (unsigned int subdet : {SubDet::Barrel, SubDet::Endcap}) {
         auto const& pos_map = maps.at({layer, subdet, 1});
@@ -139,15 +128,20 @@ namespace lstgeometry {
         auto& zero_map = maps.at({layer, subdet, 0});
         for (std::size_t isuperbin = 0; isuperbin < nSuperbin; ++isuperbin) {
           zero_map[isuperbin].reserve(pos_map[isuperbin].size() + neg_map[isuperbin].size());
-          std::set_union(pos_map[isuperbin].begin(),
-                         pos_map[isuperbin].end(),
-                         neg_map[isuperbin].begin(),
-                         neg_map[isuperbin].end(),
-                         std::back_inserter(zero_map[isuperbin]));
+          zero_map[isuperbin].insert(zero_map[isuperbin].end(), pos_map[isuperbin].begin(), pos_map[isuperbin].end());
+          zero_map[isuperbin].insert(zero_map[isuperbin].end(), neg_map[isuperbin].begin(), neg_map[isuperbin].end());
         }
       }
     }
 
+    for (auto& [key, vec_of_vecs] : maps) {
+      for (auto& vec : vec_of_vecs) {
+        if (vec.empty())
+          continue;
+        std::sort(vec.begin(), vec.end());
+        vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+      }
+    }
     return maps;
   }
 

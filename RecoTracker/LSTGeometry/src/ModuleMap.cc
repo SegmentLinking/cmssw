@@ -6,8 +6,6 @@
 #include <vector>
 #include <tuple>
 #include <initializer_list>
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/polygon.hpp>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
@@ -15,9 +13,6 @@
 #include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
 
 namespace lstgeometry {
-
-  using Point = boost::geometry::model::d2::point_xy<float>;
-  using Polygon = boost::geometry::model::polygon<Point>;
 
   struct EtaPhiBounds {
     float minEta = std::numeric_limits<float>::max();
@@ -39,10 +34,9 @@ namespace lstgeometry {
     EtaPhiBounds bounds;
   };
 
-  struct EtaPhiPolygon {
-    MatrixF4x2 corners;
-    EtaPhiBounds bounds;
-    Polygon polygon;
+  struct EtaPhiPoint {
+    float eta;
+    float phi;
   };
 
   struct ModuleMapTiming {
@@ -139,20 +133,14 @@ namespace lstgeometry {
     return bounds;
   }
 
-  EtaPhiBounds getEtaPhiBounds(Polygon const& polygon) {
-    EtaPhiBounds bounds;
-    for (auto const& point : polygon.outer()) {
-      bounds.minEta = std::min(bounds.minEta, point.x());
-      bounds.maxEta = std::max(bounds.maxEta, point.x());
-      bounds.minPhi = std::min(bounds.minPhi, point.y());
-      bounds.maxPhi = std::max(bounds.maxPhi, point.y());
-    }
-    return bounds;
-  }
-
   bool etaPhiBoundsOverlap(EtaPhiBounds const& lhs, EtaPhiBounds const& rhs) {
     return lhs.minEta <= rhs.maxEta && lhs.maxEta >= rhs.minEta && lhs.minPhi <= rhs.maxPhi &&
            lhs.maxPhi >= rhs.minPhi;
+  }
+
+  bool etaPhiBoundsContain(EtaPhiBounds const& bounds, EtaPhiPoint const& point) {
+    return point.eta >= bounds.minEta && point.eta <= bounds.maxEta && point.phi >= bounds.minPhi &&
+           point.phi <= bounds.maxPhi;
   }
 
   float cross2D(MatrixF4x2 const& points, int a, int b, int c) {
@@ -223,6 +211,36 @@ namespace lstgeometry {
     return inside;
   }
 
+  bool pointInQuad(EtaPhiQuad const& quad, EtaPhiPoint const& point) {
+    if (!etaPhiBoundsContain(quad.bounds, point))
+      return false;
+
+    bool inside = false;
+    for (int i = 0, j = 3; i < 4; j = i++) {
+      EtaPhiPoint start{quad.corners(j, 0), quad.corners(j, 1)};
+      EtaPhiPoint end{quad.corners(i, 0), quad.corners(i, 1)};
+      float cross = (end.eta - start.eta) * (point.phi - start.phi) -
+                    (end.phi - start.phi) * (point.eta - start.eta);
+      constexpr float eps = 1e-6;
+      if (std::fabs(cross) <= eps && point.eta >= std::min(start.eta, end.eta) - eps &&
+          point.eta <= std::max(start.eta, end.eta) + eps &&
+          point.phi >= std::min(start.phi, end.phi) - eps &&
+          point.phi <= std::max(start.phi, end.phi) + eps) {
+        return true;
+      }
+
+      bool crossesPhi = (end.phi > point.phi) != (start.phi > point.phi);
+      if (!crossesPhi)
+        continue;
+
+      float etaAtPointPhi = (start.eta - end.eta) * (point.phi - end.phi) / (start.phi - end.phi) + end.eta;
+      if (point.eta < etaAtPointPhi)
+        inside = !inside;
+    }
+
+    return inside;
+  }
+
   bool quadIntersects(MatrixF4x2 const& lhs, MatrixF4x2 const& rhs) {
     for (int lhsEdge = 0; lhsEdge < 4; ++lhsEdge) {
       int lhsNext = (lhsEdge + 1) % 4;
@@ -236,25 +254,6 @@ namespace lstgeometry {
     return pointInPolygon(lhs, rhs, 0) || pointInPolygon(rhs, lhs, 0);
   }
 
-  Polygon getEtaPhiPolygon(MatrixF4x2 const& corners_etaphi) {
-    Polygon poly;
-    poly.outer().reserve(5);
-    // <= because we need to close the polygon with the first point
-    for (int i = 0; i <= 4; ++i) {
-      boost::geometry::append(poly, Point(corners_etaphi(i % 4, 0), corners_etaphi(i % 4, 1)));
-    }
-    boost::geometry::correct(poly);
-    return poly;
-  }
-
-  Polygon getEtaPhiPolygon(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
-    return getEtaPhiPolygon(getEtaPhiCorners(corners, refphi, zshift));
-  }
-
-  Polygon getEtaPhiPolygon(CornerCoordinates const& corners, float refphi, float zshift = 0) {
-    return getEtaPhiPolygon(getEtaPhiCorners(corners, refphi, zshift));
-  }
-
   EtaPhiQuad getEtaPhiQuad(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
     EtaPhiQuad data;
     data.corners = getEtaPhiCorners(corners, refphi, zshift);
@@ -266,22 +265,6 @@ namespace lstgeometry {
     EtaPhiQuad data;
     data.corners = getEtaPhiCorners(corners, refphi, zshift);
     data.bounds = getEtaPhiBounds(data.corners);
-    return data;
-  }
-
-  EtaPhiPolygon getEtaPhiPolygonData(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
-    EtaPhiPolygon data;
-    data.corners = getEtaPhiCorners(corners, refphi, zshift);
-    data.bounds = getEtaPhiBounds(data.corners);
-    data.polygon = getEtaPhiPolygon(data.corners);
-    return data;
-  }
-
-  EtaPhiPolygon getEtaPhiPolygonData(CornerCoordinates const& corners, float refphi, float zshift = 0) {
-    EtaPhiPolygon data;
-    data.corners = getEtaPhiCorners(corners, refphi, zshift);
-    data.bounds = getEtaPhiBounds(data.corners);
-    data.polygon = getEtaPhiPolygon(data.corners);
     return data;
   }
 
@@ -327,14 +310,6 @@ namespace lstgeometry {
     return quadIntersects(ref_mod_boundaries_etaphi, tar_mod_boundaries_etaphi);
   }
 
-  EtaPhiPolygon getEtaPhiPolygonData(EtaPhiQuad const& quad) {
-    EtaPhiPolygon data;
-    data.corners = quad.corners;
-    data.bounds = quad.bounds;
-    data.polygon = getEtaPhiPolygon(data.corners);
-    return data;
-  }
-
   bool moduleOverlapsInEtaPhi(EtaPhiQuad const& ref_mod_boundaries_etaphi,
                               CornerCoordinates const& tar_mod_boundaries,
                               float refphi,
@@ -367,61 +342,73 @@ namespace lstgeometry {
     return quadIntersects(ref_mod_boundaries_etaphi.corners, tar_mod_boundaries_etaphi);
   }
 
-  bool appendDifferencePieces(Polygon const& ref_polygon_piece,
-                              EtaPhiBounds const& ref_bounds,
-                              float ref_area,
-                              Polygon const& tar_polygon,
-                              EtaPhiBounds const& tar_bounds,
-                              std::vector<Polygon>& difference,
-                              std::vector<EtaPhiBounds>& difference_bounds,
-                              std::vector<float>& difference_areas,
-                              float& difference_area) {
-    if (!etaPhiBoundsOverlap(ref_bounds, tar_bounds) || !boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
-      difference.push_back(ref_polygon_piece);
-      difference_bounds.push_back(ref_bounds);
-      difference_areas.push_back(ref_area);
-      difference_area += ref_area;
-      return false;
+  float quadArea(EtaPhiQuad const& quad) {
+    float area = 0.;
+    for (int i = 0; i < 4; ++i) {
+      int next = (i + 1) % 4;
+      area += quad.corners(i, 0) * quad.corners(next, 1) - quad.corners(next, 0) * quad.corners(i, 1);
     }
-
-    std::vector<Polygon> tmp_difference;
-    boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
-    for (auto& piece : tmp_difference) {
-      float area = boost::geometry::area(piece);
-      difference_bounds.push_back(getEtaPhiBounds(piece));
-      difference_areas.push_back(area);
-      difference_area += area;
-      difference.push_back(std::move(piece));
-    }
-    return true;
+    return 0.5f * std::fabs(area);
   }
 
-  bool anyBoundsOverlap(std::vector<EtaPhiBounds> const& ref_bounds, EtaPhiBounds const& tar_bounds) {
-    for (auto const& ref_bound : ref_bounds) {
-      if (etaPhiBoundsOverlap(ref_bound, tar_bounds))
+  bool pointCovered(EtaPhiPoint const& point, std::vector<EtaPhiQuad> const& covering_quads) {
+    for (auto const& quad : covering_quads) {
+      if (pointInQuad(quad, point))
         return true;
     }
     return false;
   }
 
-  bool intersectsAny(std::vector<Polygon> const& ref_polygons,
-                     std::vector<EtaPhiBounds> const& ref_bounds,
-                     CornerCoordinates const& tar_corners,
-                     float refphi,
-                     float zshift) {
-    MatrixF4x2 tar_etaphi = getEtaPhiCorners(tar_corners, refphi, zshift);
-    EtaPhiBounds tar_bounds = getEtaPhiBounds(tar_etaphi);
+  float approximateUncoveredArea(EtaPhiQuad const& ref_quad,
+                                 std::vector<EtaPhiQuad> const& covering_quads,
+                                 std::vector<EtaPhiPoint>& uncovered_points) {
+    constexpr int kGrid = 8;
+    unsigned int nInside = 0;
+    unsigned int nUncovered = 0;
+    uncovered_points.clear();
+    uncovered_points.reserve(kGrid * kGrid);
 
-    if (!anyBoundsOverlap(ref_bounds, tar_bounds))
-      return false;
+    for (int etaBin = 0; etaBin < kGrid; ++etaBin) {
+      float eta = ref_quad.bounds.minEta +
+                  (etaBin + 0.5f) * (ref_quad.bounds.maxEta - ref_quad.bounds.minEta) / static_cast<float>(kGrid);
+      for (int phiBin = 0; phiBin < kGrid; ++phiBin) {
+        float phi = ref_quad.bounds.minPhi +
+                    (phiBin + 0.5f) * (ref_quad.bounds.maxPhi - ref_quad.bounds.minPhi) / static_cast<float>(kGrid);
+        EtaPhiPoint point{eta, phi};
+        if (!pointInQuad(ref_quad, point))
+          continue;
 
-    Polygon tar_polygon = getEtaPhiPolygon(tar_etaphi);
-    for (unsigned int i = 0; i < ref_polygons.size(); ++i) {
-      if (etaPhiBoundsOverlap(ref_bounds[i], tar_bounds) &&
-          boost::geometry::intersects(ref_polygons[i], tar_polygon)) {
-        return true;
+        ++nInside;
+        if (!pointCovered(point, covering_quads)) {
+          ++nUncovered;
+          uncovered_points.push_back(point);
+        }
       }
     }
+
+    if (nInside == 0)
+      return 0.;
+    return quadArea(ref_quad) * static_cast<float>(nUncovered) / static_cast<float>(nInside);
+  }
+
+  bool targetIntersectsApproxUncovered(EtaPhiQuad const& ref_quad,
+                                       std::vector<EtaPhiQuad> const& covering_quads,
+                                       std::vector<EtaPhiPoint> const& uncovered_points,
+                                       EtaPhiQuad const& target_quad) {
+    if (!etaPhiBoundsOverlap(ref_quad.bounds, target_quad.bounds))
+      return false;
+
+    for (auto const& point : uncovered_points) {
+      if (pointInQuad(target_quad, point))
+        return true;
+    }
+
+    for (int i = 0; i < 4; ++i) {
+      EtaPhiPoint target_corner{target_quad.corners(i, 0), target_quad.corners(i, 1)};
+      if (pointInQuad(ref_quad, target_corner) && !pointCovered(target_corner, covering_quads))
+        return true;
+    }
+
     return false;
   }
 
@@ -468,61 +455,25 @@ namespace lstgeometry {
     if (timing)
       timing->straightOverlapMs += std::chrono::duration<double, std::milli>(overlapDone - overlapStart).count();
 
-    // Consider barrel to endcap connections if the intersection area is > 0
-    // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
-    // function can return multiple polygons if the difference results in disjoint pieces
+    // Consider barrel to endcap connections if the approximated uncovered area is > 0
+    // after accounting for target modules in the next barrel layer.
     if (ref_location == Location::barrel) {
       std::vector<unsigned int> barrel_endcap_connected_tar_detids;
 
       for (unsigned int i = 0; i < zshifts.size(); ++i) {
         float zshift = zshifts[i];
-        EtaPhiPolygon ref_polygon_data = getEtaPhiPolygonData(ref_quads[i]);
-        std::vector<Polygon> ref_polygon;
-        ref_polygon.push_back(ref_polygon_data.polygon);
-        std::vector<EtaPhiBounds> ref_polygon_bounds;
-        ref_polygon_bounds.push_back(ref_polygon_data.bounds);
-        std::vector<float> ref_polygon_areas;
-        ref_polygon_areas.push_back(boost::geometry::area(ref_polygon.front()));
-        float area = ref_polygon_areas.front();
 
         // Check whether there is still significant non-zero area
         const auto subtractStart = std::chrono::steady_clock::now();
+        std::vector<EtaPhiQuad> covering_quads;
+        covering_quads.reserve(list_of_detids_etaphi_layer_tar.size());
         for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
-          if (ref_polygon.empty())
-            break;
-          MatrixF4x2 tar_etaphi = getEtaPhiCorners(corner_coordinates.at(tar_detid), refphi, zshift);
-          EtaPhiBounds tar_bounds = getEtaPhiBounds(tar_etaphi);
-          if (!anyBoundsOverlap(ref_polygon_bounds, tar_bounds))
-            continue;
-          Polygon tar_polygon = getEtaPhiPolygon(tar_etaphi);
-
-          std::vector<Polygon> difference;
-          std::vector<EtaPhiBounds> difference_bounds;
-          std::vector<float> difference_areas;
-          difference.reserve(ref_polygon.size() + 1);
-          difference_bounds.reserve(ref_polygon_bounds.size() + 1);
-          difference_areas.reserve(ref_polygon_areas.size() + 1);
-          float difference_area = 0.;
-          bool changed = false;
-          for (unsigned int piece = 0; piece < ref_polygon.size(); ++piece) {
-            changed |= appendDifferencePieces(ref_polygon[piece],
-                                              ref_polygon_bounds[piece],
-                                              ref_polygon_areas[piece],
-                                              tar_polygon,
-                                              tar_bounds,
-                                              difference,
-                                              difference_bounds,
-                                              difference_areas,
-                                              difference_area);
-          }
-
-          ref_polygon = std::move(difference);
-          ref_polygon_bounds = std::move(difference_bounds);
-          ref_polygon_areas = std::move(difference_areas);
-          area = difference_area;
-          if (changed && area <= 5e-3)
-            break;
+          EtaPhiQuad tar_quad = getEtaPhiQuad(corner_coordinates.at(tar_detid), refphi, zshift);
+          if (etaPhiBoundsOverlap(ref_quads[i].bounds, tar_quad.bounds))
+            covering_quads.push_back(std::move(tar_quad));
         }
+        std::vector<EtaPhiPoint> uncovered_points;
+        float area = approximateUncoveredArea(ref_quads[i], covering_quads, uncovered_points);
 
         const auto subtractDone = std::chrono::steady_clock::now();
         if (timing)
@@ -543,7 +494,8 @@ namespace lstgeometry {
           if (std::fabs(normalizePhi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
-          if (intersectsAny(ref_polygon, ref_polygon_bounds, tar_corners, refphi, zshift))
+          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, zshift);
+          if (targetIntersectsApproxUncovered(ref_quads[i], covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(tar_detid);
         }
         const auto endcapDone = std::chrono::steady_clock::now();
@@ -644,61 +596,24 @@ namespace lstgeometry {
     if (timing)
       timing->curvedOverlapMs += std::chrono::duration<double, std::milli>(overlapDone - overlapStart).count();
 
-    // Consider barrel to endcap connections if the intersection area is > 0
-    // We construct the reference polygon as a vector of polygons because the boost::geometry::difference
-    // function can return multiple polygons if the difference results in disjoint pieces
+    // Consider barrel to endcap connections if the approximated uncovered area is > 0
+    // after accounting for target modules in the next barrel layer.
     if (ref_location == Location::barrel) {
       std::vector<unsigned int> barrel_endcap_connected_tar_detids;
 
       int zshift = 0;
-      EtaPhiPolygon next_layer_polygon = getEtaPhiPolygonData(next_layer_quad);
-
-      std::vector<Polygon> ref_polygon;
-      ref_polygon.push_back(next_layer_polygon.polygon);
-      std::vector<EtaPhiBounds> ref_polygon_bounds;
-      ref_polygon_bounds.push_back(next_layer_polygon.bounds);
-      std::vector<float> ref_polygon_areas;
-      ref_polygon_areas.push_back(boost::geometry::area(ref_polygon.front()));
-      float area = ref_polygon_areas.front();
 
       // Check whether there is still significant non-zero area
       const auto subtractStart = std::chrono::steady_clock::now();
+      std::vector<EtaPhiQuad> covering_quads;
+      covering_quads.reserve(list_of_detids_etaphi_layer_tar.size());
       for (unsigned int tar_detid : list_of_detids_etaphi_layer_tar) {
-        if (ref_polygon.empty())
-          break;
-        MatrixF4x2 tar_etaphi = getEtaPhiCorners(corner_coordinates.at(tar_detid), refphi, zshift);
-        EtaPhiBounds tar_bounds = getEtaPhiBounds(tar_etaphi);
-        if (!anyBoundsOverlap(ref_polygon_bounds, tar_bounds))
-          continue;
-        Polygon tar_polygon = getEtaPhiPolygon(tar_etaphi);
-
-        std::vector<Polygon> difference;
-        std::vector<EtaPhiBounds> difference_bounds;
-        std::vector<float> difference_areas;
-        difference.reserve(ref_polygon.size() + 1);
-        difference_bounds.reserve(ref_polygon_bounds.size() + 1);
-        difference_areas.reserve(ref_polygon_areas.size() + 1);
-        float difference_area = 0.;
-        bool changed = false;
-        for (unsigned int piece = 0; piece < ref_polygon.size(); ++piece) {
-          changed |= appendDifferencePieces(ref_polygon[piece],
-                                            ref_polygon_bounds[piece],
-                                            ref_polygon_areas[piece],
-                                            tar_polygon,
-                                            tar_bounds,
-                                            difference,
-                                            difference_bounds,
-                                            difference_areas,
-                                            difference_area);
-        }
-
-        ref_polygon = std::move(difference);
-        ref_polygon_bounds = std::move(difference_bounds);
-        ref_polygon_areas = std::move(difference_areas);
-        area = difference_area;
-        if (changed && area <= 5e-3)
-          break;
+        EtaPhiQuad tar_quad = getEtaPhiQuad(corner_coordinates.at(tar_detid), refphi, zshift);
+        if (etaPhiBoundsOverlap(next_layer_quad.bounds, tar_quad.bounds))
+          covering_quads.push_back(std::move(tar_quad));
       }
+      std::vector<EtaPhiPoint> uncovered_points;
+      float area = approximateUncoveredArea(next_layer_quad, covering_quads, uncovered_points);
 
       const auto subtractDone = std::chrono::steady_clock::now();
       if (timing)
@@ -716,7 +631,8 @@ namespace lstgeometry {
           if (std::fabs(normalizePhi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
-          if (intersectsAny(ref_polygon, ref_polygon_bounds, tar_corners, refphi, zshift))
+          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, zshift);
+          if (targetIntersectsApproxUncovered(next_layer_quad, covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(tar_detid);
         }
         const auto endcapDone = std::chrono::steady_clock::now();
