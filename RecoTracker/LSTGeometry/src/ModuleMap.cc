@@ -367,29 +367,30 @@ namespace lstgeometry {
     return quadIntersects(ref_mod_boundaries_etaphi.corners, tar_mod_boundaries_etaphi);
   }
 
-  float totalArea(std::vector<Polygon> const& polygons) {
-    float area = 0.;
-    for (auto const& polygon : polygons)
-      area += boost::geometry::area(polygon);
-    return area;
-  }
-
   bool appendDifferencePieces(Polygon const& ref_polygon_piece,
                               EtaPhiBounds const& ref_bounds,
+                              float ref_area,
                               Polygon const& tar_polygon,
                               EtaPhiBounds const& tar_bounds,
                               std::vector<Polygon>& difference,
-                              std::vector<EtaPhiBounds>& difference_bounds) {
+                              std::vector<EtaPhiBounds>& difference_bounds,
+                              std::vector<float>& difference_areas,
+                              float& difference_area) {
     if (!etaPhiBoundsOverlap(ref_bounds, tar_bounds) || !boost::geometry::intersects(ref_polygon_piece, tar_polygon)) {
       difference.push_back(ref_polygon_piece);
       difference_bounds.push_back(ref_bounds);
+      difference_areas.push_back(ref_area);
+      difference_area += ref_area;
       return false;
     }
 
     std::vector<Polygon> tmp_difference;
     boost::geometry::difference(ref_polygon_piece, tar_polygon, tmp_difference);
     for (auto& piece : tmp_difference) {
+      float area = boost::geometry::area(piece);
       difference_bounds.push_back(getEtaPhiBounds(piece));
+      difference_areas.push_back(area);
+      difference_area += area;
       difference.push_back(std::move(piece));
     }
     return true;
@@ -480,6 +481,9 @@ namespace lstgeometry {
         ref_polygon.push_back(ref_polygon_data.polygon);
         std::vector<EtaPhiBounds> ref_polygon_bounds;
         ref_polygon_bounds.push_back(ref_polygon_data.bounds);
+        std::vector<float> ref_polygon_areas;
+        ref_polygon_areas.push_back(boost::geometry::area(ref_polygon.front()));
+        float area = ref_polygon_areas.front();
 
         // Check whether there is still significant non-zero area
         const auto subtractStart = std::chrono::steady_clock::now();
@@ -494,21 +498,32 @@ namespace lstgeometry {
 
           std::vector<Polygon> difference;
           std::vector<EtaPhiBounds> difference_bounds;
+          std::vector<float> difference_areas;
           difference.reserve(ref_polygon.size() + 1);
           difference_bounds.reserve(ref_polygon_bounds.size() + 1);
+          difference_areas.reserve(ref_polygon_areas.size() + 1);
+          float difference_area = 0.;
           bool changed = false;
           for (unsigned int piece = 0; piece < ref_polygon.size(); ++piece) {
-            changed |= appendDifferencePieces(
-                ref_polygon[piece], ref_polygon_bounds[piece], tar_polygon, tar_bounds, difference, difference_bounds);
+            changed |= appendDifferencePieces(ref_polygon[piece],
+                                              ref_polygon_bounds[piece],
+                                              ref_polygon_areas[piece],
+                                              tar_polygon,
+                                              tar_bounds,
+                                              difference,
+                                              difference_bounds,
+                                              difference_areas,
+                                              difference_area);
           }
 
           ref_polygon = std::move(difference);
           ref_polygon_bounds = std::move(difference_bounds);
-          if (changed && totalArea(ref_polygon) <= 5e-3)
+          ref_polygon_areas = std::move(difference_areas);
+          area = difference_area;
+          if (changed && area <= 5e-3)
             break;
         }
 
-        float area = totalArea(ref_polygon);
         const auto subtractDone = std::chrono::steady_clock::now();
         if (timing)
           timing->straightSubtractMs +=
@@ -560,56 +575,25 @@ namespace lstgeometry {
     MatrixF4x3 next_layer_bound_points;
 
     for (int i = 0; i < bounds.rows(); i++) {
-      auto helix_p10 = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      auto helix_m10 = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), -charge);
-      auto helix_p10_pos = Helix(ptCut, 0, 0, 10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
-      auto helix_m10_pos = Helix(ptCut, 0, 0, -10, bounds(i, 1), bounds(i, 2), bounds(i, 0), charge);
       float bound_z_r = bounds(i, 0) / std::sqrt(bounds(i, 1) * bounds(i, 1) + bounds(i, 2) * bounds(i, 2));
       float bound_phi = std::atan2(bounds(i, 2), bounds(i, 1));
       float phi_diff = normalizePhi(bound_phi - refphi);
+      int helixCharge = phi_diff > 0 ? -charge : charge;
+      float vertexZ = bound_z_r < z_r ? 10.f : -10.f;
+      Helix helix(ptCut, 0, 0, vertexZ, bounds(i, 1), bounds(i, 2), bounds(i, 0), helixCharge);
 
       std::tuple<float, float, float, float> next_point;
       if (ref_location == Location::barrel) {
         if (doR) {
           float tar_layer_radius = average_r_barrel[ref_layer];
-          if (bound_z_r < z_r) {
-            auto const& h = phi_diff > 0 ? helix_p10 : helix_p10_pos;
-            next_point = h.pointFromRadius(tar_layer_radius);
-          } else {
-            auto const& h = phi_diff > 0 ? helix_m10 : helix_m10_pos;
-            next_point = h.pointFromRadius(tar_layer_radius);
-          }
+          next_point = helix.pointFromRadius(tar_layer_radius);
         } else {
           float tar_layer_z = average_z_endcap[0];
-          if (bound_z_r < z_r) {
-            if (phi_diff > 0) {
-              next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
-            } else {
-              next_point = helix_p10_pos.pointFromZ(std::copysign(tar_layer_z, helix_p10_pos.lambda));
-            }
-          } else {
-            if (phi_diff > 0) {
-              next_point = helix_m10.pointFromZ(std::copysign(tar_layer_z, helix_m10.lambda));
-            } else {
-              next_point = helix_m10_pos.pointFromZ(std::copysign(tar_layer_z, helix_m10_pos.lambda));
-            }
-          }
+          next_point = helix.pointFromZ(std::copysign(tar_layer_z, helix.lambda));
         }
       } else {
         float tar_layer_z = average_z_endcap[ref_layer];
-        if (bound_z_r < z_r) {
-          if (phi_diff > 0) {
-            next_point = helix_p10.pointFromZ(std::copysign(tar_layer_z, helix_p10.lambda));
-          } else {
-            next_point = helix_p10_pos.pointFromZ(std::copysign(tar_layer_z, helix_p10_pos.lambda));
-          }
-        } else {
-          if (phi_diff > 0) {
-            next_point = helix_m10.pointFromZ(std::copysign(tar_layer_z, helix_m10.lambda));
-          } else {
-            next_point = helix_m10_pos.pointFromZ(std::copysign(tar_layer_z, helix_m10_pos.lambda));
-          }
-        }
+        next_point = helix.pointFromZ(std::copysign(tar_layer_z, helix.lambda));
       }
       next_layer_bound_points(i, 0) = std::get<2>(next_point);
       next_layer_bound_points(i, 1) = std::get<0>(next_point);
@@ -673,6 +657,9 @@ namespace lstgeometry {
       ref_polygon.push_back(next_layer_polygon.polygon);
       std::vector<EtaPhiBounds> ref_polygon_bounds;
       ref_polygon_bounds.push_back(next_layer_polygon.bounds);
+      std::vector<float> ref_polygon_areas;
+      ref_polygon_areas.push_back(boost::geometry::area(ref_polygon.front()));
+      float area = ref_polygon_areas.front();
 
       // Check whether there is still significant non-zero area
       const auto subtractStart = std::chrono::steady_clock::now();
@@ -687,21 +674,32 @@ namespace lstgeometry {
 
         std::vector<Polygon> difference;
         std::vector<EtaPhiBounds> difference_bounds;
+        std::vector<float> difference_areas;
         difference.reserve(ref_polygon.size() + 1);
         difference_bounds.reserve(ref_polygon_bounds.size() + 1);
+        difference_areas.reserve(ref_polygon_areas.size() + 1);
+        float difference_area = 0.;
         bool changed = false;
         for (unsigned int piece = 0; piece < ref_polygon.size(); ++piece) {
-          changed |= appendDifferencePieces(
-              ref_polygon[piece], ref_polygon_bounds[piece], tar_polygon, tar_bounds, difference, difference_bounds);
+          changed |= appendDifferencePieces(ref_polygon[piece],
+                                            ref_polygon_bounds[piece],
+                                            ref_polygon_areas[piece],
+                                            tar_polygon,
+                                            tar_bounds,
+                                            difference,
+                                            difference_bounds,
+                                            difference_areas,
+                                            difference_area);
         }
 
         ref_polygon = std::move(difference);
         ref_polygon_bounds = std::move(difference_bounds);
-        if (changed && totalArea(ref_polygon) <= 5e-3)
+        ref_polygon_areas = std::move(difference_areas);
+        area = difference_area;
+        if (changed && area <= 5e-3)
           break;
       }
 
-      float area = totalArea(ref_polygon);
       const auto subtractDone = std::chrono::steady_clock::now();
       if (timing)
         timing->curvedSubtractMs += std::chrono::duration<double, std::milli>(subtractDone - subtractStart).count();
@@ -768,6 +766,8 @@ namespace lstgeometry {
     CornerCoordinatesMap corner_coordinates;
     corner_coordinates.reserve(sensors.size());
     for (auto const& [detid, sensor] : sensors) {
+      if (!sensor.extra->lower)
+        continue;
       corner_coordinates.emplace(detid, getCornerCoordinates(sensor));
     }
 
