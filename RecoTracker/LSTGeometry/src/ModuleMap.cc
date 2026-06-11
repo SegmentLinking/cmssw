@@ -636,8 +636,7 @@ namespace lstgeometry {
       ++nRefSensors;
       auto const& ref_corners = corner_coordinates.at(ref_detid);
       const auto straightStart = std::chrono::steady_clock::now();
-      auto straight_line_connections =
-          getStraightLineConnections(s, ref_corners, binned_candidates, &timing);
+      auto straight_line_connections = getStraightLineConnections(s, ref_corners, binned_candidates, &timing);
       const auto straightDone = std::chrono::steady_clock::now();
       auto curved_line_connections = getCurvedLineConnections(
           s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut, &timing);

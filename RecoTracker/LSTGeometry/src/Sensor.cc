@@ -67,14 +67,11 @@ Sensor::Sensor(unsigned int detId,
   extra->subdet = subdet;
   extra->location = location;
   extra->side = side;
-  extra->moduleId = moduleId;
   extra->layer = layer;
   extra->ring = ring;
-  extra->inverted = isInverted(moduleId, location, side, layer);
-  extra->centerRho = centerRho;
-  extra->lower = isLower(extra->inverted, detId);
-  extra->strip = isStrip(moduleType, extra->inverted, extra->lower);
-  extra->centerEta = std::asinh(centerZ / centerRho);
+  bool inverted = isInverted(moduleId, location, side, layer);
+  extra->lower = isLower(inverted, detId);
+  extra->strip = isStrip(moduleType, inverted, extra->lower);
   extra->centerTheta = std::numbers::pi_v<float> / 2. - std::atan(centerZ / centerRho);
 
   const Bounds &bounds = surface.bounds();
@@ -116,7 +113,7 @@ Sensor::Sensor(unsigned int detId,
     float y = extra->corners(i, 2);
     float r = std::sqrt(x * x + y * y);
     float z = extra->corners(i, 0);
-    float phi = phi_mpi_pi(std::atan2(y, x));
+    float phi = phi_mpi_pi(std::numbers::pi_v<float> + std::atan2(-extra->corners(i, 2), -extra->corners(i, 1)));
 
     extra->minR = std::min(extra->minR, r);
     extra->maxR = std::max(extra->maxR, r);
