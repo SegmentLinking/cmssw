@@ -1,8 +1,9 @@
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cmath>
-#include <vector>
+#include <limits>
 #include <tuple>
+#include <vector>
 
 #include "RecoTracker/LSTGeometry/interface/Helix.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
@@ -56,20 +57,17 @@ namespace lstgeometry {
       std::array<std::array<std::array<std::vector<ModuleCandidate>, kNPhiBins>, kNThetaBins>, kBarrelLayers + 1>,
       2>;
 
-  std::vector<ModuleCandidate>& candidatesAt(BinnedCandidates& candidates,
-                                             Location location,
-                                             unsigned int layer,
-                                             unsigned int theta_bin,
-                                             unsigned int phi_bin) {
-    return candidates[locationIndex(location)][layer][theta_bin][phi_bin];
+  std::vector<ModuleCandidate>& candidatesAt(
+      BinnedCandidates& candidates, Location location, unsigned int layer, unsigned int thetaBin, unsigned int phiBin) {
+    return candidates[locationIndex(location)][layer][thetaBin][phiBin];
   }
 
   std::vector<ModuleCandidate> const& candidatesAt(BinnedCandidates const& candidates,
                                                    Location location,
                                                    unsigned int layer,
-                                                   unsigned int theta_bin,
-                                                   unsigned int phi_bin) {
-    return candidates[locationIndex(location)][layer][theta_bin][phi_bin];
+                                                   unsigned int thetaBin,
+                                                   unsigned int phiBin) {
+    return candidates[locationIndex(location)][layer][thetaBin][phiBin];
   }
 
   BinnedCandidates buildBinnedCandidates(BinnedDetIds const& binned_detids,

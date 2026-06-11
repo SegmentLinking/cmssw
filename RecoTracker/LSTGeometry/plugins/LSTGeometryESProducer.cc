@@ -3,8 +3,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/Framework/interface/ModuleFactory.h"
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
@@ -30,8 +32,8 @@ private:
   edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
   edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> ttopoToken_;
 
-  const TrackerGeometry *trackerGeom_ = nullptr;
-  const TrackerTopology *trackerTopo_ = nullptr;
+  TrackerGeometry const *trackerGeom_ = nullptr;
+  TrackerTopology const *trackerTopo_ = nullptr;
 };
 
 LSTGeometryESProducer::LSTGeometryESProducer(const edm::ParameterSet &iConfig)
