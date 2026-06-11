@@ -34,9 +34,7 @@ bool isInverted(unsigned int moduleId, Location location, Side side, unsigned in
 }
 
 // This differs from TrackerTopology::isLower since it considers if the module is inverted
-bool isLower(bool isInverted, unsigned int detId) {
-  return isInverted ? !(detId & 1) : (detId & 1);
-}
+bool isLower(bool isInverted, unsigned int detId) { return isInverted ? !(detId & 1) : (detId & 1); }
 
 bool isStrip(ModuleType moduleType, bool isInverted, bool isLower) {
   if (moduleType == ModuleType::Ph2SS)

@@ -52,10 +52,9 @@ namespace lstgeometry {
     RelativePhiData relativePhis;
   };
 
-  using BinnedCandidates =
-      std::array<std::array<std::array<std::array<std::vector<ModuleCandidate>, kNPhiBins>, kNThetaBins>,
-                            kBarrelLayers + 1>,
-                 2>;
+  using BinnedCandidates = std::array<
+      std::array<std::array<std::array<std::vector<ModuleCandidate>, kNPhiBins>, kNThetaBins>, kBarrelLayers + 1>,
+      2>;
 
   std::vector<ModuleCandidate>& candidatesAt(BinnedCandidates& candidates,
                                              Location location,
@@ -120,8 +119,7 @@ namespace lstgeometry {
   }
 
   bool etaPhiBoundsOverlap(EtaPhiBounds const& lhs, EtaPhiBounds const& rhs) {
-    return lhs.minEta <= rhs.maxEta && lhs.maxEta >= rhs.minEta && lhs.minPhi <= rhs.maxPhi &&
-           lhs.maxPhi >= rhs.minPhi;
+    return lhs.minEta <= rhs.maxEta && lhs.maxEta >= rhs.minEta && lhs.minPhi <= rhs.maxPhi && lhs.maxPhi >= rhs.minPhi;
   }
 
   bool etaPhiBoundsContain(EtaPhiBounds const& bounds, EtaPhiPoint const& point) {
@@ -187,9 +185,9 @@ namespace lstgeometry {
       if (!crossesPhi)
         continue;
 
-      float etaAtPointPhi = (polygon(j, 0) - polygon(i, 0)) * (pointPhi - polygon(i, 1)) /
-                                (polygon(j, 1) - polygon(i, 1)) +
-                            polygon(i, 0);
+      float etaAtPointPhi =
+          (polygon(j, 0) - polygon(i, 0)) * (pointPhi - polygon(i, 1)) / (polygon(j, 1) - polygon(i, 1)) +
+          polygon(i, 0);
       if (pointEta < etaAtPointPhi)
         inside = !inside;
     }
@@ -205,12 +203,10 @@ namespace lstgeometry {
     for (int i = 0, j = 3; i < 4; j = i++) {
       EtaPhiPoint start{quad.corners(j, 0), quad.corners(j, 1)};
       EtaPhiPoint end{quad.corners(i, 0), quad.corners(i, 1)};
-      float cross = (end.eta - start.eta) * (point.phi - start.phi) -
-                    (end.phi - start.phi) * (point.eta - start.eta);
+      float cross = (end.eta - start.eta) * (point.phi - start.phi) - (end.phi - start.phi) * (point.eta - start.eta);
       constexpr float eps = 1e-6;
       if (std::fabs(cross) <= eps && point.eta >= std::min(start.eta, end.eta) - eps &&
-          point.eta <= std::max(start.eta, end.eta) + eps &&
-          point.phi >= std::min(start.phi, end.phi) - eps &&
+          point.eta <= std::max(start.eta, end.eta) + eps && point.phi >= std::min(start.phi, end.phi) - eps &&
           point.phi <= std::max(start.phi, end.phi) + eps) {
         return true;
       }
@@ -427,10 +423,7 @@ namespace lstgeometry {
         continue;
       RelativePhiData relativePhis = getRelativePhiData(tar_corners, refphi);
       for (unsigned int i = 0; i < etaColumns.size(); ++i) {
-        if (moduleOverlapsInEtaPhi(ref_quads[i],
-                                   tar_corners,
-                                   relativePhis,
-                                   etaColumns[i])) {
+        if (moduleOverlapsInEtaPhi(ref_quads[i], tar_corners, relativePhis, etaColumns[i])) {
           list_of_detids_etaphi_layer_tar.push_back(candidate.detid);
           list_of_candidates_etaphi_layer_tar.push_back({&candidate, relativePhis});
           break;
@@ -451,8 +444,7 @@ namespace lstgeometry {
         // Check whether there is still significant non-zero area
         covering_quads.clear();
         for (auto const& candidate : list_of_candidates_etaphi_layer_tar) {
-          EtaPhiQuad tar_quad =
-              getEtaPhiQuad(*candidate.candidate->corners, candidate.relativePhis, etaColumns[i]);
+          EtaPhiQuad tar_quad = getEtaPhiQuad(*candidate.candidate->corners, candidate.relativePhis, etaColumns[i]);
           if (etaPhiBoundsOverlap(ref_quads[i].bounds, tar_quad.bounds))
             covering_quads.push_back(std::move(tar_quad));
         }
@@ -550,10 +542,7 @@ namespace lstgeometry {
       if (std::fabs(normalizePhi(next_layer_center_phi - tar_corners.centerPhi)) > std::numbers::pi_v<float> / 2.)
         continue;
       RelativePhiData relativePhis = getRelativePhiData(tar_corners, refphi);
-      if (moduleOverlapsInEtaPhi(next_layer_quad,
-                                 tar_corners,
-                                 relativePhis,
-                                 0)) {
+      if (moduleOverlapsInEtaPhi(next_layer_quad, tar_corners, relativePhis, 0)) {
         list_of_detids_etaphi_layer_tar.push_back(candidate.detid);
         list_of_candidates_etaphi_layer_tar.push_back({&candidate, relativePhis});
       }
@@ -627,8 +616,8 @@ namespace lstgeometry {
         continue;
       auto const& ref_corners = corner_coordinates.at(ref_detid);
       auto straight_line_connections = getStraightLineConnections(s, ref_corners, binned_candidates);
-      auto curved_line_connections = getCurvedLineConnections(
-          s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut);
+      auto curved_line_connections =
+          getCurvedLineConnections(s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut);
       auto& connections = moduleMap[ref_detid];
       connections.reserve(straight_line_connections.size() + curved_line_connections.size());
       connections.insert(connections.end(), straight_line_connections.begin(), straight_line_connections.end());

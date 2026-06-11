@@ -67,14 +67,14 @@ namespace lstgeometry {
         float neg_q_phi_lo_bound = phi_mpi_pi(-curvatureToPhi * maxR * invPtLo + minPhi);
         float neg_q_phi_hi_bound = phi_mpi_pi(-curvatureToPhi * minR * invPtHi + maxPhi);
 
-        unsigned int iphimin_pos = static_cast<unsigned int>((pos_q_phi_lo_bound + std::numbers::pi_v<float>) *
-                                                             inversePhiBinWidth);
-        unsigned int iphimax_pos = static_cast<unsigned int>((pos_q_phi_hi_bound + std::numbers::pi_v<float>) *
-                                                             inversePhiBinWidth);
-        unsigned int iphimin_neg = static_cast<unsigned int>((neg_q_phi_lo_bound + std::numbers::pi_v<float>) *
-                                                             inversePhiBinWidth);
-        unsigned int iphimax_neg = static_cast<unsigned int>((neg_q_phi_hi_bound + std::numbers::pi_v<float>) *
-                                                             inversePhiBinWidth);
+        unsigned int iphimin_pos =
+            static_cast<unsigned int>((pos_q_phi_lo_bound + std::numbers::pi_v<float>)*inversePhiBinWidth);
+        unsigned int iphimax_pos =
+            static_cast<unsigned int>((pos_q_phi_hi_bound + std::numbers::pi_v<float>)*inversePhiBinWidth);
+        unsigned int iphimin_neg =
+            static_cast<unsigned int>((neg_q_phi_lo_bound + std::numbers::pi_v<float>)*inversePhiBinWidth);
+        unsigned int iphimax_neg =
+            static_cast<unsigned int>((neg_q_phi_hi_bound + std::numbers::pi_v<float>)*inversePhiBinWidth);
 
         for (unsigned int iz = 0; iz < kNZ; iz++) {
           // The zmin, zmax of consideration

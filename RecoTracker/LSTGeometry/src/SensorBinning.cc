@@ -80,9 +80,8 @@ namespace lstgeometry {
         if (thetaBin < 0 || thetaBin >= static_cast<int>(kNThetaBins))
           continue;
         for (int phiOffset = -1; phiOffset <= 1; ++phiOffset) {
-          unsigned int phibin =
-              static_cast<unsigned int>((static_cast<int>(centerPhiBin) + static_cast<int>(kNPhiBins) + phiOffset) %
-                                        static_cast<int>(kNPhiBins));
+          unsigned int phibin = static_cast<unsigned int>(
+              (static_cast<int>(centerPhiBin) + static_cast<int>(kNPhiBins) + phiOffset) % static_cast<int>(kNPhiBins));
           unsigned int thetabin = static_cast<unsigned int>(thetaBin);
           if (isInThetaPhiBin(sensor.extra->centerTheta, sensor.centerPhi, thetabin, phibin)) {
             binnedDetIdsAt(binned_detids, sensor.extra->location, sensor.extra->layer, thetabin, phibin)

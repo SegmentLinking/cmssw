@@ -16,9 +16,9 @@ namespace lstgeometry {
   static constexpr unsigned int kNPhiBins = 6;
   static constexpr float kPhiBinWidth = 2 * std::numbers::pi_v<float> / kNPhiBins;
 
-  using BinnedDetIds = std::array<std::array<std::array<std::array<std::vector<unsigned int>, kNPhiBins>, kNThetaBins>,
-                                            kBarrelLayers + 1>,
-                                  2>;
+  using BinnedDetIds =
+      std::array<std::array<std::array<std::array<std::vector<unsigned int>, kNPhiBins>, kNThetaBins>, kBarrelLayers + 1>,
+                 2>;
 
   inline unsigned int locationIndex(Location location) { return location == Location::barrel ? 0 : 1; }
 
