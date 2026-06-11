@@ -120,22 +120,6 @@ namespace lstgeometry {
     return coordinates;
   }
 
-  int getEtaColumn(float zshift) {
-    int etaColumn = -1;
-    if (zshift == 0.f)
-      etaColumn = 0;
-    else if (zshift == 10.f)
-      etaColumn = 1;
-    else if (zshift == -10.f)
-      etaColumn = 2;
-    return etaColumn;
-  }
-
-  float getEta(CornerCoordinates const& corners, int corner, float zshift, int etaColumn) {
-    return etaColumn >= 0 ? corners.shiftedEtas(corner, etaColumn)
-                          : std::asinh((corners.values(corner, 0) + zshift) * corners.values(corner, 1));
-  }
-
   bool etaPhiBoundsOverlap(EtaPhiBounds const& lhs, EtaPhiBounds const& rhs) {
     return lhs.minEta <= rhs.maxEta && lhs.maxEta >= rhs.minEta && lhs.minPhi <= rhs.maxPhi &&
            lhs.maxPhi >= rhs.minPhi;
@@ -260,9 +244,10 @@ namespace lstgeometry {
   EtaPhiQuad getEtaPhiQuad(MatrixF4x3 const& corners, float refphi, float zshift = 0) {
     EtaPhiQuad data;
     for (int i = 0; i < 4; ++i) {
-      auto ref_etaphi = getEtaPhi(corners(i, 1), corners(i, 2), corners(i, 0) + zshift, refphi);
-      data.corners(i, 0) = ref_etaphi.first;
-      data.corners(i, 1) = ref_etaphi.second;
+      float x = corners(i, 1);
+      float y = corners(i, 2);
+      data.corners(i, 0) = std::asinh((corners(i, 0) + zshift) / std::sqrt(x * x + y * y));
+      data.corners(i, 1) = normalizePhi(std::atan2(y, x) - refphi);
       data.bounds.minEta = std::min(data.bounds.minEta, data.corners(i, 0));
       data.bounds.maxEta = std::max(data.bounds.maxEta, data.corners(i, 0));
       data.bounds.minPhi = std::min(data.bounds.minPhi, data.corners(i, 1));
@@ -271,11 +256,10 @@ namespace lstgeometry {
     return data;
   }
 
-  EtaPhiQuad getEtaPhiQuad(CornerCoordinates const& corners, float refphi, float zshift = 0) {
+  EtaPhiQuad getEtaPhiQuad(CornerCoordinates const& corners, float refphi, int etaColumn) {
     EtaPhiQuad data;
-    int etaColumn = getEtaColumn(zshift);
     for (int i = 0; i < 4; ++i) {
-      data.corners(i, 0) = getEta(corners, i, zshift, etaColumn);
+      data.corners(i, 0) = corners.shiftedEtas(i, etaColumn);
       data.corners(i, 1) = normalizePhi(corners.values(i, 2) - refphi);
       data.bounds.minEta = std::min(data.bounds.minEta, data.corners(i, 0));
       data.bounds.maxEta = std::max(data.bounds.maxEta, data.corners(i, 0));
@@ -294,18 +278,10 @@ namespace lstgeometry {
   bool moduleOverlapsInEtaPhi(EtaPhiQuad const& ref_mod_boundaries_etaphi,
                               CornerCoordinates const& tar_mod_boundaries,
                               float refphi,
-                              float zshift,
-                              float ref_center_phi,
-                              float tar_center_phi,
-                              bool centers_compatible = false) {
-    if (!centers_compatible &&
-        std::fabs(normalizePhi(ref_center_phi - tar_center_phi)) > std::numbers::pi_v<float> / 2.)
-      return false;
-
-    int etaColumn = getEtaColumn(zshift);
+                              int etaColumn) {
     MatrixF4x2 tar_mod_boundaries_etaphi;
     EtaPhiBounds tar_bounds;
-    tar_mod_boundaries_etaphi(0, 0) = getEta(tar_mod_boundaries, 0, zshift, etaColumn);
+    tar_mod_boundaries_etaphi(0, 0) = tar_mod_boundaries.shiftedEtas(0, etaColumn);
     tar_mod_boundaries_etaphi(0, 1) = normalizePhi(tar_mod_boundaries.values(0, 2) - refphi);
     tar_bounds.minEta = tar_bounds.maxEta = tar_mod_boundaries_etaphi(0, 0);
     tar_bounds.minPhi = tar_bounds.maxPhi = tar_mod_boundaries_etaphi(0, 1);
@@ -317,7 +293,7 @@ namespace lstgeometry {
       return false;
 
     for (int i = 1; i < 4; ++i) {
-      tar_mod_boundaries_etaphi(i, 0) = getEta(tar_mod_boundaries, i, zshift, etaColumn);
+      tar_mod_boundaries_etaphi(i, 0) = tar_mod_boundaries.shiftedEtas(i, etaColumn);
       tar_mod_boundaries_etaphi(i, 1) = normalizePhi(tar_mod_boundaries.values(i, 2) - refphi);
       tar_bounds.minEta = std::min(tar_bounds.minEta, tar_mod_boundaries_etaphi(i, 0));
       tar_bounds.maxEta = std::max(tar_bounds.maxEta, tar_mod_boundaries_etaphi(i, 0));
@@ -414,10 +390,10 @@ namespace lstgeometry {
     auto const& tar_detids_to_be_considered =
         candidatesAt(binned_candidates, ref_location, ref_layer + 1, thetaphibins.first, thetaphibins.second);
 
-    std::array<EtaPhiQuad, 3> ref_quads = {getEtaPhiQuad(ref_corners, refphi, 0),
-                                           getEtaPhiQuad(ref_corners, refphi, 10),
-                                           getEtaPhiQuad(ref_corners, refphi, -10)};
-    constexpr std::array<float, 3> zshifts = {0.f, 10.f, -10.f};
+    constexpr std::array<int, 3> etaColumns = {0, 1, 2};
+    std::array<EtaPhiQuad, 3> ref_quads = {getEtaPhiQuad(ref_corners, refphi, etaColumns[0]),
+                                           getEtaPhiQuad(ref_corners, refphi, etaColumns[1]),
+                                           getEtaPhiQuad(ref_corners, refphi, etaColumns[2])};
 
     std::vector<unsigned int> list_of_detids_etaphi_layer_tar;
     list_of_detids_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
@@ -428,14 +404,11 @@ namespace lstgeometry {
       auto const& tar_corners = *candidate.corners;
       if (std::fabs(normalizePhi(ref_sensor.centerPhi - tar_corners.centerPhi)) > std::numbers::pi_v<float> / 2.)
         continue;
-      for (unsigned int i = 0; i < zshifts.size(); ++i) {
+      for (unsigned int i = 0; i < etaColumns.size(); ++i) {
         if (moduleOverlapsInEtaPhi(ref_quads[i],
                                    tar_corners,
                                    refphi,
-                                   zshifts[i],
-                                   ref_sensor.centerPhi,
-                                   tar_corners.centerPhi,
-                                   true)) {
+                                   etaColumns[i])) {
           list_of_detids_etaphi_layer_tar.push_back(candidate.detid);
           list_of_candidates_etaphi_layer_tar.push_back(&candidate);
           break;
@@ -455,14 +428,12 @@ namespace lstgeometry {
       covering_quads.reserve(list_of_candidates_etaphi_layer_tar.size());
       uncovered_points.reserve(64);
 
-      for (unsigned int i = 0; i < zshifts.size(); ++i) {
-        float zshift = zshifts[i];
-
+      for (unsigned int i = 0; i < etaColumns.size(); ++i) {
         // Check whether there is still significant non-zero area
         const auto subtractStart = std::chrono::steady_clock::now();
         covering_quads.clear();
         for (auto const* candidate : list_of_candidates_etaphi_layer_tar) {
-          EtaPhiQuad tar_quad = getEtaPhiQuad(*candidate->corners, refphi, zshift);
+          EtaPhiQuad tar_quad = getEtaPhiQuad(*candidate->corners, refphi, etaColumns[i]);
           if (etaPhiBoundsOverlap(ref_quads[i].bounds, tar_quad.bounds))
             covering_quads.push_back(std::move(tar_quad));
         }
@@ -487,7 +458,7 @@ namespace lstgeometry {
           if (std::fabs(normalizePhi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
-          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, zshift);
+          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, etaColumns[i]);
           if (targetIntersectsApproxUncovered(ref_quads[i], covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(candidate.detid);
         }
@@ -506,8 +477,7 @@ namespace lstgeometry {
   MatrixF4x3 boundsAfterCurved(Sensor const& ref_sensor,
                                std::array<float, kBarrelLayers> const& average_r_barrel,
                                std::array<float, kEndcapLayers> const& average_z_endcap,
-                               float ptCut,
-                               bool doR = true) {
+                               float ptCut) {
     auto const& bounds = ref_sensor.extra->corners;
     int charge = 1;
     float z_r = ref_sensor.centerZ /
@@ -527,13 +497,8 @@ namespace lstgeometry {
 
       std::tuple<float, float, float, float> next_point;
       if (ref_location == Location::barrel) {
-        if (doR) {
-          float tar_layer_radius = average_r_barrel[ref_layer];
-          next_point = helix.pointFromRadius(tar_layer_radius);
-        } else {
-          float tar_layer_z = average_z_endcap[0];
-          next_point = helix.pointFromZ(std::copysign(tar_layer_z, helix.lambda));
-        }
+        float tar_layer_radius = average_r_barrel[ref_layer];
+        next_point = helix.pointFromRadius(tar_layer_radius);
       } else {
         float tar_layer_z = average_z_endcap[ref_layer];
         next_point = helix.pointFromZ(std::copysign(tar_layer_z, helix.lambda));
@@ -578,10 +543,7 @@ namespace lstgeometry {
       if (moduleOverlapsInEtaPhi(next_layer_quad,
                                  tar_corners,
                                  refphi,
-                                 0,
-                                 next_layer_center_phi,
-                                 tar_corners.centerPhi,
-                                 true)) {
+                                 0)) {
         list_of_detids_etaphi_layer_tar.push_back(candidate.detid);
         list_of_candidates_etaphi_layer_tar.push_back(&candidate);
       }
@@ -595,14 +557,12 @@ namespace lstgeometry {
     if (ref_location == Location::barrel) {
       std::vector<unsigned int> barrel_endcap_connected_tar_detids;
 
-      int zshift = 0;
-
       // Check whether there is still significant non-zero area
       const auto subtractStart = std::chrono::steady_clock::now();
       std::vector<EtaPhiQuad> covering_quads;
       covering_quads.reserve(list_of_detids_etaphi_layer_tar.size());
       for (auto const* candidate : list_of_candidates_etaphi_layer_tar) {
-        EtaPhiQuad tar_quad = getEtaPhiQuad(*candidate->corners, refphi, zshift);
+        EtaPhiQuad tar_quad = getEtaPhiQuad(*candidate->corners, refphi, 0);
         if (etaPhiBoundsOverlap(next_layer_quad.bounds, tar_quad.bounds))
           covering_quads.push_back(std::move(tar_quad));
       }
@@ -625,7 +585,7 @@ namespace lstgeometry {
           if (std::fabs(normalizePhi(tarphi - refphi)) > std::numbers::pi_v<float> / 2.)
             continue;
 
-          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, zshift);
+          EtaPhiQuad target_quad = getEtaPhiQuad(tar_corners, refphi, 0);
           if (targetIntersectsApproxUncovered(next_layer_quad, covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(candidate.detid);
         }

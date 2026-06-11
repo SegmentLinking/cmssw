@@ -11,6 +11,9 @@ namespace lstgeometry {
     maps.reserve(12);
 
     std::size_t nSuperbin = kPtBounds.size() * kNPhi * kNEta * kNZ;
+    constexpr float zBinWidth = 60.f / kNZ;
+    constexpr float etaBinScale = kNEta / 5.2f;
+    constexpr float inversePhiBinWidth = kNPhi / (2.f * std::numbers::pi_v<float>);
 
     // Initialize empty lists for the pixel map
     for (unsigned int layer : {1, 2}) {
@@ -23,16 +26,25 @@ namespace lstgeometry {
 
     // Loop over the detids and for each detid compute which superbins it is connected to
     for (auto const& [detId, sensor] : sensors) {
-      // Phase-2 enum differs from the legacy one used here
-      unsigned int subdet = sensor.extra->subdet == SubDetector::P2OTB ? SubDet::Barrel : SubDet::Endcap;
       auto layer = sensor.extra->layer;
       if (layer > 2)
         continue;
-      auto location = sensor.extra->location;
 
       // Skip if the module is not PS module and is not lower sensor
       if (sensor.moduleType == ModuleType::Ph2SS || !sensor.extra->lower)
         continue;
+
+      // Phase-2 enum differs from the legacy one used here
+      unsigned int subdet = sensor.extra->subdet == SubDetector::P2OTB ? SubDet::Barrel : SubDet::Endcap;
+      auto location = sensor.extra->location;
+      float minR = sensor.extra->minR;
+      float maxR = sensor.extra->maxR;
+      float minZ = sensor.extra->minZ;
+      float maxZ = sensor.extra->maxZ;
+      float invMinR = 1.f / minR;
+      float invMaxR = 1.f / maxR;
+      float minEtaInvR = minZ > 0 ? invMaxR : invMinR;
+      float maxEtaInvR = maxZ > 0 ? invMinR : invMaxR;
 
       auto& pos_map = maps.at({layer, subdet, 1});
       auto& neg_map = maps.at({layer, subdet, -1});
@@ -47,24 +59,23 @@ namespace lstgeometry {
 
         auto phi_ranges = getCompatiblePhiRange(sensor, pt_lo, pt_hi);
 
-        unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<float>) /
-                                                             (2. * std::numbers::pi_v<float> / kNPhi));
-        unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<float>) /
-                                                             (2. * std::numbers::pi_v<float> / kNPhi));
-        unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<float>) /
-                                                             (2. * std::numbers::pi_v<float> / kNPhi));
-        unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<float>) /
-                                                             (2. * std::numbers::pi_v<float> / kNPhi));
+        unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<float>) *
+                                                             inversePhiBinWidth);
+        unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<float>) *
+                                                             inversePhiBinWidth);
+        unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<float>) *
+                                                             inversePhiBinWidth);
+        unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<float>) *
+                                                             inversePhiBinWidth);
 
         for (unsigned int iz = 0; iz < kNZ; iz++) {
           // The zmin, zmax of consideration
-          float zmin = -30 + iz * (60. / kNZ);
-          float zmax = -30 + (iz + 1) * (60. / kNZ);
-
-          zmin -= 0.05;
-          zmax += 0.05;
-
-          auto [etamin, etamax] = getCompatibleEtaRange(sensor, zmin, zmax);
+          float zmin = -30.f + iz * zBinWidth - 0.05f;
+          float zmax = -30.f + (iz + 1) * zBinWidth + 0.05f;
+          float etamin = std::asinh((minZ - zmin) * minEtaInvR);
+          float etamax = std::asinh((maxZ - zmax) * maxEtaInvR);
+          if (etamax < etamin)
+            std::swap(etamax, etamin);
 
           etamin -= 0.05;
           etamax += 0.05;
@@ -77,9 +88,9 @@ namespace lstgeometry {
           }
 
           // Compute the indices of the compatible eta range
-          unsigned int ietamin = static_cast<unsigned int>(std::max((etamin + 2.6f) / (5.2f / kNEta), 0.0f));
+          unsigned int ietamin = static_cast<unsigned int>(std::max((etamin + 2.6f) * etaBinScale, 0.0f));
           unsigned int ietamax =
-              static_cast<unsigned int>(std::min((etamax + 2.6f) / (5.2f / kNEta), static_cast<float>(kNEta - 1)));
+              static_cast<unsigned int>(std::min((etamax + 2.6f) * etaBinScale, static_cast<float>(kNEta - 1)));
 
           // <= to cover some inefficiencies
           for (unsigned int ieta = ietamin; ieta <= ietamax; ieta++) {
