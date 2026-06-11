@@ -43,8 +43,8 @@ namespace lstgeometry {
     float maxr = sensor.extra->maxR;
     float minz = sensor.extra->minZ;
     float maxz = sensor.extra->maxZ;
-    float mineta = -std::log(std::tan(std::atan2(minz > 0 ? maxr : minr, minz - zmin_bound) / 2.));
-    float maxeta = -std::log(std::tan(std::atan2(maxz > 0 ? minr : maxr, maxz - zmax_bound) / 2.));
+    float mineta = std::asinh((minz - zmin_bound) / (minz > 0 ? maxr : minr));
+    float maxeta = std::asinh((maxz - zmax_bound) / (maxz > 0 ? minr : maxr));
 
     if (maxeta < mineta)
       std::swap(maxeta, mineta);

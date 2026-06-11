@@ -4,7 +4,6 @@
 #include <cmath>
 #include <vector>
 #include <tuple>
-#include <initializer_list>
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
@@ -312,10 +311,9 @@ namespace lstgeometry {
     tar_bounds.minPhi = tar_bounds.maxPhi = tar_mod_boundaries_etaphi(0, 1);
 
     // Quick cut
-    RowVectorF2 diff = ref_mod_boundaries_etaphi.corners.row(0) - tar_mod_boundaries_etaphi.row(0);
-    if (std::fabs(diff(0)) > 0.5)
+    if (std::fabs(ref_mod_boundaries_etaphi.corners(0, 0) - tar_mod_boundaries_etaphi(0, 0)) > 0.5)
       return false;
-    if (std::fabs(normalizePhi(diff(1))) > 1.)
+    if (std::fabs(normalizePhi(ref_mod_boundaries_etaphi.corners(0, 1) - tar_mod_boundaries_etaphi(0, 1))) > 1.)
       return false;
 
     for (int i = 1; i < 4; ++i) {
@@ -403,14 +401,10 @@ namespace lstgeometry {
     return false;
   }
 
-  std::vector<unsigned int> getStraightLineConnections(unsigned int ref_detid,
-                                                       Sensors const& sensors,
+  std::vector<unsigned int> getStraightLineConnections(Sensor const& ref_sensor,
+                                                       CornerCoordinates const& ref_corners,
                                                        BinnedCandidates const& binned_candidates,
-                                                       CornerCoordinatesMap const& corner_coordinates,
                                                        ModuleMapTiming* timing = nullptr) {
-    auto const& ref_sensor = sensors.at(ref_detid);
-    auto const& ref_corners = corner_coordinates.at(ref_detid);
-
     float refphi = ref_sensor.centerPhi;
     unsigned short ref_layer = ref_sensor.extra->layer;
     auto ref_location = ref_sensor.extra->location;
@@ -509,13 +503,11 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  MatrixF4x3 boundsAfterCurved(unsigned int ref_detid,
-                               Sensors const& sensors,
+  MatrixF4x3 boundsAfterCurved(Sensor const& ref_sensor,
                                std::array<float, kBarrelLayers> const& average_r_barrel,
                                std::array<float, kEndcapLayers> const& average_z_endcap,
                                float ptCut,
                                bool doR = true) {
-    auto const& ref_sensor = sensors.at(ref_detid);
     auto const& bounds = ref_sensor.extra->corners;
     int charge = 1;
     float z_r = ref_sensor.centerZ /
@@ -554,16 +546,12 @@ namespace lstgeometry {
     return next_layer_bound_points;
   }
 
-  std::vector<unsigned int> getCurvedLineConnections(unsigned int ref_detid,
-                                                     Sensors const& sensors,
+  std::vector<unsigned int> getCurvedLineConnections(Sensor const& ref_sensor,
                                                      BinnedCandidates const& binned_candidates,
-                                                     CornerCoordinatesMap const& corner_coordinates,
                                                      std::array<float, kBarrelLayers> const& average_r_barrel,
                                                      std::array<float, kEndcapLayers> const& average_z_endcap,
                                                      float ptCut,
                                                      ModuleMapTiming* timing = nullptr) {
-    auto const& ref_sensor = sensors.at(ref_detid);
-
     float refphi = ref_sensor.centerPhi;
 
     unsigned short ref_layer = ref_sensor.extra->layer;
@@ -574,7 +562,7 @@ namespace lstgeometry {
     auto const& tar_detids_to_be_considered =
         candidatesAt(binned_candidates, ref_location, ref_layer + 1, thetaphibins.first, thetaphibins.second);
 
-    auto next_layer_bound_points = boundsAfterCurved(ref_detid, sensors, average_r_barrel, average_z_endcap, ptCut);
+    auto next_layer_bound_points = boundsAfterCurved(ref_sensor, average_r_barrel, average_z_endcap, ptCut);
     EtaPhiQuad next_layer_quad = getEtaPhiQuad(next_layer_bound_points, refphi);
     float next_layer_center_phi = getCenterPhi(next_layer_bound_points);
 
@@ -654,34 +642,13 @@ namespace lstgeometry {
     return list_of_detids_etaphi_layer_tar;
   }
 
-  ModuleMap mergeLineConnections(
-      std::initializer_list<const std::unordered_map<unsigned int, std::vector<unsigned int>>*> connections_list) {
-    ModuleMap merged;
-
-    for (auto* connections : connections_list) {
-      for (auto const& [detid, list] : *connections) {
-        auto& target = merged[detid];
-        target.insert(target.end(), list.begin(), list.end());
-      }
-    }
-
-    for (auto& [detid, list] : merged) {
-      std::sort(list.begin(), list.end());
-      list.erase(std::unique(list.begin(), list.end()), list.end());
-    }
-
-    return merged;
-  }
-
   ModuleMap buildModuleMap(Sensors const& sensors,
                            BinnedDetIds const& binned_detids,
                            std::array<float, kBarrelLayers> const& average_r_barrel,
                            std::array<float, kEndcapLayers> const& average_z_endcap,
                            float pt_cut) {
-    std::unordered_map<unsigned int, std::vector<unsigned int>> straight_line_connections;
-    std::unordered_map<unsigned int, std::vector<unsigned int>> curved_line_connections;
-    straight_line_connections.reserve(sensors.size());
-    curved_line_connections.reserve(sensors.size());
+    ModuleMap moduleMap;
+    moduleMap.reserve(sensors.size());
 
     const auto start = std::chrono::steady_clock::now();
 
@@ -696,6 +663,7 @@ namespace lstgeometry {
 
     double straightMs = 0.;
     double curvedMs = 0.;
+    double mergeMs = 0.;
     unsigned int nRefSensors = 0;
     ModuleMapTiming timing;
     for (auto const& [ref_detid, s] : sensors) {
@@ -706,25 +674,33 @@ namespace lstgeometry {
              !(s.extra->ring == 12 && s.extra->layer == 3) && !(s.extra->ring == 12 && s.extra->layer == 4))))
         continue;
       ++nRefSensors;
+      auto const& ref_corners = corner_coordinates.at(ref_detid);
       const auto straightStart = std::chrono::steady_clock::now();
-      straight_line_connections[ref_detid] =
-          getStraightLineConnections(ref_detid, sensors, binned_candidates, corner_coordinates, &timing);
+      auto straight_line_connections =
+          getStraightLineConnections(s, ref_corners, binned_candidates, &timing);
       const auto straightDone = std::chrono::steady_clock::now();
-      curved_line_connections[ref_detid] = getCurvedLineConnections(
-          ref_detid, sensors, binned_candidates, corner_coordinates, average_r_barrel, average_z_endcap, pt_cut, &timing);
+      auto curved_line_connections = getCurvedLineConnections(
+          s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut, &timing);
       const auto curvedDone = std::chrono::steady_clock::now();
       straightMs += std::chrono::duration<double, std::milli>(straightDone - straightStart).count();
       curvedMs += std::chrono::duration<double, std::milli>(curvedDone - straightDone).count();
+      const auto mergeStart = std::chrono::steady_clock::now();
+      auto& connections = moduleMap[ref_detid];
+      connections.reserve(straight_line_connections.size() + curved_line_connections.size());
+      connections.insert(connections.end(), straight_line_connections.begin(), straight_line_connections.end());
+      connections.insert(connections.end(), curved_line_connections.begin(), curved_line_connections.end());
+      std::sort(connections.begin(), connections.end());
+      connections.erase(std::unique(connections.begin(), connections.end()), connections.end());
+      const auto mergeDone = std::chrono::steady_clock::now();
+      mergeMs += std::chrono::duration<double, std::milli>(mergeDone - mergeStart).count();
     }
     const auto connectionsDone = std::chrono::steady_clock::now();
-    auto moduleMap = mergeLineConnections({&straight_line_connections, &curved_line_connections});
-    const auto mergeDone = std::chrono::steady_clock::now();
 
     edm::LogInfo("LSTGeometryESProducer")
         << "Temporary timing: buildModuleMap refs " << nRefSensors << ", straight " << straightMs << " ms, curved "
         << curvedMs << " ms, loop total "
-        << std::chrono::duration<double, std::milli>(connectionsDone - start).count() << " ms, merge "
-        << std::chrono::duration<double, std::milli>(mergeDone - connectionsDone).count() << " ms";
+        << std::chrono::duration<double, std::milli>(connectionsDone - start).count() << " ms, merge " << mergeMs
+        << " ms";
     edm::LogInfo("LSTGeometryESProducer")
         << "Temporary timing: buildModuleMap detail straight overlap " << timing.straightOverlapMs << " ms, subtract "
         << timing.straightSubtractMs << " ms, endcap scan " << timing.straightEndcapMs << " ms; curved overlap "
