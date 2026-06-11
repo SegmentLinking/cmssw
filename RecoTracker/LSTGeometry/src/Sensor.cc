@@ -34,8 +34,8 @@ bool isInverted(unsigned int moduleId, Location location, Side side, unsigned in
 }
 
 // This differs from TrackerTopology::isLower since it considers if the module is inverted
-bool isLower(unsigned int moduleId, Location location, Side side, unsigned int layer, unsigned int detId) {
-  return isInverted(moduleId, location, side, layer) ? !(detId & 1) : (detId & 1);
+bool isLower(bool isInverted, unsigned int detId) {
+  return isInverted ? !(detId & 1) : (detId & 1);
 }
 
 bool isStrip(ModuleType moduleType, bool isInverted, bool isLower) {
@@ -72,7 +72,7 @@ Sensor::Sensor(unsigned int detId,
   extra->ring = ring;
   extra->inverted = isInverted(moduleId, location, side, layer);
   extra->centerRho = centerRho;
-  extra->lower = isLower(moduleId, location, side, layer, detId);
+  extra->lower = isLower(extra->inverted, detId);
   extra->strip = isStrip(moduleType, extra->inverted, extra->lower);
   extra->centerEta = std::asinh(centerZ / centerRho);
   extra->centerTheta = std::numbers::pi_v<float> / 2. - std::atan(centerZ / centerRho);
@@ -116,7 +116,7 @@ Sensor::Sensor(unsigned int detId,
     float y = extra->corners(i, 2);
     float r = std::sqrt(x * x + y * y);
     float z = extra->corners(i, 0);
-    float phi = phi_mpi_pi(std::numbers::pi_v<float> + std::atan2(-extra->corners(i, 2), -extra->corners(i, 1)));
+    float phi = phi_mpi_pi(std::atan2(y, x));
 
     extra->minR = std::min(extra->minR, r);
     extra->maxR = std::max(extra->maxR, r);

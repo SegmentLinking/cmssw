@@ -14,6 +14,7 @@ namespace lstgeometry {
     constexpr float zBinWidth = 60.f / kNZ;
     constexpr float etaBinScale = kNEta / 5.2f;
     constexpr float inversePhiBinWidth = kNPhi / (2.f * std::numbers::pi_v<float>);
+    constexpr float curvatureToPhi = kC * kB / 2.f;
 
     // Initialize empty lists for the pixel map
     for (unsigned int layer : {1, 2}) {
@@ -41,6 +42,8 @@ namespace lstgeometry {
       float maxR = sensor.extra->maxR;
       float minZ = sensor.extra->minZ;
       float maxZ = sensor.extra->maxZ;
+      float minPhi = sensor.extra->minPhi;
+      float maxPhi = sensor.extra->maxPhi;
       float invMinR = 1.f / minR;
       float invMaxR = 1.f / maxR;
       float minEtaInvR = minZ > 0 ? invMaxR : invMinR;
@@ -57,15 +60,20 @@ namespace lstgeometry {
         float pt_lo = ipt == 0 ? pt_cut : kPtBounds[ipt - 1];
         float pt_hi = kPtBounds[ipt];
 
-        auto phi_ranges = getCompatiblePhiRange(sensor, pt_lo, pt_hi);
+        float invPtLo = 1.f / pt_lo;
+        float invPtHi = 1.f / pt_hi;
+        float pos_q_phi_lo_bound = phi_mpi_pi(curvatureToPhi * minR * invPtHi + minPhi);
+        float pos_q_phi_hi_bound = phi_mpi_pi(curvatureToPhi * maxR * invPtLo + maxPhi);
+        float neg_q_phi_lo_bound = phi_mpi_pi(-curvatureToPhi * maxR * invPtLo + minPhi);
+        float neg_q_phi_hi_bound = phi_mpi_pi(-curvatureToPhi * minR * invPtHi + maxPhi);
 
-        unsigned int iphimin_pos = static_cast<unsigned int>((phi_ranges.first.first + std::numbers::pi_v<float>) *
+        unsigned int iphimin_pos = static_cast<unsigned int>((pos_q_phi_lo_bound + std::numbers::pi_v<float>) *
                                                              inversePhiBinWidth);
-        unsigned int iphimax_pos = static_cast<unsigned int>((phi_ranges.first.second + std::numbers::pi_v<float>) *
+        unsigned int iphimax_pos = static_cast<unsigned int>((pos_q_phi_hi_bound + std::numbers::pi_v<float>) *
                                                              inversePhiBinWidth);
-        unsigned int iphimin_neg = static_cast<unsigned int>((phi_ranges.second.first + std::numbers::pi_v<float>) *
+        unsigned int iphimin_neg = static_cast<unsigned int>((neg_q_phi_lo_bound + std::numbers::pi_v<float>) *
                                                              inversePhiBinWidth);
-        unsigned int iphimax_neg = static_cast<unsigned int>((phi_ranges.second.second + std::numbers::pi_v<float>) *
+        unsigned int iphimax_neg = static_cast<unsigned int>((neg_q_phi_hi_bound + std::numbers::pi_v<float>) *
                                                              inversePhiBinWidth);
 
         for (unsigned int iz = 0; iz < kNZ; iz++) {

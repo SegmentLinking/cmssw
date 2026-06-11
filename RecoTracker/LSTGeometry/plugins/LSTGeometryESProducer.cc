@@ -82,17 +82,11 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     const float rho_cm = position.perp();
     const float z_cm = lstgeometry::roundCoordinate(position.z());
-    const float phi_rad = lstgeometry::roundAngle(position.phi());
 
     const auto subdet = trackerGeom_->geomDetSubDetector(detId.subdetId());
     const auto location =
         GeomDetEnumerators::isBarrel(subdet) ? lstgeometry::Location::barrel : lstgeometry::Location::endcap;
-    const auto side = static_cast<lstgeometry::Side>(
-        location == lstgeometry::Location::barrel ? static_cast<unsigned int>(trackerTopo_->barrelTiltTypeP2(detId))
-                                                  : trackerTopo_->side(detId));
-    const unsigned int moduleId = trackerTopo_->module(detId);
     const unsigned int layer = trackerTopo_->layer(detId);
-    const unsigned int ring = trackerTopo_->endcapRingP2(detId);
 
     if (layer == 0 || (location == lstgeometry::Location::barrel && layer > lstgeometry::kBarrelLayers) ||
         (location == lstgeometry::Location::endcap && layer > lstgeometry::kEndcapLayers)) {
@@ -101,8 +95,14 @@ std::unique_ptr<lstgeometry::Geometry> LSTGeometryESProducer::produce(const Trac
 
     if (det->isLeaf()) {
       // Leafs are the sensors
-      sensors[detid] = lstgeometry::Sensor(
-          detid, moduleType, subdet, location, side, moduleId, layer, ring, rho_cm, z_cm, phi_rad, surface);
+      const float phi_rad = lstgeometry::roundAngle(position.phi());
+      const auto side = static_cast<lstgeometry::Side>(
+          location == lstgeometry::Location::barrel ? static_cast<unsigned int>(trackerTopo_->barrelTiltTypeP2(detId))
+                                                    : trackerTopo_->side(detId));
+      const unsigned int moduleId = trackerTopo_->module(detId);
+      const unsigned int ring = location == lstgeometry::Location::endcap ? trackerTopo_->endcapRingP2(detId) : 0;
+      sensors.try_emplace(
+          detid, detid, moduleType, subdet, location, side, moduleId, layer, ring, rho_cm, z_cm, phi_rad, surface);
 
       continue;
     }
