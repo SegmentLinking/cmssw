@@ -1,11 +1,8 @@
 #include <array>
 #include <algorithm>
-#include <chrono>
 #include <cmath>
 #include <vector>
 #include <tuple>
-
-#include "FWCore/MessageLogger/interface/MessageLogger.h"
 
 #include "RecoTracker/LSTGeometry/interface/Helix.h"
 #include "RecoTracker/LSTGeometry/interface/ModuleMap.h"
@@ -41,15 +38,6 @@ namespace lstgeometry {
     std::array<float, 4> corners;
     float minPhi;
     float maxPhi;
-  };
-
-  struct ModuleMapTiming {
-    double straightOverlapMs = 0.;
-    double straightSubtractMs = 0.;
-    double straightEndcapMs = 0.;
-    double curvedOverlapMs = 0.;
-    double curvedSubtractMs = 0.;
-    double curvedEndcapMs = 0.;
   };
 
   using CornerCoordinatesMap = std::unordered_map<unsigned int, CornerCoordinates>;
@@ -414,8 +402,7 @@ namespace lstgeometry {
 
   std::vector<unsigned int> getStraightLineConnections(Sensor const& ref_sensor,
                                                        CornerCoordinates const& ref_corners,
-                                                       BinnedCandidates const& binned_candidates,
-                                                       ModuleMapTiming* timing = nullptr) {
+                                                       BinnedCandidates const& binned_candidates) {
     float refphi = ref_sensor.centerPhi;
     unsigned short ref_layer = ref_sensor.extra->layer;
     auto ref_location = ref_sensor.extra->location;
@@ -434,7 +421,6 @@ namespace lstgeometry {
     list_of_detids_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
     std::vector<MatchedCandidate> list_of_candidates_etaphi_layer_tar;
     list_of_candidates_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
-    const auto overlapStart = std::chrono::steady_clock::now();
     for (auto const& candidate : tar_detids_to_be_considered) {
       auto const& tar_corners = *candidate.corners;
       if (std::fabs(normalizePhi(ref_sensor.centerPhi - tar_corners.centerPhi)) > std::numbers::pi_v<float> / 2.)
@@ -451,9 +437,6 @@ namespace lstgeometry {
         }
       }
     }
-    const auto overlapDone = std::chrono::steady_clock::now();
-    if (timing)
-      timing->straightOverlapMs += std::chrono::duration<double, std::milli>(overlapDone - overlapStart).count();
 
     // Consider barrel to endcap connections if the approximated uncovered area is > 0
     // after accounting for target modules in the next barrel layer.
@@ -466,7 +449,6 @@ namespace lstgeometry {
 
       for (unsigned int i = 0; i < etaColumns.size(); ++i) {
         // Check whether there is still significant non-zero area
-        const auto subtractStart = std::chrono::steady_clock::now();
         covering_quads.clear();
         for (auto const& candidate : list_of_candidates_etaphi_layer_tar) {
           EtaPhiQuad tar_quad =
@@ -476,18 +458,12 @@ namespace lstgeometry {
         }
         float area = approximateUncoveredArea(ref_quads[i], covering_quads, uncovered_points);
 
-        const auto subtractDone = std::chrono::steady_clock::now();
-        if (timing)
-          timing->straightSubtractMs +=
-              std::chrono::duration<double, std::milli>(subtractDone - subtractStart).count();
-
         if (area <= 5e-3)
           continue;
 
         auto const& new_tar_detids_to_be_considered =
             candidatesAt(binned_candidates, Location::endcap, 1, thetaphibins.first, thetaphibins.second);
 
-        const auto endcapStart = std::chrono::steady_clock::now();
         for (auto const& candidate : new_tar_detids_to_be_considered) {
           auto const& tar_corners = *candidate.corners;
           float tarphi = tar_corners.centerPhi;
@@ -500,9 +476,6 @@ namespace lstgeometry {
           if (targetIntersectsApproxUncovered(ref_quads[i], covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(candidate.detid);
         }
-        const auto endcapDone = std::chrono::steady_clock::now();
-        if (timing)
-          timing->straightEndcapMs += std::chrono::duration<double, std::milli>(endcapDone - endcapStart).count();
       }
       list_of_detids_etaphi_layer_tar.insert(list_of_detids_etaphi_layer_tar.end(),
                                              barrel_endcap_connected_tar_detids.begin(),
@@ -553,8 +526,7 @@ namespace lstgeometry {
                                                      BinnedCandidates const& binned_candidates,
                                                      std::array<float, kBarrelLayers> const& average_r_barrel,
                                                      std::array<float, kEndcapLayers> const& average_z_endcap,
-                                                     float ptCut,
-                                                     ModuleMapTiming* timing = nullptr) {
+                                                     float ptCut) {
     float refphi = ref_sensor.centerPhi;
 
     unsigned short ref_layer = ref_sensor.extra->layer;
@@ -573,7 +545,6 @@ namespace lstgeometry {
     list_of_detids_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
     std::vector<MatchedCandidate> list_of_candidates_etaphi_layer_tar;
     list_of_candidates_etaphi_layer_tar.reserve(tar_detids_to_be_considered.size());
-    const auto overlapStart = std::chrono::steady_clock::now();
     for (auto const& candidate : tar_detids_to_be_considered) {
       auto const& tar_corners = *candidate.corners;
       if (std::fabs(normalizePhi(next_layer_center_phi - tar_corners.centerPhi)) > std::numbers::pi_v<float> / 2.)
@@ -587,9 +558,6 @@ namespace lstgeometry {
         list_of_candidates_etaphi_layer_tar.push_back({&candidate, relativePhis});
       }
     }
-    const auto overlapDone = std::chrono::steady_clock::now();
-    if (timing)
-      timing->curvedOverlapMs += std::chrono::duration<double, std::milli>(overlapDone - overlapStart).count();
 
     // Consider barrel to endcap connections if the approximated uncovered area is > 0
     // after accounting for target modules in the next barrel layer.
@@ -597,7 +565,6 @@ namespace lstgeometry {
       std::vector<unsigned int> barrel_endcap_connected_tar_detids;
 
       // Check whether there is still significant non-zero area
-      const auto subtractStart = std::chrono::steady_clock::now();
       std::vector<EtaPhiQuad> covering_quads;
       covering_quads.reserve(list_of_detids_etaphi_layer_tar.size());
       for (auto const& candidate : list_of_candidates_etaphi_layer_tar) {
@@ -608,15 +575,10 @@ namespace lstgeometry {
       std::vector<EtaPhiPoint> uncovered_points;
       float area = approximateUncoveredArea(next_layer_quad, covering_quads, uncovered_points);
 
-      const auto subtractDone = std::chrono::steady_clock::now();
-      if (timing)
-        timing->curvedSubtractMs += std::chrono::duration<double, std::milli>(subtractDone - subtractStart).count();
-
       if (area > 5e-3) {
         auto const& new_tar_detids_to_be_considered =
             candidatesAt(binned_candidates, Location::endcap, 1, thetaphibins.first, thetaphibins.second);
 
-        const auto endcapStart = std::chrono::steady_clock::now();
         for (auto const& candidate : new_tar_detids_to_be_considered) {
           auto const& tar_corners = *candidate.corners;
           float tarphi = tar_corners.centerPhi;
@@ -629,9 +591,6 @@ namespace lstgeometry {
           if (targetIntersectsApproxUncovered(next_layer_quad, covering_quads, uncovered_points, target_quad))
             barrel_endcap_connected_tar_detids.push_back(candidate.detid);
         }
-        const auto endcapDone = std::chrono::steady_clock::now();
-        if (timing)
-          timing->curvedEndcapMs += std::chrono::duration<double, std::milli>(endcapDone - endcapStart).count();
       }
 
       list_of_detids_etaphi_layer_tar.insert(list_of_detids_etaphi_layer_tar.end(),
@@ -650,8 +609,6 @@ namespace lstgeometry {
     ModuleMap moduleMap;
     moduleMap.reserve(sensors.size());
 
-    const auto start = std::chrono::steady_clock::now();
-
     CornerCoordinatesMap corner_coordinates;
     corner_coordinates.reserve(sensors.size());
     for (auto const& [detid, sensor] : sensors) {
@@ -661,11 +618,6 @@ namespace lstgeometry {
     }
     BinnedCandidates binned_candidates = buildBinnedCandidates(binned_detids, corner_coordinates);
 
-    double straightMs = 0.;
-    double curvedMs = 0.;
-    double mergeMs = 0.;
-    unsigned int nRefSensors = 0;
-    ModuleMapTiming timing;
     for (auto const& [ref_detid, s] : sensors) {
       // exclude the outermost modules that do not have connections to other modules
       if (!((s.extra->location == Location::barrel && s.extra->lower && s.extra->layer != 6) ||
@@ -673,38 +625,17 @@ namespace lstgeometry {
              !(s.extra->ring == 15 && s.extra->layer == 1) && !(s.extra->ring == 15 && s.extra->layer == 2) &&
              !(s.extra->ring == 12 && s.extra->layer == 3) && !(s.extra->ring == 12 && s.extra->layer == 4))))
         continue;
-      ++nRefSensors;
       auto const& ref_corners = corner_coordinates.at(ref_detid);
-      const auto straightStart = std::chrono::steady_clock::now();
-      auto straight_line_connections = getStraightLineConnections(s, ref_corners, binned_candidates, &timing);
-      const auto straightDone = std::chrono::steady_clock::now();
+      auto straight_line_connections = getStraightLineConnections(s, ref_corners, binned_candidates);
       auto curved_line_connections = getCurvedLineConnections(
-          s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut, &timing);
-      const auto curvedDone = std::chrono::steady_clock::now();
-      straightMs += std::chrono::duration<double, std::milli>(straightDone - straightStart).count();
-      curvedMs += std::chrono::duration<double, std::milli>(curvedDone - straightDone).count();
-      const auto mergeStart = std::chrono::steady_clock::now();
+          s, binned_candidates, average_r_barrel, average_z_endcap, pt_cut);
       auto& connections = moduleMap[ref_detid];
       connections.reserve(straight_line_connections.size() + curved_line_connections.size());
       connections.insert(connections.end(), straight_line_connections.begin(), straight_line_connections.end());
       connections.insert(connections.end(), curved_line_connections.begin(), curved_line_connections.end());
       std::sort(connections.begin(), connections.end());
       connections.erase(std::unique(connections.begin(), connections.end()), connections.end());
-      const auto mergeDone = std::chrono::steady_clock::now();
-      mergeMs += std::chrono::duration<double, std::milli>(mergeDone - mergeStart).count();
     }
-    const auto connectionsDone = std::chrono::steady_clock::now();
-
-    edm::LogInfo("LSTGeometryESProducer")
-        << "Temporary timing: buildModuleMap refs " << nRefSensors << ", straight " << straightMs << " ms, curved "
-        << curvedMs << " ms, loop total "
-        << std::chrono::duration<double, std::milli>(connectionsDone - start).count() << " ms, merge " << mergeMs
-        << " ms";
-    edm::LogInfo("LSTGeometryESProducer")
-        << "Temporary timing: buildModuleMap detail straight overlap " << timing.straightOverlapMs << " ms, subtract "
-        << timing.straightSubtractMs << " ms, endcap scan " << timing.straightEndcapMs << " ms; curved overlap "
-        << timing.curvedOverlapMs << " ms, subtract " << timing.curvedSubtractMs << " ms, endcap scan "
-        << timing.curvedEndcapMs << " ms";
 
     return moduleMap;
   }

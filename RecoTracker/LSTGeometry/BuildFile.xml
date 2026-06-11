@@ -1,6 +1,5 @@
 <use name="eigen"/>
 <use name="DataFormats/Common"/>
-<use name="FWCore/MessageLogger"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
 <use name="Geometry/CommonTopologies"/>
 <export>
