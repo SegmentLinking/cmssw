@@ -45,6 +45,7 @@ namespace lst {
                                              std::vector<float> const& ph2_y,
                                              std::vector<float> const& ph2_z,
 #ifndef LST_STANDALONE
+                                             std::vector<ArrayFx6> const& ph2_ge,
                                              std::vector<TrackingRecHit const*> const& ph2_hits,
 #endif
                                              float const ptCut,
@@ -226,6 +227,7 @@ namespace lst {
     std::copy_n(ph2_detId.data(), nHitsOT, hits.detid().data());
     std::copy_n(ph2_clustSize.data(), nHitsOT, hits.clustsize().data());
 #ifndef LST_STANDALONE
+    std::copy_n(ph2_ge.data(), nHitsOT, hits.ge().data());
     std::copy_n(ph2_hits.data(), nHitsOT, hits.hits().data());
 #endif
 
@@ -235,6 +237,7 @@ namespace lst {
     std::copy_n(hitId.data(), nHitsIT, hits.detid().data() + nHitsOT);
     std::copy_n(hitClustSize.data(), nHitsIT, hits.clustsize().data() + nHitsOT);
 #ifndef LST_STANDALONE
+    std::fill_n(hits.ge().data() + nHitsOT, nHitsIT, ArrayFx6{});
     std::fill_n(hits.hits().data() + nHitsOT, nHitsIT, nullptr);
 #endif
 

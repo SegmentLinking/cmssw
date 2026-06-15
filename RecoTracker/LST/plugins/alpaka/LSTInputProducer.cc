@@ -10,6 +10,7 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
+#include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
 #include "FWCore/Utilities/interface/transform.h"
@@ -90,6 +91,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ph2_y.reserve(phase2OTHits.dataSize());
     std::vector<float> ph2_z;
     ph2_z.reserve(phase2OTHits.dataSize());
+    std::vector<lst::ArrayFx6> ph2_ge;
+    ph2_ge.reserve(phase2OTHits.dataSize());
     std::vector<TrackingRecHit const*> ph2_hits;
     ph2_hits.reserve(phase2OTHits.dataSize());
 
@@ -101,6 +104,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ph2_x.push_back(hit.globalPosition().x());
         ph2_y.push_back(hit.globalPosition().y());
         ph2_z.push_back(hit.globalPosition().z());
+
+        // Rotate local position error to global covariance for BLF.
+        // Local covariance: [[lxx, lxy, 0], [lxy, lyy, 0], [0, 0, 0]]
+        // Global covariance: R * LocalCov * R^T, keeping only x/y local axes.
+        auto const& rot = hit.det()->surface().rotation();
+        auto const lErr = hit.localPositionError();
+        float lxx = lErr.xx(), lxy = lErr.xy(), lyy = lErr.yy();
+        float rxx = rot.xx(), rxy = rot.xy();
+        float ryx = rot.yx(), ryy = rot.yy();
+        float rzx = rot.zx(), rzy = rot.zy();
+        lst::ArrayFx6 ge;
+        ge[0] = rxx * rxx * lxx + 2.f * rxx * rxy * lxy + rxy * rxy * lyy;
+        ge[1] = rxx * ryx * lxx + (rxx * ryy + rxy * ryx) * lxy + rxy * ryy * lyy;
+        ge[2] = ryx * ryx * lxx + 2.f * ryx * ryy * lxy + ryy * ryy * lyy;
+        ge[3] = rxx * rzx * lxx + (rxx * rzy + rxy * rzx) * lxy + rxy * rzy * lyy;
+        ge[4] = ryx * rzx * lxx + (ryx * rzy + ryy * rzx) * lxy + ryy * rzy * lyy;
+        ge[5] = rzx * rzx * lxx + 2.f * rzx * rzy * lxy + rzy * rzy * lyy;
+        ph2_ge.push_back(ge);
+
         ph2_hits.push_back(&hit);
       }
     }
@@ -241,6 +263,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         ph2_x,
                                         ph2_y,
                                         ph2_z,
+                                        ph2_ge,
                                         ph2_hits,
                                         ptCut_,
                                         iEvent.queue());

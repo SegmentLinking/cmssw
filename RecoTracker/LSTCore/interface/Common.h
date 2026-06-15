@@ -116,6 +116,7 @@ namespace lst {
 
   using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
+  using ArrayFx6 = edm::StdArray<float, 6>;
 
 }  //namespace lst
 
