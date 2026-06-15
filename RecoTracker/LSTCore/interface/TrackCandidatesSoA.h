@@ -31,12 +31,24 @@ namespace lst {
                       SOA_SCALAR(unsigned int, nTrackCandidatesT5),
                       SOA_SCALAR(unsigned int, nTrackCandidatesT4))
 
+  GENERATE_SOA_LAYOUT(TrackCandidatesBLFFitSoALayout,
+                      SOA_COLUMN(float, pt),
+                      SOA_COLUMN(float, eta),
+                      SOA_COLUMN(float, phi),
+                      SOA_COLUMN(float, tip),
+                      SOA_COLUMN(float, zip),
+                      SOA_COLUMN(int8_t, charge),
+                      SOA_COLUMN(float, chi2))
+
   using TrackCandidatesBaseSoA = TrackCandidatesBaseSoALayout<>;
   using TrackCandidatesExtendedSoA = TrackCandidatesExtendedSoALayout<>;
+  using TrackCandidatesBLFFitSoA = TrackCandidatesBLFFitSoALayout<>;
 
   using TrackCandidatesBase = TrackCandidatesBaseSoA::View;
   using TrackCandidatesBaseConst = TrackCandidatesBaseSoA::ConstView;
   using TrackCandidatesExtended = TrackCandidatesExtendedSoA::View;
   using TrackCandidatesExtendedConst = TrackCandidatesExtendedSoA::ConstView;
+  using TrackCandidatesBLFFit = TrackCandidatesBLFFitSoA::View;
+  using TrackCandidatesBLFFitConst = TrackCandidatesBLFFitSoA::ConstView;
 }  // namespace lst
 #endif
