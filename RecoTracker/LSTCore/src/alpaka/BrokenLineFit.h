@@ -29,12 +29,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   template <int N>
   struct Kernel_LSTBLFit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                  double bField,
+                                  const float bField,
                                   TrackCandidatesBaseConst candsBase,
                                   HitsBaseConst hitsBase,
                                   TrackCandidatesBLFFit fitResults,
                                   LSTObjType targetType) const {
-      unsigned int const nTC = candsBase.nTrackCandidates();
+      const double bFieldD = static_cast<double>(bField);
+      const unsigned int nTC = candsBase.nTrackCandidates();
       for (unsigned int tcIdx : cms::alpakatools::uniform_elements(acc, nTC)) {
         if (candsBase.trackCandidateType()[tcIdx] != targetType)
           continue;
@@ -57,7 +58,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         Eigen::Matrix<double, 3, N> hits;
         Eigen::Matrix<float, 6, N> hits_ge;
         for (int i = 0; i < N; ++i) {
-          unsigned int const hIdx = validHitIdxs[i];
+          const unsigned int hIdx = validHitIdxs[i];
           hits(0, i) = static_cast<double>(hitsBase.xs()[hIdx]);
           hits(1, i) = static_cast<double>(hitsBase.ys()[hIdx]);
           hits(2, i) = static_cast<double>(hitsBase.zs()[hIdx]);
@@ -74,16 +75,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         brokenline::fastFit(acc, hits, fast_fit);
 
         brokenline::PreparedBrokenLineData<N> data;
-        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bField, data);
+        brokenline::prepareBrokenLineData(acc, hits, fast_fit, bFieldD, data);
 
         brokenline::karimaki_circle_fit circle;
         ::riemannFit::LineFit line;
-        brokenline::lineFit(acc, hits_ge, fast_fit, bField, data, line);
-        brokenline::circleFit(acc, hits, hits_ge, fast_fit, bField, data, circle);
+        brokenline::lineFit(acc, hits_ge, fast_fit, bFieldD, data, line);
+        brokenline::circleFit(acc, hits, hits_ge, fast_fit, bFieldD, data, circle);
 
         fitResults.phi()[tcIdx] = static_cast<float>(circle.par(0));
         fitResults.tip()[tcIdx] = static_cast<float>(circle.par(1));
-        fitResults.pt()[tcIdx] = static_cast<float>(bField / alpaka::math::abs(acc, circle.par(2)));
+        fitResults.pt()[tcIdx] = static_cast<float>(bFieldD / alpaka::math::abs(acc, circle.par(2)));
         fitResults.eta()[tcIdx] = static_cast<float>(alpaka::math::asinh(acc, line.par(0)));
         fitResults.zip()[tcIdx] = static_cast<float>(line.par(1));
         fitResults.charge()[tcIdx] = static_cast<int8_t>(circle.qCharge);
@@ -96,7 +97,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // T5 and pT5 can have 5, 6, or 7 OT hits (5 base + up to 2 extensions); separate kernel
   // instantiations are used for each count so all hits are used without subsampling.
   inline void launchLSTBrokenLineKernels(Queue& queue,
-                                         double bField,
+                                         const float bField,
                                          TrackCandidatesBaseConst candsBase,
                                          HitsBaseConst hitsBase,
                                          TrackCandidatesBLFFit fitResults,

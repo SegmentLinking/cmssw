@@ -1929,8 +1929,8 @@ std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandi
 }
 
 #ifndef LST_STANDALONE
-void LSTEvent::fitTrackCandidatesBrokenLine(double bField) {
-  unsigned int const nAlloc = trackCandidatesBaseDC_->size();
+void LSTEvent::fitTrackCandidatesBrokenLine(const float bField) {
+  const unsigned int nAlloc = trackCandidatesBaseDC_->size();
   if (!trackCandidatesBLFFitDC_) {
     trackCandidatesBLFFitDC_.emplace(queue_, nAlloc);
     if (objectsStatistics_) {
