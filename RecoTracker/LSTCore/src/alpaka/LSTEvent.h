@@ -14,6 +14,7 @@
 #include "RecoTracker/LSTCore/interface/SegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/TrackCandidatesBLFFitHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TripletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
@@ -29,6 +30,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelSegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesBLFFitDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TripletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ModulesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ObjectRangesDeviceCollection.h"
@@ -71,6 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<QuadrupletsDeviceCollection> quadrupletsDC_;
     std::optional<TrackCandidatesBaseDeviceCollection> trackCandidatesBaseDC_;
     std::optional<TrackCandidatesExtendedDeviceCollection> trackCandidatesExtendedDC_;
+    std::optional<TrackCandidatesBLFFitDeviceCollection> trackCandidatesBLFFitDC_;
     std::optional<PixelTripletsDeviceCollection> pixelTripletsDC_;
     std::optional<PixelQuintupletsDeviceCollection> pixelQuintupletsDC_;
 
@@ -84,6 +87,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<TripletsHostCollection> tripletsHC_;
     std::optional<TrackCandidatesBaseHostCollection> trackCandidatesBaseHC_;
     std::optional<TrackCandidatesExtendedHostCollection> trackCandidatesExtendedHC_;
+    std::optional<TrackCandidatesBLFFitHostCollection> trackCandidatesBLFFitHC_;
     std::optional<ModulesHostCollection> modulesHC_;
     std::optional<QuintupletsHostCollection> quintupletsHC_;
     std::optional<PixelTripletsHostCollection> pixelTripletsHC_;
@@ -144,6 +148,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
     void createPixelQuintuplets();
     void createQuadruplets();
+#ifndef LST_STANDALONE
+    void fitTrackCandidatesBrokenLine(double bField);
+#endif
 
     // functions that map the objects to the appropriate modules
     void addMiniDoubletsToEventExplicit();
@@ -217,6 +224,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TDev = Device>
     TrackCandidatesExtendedConst getTrackCandidatesExtended(bool sync = true);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> releaseTrackCandidatesBaseDeviceCollection();
+    template <typename TDev = Device>
+    TrackCandidatesBLFFitConst getTrackCandidatesBLFFit(bool sync = true);
+    std::unique_ptr<TrackCandidatesBLFFitDeviceCollection> releaseTrackCandidatesBLFFitDeviceCollection();
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getModules(bool sync = true);
   };
