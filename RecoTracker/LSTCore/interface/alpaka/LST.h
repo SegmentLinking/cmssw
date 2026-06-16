@@ -5,6 +5,7 @@
 #include "RecoTracker/LSTCore/interface/LSTESData.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesBLFFitDeviceCollection.h"
 
 #include <cstdlib>
 #include <numeric>
@@ -25,14 +26,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              LSTInputDeviceCollection const* lstInputDC,
              bool no_pls_dupclean,
              bool tc_pls_triplets,
-             bool reduce_mem_by_full_precompute);
+             bool reduce_mem_by_full_precompute,
+             const float bField);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> getTrackCandidates() {
       return std::move(trackCandidatesBaseDC_);
     }
+    std::unique_ptr<TrackCandidatesBLFFitDeviceCollection> getTrackCandidatesBLFFit() {
+      return std::move(trackCandidatesBLFFitDC_);
+    }
 
   private:
-    // Output collection
+    // Output collections
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> trackCandidatesBaseDC_;
+    std::unique_ptr<TrackCandidatesBLFFitDeviceCollection> trackCandidatesBLFFitDC_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

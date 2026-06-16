@@ -12,13 +12,14 @@ using XYZVector = ROOT::Math::XYZVector;
 
 void LST::run(Queue& queue,
               bool verbose,
-              float const ptCut,
-              uint16_t const clustSizeCut,
+              const float ptCut,
+              const uint16_t clustSizeCut,
               LSTESData<Device> const* deviceESData,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
               bool tc_pls_triplets,
-              bool reduce_mem_by_full_precompute) {
+              bool reduce_mem_by_full_precompute,
+              const float bField) {
   auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData, reduce_mem_by_full_precompute);
 
   event.addInputToEvent(lstInputDC);
@@ -138,5 +139,8 @@ void LST::run(Queue& queue,
     lstWarning(std::format("[MEM] Total: {:.1f} MB", event.getMemoryAllocatedMB()));
   }
 
+  event.fitTrackCandidatesBrokenLine(bField);
+
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
+  trackCandidatesBLFFitDC_ = event.releaseTrackCandidatesBLFFitDeviceCollection();
 }
