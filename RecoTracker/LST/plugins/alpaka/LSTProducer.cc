@@ -33,13 +33,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
           reduceMemByFullPrecompute_(config.getParameter<bool>("reduceMemByFullPrecompute")),
-          lstOutputToken_{produces()} {}
+          bFieldToken_(consumes<float>(config.getParameter<edm::InputTag>("bField"))),
+          lstOutputToken_{produces()},
+          lstBLFFitOutputToken_{produces()} {}
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
       lst::LST lst;
       // Inputs
       auto const& lstInputDC = iEvent.get(lstInputToken_);
       auto const& lstESDeviceData = iSetup.getData(lstESToken_);
+      const float bField = iEvent.get(bFieldToken_);
 
       lst.run(iEvent.queue(),
               verbose_,
@@ -49,11 +52,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               &lstInputDC,
               nopLSDupClean_,
               tcpLSTriplets_,
-              reduceMemByFullPrecompute_);
+              reduceMemByFullPrecompute_,
+              bField);
 
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
       iEvent.emplace(lstOutputToken_, std::move(*lstTrackCandidates.release()));
+      auto lstBLFFit = lst.getTrackCandidatesBLFFit();
+      iEvent.emplace(lstBLFFitOutputToken_, std::move(*lstBLFFit.release()));
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -70,6 +76,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "If true, run extra counting kernels that exactly size the MD/LS/T3/T5/T4 "
               "buffers, reducing average per-event memory at a small CPU/GPU runtime cost. "
               "If false (default), buffers use cheaper, looser occupancy estimates.");
+      desc.add<edm::InputTag>("bField", edm::InputTag{"lstInputProducer"});
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -82,7 +89,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
     const bool reduceMemByFullPrecompute_;
+    const edm::EDGetTokenT<float> bFieldToken_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
+    const device::EDPutToken<lst::TrackCandidatesBLFFitDeviceCollection> lstBLFFitOutputToken_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
