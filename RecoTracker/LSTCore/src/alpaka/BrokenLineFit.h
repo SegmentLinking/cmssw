@@ -89,6 +89,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         fitResults.zip()[tcIdx] = static_cast<float>(line.par(1));
         fitResults.charge()[tcIdx] = static_cast<int8_t>(circle.qCharge);
         fitResults.chi2()[tcIdx] = static_cast<float>((circle.chi2 + line.chi2) / (2 * N - 5));
+
+        // Circle covariance upper triangle: (phi-phi, phi-tip, tip-tip, phi-k, tip-k, k-k)
+        auto& cCircle = fitResults.covCircle()[tcIdx];
+        cCircle[0] = static_cast<float>(circle.cov(0, 0));
+        cCircle[1] = static_cast<float>(circle.cov(0, 1));
+        cCircle[2] = static_cast<float>(circle.cov(1, 1));
+        cCircle[3] = static_cast<float>(circle.cov(0, 2));
+        cCircle[4] = static_cast<float>(circle.cov(1, 2));
+        cCircle[5] = static_cast<float>(circle.cov(2, 2));
+
+        // Line covariance upper triangle: (slope-slope, slope-zip, zip-zip)
+        auto& cLine = fitResults.covLine()[tcIdx];
+        cLine[0] = static_cast<float>(line.cov(0, 0));
+        cLine[1] = static_cast<float>(line.cov(0, 1));
+        cLine[2] = static_cast<float>(line.cov(1, 1));
       }
     }
   };
