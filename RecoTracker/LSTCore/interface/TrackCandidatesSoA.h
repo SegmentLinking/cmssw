@@ -38,7 +38,9 @@ namespace lst {
                       SOA_COLUMN(float, tip),
                       SOA_COLUMN(float, zip),
                       SOA_COLUMN(int8_t, charge),
-                      SOA_COLUMN(float, chi2))
+                      SOA_COLUMN(float, chi2),
+                      SOA_COLUMN(lst::ArrayFx6, covCircle),
+                      SOA_COLUMN(lst::ArrayFx3, covLine))
 
   using TrackCandidatesBaseSoA = TrackCandidatesBaseSoALayout<>;
   using TrackCandidatesExtendedSoA = TrackCandidatesExtendedSoALayout<>;
