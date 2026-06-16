@@ -14,6 +14,7 @@
 #include "TrackCandidate.h"
 #include "Triplet.h"
 #include "Quadruplet.h"
+#include "BrokenLineFit.h"
 
 #include <format>
 
@@ -72,6 +73,7 @@ void LSTEvent::resetEventSync() {
   quintupletsDC_.reset();
   trackCandidatesBaseDC_.reset();
   trackCandidatesExtendedDC_.reset();
+  trackCandidatesBLFFitDC_.reset();
   pixelTripletsDC_.reset();
   pixelQuintupletsDC_.reset();
   quadrupletsDC_.reset();
@@ -88,6 +90,7 @@ void LSTEvent::resetEventSync() {
   pixelQuintupletsHC_.reset();
   trackCandidatesBaseHC_.reset();
   trackCandidatesExtendedHC_.reset();
+  trackCandidatesBLFFitHC_.reset();
   modulesHC_.reset();
   quadrupletsHC_.reset();
 }
@@ -1923,6 +1926,47 @@ template TrackCandidatesExtendedConst LSTEvent::getTrackCandidatesExtended<>(boo
 
 std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandidatesBaseDeviceCollection() {
   return std::make_unique<TrackCandidatesBaseDeviceCollection>(std::move(trackCandidatesBaseDC_.value()));
+}
+
+#ifndef LST_STANDALONE
+void LSTEvent::fitTrackCandidatesBrokenLine(double bField) {
+  unsigned int const nAlloc = trackCandidatesBaseDC_->size();
+  if (!trackCandidatesBLFFitDC_) {
+    trackCandidatesBLFFitDC_.emplace(queue_, nAlloc);
+    if (objectsStatistics_) {
+      double mb = alpaka::getExtentProduct(trackCandidatesBLFFitDC_->buffer()) / 1e6;
+      memoryAllocatedMB_ += mb;
+      lstWarning(std::format("[MEM] TrackCandidatesBLFFit: {} allocated ({:.1f} MB)", nAlloc, mb));
+    }
+  }
+  launchLSTBrokenLineKernels(queue_,
+                             bField,
+                             trackCandidatesBaseDC_->const_view(),
+                             lstInputDC_->const_view().hits(),
+                             trackCandidatesBLFFitDC_->view(),
+                             nAlloc);
+}
+#endif
+
+template <typename TDev>
+TrackCandidatesBLFFitConst LSTEvent::getTrackCandidatesBLFFit(bool sync) {
+  if constexpr (std::is_same_v<TDev, DevHost>) {
+    return trackCandidatesBLFFitDC_->const_view();
+  } else {
+    if (!trackCandidatesBLFFitHC_) {
+      trackCandidatesBLFFitHC_.emplace(
+          cms::alpakatools::CopyToHost<::PortableCollection<TDev, TrackCandidatesBLFFitSoA>>::copyAsync(
+              queue_, *trackCandidatesBLFFitDC_));
+      if (sync)
+        alpaka::wait(queue_);  // host consumers expect filled data
+    }
+  }
+  return trackCandidatesBLFFitHC_->const_view();
+}
+template TrackCandidatesBLFFitConst LSTEvent::getTrackCandidatesBLFFit<>(bool);
+
+std::unique_ptr<TrackCandidatesBLFFitDeviceCollection> LSTEvent::releaseTrackCandidatesBLFFitDeviceCollection() {
+  return std::make_unique<TrackCandidatesBLFFitDeviceCollection>(std::move(trackCandidatesBLFFitDC_.value()));
 }
 
 template <typename TSoA, typename TDev>
