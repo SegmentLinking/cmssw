@@ -48,6 +48,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
 
     const edm::EDPutTokenT<lst::LSTInputHostCollection> lstInputPutToken_;
+    const edm::EDPutTokenT<float> bFieldToken_;
   };
 
   LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
@@ -60,7 +61,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("pixelSeeds"),
                                   [&](const edm::InputTag& tag) { return consumes<TrajectorySeedCollection>(tag); })),
         lstPixelSeedsPutToken_(produces()),
-        lstInputPutToken_(produces()) {}
+        lstInputPutToken_(produces()),
+        bFieldToken_(produces()) {}
 
   void LSTInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -129,6 +131,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     // Get the pixel seeds
     auto const& mf = iSetup.getData(mfToken_);
+    const float bField = static_cast<float>(1. / mf.inverseBzAtOriginInGeV());
     auto const& bs = iEvent.get(beamSpotToken_);
 
     TSCBLBuilderNoMaterial tscblBuilder;
@@ -270,6 +273,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     iEvent.emplace(lstInputPutToken_, std::move(lstInputHC));
     iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
+    iEvent.emplace(bFieldToken_, bField);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
