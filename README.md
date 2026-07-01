@@ -18,7 +18,8 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 - `required-prs`: (int or list) PR number or list of PR numbers indicating required PRs that must be merged before checks and tests are run.
 
 - `modifiers`: (string or list) Modifier or list of modifiers that can change some parameters of how the tests run. The available options are:
-  - `gpu`: Run the tests on the self-hosted GPU CI.
+  - `cpu`: Run the tests on CPU. This is the default behavior when neither `cpu` nor `gpu` is specified. If both `cpu` and `gpu` are specified, tests will run on both.
+  - `gpu`: Run the tests on the self-hosted GPU CI. By default (without `cpu`), only the GPU run is performed. If both `cpu` and `gpu` are specified, tests will run on both.
   - `lowpt`: Use the low pT setup.
   - `ci_devel`: Use the development branch of the CI. This is useful for testing things without affecting the main CI setup.
 
@@ -41,7 +42,7 @@ The following exemplifies all the available options.
 ```yaml
 run-ci: [standalone, cmssw, checks]
 required-prs: [223, 224]
-modifiers: [gpu, lowpt]
+modifiers: [cpu, gpu, lowpt]
 release: CMSSW_16_1_0_pre1
 packages: [HeterogeneousCore/AlpakaInterface, DataFormats/Portable]
 procmodifiers:

@@ -98,7 +98,7 @@ jobs:
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw,hlt"
-          KNOWN_MODIFIERS="lowpt,gpu,ci_devel"
+          KNOWN_MODIFIERS="lowpt,cpu,gpu,ci_devel"
           KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,packages,procmodifiers"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
@@ -121,8 +121,8 @@ jobs:
                 'packages': '${{ env.packages }}'
               }
             });
-      - name: Start standalone tests
-        if: contains(env.workflows, 'standalone') || contains(env.workflows, 'all')
+      - name: Start standalone tests (CPU)
+        if: (contains(env.workflows, 'standalone') || contains(env.workflows, 'all')) && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -135,14 +135,34 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
             });
-      - name: Start CMSSW tests
-        if: contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')
+      - name: Start standalone tests (GPU)
+        if: (contains(env.workflows, 'standalone') || contains(env.workflows, 'all')) && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'standalone.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}'
+              }
+            });
+      - name: Start CMSSW tests (CPU)
+        if: (contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')) && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -155,14 +175,34 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
             });
-      - name: Start HLT tests
-        if: contains(env.workflows, 'hlt')
+      - name: Start CMSSW tests (GPU)
+        if: (contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')) && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'cmssw.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}'
+              }
+            });
+      - name: Start HLT tests (CPU)
+        if: contains(env.workflows, 'hlt') && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -175,7 +215,29 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
+              }
+            });
+      - name: Start HLT tests (GPU)
+        if: contains(env.workflows, 'hlt') && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'hlt.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}',
