@@ -1,8 +1,15 @@
+#include <cmath>
+
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
 #include "DataFormats/TrackReco/interface/SeedStopInfo.h"
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackReco/interface/TrackExtra.h"
+#include "DataFormats/TrackReco/interface/TrackExtraFwd.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
+#include "RecoTracker/LSTCore/interface/TrackCandidatesBLFFitHostCollection.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -60,6 +67,11 @@ private:
   const edm::EDPutTokenT<std::vector<SeedStopInfo>> pTCsSeedStopInfoPutToken_;
   const edm::EDPutTokenT<std::vector<SeedStopInfo>> t4t5TCsSeedStopInfoPutToken_;
   const edm::EDPutTokenT<std::vector<SeedStopInfo>> pTTCsSeedStopInfoPutToken_;
+  const bool produceBLFTracks_;
+  const edm::EDGetTokenT<lst::TrackCandidatesBLFFitHostCollection> lstBLFFitToken_;
+  const edm::EDPutTokenT<reco::TrackCollection> blfTrackPutToken_;
+  const edm::EDPutTokenT<reco::TrackExtraCollection> blfTrackExtraPutToken_;
+  const edm::EDPutTokenT<TrackingRecHitCollection> blfRecHitPutToken_;
 };
 
 LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
@@ -100,7 +112,17 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       t4t5TCsSeedStopInfoPutToken_(produceTrackCandidates_ ? produces<std::vector<SeedStopInfo>>("t4t5TCsLST")
                                                            : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}),
       pTTCsSeedStopInfoPutToken_(produceTrackCandidates_ ? produces<std::vector<SeedStopInfo>>("pTTCsLST")
-                                                         : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}) {}
+                                                         : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}),
+      produceBLFTracks_(iConfig.getParameter<bool>("produceBLFTracks")),
+      lstBLFFitToken_(produceBLFTracks_ ? consumes<lst::TrackCandidatesBLFFitHostCollection>(
+                                              iConfig.getParameter<edm::InputTag>("lstBLFFitOutput"))
+                                        : edm::EDGetTokenT<lst::TrackCandidatesBLFFitHostCollection>{}),
+      blfTrackPutToken_(produceBLFTracks_ ? produces<reco::TrackCollection>("lstBLF")
+                                          : edm::EDPutTokenT<reco::TrackCollection>{}),
+      blfTrackExtraPutToken_(produceBLFTracks_ ? produces<reco::TrackExtraCollection>("lstBLF")
+                                               : edm::EDPutTokenT<reco::TrackExtraCollection>{}),
+      blfRecHitPutToken_(produceBLFTracks_ ? produces<TrackingRecHitCollection>("lstBLF")
+                                           : edm::EDPutTokenT<TrackingRecHitCollection>{}) {}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -125,6 +147,9 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
   psd0.add<std::string>("TTRHBuilder", std::string("WithTrackAngle"));
   psd0.add<bool>("forceKinematicWithRegionDirection", false);
   desc.add<edm::ParameterSetDescription>("SeedCreatorPSet", psd0);
+
+  desc.add<bool>("produceBLFTracks", false);
+  desc.add<edm::InputTag>("lstBLFFitOutput", edm::InputTag{"lstProducer"});
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -158,6 +183,24 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   outputpLSTC.reserve(nTrackCandidates);
 
   auto OTHits = lstInputHC.const_view().hits().hits();
+
+  // BLF direct-track output: set up before the main loop so recHits can be reused.
+  std::optional<lst::TrackCandidatesBLFFitConst> fitViewOpt;
+  float bField = 0.f;
+  reco::TrackCollection outputBLFTracks;
+  reco::TrackExtraCollection outputBLFTrackExtras;
+  TrackingRecHitCollection outputBLFRecHits;
+  edm::RefProd<reco::TrackExtraCollection> trackExtrasRefProd;
+  edm::RefProd<TrackingRecHitCollection> recHitsRefProd;
+  if (produceBLFTracks_) {
+    fitViewOpt.emplace(iEvent.get(lstBLFFitToken_).const_view());
+    bField = static_cast<float>(1. / mf.inverseBzAtOriginInGeV());
+    outputBLFTracks.reserve(nTrackCandidates);
+    outputBLFTrackExtras.reserve(nTrackCandidates);
+    outputBLFRecHits.reserve(nTrackCandidates * 7);
+    trackExtrasRefProd = iEvent.getRefBeforePut(blfTrackExtraPutToken_);
+    recHitsRefProd = iEvent.getRefBeforePut(blfRecHitPutToken_);
+  }
 
   TrajectorySeedCollection seeds;
   using Hit = SeedingHitSet::ConstRecHitPointer;
@@ -212,6 +255,87 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           }
         }
       });
+
+      // BLF direct reco::Track output - reuses the sorted recHits from above.
+      if (produceBLFTracks_) {
+        auto const& fitView = *fitViewOpt;
+        const float pt_fit = fitView.pt()[i];
+        if (pt_fit >= 0.f) {
+          const float phi = fitView.phi()[i];
+          const float tip = fitView.tip()[i];
+          const float zip = fitView.zip()[i];
+          const float slope = std::sinh(fitView.eta()[i]);
+          const int charge = static_cast<int>(fitView.charge()[i]);
+          const float chi2stored = fitView.chi2()[i];
+          const auto& cc = fitView.covCircle()[i];
+          const auto& cl = fitView.covLine()[i];
+
+          const float c2 = 1.f + slope * slope;
+          const float c = std::sqrt(c2);
+          const float k = static_cast<float>(charge) * bField / pt_fit;
+
+          // Analytic Jacobian d(q/|p|, lambda, phi, dxy, dsz) / d(phi, tip, kappa, slope, zip)
+          const float j02 = 1.f / (bField * c);
+          const float j03 = -k * slope / (bField * c * c2);
+          const float j13 = 1.f / c2;
+          const float j43 = -zip * slope / (c * c2);
+          const float j44 = 1.f / c;
+
+          const float cphiphi = cc[0], cphit = cc[1], ctt = cc[2];
+          const float cphik = cc[3], ctk = cc[4], ckk = cc[5];
+          const float css = cl[0], csz = cl[1], czz = cl[2];
+          const float slope_zip_term = css * j43 + csz * j44;
+
+          reco::TrackBase::CovarianceMatrix cov;
+          cov(0, 0) = j02 * j02 * ckk + j03 * j03 * css;
+          cov(0, 1) = j03 * j13 * css;
+          cov(0, 2) = j02 * cphik;
+          cov(0, 3) = j02 * ctk;
+          cov(0, 4) = j03 * slope_zip_term;
+          cov(1, 1) = j13 * j13 * css;
+          cov(1, 2) = 0.f;
+          cov(1, 3) = 0.f;
+          cov(1, 4) = j13 * slope_zip_term;
+          cov(2, 2) = cphiphi;
+          cov(2, 3) = cphit;
+          cov(2, 4) = 0.f;
+          cov(3, 3) = ctt;
+          cov(3, 4) = 0.f;
+          cov(4, 4) = j43 * j43 * css + 2.f * j43 * j44 * csz + j44 * j44 * czz;
+
+          const float sp = std::sin(phi), cp_phi = std::cos(phi);
+          const math::XYZPoint refPoint(-tip * sp, tip * cp_phi, zip);
+          const math::XYZVector mom(pt_fit * cp_phi, pt_fit * sp, pt_fit * slope);
+
+          const int nOTHits = static_cast<int>(recHits.size());
+          const double ndof = static_cast<double>(std::max(1, 2 * nOTHits - 5));
+          const double chi2total = static_cast<double>(chi2stored) * ndof;
+
+          reco::Track track(chi2total, ndof, refPoint, mom, charge, cov, reco::TrackBase::undefAlgorithm);
+          for (auto const& hit : recHits)
+            track.appendHitPattern(hit, tTopo);
+          outputBLFTracks.push_back(std::move(track));
+
+          reco::TrackExtra extra(math::XYZPoint(),
+                                 math::XYZVector(),
+                                 false,
+                                 math::XYZPoint(),
+                                 math::XYZVector(),
+                                 false,
+                                 reco::TrackBase::CovarianceMatrix(),
+                                 0,
+                                 reco::TrackBase::CovarianceMatrix(),
+                                 0,
+                                 anyDirection);
+          const unsigned int firstHitIdx = outputBLFRecHits.size();
+          for (auto const& hit : recHits)
+            outputBLFRecHits.push_back(hit.clone());
+          extra.setHits(recHitsRefProd, firstHitIdx, static_cast<unsigned int>(recHits.size()));
+          outputBLFTrackExtras.push_back(std::move(extra));
+          outputBLFTracks.back().setExtra(
+              {trackExtrasRefProd, static_cast<unsigned int>(outputBLFTrackExtras.size() - 1)});
+        }
+      }
     }
 
     if (iType != lst::LSTObjType::pLS) {
@@ -330,6 +454,12 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     iEvent.emplace(trackCandidateNopLSTCPutToken_, std::move(outputNopLSTC));
     iEvent.emplace(trackCandidatepTTCPutToken_, std::move(outputpTTC));
     iEvent.emplace(trackCandidatepLSTCPutToken_, std::move(outputpLSTC));
+  }
+
+  if (produceBLFTracks_) {
+    iEvent.emplace(blfTrackPutToken_, std::move(outputBLFTracks));
+    iEvent.emplace(blfTrackExtraPutToken_, std::move(outputBLFTrackExtras));
+    iEvent.emplace(blfRecHitPutToken_, std::move(outputBLFRecHits));
   }
 }
 
