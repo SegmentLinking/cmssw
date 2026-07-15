@@ -70,3 +70,33 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
 
 from Configuration.ProcessModifiers.trackingMkFitFit_cff import trackingMkFitFit
 trackingMkFitFit.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksMkFitFit)
+
+
+_hltInitialStepTracksTrackProducer = hltInitialStepTracks.clone()
+
+_hltInitialStepTracksLST = cms.EDProducer('LSTOutputConverter',
+    lstOutput = cms.InputTag('hltLST'),
+    lstInput = cms.InputTag('hltInputLST'),
+    lstPixelSeeds = cms.InputTag('hltInputLST'),
+    includeT5s = cms.bool(True),
+    includeNonpLSTSs = cms.bool(False),
+    produceSeeds = cms.bool(False),
+    produceTrackCandidates = cms.bool(False),
+    produceBLFTracks = cms.bool(True),
+    lstBLFFitOutput = cms.InputTag('hltLST'),
+    propagatorAlong = cms.ESInputTag('', 'PropagatorWithMaterial'),
+    propagatorOpposite = cms.ESInputTag('', 'PropagatorWithMaterialOpposite'),
+    SeedCreatorPSet = cms.PSet(
+        ComponentName = cms.string('SeedFromConsecutiveHitsCreator'),
+        propagator = cms.string('PropagatorWithMaterial'),
+        SeedMomentumForBOFF = cms.double(5),
+        OriginTransverseErrorMultiplier = cms.double(1),
+        MinOneOverPtError = cms.double(1),
+        magneticField = cms.string(''),
+        TTRHBuilder = cms.string('WithTrackAngle'),
+        forceKinematicWithRegionDirection = cms.bool(False)
+    )
+)
+
+from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
+trackingLST.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksLST)

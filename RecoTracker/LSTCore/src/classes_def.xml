@@ -12,4 +12,10 @@
   <class name="lst::TrackCandidatesBaseHostCollection::Layout"/>
   <class name="lst::TrackCandidatesBaseSoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::TrackCandidatesBaseHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::TrackCandidatesBLFFitHostCollection"/>
+  <!-- lst::TrackCandidatesBLFFitHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::TrackCandidatesBLFFitHostCollection::Layout"/>
+  <class name="lst::TrackCandidatesBLFFitSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::TrackCandidatesBLFFitHostCollection>" splitLevel="0" persistent="false"/>
 </lcgdict>

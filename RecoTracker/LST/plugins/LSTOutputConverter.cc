@@ -117,11 +117,11 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       lstBLFFitToken_(produceBLFTracks_ ? consumes<lst::TrackCandidatesBLFFitHostCollection>(
                                               iConfig.getParameter<edm::InputTag>("lstBLFFitOutput"))
                                         : edm::EDGetTokenT<lst::TrackCandidatesBLFFitHostCollection>{}),
-      blfTrackPutToken_(produceBLFTracks_ ? produces<reco::TrackCollection>("lstBLF")
+      blfTrackPutToken_(produceBLFTracks_ ? produces<reco::TrackCollection>()
                                           : edm::EDPutTokenT<reco::TrackCollection>{}),
-      blfTrackExtraPutToken_(produceBLFTracks_ ? produces<reco::TrackExtraCollection>("lstBLF")
+      blfTrackExtraPutToken_(produceBLFTracks_ ? produces<reco::TrackExtraCollection>()
                                                : edm::EDPutTokenT<reco::TrackExtraCollection>{}),
-      blfRecHitPutToken_(produceBLFTracks_ ? produces<TrackingRecHitCollection>("lstBLF")
+      blfRecHitPutToken_(produceBLFTracks_ ? produces<TrackingRecHitCollection>()
                                            : edm::EDPutTokenT<TrackingRecHitCollection>{}) {}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -331,6 +331,9 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           for (auto const& hit : recHits)
             outputBLFRecHits.push_back(hit.clone());
           extra.setHits(recHitsRefProd, firstHitIdx, static_cast<unsigned int>(recHits.size()));
+          // TrackCollectionCloner asserts trajParams().size() == recHitsSize(); fill dummies.
+          extra.setTrajParams(reco::TrackExtra::TrajParams(recHits.size()),
+                              reco::TrackExtra::Chi2sFive(recHits.size(), 0));
           outputBLFTrackExtras.push_back(std::move(extra));
           outputBLFTracks.back().setExtra(
               {trackExtrasRefProd, static_cast<unsigned int>(outputBLFTrackExtras.size() - 1)});
