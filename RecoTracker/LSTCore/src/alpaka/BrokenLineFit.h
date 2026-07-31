@@ -43,12 +43,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int validHitIdxs[Params_TC::kHitsPerLayer * (Params_TC::kLayers - Params_TC::kPixelLayerSlots)];
         int nValid = 0;
         for (int slot = Params_TC::kPixelLayerSlots; slot < Params_TC::kLayers; ++slot) {
-          for (int sensor = 0; sensor < Params_TC::kHitsPerLayer; ++sensor) {
-            unsigned int hIdx = hitSlots[slot][sensor];
-            if (hIdx == kTCEmptyHitIdx)
-              continue;
-            validHitIdxs[nValid++] = hIdx;
-          }
+          unsigned int h0 = hitSlots[slot][0];
+          if (h0 == kTCEmptyHitIdx)
+            continue;
+          unsigned int h1 = hitSlots[slot][1];
+          float x0 = hitsBase.xs()[h0], y0 = hitsBase.ys()[h0], z0 = hitsBase.zs()[h0];
+          float x1 = hitsBase.xs()[h1], y1 = hitsBase.ys()[h1], z1 = hitsBase.zs()[h1];
+          float d0sq = x0 * x0 + y0 * y0 + z0 * z0;
+          float d1sq = x1 * x1 + y1 * y1 + z1 * z1;
+          bool swap = d0sq > d1sq;
+          validHitIdxs[nValid++] = swap ? h1 : h0;
+          validHitIdxs[nValid++] = swap ? h0 : h1;
         }
 
         if (nValid != N)
@@ -108,11 +113,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   void launchLSTBrokenLineKernels(Queue& queue,
-                                   float bField,
-                                   TrackCandidatesBaseConst candsBase,
-                                   HitsBaseConst hitsBase,
-                                   TrackCandidatesBLFFit fitResults,
-                                   unsigned int nTrackCandidates);
+                                  float bField,
+                                  TrackCandidatesBaseConst candsBase,
+                                  HitsBaseConst hitsBase,
+                                  TrackCandidatesBLFFit fitResults,
+                                  unsigned int nTrackCandidates);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 
