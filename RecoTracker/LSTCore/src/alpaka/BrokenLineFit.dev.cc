@@ -2,18 +2,43 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
-  void launchBLFKernelN6(Queue&, cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&, float, TrackCandidatesBaseConst, HitsBaseConst, TrackCandidatesBLFFit);
-  void launchBLFKernelN8(Queue&, cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&, float, TrackCandidatesBaseConst, HitsBaseConst, TrackCandidatesBLFFit);
-  void launchBLFKernelN10(Queue&, cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&, float, TrackCandidatesBaseConst, HitsBaseConst, TrackCandidatesBLFFit);
-  void launchBLFKernelN12(Queue&, cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&, float, TrackCandidatesBaseConst, HitsBaseConst, TrackCandidatesBLFFit);
-  void launchBLFKernelN14(Queue&, cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&, float, TrackCandidatesBaseConst, HitsBaseConst, TrackCandidatesBLFFit);
+  void launchBLFKernelN6(Queue&,
+                         cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                         float,
+                         TrackCandidatesBaseConst,
+                         HitsBaseConst,
+                         TrackCandidatesBLFFit);
+  void launchBLFKernelN8(Queue&,
+                         cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                         float,
+                         TrackCandidatesBaseConst,
+                         HitsBaseConst,
+                         TrackCandidatesBLFFit);
+  void launchBLFKernelN10(Queue&,
+                          cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                          float,
+                          TrackCandidatesBaseConst,
+                          HitsBaseConst,
+                          TrackCandidatesBLFFit);
+  void launchBLFKernelN12(Queue&,
+                          cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                          float,
+                          TrackCandidatesBaseConst,
+                          HitsBaseConst,
+                          TrackCandidatesBLFFit);
+  void launchBLFKernelN14(Queue&,
+                          cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                          float,
+                          TrackCandidatesBaseConst,
+                          HitsBaseConst,
+                          TrackCandidatesBLFFit);
 
   void launchLSTBrokenLineKernels(Queue& queue,
-                                   float bField,
-                                   TrackCandidatesBaseConst candsBase,
-                                   HitsBaseConst hitsBase,
-                                   TrackCandidatesBLFFit fitResults,
-                                   unsigned int nTrackCandidates) {
+                                  float bField,
+                                  TrackCandidatesBaseConst candsBase,
+                                  HitsBaseConst hitsBase,
+                                  TrackCandidatesBLFFit fitResults,
+                                  unsigned int nTrackCandidates) {
     if (nTrackCandidates == 0)
       return;
 
