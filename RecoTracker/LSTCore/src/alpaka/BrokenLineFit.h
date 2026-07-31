@@ -32,14 +32,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   const float bField,
                                   TrackCandidatesBaseConst candsBase,
                                   HitsBaseConst hitsBase,
-                                  TrackCandidatesBLFFit fitResults,
-                                  LSTObjType targetType) const {
+                                  TrackCandidatesBLFFit fitResults) const {
       const double bFieldD = static_cast<double>(bField);
       const unsigned int nTC = candsBase.nTrackCandidates();
       for (unsigned int tcIdx : cms::alpakatools::uniform_elements(acc, nTC)) {
-        if (candsBase.trackCandidateType()[tcIdx] != targetType)
-          continue;
-
         auto const& hitSlots = candsBase.hitIndices()[tcIdx];
 
         // Collect valid OT anchor hit indices; skip pixel layer slots.
@@ -108,38 +104,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  // Launch BLF kernels for all OT-based TC types.  pLS carries no OT hits and is not fitted.
-  // T5 and pT5 can have 5, 6, or 7 OT hits (5 base + up to 2 extensions); separate kernel
-  // instantiations are used for each count so all hits are used without subsampling.
-  inline void launchLSTBrokenLineKernels(Queue& queue,
-                                         const float bField,
-                                         TrackCandidatesBaseConst candsBase,
-                                         HitsBaseConst hitsBase,
-                                         TrackCandidatesBLFFit fitResults,
-                                         unsigned int nTrackCandidates) {
-    if (nTrackCandidates == 0)
-      return;
-
-    constexpr uint32_t kBlockSize = 64;
-    auto const workDiv =
-        cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nTrackCandidates, kBlockSize), kBlockSize);
-
-    // Initialise all entries to pt=-1; fit kernels only write successful results.
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_InitBLFFit{}, fitResults, nTrackCandidates);
-
-    // pT3: exactly 3 OT layers (DoF = 2*3-5 = 1)
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<3>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::pT3);
-    // T4: exactly 4 OT layers (DoF = 3)
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<4>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::T4);
-    // T5: 5, 6, or 7 OT layers (DoF = 5, 7, or 9)
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<5>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::T5);
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<6>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::T5);
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<7>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::T5);
-    // pT5: same OT layer structure as T5 (DoF = 5, 7, or 9)
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<5>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::pT5);
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<6>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::pT5);
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<7>{}, bField, candsBase, hitsBase, fitResults, LSTObjType::pT5);
-  }
+  void launchLSTBrokenLineKernels(Queue& queue,
+                                   float bField,
+                                   TrackCandidatesBaseConst candsBase,
+                                   HitsBaseConst hitsBase,
+                                   TrackCandidatesBLFFit fitResults,
+                                   unsigned int nTrackCandidates);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 
