@@ -8,7 +8,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                           TrackCandidatesBaseConst candsBase,
                           HitsBaseConst hitsBase,
                           TrackCandidatesBLFFit fitResults) {
-    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<4>{}, bField, candsBase, hitsBase, fitResults);
+    alpaka::exec<Acc1D>(queue, workDiv, Kernel_LSTBLFit<8>{}, bField, candsBase, hitsBase, fitResults);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst

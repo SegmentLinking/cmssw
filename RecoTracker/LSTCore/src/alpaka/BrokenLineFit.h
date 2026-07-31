@@ -24,7 +24,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  // BLF kernel for TCs with exactly N valid OT hits.
+  // BLF kernel for TCs with exactly N valid OT hits (both sensors per doublet layer).
   // TCs with a different nValid are skipped (handled by another N instantiation).
   template <int N>
   struct Kernel_LSTBLFit {
@@ -38,14 +38,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       for (unsigned int tcIdx : cms::alpakatools::uniform_elements(acc, nTC)) {
         auto const& hitSlots = candsBase.hitIndices()[tcIdx];
 
-        // Collect valid OT anchor hit indices; skip pixel layer slots.
-        unsigned int validHitIdxs[Params_TC::kLayers - Params_TC::kPixelLayerSlots];
+        // Collect both sensor hits per OT doublet layer slot (inner sensor first,
+        // then outer sensor), skipping pixel layer slots and empty slots.
+        unsigned int validHitIdxs[Params_TC::kHitsPerLayer * (Params_TC::kLayers - Params_TC::kPixelLayerSlots)];
         int nValid = 0;
         for (int slot = Params_TC::kPixelLayerSlots; slot < Params_TC::kLayers; ++slot) {
-          unsigned int hIdx = hitSlots[slot][0];
-          if (hIdx == kTCEmptyHitIdx)
-            continue;
-          validHitIdxs[nValid++] = hIdx;
+          for (int sensor = 0; sensor < Params_TC::kHitsPerLayer; ++sensor) {
+            unsigned int hIdx = hitSlots[slot][sensor];
+            if (hIdx == kTCEmptyHitIdx)
+              continue;
+            validHitIdxs[nValid++] = hIdx;
+          }
         }
 
         if (nValid != N)
