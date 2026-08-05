@@ -148,9 +148,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
     void createPixelQuintuplets();
     void createQuadruplets();
-#ifndef LST_STANDALONE
     void fitTrackCandidatesBrokenLine(const float bField);
-#endif
 
     // functions that map the objects to the appropriate modules
     void addMiniDoubletsToEventExplicit();

@@ -1,8 +1,6 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_BrokenLineFit_h
 #define RecoTracker_LSTCore_src_alpaka_BrokenLineFit_h
 
-#ifndef LST_STANDALONE
-
 #include <cstdint>
 
 #include <Eigen/Core>
@@ -120,7 +118,5 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   unsigned int nTrackCandidates);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
-
-#endif  // LST_STANDALONE
 
 #endif  // RecoTracker_LSTCore_src_alpaka_BrokenLineFit_h

@@ -10,7 +10,7 @@ OBJECTS=$(OBJECTS_CPU) $(OBJECTS_CUDA) $(OBJECTS_ROCM)
 
 CXX         = g++
 CXXFLAGS    = -g -O2 -Wall -fPIC -Woverloaded-virtual -Wno-unused-function -fno-var-tracking -std=c++20
-INCLUDEFLAGS= -ILST -I$(shell pwd) -Icode -Icode/core -I${ALPAKA_ROOT}/include -I/${BOOST_ROOT}/include $(shell rooutil-config --include) -I$(shell root-config --incdir) -I${TRACKLOOPERDIR}/../../../ -I${CMSSW_BASE}/src -I${FMT_ROOT}/include -I../interface/ -I../interface/alpaka/ -I../src/ -I../src/alpaka/
+INCLUDEFLAGS= -ILST -I$(shell pwd) -Icode -Icode/core -I${ALPAKA_ROOT}/include -I/${BOOST_ROOT}/include -I${EIGEN_ROOT}/include/eigen3 $(shell rooutil-config --include) -I$(shell root-config --incdir) -I${TRACKLOOPERDIR}/../../../ -I${CMSSW_BASE}/src -I${FMT_ROOT}/include -I../interface/ -I../interface/alpaka/ -I../src/ -I../src/alpaka/
 ifdef CMSSW_RELEASE_BASE
 INCLUDEFLAGS:= ${INCLUDEFLAGS} -I${CMSSW_RELEASE_BASE}/src
 endif

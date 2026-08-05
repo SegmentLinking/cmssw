@@ -1928,7 +1928,6 @@ std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandi
   return std::make_unique<TrackCandidatesBaseDeviceCollection>(std::move(trackCandidatesBaseDC_.value()));
 }
 
-#ifndef LST_STANDALONE
 void LSTEvent::fitTrackCandidatesBrokenLine(const float bField) {
   const unsigned int nAlloc = trackCandidatesBaseDC_->size();
   if (!trackCandidatesBLFFitDC_) {
@@ -1946,7 +1945,6 @@ void LSTEvent::fitTrackCandidatesBrokenLine(const float bField) {
                              trackCandidatesBLFFitDC_->view(),
                              nAlloc);
 }
-#endif
 
 template <typename TDev>
 TrackCandidatesBLFFitConst LSTEvent::getTrackCandidatesBLFFit(bool sync) {

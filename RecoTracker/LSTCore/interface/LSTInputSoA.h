@@ -20,8 +20,8 @@ namespace lst {
                       SOA_COLUMN(unsigned int, idxs),
                       SOA_COLUMN(unsigned int, detid),
                       SOA_COLUMN(uint16_t, clustsize),
-#ifndef LST_STANDALONE
                       SOA_COLUMN(lst::ArrayFx6, ge),
+#ifndef LST_STANDALONE
                       SOA_COLUMN(TrackingRecHit const*, hits),
 #endif
                       SOA_SCALAR(unsigned int, nHitsOT))
