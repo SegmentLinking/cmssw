@@ -10,7 +10,6 @@
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
-#include "Geometry/CommonTopologies/interface/GeomDet.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeedCollection.h"
 
 #include "FWCore/Utilities/interface/transform.h"
@@ -107,22 +106,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ph2_y.push_back(hit.globalPosition().y());
         ph2_z.push_back(hit.globalPosition().z());
 
-        // Rotate local position error to global covariance for BLF.
-        // Local covariance: [[lxx, lxy, 0], [lxy, lyy, 0], [0, 0, 0]]
-        // Global covariance: R * LocalCov * R^T, keeping only x/y local axes.
-        auto const& rot = hit.det()->surface().rotation();
-        auto const lErr = hit.localPositionError();
-        float lxx = lErr.xx(), lxy = lErr.xy(), lyy = lErr.yy();
-        float rxx = rot.xx(), rxy = rot.xy();
-        float ryx = rot.yx(), ryy = rot.yy();
-        float rzx = rot.zx(), rzy = rot.zy();
+        auto const& err = hit.globalPositionError();
         lst::ArrayFx6 ge;
-        ge[0] = rxx * rxx * lxx + 2.f * rxx * rxy * lxy + rxy * rxy * lyy;
-        ge[1] = rxx * ryx * lxx + (rxx * ryy + rxy * ryx) * lxy + rxy * ryy * lyy;
-        ge[2] = ryx * ryx * lxx + 2.f * ryx * ryy * lxy + ryy * ryy * lyy;
-        ge[3] = rxx * rzx * lxx + (rxx * rzy + rxy * rzx) * lxy + rxy * rzy * lyy;
-        ge[4] = ryx * rzx * lxx + (ryx * rzy + ryy * rzx) * lxy + ryy * rzy * lyy;
-        ge[5] = rzx * rzx * lxx + 2.f * rzx * rzy * lxy + rzy * rzy * lyy;
+        ge[0] = err.cxx();
+        ge[1] = err.cyx();
+        ge[2] = err.cyy();
+        ge[3] = err.czx();
+        ge[4] = err.czy();
+        ge[5] = err.czz();
         ph2_ge.push_back(ge);
 
         ph2_hits.push_back(&hit);
