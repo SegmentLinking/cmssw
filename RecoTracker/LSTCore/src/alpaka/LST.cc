@@ -140,6 +140,19 @@ void LST::run(Queue& queue,
   }
 
   event.fitTrackCandidatesBrokenLine(bField);
+  if (verbose) {
+    alpaka::wait(queue);  // event calls are asynchronous: wait before printing
+    // Kernel_InitBLFFit sets pt to -1 for every track candidate before the fit kernels run;
+    // TCs whose OT hit count doesn't match one of the instantiated N (6,8,10,12,14) are left unfit.
+    auto const& blfFit = event.getTrackCandidatesBLFFit();
+    int nTrackCandidates = event.getNumberOfTrackCandidates();
+    int nFit = 0;
+    for (int i = 0; i < nTrackCandidates; ++i) {
+      if (blfFit.pt()[i] != -1.f)
+        ++nFit;
+    }
+    printf("# of Broken Line Fits produced: %d (out of %d track candidates)\n", nFit, nTrackCandidates);
+  }
 
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
   trackCandidatesBLFFitDC_ = event.releaseTrackCandidatesBLFFitDeviceCollection();
