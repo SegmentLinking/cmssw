@@ -327,6 +327,35 @@ float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_tripl
   return tc_elapsed;
 }
 
+//___________________________________________________________________________________________________________________________________________________________________________________________
+float runBrokenLineFit(LSTEvent* event, const float bField) {
+  TStopwatch my_timer;
+  if (ana.verbose >= 2)
+    std::cout << "Reco Broken Line Fit start" << std::endl;
+  my_timer.Start();
+  event->fitTrackCandidatesBrokenLine(bField);
+  event->wait();  // device side event calls are asynchronous: wait to measure time or print
+  float blf_elapsed = my_timer.RealTime();
+  if (ana.verbose >= 2)
+    std::cout << "Reco Broken Line Fit processing time: " << blf_elapsed << " secs" << std::endl;
+
+  if (ana.verbose >= 2) {
+    // Kernel_InitBLFFit sets pt to -1 for every track candidate before the fit kernels run;
+    // TCs whose OT hit count doesn't match one of the instantiated N (6,8,10,12,14) are left unfit.
+    auto const& blfFit = event->getTrackCandidatesBLFFit();
+    unsigned int nTrackCandidates = event->getNumberOfTrackCandidates();
+    unsigned int nFit = 0;
+    for (unsigned int i = 0; i < nTrackCandidates; ++i) {
+      if (blfFit.pt()[i] != -1.f)
+        ++nFit;
+    }
+    std::cout << "# of Broken Line Fits produced: " << nFit << " (out of " << nTrackCandidates
+              << " track candidates)" << std::endl;
+  }
+
+  return blf_elapsed;
+}
+
 //  ---------------------------------- =========================================== ----------------------------------------------
 //  ---------------------------------- =========================================== ----------------------------------------------
 //  ---------------------------------- =========================================== ----------------------------------------------
@@ -797,6 +826,7 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
   std::cout << "   " << std::setw(6) << "pT5";
   std::cout << "   " << std::setw(6) << "pT3";
   std::cout << "   " << std::setw(6) << "TC";
+  std::cout << "   " << std::setw(6) << "BLF";
   std::cout << "   " << std::setw(6) << "Reset";
   std::cout << "   " << std::setw(7) << "Total";
   std::cout << "   " << std::setw(7) << "Total(short)";
@@ -808,13 +838,13 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
     auto timing = timing_information[ievt];
     float timing_total = 0.f;
     float timing_total_short = 0.f;
-    timing_total += timing[0] * 1000;           // Hits
-    for (size_t iobj = 1; iobj <= 9; ++iobj) {  // MD-TC
+    timing_total += timing[0] * 1000;            // Hits
+    for (size_t iobj = 1; iobj <= 10; ++iobj) {  // MD-BLF
       timing_total += timing[iobj] * 1000;
       if (iobj != 5)
         timing_total_short += timing[iobj] * 1000;  // exclude pLS
     }
-    timing_total_short += timing[10] * 1000;  // Reset
+    timing_total_short += timing[11] * 1000;  // Reset
     std::cout << std::setw(6) << ievt;
     for (auto objtime : timing) {
       std::cout << "   " << std::setw(6) << objtime * 1000;  // Print Hits-Reset
@@ -822,20 +852,20 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
     std::cout << "   " << std::setw(7) << timing_total;        // Total time
     std::cout << "   " << std::setw(7) << timing_total_short;  // Total time
     std::cout << std::endl;
-    for (size_t iobj = 0; iobj <= 10; ++iobj) {  // Hits-Reset
+    for (size_t iobj = 0; iobj <= 11; ++iobj) {  // Hits-Reset
       timing_sum_information[iobj] += timing[iobj] * 1000;
     }
     timing_shortlist.push_back(timing_total_short);  // short total
     timing_list.push_back(timing_total);             // short total
   }
-  for (size_t iobj = 0; iobj <= 10; iobj++) {  // Hits-Reset
+  for (size_t iobj = 0; iobj <= 11; iobj++) {  // Hits-Reset
     timing_sum_information[iobj] /= timing_information.size();
   }
 
   float timing_total_avg = 0.0;
   float timing_totalshort_avg = 0.0;
   timing_total_avg += timing_sum_information[0];  // Hits
-  for (size_t iobj = 1; iobj <= 10; iobj++) {     // MD-Reset
+  for (size_t iobj = 1; iobj <= 11; iobj++) {     // MD-Reset
     timing_total_avg += timing_sum_information[iobj];
     if (iobj != 5)
       timing_totalshort_avg += timing_sum_information[iobj];  // exclude pLS
@@ -859,6 +889,7 @@ void printTimingInformation(std::vector<std::vector<float>>& timing_information,
   std::cout << "   " << std::setw(6) << "pT5";
   std::cout << "   " << std::setw(6) << "pT3";
   std::cout << "   " << std::setw(6) << "TC";
+  std::cout << "   " << std::setw(6) << "BLF";
   std::cout << "   " << std::setw(6) << "Reset";
   std::cout << "   " << std::setw(7) << "Total";
   std::cout << "   " << std::setw(7) << "Total(short)";

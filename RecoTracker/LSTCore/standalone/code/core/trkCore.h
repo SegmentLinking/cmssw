@@ -25,6 +25,7 @@ float runT4(LSTEvent* event);
 float runT4x(LSTEvent* event);
 float runT3(LSTEvent* event);
 float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets);
+float runBrokenLineFit(LSTEvent* event, const float bField);
 float runQuadruplet(LSTEvent* event);
 float runQuintuplet(LSTEvent* event);
 float runPixelQuintuplet(LSTEvent* event);

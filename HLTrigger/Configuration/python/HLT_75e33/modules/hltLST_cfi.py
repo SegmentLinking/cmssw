@@ -2,6 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 hltLST = cms.EDProducer('LSTProducer@alpaka',
     lstInput = cms.InputTag('hltInputLST'),
+    bField = cms.InputTag('hltInputLST'),
     verbose = cms.bool(False),
     ptCut = cms.double(0.8),
     nopLSDupClean = cms.bool(True),
