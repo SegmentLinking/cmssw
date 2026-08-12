@@ -231,6 +231,7 @@ void LSTEvent::createMiniDoublets() {
     alpaka::memcpy(queue_, nTotalMDs_buf_h, nTotalMDs_buf_d);
     alpaka::wait(queue_);  // wait to get the data before manipulation
 
+    nTotalMDsOT_ = *nTotalMDs_buf_h.data();
     *nTotalMDs_buf_h.data() += 2 * pixelSize_;
     unsigned int nTotalMDs = *nTotalMDs_buf_h.data();
 
@@ -251,6 +252,8 @@ void LSTEvent::createMiniDoublets() {
   auto mdView = miniDoubletsDC_->view().miniDoublets();
   auto connView = cms::alpakatools::make_device_view(queue_, mdView.connectedMax());
   alpaka::memset(queue_, connView, 0u);
+  auto connT3View = cms::alpakatools::make_device_view(queue_, mdView.connectedT3sMax());
+  alpaka::memset(queue_, connT3View, 0u);
 
   unsigned int mdSize = pixelSize_ * 2;
   auto src_view_mdSize = cms::alpakatools::make_host_view(mdSize);
@@ -332,6 +335,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
     alpaka::memcpy(queue_, nTotalSegments_view_h, nTotalSegments_view_d);
     alpaka::wait(queue_);  // wait to get the value before manipulation
 
+    nTotalSegmentsOT_ = nTotalSegments_;
     nTotalSegments_ += pixelSize_;
 
     segmentsDC_.emplace(queue_, nTotalSegments_, nLowerModules_ + 1);
@@ -399,7 +403,7 @@ void LSTEvent::createTriplets() {
                           countSegConn_wd,
                           kernel,
                           modules_.const_view().modules(),
-                          miniDoubletsDC_->const_view().miniDoublets(),
+                          miniDoubletsDC_->view().miniDoublets(),
                           segmentsDC_->view().segments(),
                           segmentsDC_->const_view().segmentsOccupancy(),
                           rangesDC_->const_view(),
@@ -428,7 +432,8 @@ void LSTEvent::createTriplets() {
     alpaka::wait(queue_);  // wait to get the value before using it
 
     unsigned int nTotalTriplets = *maxTriplets_buf_h.data();
-    tripletsDC_.emplace(queue_, nTotalTriplets, nLowerModules_);
+    tripletsDC_.emplace(
+        queue_, nTotalTriplets, nLowerModules_, nTotalSegmentsOT_, nTotalTriplets, nTotalMDsOT_, nTotalTriplets);
     if (objectsStatistics_) {
       double mb = alpaka::getExtentProduct(tripletsDC_->buffer()) / 1e6;
       memoryAllocatedMB_ += mb;
@@ -505,10 +510,15 @@ void LSTEvent::createTriplets() {
                         kernel,
                         modules_.const_view().modules(),
                         miniDoubletsDC_->const_view().miniDoublets(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                         segmentsDC_->const_view().segments(),
                         segmentsDC_->const_view().segmentsOccupancy(),
                         tripletsDC_->view().triplets(),
                         tripletsDC_->view().tripletsOccupancy(),
+                        tripletsDC_->view().tripletsBySegment(),
+                        tripletsDC_->view().tripletsRangesBySegment(),
+                        tripletsDC_->view().tripletsByMD(),
+                        tripletsDC_->view().tripletsRangesByMD(),
                         rangesDC_->const_view(),
                         index_gpu_buf.data(),
                         nonZeroModules,
@@ -927,6 +937,8 @@ void LSTEvent::createQuintuplets() {
                         segmentsDC_->const_view().segments(),
                         tripletsDC_->view().triplets(),
                         tripletsDC_->const_view().tripletsOccupancy(),
+                        tripletsDC_->const_view().tripletsByMD(),
+                        tripletsDC_->const_view().tripletsRangesByMD(),
                         rangesDC_->const_view(),
                         ptCut_);
   };
@@ -993,6 +1005,8 @@ void LSTEvent::createQuintuplets() {
                         segmentsDC_->const_view().segments(),
                         tripletsDC_->view().triplets(),
                         tripletsDC_->const_view().tripletsOccupancy(),
+                        tripletsDC_->const_view().tripletsByMD(),
+                        tripletsDC_->const_view().tripletsRangesByMD(),
                         quintupletsDC_->view().quintuplets(),
                         quintupletsDC_->view().quintupletsOccupancy(),
                         rangesDC_->const_view(),
@@ -1201,6 +1215,8 @@ void LSTEvent::createQuadruplets() {
                         segmentsDC_->const_view().segments(),
                         tripletsDC_->view().triplets(),
                         tripletsDC_->const_view().tripletsOccupancy(),
+                        tripletsDC_->const_view().tripletsBySegment(),
+                        tripletsDC_->const_view().tripletsRangesBySegment(),
                         rangesDC_->const_view(),
                         ptCut_);
   };
@@ -1260,8 +1276,10 @@ void LSTEvent::createQuadruplets() {
                         modules_.const_view().modules(),
                         miniDoubletsDC_->const_view().miniDoublets(),
                         segmentsDC_->const_view().segments(),
-                        tripletsDC_->view().triplets(),
+                        tripletsDC_->const_view().triplets(),
                         tripletsDC_->const_view().tripletsOccupancy(),
+                        tripletsDC_->const_view().tripletsBySegment(),
+                        tripletsDC_->const_view().tripletsRangesBySegment(),
                         quadrupletsDC_->view().quadruplets(),
                         quadrupletsDC_->view().quadrupletsOccupancy(),
                         rangesDC_->const_view(),

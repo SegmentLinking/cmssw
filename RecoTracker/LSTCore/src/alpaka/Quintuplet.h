@@ -1698,6 +1698,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOccupancy,
+                                  TripletsByMDConst tripletsByMD,
+                                  TripletsRangesConst tripletsRangesByMD,
                                   Quintuplets quintuplets,
                                   QuintupletsOccupancy quintupletsOccupancy,
                                   ObjectRangesConst ranges,
@@ -1768,18 +1770,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (nOuterTriplets == 0)
             continue;
 
-          const auto outerTripletOffset = tripIdx[lowerModule3];
-          const auto secondSegmentIndex = segIdx[innerTripletIndex][1];
-          const auto miniDoublet3Index = mdIndices[secondSegmentIndex][1];  //outermost MD
-          for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
-            unsigned int outerTripletIndex = outerTripletOffset + outerTripletArrayIndex;
+          const unsigned int secondSegIdx = segIdx[innerTripletIndex][1];
+          const unsigned int secondMDOuter = mdIndices[secondSegIdx][1];
+          const unsigned int nOuterTripletsByMD = tripletsRangesByMD.n()[secondMDOuter];
+          if (nOuterTripletsByMD == 0)
+            continue;
 
-            const auto thirdSegmentIndex = segIdx[outerTripletIndex][0];
-            const auto outerInnerInnerMiniDoubletIndex = mdIndices[thirdSegmentIndex][0];  //outer triplet innermost MD
-
-            //matching MDs
-            if (miniDoublet3Index != outerInnerInnerMiniDoubletIndex)
-              continue;
+          const auto outerOffset = tripletsRangesByMD.offset()[secondMDOuter];
+          for (unsigned int outerIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTripletsByMD)) {
+            unsigned int outerTripletIndex = tripletsByMD.tripletIndex()[outerOffset + outerIndex];
 
             // If densely connected, do not attempt parallel processing to avoid truncation
             if (ReduceMem || nInnerTriplets >= kNTripletThreshold || nOuterTriplets >= kNTripletThreshold) {
@@ -2034,6 +2033,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOcc,
+                                  TripletsByMDConst tripletsByMD,
+                                  TripletsRangesConst tripletsRangesByMD,
                                   ObjectRangesConst ranges,
                                   const float ptCut) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
@@ -2062,57 +2063,57 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           const unsigned int secondSegIdx = segIdx[innerTripletIndex][1];
           const unsigned int secondMDOuter = mdIndices[secondSegIdx][1];
+          const unsigned int nOuterTripletsByMD = tripletsRangesByMD.n()[secondMDOuter];
+          if (nOuterTripletsByMD == 0)
+            continue;
 
-          for (unsigned int outerTripletArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTriplets)) {
-            const unsigned int outerTripletIndex = tripIdx[lowerModule3] + outerTripletArrayIndex;
-            const unsigned int thirdSegIdx = segIdx[outerTripletIndex][0];
-            const unsigned int thirdMDInner = mdIndices[thirdSegIdx][0];
+          const auto outerOffset = tripletsRangesByMD.offset()[secondMDOuter];
+          for (unsigned int outerIndex : cms::alpakatools::uniform_elements_x(acc, nOuterTripletsByMD)) {
+            const unsigned int outerTripletIndex = tripletsByMD.tripletIndex()[outerOffset + outerIndex];
 
-            if (secondMDOuter == thirdMDInner) {
-              // Will only perform runQuintupletDefaultAlgorithm() checks if densely connected
-              if (!ReduceMem && nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
+            // Will only perform runQuintupletDefaultAlgorithm() checks if densely connected
+            if (!ReduceMem && nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
+              alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+            } else {
+              const uint16_t lowerModule2 = lmIdx[innerTripletIndex][1];
+              const uint16_t lowerModule4 = lmIdx[outerTripletIndex][1];
+              const uint16_t lowerModule5 = lmIdx[outerTripletIndex][2];
+
+              float innerRadius, outerRadius, bridgeRadius;
+              float regCx, regCy, regR;
+              float rzChi2, chi2, nonAnchorChi2, dBeta1, dBeta2, dnnScore;
+              float t5Embed[Params_T5::kEmbed] = {0.f};
+              bool tightFlag = false;
+
+              const bool ok = runQuintupletDefaultAlgo(acc,
+                                                       modules,
+                                                       mds,
+                                                       segments,
+                                                       triplets,
+                                                       lowerModule1,
+                                                       lowerModule2,
+                                                       lowerModule3,
+                                                       lowerModule4,
+                                                       lowerModule5,
+                                                       innerTripletIndex,
+                                                       outerTripletIndex,
+                                                       innerRadius,
+                                                       outerRadius,
+                                                       bridgeRadius,
+                                                       regCx,
+                                                       regCy,
+                                                       regR,
+                                                       rzChi2,
+                                                       chi2,
+                                                       nonAnchorChi2,
+                                                       dBeta1,
+                                                       dBeta2,
+                                                       dnnScore,
+                                                       tightFlag,
+                                                       t5Embed,
+                                                       ptCut);
+              if (ok) {
                 alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
-              } else {
-                const uint16_t lowerModule2 = lmIdx[innerTripletIndex][1];
-                const uint16_t lowerModule4 = lmIdx[outerTripletIndex][1];
-                const uint16_t lowerModule5 = lmIdx[outerTripletIndex][2];
-
-                float innerRadius, outerRadius, bridgeRadius;
-                float regCx, regCy, regR;
-                float rzChi2, chi2, nonAnchorChi2, dBeta1, dBeta2, dnnScore;
-                float t5Embed[Params_T5::kEmbed] = {0.f};
-                bool tightFlag = false;
-
-                const bool ok = runQuintupletDefaultAlgo(acc,
-                                                         modules,
-                                                         mds,
-                                                         segments,
-                                                         triplets,
-                                                         lowerModule1,
-                                                         lowerModule2,
-                                                         lowerModule3,
-                                                         lowerModule4,
-                                                         lowerModule5,
-                                                         innerTripletIndex,
-                                                         outerTripletIndex,
-                                                         innerRadius,
-                                                         outerRadius,
-                                                         bridgeRadius,
-                                                         regCx,
-                                                         regCy,
-                                                         regR,
-                                                         rzChi2,
-                                                         chi2,
-                                                         nonAnchorChi2,
-                                                         dBeta1,
-                                                         dBeta2,
-                                                         dnnScore,
-                                                         tightFlag,
-                                                         t5Embed,
-                                                         ptCut);
-                if (ok) {
-                  alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
-                }
               }
             }
           }

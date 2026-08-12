@@ -43,7 +43,8 @@ namespace lst {
                       SOA_COLUMN(float, noShiftedDphis),
                       SOA_COLUMN(float, noShiftedDphiChanges),
 #endif
-                      SOA_COLUMN(unsigned int, connectedMax))
+                      SOA_COLUMN(unsigned int, connectedMax),
+                      SOA_COLUMN(unsigned int, connectedT3sMax))
 
   GENERATE_SOA_LAYOUT(MiniDoubletsOccupancySoALayout,
                       SOA_COLUMN(unsigned int, nMDs),
