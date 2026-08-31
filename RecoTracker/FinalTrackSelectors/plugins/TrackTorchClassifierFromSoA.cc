@@ -10,8 +10,6 @@
 
 #include "DataFormats/Portable/interface/PortableHostCollection.h"
 #include "RecoTracker/FinalTrackSelectors/interface/TrackTorchClassifierFeaturesSoA.h"
-#include "TrackingTools/PatternTools/interface/Trajectory.h"
-#include "TrackingTools/PatternTools/interface/TrajTrackAssociation.h"
 
 // This module consumes the HOST copy of the Alpaka device scores
 // The framework automatically creates host copies of device PortableCollections
@@ -35,6 +33,7 @@ private:
   const std::vector<double> quality_cuts_prompt_;
   const float dxy_threshold_;
   const std::vector<double> quality_cuts_displaced_;
+  const std::string name_;
 
   const edm::EDPutTokenT<MVACollection> scores_output_token_;
   const edm::EDPutTokenT<edm::ValueMap<float>> mva_vals_token_;
@@ -49,10 +48,11 @@ TrackTorchClassifierFromSoA::TrackTorchClassifierFromSoA(const edm::ParameterSet
       quality_cuts_prompt_(iConfig.getParameter<std::vector<double>>("qualityCutsPrompt")),
       dxy_threshold_(iConfig.getParameter<double>("dxyThreshold")),
       quality_cuts_displaced_(iConfig.getParameter<std::vector<double>>("qualityCutsDisplaced")),
+      name_(iConfig.getParameter<std::string>("name")),
       scores_output_token_(produces<MVACollection>("MVAValues")),
       mva_vals_token_(produces<edm::ValueMap<float>>("MVAVals")),
-      track_quals_token_(produces<edm::ValueMap<int>>("TrackQuals")),
-      quality_mask_output_token_(produces<QualityMaskCollection>("QualityMasks")) {
+      track_quals_token_(produces<edm::ValueMap<int>>(name_)),
+      quality_mask_output_token_(produces<QualityMaskCollection>(name_)) {
   assert(quality_cuts_prompt_.size() == 3);
   assert(quality_cuts_displaced_.size() == 3);
 }
@@ -67,6 +67,7 @@ void TrackTorchClassifierFromSoA::fillDescriptions(edm::ConfigurationDescription
   desc.add<double>("dxyThreshold", 0.5)->setComment("Tracks with |dxy| > this value use the displaced quality cuts");
   desc.add<std::vector<double>>("qualityCutsDisplaced", {0.5, 0.5, 0.5})
       ->setComment("MVA score quality cuts for displaced tracks");
+  desc.add<std::string>("name", "QualityMasks")->setComment("Instance label of the track quality products");
   descriptions.addWithDefaultLabel(desc);
 }
 
