@@ -409,6 +409,22 @@ void run_lst() {
     const auto trk_ph2_clustSize =
         hasClustSize ? trk.getVUS("ph2_clustSize") : std::vector<uint16_t>(trk.getVF("ph2_x").size());
 
+    auto const& ph2_xx = trk.getVF("ph2_xx");
+    auto const& ph2_xy = trk.getVF("ph2_xy");
+    auto const& ph2_yy = trk.getVF("ph2_yy");
+    auto const& ph2_yz = trk.getVF("ph2_yz");
+    auto const& ph2_zz = trk.getVF("ph2_zz");
+    auto const& ph2_zx = trk.getVF("ph2_zx");
+    std::vector<lst::ArrayFx6> trk_ph2_ge(ph2_xx.size());
+    for (size_t i = 0; i < trk_ph2_ge.size(); ++i) {
+      trk_ph2_ge[i][0] = ph2_xx[i];
+      trk_ph2_ge[i][1] = ph2_xy[i];
+      trk_ph2_ge[i][2] = ph2_yy[i];
+      trk_ph2_ge[i][3] = ph2_zx[i];
+      trk_ph2_ge[i][4] = ph2_yz[i];
+      trk_ph2_ge[i][5] = ph2_zz[i];
+    }
+
     auto lstInputHC = prepareInput(trk.getVF("see_px"),
                                    trk.getVF("see_py"),
                                    trk.getVF("see_pz"),
@@ -431,6 +447,7 @@ void run_lst() {
                                    trk.getVF("ph2_x"),
                                    trk.getVF("ph2_y"),
                                    trk.getVF("ph2_z"),
+                                   trk_ph2_ge,
                                    ana.ptCut,
                                    queues[0]);
 
@@ -470,6 +487,7 @@ void run_lst() {
     float timing_pT5;
     float timing_pT3;
     float timing_TC;
+    float timing_BLF;
 
 #pragma omp for  // nowait// private(event)
     for (int evt = 0; evt < static_cast<int>(out_lstInputHC.size()); evt++) {
@@ -495,6 +513,8 @@ void run_lst() {
       timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);
+      timing_BLF =
+          runBrokenLineFit(events.at(omp_get_thread_num()), ALPAKA_ACCELERATOR_NAMESPACE::lst::kB);
 
       if (ana.verbose == 4) {
 #pragma omp critical
@@ -541,6 +561,7 @@ void run_lst() {
                                     timing_pT5,
                                     timing_pT3,
                                     timing_TC,
+                                    timing_BLF,
                                     timing_resetEvent});
     }
 

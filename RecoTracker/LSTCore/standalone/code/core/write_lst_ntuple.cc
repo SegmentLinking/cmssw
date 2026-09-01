@@ -346,6 +346,18 @@ void createTrackCandidateBranches() {
   if (ana.t4_branches)
     ana.tx->createBranch<std::vector<int>>(
         "tc_t4Idx");  // index to the t4_*  if it is the said type, if not set to -999
+
+  // Broken Line Fit results, one entry per track candidate (same indexing as tc_pt/tc_eta/tc_phi above)
+  ana.tx->createBranch<std::vector<float>>("tc_blf_pt");
+  ana.tx->createBranch<std::vector<float>>("tc_blf_eta");
+  ana.tx->createBranch<std::vector<float>>("tc_blf_phi");
+  ana.tx->createBranch<std::vector<float>>("tc_blf_tip");
+  ana.tx->createBranch<std::vector<float>>("tc_blf_zip");
+  ana.tx->createBranch<std::vector<int>>("tc_blf_charge");
+  ana.tx->createBranch<std::vector<float>>("tc_blf_chi2");
+  // Fitted circle covariance (6 elements) and line covariance (3 elements) per track candidate
+  ana.tx->createBranch<std::vector<std::vector<float>>>("tc_blf_covCircle");
+  ana.tx->createBranch<std::vector<std::vector<float>>>("tc_blf_covLine");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -2283,6 +2295,7 @@ void setTrackCandidateBranches(LSTEvent* event,
   auto const& modules = event->getModules<ModulesSoA>();
   auto const& trackCandidatesBase = event->getTrackCandidatesBase();
   auto const& trackCandidatesExtended = event->getTrackCandidatesExtended();
+  auto const& trackCandidatesBLFFit = event->getTrackCandidatesBLFFit();
 
   // Following are some vectors to keep track of the information to write to the ntuple
   // N.B. following two branches have a length for the entire sim track, but what actually will be written in sim_tcIdxAll branch is NOT that long
@@ -2342,6 +2355,23 @@ void setTrackCandidateBranches(LSTEvent* event,
     ana.tx->pushbackToBranch<float>("tc_eta", eta);
     ana.tx->pushbackToBranch<float>("tc_phi", phi);
     ana.tx->pushbackToBranch<int>("tc_type", type);
+
+    // Broken Line Fit results for this track candidate
+    ana.tx->pushbackToBranch<float>("tc_blf_pt", trackCandidatesBLFFit.pt()[tc_idx]);
+    ana.tx->pushbackToBranch<float>("tc_blf_eta", trackCandidatesBLFFit.eta()[tc_idx]);
+    ana.tx->pushbackToBranch<float>("tc_blf_phi", trackCandidatesBLFFit.phi()[tc_idx]);
+    ana.tx->pushbackToBranch<float>("tc_blf_tip", trackCandidatesBLFFit.tip()[tc_idx]);
+    ana.tx->pushbackToBranch<float>("tc_blf_zip", trackCandidatesBLFFit.zip()[tc_idx]);
+    ana.tx->pushbackToBranch<int>("tc_blf_charge", trackCandidatesBLFFit.charge()[tc_idx]);
+    ana.tx->pushbackToBranch<float>("tc_blf_chi2", trackCandidatesBLFFit.chi2()[tc_idx]);
+    std::vector<float> tc_blf_covCircle(6);
+    for (int k = 0; k < 6; ++k)
+      tc_blf_covCircle[k] = trackCandidatesBLFFit.covCircle()[tc_idx][k];
+    ana.tx->pushbackToBranch<std::vector<float>>("tc_blf_covCircle", tc_blf_covCircle);
+    std::vector<float> tc_blf_covLine(3);
+    for (int k = 0; k < 3; ++k)
+      tc_blf_covLine[k] = trackCandidatesBLFFit.covLine()[tc_idx][k];
+    ana.tx->pushbackToBranch<std::vector<float>>("tc_blf_covLine", tc_blf_covLine);
     if (type == LSTObjType::pT5) {
       if (ana.pt5_branches)
         ana.tx->pushbackToBranch<int>(
