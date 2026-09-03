@@ -670,10 +670,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   }
 
+  // Occupancy-conditioned widening of the module-constant (scattering + luminous-region) part of
+  // the dPhiChange window: sparse modules get a wider window, dense ones stay at the stock value.
+  HOST_DEVICE_CONSTANT float kMiniOccScaleMax = 8.f;
+  HOST_DEVICE_CONSTANT float kMiniOccScaleK = 1024.f;
+
   // Hoist module-constant data once per module to avoid redundant SoA loads per hit pair.
+  // nPairs is the module's candidate-pair count (nLowerHits * nUpperHits), the caller's loop bound.
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE ModuleMDData
-  loadModuleMDData(TAcc const& acc, ModulesConst modules, uint16_t lowerModuleIndex, const float ptCut) {
+  loadModuleMDData(TAcc const& acc, ModulesConst modules, uint16_t lowerModuleIndex, const float ptCut, int nPairs) {
     ModuleMDData mod;
     mod.lowerModuleIndex = lowerModuleIndex;
     mod.subdet = modules.subdets()[lowerModuleIndex];
@@ -708,6 +714,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     } else {
       mod.miniTilt2 = 0.f;
     }
+
+    // Barrel-only occupancy conditioning.  Scaling the two cached members widens every consumer
+    // of the module-constant bracket together, pre-checks included, so no cut can become binding.
+    if (nPairs > 0 && mod.subdet == Barrel) {
+      const float m = alpaka::math::max(
+          acc, 1.f, alpaka::math::min(acc, kMiniOccScaleMax, kMiniOccScaleK / static_cast<float>(nPairs)));
+      mod.miniMulsAndPVoff *= m * m;
+      mod.sqrtMiniMulsAndPVoff *= m;
+    }
     return mod;
   }
 
@@ -731,7 +746,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int loHitArrayIndex = hitsRanges.hitRangesLower()[lowerModuleIndex];
         int limit = nUpperHits * nLowerHits;
 
-        ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut);
+        ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut, limit);
 
         for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
           int lowerHitIndex = hitIndex / nUpperHits;
@@ -830,7 +845,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int loHitArrayIndex = hitsRanges.hitRangesLower()[lowerModuleIndex];
         int limit = nUpperHits * nLowerHits;
 
-        ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut);
+        ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut, limit);
 
         for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
           int lowerHitIndex = hitIndex / nUpperHits;
