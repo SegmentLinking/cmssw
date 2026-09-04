@@ -295,7 +295,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           const float c = std::sqrt(c2);
           const float k = static_cast<float>(charge) * bField / pt_fit;
 
-          // Analytic Jacobian d(q/|p|, lambda, phi, dxy, dsz) / d(phi, tip, kappa, slope, zip)
+          // Analytic Jacobian d(q/|p|, lambda, phi, dxy, dsz) / d(phi, tip, kappa, slope, zip).
+          // Sign convention: the Karimaki impact parameter is tip = d0 = -dxy, so d(dxy)/d(tip) = -1.
           const float j02 = 1.f / (bField * c);
           const float j03 = -k * slope / (bField * c * c2);
           const float j13 = 1.f / c2;
@@ -311,21 +312,21 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           cov(0, 0) = j02 * j02 * ckk + j03 * j03 * css;
           cov(0, 1) = j03 * j13 * css;
           cov(0, 2) = j02 * cphik;
-          cov(0, 3) = j02 * ctk;
+          cov(0, 3) = -j02 * ctk;
           cov(0, 4) = j03 * slope_zip_term;
           cov(1, 1) = j13 * j13 * css;
           cov(1, 2) = 0.f;
           cov(1, 3) = 0.f;
           cov(1, 4) = j13 * slope_zip_term;
           cov(2, 2) = cphiphi;
-          cov(2, 3) = cphit;
+          cov(2, 3) = -cphit;
           cov(2, 4) = 0.f;
           cov(3, 3) = ctt;
           cov(3, 4) = 0.f;
           cov(4, 4) = j43 * j43 * css + 2.f * j43 * j44 * csz + j44 * j44 * czz;
 
           const float sp = std::sin(phi), cp_phi = std::cos(phi);
-          const math::XYZPoint refPoint(-tip * sp, tip * cp_phi, zip);
+          const math::XYZPoint refPoint(tip * sp, -tip * cp_phi, zip);
           const math::XYZVector mom(pt_fit * cp_phi, pt_fit * sp, pt_fit * slope);
 
           const int nOTHits = static_cast<int>(recHits.size()) - nPixelHits;
