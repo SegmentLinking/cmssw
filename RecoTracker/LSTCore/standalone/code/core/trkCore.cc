@@ -349,8 +349,8 @@ float runBrokenLineFit(LSTEvent* event, const float bField) {
       if (blfFit.pt()[i] != -1.f)
         ++nFit;
     }
-    std::cout << "# of Broken Line Fits produced: " << nFit << " (out of " << nTrackCandidates
-              << " track candidates)" << std::endl;
+    std::cout << "# of Broken Line Fits produced: " << nFit << " (out of " << nTrackCandidates << " track candidates)"
+              << std::endl;
   }
 
   return blf_elapsed;
