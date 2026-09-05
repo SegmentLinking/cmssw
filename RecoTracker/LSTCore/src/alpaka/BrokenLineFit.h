@@ -13,11 +13,32 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
-  // Initialise all fit-result pt entries to -1 before the fit kernels run.
+  // Initialise every fit-result column before the fit kernels run:
+  //   pt   = -1: the unfit flag every consumer keys on (LSTOutputConverter gates the reco::Track on
+  //              pt >= 0; LST.cc and the standalone trkCore.cc count pt != -1). It must not change.
+  //   chi2 = -1: chi2 is non-negative by construction, so a negative value cannot be mistaken for a
+  //              fit, whereas 0 would look like a perfect one. LSTOutputConverter rebuilds
+  //              chi2total = chi2stored * ndof, so a leaked chi2 = 0 would sail through the chi2n
+  //              cut in the downstream track selection.
+  //   charge = 0: not a valid track charge.
+  //   eta, phi, tip, zip and both covariances = 0: a zero covariance is a zero error, which is loud
+  //              rather than plausible. The authoritative unfit test remains pt < 0, not these.
   struct Kernel_InitBLFFit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackCandidatesBLFFit fitResults, unsigned int nTC) const {
       for (unsigned int tcIdx : cms::alpakatools::uniform_elements(acc, nTC)) {
         fitResults.pt()[tcIdx] = -1.f;
+        fitResults.eta()[tcIdx] = 0.f;
+        fitResults.phi()[tcIdx] = 0.f;
+        fitResults.tip()[tcIdx] = 0.f;
+        fitResults.zip()[tcIdx] = 0.f;
+        fitResults.charge()[tcIdx] = 0;
+        fitResults.chi2()[tcIdx] = -1.f;
+        auto& cCircle = fitResults.covCircle()[tcIdx];
+        for (unsigned int i = 0; i < cCircle.size(); ++i)
+          cCircle[i] = 0.f;
+        auto& cLine = fitResults.covLine()[tcIdx];
+        for (unsigned int i = 0; i < cLine.size(); ++i)
+          cLine[i] = 0.f;
       }
     }
   };

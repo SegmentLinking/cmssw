@@ -142,7 +142,7 @@ void LST::run(Queue& queue,
   event.fitTrackCandidatesBrokenLine(bField);
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
-    // Kernel_InitBLFFit sets pt to -1 for every track candidate before the fit kernels run;
+    // Kernel_InitBLFFit initialises every fit-result column, with pt = -1, for every candidate;
     // TCs whose OT hit count doesn't match one of the instantiated N (6,8,10,12,14) are left unfit.
     auto const& blfFit = event.getTrackCandidatesBLFFit();
     int nTrackCandidates = event.getNumberOfTrackCandidates();

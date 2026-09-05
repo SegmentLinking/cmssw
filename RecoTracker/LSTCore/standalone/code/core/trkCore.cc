@@ -340,7 +340,7 @@ float runBrokenLineFit(LSTEvent* event, const float bField) {
     std::cout << "Reco Broken Line Fit processing time: " << blf_elapsed << " secs" << std::endl;
 
   if (ana.verbose >= 2) {
-    // Kernel_InitBLFFit sets pt to -1 for every track candidate before the fit kernels run;
+    // Kernel_InitBLFFit initialises every fit-result column, with pt = -1, for every candidate;
     // TCs whose OT hit count doesn't match one of the instantiated N (6,8,10,12,14) are left unfit.
     auto const& blfFit = event->getTrackCandidatesBLFFit();
     unsigned int nTrackCandidates = event->getNumberOfTrackCandidates();
