@@ -31,6 +31,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float sin_alphaRHmax, cos_alphaRHmax;  // for endcap EEE path
     short innerSubdet;                     // subdet of inner-inner module
     short middleSubdet;                    // subdet of middle module
+    // Multiple-scattering allowance for the pointing cut; exactly 0 on barrel-barrel inner segments.
+    float msTermEc;
   };
 
   // Pre-loaded hit coordinates for passRZConstraint.
@@ -48,7 +50,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                    ModulesConst modules,
                                                                    unsigned int innerSegmentIndex,
                                                                    uint16_t innerInnerLowerModuleIndex,
-                                                                   uint16_t middleLowerModuleIndex) {
+                                                                   uint16_t middleLowerModuleIndex,
+                                                                   const float ptCut) {
     unsigned int firstMDIndex = segments.mdIndices()[innerSegmentIndex][0];
     unsigned int secondMDIndex = segments.mdIndices()[innerSegmentIndex][1];
     T3InnerSegData d;
@@ -72,6 +75,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       d.cos_alphaRHmin = alpaka::math::cos(acc, d.sdIn_alphaRHmin);
       d.sin_alphaRHmax = alpaka::math::sin(acc, d.sdIn_alphaRHmax);
       d.cos_alphaRHmax = alpaka::math::cos(acc, d.sdIn_alphaRHmax);
+    }
+
+    // Endcap-form inner segments are exactly the ones Segment.h dispatches to
+    // runSegmentDefaultAlgoEndcap: NOT (inner Barrel and middle Barrel).  Same multiple-scattering
+    // allowance the segment stage carries for the inner module.
+    d.msTermEc = 0.f;
+    if (not(d.innerSubdet == Barrel and d.middleSubdet == Barrel)) {
+      const unsigned int lay = modules.layers()[innerInnerLowerModuleIndex] - 1;
+      const float mulsScale = (d.innerSubdet == Barrel) ? kMiniMulsPtScaleBarrel[lay] : kMiniMulsPtScaleEndcap[lay];
+      d.msTermEc = mulsScale * 3.f / ptCut;
     }
     return d;
   }
@@ -394,10 +407,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dy = y3 - innerSegData.y1;
     const float drt_tl_axis = alpaka::math::sqrt(acc, dx * dx + dy * dy);
 
+    // On endcap-form inner segments the bare position slop is taken in quadrature with the
+    // multiple-scattering allowance; msTermEc is exactly 0 elsewhere and that path is stock.
+    const float slop = 0.02f / innerSegData.drt_InSeg;
     const float betaInCut =
         alpaka::math::asin(
             acc, alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / innerSegData.drt_InSeg);
+        (innerSegData.msTermEc == 0.f
+             ? slop
+             : alpaka::math::sqrt(acc, slop * slop + innerSegData.msTermEc * innerSegData.msTermEc));
 
     // Algebraic betaIn check, avoiding per-candidate atan2.
     // betaIn = sdIn_alpha - (phi(dx,dy) - anchorPhi1)
@@ -637,7 +655,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           int middleMDIndexInner = segments.mdIndices()[innerSegmentIndex][1];
 
           T3InnerSegData innerSegData = loadT3InnerSegData(
-              acc, mds, segments, modules, innerSegmentIndex, innerInnerLowerModuleIndex, middleLowerModuleIndex);
+              acc, mds, segments, modules, innerSegmentIndex, innerInnerLowerModuleIndex, middleLowerModuleIndex, ptCut);
 
           unsigned int nOuterSegments = segmentsOccupancy.nSegments()[middleLowerModuleIndex];
           for (unsigned int outerSegmentArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterSegments)) {
@@ -749,7 +767,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           T3InnerSegData innerSegData = loadT3InnerSegData(
-              acc, mds, segments, modules, innerSegmentIndex, innerLowerModuleArrayIdx, middleLowerModuleIndex);
+              acc, mds, segments, modules, innerSegmentIndex, innerLowerModuleArrayIdx, middleLowerModuleIndex, ptCut);
 
           for (unsigned int outerSegmentArrayIndex : cms::alpakatools::uniform_elements_x(acc, nOuterSegments)) {
             const unsigned int outerSegmentIndex = segmentRanges[middleLowerModuleIndex][0] + outerSegmentArrayIndex;

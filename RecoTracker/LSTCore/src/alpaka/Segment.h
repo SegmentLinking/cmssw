@@ -139,7 +139,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                       float rtOut,
                                                       unsigned int innerMDIndex,
                                                       unsigned int outerMDIndex,
-                                                      const float ptCut) {
+                                                      const float ptCut,
+                                                      float& dAlphaBfieldOut,
+                                                      float& dAlphaResMulsOut) {
     const float sdMuls = innerMod.sdMuls;
 
     //more accurate then outer rt - inner rt
@@ -190,6 +192,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //Inner to outer
     dAlphaThresholdValues[2] = dAlpha_Bfield + alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+
+    // Handed back for the circle-residual cut below: the curvature part of the thresholds, and the
+    // origin-free half-tolerance (taken straight from the sqrt, never as thr[2] - dAlpha_Bfield).
+    dAlphaBfieldOut = dAlpha_Bfield;
+    dAlphaResMulsOut = alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+  }
+
+  // Origin-free circle residual.  For any circle the chord makes equal angles with the tangents at
+  // its two ends, so alphaIn + alphaOut + dPhi - 2*(chord turn - inner turn) vanishes exactly; both
+  // the radius and d0 cancel, so T is pt-free and origin-free.  In the barrel dPhiChange IS the
+  // chord turn and the form collapses to dAlphaIn + dAlphaOut + dPhi.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passTResidual(TAcc const& acc,
+                                                    const float T,
+                                                    const float dAlphaInnerThr,
+                                                    const float dAlphaOuterThr,
+                                                    const float dAlphaBfield,
+                                                    const float dAlphaResMuls,
+                                                    const bool isEndcapBranch) {
+    // The barrel tolerance is the non-curvature part of the two MD-segment thresholds.  In the
+    // endcap that inherits sdLum (built from kDeltaZLum) and is neither origin-free nor finite, so
+    // the symmetric origin-free tolerance is used there instead.
+    const float sigmaT =
+        isEndcapBranch ? 2.f * dAlphaResMuls : (dAlphaInnerThr - dAlphaBfield) + (dAlphaOuterThr - dAlphaBfield);
+    return alpaka::math::abs(acc, T) < sigmaT;
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addSegmentToMemory(Segments segments,
@@ -487,6 +514,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 dPhiChange))
       return false;
 
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
     dAlphaThreshold(acc,
                     dAlphaThresholdValues,
@@ -503,7 +532,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     rtOut,
                     innerMDIndex,
                     outerMDIndex,
-                    ptCut);
+                    ptCut,
+                    dAlphaBfield,
+                    dAlphaResMuls);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -514,6 +545,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // Barrel form: dPhiChange is the chord turn, so T = dAlphaIn + dAlphaOut + dPhi.
+    const float tResidual = dAlphaInnerMDSegment + dAlphaOuterMDSegment + dPhi;
+    if (!passTResidual(acc,
+                       tResidual,
+                       dAlphaInnerMDSegmentThreshold,
+                       dAlphaOuterMDSegmentThreshold,
+                       dAlphaBfield,
+                       dAlphaResMuls,
+                       false))
+      return false;
 
     if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
       return false;
@@ -608,6 +650,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     dPhiChangeMin = dPhiMin / dzFrac * (1.f + dzFrac);
     dPhiChangeMax = dPhiMax / dzFrac * (1.f + dzFrac);
 
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
     dAlphaThreshold(acc,
                     dAlphaThresholdValues,
@@ -624,7 +668,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     rtOut,
                     innerMDIndex,
                     outerMDIndex,
-                    ptCut);
+                    ptCut,
+                    dAlphaBfield,
+                    dAlphaResMuls);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -635,6 +681,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // Endcap form: dPhiChange is the z-extrapolation, not the chord turn, so the chord is rebuilt
+    // and the difference enters the residual twice.
+    const float chord =
+        alpaka::math::atan2(acc, rtOut * alpaka::math::sin(acc, dPhi), rtOut * alpaka::math::cos(acc, dPhi) - rtIn);
+    const float tResidual = dAlphaInnerMDSegment + dAlphaOuterMDSegment + dPhi + 2.f * (dPhiChange - chord);
+    if (!passTResidual(acc,
+                       tResidual,
+                       dAlphaInnerMDSegmentThreshold,
+                       dAlphaOuterMDSegmentThreshold,
+                       dAlphaBfield,
+                       dAlphaResMuls,
+                       true))
+      return false;
 
     if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
       return false;

@@ -230,19 +230,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float eta1 = __H2F(quintuplets.eta()[iT5]);
           float phi1 = __H2F(quintuplets.phi()[iT5]);
 
-          float iEmbedT5[Params_T5::kEmbed];
-          CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_T5::kEmbed; ++k) {
-            iEmbedT5[k] = quintuplets.t5Embed()[iT5][k];
-          }
-
-          // Pre-load T5 hits and iT5-only dup-cleaning constants outside the jx loop.
+          // Pre-load T5 hits outside the jx loop.
           unsigned int iT5Hits[Params_T5::kHits];
           CMS_UNROLL_LOOP for (int i = 0; i < Params_T5::kHits; ++i) { iT5Hits[i] = quintuplets.hitIndices()[iT5][i]; }
-          // Longer (extended) T5s get a tighter cut: 3x smaller d2 and 6 (vs 4) shared OT hits.
-          const bool isExtT5 = quintuplets.nLayers()[iT5] > Params_T5::kBaseLayers;
-          const float d2Lo = isExtT5 ? 0.03f : 0.1f;
-          const float d2Hi = isExtT5 ? 0.3f : 1.0f;
-          const int otThresh = isExtT5 ? 6 : 4;
+          // A pixel object may delete a quintuplet only on shared outer-tracker hits: agreeing in
+          // direction, or in a prompt-trained embedding, is not evidence that they are one track.
+          constexpr int otThresh = 4;
 
           // Cross-clean against both pT5s and pT3s
           for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, loop_bound)) {
@@ -260,20 +253,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-            float dR2 = dEta * dEta + dPhi * dPhi;
 
             if (isPT5) {
-              unsigned int jT5 = pixelQuintuplets.quintupletIndices()[jx];
-              float d2 = 0.f;
-              // Compute distance-squared between the two t5 embeddings.
-              CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_T5::kEmbed; ++k) {
-                float df = iEmbedT5[k] - quintuplets.t5Embed()[jT5][k];
-                d2 += df * df;
-              }
-
-              if ((dR2 < 0.02f && d2 < d2Lo) || (dR2 < 1e-3f && d2 < d2Hi)) {
-                quintuplets.isDup()[iT5] |= 4;
-              } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
+              if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
                 // OT hit matching: T5 hits vs pT5 OT hits
                 int nOTMatched = 0;
                 for (int i = 0; i < Params_T5::kHits; ++i) {
@@ -290,11 +272,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     }
                   }
                 }
-                if (nOTMatched >= otThresh)
+                // !isDup is the promotion predicate AddpT5asTrackCandidate itself uses, and nothing
+                // between here and there writes that column: only a promoted pixel object may kill.
+                if (nOTMatched >= otThresh && !pixelQuintuplets.isDup()[jx])
                   quintuplets.isDup()[iT5] |= 4;
               }
-            } else if (dR2 < 1e-3f) {
-              quintuplets.isDup()[iT5] |= 4;
             } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
               // OT hit matching: T5 hits vs pT3 OT hits (same extended logic as pT5 path)
               int nOTMatched = 0;
@@ -312,7 +294,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   }
                 }
               }
-              if (nOTMatched >= otThresh)
+              if (nOTMatched >= otThresh && !pixelTriplets.isDup()[ptidx])
                 quintuplets.isDup()[iT5] |= 4;
             }
 
@@ -360,6 +342,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
         const float threshold = dnn::plsembdnn::kWP[bin_idx];
 
+        // The pT3 / pT5 duplicate test below asks for a real direction window instead of exact
+        // agreement, and pays for it with the helix: equal charge and agreeing circle radius.
+        constexpr float kPlsPixWin = 0.001f;
+        constexpr float kPlsPixRatio = 1.15f;
+        const float rad1 = pixelSegments.circleRadius()[pixelArrayIndex];
+        const int chg1 = pixelSeeds.charge()[pixelArrayIndex];
+
         unsigned int nTrackCandidates = candsBase.nTrackCandidates();
         for (unsigned int trackCandidateIndex : cms::alpakatools::uniform_elements_x(acc, nTrackCandidates)) {
           LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
@@ -386,32 +375,38 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           } else if (type == LSTObjType::pT3) {
             int pT3Index = innerTrackletIdx;
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[pT3Index];
-            if (pixelHitsOverlapAny(pixelArrayIndex, pLSIndex - prefix, pixelSegments)) {
+            const unsigned int j = pLSIndex - prefix;
+            if (pixelHitsOverlapAny(pixelArrayIndex, j, pixelSegments)) {
               pixelSegments.isDup()[pixelArrayIndex] = true;
             }
 
-            float eta2 = __H2F(pixelTriplets.eta_pix()[pT3Index]);
-            float phi2 = __H2F(pixelTriplets.phi_pix()[pT3Index]);
-            float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
-            float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 0.000001f) {
+            // Compare against the partner pLS's own direction, not the pT3's stored eta_pix/phi_pix.
+            const float dEta = alpaka::math::abs(acc, eta1 - pixelSeeds.eta()[j]);
+            const float dPhi = cms::alpakatools::deltaPhi(acc, phi1, pixelSeeds.phi()[j]);
+            const float dR2 = dEta * dEta + dPhi * dPhi;
+            const float rad2 = pixelSegments.circleRadius()[j];
+            const bool helixOk =
+                (chg1 == pixelSeeds.charge()[j]) && (rad1 < kPlsPixRatio * rad2) && (rad2 < kPlsPixRatio * rad1);
+            if (dR2 < kPlsPixWin && helixOk) {
               pixelSegments.isDup()[pixelArrayIndex] = true;
             }
           } else if (type == LSTObjType::pT5) {
             unsigned int pLSIndex = innerTrackletIdx;
-            if (pixelHitsOverlapAny(pixelArrayIndex, pLSIndex - prefix, pixelSegments)) {
+            const unsigned int j = pLSIndex - prefix;
+            if (pixelHitsOverlapAny(pixelArrayIndex, j, pixelSegments)) {
               pixelSegments.isDup()[pixelArrayIndex] = true;
             }
 
-            float eta2 = pixelSeeds.eta()[pLSIndex - prefix];
-            float phi2 = pixelSeeds.phi()[pLSIndex - prefix];
+            float eta2 = pixelSeeds.eta()[j];
+            float phi2 = pixelSeeds.phi()[j];
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
             float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 0.000001f) {
+            const float rad2 = pixelSegments.circleRadius()[j];
+            const bool helixOk =
+                (chg1 == pixelSeeds.charge()[j]) && (rad1 < kPlsPixRatio * rad2) && (rad2 < kPlsPixRatio * rad1);
+            if (dR2 < kPlsPixWin && helixOk) {
               pixelSegments.isDup()[pixelArrayIndex] = true;
             }
           }
@@ -573,8 +568,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int nQuints = quintupletsOccupancy.nQuintuplets()[idx];
         for (unsigned int jdx = 0; jdx < nQuints; ++jdx) {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
+          // Must mirror AddT5asTrackCandidate's admission test exactly: this count sizes the
+          // TrackCandidate allocation.
+          const float rescueThr = (quintuplets.nLayers()[quintupletIndex] > Params_T5::kBaseLayers) ? 0.f : 0.90f;
           if (!quintuplets.isDup()[quintupletIndex] && !quintuplets.partOfPT5()[quintupletIndex] &&
-              quintuplets.tightCutFlag()[quintupletIndex])
+              (quintuplets.tightCutFlag()[quintupletIndex] || quintuplets.dnnScore()[quintupletIndex] >= rescueThr))
             alpaka::atomicAdd(acc, &nSurviving[2], 1u, alpaka::hierarchy::Threads{});
         }
       }
@@ -670,7 +668,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
           if (quintuplets.isDup()[quintupletIndex] or quintuplets.partOfPT5()[quintupletIndex])
             continue;
-          if (!(quintuplets.tightCutFlag()[quintupletIndex]))
+          // The 95% rz tax is waived for a quintuplet the T5 head already calls real.  Every T5 that
+          // exists has passed the 99% rz verdict, so this admits nothing the build stage rejected.
+          // MUST stay identical to the CountSurvivingTCs test (it sizes the allocation).
+          const float rescueThr = (quintuplets.nLayers()[quintupletIndex] > Params_T5::kBaseLayers) ? 0.f : 0.90f;
+          if (!(quintuplets.tightCutFlag()[quintupletIndex]) && !(quintuplets.dnnScore()[quintupletIndex] >= rescueThr))
             continue;
 
           unsigned int trackCandidateIdx =
