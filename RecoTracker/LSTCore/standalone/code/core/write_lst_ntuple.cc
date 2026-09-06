@@ -358,6 +358,8 @@ void createTrackCandidateBranches() {
   // Fitted circle covariance (6 elements) and line covariance (3 elements) per track candidate
   ana.tx->createBranch<std::vector<std::vector<float>>>("tc_blf_covCircle");
   ana.tx->createBranch<std::vector<std::vector<float>>>("tc_blf_covLine");
+  ana.tx->createBranch<std::vector<int>>("tc_blf_nFit");
+  ana.tx->createBranch<std::vector<int>>("tc_blf_nDegen");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -2372,6 +2374,8 @@ void setTrackCandidateBranches(LSTEvent* event,
     for (int k = 0; k < 3; ++k)
       tc_blf_covLine[k] = trackCandidatesBLFFit.covLine()[tc_idx][k];
     ana.tx->pushbackToBranch<std::vector<float>>("tc_blf_covLine", tc_blf_covLine);
+    ana.tx->pushbackToBranch<int>("tc_blf_nFit", trackCandidatesBLFFit.nFit()[tc_idx]);
+    ana.tx->pushbackToBranch<int>("tc_blf_nDegen", trackCandidatesBLFFit.nDegen()[tc_idx]);
     if (type == LSTObjType::pT5) {
       if (ana.pt5_branches)
         ana.tx->pushbackToBranch<int>(

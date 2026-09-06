@@ -13,6 +13,53 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
+  // Node counts N for which a Kernel_LSTBLFit<N> instantiation exists, descending.
+  // Keep in sync with the launchBLFKernelN* calls in BrokenLineFit.dev.cc.
+  inline constexpr int kBLFitSizes[] = {14, 12, 10, 8, 6, 5};
+  inline constexpr int kBLFitMaxNodes = kBLFitSizes[0];
+  inline constexpr int kBLFitMinNodes = kBLFitSizes[5];
+  static_assert(kBLFitSizes[1] == 12 && kBLFitSizes[2] == 10 && kBLFitSizes[3] == 8 && kBLFitSizes[4] == 6,
+                "blfFitNodes spells the intermediate sizes out; keep it in step with kBLFitSizes");
+
+  // Largest instantiated node count not exceeding nHits, or 0 when nHits is below the
+  // smallest one, in which case no kernel claims the candidate and it stays unfit.
+  // The clamp at kBLFitMaxNodes is unconditional, but it cannot fire today, because
+  // Params_T5::kLayers = 7 caps a track candidate's OT hit count at 14.
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr int blfFitNodes(int nHits) {
+    if (nHits >= kBLFitMaxNodes)
+      return kBLFitMaxNodes;
+    if (nHits >= 12)
+      return 12;
+    if (nHits >= 10)
+      return 10;
+    if (nHits >= 8)
+      return 8;
+    if (nHits >= 6)
+      return 6;
+    if (nHits >= kBLFitMinNodes)
+      return kBLFitMinNodes;
+    return 0;
+  }
+
+  // Loop through the list of hits with a constant increment and force the last entry,
+  // which keeps the maximum lever arm. Requires nSrc >= M, which blfFitNodes guarantees.
+  // For nSrc == M the increment is exactly 1 and the mapping is the identity,
+  // so such a candidate is fitted on all the hits in order.
+  template <int M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void selectFitHits(const unsigned int* src, int nSrc, unsigned int (&dst)[M]) {
+    float incr = static_cast<float>(nSrc) / static_cast<float>(M);
+    if (incr < 1.f)
+      incr = 1.f;
+    float n = 0.f;
+    for (int i = 0; i < M; ++i) {
+      int j = static_cast<int>(n + 0.5f);  // round
+      if (M - 1 == i)
+        j = nSrc - 1;
+      n += incr;
+      dst[i] = src[j];
+    }
+  }
+
   // Initialise every fit-result column before the fit kernels run:
   //   pt   = -1: the unfit flag every consumer keys on (LSTOutputConverter gates the reco::Track on
   //              pt >= 0; LST.cc and the standalone trkCore.cc count pt != -1). It must not change.
@@ -23,6 +70,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   //   charge = 0: not a valid track charge.
   //   eta, phi, tip, zip and both covariances = 0: a zero covariance is a zero error, which is loud
   //              rather than plausible. The authoritative unfit test remains pt < 0, not these.
+  //   nFit = 0: the number of nodes the fit used. Only the instantiated node counts
+  //              (5, 6, 8, 10, 12, 14) are valid, so 0 is unphysical.
+  //   nDegen = 0: the number of mini-doublets whose outer sensor was dropped as degenerate.
+  //              0 is also a legal value for a fitted candidate, so it is not a flag
   struct Kernel_InitBLFFit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc, TrackCandidatesBLFFit fitResults, unsigned int nTC) const {
       for (unsigned int tcIdx : cms::alpakatools::uniform_elements(acc, nTC)) {
@@ -33,6 +84,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         fitResults.zip()[tcIdx] = 0.f;
         fitResults.charge()[tcIdx] = 0;
         fitResults.chi2()[tcIdx] = -1.f;
+        fitResults.nFit()[tcIdx] = 0;
+        fitResults.nDegen()[tcIdx] = 0;
         auto& cCircle = fitResults.covCircle()[tcIdx];
         for (unsigned int i = 0; i < cCircle.size(); ++i)
           cCircle[i] = 0.f;
@@ -43,8 +96,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  // BLF kernel for TCs with exactly N valid OT hits (both sensors per doublet layer).
-  // TCs with a different nValid are skipped (handled by another N instantiation).
+  // BLF kernel for TCs whose surviving OT hit count rounds down to exactly N nodes.
+  // TCs that round down to a different node count are skipped (handled by another N
+  // instantiation), and TCs left with fewer than kBLFitMinNodes hits are not fitted at all.
   template <int N>
   struct Kernel_LSTBLFit {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
@@ -59,8 +113,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         // Collect both sensor hits per OT doublet layer slot (inner sensor first,
         // then outer sensor), skipping pixel layer slots and empty slots.
-        unsigned int validHitIdxs[Params_TC::kHitsPerLayer * (Params_TC::kLayers - Params_TC::kPixelLayerSlots)];
-        int nValid = 0;
+        //
+        // The outer sensor is DROPPED when it reports the same global (x, y) as the inner
+        // one. sTransverse depends on the hit only through (x, y), so such a pair has an
+        // exactly zero first difference; matrixC_u divides by first differences of
+        // sTransverse and invertNN then turns the resulting infinities into a NaN pt, which
+        // LSTOutputConverter silently drops. It is the two sensors of a Phase-2 endcap 2S
+        // module that do this, once the track is straight enough for the same strip to fire
+        // in both. The line fit is unaffected either way, since it uses sTotal, which still
+        // separates the two nodes through z.
+        unsigned int survHitIdxs[Params_TC::kHitsPerLayer * (Params_TC::kLayers - Params_TC::kPixelLayerSlots)];
+        int nSurv = 0;
+        int nDegen = 0;
         for (int slot = Params_TC::kPixelLayerSlots; slot < Params_TC::kLayers; ++slot) {
           unsigned int h0 = hitSlots[slot][0];
           if (h0 == kTCEmptyHitIdx)
@@ -71,17 +135,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float d0sq = x0 * x0 + y0 * y0 + z0 * z0;
           float d1sq = x1 * x1 + y1 * y1 + z1 * z1;
           bool swap = d0sq > d1sq;
-          validHitIdxs[nValid++] = swap ? h1 : h0;
-          validHitIdxs[nValid++] = swap ? h0 : h1;
+          survHitIdxs[nSurv++] = swap ? h1 : h0;
+          if (x0 == x1 && y0 == y1) {
+            ++nDegen;
+            continue;
+          }
+          survHitIdxs[nSurv++] = swap ? h0 : h1;
         }
 
-        if (nValid != N)
+        // Round the surviving hit count down to the nearest instantiated node count; the
+        // instantiation it lands on claims the candidate, and selectFitHits sheds the
+        // remaining hits. Without the degeneracy drop, nSurv is always even and equal to one
+        // of those counts, so this is the identity and the candidate is fitted exactly.
+        if (blfFitNodes(nSurv) != N)
           continue;
+
+        unsigned int fitHitIdxs[N];
+        selectFitHits<N>(survHitIdxs, nSurv, fitHitIdxs);
 
         Eigen::Matrix<double, 3, N> hits;
         Eigen::Matrix<float, 6, N> hits_ge;
         for (int i = 0; i < N; ++i) {
-          const unsigned int hIdx = validHitIdxs[i];
+          const unsigned int hIdx = fitHitIdxs[i];
           hits(0, i) = static_cast<double>(hitsBase.xs()[hIdx]);
           hits(1, i) = static_cast<double>(hitsBase.ys()[hIdx]);
           hits(2, i) = static_cast<double>(hitsBase.zs()[hIdx]);
@@ -112,6 +187,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         fitResults.zip()[tcIdx] = static_cast<float>(line.par(1));
         fitResults.charge()[tcIdx] = static_cast<int8_t>(circle.qCharge);
         fitResults.chi2()[tcIdx] = static_cast<float>((circle.chi2 + line.chi2) / (2 * N - 5));
+        fitResults.nFit()[tcIdx] = static_cast<uint8_t>(N);
+        fitResults.nDegen()[tcIdx] = static_cast<uint8_t>(nDegen);
 
         // Circle covariance upper triangle: (phi-phi, phi-tip, tip-tip, phi-k, tip-k, k-k)
         auto& cCircle = fitResults.covCircle()[tcIdx];

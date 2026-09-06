@@ -341,7 +341,8 @@ float runBrokenLineFit(LSTEvent* event, const float bField) {
 
   if (ana.verbose >= 2) {
     // Kernel_InitBLFFit initialises every fit-result column, with pt = -1, for every candidate;
-    // TCs whose OT hit count doesn't match one of the instantiated N (6,8,10,12,14) are left unfit.
+    // a TC's surviving OT hit count is rounded down to one of the instantiated N
+    // (5,6,8,10,12,14), and a TC left with fewer than 5 hits is not fitted at all.
     auto const& blfFit = event->getTrackCandidatesBLFFit();
     unsigned int nTrackCandidates = event->getNumberOfTrackCandidates();
     unsigned int nFit = 0;

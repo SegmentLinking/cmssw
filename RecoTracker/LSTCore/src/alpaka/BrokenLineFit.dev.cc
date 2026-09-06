@@ -2,6 +2,12 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
+  void launchBLFKernelN5(Queue&,
+                         cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
+                         float,
+                         TrackCandidatesBaseConst,
+                         HitsBaseConst,
+                         TrackCandidatesBLFFit);
   void launchBLFKernelN6(Queue&,
                          cms::alpakatools::WorkDiv<alpaka::Dim<Acc1D>> const&,
                          float,
@@ -48,6 +54,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     alpaka::exec<Acc1D>(queue, workDiv, Kernel_InitBLFFit{}, fitResults, nTrackCandidates);
 
+    launchBLFKernelN5(queue, workDiv, bField, candsBase, hitsBase, fitResults);
     launchBLFKernelN6(queue, workDiv, bField, candsBase, hitsBase, fitResults);
     launchBLFKernelN8(queue, workDiv, bField, candsBase, hitsBase, fitResults);
     launchBLFKernelN10(queue, workDiv, bField, candsBase, hitsBase, fitResults);

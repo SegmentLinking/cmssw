@@ -238,7 +238,6 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     }
 
     if (iType != lst::LSTObjType::pLS) {
-      const int nPixelHits = static_cast<int>(recHits.size());
       // The pixel hits are packed into first kPixelLayerSlots layer slots.
       for (unsigned int layerSlot = lst::Params_TC::kPixelLayerSlots; layerSlot < lst::Params_TC::kLayers;
            ++layerSlot) {
@@ -329,8 +328,8 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
           const math::XYZPoint refPoint(tip * sp, -tip * cp_phi, zip);
           const math::XYZVector mom(pt_fit * cp_phi, pt_fit * sp, pt_fit * slope);
 
-          const int nOTHits = static_cast<int>(recHits.size()) - nPixelHits;
-          const double ndof = static_cast<double>(std::max(1, 2 * nOTHits - 5));
+          // ndof must be built from the hits the fit actually used, which the kernel reports in nFit.
+          const double ndof = static_cast<double>(std::max(1, 2 * static_cast<int>(fitView.nFit()[i]) - 5));
           const double chi2total = static_cast<double>(chi2stored) * ndof;
 
           reco::Track track(chi2total, ndof, refPoint, mom, charge, cov, reco::TrackBase::undefAlgorithm);
