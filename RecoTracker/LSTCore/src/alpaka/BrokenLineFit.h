@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <iterator>
+#include <limits>
 
 #include <Eigen/Core>
 
@@ -76,6 +77,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   }
 
+  // Shed exactly one node, keeping the order of the others.
+  template <int M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void dropFitHit(const unsigned int* src, int dropIdx, unsigned int (&dst)[M]) {
+    ALPAKA_ASSERT_ACC(dropIdx >= 0 && dropIdx <= M);
+    for (int i = 0; i < M; ++i)
+      dst[i] = src[i + (i >= dropIdx ? 1 : 0)];
+  }
+
   // Initialise every fit-result column before the fit kernels run:
   //   pt   = -1: the unfit flag every consumer keys on (LSTOutputConverter gates the reco::Track on
   //              pt >= 0; LST.cc and the standalone trkCore.cc count pt != -1). It must not change.
@@ -144,6 +153,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int survHitIdxs[Params_TC::kHitsPerLayer * (Params_TC::kLayers - Params_TC::kPixelLayerSlots)];
         int nSurv = 0;
         int nDegen = 0;
+        // Position in survHitIdxs of the outer sensor of the least separated pair that was
+        // NOT dropped as degenerate, and that separation.
+        // The two sensors of a nearly coincident pair carry almost the same
+        // transverse information, so removing one costs the least.
+        int dropIdx = -1;
+        float dropSep2 = std::numeric_limits<float>::max();
         for (int slot = Params_TC::kPixelLayerSlots; slot < Params_TC::kLayers; ++slot) {
           unsigned int h0 = hitSlots[slot][0];
           if (h0 == kTCEmptyHitIdx)
@@ -156,11 +171,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           bool swap = d0sq > d1sq;
           survHitIdxs[nSurv++] = swap ? h1 : h0;
           float dx = x1 - x0, dy = y1 - y0;
-          if (dx * dx + dy * dy < kMaxDegenSepXY2) {
+          float sep2 = dx * dx + dy * dy;
+          if (sep2 < kMaxDegenSepXY2) {
             ++nDegen;
             continue;
           }
           survHitIdxs[nSurv++] = swap ? h0 : h1;
+          if (sep2 < dropSep2) {
+            dropSep2 = sep2;
+            dropIdx = nSurv - 1;
+          }
         }
 
         // Round the surviving hit count down to the nearest instantiated node count; the
@@ -170,8 +190,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (blfFitNodes(nSurv) != N)
           continue;
 
+        // Drop the extra hit. Two facts together make it at most one hit today:
+        // no gap in kBLFitSizes is wider than 2, AND nSurv cannot exceed kBLFitMaxNodes,
+        // because Params_T5::kLayers = 7 caps the OT hit count at 14.
+        // The argmin drop for a surplus of exactly one, the uniform stride otherwise.
+        // The stride also covers the case where every pair was degenerate,
+        // which leaves no spare node to name and dropIdx at -1.
         unsigned int fitHitIdxs[N];
-        selectFitHits<N>(survHitIdxs, nSurv, fitHitIdxs);
+        if (nSurv == N + 1 && dropIdx >= 0)
+          dropFitHit<N>(survHitIdxs, dropIdx, fitHitIdxs);
+        else
+          selectFitHits<N>(survHitIdxs, nSurv, fitHitIdxs);
 
         Eigen::Matrix<double, 3, N> hits;
         Eigen::Matrix<float, 6, N> hits_ge;
