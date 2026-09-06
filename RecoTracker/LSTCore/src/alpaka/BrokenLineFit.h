@@ -2,6 +2,7 @@
 #define RecoTracker_LSTCore_src_alpaka_BrokenLineFit_h
 
 #include <cstdint>
+#include <iterator>
 
 #include <Eigen/Core>
 
@@ -16,10 +17,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // Node counts N for which a Kernel_LSTBLFit<N> instantiation exists, descending.
   // Keep in sync with the launchBLFKernelN* calls in BrokenLineFit.dev.cc.
   inline constexpr int kBLFitSizes[] = {14, 12, 10, 8, 6, 5};
+  inline constexpr int kBLFitNumSizes = std::size(kBLFitSizes);
   inline constexpr int kBLFitMaxNodes = kBLFitSizes[0];
-  inline constexpr int kBLFitMinNodes = kBLFitSizes[5];
+  inline constexpr int kBLFitMinNodes = kBLFitSizes[kBLFitNumSizes - 1];
+  static_assert(kBLFitNumSizes == 6,
+                "blfFitNodes tests one size per instantiation, spelled out; adding or removing an entry in "
+                "kBLFitSizes means editing it by hand");
   static_assert(kBLFitSizes[1] == 12 && kBLFitSizes[2] == 10 && kBLFitSizes[3] == 8 && kBLFitSizes[4] == 6,
                 "blfFitNodes spells the intermediate sizes out; keep it in step with kBLFitSizes");
+
+  // Two hits of the same OT mini-doublet are treated as one node when their global (x, y)
+  // lie within 1e-4 cm of each other. Squared, in cm^2, so the test is a plain
+  // dx * dx + dy * dy comparison with no square root in device code.
+  // The value sits in the empty part of the measured endcap 2S separation spectrum -- 2778
+  // pairs at exactly 0, 76 in [1e-7, 1e-5) cm, then nothing until 0.0044 cm -- so every
+  // tolerance in that gap flags the same pairs, while exact equality misses the 76 that
+  // differ only in the float rounding of the global transform at two different z.
+  inline constexpr float kMaxDegenSepXY2 = 1e-4f * 1e-4f;
 
   // Largest instantiated node count not exceeding nHits, or 0 when nHits is below the
   // smallest one, in which case no kernel claims the candidate and it stays unfit.
@@ -47,6 +61,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // so such a candidate is fitted on all the hits in order.
   template <int M>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void selectFitHits(const unsigned int* src, int nSrc, unsigned int (&dst)[M]) {
+    ALPAKA_ASSERT_ACC(nSrc >= M);
     float incr = static_cast<float>(nSrc) / static_cast<float>(M);
     if (incr < 1.f)
       incr = 1.f;
@@ -55,6 +70,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       int j = static_cast<int>(n + 0.5f);  // round
       if (M - 1 == i)
         j = nSrc - 1;
+      ALPAKA_ASSERT_ACC(j < nSrc);
       n += incr;
       dst[i] = src[j];
     }
@@ -114,11 +130,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Collect both sensor hits per OT doublet layer slot (inner sensor first,
         // then outer sensor), skipping pixel layer slots and empty slots.
         //
-        // The outer sensor is DROPPED when it reports the same global (x, y) as the inner
-        // one. sTransverse depends on the hit only through (x, y), so such a pair has an
-        // exactly zero first difference; matrixC_u divides by first differences of
-        // sTransverse and invertNN then turns the resulting infinities into a NaN pt, which
-        // LSTOutputConverter silently drops. It is the two sensors of a Phase-2 endcap 2S
+        // The outer sensor is DROPPED when its global (x, y) is within kMaxDegenSepXY2 of
+        // the inner one's. sTransverse depends on the hit only through (x, y), so such a
+        // pair has a zero or sub-ulp first difference; matrixC_u divides by first
+        // differences of sTransverse and invertNN then turns the resulting infinities into
+        // a NaN pt, which LSTOutputConverter silently drops. A separation too small to
+        // divide by but not exactly zero is as bad: it gives c_uMat entries of order 1e23
+        // and a meaningless pt that passes the pt >= 0 gate, which is why the test is a
+        // tolerance and not an equality. It is the two sensors of a Phase-2 endcap 2S
         // module that do this, once the track is straight enough for the same strip to fire
         // in both. The line fit is unaffected either way, since it uses sTotal, which still
         // separates the two nodes through z.
@@ -136,7 +155,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float d1sq = x1 * x1 + y1 * y1 + z1 * z1;
           bool swap = d0sq > d1sq;
           survHitIdxs[nSurv++] = swap ? h1 : h0;
-          if (x0 == x1 && y0 == y1) {
+          float dx = x1 - x0, dy = y1 - y0;
+          if (dx * dx + dy * dy < kMaxDegenSepXY2) {
             ++nDegen;
             continue;
           }
