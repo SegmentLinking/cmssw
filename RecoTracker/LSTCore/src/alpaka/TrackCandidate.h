@@ -230,19 +230,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float eta1 = __H2F(quintuplets.eta()[iT5]);
           float phi1 = __H2F(quintuplets.phi()[iT5]);
 
-          float iEmbedT5[Params_T5::kEmbed];
-          CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_T5::kEmbed; ++k) {
-            iEmbedT5[k] = quintuplets.t5Embed()[iT5][k];
-          }
-
-          // Pre-load T5 hits and iT5-only dup-cleaning constants outside the jx loop.
+          // Pre-load T5 hits outside the jx loop.
           unsigned int iT5Hits[Params_T5::kHits];
           CMS_UNROLL_LOOP for (int i = 0; i < Params_T5::kHits; ++i) { iT5Hits[i] = quintuplets.hitIndices()[iT5][i]; }
-          // Longer (extended) T5s get a tighter cut: 3x smaller d2 and 6 (vs 4) shared OT hits.
-          const bool isExtT5 = quintuplets.nLayers()[iT5] > Params_T5::kBaseLayers;
-          const float d2Lo = isExtT5 ? 0.03f : 0.1f;
-          const float d2Hi = isExtT5 ? 0.3f : 1.0f;
-          const int otThresh = isExtT5 ? 6 : 4;
+          // A pixel object may delete a quintuplet only on shared outer-tracker hits.
+          constexpr int otThresh = 4;
 
           // Cross-clean against both pT5s and pT3s
           for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, loop_bound)) {
@@ -260,20 +252,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-            float dR2 = dEta * dEta + dPhi * dPhi;
 
             if (isPT5) {
-              unsigned int jT5 = pixelQuintuplets.quintupletIndices()[jx];
-              float d2 = 0.f;
-              // Compute distance-squared between the two t5 embeddings.
-              CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_T5::kEmbed; ++k) {
-                float df = iEmbedT5[k] - quintuplets.t5Embed()[jT5][k];
-                d2 += df * df;
-              }
-
-              if ((dR2 < 0.02f && d2 < d2Lo) || (dR2 < 1e-3f && d2 < d2Hi)) {
-                quintuplets.isDup()[iT5] |= 4;
-              } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
+              if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
                 // OT hit matching: T5 hits vs pT5 OT hits
                 int nOTMatched = 0;
                 for (int i = 0; i < Params_T5::kHits; ++i) {
@@ -290,11 +271,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     }
                   }
                 }
-                if (nOTMatched >= otThresh)
+                // Only a promoted (!isDup) pixel object may kill.
+                if (nOTMatched >= otThresh && !pixelQuintuplets.isDup()[jx])
                   quintuplets.isDup()[iT5] |= 4;
               }
-            } else if (dR2 < 1e-3f) {
-              quintuplets.isDup()[iT5] |= 4;
             } else if (dEta < 0.15f && alpaka::math::abs(acc, dPhi) < 0.15f) {
               // OT hit matching: T5 hits vs pT3 OT hits (same extended logic as pT5 path)
               int nOTMatched = 0;
@@ -312,7 +292,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   }
                 }
               }
-              if (nOTMatched >= otThresh)
+              if (nOTMatched >= otThresh && !pixelTriplets.isDup()[ptidx])
                 quintuplets.isDup()[iT5] |= 4;
             }
 
@@ -537,6 +517,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Promotion working point of a quintuplet with no pixel alternative, indexed like the build-stage kWp lookup.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool t5PromoteOnScore(TAcc const& acc, QuintupletsConst quintuplets, unsigned int i) {
+    const float pt = __H2F(quintuplets.innerRadius()[i]) * k2Rinv1GeVf * 2;
+    const float absEta = alpaka::math::abs(acc, __H2F(quintuplets.eta()[i]));
+    const uint8_t ptIndex = (pt > 5.0f);
+    const uint8_t binIndex = (absEta > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<unsigned int>(absEta / dnn::kEtaSize);
+    return quintuplets.dnnScore()[i] >= dnn::t5dnn::kWpPromote[ptIndex][binIndex];
+  }
+
   struct CountSurvivingTCs {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   uint16_t nLowerModules,
@@ -574,7 +564,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         for (unsigned int jdx = 0; jdx < nQuints; ++jdx) {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
           if (!quintuplets.isDup()[quintupletIndex] && !quintuplets.partOfPT5()[quintupletIndex] &&
-              quintuplets.tightCutFlag()[quintupletIndex])
+              (quintuplets.tightCutFlag()[quintupletIndex] || t5PromoteOnScore(acc, quintuplets, quintupletIndex)))
             alpaka::atomicAdd(acc, &nSurviving[2], 1u, alpaka::hierarchy::Threads{});
         }
       }
@@ -670,7 +660,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
           if (quintuplets.isDup()[quintupletIndex] or quintuplets.partOfPT5()[quintupletIndex])
             continue;
-          if (!(quintuplets.tightCutFlag()[quintupletIndex]))
+          if (!(quintuplets.tightCutFlag()[quintupletIndex]) && !t5PromoteOnScore(acc, quintuplets, quintupletIndex))
             continue;
 
           unsigned int trackCandidateIdx =
