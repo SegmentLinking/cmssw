@@ -770,6 +770,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (triplets.partOfPT5()[outerTripletIndex])
               continue;  //don't create pT3s for T3s accounted in pT5s
 
+            if (triplets.rescuedAdmit()[outerTripletIndex])
+              continue;  //a rescued triplet reaches a track candidate only on the >= 5-layer route
+
             float pixelRadius, tripletRadius, rPhiChiSquared, rzChiSquared, rPhiChiSquaredInwards, centerX, centerY,
                 pixelRadiusError;
             bool success = runPixelTripletDefaultAlgo(acc,

@@ -139,7 +139,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                       float rtOut,
                                                       unsigned int innerMDIndex,
                                                       unsigned int outerMDIndex,
-                                                      const float ptCut) {
+                                                      const float ptCut,
+                                                      float& dAlphaBfieldOut,
+                                                      float& dAlphaResMulsOut) {
     const float sdMuls = innerMod.sdMuls;
 
     //more accurate then outer rt - inner rt
@@ -190,6 +192,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //Inner to outer
     dAlphaThresholdValues[2] = dAlpha_Bfield + alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+
+    // Handed back for the circle residual: the curvature part of the thresholds and the origin-free half-tolerance.
+    dAlphaBfieldOut = dAlpha_Bfield;
+    dAlphaResMulsOut = alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+  }
+
+  // Tolerance on the origin-free residual in units of sigmaT (the 99.4% point of true above-cut segments).
+  HOST_DEVICE_CONSTANT float kLsTResidTol = 0.75f;
+
+  // Origin-free circle residual: the chord makes equal angles with the tangents at its ends for any radius and d0.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passTResidual(TAcc const& acc,
+                                                    const float tResidual,
+                                                    const float dAlphaInnerThr,
+                                                    const float dAlphaOuterThr,
+                                                    const float dAlphaBfield,
+                                                    const float dAlphaResMuls,
+                                                    const bool isEndcapBranch) {
+    // The endcap thresholds inherit sdLum, which is not origin-free, so the symmetric form is used there.
+    const float sigmaT =
+        isEndcapBranch ? 2.f * dAlphaResMuls : (dAlphaInnerThr - dAlphaBfield) + (dAlphaOuterThr - dAlphaBfield);
+    return alpaka::math::abs(acc, tResidual) < kLsTResidTol * sigmaT;
   }
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void addSegmentToMemory(Segments segments,
@@ -338,15 +362,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              const float sdCut,
                                                              float& dPhi,
                                                              float& dPhiChange) {
-    // Loose sin^2-based pre-check for dPhi and dPhiChange using x/y coordinates
-    // directly, avoiding anchorPhi SoA reads + reducePhiRange for pairs that clearly fail.
+    // Loose sin^2-based pre-check for dPhi using x/y coordinates directly,
+    // avoiding anchorPhi SoA reads + reducePhiRange for pairs that clearly fail.
     //
     // Check: |sin(dPhi)| < L where L = sdSlopeSin + sdMulsAndPVoff (looseCutDPhi).
     // This is strictly looser than |dPhi| < sdCut because L = s + M >= sin(asin(s) + M)
     // = sin(sdCut), provable via f(M) = s+M - sin(asin(s)+M), f(0)=0, f'(M)=1-cos(...)>=0.
     // Using Lagrange identity (cross^2+dot^2 = rtIn^2*rtOut^2): |cross| >= L*rtIn*rtOut.
-    //
-    // The dPhiChange pre-check replaces dotDPhi with dotDPhiChange = dotDPhi - rtIn^2
     const float crossDPhi = xIn * yOut - xOut * yIn;
     const float dotDPhi = xIn * xOut + yIn * yOut;
     if (dotDPhi <= 0.f)
@@ -354,10 +376,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Lagrange identity: crossDPhi^2 + dotDPhi^2 = rtIn^2 * rtOut^2
     const float looseCutDPhi = sdSlopeSin + sdMulsAndPVoff;
     if (alpaka::math::abs(acc, crossDPhi) >= looseCutDPhi * rtIn * rtOut)
-      return false;
-    const float dotDPhiChange = dotDPhi - (rtIn * rtIn);
-    if (dotDPhiChange <= 0.f ||
-        crossDPhi * crossDPhi >= looseCutDPhi * looseCutDPhi * (crossDPhi * crossDPhi + dotDPhiChange * dotDPhiChange))
       return false;
 
     if constexpr (LooseOnly)
@@ -368,10 +386,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (alpaka::math::abs(acc, dPhi) > sdCut)
       return false;
 
+    // dPhiChange is not cut on here: the circle residual in the caller is the selection.
     dPhiChange = cms::alpakatools::reducePhiRange(
         acc, cms::alpakatools::phi(acc, xOut - xIn, yOut - yIn) - mds.anchorPhi()[innerMD]);
 
-    return alpaka::math::abs(acc, dPhiChange) < sdCut;
+    return true;
   }
 
   // When LooseOnly=true, returns after the pre-check (used by counting kernel).
@@ -402,17 +421,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     dPhi = cms::alpakatools::reducePhiRange(acc, mds.anchorPhi()[outerMD] - mds.anchorPhi()[innerMD]);
 
-    if (alpaka::math::abs(acc, dPhi) > sdSlope)
-      return false;
-
-    const float zIn = mds.anchorZ()[innerMD];
-    const float zOut = mds.anchorZ()[outerMD];
-
-    const float dz = zOut - zIn;
-    const float dzFrac = dz / zIn;
-    const float dPhiChange = dPhi / dzFrac * (1.f + dzFrac);
-
-    return alpaka::math::abs(acc, dPhiChange) < sdSlope;
+    // dPhiChange is not cut on here: the circle residual in the caller is the selection.
+    return alpaka::math::abs(acc, dPhi) <= sdSlope;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -487,6 +497,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 dPhiChange))
       return false;
 
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
     dAlphaThreshold(acc,
                     dAlphaThresholdValues,
@@ -503,7 +515,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     rtOut,
                     innerMDIndex,
                     outerMDIndex,
-                    ptCut);
+                    ptCut,
+                    dAlphaBfield,
+                    dAlphaResMuls);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -514,6 +528,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // Barrel form: dPhiChange is the chord turn, so T = dAlphaIn + dAlphaOut + dPhi.
+    const float tResidual = dAlphaInnerMDSegment + dAlphaOuterMDSegment + dPhi;
+    if (!passTResidual(acc,
+                       tResidual,
+                       dAlphaInnerMDSegmentThreshold,
+                       dAlphaOuterMDSegmentThreshold,
+                       dAlphaBfield,
+                       dAlphaResMuls,
+                       false))
+      return false;
 
     if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
       return false;
@@ -608,6 +633,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     dPhiChangeMin = dPhiMin / dzFrac * (1.f + dzFrac);
     dPhiChangeMax = dPhiMax / dzFrac * (1.f + dzFrac);
 
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
     dAlphaThreshold(acc,
                     dAlphaThresholdValues,
@@ -624,7 +651,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                     rtOut,
                     innerMDIndex,
                     outerMDIndex,
-                    ptCut);
+                    ptCut,
+                    dAlphaBfield,
+                    dAlphaResMuls);
 
     float innerMDAlpha = mds.dphichanges()[innerMDIndex];
     float outerMDAlpha = mds.dphichanges()[outerMDIndex];
@@ -635,6 +664,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // Endcap form: dPhiChange is the z-extrapolation, not the chord turn, so the chord is rebuilt.
+    const float chord =
+        alpaka::math::atan2(acc, rtOut * alpaka::math::sin(acc, dPhi), rtOut * alpaka::math::cos(acc, dPhi) - rtIn);
+    const float tResidual = dAlphaInnerMDSegment + dAlphaOuterMDSegment + dPhi + 2.f * (dPhiChange - chord);
+    if (!passTResidual(acc,
+                       tResidual,
+                       dAlphaInnerMDSegmentThreshold,
+                       dAlphaOuterMDSegmentThreshold,
+                       dAlphaBfield,
+                       dAlphaResMuls,
+                       true))
+      return false;
 
     if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
       return false;
