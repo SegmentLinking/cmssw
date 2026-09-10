@@ -10,6 +10,5 @@ HLTInitialStepHPSelectionSequence = cms.Sequence(
     hltInitialStepTrackFeatureExtractor
     +hltInitialStepTrackTorchClassifier
     +hltInitialStepTrackTorchClassifierOutput 
-    +hltInitialStepTrackCutClassifier
     +hltInitialStepTrackSelectionHighPurity
 )
