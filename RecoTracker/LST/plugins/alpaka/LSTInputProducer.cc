@@ -47,6 +47,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
 
     const edm::EDPutTokenT<lst::LSTInputHostCollection> lstInputPutToken_;
+    const edm::EDPutTokenT<float> bFieldToken_;
   };
 
   LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
@@ -59,7 +60,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("pixelSeeds"),
                                   [&](const edm::InputTag& tag) { return consumes<TrajectorySeedCollection>(tag); })),
         lstPixelSeedsPutToken_(produces()),
-        lstInputPutToken_(produces()) {}
+        lstInputPutToken_(produces()),
+        bFieldToken_(produces()) {}
 
   void LSTInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -90,6 +92,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ph2_y.reserve(phase2OTHits.dataSize());
     std::vector<float> ph2_z;
     ph2_z.reserve(phase2OTHits.dataSize());
+    std::vector<lst::ArrayFx6> ph2_ge;
+    ph2_ge.reserve(phase2OTHits.dataSize());
     std::vector<TrackingRecHit const*> ph2_hits;
     ph2_hits.reserve(phase2OTHits.dataSize());
 
@@ -101,12 +105,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         ph2_x.push_back(hit.globalPosition().x());
         ph2_y.push_back(hit.globalPosition().y());
         ph2_z.push_back(hit.globalPosition().z());
+
+        auto const& err = hit.globalPositionError();
+        lst::ArrayFx6 ge;
+        ge[0] = err.cxx();
+        ge[1] = err.cyx();
+        ge[2] = err.cyy();
+        ge[3] = err.czx();
+        ge[4] = err.czy();
+        ge[5] = err.czz();
+        ph2_ge.push_back(ge);
+
         ph2_hits.push_back(&hit);
       }
     }
 
     // Get the pixel seeds
     auto const& mf = iSetup.getData(mfToken_);
+    const float bField = static_cast<float>(1. / mf.inverseBzAtOriginInGeV());
     auto const& bs = iEvent.get(beamSpotToken_);
 
     TSCBLBuilderNoMaterial tscblBuilder;
@@ -241,12 +257,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         ph2_x,
                                         ph2_y,
                                         ph2_z,
+                                        ph2_ge,
                                         ph2_hits,
                                         ptCut_,
                                         iEvent.queue());
 
     iEvent.emplace(lstInputPutToken_, std::move(lstInputHC));
     iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
+    iEvent.emplace(bFieldToken_, bField);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

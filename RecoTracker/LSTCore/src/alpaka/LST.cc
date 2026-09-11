@@ -12,13 +12,14 @@ using XYZVector = ROOT::Math::XYZVector;
 
 void LST::run(Queue& queue,
               bool verbose,
-              float const ptCut,
-              uint16_t const clustSizeCut,
+              const float ptCut,
+              const uint16_t clustSizeCut,
               LSTESData<Device> const* deviceESData,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
               bool tc_pls_triplets,
-              bool reduce_mem_by_full_precompute) {
+              bool reduce_mem_by_full_precompute,
+              const float bField) {
   auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData, reduce_mem_by_full_precompute);
 
   event.addInputToEvent(lstInputDC);
@@ -138,5 +139,22 @@ void LST::run(Queue& queue,
     lstWarning(std::format("[MEM] Total: {:.1f} MB", event.getMemoryAllocatedMB()));
   }
 
+  event.fitTrackCandidatesBrokenLine(bField);
+  if (verbose) {
+    alpaka::wait(queue);  // event calls are asynchronous: wait before printing
+    // Kernel_InitBLFFit initialises every fit-result column, with pt = -1, for every candidate;
+    // a TC's surviving OT hit count is rounded down to one of the instantiated N
+    // (5,6,8,10,12,14), and a TC left with fewer than 5 hits is not fitted at all.
+    auto const& blfFit = event.getTrackCandidatesBLFFit();
+    int nTrackCandidates = event.getNumberOfTrackCandidates();
+    int nFit = 0;
+    for (int i = 0; i < nTrackCandidates; ++i) {
+      if (blfFit.pt()[i] != -1.f)
+        ++nFit;
+    }
+    printf("# of Broken Line Fits produced: %d (out of %d track candidates)\n", nFit, nTrackCandidates);
+  }
+
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
+  trackCandidatesBLFFitDC_ = event.releaseTrackCandidatesBLFFitDeviceCollection();
 }
