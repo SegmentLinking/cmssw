@@ -33,6 +33,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
           reduceMemByFullPrecompute_(config.getParameter<bool>("reduceMemByFullPrecompute")),
+          memoryProfile_(config.getParameter<bool>("memoryProfile")),
+          memoryProfileOutput_(config.getParameter<std::string>("memoryProfileOutput")),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
           lstESToken_{esConsumes(edm::ESInputTag("", ptCutStr_))},
           lstOutputToken_{produces()} {}
@@ -43,6 +45,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto const& lstInputDC = iEvent.get(lstInputToken_);
       auto const& lstESDeviceData = iSetup.getData(lstESToken_);
 
+      // Built per call, so nothing stateful lives on this global::EDProducer.
+      lst::MemoryProfileOptions memProfile;
+      memProfile.enabled = memoryProfile_;
+      memProfile.outputPrefix = memoryProfileOutput_;
+      memProfile.eventId = iEvent.id().event();
+      memProfile.streamId = sid.value();
+
       lst.run(iEvent.queue(),
               verbose_,
               ptCut_,
@@ -51,7 +60,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               &lstInputDC,
               nopLSDupClean_,
               tcpLSTriplets_,
-              reduceMemByFullPrecompute_);
+              reduceMemByFullPrecompute_,
+              memProfile);
 
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
@@ -71,6 +81,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "If true, run extra counting kernels that exactly size the MD/LS/T3/T5/T4 "
               "buffers, reducing average per-event memory at a small CPU/GPU runtime cost. "
               "If false (default), buffers use cheaper, looser occupancy estimates.");
+      desc.add<bool>("memoryProfile", false)
+          ->setComment(
+              "If true, record per-event memory accounting for the LST collections. "
+              "Independent of 'verbose': it does not enable the add*ToEventExplicit() "
+              "device-to-host copies and produces no printout. Default false, and free "
+              "when disabled.");
+      desc.add<std::string>("memoryProfileOutput", "lstMemoryProfile")
+          ->setComment(
+              "Path prefix for the memory profile records, written as JSON lines to "
+              "<prefix>_stream<N>.jsonl, one file per stream. Ignored unless "
+              "'memoryProfile' is true. Per-stream rather than one shared file because "
+              "a stream processes one event at a time, so each file has a single writer "
+              "and the producer needs no shared state.");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -82,6 +105,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
     const bool reduceMemByFullPrecompute_;
+    const bool memoryProfile_;
+    const std::string memoryProfileOutput_;
     const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
     const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;

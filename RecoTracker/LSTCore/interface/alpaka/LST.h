@@ -6,12 +6,23 @@
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
 
+#include <cstdint>
 #include <cstdlib>
 #include <numeric>
+#include <string>
 #include <alpaka/alpaka.hpp>
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   class LSTEvent;
+
+  // Per-event memory accounting. Off by default and free when off.
+  // Records go to one file per stream, named from outputPrefix and streamId.
+  struct MemoryProfileOptions {
+    bool enabled = false;
+    std::string outputPrefix;
+    std::uint64_t eventId = 0;
+    unsigned int streamId = 0;
+  };
 
   class LST {
   public:
@@ -25,7 +36,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              LSTInputDeviceCollection const* lstInputDC,
              bool no_pls_dupclean,
              bool tc_pls_triplets,
-             bool reduce_mem_by_full_precompute);
+             bool reduce_mem_by_full_precompute,
+             MemoryProfileOptions const& memory_profile);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> getTrackCandidates() {
       return std::move(trackCandidatesBaseDC_);
     }

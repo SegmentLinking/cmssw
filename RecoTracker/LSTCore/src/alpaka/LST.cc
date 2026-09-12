@@ -3,6 +3,7 @@
 #include "LSTEvent.h"
 
 #include <format>
+#include <fstream>
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
@@ -18,8 +19,10 @@ void LST::run(Queue& queue,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
               bool tc_pls_triplets,
-              bool reduce_mem_by_full_precompute) {
-  auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData, reduce_mem_by_full_precompute);
+              bool reduce_mem_by_full_precompute,
+              MemoryProfileOptions const& memory_profile) {
+  auto event = LSTEvent(
+      verbose, ptCut, clustSizeCut, queue, deviceESData, reduce_mem_by_full_precompute, memory_profile.enabled);
 
   event.addInputToEvent(lstInputDC);
   event.addHitToEvent();
@@ -136,6 +139,28 @@ void LST::run(Queue& queue,
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
     printf("        # of T4 TrackCandidates produced: %d\n", event.getNumberOfT4TrackCandidates());
     lstWarning(std::format("[MEM] Total: {:.1f} MB", event.getMemoryAllocatedMB()));
+  }
+
+  if (memory_profile.enabled) {
+    // After every stage, never between them: recordUsedSlots() synchronises and
+    // would otherwise distort the timings the record reports.
+    event.recordUsedSlots();
+
+    // One file per stream, opened and closed per event. A stream handles one
+    // event at a time, so this file has a single writer and needs no lock;
+    std::string const path =
+        memory_profile.outputPrefix + "_stream" + std::to_string(memory_profile.streamId) + ".jsonl";
+    std::ofstream out(path, std::ios::app);
+    if (out) {
+      MemoryProfiler::RecordMeta meta{memory_profile.eventId,
+                                      memory_profile.streamId,
+                                      event.getNumberOfInputHits(),
+                                      event.getNumberOfPixelSeeds(),
+                                      reduce_mem_by_full_precompute};
+      event.getMemoryProfile().writeRecord(out, meta);
+    } else {
+      lstWarning("[MEM] could not open memory profile output " + path);
+    }
   }
 
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();

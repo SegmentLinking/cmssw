@@ -7,7 +7,42 @@
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using LSTInputDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTInputDeviceCollection;
+using MemoryProfiler = ALPAKA_ACCELERATOR_NAMESPACE::lst::MemoryProfiler;
 using namespace ::lst;
+
+// ALPAKA_ACCELERATOR_NAMESPACE is a macro (alpaka_serial_sync, alpaka_cuda_async, ...);
+// two levels of indirection are needed to stringify its expansion rather than its name.
+#define LST_STRINGIFY_(x) #x
+#define LST_STRINGIFY(x) LST_STRINGIFY_(x)
+#define LST_BACKEND_NAME LST_STRINGIFY(ALPAKA_ACCELERATOR_NAMESPACE)
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
+// Append one JSON-lines memory record for this event.
+// The record itself is built by MemoryProfiler::writeRecord, the same code the
+// CMSSW producer uses, so the two paths cannot drift apart. Only the file
+// handling differs: standalone owns its process and writes a single file under an
+// omp critical section, while CMSSW writes one file per stream.
+void writeMemoryProfileRecord(LSTEvent *event, int evt, int stream) {
+  static std::ofstream out;
+  if (!out.is_open()) {
+    TString path = ana.output_tfile->GetName();
+    path.ReplaceAll(".root", "");
+    path += ".memprofile.jsonl";
+    out.open(path.Data(), std::ios::out | std::ios::trunc);
+    if (!out) {
+      RooUtil::error(TString::Format("could not open memory profile output %s", path.Data()));
+    }
+    std::cout << "[memoryProfile] writing records to " << path << std::endl;
+  }
+
+  event->recordUsedSlots();
+  MemoryProfiler::RecordMeta meta{static_cast<std::uint64_t>(evt),
+                                  static_cast<unsigned int>(stream),
+                                  event->getNumberOfInputHits(),
+                                  event->getNumberOfPixelSeeds(),
+                                  ana.reduce_mem_by_full_precompute};
+  event->getMemoryProfile().writeRecord(out, meta);
+}
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
 int main(int argc, char **argv) {
@@ -75,6 +110,7 @@ int main(int argc, char **argv) {
       "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")(
       "reduce_mem_by_full_precompute",
       "Run extra counting kernels to exactly size MD/LS/T3/T5/T4 buffers (lower mem, small runtime cost)")(
+      "memory_profile", "Record per-event memory accounting for the LST collections (independent of --verbose)")(
       "h,help", "Print help")("md", "Write MD branches in output ntuple.")("ls", "Write LS branches in output ntuple.")(
       "t3", "Write T3 branches in output ntuple.")("t5", "Write T5 branches in output ntuple.")(
       "pls", "Write pLS branches in output ntuple.")("pt3", "Write pT3 branches in output ntuple.")(
@@ -262,6 +298,10 @@ int main(int argc, char **argv) {
   ana.reduce_mem_by_full_precompute = result["reduce_mem_by_full_precompute"].as<bool>();
 
   //_______________________________________________________________________________
+  // --memory_profile
+  ana.memory_profile = result["memory_profile"].as<bool>();
+
+  //_______________________________________________________________________________
   // --md
   ana.md_branches = result["md"].as<bool>() || result["allobj"].as<bool>();
 
@@ -338,6 +378,7 @@ int main(int argc, char **argv) {
   std::cout << " ana.tc_pls_triplets: " << ana.tc_pls_triplets << std::endl;
   std::cout << " ana.no_pls_dupclean: " << ana.no_pls_dupclean << std::endl;
   std::cout << " ana.reduce_mem_by_full_precompute: " << ana.reduce_mem_by_full_precompute << std::endl;
+  std::cout << " ana.memory_profile: " << ana.memory_profile << std::endl;
   std::cout << "=========================================================" << std::endl;
 
   // Create the TChain that holds the TTree's of the baby ntuples
@@ -446,8 +487,13 @@ void run_lst() {
   std::vector<LSTEvent *> events;
   std::vector<ALPAKA_ACCELERATOR_NAMESPACE::Queue *> event_queues;
   for (int s = 0; s < ana.streams; s++) {
-    LSTEvent *event = new LSTEvent(
-        ana.verbose >= 2, ana.ptCut, ana.clustSizeCut, queues[s], &deviceESData, ana.reduce_mem_by_full_precompute);
+    LSTEvent *event = new LSTEvent(ana.verbose >= 2,
+                                   ana.ptCut,
+                                   ana.clustSizeCut,
+                                   queues[s],
+                                   &deviceESData,
+                                   ana.reduce_mem_by_full_precompute,
+                                   ana.memory_profile);
     events.push_back(event);
     event_queues.push_back(&queues[s]);
   }
@@ -522,6 +568,13 @@ void run_lst() {
           trk.GetEntry(trkev);
           fillOutputBranches(events.at(omp_get_thread_num()));
           f->Close();
+        }
+      }
+
+      if (ana.memory_profile) {
+#pragma omp critical
+        {
+          writeMemoryProfileRecord(events.at(omp_get_thread_num()), evt, omp_get_thread_num());
         }
       }
 
