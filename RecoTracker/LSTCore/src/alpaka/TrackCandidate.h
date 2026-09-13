@@ -397,7 +397,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuintupletsConst quintuplets,
                                   TrackCandidatesBase candsBase,
                                   TrackCandidatesExtended candsExtended,
-                                  TripletsConst triplets,
                                   ObjectRangesConst ranges) const {
       for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
         if (ranges.quadrupletModuleIndices()[lowmod] == -1)
@@ -424,8 +423,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               if (nSharedHitsT4(t4Hits, t5Hits, Params_T5::kHits) >= minShared)
                 quadruplets.isDup()[iT4] = true;
             } else if (type == LSTObjType::pT3) {
-              int innerTripletIndex = pixelTriplets.tripletIndices()[outerTrackletIdx];
-              unsigned int const* t3Hits = triplets.hitIndices()[innerTripletIndex].data();
+              // Hits 4-9 of a pT3 are its T3's six hits.
+              unsigned int const* t3Hits = pixelTriplets.hitIndices()[outerTrackletIdx].data() + 4;
               if (nSharedHitsT4(t4Hits, t3Hits, Params_T3::kHits) >= minShared)
                 quadruplets.isDup()[iT4] = true;
             }
