@@ -1942,6 +1942,9 @@ void LSTEvent::fitTrackCandidatesBrokenLine(const float bField) {
                              bField,
                              trackCandidatesBaseDC_->const_view(),
                              lstInputDC_->const_view().hits(),
+#if LST_BLF_PIXEL_HITS
+                             lstInputDC_->const_view().seedHits(),
+#endif
                              trackCandidatesBLFFitDC_->view(),
                              nAlloc);
 }
