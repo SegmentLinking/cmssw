@@ -452,6 +452,13 @@ void run_lst() {
                                    trk.getVI("see_q"),
                                    trk.getVVI("see_hitIdx"),
                                    trk.getVVI("see_hitType"),
+#if LST_BLF_PIXEL_HITS
+                                   // The ntuple has no per-seed-hit position or error branches,
+                                   // so the pixel seed rows carry no measurement and
+                                   // the BLF kernel fits the OT hits only.
+                                   {},
+                                   {},
+#endif
                                    trk.getVU("see_algo"),
                                    trk.getVU("ph2_detId"),
                                    trk_ph2_clustSize,

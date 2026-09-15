@@ -144,6 +144,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::vector<int> see_q;
     std::vector<std::vector<int>> see_hitIdx;
     std::vector<std::vector<int>> see_hitType;
+#if LST_BLF_PIXEL_HITS
+    std::vector<std::vector<lst::ArrayFx3>> see_hitPos;
+    std::vector<std::vector<lst::ArrayFx6>> see_hitGe;
+#endif
     TrajectorySeedCollection see_seeds;
 
     for (auto const& seedToken : seedTokens_) {
@@ -196,12 +200,39 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
         std::vector<int> hitIdx;
         std::vector<int> hitType;
+#if LST_BLF_PIXEL_HITS
+        std::vector<lst::ArrayFx3> hitPos;
+        std::vector<lst::ArrayFx6> hitGe;
+#endif
         for (auto const& hit : seed.recHits()) {
           auto det = hit.geographicalId().det();
           if (det == DetId::Tracker) {
             const BaseTrackerRecHit* bhit = dynamic_cast<const BaseTrackerRecHit*>(&hit);
             const auto& clusterRef = bhit->firstClusterRef();
             hitIdx.push_back(clusterRef.index());
+#if LST_BLF_PIXEL_HITS
+            // The measured position and error of this seed rec hit.
+            // The error is packed in the same order as the OT hits above.
+            auto const& hitPosGlb = bhit->globalPosition();
+            lst::ArrayFx3 pos;
+            pos[0] = hitPosGlb.x();
+            pos[1] = hitPosGlb.y();
+            pos[2] = hitPosGlb.z();
+            hitPos.push_back(pos);
+
+            // GlobalError's accessors return double; the narrowing to float is explicit here and
+            // matches how ph2_ge is built for the OT hits.
+            auto const& hitErr = bhit->globalPositionError();
+            lst::ArrayFx6 ge;
+            ge[0] = static_cast<float>(hitErr.cxx());
+            ge[1] = static_cast<float>(hitErr.cyx());
+            ge[2] = static_cast<float>(hitErr.cyy());
+            ge[3] = static_cast<float>(hitErr.czx());
+            ge[4] = static_cast<float>(hitErr.czy());
+            ge[5] = static_cast<float>(hitErr.czz());
+            hitGe.push_back(ge);
+
+#endif
             if (clusterRef.isPixel()) {
               hitType.push_back(static_cast<int>(lst::HitType::Pixel));
             } else if (clusterRef.isPhase2()) {
@@ -231,6 +262,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         see_q.push_back(charge);
         see_hitIdx.emplace_back(std::move(hitIdx));
         see_hitType.emplace_back(std::move(hitType));
+#if LST_BLF_PIXEL_HITS
+        see_hitPos.emplace_back(std::move(hitPos));
+        see_hitGe.emplace_back(std::move(hitGe));
+#endif
         see_seeds.push_back(seed);
       }
     }
@@ -251,6 +286,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         see_q,
                                         see_hitIdx,
                                         see_hitType,
+#if LST_BLF_PIXEL_HITS
+                                        see_hitPos,
+                                        see_hitGe,
+#endif
                                         {},
                                         ph2_detId,
                                         ph2_clustSize,

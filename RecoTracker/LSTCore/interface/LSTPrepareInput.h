@@ -2,6 +2,7 @@
 #define RecoTracker_LSTCore_interface_LSTPrepareInput_h
 
 #include <algorithm>
+#include <cassert>
 #include <memory>
 #include <Math/Vector3D.h>
 #include <Math/VectorUtil.h>
@@ -38,6 +39,10 @@ namespace lst {
                                              std::vector<int> const& see_q,
                                              std::vector<std::vector<int>> const& see_hitIdx,
                                              std::vector<std::vector<int>> const& see_hitType,
+#if LST_BLF_PIXEL_HITS
+                                             std::vector<std::vector<ArrayFx3>> const& see_hitPos,
+                                             std::vector<std::vector<ArrayFx6>> const& see_hitGe,
+#endif
                                              std::vector<unsigned int> const& see_algo,
                                              std::vector<unsigned int> const& ph2_detId,
                                              std::vector<uint16_t> const& ph2_clustSize,
@@ -97,6 +102,29 @@ namespace lst {
     trkZ.reserve(4 * n_see);
     hitClustSize.reserve(4 * n_see);
     hitId.reserve(4 * n_see);
+#if LST_BLF_PIXEL_HITS
+    std::vector<float> seedHitX;
+    std::vector<float> seedHitY;
+    std::vector<float> seedHitZ;
+    std::vector<ArrayFx6> seedHitGe;
+    bool hasSeedHitPos = !see_hitPos.empty() && see_hitPos.size() == n_see && see_hitGe.size() == n_see;
+    if (hasSeedHitPos) {
+      for (size_t iSeed = 0; iSeed < n_see; iSeed++) {
+        if (see_hitPos[iSeed].size() != see_hitIdx[iSeed].size() ||
+            see_hitGe[iSeed].size() != see_hitIdx[iSeed].size()) {
+          hasSeedHitPos = false;
+          break;
+        }
+      }
+    }
+    assert(see_hitPos.empty() || hasSeedHitPos);
+    if (hasSeedHitPos) {
+      seedHitX.reserve(4 * n_see);
+      seedHitY.reserve(4 * n_see);
+      seedHitZ.reserve(4 * n_see);
+      seedHitGe.reserve(4 * n_see);
+    }
+#endif
     hitIdxs.reserve(hit_size + 4 * n_see);
     hitIdxs.resize(hit_size);
 
@@ -154,6 +182,15 @@ namespace lst {
           auto iH = iSH + 1 == nHitsToSoA ? see_hitIdx[iSeed].size() - 1 : iSH;  // include the last
           hitId.push_back(hTypes[iH] == intPixel ? kPixelModuleId : ph2_detId[hIdxs[iH]]);
           hitClustSize.push_back(hTypes[iH] == intPixel ? 1 : ph2_clustSize[hIdxs[iH]]);
+#if LST_BLF_PIXEL_HITS
+          if (hasSeedHitPos) {
+            auto const& hPos = see_hitPos[iSeed][iH];
+            seedHitX.push_back(hPos[0]);
+            seedHitY.push_back(hPos[1]);
+            seedHitZ.push_back(hPos[2]);
+            seedHitGe.push_back(see_hitGe[iSeed][iH]);
+          }
+#endif
         }
         uint8_t hitDetBits = 0;
         uint8_t nToBits = std::min(kMaxPLSHitBitsInHitsSoA, static_cast<unsigned int>(see_hitIdx[iSeed].size()));
@@ -181,6 +218,9 @@ namespace lst {
           trkZ.push_back(see_dz[iSeed]);
         }
         assert(trkX.size() == count);
+#if LST_BLF_PIXEL_HITS
+        assert(!hasSeedHitPos || seedHitX.size() == count);
+#endif
 
         px_vec.push_back(px);
         py_vec.push_back(py);
@@ -224,7 +264,11 @@ namespace lst {
       nPixelSeeds = n_max_pixel_segments_per_module;
     }
 
+#if LST_BLF_PIXEL_HITS
+    LSTInputHostCollection lstInputHC(queue, nHitsIT + nHitsOT, nPixelSeeds, hasSeedHitPos ? nHitsIT : 0);
+#else
     LSTInputHostCollection lstInputHC(queue, nHitsIT + nHitsOT, nPixelSeeds);
+#endif
 
     auto hits = lstInputHC.view().hits();
     hits.nHitsOT() = nHitsOT;
@@ -244,6 +288,17 @@ namespace lst {
     std::copy_n(hitId.data(), nHitsIT, hits.detid().data() + nHitsOT);
     std::copy_n(hitClustSize.data(), nHitsIT, hits.clustsize().data() + nHitsOT);
     std::fill_n(hits.ge().data() + nHitsOT, nHitsIT, ArrayFx6{});
+#if LST_BLF_PIXEL_HITS
+    hits.hasSeedHitPos() = hasSeedHitPos ? 1 : 0;
+    if (hasSeedHitPos) {
+      // Row i of this block is row nHitsOT + i of HitsBaseSoA; the kernel undoes the shift.
+      auto seedHits = lstInputHC.view().seedHits();
+      std::copy_n(seedHitX.data(), nHitsIT, seedHits.xs().data());
+      std::copy_n(seedHitY.data(), nHitsIT, seedHits.ys().data());
+      std::copy_n(seedHitZ.data(), nHitsIT, seedHits.zs().data());
+      std::copy_n(seedHitGe.data(), nHitsIT, seedHits.ge().data());
+    }
+#endif
 #ifndef LST_STANDALONE
     std::fill_n(hits.hits().data() + nHitsOT, nHitsIT, nullptr);
 #endif

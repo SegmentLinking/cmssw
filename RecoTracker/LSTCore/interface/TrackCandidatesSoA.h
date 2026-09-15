@@ -41,8 +41,8 @@ namespace lst {
                       SOA_COLUMN(float, chi2),
                       SOA_COLUMN(lst::ArrayFx6, covCircle),
                       SOA_COLUMN(lst::ArrayFx3, covLine),
-                      // Number of nodes the Broken Line Fit actually used. One of the instantiated
-                      // node counts (5, 6, 8, 10, 12, 14) for a fitted candidate, 0 for an unfit one.
+                      // Number of hits the Broken Line Fit actually used. One of the instantiated
+                      // hit counts (5, 6, 8, 10, 12, 14) for a fitted candidate, 0 for an unfit one.
                       SOA_COLUMN(uint8_t, nFit),
                       // Number of mini-doublets whose two sensors reported the same global (x, y)
                       // and whose outer hit was therefore dropped before the fit.
