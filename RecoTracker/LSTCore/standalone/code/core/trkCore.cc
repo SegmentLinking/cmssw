@@ -328,6 +328,8 @@ float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_tripl
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
+// The CMSSW path gates the Broken Line Fit at LST::run, through the LSTProducer parameter
+// produceBLFFit. The standalone deliberately has no such gate and always runs the fit.
 float runBrokenLineFit(LSTEvent* event, const float bField) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)

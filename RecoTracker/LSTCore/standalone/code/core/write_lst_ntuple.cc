@@ -2297,6 +2297,8 @@ void setTrackCandidateBranches(LSTEvent* event,
   auto const& modules = event->getModules<ModulesSoA>();
   auto const& trackCandidatesBase = event->getTrackCandidatesBase();
   auto const& trackCandidatesExtended = event->getTrackCandidatesExtended();
+  // The CMSSW path gates the Broken Line Fit at LST::run, through the LSTProducer parameter
+  // produceBLFFit. The standalone deliberately has no such gate and always runs the fit.
   auto const& trackCandidatesBLFFit = event->getTrackCandidatesBLFFit();
 
   // Following are some vectors to keep track of the information to write to the ntuple
