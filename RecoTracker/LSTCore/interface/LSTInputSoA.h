@@ -20,10 +20,25 @@ namespace lst {
                       SOA_COLUMN(unsigned int, idxs),
                       SOA_COLUMN(unsigned int, detid),
                       SOA_COLUMN(uint16_t, clustsize),
+                      SOA_COLUMN(lst::ArrayFx6, ge),
 #ifndef LST_STANDALONE
                       SOA_COLUMN(TrackingRecHit const*, hits),
 #endif
+#if LST_BLF_PIXEL_HITS
+                      SOA_SCALAR(char, hasSeedHitPos),
+#endif
                       SOA_SCALAR(unsigned int, nHitsOT))
+
+  // Declared whether or not LST_BLF_PIXEL_HITS is set, and made a member of LSTInputSoALayout
+  // only when it is. src/classes_def.xml names this type and XML has no preprocessor, so a
+  // conditional declaration would leave the dictionary naming a type that does not exist.
+  // This costs dictionary a bit of compile time but nothing at run time. Otheriwse,
+  // an empty block left in LSTInputSoALayout would change the data format type itself.
+  GENERATE_SOA_LAYOUT(SeedHitsSoALayout,
+                      SOA_COLUMN(float, xs),
+                      SOA_COLUMN(float, ys),
+                      SOA_COLUMN(float, zs),
+                      SOA_COLUMN(lst::ArrayFx6, ge))
 
   GENERATE_SOA_LAYOUT(PixelSeedsSoALayout,
                       SOA_COLUMN(unsigned int, firstHit),
@@ -44,16 +59,26 @@ namespace lst {
                       SOA_COLUMN(float, eta),
                       SOA_COLUMN(float, phi))
 
+#if LST_BLF_PIXEL_HITS
+  GENERATE_SOA_BLOCKS(LSTInputSoALayout,
+                      SOA_BLOCK(hits, HitsBaseSoALayout),
+                      SOA_BLOCK(pixelSeeds, PixelSeedsSoALayout),
+                      SOA_BLOCK(seedHits, SeedHitsSoALayout))
+#else
   GENERATE_SOA_BLOCKS(LSTInputSoALayout, SOA_BLOCK(hits, HitsBaseSoALayout), SOA_BLOCK(pixelSeeds, PixelSeedsSoALayout))
+#endif
 
   using HitsBaseSoA = HitsBaseSoALayout<>;
   using PixelSeedsSoA = PixelSeedsSoALayout<>;
+  using SeedHitsSoA = SeedHitsSoALayout<>;
   using LSTInputSoA = LSTInputSoALayout<>;
 
   using HitsBase = HitsBaseSoA::View;
   using HitsBaseConst = HitsBaseSoA::ConstView;
   using PixelSeeds = PixelSeedsSoA::View;
   using PixelSeedsConst = PixelSeedsSoA::ConstView;
+  using SeedHits = SeedHitsSoA::View;
+  using SeedHitsConst = SeedHitsSoA::ConstView;
   using LSTInputView = LSTInputSoA::View;
   using LSTInputConstView = LSTInputSoA::ConstView;
 
@@ -71,6 +96,13 @@ namespace lst {
     static constexpr auto get(auto const& v) { return v.pixelSeeds(); }
   };
 
+#if LST_BLF_PIXEL_HITS
+  template <>
+  struct LSTInputViewAccessor<SeedHitsSoA> {
+    static constexpr auto get(auto const& v) { return v.seedHits(); }
+  };
+
+#endif
 }  // namespace lst
 
 #endif
