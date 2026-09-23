@@ -1453,40 +1453,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return false;
   }
 
-  // T5 DNN inputs: MD-direction log-likelihood (mean, max over the 5 MDs, module frame, circle through anchors 0,2,4),
-  // local density and dcaXY of that circle.
-  // Not inlined on ROCm: inlining it into CountTripletConnectionsT crashes the gfx90a register allocator (ROCm 7.2).
+  // T5/T4 DNN inputs over the N MDs: MD-direction log-likelihood (mean, max; module frame, circle through anchors
+  // iA,iB,iC), local density (T3s leaving MD iMid and MD 0, MDs in the first module) and dcaXY of that circle.
+  // Not inlined on ROCm: inlining it into the counting kernels crashes the gfx90a register allocator (ROCm 7.2).
 #if defined(ALPAKA_ACC_GPU_HIP_ENABLED)
-#define LST_T5DNN_FEATURES_INLINE [[gnu::noinline]]
+#define LST_DNN_FEATURES_INLINE [[gnu::noinline]]
 #else
-#define LST_T5DNN_FEATURES_INLINE ALPAKA_FN_INLINE
+#define LST_DNN_FEATURES_INLINE ALPAKA_FN_INLINE
 #endif
-  template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC LST_T5DNN_FEATURES_INLINE void computeT5DnnFeatures(TAcc const& acc,
-                                                                    ModulesConst modules,
-                                                                    MiniDoubletsConst mds,
-                                                                    MiniDoubletsOccupancyConst mdOccupancy,
-                                                                    TripletsRangesConst tripletsRangesByMD,
-                                                                    const uint16_t (&lm)[Params_T5::kBaseLayers],
-                                                                    const unsigned int (&md)[Params_T5::kBaseLayers],
-                                                                    float (&f)[dnn::t5dnn::kExtraFeatures]) {
-    float ax[Params_T5::kBaseLayers], ay[Params_T5::kBaseLayers], az[Params_T5::kBaseLayers];
-    for (int i = 0; i < Params_T5::kBaseLayers; ++i) {
+  template <int N, int iA, int iB, int iC, int iMid, alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC LST_DNN_FEATURES_INLINE void computeDnnFeatures(TAcc const& acc,
+                                                                ModulesConst modules,
+                                                                MiniDoubletsConst mds,
+                                                                MiniDoubletsOccupancyConst mdOccupancy,
+                                                                TripletsRangesConst tripletsRangesByMD,
+                                                                const uint16_t (&lm)[N],
+                                                                const unsigned int (&md)[N],
+                                                                float (&f)[dnn::t5dnn::kExtraFeatures]) {
+    float ax[N], ay[N], az[N];
+    for (int i = 0; i < N; ++i) {
       ax[i] = mds.anchorX()[md[i]];
       ay[i] = mds.anchorY()[md[i]];
       az[i] = mds.anchorZ()[md[i]];
     }
-    const auto circle = computeRadiusFromThreeAnchorHits(acc, ax[0], ay[0], ax[2], ay[2], ax[4], ay[4]);
+    const auto circle = computeRadiusFromThreeAnchorHits(acc, ax[iA], ay[iA], ax[iB], ay[iB], ax[iC], ay[iC]);
     const float cr = std::get<0>(circle), cx = std::get<1>(circle), cy = std::get<2>(circle);
-    const float chx = ax[4] - ax[0], chy = ay[4] - ay[0];
+    const float chx = ax[iC] - ax[iA], chy = ay[iC] - ay[iA];
     const float chord = alpaka::math::sqrt(acc, chx * chx + chy * chy);
-    const float r = alpaka::math::sqrt(acc, (ax[0] - cx) * (ax[0] - cx) + (ay[0] - cy) * (ay[0] - cy));
+    const float r = alpaka::math::sqrt(acc, (ax[iA] - cx) * (ax[iA] - cx) + (ay[iA] - cy) * (ay[iA] - cy));
     float arc = chord;
     if (edm::isFinite(r) && r > 0.f)
       arc = 2.f * r * alpaka::math::asin(acc, alpaka::math::min(acc, chord / (2.f * r), 1.f));
-    const float cotTheta = (az[4] - az[0]) / arc;
+    const float cotTheta = (az[iC] - az[iA]) / arc;
     float sumW = 0.f, maxW = 0.f;
-    for (int i = 0; i < Params_T5::kBaseLayers; ++i) {
+    for (int i = 0; i < N; ++i) {
       const uint16_t lowerModuleIndex = lm[i];
       float tx = cy - ay[i], ty = ax[i] - cx;
       const float tn = alpaka::math::sqrt(acc, tx * tx + ty * ty);
@@ -1533,11 +1533,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       sumW += w;
       maxW = alpaka::math::max(acc, maxW, w);
     }
-    f[0] = sumW / Params_T5::kBaseLayers;
+    f[0] = sumW / N;
     f[1] = maxW;
-    f[2] = tripletsRangesByMD.n()[md[2]];  // T3s leaving the middle MD
-    f[3] = tripletsRangesByMD.n()[md[0]];  // T3s leaving the first MD
-    f[4] = mdOccupancy.nMDs()[lm[0]];      // MDs in the first module
+    f[2] = tripletsRangesByMD.n()[md[iMid]];  // T3s leaving the middle MD
+    f[3] = tripletsRangesByMD.n()[md[0]];     // T3s leaving the first MD
+    f[4] = mdOccupancy.nMDs()[lm[0]];         // MDs in the first module
     f[5] = alpaka::math::abs(acc, alpaka::math::sqrt(acc, cx * cx + cy * cy) - cr);
   }
 
@@ -1663,7 +1663,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const unsigned int t5Md[Params_T5::kBaseLayers] = {
         firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex, fifthMDIndex};
     float t5Feat[dnn::t5dnn::kExtraFeatures];
-    computeT5DnnFeatures(acc, modules, mds, mdOccupancy, tripletsRangesByMD, t5Lm, t5Md, t5Feat);
+    computeDnnFeatures<Params_T5::kBaseLayers, 0, 2, 4, 2>(
+        acc, modules, mds, mdOccupancy, tripletsRangesByMD, t5Lm, t5Md, t5Feat);
     float dnnOutput[dnn::t5dnn::kOutputFeatures];
     const bool inference = lst::t5dnn::runInference(acc,
                                                     mds,
@@ -1869,7 +1870,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              mdIndices[segIdx[outerTripletIndex][0]][1],
                                                              mdIndices[segIdx[outerTripletIndex][1]][1]};
           float t5Feat[dnn::t5dnn::kExtraFeatures];
-          computeT5DnnFeatures(acc, modules, mds, mdOccupancy, tripletsRangesByMD, t5Lm, t5Md, t5Feat);
+          computeDnnFeatures<Params_T5::kBaseLayers, 0, 2, 4, 2>(
+              acc, modules, mds, mdOccupancy, tripletsRangesByMD, t5Lm, t5Md, t5Feat);
           for (unsigned int i = 0; i < dnn::t5dnn::kExtraFeatures; ++i)
             quintuplets.extraFeat()[quintupletIndex][i] = t5Feat[i];
         }

@@ -35,6 +35,7 @@ namespace lst {
                       SOA_COLUMN(float, promptScore),
                       SOA_COLUMN(int, layer),
                       SOA_COLUMN(float, dBeta),
+                      SOA_COLUMN(Params_T5::ArrayFxExtraFeat, extraFeat),  // T4 DNN extra inputs (same as T5's)
 #endif
                       SOA_COLUMN(bool, partOfTC));
 
