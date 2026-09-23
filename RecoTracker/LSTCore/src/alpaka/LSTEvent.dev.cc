@@ -1613,6 +1613,8 @@ void LSTEvent::createQuadruplets() {
                       tripletsDC_->const_view().tripletsOccupancy(),
                       tripletsDC_->const_view().tripletsBySegment(),
                       tripletsListRangesDC_->const_view().tripletsRangesBySegment(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                      tripletsListRangesDC_->const_view().tripletsRangesByMD(),
                       rangesDC_->const_view(),
                       ptCut_,
                       t3ConnectedLSMax_buf.data());
@@ -1671,6 +1673,8 @@ void LSTEvent::createQuadruplets() {
                       tripletsDC_->const_view().tripletsOccupancy(),
                       tripletsDC_->const_view().tripletsBySegment(),
                       tripletsListRangesDC_->const_view().tripletsRangesBySegment(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                      tripletsListRangesDC_->const_view().tripletsRangesByMD(),
                       quadrupletsDC_->view().quadruplets(),
                       quadrupletsDC_->view().quadrupletsOccupancy(),
                       rangesDC_->const_view(),
