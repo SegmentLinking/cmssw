@@ -102,10 +102,12 @@ namespace lst {
     static constexpr int kLayers = 7, kHits = 14;  // 5 base + max 2 extensions
     static constexpr int kBaseLayers = 5;
     static constexpr int kEmbed = 6;
+    static constexpr int kExtraFeat = 6;  // extra T5 DNN inputs (written with CUT_VALUE_DEBUG)
     using ArrayU8xLayers = edm::StdArray<uint8_t, kLayers>;
     using ArrayU16xLayers = edm::StdArray<uint16_t, kLayers>;
     using ArrayUxHits = edm::StdArray<unsigned int, kHits>;
     using ArrayFxEmbed = edm::StdArray<float, kEmbed>;
+    using ArrayFxExtraFeat = edm::StdArray<float, kExtraFeat>;
   };
   struct Params_pT5 {
     static constexpr int kLayers = 9, kHits = 18;  // 2 pixel + 7 OT (= T5::kLayers after extension)
