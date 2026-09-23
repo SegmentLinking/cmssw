@@ -1274,6 +1274,7 @@ void LSTEvent::createQuintuplets() {
                       tripletsDC_->const_view().tripletsByMD(),
                       tripletsListRangesDC_->const_view().tripletsRangesByMD(),
                       rangesDC_->const_view(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                       ptCut_,
                       dBetaPassMask_buf.data(),
                       t3ConnectedMax_buf.data());
@@ -1386,6 +1387,8 @@ void LSTEvent::createQuintuplets() {
                       miniDoubletsDC_->const_view().miniDoublets(),
                       segmentsDC_->const_view().segments(),
                       tripletsDC_->const_view().triplets(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                      tripletsListRangesDC_->const_view().tripletsRangesByMD(),
                       looseDC.const_view().quintupletsLoose(),
                       looseDC.const_view().quintupletsOccupancy(),
                       quintupletsDC_->view().quintuplets(),
