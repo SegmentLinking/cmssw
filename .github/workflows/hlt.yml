@@ -48,7 +48,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}-${{ inputs.procmodifiers }}
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}-${{ inputs.procmodifiers-pr }}-${{ inputs.procmodifiers-target }}
   cancel-in-progress: true
 
 permissions:
