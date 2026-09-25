@@ -112,7 +112,7 @@ jobs:
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
           python -c "ks = '${KNOWN_SAMPLES}'.split(','); assert '${{ env.sample }}' in ks"
           python -c "kt = '${KNOWN_TOPKEYS}'.split(','); assert all(t in kt for t in '${{ env.topkeys }}'.split(','))"
-          python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
+          python -c "assert all(pr.isdecimal() for pr in '${{ env.required-prs }}'.split(',')) or '${{ env.required-prs }}' == ''"
       - name: Start checks
         if: contains(env.workflows, 'checks') || contains(env.workflows, 'all')
         uses: actions/github-script@v7
