@@ -64,6 +64,13 @@ jobs:
           fi
           echo "Release: $RELEASE"
           echo "release=$RELEASE" >> $GITHUB_ENV
+          SAMPLE=$(echo "$COMMENT_BODY" | yq -M ".sample")
+          # Set to ttbar if null
+          if [[ -z "$SAMPLE" || "$SAMPLE" == "null" ]]; then
+            SAMPLE="ttbar"
+          fi
+          echo "Sample: $SAMPLE"
+          echo "sample=$SAMPLE" >> $GITHUB_ENV
           # First try to get procmodifiers specific to pr and target branches
           PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.pr | @csv")
           PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.target | @csv")
@@ -99,9 +106,11 @@ jobs:
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw,hlt"
           KNOWN_MODIFIERS="lowpt,cpu,gpu,ci_devel"
-          KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,packages,procmodifiers"
+          KNOWN_SAMPLES="ttbar,qcd"
+          KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,sample,packages,procmodifiers"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
+          python -c "ks = '${KNOWN_SAMPLES}'.split(','); assert '${{ env.sample }}' in ks"
           python -c "kt = '${KNOWN_TOPKEYS}'.split(','); assert all(t in kt for t in '${{ env.topkeys }}'.split(','))"
           python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
       - name: Start checks
@@ -177,6 +186,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
@@ -197,6 +207,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'self-hosted',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
@@ -217,6 +228,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}',
                 'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
@@ -239,6 +251,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'self-hosted',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}',
                 'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
