@@ -72,6 +72,10 @@ void LSTEvent::resetEventSync() {
   nPT3Host_.reset();
   nT4Host_.reset();
   exactT4Indices_.reset();
+  triedPT5Host_.reset();
+  triedPT3Host_.reset();
+  triedT4Host_.reset();
+  triedT4Indices_.reset();
   memoryPeakLiveMB_ = 0;
   lstInputDC_ = nullptr;
   hitsDC_.reset();
@@ -724,12 +728,20 @@ void LSTEvent::requestShrinkCounts() {
     nPT5Host_.emplace(cms::alpakatools::make_host_buffer<unsigned int>(queue_));
     alpaka::memcpy(
         queue_, *nPT5Host_, cms::alpakatools::make_device_view(queue_, (*pixelQuintupletsDC_)->nPixelQuintuplets()));
+    triedPT5Host_.emplace(cms::alpakatools::make_host_buffer<unsigned int>(queue_));
+    alpaka::memcpy(queue_,
+                   *triedPT5Host_,
+                   cms::alpakatools::make_device_view(queue_, (*pixelQuintupletsDC_)->totOccupancyPixelQuintuplets()));
     pT5Shrink_ = ShrinkState::kRequested;
   }
   if (pT3Shrink_ == ShrinkState::kCreated) {
     nPT3Host_.emplace(cms::alpakatools::make_host_buffer<unsigned int>(queue_));
     alpaka::memcpy(
         queue_, *nPT3Host_, cms::alpakatools::make_device_view(queue_, (*pixelTripletsDC_)->nPixelTriplets()));
+    triedPT3Host_.emplace(cms::alpakatools::make_host_buffer<unsigned int>(queue_));
+    alpaka::memcpy(queue_,
+                   *triedPT3Host_,
+                   cms::alpakatools::make_device_view(queue_, (*pixelTripletsDC_)->totOccupancyPixelTriplets()));
     pT3Shrink_ = ShrinkState::kRequested;
   }
   if (t4Shrink_ == ShrinkState::kCreated) {
@@ -745,11 +757,37 @@ void LSTEvent::requestShrinkCounts() {
     nT4Host_.emplace(cms::alpakatools::make_host_buffer<int>(queue_));
     alpaka::memcpy(
         queue_, *nT4Host_, cms::alpakatools::make_device_view(queue_, exactT4Indices_->data()[nLowerModules_]));
+    // Same sum over the attempts, for the capacity-overflow check.
+    triedT4Indices_.emplace(cms::alpakatools::make_device_buffer<int[]>(queue_, nLowerModules_ + 1));
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        ExactModuleOffsetsKernel{},
+                        static_cast<unsigned int>(nLowerModules_),
+                        quadrupletsDC_->const_view().quadrupletsOccupancy().totOccupancyQuadruplets().data(),
+                        rangesDC_->const_view().quadrupletModuleIndices().data(),
+                        triedT4Indices_->data());
+    triedT4Host_.emplace(cms::alpakatools::make_host_buffer<int>(queue_));
+    alpaka::memcpy(
+        queue_, *triedT4Host_, cms::alpakatools::make_device_view(queue_, triedT4Indices_->data()[nLowerModules_]));
     t4Shrink_ = ShrinkState::kRequested;
   }
 }
 
 void LSTEvent::shrinkRequested() {
+  // Objects that found no slot: pT5/pT3 beyond their fixed caps, T4 beyond the counting-kernel size of their module.
+  {
+    const unsigned int lostPT5 =
+        pT5Shrink_ == ShrinkState::kRequested ? *triedPT5Host_->data() - *nPT5Host_->data() : 0;
+    const unsigned int lostPT3 =
+        pT3Shrink_ == ShrinkState::kRequested ? *triedPT3Host_->data() - *nPT3Host_->data() : 0;
+    const int lostT4 = t4Shrink_ == ShrinkState::kRequested ? *triedT4Host_->data() - *nT4Host_->data() : 0;
+    if (lostPT5 + lostPT3 > 0 || lostT4 > 0)
+      lstWarning(std::format("Capacity overflow, objects dropped: {} pT5, {} pT3, {} T4", lostPT5, lostPT3, lostT4));
+    triedPT5Host_.reset();
+    triedPT3Host_.reset();
+    triedT4Host_.reset();
+    triedT4Indices_.reset();
+  }
   if (pT5Shrink_ == ShrinkState::kRequested) {
     if (objectsStatistics_)
       memoryLiveMB_ -= alpaka::getExtentProduct(pixelQuintupletsDC_->buffer()) / 1e6;
@@ -961,10 +999,11 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                  cms::alpakatools::make_device_view(queue_, rangesView.nQuintupletOverflows()));
   alpaka::wait(queue_);  // wait to get counts before allocation
   if (nCountOverflows_[0] + nCountOverflows_[1] + nCountOverflows_[2] > 0)
-    lstWarning(std::format("Counting-kernel overflow, objects dropped: {} segments, {} triplets, {} quintuplets",
-                           nCountOverflows_[0],
-                           nCountOverflows_[1],
-                           nCountOverflows_[2]));
+    lstWarning(
+        std::format("Counting-kernel overflow, objects dropped or unlisted: {} segments, {} triplets, {} quintuplets",
+                    nCountOverflows_[0],
+                    nCountOverflows_[1],
+                    nCountOverflows_[2]));
   if (objectsStatistics_)
     lstWarning(std::format("[CNT] overflows: {} {} {}", nCountOverflows_[0], nCountOverflows_[1], nCountOverflows_[2]));
 

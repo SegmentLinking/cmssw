@@ -120,6 +120,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<cms::alpakatools::host_buffer<unsigned int>> nPT3Host_;
     std::optional<cms::alpakatools::host_buffer<int>> nT4Host_;
     std::optional<cms::alpakatools::device_buffer<Device, int[]>> exactT4Indices_;
+    // attempts (totOccupancy) of the capped pT5/pT3/T4 creation, read at the same syncs as the produced counts
+    std::optional<cms::alpakatools::host_buffer<unsigned int>> triedPT5Host_;
+    std::optional<cms::alpakatools::host_buffer<unsigned int>> triedPT3Host_;
+    std::optional<cms::alpakatools::host_buffer<int>> triedT4Host_;
+    std::optional<cms::alpakatools::device_buffer<Device, int[]>> triedT4Indices_;
     void requestShrinkCounts();
     void shrinkRequested();
     double memoryPeakLiveMB_ = 0;
