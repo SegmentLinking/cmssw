@@ -1735,6 +1735,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void tryAddQuintuplet(Acc3D const& acc,
                                                        ModulesConst modules,
                                                        MiniDoubletsConst mds,
+                                                       MiniDoubletsT5CountsConst mdT5Counts,
                                                        SegmentsConst segments,
                                                        Triplets triplets,
                                                        Quintuplets quintuplets,
@@ -1807,7 +1808,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         auto const quintupletByMD0Local =
             alpaka::atomicAdd(acc, &quintupletsRangesByMD0.n()[md0Index], 1u, alpaka::hierarchy::Threads{});
         auto quintupletByMD0Index = quintupletByMD0Local + quintupletsRangesByMD0.offset()[md0Index];
-        if (quintupletByMD0Local >= mds.connectedT5s0Max()[md0Index]) {
+        if (quintupletByMD0Local >= mdT5Counts.connectedT5s0Max()[md0Index]) {
           alpaka::atomicSub(acc, &quintupletsRangesByMD0.n()[md0Index], 1u, alpaka::hierarchy::Threads{});
           quintupletByMD0Index = kInvalidU32Idx;
         }
@@ -1815,7 +1816,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         auto const quintupletByMD1Local =
             alpaka::atomicAdd(acc, &quintupletsRangesByMD1.n()[md1Index], 1u, alpaka::hierarchy::Blocks{});
         auto quintupletByMD1Index = quintupletByMD1Local + quintupletsRangesByMD1.offset()[md1Index];
-        if (quintupletByMD1Local >= mds.connectedT5s1Max()[md1Index]) {
+        if (quintupletByMD1Local >= mdT5Counts.connectedT5s1Max()[md1Index]) {
           alpaka::atomicSub(acc, &quintupletsRangesByMD1.n()[md1Index], 1u, alpaka::hierarchy::Blocks{});
           quintupletByMD1Index = kInvalidU32Idx;
         }
@@ -1877,6 +1878,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   MiniDoubletsConst mds,
+                                  MiniDoubletsT5CountsConst mdT5Counts,
                                   MiniDoubletsOccupancyConst mdOccupancy,
                                   SegmentsConst segments,
                                   Triplets triplets,
@@ -1964,6 +1966,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               tryAddQuintuplet(acc,
                                modules,
                                mds,
+                               mdT5Counts,
                                segments,
                                triplets,
                                quintuplets,
@@ -2024,6 +2027,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           tryAddQuintuplet(acc,
                            modules,
                            mds,
+                           mdT5Counts,
                            segments,
                            triplets,
                            quintuplets,
@@ -2056,7 +2060,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   struct CountTripletConnectionsT {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
-                                  MiniDoublets mds,
+                                  MiniDoubletsConst mds,
+                                  MiniDoubletsT5Counts mdT5Counts,
                                   SegmentsConst segments,
                                   Triplets triplets,
                                   TripletsOccupancyConst tripletsOcc,
@@ -2110,9 +2115,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
               auto const ls0Index = segIdx[innerTripletIndex][0];
               auto const md0Index = mdIndices[ls0Index][0];
-              alpaka::atomicAdd(acc, &mds.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
+              alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
               auto const md1Index = mdIndices[ls0Index][1];
-              alpaka::atomicAdd(acc, &mds.connectedT5s1Max()[md1Index], 1u, alpaka::hierarchy::Blocks{});
+              alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s1Max()[md1Index], 1u, alpaka::hierarchy::Blocks{});
             } else {
               //asynchronous stop; exact truncation here is not important
               if (denseMatchCount > kNQuintupletThreshold)
@@ -2159,9 +2164,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                 alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
                 auto const ls0Index = segIdx[innerTripletIndex][0];
                 auto const md0Index = mdIndices[ls0Index][0];
-                alpaka::atomicAdd(acc, &mds.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
+                alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
                 auto const md1Index = mdIndices[ls0Index][1];
-                alpaka::atomicAdd(acc, &mds.connectedT5s1Max()[md1Index], 1u, alpaka::hierarchy::Blocks{});
+                alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s1Max()[md1Index], 1u, alpaka::hierarchy::Blocks{});
                 alpaka::atomicAdd(acc, &denseMatchCount, 1u, alpaka::hierarchy::Threads{});
               }
             }
@@ -2180,7 +2185,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsOccupancyConst tripletsOcc,
                                   ObjectRanges ranges,
                                   TripletsConst triplets,
-                                  MiniDoubletsConst mds,
+                                  MiniDoubletsT5CountsConst mdT5Counts,
                                   MiniDoubletsOccupancyConst mdsOcc,
                                   QuintupletsRanges quintupletsRangesByMD0,
                                   QuintupletsRanges quintupletsRangesByMD1) const {
@@ -2257,8 +2262,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (nMDs == 0)
           continue;
 
-        setMDranges(lowerModule, nMDs, mds.connectedT5s0Max().data(), quintupletsRangesByMD0, nTotalQuintuplets0x);
-        setMDranges(lowerModule, nMDs, mds.connectedT5s1Max().data(), quintupletsRangesByMD1, nTotalQuintuplets1x);
+        setMDranges(lowerModule, nMDs, mdT5Counts.connectedT5s0Max().data(), quintupletsRangesByMD0, nTotalQuintuplets0x);
+        setMDranges(lowerModule, nMDs, mdT5Counts.connectedT5s1Max().data(), quintupletsRangesByMD1, nTotalQuintuplets1x);
       }
 
       // Wait for all threads to finish before reporting final values
