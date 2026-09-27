@@ -529,7 +529,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint16_t nEligibleT4Modules,
-                                  const float ptCut) const {
+                                  const float ptCut,
+                                  unsigned int const* __restrict__ t3ConnectedLSMax) const {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
 
@@ -592,7 +593,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const auto innerTripletOffset = tripIdx[lowerModule1];
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           const unsigned int innerTripletIndex = innerTripletOffset + innerTripletArrayIndex;
-          if (triplets.connectedLSMax()[innerTripletIndex] == 0)
+          if (t3ConnectedLSMax[innerTripletIndex] == 0)
             continue;
           // partOf{PT5, T5, PT3} is implicit, see CountTripletLSConnectionsT
           // Triplets admitted only by the widened pointing bound are used only in quintuplets.
@@ -850,7 +851,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsBySegmentConst tripletsBySegment,
                                   TripletsRangesConst tripletsRangesBySegment,
                                   ObjectRangesConst ranges,
-                                  const float ptCut) const {
+                                  const float ptCut,
+                                  unsigned int* __restrict__ t3ConnectedLSMax) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -907,7 +909,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             // Will only perform runQuadrupletDefaultAlgorithm() checks if densely connected
             if (nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
-              alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+              alpaka::atomicAdd(acc, &t3ConnectedLSMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
             } else {
               const uint16_t lowerModule3 = lmIdx[outerTripletIndex][1];
               const uint16_t lowerModule4 = lmIdx[outerTripletIndex][2];
@@ -939,7 +941,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        displacedScore,
                                                        fakeScore);
               if (ok) {
-                alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                alpaka::atomicAdd(acc, &t3ConnectedLSMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
               }
             }
           }
@@ -953,7 +955,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ModulesConst modules,
                                   TripletsOccupancyConst tripletsOcc,
                                   ObjectRanges ranges,
-                                  Triplets triplets) const {
+                                  unsigned int const* __restrict__ t3ConnectedLSMax) const {
       // Single-block kernel
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
 
@@ -978,7 +980,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int firstTripletIdx = ranges.tripletModuleIndices()[lowerModule];
         for (unsigned int t = 0; t < nInnerTriplets; ++t) {
           unsigned int tripletIndex = firstTripletIdx + t;
-          dynamic_count += triplets.connectedLSMax()[tripletIndex];
+          dynamic_count += t3ConnectedLSMax[tripletIndex];
         }
 
         if (dynamic_count == 0)
