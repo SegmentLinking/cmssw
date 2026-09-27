@@ -737,7 +737,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoubletsOccupancyConst mdsOccupancy,
                                   SegmentCandidates candidates,
                                   SegmentsOccupancy segmentsOccupancy,
-                                  ObjectRangesConst ranges,
+                                  ObjectRanges ranges,
                                   const float ptCut) const {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -812,6 +812,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     1u,
                                     alpaka::hierarchy::Threads{});
               if (static_cast<int>(totOccupancySegments) >= ranges.segmentModuleOccupancy()[innerLowerModuleIndex]) {
+                alpaka::atomicAdd(acc, &ranges.nSegmentOverflows(), 1u, alpaka::hierarchy::Blocks{});
 #ifdef WARNINGS
                 printf("Segment excess alert! Module index = %d, Occupancy = %d\n",
                        innerLowerModuleIndex,
@@ -1040,6 +1041,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       if (cms::alpakatools::once_per_block(acc)) {
         ranges.segmentModuleIndices()[modules.nLowerModules()] = nTotalSegments;
         ranges.nTotalSegs() = nTotalSegments;
+        ranges.nSegmentOverflows() = 0;
       }
     }
   };

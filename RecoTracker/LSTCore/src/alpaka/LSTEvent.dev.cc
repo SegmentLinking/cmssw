@@ -435,7 +435,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
                       miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                       candidatesDC.view().candidates(),
                       candidatesDC.view().segmentsOccupancy(),
-                      rangesDC_->const_view(),
+                      rangesDC_->view(),
                       ptCut_);
 
   compactSegments(candidatesDC);
@@ -646,7 +646,7 @@ void LSTEvent::createTriplets() {
                           looseTripletsDC.view().scratch(),
                           tripletsListRangesDC_->view().tripletsRangesBySegment(),
                           tripletsListRangesDC_->view().tripletsRangesByMD(),
-                          rangesDC_->const_view(),
+                          rangesDC_->view(),
                           index_gpu_buf.data(),
                           nonZeroModules,
                           ptCut_);
@@ -914,7 +914,25 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
 
   auto nSurvivingTCs_host = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 5u);
   alpaka::memcpy(queue_, nSurvivingTCs_host, nSurvivingTCs_dev);
+  // Objects the creation kernels found no reserved slot for (the counting kernels must be a superset).
+  auto rangesView = rangesDC_->const_view();
+  alpaka::memcpy(queue_,
+                 cms::alpakatools::make_host_view(nCountOverflows_[0]),
+                 cms::alpakatools::make_device_view(queue_, rangesView.nSegmentOverflows()));
+  alpaka::memcpy(queue_,
+                 cms::alpakatools::make_host_view(nCountOverflows_[1]),
+                 cms::alpakatools::make_device_view(queue_, rangesView.nTripletOverflows()));
+  alpaka::memcpy(queue_,
+                 cms::alpakatools::make_host_view(nCountOverflows_[2]),
+                 cms::alpakatools::make_device_view(queue_, rangesView.nQuintupletOverflows()));
   alpaka::wait(queue_);  // wait to get counts before allocation
+  if (nCountOverflows_[0] + nCountOverflows_[1] + nCountOverflows_[2] > 0)
+    lstWarning(std::format("Counting-kernel overflow, objects dropped: {} segments, {} triplets, {} quintuplets",
+                           nCountOverflows_[0],
+                           nCountOverflows_[1],
+                           nCountOverflows_[2]));
+  if (objectsStatistics_)
+    lstWarning(std::format("[CNT] overflows: {} {} {}", nCountOverflows_[0], nCountOverflows_[1], nCountOverflows_[2]));
 
   auto const* counts = nSurvivingTCs_host.data();
   constexpr unsigned int nMaxTC = n_max_nonpixel_track_candidates + n_max_pixel_track_candidates;
@@ -1213,6 +1231,10 @@ void LSTEvent::createQuintuplets() {
 
   auto const countConn_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
 
+  // Per-triplet bits: which of the first 32 outer-triplet candidates pass the dBeta cuts of the counting kernel.
+  const unsigned int nTripletSlots = tripletsDC_->const_view().triplets().metadata().size();
+  auto dBetaPassMask_buf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, std::max(nTripletSlots, 1u));
+  alpaka::memset(queue_, dBetaPassMask_buf, 0u);
   auto execCountTripletConn = [&](auto kernel) {
     alpaka::exec<Acc3D>(queue_,
                         countConn_workDiv,
@@ -1226,7 +1248,8 @@ void LSTEvent::createQuintuplets() {
                         tripletsDC_->const_view().tripletsByMD(),
                         tripletsListRangesDC_->const_view().tripletsRangesByMD(),
                         rangesDC_->const_view(),
-                        ptCut_);
+                        ptCut_,
+                        dBetaPassMask_buf.data());
   };
   if (reduceMemByFullPrecompute_)
     execCountTripletConn(CountTripletConnectionsReduceMem{});
@@ -1304,9 +1327,10 @@ void LSTEvent::createQuintuplets() {
                         looseOccupancy,
                         miniDoubletsT5BuildDC_->view().quintupletsRangesByMD0(),
                         miniDoubletsT5BuildDC_->view().quintupletsRangesByMD1(),
-                        rangesDC_->const_view(),
+                        rangesDC_->view(),
                         nEligibleT5Modules,
-                        ptCut_);
+                        ptCut_,
+                        dBetaPassMask_buf.data());
   };
   if (reduceMemByFullPrecompute_)
     execCreateQuintuplets(CreateQuintupletsReduceMem{});

@@ -60,6 +60,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int nTotalSegmentsOT_;
     unsigned int pixelSize_;
     uint16_t pixelModuleIndex_;
+    unsigned int nCountOverflows_[3] = {0, 0, 0};
 
     //Device stuff
     LSTInputDeviceCollection const* lstInputDC_;  // not owned
