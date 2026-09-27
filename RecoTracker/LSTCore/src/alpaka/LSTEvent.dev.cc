@@ -464,8 +464,6 @@ void LSTEvent::compactSegments(SegmentCandidatesDeviceCollection const& candidat
   // Exact segment collection: OT segments at module-ordered offsets (prefix sum of nSegments), then the pLS
   // slots (filled later by addPixelSegmentToEventFinalize at segmentModuleIndices[pixel] = nExactOT).
   auto exactOffsets_buf = cms::alpakatools::make_device_buffer<int[]>(queue_, nLowerModules_ + 1);
-  auto nRecomputeFails_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 1u);
-  alpaka::memset(queue_, nRecomputeFails_buf, 0u);
 
   alpaka::exec<Acc1D>(queue_,
                       cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
@@ -489,12 +487,12 @@ void LSTEvent::compactSegments(SegmentCandidatesDeviceCollection const& candidat
                       modules_.const_view().modules(),
                       miniDoubletsDC_->const_view().miniDoublets(),
                       miniDoubletsBuildDC_->const_view(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                       rangesDC_->const_view(),
                       candidatesDC.const_view().candidates(),
                       candidatesDC.const_view().segmentsOccupancy(),
                       exactOffsets_buf.data(),
                       segmentsDC_->view().segments(),
-                      nRecomputeFails_buf.data(),
                       ptCut_);
 
   alpaka::exec<Acc1D>(queue_,
@@ -507,11 +505,6 @@ void LSTEvent::compactSegments(SegmentCandidatesDeviceCollection const& candidat
                       rangesDC_->view());
 
   if (objectsStatistics_) {
-    auto nRecomputeFails_h = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
-    alpaka::memcpy(queue_, nRecomputeFails_h, nRecomputeFails_buf);
-    alpaka::wait(queue_);
-    if (*nRecomputeFails_h.data() != 0)
-      lstWarning(std::format("[SEG] {} segments failed the payload recompute", *nRecomputeFails_h.data()));
     double mb = alpaka::getExtentProduct(segmentsDC_->buffer()) / 1e6;
     trackAllocatedMB(mb);
     lstWarning(std::format("[MEM] Segments: {} allocated ({:.1f} MB)", nTotalSegments_, mb));
@@ -679,7 +672,8 @@ void LSTEvent::createTriplets() {
     double mb = alpaka::getExtentProduct(tripletsDC_->buffer()) / 1e6;
     trackAllocatedMB(mb);
     lstWarning(std::format("[MEM] Triplets: {} allocated ({:.1f} MB)", nTotalTriplets, mb + listRangesMB));
-    lstWarning(std::format("[MEM] (transient) Triplets creation buffer: {} slots ({:.1f} MB)", nLooseTriplets, looseMB));
+    lstWarning(
+        std::format("[MEM] (transient) Triplets creation buffer: {} slots ({:.1f} MB)", nLooseTriplets, looseMB));
   }
 
   auto tripletsOccupancy = tripletsDC_->view().tripletsOccupancy();
@@ -764,10 +758,10 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   // Shrink pT5, pT3 (fixed caps, filled as a prefix) and T4 (counting-kernel size) to the produced objects.
   {
     if (objectsStatistics_)
-      memoryLiveMB_ -= (alpaka::getExtentProduct(pixelQuintupletsDC_->buffer()) +
-                        alpaka::getExtentProduct(pixelTripletsDC_->buffer()) +
-                        alpaka::getExtentProduct(quadrupletsDC_->buffer())) /
-                       1e6;
+      memoryLiveMB_ -=
+          (alpaka::getExtentProduct(pixelQuintupletsDC_->buffer()) +
+           alpaka::getExtentProduct(pixelTripletsDC_->buffer()) + alpaka::getExtentProduct(quadrupletsDC_->buffer())) /
+          1e6;
     const unsigned int nPT5 = *nPT5_buf_h.data();
     PixelQuintupletsDeviceCollection exactPT5(queue_, std::max(nPT5, 1u));
     alpaka::exec<Acc1D>(
