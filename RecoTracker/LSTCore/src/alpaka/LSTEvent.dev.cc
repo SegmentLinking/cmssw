@@ -17,6 +17,7 @@
 #include "Quadruplet.h"
 
 #include <format>
+#include <stdexcept>
 
 using Device = ALPAKA_ACCELERATOR_NAMESPACE::Device;
 using Queue = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
@@ -2187,8 +2188,7 @@ typename TSoA::ConstView LSTEvent::getInput(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
     return LSTInputViewAccessor<TSoA>::get(lstInputDC_->const_view());
   } else {
-    // In case getTrimmedInput was called first
-    if (!lstInputHC_ || lstInputHC_->size()[1] == 0) {
+    if (!lstInputHC_) {
       lstInputHC_.emplace(
           cms::alpakatools::CopyToHost<PortableDeviceCollection<TDev, LSTInputSoA>>::copyAsync(queue_, *lstInputDC_));
       if (sync)
@@ -2204,9 +2204,13 @@ template HitsITConst LSTEvent::getInput<HitsITSoA>(bool);
 template <typename TSoA, typename TDev>
 typename TSoA::ConstView LSTEvent::getHits(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
+    if (!hitsDC_ && !hitsHC_)
+      throw std::runtime_error("LSTEvent::getHits: hits released after the MD stage; call setKeepHostCopies(true)");
     return HitsViewAccessor<TSoA>::get(hitsDC_ ? hitsDC_->const_view() : hitsHC_->const_view());
   } else {
     if (!hitsHC_) {
+      if (!hitsDC_)
+        throw std::runtime_error("LSTEvent::getHits: hits released after the MD stage; call setKeepHostCopies(true)");
       hitsHC_.emplace(
           cms::alpakatools::CopyToHost<PortableDeviceCollection<TDev, HitsSoA>>::copyAsync(queue_, *hitsDC_));
       if (sync)
@@ -2255,9 +2259,15 @@ template MiniDoubletsOccupancyConst LSTEvent::getMiniDoublets<MiniDoubletsOccupa
 template <typename TDev>
 MiniDoubletsBuildConst LSTEvent::getMiniDoubletsBuild(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {
+    if (!miniDoubletsBuildDC_ && !miniDoubletsBuildHC_)
+      throw std::runtime_error(
+          "LSTEvent::getMiniDoubletsBuild: released after the LS stage; call setKeepHostCopies(true)");
     return miniDoubletsBuildDC_ ? miniDoubletsBuildDC_->const_view() : miniDoubletsBuildHC_->const_view();
   } else {
     if (!miniDoubletsBuildHC_) {
+      if (!miniDoubletsBuildDC_)
+        throw std::runtime_error(
+            "LSTEvent::getMiniDoubletsBuild: released after the LS stage; call setKeepHostCopies(true)");
       miniDoubletsBuildHC_.emplace(
           cms::alpakatools::CopyToHost<PortableDeviceCollection<TDev, MiniDoubletsBuildSoA>>::copyAsync(
               queue_, *miniDoubletsBuildDC_));
