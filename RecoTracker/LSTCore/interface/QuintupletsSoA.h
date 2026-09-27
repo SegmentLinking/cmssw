@@ -26,19 +26,15 @@ namespace lst {
                       SOA_COLUMN(float, regressionCenterX),
                       SOA_COLUMN(float, regressionCenterY),
                       SOA_COLUMN(float, dnnScore),
-                      SOA_COLUMN(FPX, innerRadius),   // inner triplet circle radius
-                      SOA_COLUMN(FPX, bridgeRadius),  // "middle"/bridge triplet radius
-                      SOA_COLUMN(FPX, outerRadius),   // outer triplet radius
-                      SOA_COLUMN(FPX, pt)
 #ifdef CUT_VALUE_DEBUG
-                          ,
+                      SOA_COLUMN(FPX, bridgeRadius),    // "middle"/bridge triplet radius
                       SOA_COLUMN(float, rzChiSquared),  // r-z only chi2
                       SOA_COLUMN(float, chiSquared),
                       SOA_COLUMN(float, nonAnchorChiSquared),
                       SOA_COLUMN(float, dBeta1),
-                      SOA_COLUMN(float, dBeta2)
+                      SOA_COLUMN(float, dBeta2),
 #endif
-  );
+                      SOA_COLUMN(FPX, innerRadius));  // inner triplet circle radius (outer: triplets.radius of T3 1)
 
   using QuintupletsSoA = QuintupletsSoALayout<>;
   using Quintuplets = QuintupletsSoA::View;
