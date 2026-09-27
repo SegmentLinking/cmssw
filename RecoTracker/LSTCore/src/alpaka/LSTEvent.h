@@ -62,6 +62,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int pixelSize_;
     uint16_t pixelModuleIndex_;
     unsigned int nCountOverflows_[3] = {0, 0, 0};
+    unsigned int nT5ListOverflows_ = 0;  // T5s kept but missing from their by-MD list
+    unsigned int nT5CapDrops_ = 0;       // T5s dropped at the fixed per-module cap kNQuintupletThreshold
 
     //Device stuff
     LSTInputDeviceCollection const* lstInputDC_;  // not owned

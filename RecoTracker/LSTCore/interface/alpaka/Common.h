@@ -19,6 +19,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
   }
 
+  ALPAKA_FN_HOST ALPAKA_FN_INLINE void lstInfo(std::string_view info) {
+#ifdef LST_STANDALONE
+    printf("%s\n", info.data());
+#else
+    edm::LogInfo("LST") << info;
+#endif
+  }
+
   // The constants below are usually used in functions like alpaka::math::min(),
   // expecting a reference (T const&) in the arguments. Hence,
   // HOST_DEVICE_CONSTANT needs to be used instead of constexpr.

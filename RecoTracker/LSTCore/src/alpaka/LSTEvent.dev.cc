@@ -998,13 +998,24 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   alpaka::memcpy(queue_,
                  cms::alpakatools::make_host_view(nCountOverflows_[2]),
                  cms::alpakatools::make_device_view(queue_, rangesView.nQuintupletOverflows()));
+  alpaka::memcpy(queue_,
+                 cms::alpakatools::make_host_view(nT5ListOverflows_),
+                 cms::alpakatools::make_device_view(queue_, rangesView.nQuintupletListOverflows()));
+  alpaka::memcpy(queue_,
+                 cms::alpakatools::make_host_view(nT5CapDrops_),
+                 cms::alpakatools::make_device_view(queue_, rangesView.nQuintupletCapDrops()));
   alpaka::wait(queue_);  // wait to get counts before allocation
   if (nCountOverflows_[0] + nCountOverflows_[1] + nCountOverflows_[2] > 0)
-    lstWarning(
-        std::format("Counting-kernel overflow, objects dropped or unlisted: {} segments, {} triplets, {} quintuplets",
-                    nCountOverflows_[0],
-                    nCountOverflows_[1],
-                    nCountOverflows_[2]));
+    lstWarning(std::format("Counting-kernel overflow, objects dropped: {} segments, {} triplets, {} quintuplets",
+                           nCountOverflows_[0],
+                           nCountOverflows_[1],
+                           nCountOverflows_[2]));
+  if (objectsStatistics_ && nT5ListOverflows_ > 0)
+    lstInfo(std::format("T5 by-MD list full: {} quintuplets kept but not listed for the by-MD duplicate search",
+                        nT5ListOverflows_));
+  if (objectsStatistics_ && nT5CapDrops_ > 0)
+    lstInfo(std::format("T5 per-module cap reached: {} quintuplets dropped (fixed cap, not a counting shortfall)",
+                        nT5CapDrops_));
   if (objectsStatistics_)
     lstWarning(std::format("[CNT] overflows: {} {} {}", nCountOverflows_[0], nCountOverflows_[1], nCountOverflows_[2]));
 
