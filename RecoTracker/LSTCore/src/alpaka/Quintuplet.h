@@ -2149,7 +2149,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ObjectRanges ranges,
                                   uint16_t nEligibleT5Modules,
                                   const float ptCut,
-                                  const uint32_t* dBetaPassMask) const {
+                                  const uint32_t* dBetaPassMask,
+                                  unsigned int const* __restrict__ t3ConnectedMax) const {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
 
@@ -2199,7 +2200,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         // Step 1: Make inner and outer triplet pairs
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           unsigned int innerTripletIndex = innerTripletOffset + innerTripletArrayIndex;
-          if (triplets.connectedMax()[innerTripletIndex] == 0)
+          if (t3ConnectedMax[innerTripletIndex] == 0)
             continue;
 
           uint16_t lowerModule3 = lmIdx[innerTripletIndex][2];
@@ -2339,7 +2340,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsRangesConst tripletsRangesByMD,
                                   ObjectRangesConst ranges,
                                   const float ptCut,
-                                  uint32_t* dBetaPassMask) const {
+                                  uint32_t* dBetaPassMask,
+                                  unsigned int* __restrict__ t3ConnectedMax) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -2397,7 +2399,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               if (outerIndex < kT5DBetaMaskBits)
                 alpaka::atomicOr(
                     acc, &dBetaPassMask[innerTripletIndex], uint32_t(1) << outerIndex, alpaka::hierarchy::Threads{});
-              alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+              alpaka::atomicAdd(acc, &t3ConnectedMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
               auto const ls0Index = segIdx[innerTripletIndex][0];
               auto const md0Index = mdIndices[ls0Index][0];
               alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
@@ -2446,7 +2448,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        t5Embed,
                                                        ptCut);
               if (ok) {
-                alpaka::atomicAdd(acc, &triplets.connectedMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                alpaka::atomicAdd(acc, &t3ConnectedMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
                 auto const ls0Index = segIdx[innerTripletIndex][0];
                 auto const md0Index = mdIndices[ls0Index][0];
                 alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Threads{});
@@ -2469,7 +2471,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ModulesConst modules,
                                   TripletsOccupancyConst tripletsOcc,
                                   ObjectRanges ranges,
-                                  TripletsConst triplets,
+                                  unsigned int const* __restrict__ t3ConnectedMax,
                                   MiniDoubletsT5CountsConst mdT5Counts,
                                   MiniDoubletsOccupancyConst mdsOcc,
                                   QuintupletsRanges quintupletsRangesByMD0,
@@ -2502,7 +2504,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int firstTripletIdx = ranges.tripletModuleIndices()[lowerModule];
         for (unsigned int t = 0; t < nInnerTriplets; ++t) {
           unsigned int tripletIndex = firstTripletIdx + t;
-          dynamic_count += triplets.connectedMax()[tripletIndex];
+          dynamic_count += t3ConnectedMax[tripletIndex];
         }
 
         if (dynamic_count == 0)
@@ -2547,8 +2549,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         if (nMDs == 0)
           continue;
 
-        setMDranges(lowerModule, nMDs, mdT5Counts.connectedT5s0Max().data(), quintupletsRangesByMD0, nTotalQuintuplets0x);
-        setMDranges(lowerModule, nMDs, mdT5Counts.connectedT5s1Max().data(), quintupletsRangesByMD1, nTotalQuintuplets1x);
+        setMDranges(
+            lowerModule, nMDs, mdT5Counts.connectedT5s0Max().data(), quintupletsRangesByMD0, nTotalQuintuplets0x);
+        setMDranges(
+            lowerModule, nMDs, mdT5Counts.connectedT5s1Max().data(), quintupletsRangesByMD1, nTotalQuintuplets1x);
       }
 
       // Wait for all threads to finish before reporting final values

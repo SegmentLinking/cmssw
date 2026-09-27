@@ -35,6 +35,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/EndcapGeometryDevDeviceCollection.h"
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -67,9 +68,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<ObjectRangesDeviceCollection> rangesDC_;
     std::optional<HitsDeviceCollection> hitsDC_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
-    std::optional<MiniDoubletsBuildDeviceCollection> miniDoubletsBuildDC_;  // MD -> LS stage only
-    std::optional<SegmentsT3CountsDeviceCollection> segmentsT3CountsDC_;          // T3 stage only
-    std::optional<MiniDoubletsT5BuildDeviceCollection> miniDoubletsT5BuildDC_;    // T5 stage only
+    std::optional<MiniDoubletsBuildDeviceCollection> miniDoubletsBuildDC_;      // MD -> LS stage only
+    std::optional<SegmentsT3CountsDeviceCollection> segmentsT3CountsDC_;        // T3 stage only
+    std::optional<MiniDoubletsT5BuildDeviceCollection> miniDoubletsT5BuildDC_;  // T5 stage only
     std::optional<SegmentsDeviceCollection> segmentsDC_;
     std::optional<PixelSegmentsDeviceCollection> pixelSegmentsDC_;
     std::optional<TripletsDeviceCollection> tripletsDC_;
@@ -107,6 +108,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     bool keepHostCopies_ = false;  // copy a device collection to host before it is released (standalone writer)
     double memoryAllocatedMB_ = 0;
     double memoryLiveMB_ = 0;
+
+    // pT5 and pT3 (fixed caps) and T4 (counting-kernel size) are shrunk to the produced objects at the first
+    // existing host sync after their stage: requestShrinkCounts() before that sync, shrinkRequested() after it.
+    enum class ShrinkState : uint8_t { kNone, kCreated, kRequested, kShrunk };
+    ShrinkState pT5Shrink_ = ShrinkState::kNone;
+    ShrinkState pT3Shrink_ = ShrinkState::kNone;
+    ShrinkState t4Shrink_ = ShrinkState::kNone;
+    uint16_t nEligibleT4Modules_ = 0;
+    std::optional<cms::alpakatools::host_buffer<unsigned int>> nPT5Host_;
+    std::optional<cms::alpakatools::host_buffer<unsigned int>> nPT3Host_;
+    std::optional<cms::alpakatools::host_buffer<int>> nT4Host_;
+    std::optional<cms::alpakatools::device_buffer<Device, int[]>> exactT4Indices_;
+    void requestShrinkCounts();
+    void shrinkRequested();
     double memoryPeakLiveMB_ = 0;
 
     void trackAllocatedMB(double mb);
