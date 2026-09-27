@@ -17,7 +17,6 @@ namespace lst {
                       SOA_COLUMN(float, anchorPhi),
                       SOA_COLUMN(float, anchorEta),
                       SOA_COLUMN(float, outerX),
-                      SOA_COLUMN(float, outerY),
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(float, outerRt),
                       SOA_COLUMN(float, outerPhi),
@@ -28,7 +27,7 @@ namespace lst {
                       SOA_COLUMN(float, noShiftedDphis),
                       SOA_COLUMN(float, noShiftedDphiChanges),
 #endif
-                      SOA_COLUMN(float, outerZ))
+                      SOA_COLUMN(float, outerY))
 
   // Build-only MD columns (MD creation -> segment creation), in their own collection released after the LS stage
   GENERATE_SOA_LAYOUT(MiniDoubletsBuildSoALayout,

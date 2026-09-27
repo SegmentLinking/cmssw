@@ -219,6 +219,7 @@ void LSTEvent::addPixelSegmentToEventFinalize() {
                       AddPixelSegmentToEventKernel{},
                       rangesDC_->const_view(),
                       lstInputDC_->const_view().hits(),
+                      lstInputDC_->const_view().hitsIT(),
                       lstInputDC_->const_view().pixelSeeds(),
                       miniDoubletsDC_->const_view().miniDoublets(),
                       segmentsDC_->view().segments(),
@@ -2104,6 +2105,7 @@ typename TSoA::ConstView LSTEvent::getInput(bool sync) {
 }
 template HitsBaseConst LSTEvent::getInput<HitsBaseSoA>(bool);
 template PixelSeedsConst LSTEvent::getInput<PixelSeedsSoA>(bool);
+template HitsITConst LSTEvent::getInput<HitsITSoA>(bool);
 
 template <typename TSoA, typename TDev>
 typename TSoA::ConstView LSTEvent::getHits(bool sync) {
