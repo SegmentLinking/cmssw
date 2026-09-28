@@ -112,7 +112,7 @@ namespace mkfit {
       vdt::fast_sincosf(outPar.constAt(n, 4, 0), sinP, cosP);
       const float invCos = p / std::abs(pt * cosP * plNrm.constAt(n, 0, 0) + pt * sinP * plNrm.constAt(n, 1, 0) +
                                         pz * plNrm.constAt(n, 2, 0));
-      radL = radL * invCos;  //fixme works only for barrel geom
+      radL = radL * invCos;  // general: invCos is p/|p.n| with n the module normal
       // multiple scattering
       //vary independently phi and theta by the rms of the planar multiple scattering angle
       // XXX-KMD radL < 0, see your fixme above! Repeating bailout

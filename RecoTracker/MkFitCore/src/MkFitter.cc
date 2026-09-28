@@ -161,8 +161,8 @@ namespace mkfit {
           std::cout << R2 << " R2 -- z " << z << " index " << local_m << " i/Nproc " << i << " / " << N_proc
                     << std::endl;
 #endif
-          int sign = L.is_barrel() > 0 ? 1 : -1;
-          r2z.push_back(std::make_pair(sign * R2, z));
+          // NB: the sort below uses R2 and z only -- barrel/endcap does not enter it.
+          r2z.push_back(std::make_pair(R2, z));
           indices.push_back(local_m);
           if (R2 < minR2) {
             minR2 = R2;
@@ -175,7 +175,7 @@ namespace mkfit {
       std::map<float, std::vector<int>> index_RorZ;
       std::vector<int> sorted_indices;
       for (int i = 0; i < (int)r2z.size(); i++) {
-        float r2 = r2z[i].first > 0 ? r2z[i].first : -r2z[i].first;
+        float r2 = r2z[i].first;
         float z = r2z[i].second - z_minR;
 #ifdef DEBUG_FIT
         std::cout << "SORTING by 3dR" << "R2 " << r2z[i].first << " z " << r2z[i].second << " z0 " << z_minR
@@ -425,9 +425,12 @@ namespace mkfit {
 
       for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
       {
-        auto indices = indices_R2Z[i];
-        std::reverse(indices.begin(), indices.end());
-        int index = indices[hitIndex[i] - 1];
+        // The backward pass walks the same sorted list outer->inner.  Index it from
+        // the back directly: reverse(v)[k-1] == v[v.size()-k].  Copying and reversing
+        // the vector for every hit of every track produced the same indices.
+        const auto &indices = indices_R2Z[i];
+        const int nidx = (int)indices.size();
+        int index = indices[nidx - hitIndex[i]];
 #ifdef DEBUG_FIT_BKW
         std::cout << "DEBUG hitIndex " << hitIndex[i] << std::endl;
         std::cout << "DEBUG i " << index << std::endl;
@@ -469,11 +472,11 @@ namespace mkfit {
           std::cout << "at the track " << i << " / " << N_proc << " check the material " << std::endl;
 
           std::cout << "at the hit " << index << " Don't remove the material" << std::endl;
-          if (hitIndex[i] < (int)indices.size())
+          if (hitIndex[i] < nidx)
             std::cout << "layers are " << m_HoTArr[i][index].layer << " and  "
-                      << m_HoTArr[i][indices[hitIndex[i]]].layer << std::endl;
+                      << m_HoTArr[i][indices[nidx - 1 - hitIndex[i]]].layer << std::endl;
 #endif
-          if (index == indices.back())
+          if (index == indices.front())  // the outermost hit
             no_mat_effs[i] = 1;
         }
         hitIndex[i]--;

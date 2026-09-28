@@ -493,6 +493,10 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     // Error is only rescaled for candidates propagated to first layer;
     // otherwise, candidates undergo backwardFit where error is already rescaled
 
+    // The backward refit leaves the state on the plane of the hit that reFitIndices
+    // ordered innermost (smallest R), so no propagation is needed here -- propagating
+    // would re-apply that module material a second time.  recHits was sorted above by
+    // 3D distance from the origin; for a track from the beam line the two agree.
     auto detH0 = recHits[0].det();
 
     if (detH0 == nullptr) {
