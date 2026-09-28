@@ -11,7 +11,7 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 - `run-ci`: (string or list) This is what indicates which workflows you want to run. The available options are:
   - `all`: Run all available workflows (excluding hlt).
   - `standalone`: Run the standalone tests.
-  - `cmssw`: Run the CMSSW 29834.1 workflow.
+  - `cmssw`: Run the CMSSW 34634.712 workflow.
   - `checks`: Run the SCRAM checks.
   - `hlt`: Run the HLT tests.
 
@@ -24,6 +24,10 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
   - `ci_devel`: Use the development branch of the CI. This is useful for testing things without affecting the main CI setup.
 
 - `release`: (string) Specify the CMSSW release version to use for the tests. If not specified, the latest Integration Build (IB) will be used. If specified, it will be used as reference instead of the master branch.
+
+- `sample`: (string) Sample to use for the CMSSW and HLT tests. It has no effect on the other workflows. The available options are:
+  - `ttbar`: Use the ttbar sample (100 events). This is the default.
+  - `qcd`: Use the QCD sample (50 events).
 
 - `packages`: (string or list) Package or list of extra packages to be added. By default, `RecoTracker/LSTCore` and `RecoTracker/LST` are added, along with packages that were changed in the PR. However, in cases where the master branch contains changes not reflected in the latest IB, it may be necessary to manually specify additional packages to ensure the tests run correctly.
 
@@ -44,6 +48,7 @@ run-ci: [standalone, cmssw, checks]
 required-prs: [223, 224]
 modifiers: [cpu, gpu, lowpt]
 release: CMSSW_16_1_0_pre1
+sample: qcd
 packages: [HeterogeneousCore/AlpakaInterface, DataFormats/Portable]
 procmodifiers:
   pr: [phase2CAExtension, singleIterPatatrack]
