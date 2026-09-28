@@ -25,8 +25,43 @@
 #include <vector>
 #include <unordered_map>
 #include <sstream>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 // #define DUMP_MKF_GEO
+
+namespace {
+  // Squared distance from the beam line to the closest point of segment a-b in x-y.
+  double minTransverseR2(const GlobalPoint &a, const GlobalPoint &b) {
+    const double ax = a.x(), ay = a.y();
+    const double dx = b.x() - ax, dy = b.y() - ay;
+    const double d2 = dx * dx + dy * dy;
+    const double t = d2 > 0 ? std::clamp(-(ax * dx + ay * dy) / d2, 0.0, 1.0) : 0.0;
+    const double px = ax + t * dx, py = ay + t * dy;
+    return px * px + py * py;
+  }
+
+  // Smallest distance from the beam line to a module box, given its 8 corners,
+  // gp[2 * i] and gp[2 * i + 1] being corner i of the two faces. The largest
+  // distance is always at a corner, the smallest in general is not: for a flat
+  // barrel module it is where the perpendicular from the beam line meets the
+  // module, for a disc module at the middle of its inner edge. That point lies on
+  // the outline of the box's x-y projection, which is made of projected box edges,
+  // so the minimum over the 12 edges is exact. Assumes the beam line does not pass
+  // through the module.
+  float minTransverseRadius(const GlobalPoint (&gp)[8]) {
+    double r2_min = std::numeric_limits<double>::max();
+    for (int i = 0; i < 4; ++i) {
+      const int j = (i + 1) % 4;
+      r2_min = std::min({r2_min,
+                         minTransverseR2(gp[2 * i], gp[2 * j]),
+                         minTransverseR2(gp[2 * i + 1], gp[2 * j + 1]),
+                         minTransverseR2(gp[2 * i], gp[2 * i + 1])});
+    }
+    return std::sqrt(r2_min);
+  }
+}  // namespace
 
 //------------------------------------------------------------------------------
 
@@ -297,21 +332,29 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
     (*lgc_map)[lay].reset_current();
   }
   float zbox_min = 1000, zbox_max = 0, rbox_min = 1000, rbox_max = 0;
+  GlobalPoint gp[8];
   for (int i = 0; i < 4; ++i) {
     Local3DPoint lp1(xy[i][0], xy[i][1], -dz);
     Local3DPoint lp2(xy[i][0], xy[i][1], dz);
-    GlobalPoint gp1 = det->surface().toGlobal(lp1);
-    GlobalPoint gp2 = det->surface().toGlobal(lp2);
-    considerPoint(gp1, layer_info);
-    considerPoint(gp2, layer_info);
-    findRZBox(gp1, rbox_min, rbox_max, zbox_min, zbox_max);
-    findRZBox(gp2, rbox_min, rbox_max, zbox_min, zbox_max);
+    gp[2 * i] = det->surface().toGlobal(lp1);
+    gp[2 * i + 1] = det->surface().toGlobal(lp2);
+  }
+  for (const GlobalPoint &g : gp) {
+    considerPoint(g, layer_info);
+    findRZBox(g, rbox_min, rbox_max, zbox_min, zbox_max);
     if (lgc_map) {
-      (*lgc_map)[lay].extend_current(gp1.perp2());
-      (*lgc_map)[lay].extend_current(gp2.perp2());
+      (*lgc_map)[lay].extend_current(g.perp2());
     }
   }
+  // The corners give the largest radius and the z extent, but not the smallest
+  // radius, see minTransverseRadius(). Layer radii are kept squared until produce()
+  // takes the root.
+  const float r_min = minTransverseRadius(gp);
+  if (r_min * r_min < layer_info.rin())
+    layer_info.set_limits(r_min * r_min, layer_info.rout(), layer_info.zmin(), layer_info.zmax());
+  rbox_min = std::min(rbox_min, r_min);
   if (lgc_map) {
+    (*lgc_map)[lay].extend_current(r_min * r_min);
     (*lgc_map)[lay].add_current();
   }
 
