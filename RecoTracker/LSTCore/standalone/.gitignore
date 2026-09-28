@@ -43,3 +43,4 @@ movetoweb.sh
 performance/
 notebooks/
 *.npz
+*.pkl

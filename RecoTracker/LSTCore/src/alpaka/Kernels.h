@@ -737,6 +737,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float dEtaCut_ = 0.2f;
     float dPhiCut_ = 0.2f;
     int nMatchedCut_ = 7;
+    // Ranking: 0 = master (lower score wins); 1 = more layers wins, then lower score.
+    int keyMode_ = 0;
     ALPAKA_FN_ACC void operator()(Acc2D const& acc, PixelQuintuplets pixelQuintuplets) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
@@ -759,7 +761,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           float score2 = __H2F(pixelQuintuplets.score()[jx]);
           const int minNHitsForDup_pT5 = nMatchedCut_;
           if (nMatched >= minNHitsForDup_pT5) {
-            if (score1 > score2 or ((score1 == score2) and (ix > jx))) {
+            unsigned int nLayers1 = pixelQuintuplets.nLayers()[ix];
+            unsigned int nLayers2 = pixelQuintuplets.nLayers()[jx];
+            bool ixLoses = (keyMode_ == 1 && nLayers1 != nLayers2)
+                               ? nLayers1 < nLayers2
+                               : (score1 > score2 or ((score1 == score2) and (ix > jx)));
+            if (ixLoses) {
               rmPixelQuintupletFromMemory(pixelQuintuplets, ix);
               break;
             }
@@ -769,7 +776,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // partOfPT5 is set on a pT5's T5, T3s and pLS when the pT5 is built and was never cleared when pT5 dedup kills it.
+  // Launched twice after RemoveDupPixelQuintupletsFromMap: set_ = false clears the flags of dead pT5s, then
+  // set_ = true sets them again for surviving pT5s (objects shared with a surviving pT5 stay flagged).
+  struct ResetPartOfPT5 {
+    bool set_ = false;
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  uint16_t nLowerModules,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  Quintuplets quintuplets,
+                                  Triplets triplets,
+                                  PixelSegments pixelSegments,
+                                  ObjectRangesConst ranges) const {
+      unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
+      unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nPixelQuintuplets)) {
+        if (pixelQuintuplets.isDup()[i] == set_)
+          continue;
+        unsigned int t5 = pixelQuintuplets.quintupletIndices()[i];
+        quintuplets.partOfPT5()[t5] = set_;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][0]] = set_;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][1]] = set_;
+        pixelSegments.partOfPT5()[pixelQuintuplets.pixelSegmentIndices()[i] - pLS_offset] = set_;
+      }
+    }
+  };
+
   struct CheckHitspLS {
+    // true = count each shared pixel hit once (triplet pLS repeat their last hit in slot 3,
+    // which otherwise lets 2 distinct shared hits reach the 3-hit threshold). false = master.
+    bool distinctHits_ = false;
+
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
                                   SegmentsOccupancyConst segmentsOccupancy,
@@ -819,6 +856,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           int npMatched = 0;
           for (int i = 0; i < Params_pLS::kHits; i++) {
+            if (distinctHits_) {
+              bool repeated = false;
+              for (int k = 0; k < i; k++)
+                repeated |= (phits1[k] == phits1[i]);
+              if (repeated)
+                continue;
+            }
             bool pmatched = false;
             for (int j = 0; j < Params_pLS::kHits; j++) {
               if (phits1[i] == phits2[j]) {

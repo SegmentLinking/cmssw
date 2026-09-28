@@ -1,3 +1,173 @@
+# LST-Internal Stage Scan on the Rebased Code (4 agents) — Handoff (Session 47, 2026-09-25)
+
+Four read-only agents (no source edits, builds or LST runs) scanned the current code (HEAD `e49be6e473d`) on `Ntuple-files/LSTNtuple_s45_rebased_100evt.root` (core ΔR<0.02: 1226 tracks, 316 failures, eff 0.742). Outputs are in `efficiency/python/s47_stage_scan/{early_md_ls,early_pixel,late_build,late_tc}/SUMMARY.txt`. **All gains are offline estimates per 100 evt (core /1226), not yet validated by LST runs.** Noise: ±~5 core tracks per 1000 evt.
+
+**Candidate fixes, ranked** (S47 numbering, which avoids a clash with S44 Fixes A–D):
+
+| # | Fix | Where | Est. core gain | Fakes | Confidence |
+|---|---|---|---|---|---|
+| S47-1 | **Demote wrong-pLS pT5 → T5 TC**: in AddpT5asTrackCandidate, if pT5 score (rPhiχ²) > X, write the pT5's T5 as a T5 TC and keep the pLS dead | TrackCandidate.h:638-687 (T5 path :583-596) | **+65 (+5.3 pp)** at X=50 (train +35 / test +30); X=100 +56, X=200 +46; oracle ceiling +74 | **−178 TCs (−8.8%)**; core fakes 584→342 | medium-high |
+| S47-2 | Relax/scale CrossCleanpLS pLS–T5 embedding cut (`dnn::plsembdnn::kWP`) | TrackCandidate.h:302-331 | +13 (+1.1 pp) with the cut off | ~flat; dup 0.0246→0.028 | medium-high |
+| S47-3 | Clear stale `partOfPT5` after pT5 dedup (also T3/pLS for pT3 building) | after Kernels.h:762 / LSTEvent.dev.cc:1248 | **+8** (late_tc, after re-running CrossCleanT5/BeforeTC; late_build's +14–18 skipped that) | +20 | medium |
+| S47-4 | pT5 dedup rank = nLayers, then score | Kernels.h:760 | +8 (train +3 / test +5) | −26 | low-medium |
+| S47-5 | New T5 DNN density penalty: clamp density inputs / shift WP at high density | Quintuplet.h:1538-1540, 1669-1689 | ≤10–12 (upper bound) | real risk | needs a `-d` rejected-pair instrumentation first |
+| — | Combined S47-1 (X=50) + S47-3 + S47-4 (model) | | **+81 (+6.6 pp)**; ΔR<0.1 +90 | −182 | first-order model |
+
+Key mechanism for S47-1: above 5 GeV the pT5 χ² cuts are skipped (PixelQuintuplet.h:612/645/658), so in jet cores a genuine T5 is often paired with a foreign pLS. In 84/98 fake-killer pairs the genuine pT5 has a ≥1.5× worse score. 74 failing core sims have their genuine T5 inside an alive pT5 with a wrong pLS, and ~67 near-miss TCs are pT5s with 0/4 correct pixel hits on a 10–12/12 genuine OT part. Upstream alternative: apply the rPhiχ² cut above 5 GeV in the pT5 builder (would also free the pLS). Caveat for S47-1: 642 correctly matched pT5 TCs would lose their pixel hits, so check pT/dxy resolution.
+
+**Established negatives:**
+- MD/LS/T3 are not a lever (core = non-core survival; no cap or early exit bites).
+- No-genuine-pLS (119) has ~0 LST-internal fixes: the see_algo filter mirrors CMSSW's `LSTInputProducer.cc:73-74` input, so pixelPair seeds need a CMSSW input change; the pixelPair ceiling is 2.3 pp.
+- **Drop Fix A** (−412 core per 1000 evt; foreign pT5s absorb T5s that PR277 made TC-eligible).
+- Fix B stays off (+0.15–0.26 pp, −0.3 pp at pT>100).
+- CrossCleanT4 threshold not worth it (T4 TCs 59% fake).
+- Standalone builds T4 before pT5/pT3 while CMSSW builds it after, so standalone T4 numbers don't transfer.
+
+**Bookkeeping bug (no physics):** CrossCleanpLS also writes `pLS_isDup` bit0 (TrackCandidate.h:334-366), so ~32 of `s46_core_funnel.py`'s 65 "pLS_flagged" are really CrossCleanpLS removals (the S46 funnel table below overstates Fix B's reach). Proposed: CrossCleanpLS sets `|= 4`.
+
+**Implemented and run (uncommitted, all default-off):**
+- `LST_PT5_DEMOTE_SCORE=X`: `AddpT5asTrackCandidate` writes a pT5 with score > X as a T5 TC and marks its pLS `isDup |= 8`.
+- `LST_PLS_T5EMBED_SCALE=s`: `CrossCleanpLS` multiplies the embedding WP by s.
+- `CrossCleanT4` treats a T5 TC whose T5 is `partOfPT5` (only possible for a demoted pT5) with the pT5 rule (≥2 shared hits). Without this, demotion let ~5.4k fake T4 TCs per 1000 evt survive (fake 0.141 → 0.164).
+
+Runner: `efficiency/run_s47_fixes.sh`. 1000 evt; the base mean over s46_base, rep1, rep2 and s47_base is 8381.5 core.
+
+| Run | core ΔR<0.02 | core pT>100 | ΔR<0.10 | all | n_TC | fake | dup |
+|---|---|---|---|---|---|---|---|
+| base mean | 0.7595 | 0.643 | 0.841 | 0.872 | 141.9k | 0.141 | 0.0245 |
+| **demote50_t4fix** | **0.7921 (+3.3 pp)** | **0.689 (+4.6)** | 0.857 | 0.882 | 141.8k | **0.132** | 0.0248 |
+| demote100_t4fix | 0.7893 (+3.0) | 0.687 (+4.4) | 0.855 | 0.881 | 141.9k | 0.134 | 0.0247 |
+| demote50 (no T4 fix) | 0.7936 | 0.692 | 0.857 | 0.883 | 147.3k | 0.164 | 0.0239 |
+| embed0 | 0.7699 (+1.0) | 0.651 | 0.855 | 0.883 | 142.9k | 0.140 | 0.0300 |
+| embed05 | 0.7651 (+0.5) | 0.649 | 0.850 | 0.880 | 142.7k | 0.141 | 0.0283 |
+
+Plots (S44 base / S45 newDNN / S47 demote50_t4fix): `performance/s44base_s45newDNN_s47demote50_1000evt_7c9ddeD-trackingNtuple-1000.root_e49be6-trackingNtuple-1000.root_e49be6D-trackingNtuple-1000.root/mtv/var/`.
+
+Swapped-color version (S45 green, S47 red): same path with `_swapcolors` after `_1000evt`.
+
+**S47-3 and S47-4 implemented and run (2026-09-25/26, uncommitted, default-off):**
+- `LST_PT5_UNSTALE=1` (S47-3): new `ResetPartOfPT5` kernel in Kernels.h, launched twice right after `RemoveDupPixelQuintupletsFromMap` in `createPixelQuintuplets`. The first launch clears `partOfPT5` on the T5, both T3s and the pLS of each dead pT5; the second sets it again for surviving pT5s. It runs before the pT3 builder in both standalone and CMSSW.
+- `LST_PT5_DEDUP_KEY=1` (S47-4): `RemoveDupPixelQuintupletsFromMap::keyMode_`; more `nLayers` wins, then lower score.
+
+| Run (1000 evt; base mean core 8381.5, pT>100 2607.5) | core ΔR<0.02 | Δ core | core pT>100 | ΔR<0.10 | all | fake | dup |
+|---|---|---|---|---|---|---|---|
+| unstale | 0.7730 | +149 (+1.35 pp) | 0.664 (+2.2) | 0.848 | 0.877 | 0.142 | 0.0248 |
+| dedupkey1 | 0.7610 | +16 (+0.14 pp, ≈ noise) | 0.646 | 0.843 | 0.874 | 0.140 | 0.0247 |
+| demote50_t4fix | 0.7921 | +360 (+3.3 pp) | 0.689 (+4.6) | 0.857 | 0.882 | 0.132 | 0.0248 |
+| **demote50 + unstale** | **0.8051** | **+503 (+4.55 pp)** | **0.708 (+6.5)** | 0.864 | 0.887 | **0.134** | 0.0250 |
+| demote50 + unstale + key1 | 0.8065 | +519 (+4.7 pp) | 0.709 (+6.6) | 0.865 | 0.888 | 0.133 | 0.0251 |
+
+- Unstale gave about 2× the offline estimate (+149 vs ~+80 per 1000 evt).
+- Demotion and unstale add almost exactly (360 + 149 ≈ 503).
+- key1 adds only +16, barely above noise; it can be dropped.
+- Best practical combination: **`LST_PT5_DEMOTE_SCORE=50 LST_PT5_UNSTALE=1`**, which gives core eff 0.759 → 0.805 with the fake rate down 0.7 pp.
+
+**Resolution of demoted TCs** (`efficiency/python/s47_demote_resolution.py`, outputs `s47_demote_resolution_dr{inf,0.02}.txt`; same sim tracks, base vs demote50_t4fix; unchanged controls reproduce exactly):
+- pT improves or is unchanged: σ(ΔpT/pT) goes 0.17 → 0.11 at 10–100 GeV (a +4% bias removed) and 0.40 → 0.37 above 100 GeV.
+- φ is unchanged.
+- **η degrades to T5 precision**: σ 0.0003 → ~0.05.
+- **dxy/dz cannot be checked** (no TC impact-parameter branches). Demoted TCs carry no pixel hits, so in CMSSW their impact parameters would be poor unless pixel hits are re-added downstream. **This must be checked (CMSSW workflow / MTV, or a refit) before demotion is adopted.**
+
+**Still to do:**
+- Evaluate demote50 + unstale in CMSSW (`runTheMatrix.py ... 24834.704` + MTV) for dxy/dz resolution. Alternatively, try a variant that keeps the pT5 but swaps in a better-matching pLS.
+- Plots for demote50 + unstale vs S44 base / S45 newDNN (not yet made).
+- Decide on embed0 (+1 pp core for +0.55 pp duplicate rate).
+- Optional: commit the S46/S47 switches (all default-off) so they survive the next rebase. Nothing from S46/S47 is committed. Files changed: Kernels.h, LSTEvent.dev.cc, TrackCandidate.h.
+
+---
+
+# Fix A/B Re-ported onto the Rebased Code + Determinism Check — Handoff (Session 46, 2026-09-25)
+
+## TL;DR
+
+Fix B and Fix A's host wiring were re-ported as default-off env switches (uncommitted edits to `Kernels.h` and `LSTEvent.dev.cc`; CUDA rebuilt). At 1000 evt, **Fix A now HURTS** (−3.7 pp core, −7.5 pp core pT>100) and **Fix B is at most +0.3 pp**, only just above run-to-run GPU noise. **LST CUDA runs are not bit-reproducible**: three identical `s46_base` runs gave 8385/8378/8374 core tracks (±~5, ≈0.1 pp). Neither fix should be turned on as is.
+
+| 1000 evt (core den 11035, pT>100 den 4056) | core num | eff ΔR<0.02 | pT>100 | all | n_TC | fake | dup |
+|---|---|---|---|---|---|---|---|
+| s45_rebased (binary built Sep 24 15:21) | 8367 | 0.7582 | 0.6410 | 0.8721 | 141,900 | 0.1409 | 0.0245 |
+| s46_base / rep1 / rep2 (same binary, no env) | 8385 / 8378 / 8374 | 0.759–0.760 | 0.642–0.644 | 0.872 | ~141,910 | 0.1410 | 0.0245 |
+| s46_fixB `LST_PLS_DISTINCT_HITS=1` | 8408 | 0.7619 | 0.6403 | 0.8736 | 141,648 | 0.1388 | 0.0254 |
+| s46_fixA `LST_PT5_HIGHPT_GATE=1` | 7973 | **0.7225** | **0.5690** | 0.8609 | 140,300 | 0.1378 | 0.0233 |
+| s46_fixAB | 8051 | 0.7296 | 0.5750 | 0.8635 | 140,152 | 0.1357 | 0.0242 |
+
+Runner: `efficiency/run_s46_fixes.sh` (resumable, results in `efficiency/s44_fixes_log.txt`).
+
+**Core-failure funnel** (`efficiency/python/s46_core_funnel.py <ntuple> [label] [dR]`, --allobj ntuple, 100 evt, ΔR<0.02, failures / 1226; it reproduces the S44 buckets exactly on `LSTNtuple_s44_base_100evt.root`):
+
+| Bucket | S44 base | S44 fixABCD | S45 rebased |
+|---|---|---|---|
+| genuine pT5 survives dedup, no TC | 26 | 0 | 0 |
+| all genuine pT5 dedup-killed | 109 | 176 | 65 |
+| genuine unflagged pLS + T5, no pT5 (pairing) | 78 | 22 | 25 |
+| genuine unflagged pLS, no genuine T5 | 34 | 39 | 42 |
+| all genuine pLS flagged by CheckHitspLS | 93 | 40 | 65 |
+| no genuine pLS | 230 | 170 | 119 |
+
+The funnel predicted up to ~65 tracks for Fix B, but only ~+30 appeared at 1000 evt (≈+3 at 100-evt scale), so freed pLS mostly fail downstream. Fix A was only aimed at the 25-track pairing bucket, but it cost ~400 tracks at 1000 evt; the likely cause is that the extra high-pT pT5s it admits win pT5 dedup against genuine ones (not verified).
+
+**Plots** (default LST style, `lst_plot_performance.py --compare -j`, eff / fakerate / duplrate vs ΔR):
+- S44 base vs S44 A+B+C+D, 1000 evt: `performance/s44_1000evt_base_vs_ABCD_7c9ddeD-trackingNtuple-1000.root_7c9ddeD-trackingNtuple-1000.root/mtv/`
+- S44 base vs S45 newDNN vs S46 fixAB, 1000 evt: `performance/s44base_s45newDNN_s46fixAB_1000evt_7c9ddeD-trackingNtuple-1000.root_e49be6-trackingNtuple-1000.root_e49be6D-trackingNtuple-1000.root/mtv/`
+  (`var/TC_base_0_0_eff_deltaR.png`, `var/TC_fakerate_deltaR.png`, `var/TC_duplrate_deltaRzoom.png`)
+
+**Correction to Session 45 below:** "PR277" is just the two DNN commits (branch `pr-277`: `e1270bc27d7` T5 DNN, `0b9d3bf0d5e` T4 DNN; cherry-picked here as `771ce681fad`, `2865f1c7aaa`, and fixed up by `34837ac17e3` and `e49be6e473d`). The same rebase also brought in ~10 master LST commits (`cc53146c65a` ExtendT5FromDupT5ByMD, `018a7974f5b` T5 TC assembly, `b07f513662f`, `9c3790817bc`, `617888b1d5c`, `67c0a3d11b9`, …). **The S44→S45 gain (+20 pp core) is therefore master updates + PR277 combined; no run separates them.** To separate them, build and run `78895a59165` (rebased master, pre-PR277).
+
+## Next steps (proposed, none launched)
+1. Diagnose Fix A: a 100-evt `--allobj` run with `LST_PT5_HIGHPT_GATE=1`, then find which pT5s it adds and what they kill in dedup.
+2. Optional: a master-without-PR277 build (`78895a59165`) at 1000 evt to split the S45 gain.
+3. Fix C needs a new ranking key built from the 3-class T5 DNN; the dedup-killed bucket (65) is now the largest LST-internal lever along with CheckHitspLS (65).
+
+---
+
+# Rebased Code (New T4/T5 DNN + PR277) at 1000 Events — Handoff (Session 45, 2026-09-24 → 2026-09-25)
+
+## TL;DR
+
+`claude-edits` was rebased onto the new T5 DNN (`771ce681fad`), the new T4 DNN (`2865f1c7aaa`) and a cherry-pick of PR277 (`34837ac17e3`, `e49be6e473d`). *(Corrected in S46: 771ce/2865f ARE PR277; 34837/e49be are fix-ups. The rebase also included master LST updates.)* HEAD is now **`e49be6e473d`**. With **no env switches**, it beats S44's best run (fixABCD) everywhere except the duplicate rate. The 1000-event run is complete and valid: 1000/1000 entries, not a zombie, no `Recover` needed.
+
+| Metric (1000 evt, real pLS, `--jet`, `-s 4`) | S44 base | S44 fixABCD | **S45 rebased** |
+|---|---|---|---|
+| eff ΔR<0.02 (den 11035) | 0.558 | 0.641 | **0.758** |
+| eff ΔR<0.05 | 0.659 | 0.724 | **0.812** |
+| eff ΔR<0.10 | 0.716 | 0.769 | **0.841** |
+| eff ΔR<0.02, pT>100 (den 4056) | 0.303 | 0.410 | **0.641** |
+| eff all (den 44726) | 0.787 | 0.823 | **0.872** |
+| fake rate | 0.181 | 0.191 | **0.141** |
+| dup rate | 0.019 | 0.020 | 0.0245 |
+| n_TC | 127,091 | 131,476 | 141,900 |
+
+The 100-event S45 run gave ΔR<0.02 = 0.742, consistent with the 1000-event result. `lst_cuda` wall time was about 150 s for 1000 events, against about 4 h per S44 run. S44 shared GPU 0 with another user's training job, and the new DNN applies cuts at creation; these two effects have not been separated.
+
+## Files / plots
+
+- Runner: `efficiency/run_s45_1000.sh` (untracked). Results line in `efficiency/s44_fixes_log.txt`; run log `efficiency/.s44_runlogs/s45_rebased_1000evt.log`.
+- `Ntuple-files/LSTNtuple_s45_rebased_{100,1000}evt.root`, `NumDen-files/LSTNumDen_s45_rebased_{100,1000}evt.root` (`-J`).
+- 3-way comparison plots (S44 base / S44 fixABCD / S45 new DNN):
+  - 1000 evt: `performance/s45_1000evt_base_ABCD_newDNN_7c9ddeD-trackingNtuple-1000.root_7c9ddeD-trackingNtuple-1000.root_e49be6-trackingNtuple-1000.root/` (ΔR plot: `mtv/var/TC_base_0_0_eff_deltaR.png`)
+  - 100 evt: `performance/s45_base_ABCD_newDNN_7c9ddeD-trackingNtuple-100.root_7c9ddeD-trackingNtuple-100.root_2865f1D-trackingNtuple-100.root/`
+  - To make these plots: `python3 $(which lst_plot_performance.py) <3 NumDen files> -L S44_base,S44_fixABCD,S45_newDNN -t <tag> --compare -j`. Call it through `python3`, because the `#!/bin/env python` shebang picks up `/usr/bin/python` after cmsenv and crashes with "No module named 'encodings'".
+
+## ⚠️ SOURCE TREE STATE — the S44 Fix A–D switches did NOT survive the rebase
+
+The S44 source changes survive in full only on branch **`claude-edits-backup`**, commit **`7a424adcef4`**. In the rebased copy (`e929013b438`), only the edits to `PixelQuintuplet.h` and `PixelTriplet.h` and the `pLS_isDup` branch in `write_lst_ntuple.cc` were kept. The `Kernels.h` and `LSTEvent.dev.cc` hunks were dropped. At HEAD:
+
+| Switch | Status at HEAD |
+|---|---|
+| A `LST_PT5_HIGHPT_GATE` | The kernel code is present (`PixelQuintuplet.h:490-534`, members `:677-679`, `PixelTriplet.h` `skipCurvatureCuts`), but nothing sets `highPtGate_` from the environment, so the gate is always OFF (dead code). |
+| B `LST_PLS_DISTINCT_HITS` | Gone. `CheckHitspLS{}` is launched with no arguments (`LSTEvent.dev.cc:638,1112`). |
+| C `LST_PT5_SCORE_MODE` | Gone. `RemoveDupPixelQuintupletsFromMap{pt5DEtaCut, pt5DPhiCut, pt5NMatchedCut}` (`LSTEvent.dev.cc:1243`) has no K5 rank key. The new T5 DNN also changed the T5 score semantics (3-class; `score_rphisum` removed), so K5 must be redefined, not just re-ported. |
+| D `LST_EXTEND_DUPT5` | Doesn't map. Master commit `cc53146c65a` (not PR277; corrected S46) replaced the TC-level `ExtendTrackCandidatesFromDupT5` with T5-level `ExtendT5FromDupT5ByMD` (`Kernels.h:274`). The S44 dilution mechanism (11/14 → 11/15) must be re-checked before deciding whether a switch is still needed. |
+
+HEAD's pT5 physics is therefore plain master + new DNNs + PR277 + S42 runtime-tunable dedup cuts (defaults).
+
+## Next steps (proposed, none launched)
+
+1. Decide whether to port B (small, verified bug: triplet 3rd-hit double-count) and A (needs only host wiring: read env in `LSTEvent.dev.cc` and set `highPtGate_/highPtMinPt_/highPtMaxRes_` on the `CreatePixelQuintupletsFromMap` functor) from `7a424adcef4`. Port C only after re-deriving a ranking from the new T5 DNN outputs; re-evaluate D against `ExtendT5FromDupT5ByMD`.
+2. Rerun the S44 late-stage attribution (`efficiency/python/s44_stage_scan/late_build`, `late_tc`) on `LSTNtuple_s45_rebased_100evt.root` to see which S44 loss buckets remain after the new DNN. The S44 numbers (e.g. the 61 CheckHitspLS tracks, 82 fake-winner tracks) are from pre-rebase code.
+3. Then a 1000-event fixAB(+C) run on the rebased code (~3 min now) vs `s45_rebased`.
+
+---
+
 # Jet-Core Efficiency: LST-Internal Stage Scan (4 agents) — Handoff (Session 44, 2026-09-22)
 
 ## TL;DR
