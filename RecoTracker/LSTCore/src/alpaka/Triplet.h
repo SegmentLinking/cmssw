@@ -374,6 +374,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return false;
   }
 
+  // A triplet admitted only by the widened bound is flagged and used only in quintuplets.
+  constexpr float kT3PointingWiden = 1.7f;
+
+  // The exact pointing decision of passPointingConstraint for sin(betaIn)^2 * r^2 = sinBetaInSq (in units of r2).
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int pointingDecisionExact(
+      TAcc const& acc, float sinSlope, float resCut, float sinBetaInSq, float r2) {
+    const float betaInCut = alpaka::math::asin(acc, sinSlope) + resCut;
+    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
+    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
+    const float sinWideCut = alpaka::math::sin(acc, kT3PointingWiden * betaInCut);
+    const float sinWideCutSq = sinWideCut * sinWideCut;
+    if (sinBetaInSq >= sinWideCutSq * r2)
+      return 0;
+    return (sinBetaInSq < sinBetaInCutSq * r2) ? 1 : 2;
+  }
+
   // Returns 0 if the pointing constraint fails, 1 if it passes, 2 if it passes only the widened bound.
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int passPointingConstraint(
@@ -419,25 +436,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (not cosPositive)
       return 0;
 
-    // A triplet admitted only by the widened bound is flagged and used only in quintuplets.
-    constexpr float kT3PointingWiden = 1.7f;
     const float sinSlope =
         alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax);
     const float resCut = 0.02f / innerSegData.drt_InSeg;
     // For s, c >= 0 and w = 1.7 (s + c) < 1: 0 <= sin(1.7 (asin(s) + c)) <= w, so this rejects only what the wide cut
     // below rejects (1e-4 margin for rounding) without the asin and the two sin.
     const float wideBound = kT3PointingWiden * (sinSlope + resCut);
-    if (sinSlope >= 0.f and resCut >= 0.f and wideBound < 1.f and sinBetaInSq >= wideBound * wideBound * r2 * 1.0001f)
+    if (sinSlope >= 0.f and resCut >= 0.f and wideBound < 1.f and sinBetaInSq >= wideBound * wideBound * r2 * 1.0001f) {
+      LST_CHECK_FAST_DECISION("T3 pointing reject", 0, pointingDecisionExact(acc, sinSlope, resCut, sinBetaInSq, r2));
       return 0;
+    }
+    // Same for the pass decisions: for x = asin(s) + c <= u = pi/2 s + c (maxBetaInCut) and 1.7 u <= pi/2, sin(x) is in
+    // [s + c (1 - u^2 / 2), s + c] and sin(1.7 x) >= max(sin(x), 1.7 (s + c) - (1.7 u)^3 / 6) (margins for rounding).
+    const float maxBetaInCut = 1.5708f * sinSlope + resCut;
+    if (sinSlope >= 0.f and resCut >= 0.f and kT3PointingWiden * maxBetaInCut <= 1.57f) {
+      const float tightLow = (sinSlope + resCut * (1.f - 0.5f * maxBetaInCut * maxBetaInCut)) * 0.9999f - 1e-6f;
+      if (tightLow > 0.f and sinBetaInSq < tightLow * tightLow * r2) {
+        LST_CHECK_FAST_DECISION("T3 pointing pass", 1, pointingDecisionExact(acc, sinSlope, resCut, sinBetaInSq, r2));
+        return 1;
+      }
+      const float tightHigh = (sinSlope + resCut) * 1.0001f + 1e-6f;
+      const float maxWideCut = kT3PointingWiden * maxBetaInCut;
+      const float wideLow = (wideBound - maxWideCut * maxWideCut * maxWideCut / 6.f) * 0.9999f - 1e-6f;
+      if (wideLow > 0.f and sinBetaInSq >= tightHigh * tightHigh * r2 and sinBetaInSq < wideLow * wideLow * r2) {
+        LST_CHECK_FAST_DECISION(
+            "T3 pointing wide pass", 2, pointingDecisionExact(acc, sinSlope, resCut, sinBetaInSq, r2));
+        return 2;
+      }
+    }
 
-    const float betaInCut = alpaka::math::asin(acc, sinSlope) + resCut;
-    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
-    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
-    const float sinWideCut = alpaka::math::sin(acc, kT3PointingWiden * betaInCut);
-    const float sinWideCutSq = sinWideCut * sinWideCut;
-    if (sinBetaInSq >= sinWideCutSq * r2)
-      return 0;
-    return (sinBetaInSq < sinBetaInCutSq * r2) ? 1 : 2;
+    return pointingDecisionExact(acc, sinSlope, resCut, sinBetaInSq, r2);
   }
 
   // The r-z cut of runTripletConstraintsAndAlgo (loosened by cutScale > 1 for the counting kernel).
