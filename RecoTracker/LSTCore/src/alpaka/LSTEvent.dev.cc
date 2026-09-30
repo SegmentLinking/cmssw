@@ -245,7 +245,8 @@ void LSTEvent::createMiniDoublets() {
         cms::alpakatools::make_device_view(queue_, rangesOccupancy.miniDoubletModuleOccupancy()[pixelModuleIndex_]);
     alpaka::memcpy(queue_, dst_view_miniDoubletModuleOccupancyPix, pixelMaxMDs_buf_h);
 
-    constexpr int threadsPerBlockY = 16;
+    // 256 threads per block, as CreateMiniDoublets: up to 128 registers per thread with the CMSSW nvcc flags.
+    constexpr int threadsPerBlockY = 8;
     auto const countMiniDoublets_workDiv =
         cms::alpakatools::make_workdiv<Acc2D>({nLowerModules_ / threadsPerBlockY, 1}, {threadsPerBlockY, 32});
 
@@ -312,7 +313,9 @@ void LSTEvent::createMiniDoublets() {
 
   alpaka::wait(queue_);  // FIXME: remove synch after inputs refactored to be in pinned memory
 
-  constexpr int threadsPerBlockY = 16;
+  // 256 threads per block: with the CMSSW nvcc flags (no fast-math) this kernel needs up to 176 registers per thread,
+  // so 512-thread blocks exceed the register file and fail to launch.
+  constexpr int threadsPerBlockY = 8;
   auto const createMiniDoublets_workDiv =
       cms::alpakatools::make_workdiv<Acc2D>({nLowerModules_ / threadsPerBlockY, 1}, {threadsPerBlockY, 32});
 
@@ -1628,6 +1631,11 @@ void LSTEvent::createQuintuplets() {
   // Second dBeta cut decisions per last outer segment (see passQuintupletDBeta2Memo); valid for both counting runs.
   auto dBeta2Memo_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalSegmentsOT_);
   alpaka::memset(queue_, dBeta2Memo_buf, 0xFF);
+  // The selection synchronizes the threads of a row, so on the GPU a block is one row.
+  auto select_workDiv = countConn_workDiv;
+  if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<Acc3D>)
+    select_workDiv =
+        cms::alpakatools::make_workdiv<Acc3D>({1, std::clamp(nTripletSlots, 1u, 65535u), 1}, {1, 1, kT5KeysPerChunk});
   auto countQuintuplets = [&](unsigned int capacity) {
     auto selectedT3s_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 2 * capacity);
     auto selectedBridgeRadius_buf = cms::alpakatools::make_device_buffer<float[]>(queue_, capacity);
@@ -1640,7 +1648,7 @@ void LSTEvent::createQuintuplets() {
     alpaka::memset(queue_, moduleT5Count_buf, 0u);
     alpaka::memset(queue_, nSelected_d, 0u);
     alpaka::exec<Acc3D>(queue_,
-                        countConn_workDiv,
+                        select_workDiv,
                         CountTripletConnections{},
                         modules_.const_view().modules(),
                         miniDoubletsDC_->const_view().miniDoublets(),
@@ -2029,9 +2037,10 @@ void LSTEvent::createQuadruplets() {
   auto t4PassMask_buf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, nTripletSlots);
   alpaka::memset(queue_, t4PassMask_buf, 0u);
 
-  // 8 inner triplets per block (not one module per block): dense jet modules spread over the whole device.
+  // 32 inner triplets per block (not one module per block): dense jet modules spread over the whole device. A row of
+  // 8 threads per inner triplet, as the outer triplets of its second segment are few (0-1 in ttbar, ~8 in jets).
   auto const countLSConn_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
-      {std::max(cms::alpakatools::divide_up_by(nTripletSlots, 8u), 1u), 1u}, {8, 32});
+      {std::max(cms::alpakatools::divide_up_by(nTripletSlots, 32u), 1u), 1u}, {32, 8});
 
   alpaka::exec<Acc2D>(queue_,
                       countLSConn_workDiv,
