@@ -489,6 +489,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     dPhiChangeMax = dPhiMax / dzFrac * (1.f + dzFrac);
   }
 
+  // Margin on the chord angle for the float rounding of the atan2 and of the stored anchor phis (about 1e-6 rad each).
+  HOST_DEVICE_CONSTANT float kChordAngleMargin = 1e-5f;
+
+  // Angle from r_in to the chord, arctan(t) with t = cross/dot (dot > 0), bounded without the atan2 by the odd series
+  // bounds [t - t^3/3 + t^5/5 - t^7/7, t - t^3/3 + t^5/5] (t < 1) or [pi/4, pi/2); posErr adds posErr * rtIn / dot.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool chordAngleBounds(TAcc const& acc,
+                                                       float xIn,
+                                                       float yIn,
+                                                       float rtIn,
+                                                       float xOut,
+                                                       float yOut,
+                                                       float posErr,
+                                                       float& angleLo,
+                                                       float& angleHi) {
+    const float chordX = xOut - xIn;
+    const float chordY = yOut - yIn;
+    const float dot = xIn * chordX + yIn * chordY;
+    if (not(dot > 0.f))
+      return false;
+    const float invDot = 1.f / dot;
+    const float margin = kChordAngleMargin + posErr * rtIn * invDot;
+    if (not(margin < 0.1f))  // small-angle regime: asin(posErr / |chord|) within 0.2% of its argument
+      return false;
+    const float tanAngle = (xIn * chordY - yIn * chordX) * invDot;
+    const float absTan = alpaka::math::abs(acc, tanAngle);
+    const float tanAngle2 = tanAngle * tanAngle;
+    const float seriesHi = absTan * (1.f + tanAngle2 * (-1.f / 3.f + tanAngle2 * 0.2f));
+    const float seriesLo = seriesHi - absTan * tanAngle2 * tanAngle2 * tanAngle2 * (1.f / 7.f);
+    const float absAngleLo = absTan >= 1.f ? 0.25f * kPi : seriesLo;
+    const float absAngleHi = absTan >= 1.f ? 0.5f * kPi : seriesHi;
+    angleLo = (tanAngle >= 0.f ? absAngleLo : -absAngleHi) - margin;
+    angleHi = (tanAngle >= 0.f ? absAngleHi : -absAngleLo) + margin;
+    return true;
+  }
+
+  // Cut |center - angle| < halfWidth for every angle in [angleLo, angleHi]: 1 if it passes for all, -1 if it fails
+  // for all, 0 otherwise (NaN included). Bitwise operators keep the comparisons free of branches.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int chordCutDecision(float angleLo, float angleHi, float center, float halfWidth) {
+    const float windowLo = center - halfWidth;
+    const float windowHi = center + halfWidth;
+    const bool fails = (angleHi <= windowLo) | (angleLo >= windowHi);
+    const bool passes = (angleLo > windowLo) & (angleHi < windowHi);
+    return int(passes) - int(fails);
+  }
+
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool runSegmentDefaultAlgoBarrel(TAcc const& acc,
                                                                   ModuleSegData const& innerMod,
@@ -597,14 +643,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if (not(alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold))
       return false;
 
+    // Origin-free line residual: the chord makes equal angles with the tangents at its ends for any radius and d0.
+    const float lineResidualSigma =
+        (dAlphaInnerMDSegmentThreshold - dAlphaBfield) + (dAlphaOuterMDSegmentThreshold - dAlphaBfield);
+
+    // Serial backends decide the three cuts on dPhiChange below from its atan2-free interval when that suffices (same
+    // decisions); on a GPU the undecided lanes of a warp still run the atan2, so the check does not pay there.
+    if constexpr (cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+      float angleLo, angleHi;
+      if (chordAngleBounds(acc, xIn, yIn, rtIn, xOut, yOut, 0.f, angleLo, angleHi)) {
+        const int lineDecision = chordCutDecision(angleLo,
+                                                  angleHi,
+                                                  0.5f * (innerMDAlpha + outerMDAlpha + dPhi),
+                                                  0.5f * (kLsLineResidCut * lineResidualSigma));
+        const int innerDecision = chordCutDecision(angleLo, angleHi, innerMDAlpha, dAlphaInnerMDSegmentThreshold);
+        const int outerDecision = chordCutDecision(angleLo, angleHi, outerMDAlpha, dAlphaOuterMDSegmentThreshold);
+        if ((lineDecision < 0) | (innerDecision < 0) | (outerDecision < 0))
+          return false;
+#ifndef CUT_VALUE_DEBUG
+        // dPhiChange is left unset: outside CUT_VALUE_DEBUG no caller reads it (FillCompactSegments recomputes it).
+        if (lineDecision + innerDecision + outerDecision == 3)
+          return true;
+#endif
+      }
+    }
+
     dPhiChange = segmentDPhiChangeBarrel(acc, mds, innerMDIndex, xIn, yIn, xOut, yOut);
     dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
     dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
 
-    // Origin-free line residual: the chord makes equal angles with the tangents at its ends for any radius and d0.
     const float lineResidual = innerMDAlpha + outerMDAlpha + dPhi - 2.f * dPhiChange;
-    const float lineResidualSigma =
-        (dAlphaInnerMDSegmentThreshold - dAlphaBfield) + (dAlphaOuterMDSegmentThreshold - dAlphaBfield);
     if (alpaka::math::abs(acc, lineResidual) >= kLsLineResidCut * lineResidualSigma)
       return false;
 
@@ -740,6 +808,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
 
     // Endcap dPhiChange is a z-extrapolation, so the chord turn is rebuilt; the resolution is the symmetric one.
+    // Serial backends decide it first from the atan2-free interval, as in the barrel; this atan2 uses the stored rt and
+    // phi (position margin 1e-5 of rt).
+    if constexpr (cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+      float angleLo, angleHi;
+      if (chordAngleBounds(acc, xIn, yIn, rtIn, xOut, yOut, 1e-5f * (rtIn + rtOut), angleLo, angleHi)) {
+        const int lineDecision = chordCutDecision(
+            angleLo, angleHi, 0.5f * (innerMDAlpha + outerMDAlpha + dPhi), kLsLineResidCut * dAlphaResMuls);
+        if (lineDecision != 0)
+          return lineDecision > 0;
+      }
+    }
     const float chord =
         alpaka::math::atan2(acc, rtOut * alpaka::math::sin(acc, dPhi), rtOut * alpaka::math::cos(acc, dPhi) - rtIn);
     const float lineResidual = innerMDAlpha + outerMDAlpha + dPhi - 2.f * chord;

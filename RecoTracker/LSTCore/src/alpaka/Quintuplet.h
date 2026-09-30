@@ -1466,6 +1466,114 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return false;
   }
 
+  // Terms of the trig-free dBeta bound (rejectDBetaByBound) that depend only on the inner segment MD1 -> MD2.
+  struct DBetaBoundInner {
+    float x1 = 0.f, y1 = 0.f, rt1 = 0.f;
+    float alphaIn = 0.f;    // dPhiChange of the inner segment
+    float sdIn = 0.f;       // xy length of the inner segment
+    float drtIn = 0.f;      // rt(MD2) - rt(MD1)
+    float mulsScale = 0.f;  // kMulsInGeV^2 * r3(MD1) / rt(MD1)
+    bool barrel = false;    // MD1 and MD2 on barrel modules
+  };
+
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE DBetaBoundInner makeDBetaBoundInner(TAcc const& acc,
+                                                                     ModulesConst modules,
+                                                                     MiniDoubletsConst mds,
+                                                                     SegmentsConst segments,
+                                                                     TripletsConst triplets,
+                                                                     unsigned int innerTripletIndex) {
+    DBetaBoundInner inner;
+    const unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
+    const unsigned int firstMDIndex = segments.mdIndices()[firstSegmentIndex][0];
+    const unsigned int secondMDIndex = segments.mdIndices()[firstSegmentIndex][1];
+    inner.barrel = modules.subdets()[triplets.lowerModuleIndices()[innerTripletIndex][0]] == Barrel and
+                   modules.subdets()[triplets.lowerModuleIndices()[innerTripletIndex][1]] == Barrel;
+    inner.x1 = mds.anchorX()[firstMDIndex];
+    inner.y1 = mds.anchorY()[firstMDIndex];
+    inner.rt1 = mds.anchorRt()[firstMDIndex];
+    inner.alphaIn = __H2F(segments.dPhiChanges()[firstSegmentIndex]);
+    const float segmentX = mds.anchorX()[secondMDIndex] - inner.x1;
+    const float segmentY = mds.anchorY()[secondMDIndex] - inner.y1;
+    inner.sdIn = alpaka::math::sqrt(acc, segmentX * segmentX + segmentY * segmentY);
+    inner.drtIn = mds.anchorRt()[secondMDIndex] - inner.rt1;
+    const float z1 = mds.anchorZ()[firstMDIndex];
+    inner.mulsScale = (kMulsInGeV * kMulsInGeV) * alpaka::math::sqrt(acc, z1 * z1 + inner.rt1 * inner.rt1) / inner.rt1;
+    return inner;
+  }
+
+  // Trig-free sufficient reject of runQuintupletdBetaCutBBBB if its last module is not a 2S endcap module (no RH, lum,
+  // ROut terms): bounds the raw angles, the runDeltaBetaIterations correction and the cut; false = run the exact cut.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool rejectDBetaByBound(TAcc const& acc,
+                                                         DBetaBoundInner const& inner,
+                                                         ModulesConst modules,
+                                                         MiniDoubletsConst mds,
+                                                         uint16_t outerInnerLowerModuleIndex,
+                                                         uint16_t outerOuterLowerModuleIndex,
+                                                         unsigned int thirdMDIndex,
+                                                         unsigned int fourthMDIndex,
+                                                         float alphaOut) {
+    const short lastSubdet = modules.subdets()[outerOuterLowerModuleIndex];
+    if (!inner.barrel or modules.subdets()[outerInnerLowerModuleIndex] != Barrel or
+        !(lastSubdet == Barrel or (lastSubdet == Endcap and modules.moduleType()[outerOuterLowerModuleIndex] != TwoS)))
+      return false;
+    const float x4 = mds.anchorX()[fourthMDIndex], y4 = mds.anchorY()[fourthMDIndex];
+    const float axisX = x4 - inner.x1, axisY = y4 - inner.y1;
+    // tan u and tan v share one cross product; |tan| < 2 keeps their rounding far below the angle margin
+    const float cross = inner.x1 * y4 - inner.y1 * x4;
+    const float dotIn = inner.x1 * axisX + inner.y1 * axisY, dotOut = x4 * axisX + y4 * axisY;
+    const float halfAbsCross = 0.5f * alpaka::math::abs(acc, cross);
+    if (!(dotIn > halfAbsCross and dotOut > halfAbsCross))
+      return false;
+    const float tanIn = cross / dotIn, tanOut = cross / dotOut;
+    // atan(t) lies between t - t^3/3 and t; 1e-5 rad per angle covers the stored anchor phi and atan2 rounding
+    constexpr float kAngleMargin = 1e-5f;
+    const float cubeIn = tanIn * tanIn * tanIn * (1.f / 3.f), cubeOut = tanOut * tanOut * tanOut * (1.f / 3.f);
+    const float center = inner.alphaIn + alphaOut - tanIn - tanOut;
+    const float cubes = cubeIn + cubeOut;  // tanIn and tanOut have the sign of cross
+    const float low = center + (cubes < 0.f ? cubes : 0.f) - 2.f * kAngleMargin;
+    const float high = center + (cubes > 0.f ? cubes : 0.f) + 2.f * kAngleMargin;
+    const float distance = low > 0.f ? low : -high;  // distance of 0 from [low, high] when positive
+    if (!(distance > 0.f))
+      return false;
+    const float betaInMax =
+        alpaka::math::abs(acc, inner.alphaIn - tanIn) + alpaka::math::abs(acc, cubeIn) + kAngleMargin;
+    const float betaOutMax = alpaka::math::abs(acc, tanOut - alphaOut) + alpaka::math::abs(acc, cubeOut) + kAngleMargin;
+    const float betaMax = betaInMax > betaOutMax ? betaInMax : betaOutMax;
+    // The iterations move dBeta by +-(asin(aIn) - asin(aOut)), a = min(sd |sin t| / drt, kSinAlphaMax) for one angle
+    // |t| <= betaMax + asin(a0); asin(a) <= a + a^3 on [0, 1] and asin'(a) <= 1 / (1 - a^2).
+    const float x3 = mds.anchorX()[thirdMDIndex], y3 = mds.anchorY()[thirdMDIndex];
+    const float sdOut = alpaka::math::sqrt(acc, (x4 - x3) * (x4 - x3) + (y4 - y3) * (y4 - y3));
+    const float sdMax = inner.sdIn > sdOut ? inner.sdIn : sdOut;
+    const float invDrt = 1.f / alpaka::math::sqrt(acc, axisX * axisX + axisY * axisY);
+    const float sinT0 = betaMax < 1.f ? betaMax : 1.f;
+    const float scaled0 = sdMax * sinT0 * invDrt;
+    const float a0 = scaled0 < kSinAlphaMax ? scaled0 : kSinAlphaMax;
+    const float angleT = betaMax + a0 + a0 * a0 * a0;
+    const float sinT = angleT < 1.f ? angleT : 1.f;
+    const float scaled1 = sdMax * sinT * invDrt;
+    const float a1 = scaled1 < kSinAlphaMax ? scaled1 : kSinAlphaMax;
+    const float deltaMax =
+        alpaka::math::abs(acc, inner.sdIn - sdOut) * sinT * invDrt / (1.f - a1 * a1) * 1.0001f + 1e-6f;
+    const float lower = distance - deltaMax;
+    if (!(lower > 0.f))
+      return false;
+    // The final |betaAv| <= betaMax + asin(a1) bounds 1 / min(|pt_beta|, kPt_betaMax) from above
+    const float angleAv = betaMax + a1 + a1 * a1 * a1;
+    const float sinAv = angleAv < 1.f ? angleAv : 1.f;
+    const float invPtBound = sinAv * invDrt * (1.f / k2Rinv1GeVf);
+    const float invPt = invPtBound > 1.f / kPt_betaMax ? invPtBound : 1.f / kPt_betaMax;
+    const float rt3 = mds.anchorRt()[thirdMDIndex];
+    const float thetaMuls2 = inner.mulsScale * (0.1f + 0.2f * (rt3 - inner.rt1) / 50.f);
+    const float mulsTerm = thetaMuls2 > 0.f ? thetaMuls2 * 16.f * invPt * invPt : 0.f;
+    // The cut with dBetaRes = 0.02 / resDen, both sides multiplied by resDen^2
+    const float sdOutDr = mds.anchorRt()[fourthMDIndex] - rt3;
+    const float resDen = sdOutDr < inner.drtIn ? sdOutDr : inner.drtIn;
+    const float resDen2 = resDen * resDen;
+    return lower * lower * resDen2 > (0.0008f + mulsTerm * resDen2) * 1.0001f;
+  }
+
   // The two dBeta cuts of runQuintupletSelection. The first depends only on the inner triplet and the first segment of
   // the outer triplet (thirdSegmentIndex), so the builders evaluate it once per (inner triplet, segment) key.
   // Key k < kT5DBetaMaskBits of an inner triplet records its first-cut decision in a per-triplet bit mask.
@@ -1565,12 +1673,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                unsigned int innerTripletIndex,
                                                                unsigned int outerTripletIndex,
                                                                const float ptCut,
-                                                               unsigned int* __restrict__ dBeta2Memo) {
+                                                               unsigned int* __restrict__ dBeta2Memo,
+                                                               DBetaBoundInner const& boundInner) {
     const unsigned int tag = triplets.segmentIndices()[innerTripletIndex][0] << 1;
     const unsigned int fourthSegmentIndex = triplets.segmentIndices()[outerTripletIndex][1];
     const unsigned int memo = dBeta2Memo[fourthSegmentIndex];
     if ((memo & ~1u) == tag)
       return memo & 1u;
+    if constexpr (cms::alpakatools::requires_single_thread_per_block_v<TAcc>) {
+      if (rejectDBetaByBound(acc,
+                             boundInner,
+                             modules,
+                             mds,
+                             triplets.lowerModuleIndices()[outerTripletIndex][1],
+                             triplets.lowerModuleIndices()[outerTripletIndex][2],
+                             segments.mdIndices()[fourthSegmentIndex][0],
+                             segments.mdIndices()[fourthSegmentIndex][1],
+                             segments.dPhiChangeOuts()[fourthSegmentIndex])) {
+        dBeta2Memo[fourthSegmentIndex] = tag;
+        return false;
+      }
+    }
     float dBeta2;
     const bool pass = passQuintupletDBeta2(
         acc, modules, mds, segments, triplets, lowerModuleIndex1, innerTripletIndex, outerTripletIndex, dBeta2, ptCut);
@@ -2239,7 +2362,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int nKeysByMD3 = nKeysByMD[secondMDOuter];
         const unsigned int nKeys = nKeysByMD3 < kT5DBetaMaskBits ? nKeysByMD3 : kT5DBetaMaskBits;
         const unsigned int keyOffset = keyOffsetByMD[secondMDOuter];
+        // Serial backend: a trig-free bound rejects most keys first (on a GPU it only adds divergence).
+        DBetaBoundInner boundInner;
+        if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>)
+          boundInner = makeDBetaBoundInner(acc, modules, mds, segments, triplets, innerTripletIndex);
         for (unsigned int k : cms::alpakatools::uniform_elements_x(acc, nKeys)) {
+          if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
+            const unsigned int keySegment = keys[keyOffset + k];
+            if (rejectDBetaByBound(acc,
+                                   boundInner,
+                                   modules,
+                                   mds,
+                                   lmIdx[innerTripletIndex][2],
+                                   segments.outerLowerModuleIndices()[keySegment],
+                                   secondMDOuter,
+                                   mdIndices[keySegment][1],
+                                   segments.dPhiChangeOuts()[keySegment]))
+              continue;
+          }
           float dBeta1;
           if (passQuintupletDBeta1(acc,
                                    modules,
@@ -2294,14 +2434,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                            float bridgeRadius,
                                                            const float ptCut,
                                                            unsigned int* __restrict__ dBeta2Memo,
+                                                           DBetaBoundInner const& boundInner,
                                                            unsigned int* __restrict__ moduleT5Count,
                                                            unsigned int* __restrict__ nSelected,
                                                            const unsigned int capacity,
                                                            unsigned int* __restrict__ selectedT3s,
                                                            float* __restrict__ selectedBridgeRadius,
                                                            float* __restrict__ selectedDnnScore) {
-    if (!passQuintupletDBeta2Memo(
-            acc, modules, mds, segments, triplets, lowerModule1, innerTripletIndex, outerTripletIndex, ptCut, dBeta2Memo))
+    if (!passQuintupletDBeta2Memo(acc,
+                                  modules,
+                                  mds,
+                                  segments,
+                                  triplets,
+                                  lowerModule1,
+                                  innerTripletIndex,
+                                  outerTripletIndex,
+                                  ptCut,
+                                  dBeta2Memo,
+                                  boundInner))
       return;
     float innerRadius, outerRadius, rzChi2, dnnScore;
     if (!runQuintupletSelectionOuter(acc,
@@ -2385,6 +2535,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
           // Serial backend: the keys in order, then the outer triplets of each key in order.
+          const DBetaBoundInner boundInner =
+              makeDBetaBoundInner(acc, modules, mds, segments, triplets, innerTripletIndex);
           for (unsigned int key = 0; key < nKeys; ++key) {
             //asynchronous stop; exact truncation here is not important
             if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
@@ -2423,6 +2575,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    bridgeRadius,
                                    ptCut,
                                    dBeta2Memo,
+                                   boundInner,
                                    moduleT5Count,
                                    nSelected,
                                    capacity,
@@ -2486,6 +2639,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    chunkBridgeRadius[pairKey],
                                    ptCut,
                                    dBeta2Memo,
+                                   DBetaBoundInner{},
                                    moduleT5Count,
                                    nSelected,
                                    capacity,

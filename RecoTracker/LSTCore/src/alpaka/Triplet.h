@@ -429,6 +429,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float wideBound = kT3PointingWiden * (sinSlope + resCut);
     if (sinSlope >= 0.f and wideBound < 1.f and sinBetaInSq >= wideBound * wideBound * r2 * 1.0001f)
       return 0;
+    // Same for the pass decisions: for x = asin(s) + c <= u = pi/2 s + c (maxBetaInCut) and 1.7 u <= pi/2, sin(x) is in
+    // [s + c (1 - u^2 / 2), s + c] and sin(1.7 x) >= max(sin(x), 1.7 (s + c) - (1.7 u)^3 / 6) (margins for rounding).
+    const float maxBetaInCut = 1.5708f * sinSlope + resCut;
+    if (sinSlope >= 0.f and resCut >= 0.f and kT3PointingWiden * maxBetaInCut <= 1.57f) {
+      const float tightLow = (sinSlope + resCut * (1.f - 0.5f * maxBetaInCut * maxBetaInCut)) * 0.9999f - 1e-6f;
+      if (tightLow > 0.f and sinBetaInSq < tightLow * tightLow * r2)
+        return 1;
+      const float tightHigh = (sinSlope + resCut) * 1.0001f + 1e-6f;
+      const float maxWideCut = kT3PointingWiden * maxBetaInCut;
+      const float wideLow = (wideBound - maxWideCut * maxWideCut * maxWideCut / 6.f) * 0.9999f - 1e-6f;
+      if (wideLow > 0.f and sinBetaInSq >= tightHigh * tightHigh * r2 and sinBetaInSq < wideLow * wideLow * r2)
+        return 2;
+    }
 
     const float betaInCut = alpaka::math::asin(acc, sinSlope) + resCut;
     const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
