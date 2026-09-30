@@ -1625,6 +1625,9 @@ void LSTEvent::createQuintuplets() {
   auto nTotalQuintuplets_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuints());
   auto nTotalQuintuplets0_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuintsByMD0());
   auto nTotalQuintuplets1_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuintsByMD1());
+  // Second dBeta cut decisions per last outer segment (see passQuintupletDBeta2Memo); valid for both counting runs.
+  auto dBeta2Memo_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalSegmentsOT_);
+  alpaka::memset(queue_, dBeta2Memo_buf, 0xFF);
   auto countQuintuplets = [&](unsigned int capacity) {
     auto selectedT3s_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 2 * capacity);
     auto selectedBridgeRadius_buf = cms::alpakatools::make_device_buffer<float[]>(queue_, capacity);
@@ -1659,7 +1662,8 @@ void LSTEvent::createQuintuplets() {
                         capacity,
                         selectedT3s_buf.data(),
                         selectedBridgeRadius_buf.data(),
-                        selectedDnnScore_buf.data());
+                        selectedDnnScore_buf.data(),
+                        dBeta2Memo_buf.data());
 
     alpaka::exec<Acc1D>(queue_,
                         cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
