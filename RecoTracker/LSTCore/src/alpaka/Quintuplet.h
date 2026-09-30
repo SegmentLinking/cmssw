@@ -915,12 +915,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
 
-    alpha_OutUp = cms::alpakatools::reducePhiRange(
-        acc,
-        cms::alpakatools::phi(acc,
-                              mds.anchorX()[fourthMDIndex] - mds.anchorX()[thirdMDIndex],
-                              mds.anchorY()[fourthMDIndex] - mds.anchorY()[thirdMDIndex]) -
-            mds.anchorPhi()[fourthMDIndex]);
+    alpha_OutUp = segments.dPhiChangeOuts()[outerSegmentIndex];
 
     alpha_OutUp_highEdge = alpha_OutUp;
     alpha_OutUp_lowEdge = alpha_OutUp;
