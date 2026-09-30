@@ -212,6 +212,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                          float dPhiChange,
                                                          float dPhiChangeMin,
                                                          float dPhiChangeMax,
+                                                         float dPhiChangeOut,
 #ifdef CUT_VALUE_DEBUG
                                                          float dPhi,
                                                          float dPhiMin,
@@ -237,6 +238,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
     segments.dPhiChangeMins()[idx] = __F2H(dPhiChangeMin);
     segments.dPhiChangeMaxs()[idx] = __F2H(dPhiChangeMax);
+    segments.dPhiChangeOuts()[idx] = dPhiChangeOut;
 
 #ifdef CUT_VALUE_DEBUG
     segments.zHis()[idx] = __F2H(zHi);
@@ -402,6 +404,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         acc, cms::alpakatools::phi(acc, xOut - xIn, yOut - yIn) - mds.anchorPhi()[innerMDIndex]);
   }
 
+  // Same angle measured at the outer anchor, in the form runQuintupletdBetaCutBBBB uses for its outer segment.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE float segmentDPhiChangeOut(TAcc const& acc,
+                                                            MiniDoubletsConst mds,
+                                                            unsigned int innerMDIndex,
+                                                            unsigned int outerMDIndex) {
+    return cms::alpakatools::reducePhiRange(
+        acc,
+        cms::alpakatools::phi(acc,
+                              mds.anchorX()[outerMDIndex] - mds.anchorX()[innerMDIndex],
+                              mds.anchorY()[outerMDIndex] - mds.anchorY()[innerMDIndex]) -
+            mds.anchorPhi()[outerMDIndex]);
+  }
+
   // Stored payload of an endcap segment from its dPhi; shared by the algorithm and FillCompactSegments.
   template <alpaka::concepts::Acc TAcc>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void segmentDPhiChangesEndcap(TAcc const& acc,
@@ -511,8 +527,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 dPhi))
       return false;
 
-    dPhiChange = segmentDPhiChangeBarrel(acc, mds, innerMDIndex, xIn, yIn, xOut, yOut);
-
     float dAlphaBfield = 0.f;
     float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
@@ -537,13 +551,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float innerMDAlpha = mdsBuild.dphichanges()[innerMDIndex];
     float outerMDAlpha = mdsBuild.dphichanges()[outerMDIndex];
-    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
-    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
     dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // The MD-MD cut needs no dPhiChange: test it before the atan2 (same decision, NaN included).
+    if (not(alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold))
+      return false;
+
+    dPhiChange = segmentDPhiChangeBarrel(acc, mds, innerMDIndex, xIn, yIn, xOut, yOut);
+    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
+    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
 
     // Origin-free line residual: the chord makes equal angles with the tangents at its ends for any radius and d0.
     const float lineResidual = innerMDAlpha + outerMDAlpha + dPhi - 2.f * dPhiChange;
@@ -556,7 +576,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       return false;
     if (alpaka::math::abs(acc, dAlphaOuterMDSegment) >= dAlphaOuterMDSegmentThreshold)
       return false;
-    return alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold;
+    return true;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -626,21 +646,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             acc, mds, innerMDIndex, outerMDIndex, xIn, yIn, xOut, yOut, rtIn, rtOut, sdSlopeSin, dPhi, sdSlope))
       return false;
 
-    segmentDPhiChangesEndcap(acc,
-                             outerMod,
-                             mds,
-                             innerMDIndex,
-                             xOut,
-                             yOut,
-                             zIn,
-                             zOut,
-                             dPhi,
-                             dPhiMin,
-                             dPhiMax,
-                             dPhiChange,
-                             dPhiChangeMin,
-                             dPhiChangeMax);
-
     float dAlphaBfield = 0.f;
     float dAlphaResMuls = 0.f;
     float dAlphaThresholdValues[3];
@@ -665,13 +670,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float innerMDAlpha = mdsBuild.dphichanges()[innerMDIndex];
     float outerMDAlpha = mdsBuild.dphichanges()[outerMDIndex];
-    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
-    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
     dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
     float dAlphaInnerMDOuterMDThreshold = dAlphaThresholdValues[2];
+
+    // Cheapest cuts first (same decision, NaN included): MD-MD, then MD-segment, then the chord residual.
+    if (not(alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold))
+      return false;
+
+    segmentDPhiChangesEndcap(acc,
+                             outerMod,
+                             mds,
+                             innerMDIndex,
+                             xOut,
+                             yOut,
+                             zIn,
+                             zOut,
+                             dPhi,
+                             dPhiMin,
+                             dPhiMax,
+                             dPhiChange,
+                             dPhiChangeMin,
+                             dPhiChangeMax);
+    dAlphaInnerMDSegment = innerMDAlpha - dPhiChange;
+    dAlphaOuterMDSegment = outerMDAlpha - dPhiChange;
+    if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
+      return false;
+    if (alpaka::math::abs(acc, dAlphaOuterMDSegment) >= dAlphaOuterMDSegmentThreshold)
+      return false;
 
     // Endcap dPhiChange is a z-extrapolation, so the chord turn is rebuilt; the resolution is the symmetric one.
     const float chord =
@@ -679,12 +707,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float lineResidual = innerMDAlpha + outerMDAlpha + dPhi - 2.f * chord;
     if (alpaka::math::abs(acc, lineResidual) >= kLsLineResidCut * 2.f * dAlphaResMuls)
       return false;
-
-    if (alpaka::math::abs(acc, dAlphaInnerMDSegment) >= dAlphaInnerMDSegmentThreshold)
-      return false;
-    if (alpaka::math::abs(acc, dAlphaOuterMDSegment) >= dAlphaOuterMDSegmentThreshold)
-      return false;
-    return alpaka::math::abs(acc, dAlphaInnerMDOuterMD) < dAlphaInnerMDOuterMDThreshold;
+    return true;
   }
 
   template <alpaka::concepts::Acc TAcc>
@@ -1199,6 +1222,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                              dPhiChange,
                              dPhiChangeMin,
                              dPhiChangeMax,
+                             segmentDPhiChangeOut(acc, mds, innerMDIndex, outerMDIndex),
 #ifdef CUT_VALUE_DEBUG
                              dPhi,
                              dPhiMin,
