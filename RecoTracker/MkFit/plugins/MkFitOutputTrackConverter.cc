@@ -85,25 +85,28 @@ public:
 private:
   void produce(edm::StreamID, edm::Event& iEvent, const edm::EventSetup& iSetup) const override;
 
-  void convertCandidates(const MkFitOutputWrapper& mkFitOutput,
-                         const mkfit::EventOfHits& eventOfHits,
-                         const MkFitClusterIndexToHit& pixelClusterIndexToHit,
-                         const MkFitClusterIndexToHit& stripClusterIndexToHit,
-                         const edm::View<TrajectorySeed>& seeds,
-                         const MagneticField& mf,
-                         const Propagator& propagatorAlong,
-                         const Propagator& propagatorOpposite,
-                         const MkFitGeometry& mkFitGeom,
-                         const TrackerTopology& tTopo,
-                         const TkClonerImpl& hitCloner,
-                         const std::vector<const DetLayer*>& detLayers,
-                         const mkfit::TrackVec& mkFitSeeds,
-                         const reco::BeamSpot* bs,
-                         const NavigationSchool& navSchool,
-                         const MeasurementTrackerEvent& measTk,
-                         reco::TrackCollection& trks,
-                         std::vector<int>& seedIndices,
-                         std::vector<edm::OwnVector<TrackingRecHit>>& hitsVecs) const;
+  void convertCandidates(
+      const MkFitOutputWrapper& mkFitOutput,
+      const mkfit::EventOfHits& eventOfHits,
+      const MkFitClusterIndexToHit& pixelClusterIndexToHit,
+      const MkFitClusterIndexToHit& stripClusterIndexToHit,
+      const edm::View<TrajectorySeed>& seeds,
+      const MagneticField& mf,
+      const Propagator& propagatorAlong,
+      const Propagator& propagatorOpposite,
+      const MkFitGeometry& mkFitGeom,
+      const TrackerTopology& tTopo,
+      const TkClonerImpl& hitCloner,
+      const std::vector<const DetLayer*>& detLayers,
+      const mkfit::TrackVec& mkFitSeeds,
+      const reco::BeamSpot* bs,
+      const NavigationSchool& navSchool,
+      const MeasurementTrackerEvent& measTk,
+      const MkFitOutputWrapper* buildTracks,
+      reco::TrackCollection& trks,
+      std::vector<int>& seedIndices,
+      std::vector<edm::OwnVector<TrackingRecHit>>& hitsVecs,
+      std::vector<std::pair<TrajectoryStateOnSurface, TrajectoryStateOnSurface>>& innerOuterStates) const;
 
   std::pair<TrajectoryStateOnSurface, const GeomDet*> convertInnermostState(const FreeTrajectoryState& fts,
                                                                             const edm::OwnVector<TrackingRecHit>& hits,
@@ -145,6 +148,7 @@ private:
 
   const int algo_;
   const edm::EDGetTokenT<reco::BeamSpot> bsToken_;
+  const edm::EDGetTokenT<MkFitOutputWrapper> buildTracksToken_;
 };
 
 MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iConfig)
@@ -177,8 +181,13 @@ MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iC
       measurementTrackerEventToken_{consumes(iConfig.getParameter<edm::InputTag>("measurementTrackerEvent"))},
       navToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("NavigationSchool"))},
       algo_{reco::TrackBase::algoByName(
-          TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data())},
-      bsToken_(consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"))) {
+          iConfig.getParameter<std::string>("algorithmName").empty()
+              ? TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data()
+              : iConfig.getParameter<std::string>("algorithmName"))},
+      bsToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
+      buildTracksToken_{iConfig.getParameter<edm::InputTag>("buildTracks").label().empty()
+                            ? edm::EDGetTokenT<MkFitOutputWrapper>()
+                            : consumes<MkFitOutputWrapper>(iConfig.getParameter<edm::InputTag>("buildTracks"))} {
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
   produces<reco::TrackExtraCollection>();
@@ -214,6 +223,10 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
 
   desc.add<edm::ESInputTag>("NavigationSchool", edm::ESInputTag{"", "SimpleNavigationSchool"});
   desc.add<edm::InputTag>("measurementTrackerEvent", edm::InputTag("MeasurementTrackerEvent"));
+  desc.add<edm::InputTag>("beamSpot", edm::InputTag("offlineBeamSpot"));
+  desc.add<std::string>("algorithmName", "")->setComment("track algorithm; empty: derived from the seeds label");
+  desc.add<edm::InputTag>("buildTracks", edm::InputTag(""))
+      ->setComment("mkFit build output (input of the fit): hits removed by the fit become missing hits; empty: off");
 
   descriptions.addWithDefaultLabel(desc);
 }
@@ -248,6 +261,7 @@ void MkFitOutputTrackConverter::produce(edm::StreamID iID, edm::Event& iEvent, c
 
   std::vector<int> seedIndices;
   std::vector<edm::OwnVector<TrackingRecHit>> hitsVecs;
+  std::vector<std::pair<TrajectoryStateOnSurface, TrajectoryStateOnSurface>> innerOuterStates;
 
   // product references
   reco::TrackExtraRefProd ref_trackextras = iEvent.getRefBeforePut<reco::TrackExtraCollection>();
@@ -272,21 +286,39 @@ void MkFitOutputTrackConverter::produce(edm::StreamID iID, edm::Event& iEvent, c
                     beamspot,
                     navSchool,
                     *measurementTracker,
+                    buildTracksToken_.isUninitialized() ? nullptr : &iEvent.get(buildTracksToken_),
                     *trks,
                     seedIndices,
-                    hitsVecs);
+                    hitsVecs,
+                    innerOuterStates);
 
   int i = 0;
   for (auto& trk : *trks) {
     for (auto& h : hitsVecs[i])
       hits->push_back(h);
 
-    reco::TrackExtra extra;
+    // inner and outer states as in the KF track producer: the fitted state at the first and at the last hit
+    auto const& inner = innerOuterStates[i].first;
+    auto const& outer = innerOuterStates[i].second;
+    auto const& inPos = inner.globalPosition();
+    auto const& inMom = inner.globalMomentum();
+    auto const& outPos = outer.globalPosition();
+    auto const& outMom = outer.globalMomentum();
+    reco::TrackExtra extra(math::XYZPoint(outPos.x(), outPos.y(), outPos.z()),
+                           math::XYZVector(outMom.x(), outMom.y(), outMom.z()),
+                           true,
+                           math::XYZPoint(inPos.x(), inPos.y(), inPos.z()),
+                           math::XYZVector(inMom.x(), inMom.y(), inMom.z()),
+                           true,
+                           outer.curvilinearError(),
+                           hitsVecs[i].back().geographicalId().rawId(),
+                           inner.curvilinearError(),
+                           hitsVecs[i].front().geographicalId().rawId(),
+                           alongMomentum,
+                           edm::RefToBase<TrajectorySeed>(hseeds, seedIndices[i]));
 
     extra.setHits(ref_rechits, hidx, trk.numberOfValidHits());
     hidx += trk.numberOfValidHits();
-
-    extra.setSeedRef(edm::RefToBase<TrajectorySeed>(hseeds, seedIndices[i]));
 
     AlgebraicVector5 v = AlgebraicVector5(0, 0, 0, 0, 0);
     reco::TrackExtra::TrajParams trajParams(trk.numberOfValidHits(), LocalTrajectoryParameters(v, 1.));
@@ -308,29 +340,91 @@ void MkFitOutputTrackConverter::produce(edm::StreamID iID, edm::Event& iEvent, c
   iEvent.emplace(putSeedStopInfoToken_, seeds.size());
 }
 
-void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFitOutput,
-                                                  const mkfit::EventOfHits& eventOfHits,
-                                                  const MkFitClusterIndexToHit& pixelClusterIndexToHit,
-                                                  const MkFitClusterIndexToHit& stripClusterIndexToHit,
-                                                  const edm::View<TrajectorySeed>& seeds,
-                                                  const MagneticField& mf,
-                                                  const Propagator& propagatorAlong,
-                                                  const Propagator& propagatorOpposite,
-                                                  const MkFitGeometry& mkFitGeom,
-                                                  const TrackerTopology& tTopo,
-                                                  const TkClonerImpl& hitCloner,
-                                                  const std::vector<const DetLayer*>& detLayers,
-                                                  const mkfit::TrackVec& mkFitSeeds,
-                                                  const reco::BeamSpot* bs,
-                                                  const NavigationSchool& navSchool,
-                                                  const MeasurementTrackerEvent& measTk,
-                                                  reco::TrackCollection& trks,
-                                                  std::vector<int>& seedIndices,
-                                                  std::vector<edm::OwnVector<TrackingRecHit>>& hitsVecs) const {
+void MkFitOutputTrackConverter::convertCandidates(
+    const MkFitOutputWrapper& mkFitOutput,
+    const mkfit::EventOfHits& eventOfHits,
+    const MkFitClusterIndexToHit& pixelClusterIndexToHit,
+    const MkFitClusterIndexToHit& stripClusterIndexToHit,
+    const edm::View<TrajectorySeed>& seeds,
+    const MagneticField& mf,
+    const Propagator& propagatorAlong,
+    const Propagator& propagatorOpposite,
+    const MkFitGeometry& mkFitGeom,
+    const TrackerTopology& tTopo,
+    const TkClonerImpl& hitCloner,
+    const std::vector<const DetLayer*>& detLayers,
+    const mkfit::TrackVec& mkFitSeeds,
+    const reco::BeamSpot* bs,
+    const NavigationSchool& navSchool,
+    const MeasurementTrackerEvent& measTk,
+    const MkFitOutputWrapper* buildTracks,
+    reco::TrackCollection& trks,
+    std::vector<int>& seedIndices,
+    std::vector<edm::OwnVector<TrackingRecHit>>& hitsVecs,
+    std::vector<std::pair<TrajectoryStateOnSurface, TrajectoryStateOnSurface>>& innerOuterStates) const {
   const auto& candidates = mkFitOutput.tracks();
   trks.reserve(candidates.size());
   seedIndices.reserve(candidates.size());
   hitsVecs.reserve(candidates.size());
+  innerOuterStates.reserve(candidates.size());
+
+  // build candidate (fit input) of each seed, to find the hits that the fit removed as outliers
+  std::vector<int> buildIndexOfSeed;
+  if (buildTracks) {
+    buildIndexOfSeed.resize(seeds.size(), -1);
+    for (int iBuild = 0, nBuild = buildTracks->tracks().size(); iBuild < nBuild; ++iBuild)
+      buildIndexOfSeed[buildTracks->tracks()[iBuild].label()] = iBuild;
+  }
+  const auto isPhase1 = mkFitGeom.isPhase1();
+  const auto recHitOfHitOnTrack = [&](const mkfit::HitOnTrack& hot) -> const TrackingRecHit& {
+    return *(eventOfHits[hot.layer].is_pixel() ? pixelClusterIndexToHit : stripClusterIndexToHit).hits()[hot.index];
+  };
+  // MkFit hits are *not* in the order of propagation, sort by 3D radius for now (as we don't have loopers)
+  const auto hitOrder = [&tTopo, &isPhase1](const TrackingRecHit& a, const TrackingRecHit& b) {
+    // For Phase-1, can rely on subdetector index
+    if (isPhase1) {
+      const auto asub_ph1 = a.geographicalId().subdetId();
+      const auto bsub_ph1 = b.geographicalId().subdetId();
+      const auto& apos_ph1 = a.globalPosition();
+      const auto& bpos_ph1 = b.globalPosition();
+      if (asub_ph1 != bsub_ph1) {
+        // Subdetector order (BPix, FPix, TIB, TID, TOB, TEC) corresponds also the navigation
+        return asub_ph1 < bsub_ph1;
+      } else {
+        if (isPhase1Barrel(asub_ph1)) {
+          return apos_ph1.perp2() < bpos_ph1.perp2();
+        } else {
+          return std::abs(apos_ph1.z()) < std::abs(bpos_ph1.z());
+        }
+      }
+    }
+
+    // For Phase-2, can not rely uniquely on subdetector index
+    const GeomDetEnumerators::SubDetector asub = a.det()->subDetector();
+    const GeomDetEnumerators::SubDetector bsub = b.det()->subDetector();
+    const auto& apos = a.globalPosition();
+    const auto& bpos = b.globalPosition();
+    const auto aid = a.geographicalId().rawId();
+    const auto bid = b.geographicalId().rawId();
+    const auto asubid = a.geographicalId().subdetId();
+    const auto bsubid = b.geographicalId().subdetId();
+    if (GeomDetEnumerators::isBarrel(asub) || GeomDetEnumerators::isBarrel(bsub)) {
+      // For barrel tilted modules, or in case (only) one of the two modules is barrel, use 3D position
+      if ((asubid == StripSubdetector::TOB && tTopo.tobSide(aid) < 3) ||
+          (bsubid == StripSubdetector::TOB && tTopo.tobSide(bid) < 3) ||
+          !(GeomDetEnumerators::isBarrel(asub) && GeomDetEnumerators::isBarrel(bsub))) {
+        return apos.mag2() < bpos.mag2();
+      }
+      // For fully barrel comparisons and no tilt, use 2D position
+      else {
+        return apos.perp2() < bpos.perp2();
+      }
+    }
+    // For fully endcap comparisons, use z position
+    else {
+      return std::abs(apos.z()) < std::abs(bpos.z());
+    }
+  };
 
   int candIndex = -1;
   for (const auto& cand : candidates) {
@@ -397,7 +491,6 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     const int nhits = cand.nTotalHits();
     //std::cout << candIndex << ": " << nhits << " " << cand.nFoundHits() << std::endl;
     //bool lastHitInvalid = false;
-    const auto isPhase1 = mkFitGeom.isPhase1();
     for (int i = 0; i < nhits; ++i) {
       const auto& hitOnTrack = cand.getHitOnTrack(i);
       LogTrace("MkFitOutputTrackConverter") << " hit on layer " << hitOnTrack.layer << " index " << hitOnTrack.index;
@@ -454,58 +547,8 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
       }
     }
 
-    // MkFit hits are *not* in the order of propagation, sort by 3D radius for now (as we don't have loopers)
     // TODO: Improve the sorting (extract keys? maybe even bubble sort would work well as the hits are almost in the correct order)
-    recHits.sort([&tTopo, &isPhase1](const auto& a, const auto& b) {
-      //const GeomDetEnumerators::SubDetector asub = a.det()->subDetector();
-      //const GeomDetEnumerators::SubDetector bsub = b.det()->subDetector();
-      //const auto& apos = a.globalPosition();
-      //const auto& bpos = b.globalPosition();
-      // For Phase-1, can rely on subdetector index
-      if (isPhase1) {
-        const auto asub_ph1 = a.geographicalId().subdetId();
-        const auto bsub_ph1 = b.geographicalId().subdetId();
-        const auto& apos_ph1 = a.globalPosition();
-        const auto& bpos_ph1 = b.globalPosition();
-        if (asub_ph1 != bsub_ph1) {
-          // Subdetector order (BPix, FPix, TIB, TID, TOB, TEC) corresponds also the navigation
-          return asub_ph1 < bsub_ph1;
-        } else {
-          //if (GeomDetEnumerators::isBarrel(asub)) {
-          if (isPhase1Barrel(asub_ph1)) {
-            return apos_ph1.perp2() < bpos_ph1.perp2();
-          } else {
-            return std::abs(apos_ph1.z()) < std::abs(bpos_ph1.z());
-          }
-        }
-      }
-
-      // For Phase-2, can not rely uniquely on subdetector index
-      const GeomDetEnumerators::SubDetector asub = a.det()->subDetector();
-      const GeomDetEnumerators::SubDetector bsub = b.det()->subDetector();
-      const auto& apos = a.globalPosition();
-      const auto& bpos = b.globalPosition();
-      const auto aid = a.geographicalId().rawId();
-      const auto bid = b.geographicalId().rawId();
-      const auto asubid = a.geographicalId().subdetId();
-      const auto bsubid = b.geographicalId().subdetId();
-      if (GeomDetEnumerators::isBarrel(asub) || GeomDetEnumerators::isBarrel(bsub)) {
-        // For barrel tilted modules, or in case (only) one of the two modules is barrel, use 3D position
-        if ((asubid == StripSubdetector::TOB && tTopo.tobSide(aid) < 3) ||
-            (bsubid == StripSubdetector::TOB && tTopo.tobSide(bid) < 3) ||
-            !(GeomDetEnumerators::isBarrel(asub) && GeomDetEnumerators::isBarrel(bsub))) {
-          return apos.mag2() < bpos.mag2();
-        }
-        // For fully barrel comparisons and no tilt, use 2D position
-        else {
-          return apos.perp2() < bpos.perp2();
-        }
-      }
-      // For fully endcap comparisons, use z position
-      else {
-        return std::abs(apos.z()) < std::abs(bpos.z());
-      }
-    });
+    recHits.sort(hitOrder);
 
     // seed
     const auto seedIndex = cand.label();
@@ -565,13 +608,34 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
 
     trk.appendHits(recHits.begin(), recHits.end(), tTopo);
 
+    // hits of the build candidate that the fit removed as outliers: inside the track they are missing hits, as for
+    // the KF outliers; at the ends, the inner/outer navigation below counts them
+    if (buildTracks && buildIndexOfSeed[cand.label()] >= 0) {
+      const auto& build = buildTracks->tracks()[buildIndexOfSeed[cand.label()]];
+      for (int iHit = 0, nCommon = std::min(nhits, build.nTotalHits()); iHit < nCommon; ++iHit) {
+        const auto& fitHot = cand.getHitOnTrack(iHit);
+        const auto& buildHot = build.getHitOnTrack(iHit);
+        if (fitHot.index >= 0 || buildHot.index < 0 || fitHot.layer != buildHot.layer)
+          continue;
+        const auto& removed = recHitOfHitOnTrack(buildHot);
+        if (hitOrder(recHits.front(), removed) && hitOrder(removed, recHits.back()))
+          trk.appendHitPattern(InvalidTrackingRecHit(*removed.det(), TrackingRecHit::missing), tTopo);
+      }
+    }
+
+    // outer state for the navigation and the TrackExtra: the innermost state propagated to the last hit and updated
+    // with it (the KF uses its smoothed state there)
+    auto outerTsos = propagatorAlong.propagate(tsosState, recHits.back().det()->surface());
+    if (outerTsos.isValid())
+      outerTsos = KFUpdator().update(outerTsos, recHits.back());
+    if (!outerTsos.isValid())
+      outerTsos = tsosState;
+
     //extra hits (taken from TrackProducerBase<T>::setSecondHitPattern)
     const auto* outerLayer = detLayers.at(mkFitGeom.mkFitLayerNumber(recHits.back().geographicalId()));
     const auto* innerLayer = detLayers.at(mkFitGeom.mkFitLayerNumber(recHits.front().geographicalId()));
-    auto const& innerCompLayers =
-        navSchool.compatibleLayers(*innerLayer, fts, oppositeToMomentum);  //fts only innermost hit here
-    auto const& outerCompLayers =
-        navSchool.compatibleLayers(*outerLayer, fts, alongMomentum);  //fts only innermost hit here
+    auto const& innerCompLayers = navSchool.compatibleLayers(*innerLayer, *tsosState.freeState(), oppositeToMomentum);
+    auto const& outerCompLayers = navSchool.compatibleLayers(*outerLayer, *outerTsos.freeState(), alongMomentum);
 
     //use negative sigma=-3.0 in order to use a more conservative definition of isInside() for Bounds classes.
     Chi2MeasurementEstimator estimator(30., -3.0, 0.5, 2.0, 0.5, 1.e12);  // same as defauts....
@@ -598,8 +662,7 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     for (auto it : outerCompLayers) {
       if (it->basicComponents().empty())
         continue;
-      //tsosDet is innermost (not good, but does it mean anyhting is fully wrong?)
-      auto const& detWithState = it->compatibleDets(tsosDet.first, propagatorAlong, estimator);
+      auto const& detWithState = it->compatibleDets(outerTsos, propagatorAlong, estimator);
       if (detWithState.empty())
         continue;
       DetId id = detWithState.front().first->geographicalId();
@@ -618,6 +681,7 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     //need to return also seed indices and hits in some way
     seedIndices.push_back(cand.label());
     hitsVecs.push_back(recHits);
+    innerOuterStates.emplace_back(tsosState, outerTsos);
   }
 }
 
