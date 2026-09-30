@@ -920,16 +920,48 @@ void LSTEvent::compactQuadruplets(Queue& queue, uint16_t nEligibleT4Modules) {
 }
 
 void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
-  auto const crossCleanpT3_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {64, 16});
+  {
+    // pT3 x pT5 cross cleaning through an eta-phi grid of the pT5 seeds (count, scan, fill, then 3x3 neighbourhood).
+    auto cellCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, t5DupGrid::kNCells);
+    auto cellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, t5DupGrid::kNCells + 1);
+    auto cellEntries_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, n_max_pixel_quintuplets);
+    alpaka::memset(queue_, cellCount_buf, 0u);
+    auto const pT5Grid_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 128);
 
-  alpaka::exec<Acc2D>(queue_,
-                      crossCleanpT3_workDiv,
-                      CrossCleanpT3{},
-                      modules_.const_view().modules(),
-                      rangesDC_->const_view(),
-                      pixelTripletsDC_->view(),
-                      lstInputDC_->const_view().pixelSeeds(),
-                      pixelQuintupletsDC_->const_view());
+    alpaka::exec<Acc1D>(queue_,
+                        pT5Grid_workDiv,
+                        CountPixelQuintupletSeedGrid{},
+                        modules_.const_view().modules(),
+                        rangesDC_->const_view(),
+                        lstInputDC_->const_view().pixelSeeds(),
+                        pixelQuintupletsDC_->const_view(),
+                        cellCount_buf.data());
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        ScanCellCounts{},
+                        cellCount_buf.data(),
+                        cellStart_buf.data(),
+                        static_cast<unsigned int>(t5DupGrid::kNCells));
+    alpaka::exec<Acc1D>(queue_,
+                        pT5Grid_workDiv,
+                        FillPixelQuintupletSeedGrid{},
+                        modules_.const_view().modules(),
+                        rangesDC_->const_view(),
+                        lstInputDC_->const_view().pixelSeeds(),
+                        pixelQuintupletsDC_->const_view(),
+                        cellCount_buf.data(),
+                        cellEntries_buf.data());
+    alpaka::exec<Acc2D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc2D>({64, 1}, {8, 32}),
+                        CrossCleanpT3{},
+                        modules_.const_view().modules(),
+                        rangesDC_->const_view(),
+                        pixelTripletsDC_->view(),
+                        lstInputDC_->const_view().pixelSeeds(),
+                        pixelQuintupletsDC_->const_view(),
+                        cellStart_buf.data(),
+                        cellEntries_buf.data());
+  }
 
   // Pull nEligibleT5Modules from the device.
   auto rangesOccupancy = rangesDC_->view();
@@ -939,19 +971,46 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   alpaka::wait(queue_);  // wait to get the values before using
   auto const nEligibleModules = *nEligibleModules_buf_h.data();
 
-  constexpr int threadsPerBlockY = 16;
-  constexpr int threadsPerBlockX = 32;
-  auto const removeDupQuintupletsBeforeTC_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
-      {std::max(nEligibleModules / threadsPerBlockY, 1), std::max(nEligibleModules / threadsPerBlockX, 1)}, {16, 32});
+  {
+    // T5 duplicate removal on an eta-phi grid of the alive T5s (count, scan, fill, then 3x3 neighbourhood).
+    auto const nT5Slots = quintupletsDC_->const_view().quintuplets().metadata().size();
+    auto cellCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, t5DupGrid::kNCells);
+    auto cellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, t5DupGrid::kNCells + 1);
+    auto cellEntries_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nT5Slots);
+    alpaka::memset(queue_, cellCount_buf, 0u);
+    auto const t5Grid_workDiv = cms::alpakatools::make_workdiv<Acc2D>({std::max<int>(nEligibleModules, 1), 1}, {1, 32});
 
-  alpaka::exec<Acc2D>(queue_,
-                      removeDupQuintupletsBeforeTC_workDiv,
-                      RemoveDupQuintupletsBeforeTC{},
-                      quintupletsDC_->view().quintuplets(),
-                      quintupletsDC_->view().quintupletsOccupancy(),
-                      rangesDC_->const_view());
+    alpaka::exec<Acc2D>(queue_,
+                        t5Grid_workDiv,
+                        CountT5DupGrid{},
+                        quintupletsDC_->const_view().quintuplets(),
+                        quintupletsDC_->const_view().quintupletsOccupancy(),
+                        rangesDC_->const_view(),
+                        cellCount_buf.data());
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        ScanCellCounts{},
+                        cellCount_buf.data(),
+                        cellStart_buf.data(),
+                        static_cast<unsigned int>(t5DupGrid::kNCells));
+    alpaka::exec<Acc2D>(queue_,
+                        t5Grid_workDiv,
+                        FillT5DupGrid{},
+                        quintupletsDC_->const_view().quintuplets(),
+                        quintupletsDC_->const_view().quintupletsOccupancy(),
+                        rangesDC_->const_view(),
+                        cellCount_buf.data(),
+                        cellEntries_buf.data());
+    alpaka::exec<Acc3D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc3D>({std::max<int>(nEligibleModules, 1), 1, 1}, {1, 4, 32}),
+                        RemoveDupQuintupletsBeforeTC{},
+                        quintupletsDC_->view().quintuplets(),
+                        quintupletsDC_->const_view().quintupletsOccupancy(),
+                        rangesDC_->const_view(),
+                        cellStart_buf.data(),
+                        cellEntries_buf.data());
+  }
 
-  constexpr int threadsPerBlock = 32;
   // T5 x promoted pixel object cross-cleaning on an eta-phi grid (window 0.15) of the pT5s and pT3s.
   auto const pixelGrid = EtaPhiGrid::make(0.15f, 3.f);
   auto pixelCellCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pixelGrid.nCells());
@@ -1163,20 +1222,62 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       rangesDC_->const_view(),
                       nTotal);
 
-  auto const crossCleanT4_workDiv = cms::alpakatools::make_workdiv<Acc3D>(
-      {(nLowerModules_ / threadsPerBlock) + 1, 1, max_blocks}, {threadsPerBlock, 1, threadsPerBlock});
+  {
+    // CrossCleanT4 through the TCs listed by hit: at most the surviving T5/pT5 (T5 hits) and pT3 (T3 hits) entries.
+    const unsigned int nBucketEntries =
+        std::max((counts[0] + counts[2]) * Params_T5::kHits + counts[1] * Params_T3::kHits, 1u);
+    auto bucketCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, tcHitBuckets::kNBuckets);
+    auto bucketStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, tcHitBuckets::kNBuckets + 1);
+    auto bucketTCs_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nBucketEntries);
+    auto bucketHits_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nBucketEntries);
+    alpaka::memset(queue_, bucketCount_buf, 0u);
+    auto const tcHitBuckets_workDiv =
+        cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nTotal, 256u), 256u);
 
-  alpaka::exec<Acc3D>(queue_,
-                      crossCleanT4_workDiv,
-                      CrossCleanT4{},
-                      modules_.const_view().modules(),
-                      quadrupletsDC_->view().quadruplets(),
-                      quadrupletsDC_->const_view().quadrupletsOccupancy(),
-                      pixelTripletsDC_->const_view(),
-                      quintupletsDC_->const_view().quintuplets(),
-                      trackCandidatesBaseDC_->view(),
-                      trackCandidatesExtendedDC_->view(),
-                      rangesDC_->const_view());
+    alpaka::exec<Acc1D>(queue_,
+                        tcHitBuckets_workDiv,
+                        FillTCHitBuckets{},
+                        pixelTripletsDC_->const_view(),
+                        quintupletsDC_->const_view().quintuplets(),
+                        trackCandidatesBaseDC_->const_view(),
+                        trackCandidatesExtendedDC_->const_view(),
+                        bucketCount_buf.data(),
+                        static_cast<unsigned int*>(nullptr),
+                        static_cast<unsigned int*>(nullptr));
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        ScanCellCounts{},
+                        bucketCount_buf.data(),
+                        bucketStart_buf.data(),
+                        tcHitBuckets::kNBuckets);
+    alpaka::exec<Acc1D>(queue_,
+                        tcHitBuckets_workDiv,
+                        FillTCHitBuckets{},
+                        pixelTripletsDC_->const_view(),
+                        quintupletsDC_->const_view().quintuplets(),
+                        trackCandidatesBaseDC_->const_view(),
+                        trackCandidatesExtendedDC_->const_view(),
+                        bucketCount_buf.data(),
+                        bucketTCs_buf.data(),
+                        bucketHits_buf.data());
+
+    // T4s (dense after compactQuadruplets) on y, their hits on x.
+    auto const crossCleanT4_workDiv =
+        cms::alpakatools::make_workdiv<Acc2D>({std::max(cms::alpakatools::divide_up_by(nT4, 16u), 1u), 1u}, {16, 8});
+
+    alpaka::exec<Acc2D>(queue_,
+                        crossCleanT4_workDiv,
+                        CrossCleanT4{},
+                        quadrupletsDC_->view().quadruplets(),
+                        pixelTripletsDC_->const_view(),
+                        quintupletsDC_->const_view().quintuplets(),
+                        trackCandidatesBaseDC_->const_view(),
+                        trackCandidatesExtendedDC_->const_view(),
+                        nT4,
+                        bucketStart_buf.data(),
+                        bucketTCs_buf.data(),
+                        bucketHits_buf.data());
+  }
 
   auto const addT4asTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc2D>({8, 10}, {8, 128});
 
@@ -1415,11 +1516,36 @@ void LSTEvent::createPixelTriplets() {
 #endif
 
   //pT3s can be cleaned here because they're not used in making pT5s!
-  //seems like more blocks lead to conflicting writes
-  auto const removeDupPixelTripletsFromMap_workDiv = cms::alpakatools::make_workdiv<Acc2D>({40, 1}, {16, 16});
+  {
+    // Candidate duplicates through the T3 hits (count, scan, fill buckets), then the pairwise test.
+    auto bucketCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pT3HitBuckets::kNBuckets);
+    auto bucketStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pT3HitBuckets::kNBuckets + 1);
+    auto bucketEntries_buf =
+        cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, n_max_pixel_triplets * pT3HitBuckets::kT3Hits);
+    alpaka::memset(queue_, bucketCount_buf, 0u);
+    auto const pT3Dup_workDiv = cms::alpakatools::make_workdiv<Acc1D>(40, 128);
 
-  alpaka::exec<Acc2D>(
-      queue_, removeDupPixelTripletsFromMap_workDiv, RemoveDupPixelTripletsFromMap{}, pixelTripletsDC_->view());
+    alpaka::exec<Acc1D>(
+        queue_, pT3Dup_workDiv, CountPixelTripletHitBuckets{}, pixelTripletsDC_->const_view(), bucketCount_buf.data());
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        ScanCellCounts{},
+                        bucketCount_buf.data(),
+                        bucketStart_buf.data(),
+                        pT3HitBuckets::kNBuckets);
+    alpaka::exec<Acc1D>(queue_,
+                        pT3Dup_workDiv,
+                        FillPixelTripletHitBuckets{},
+                        pixelTripletsDC_->const_view(),
+                        bucketCount_buf.data(),
+                        bucketEntries_buf.data());
+    alpaka::exec<Acc2D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc2D>({64, 1}, {8, 32}),
+                        RemoveDupPixelTripletsFromMap{},
+                        pixelTripletsDC_->view(),
+                        bucketStart_buf.data(),
+                        bucketEntries_buf.data());
+  }
 
   compactPixelTriplets(queue_);
 }
