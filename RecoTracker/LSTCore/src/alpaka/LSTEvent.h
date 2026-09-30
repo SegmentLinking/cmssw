@@ -57,6 +57,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     unsigned int nTotalMDsOT_;
     unsigned int nTotalSegments_;
     unsigned int nTotalSegmentsOT_;
+    unsigned int nT4Compact_ = 0;  // T4 count after compactQuadruplets()
     unsigned int pixelSize_;
     uint16_t pixelModuleIndex_;
     unsigned int nSegmentOverflows_ = 0;  // created but found no slot in the counting-kernel allocation
