@@ -2257,8 +2257,93 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // First dBeta cut of key `key` of an inner triplet: from the key-cut mask for the first kT5DBetaMaskBits keys.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passQuintupletKey(TAcc const& acc,
+                                                        ModulesConst modules,
+                                                        MiniDoubletsConst mds,
+                                                        SegmentsConst segments,
+                                                        TripletsConst triplets,
+                                                        uint16_t lowerModule1,
+                                                        unsigned int innerTripletIndex,
+                                                        unsigned int thirdSegmentIndex,
+                                                        unsigned int key,
+                                                        T5KeyMask passMask,
+                                                        const float ptCut) {
+    if (key < kT5DBetaMaskBits)
+      return (passMask >> key) & 1u;
+    float dBeta1;
+    return passQuintupletDBeta1(
+        acc, modules, mds, segments, triplets, lowerModule1, innerTripletIndex, thirdSegmentIndex, dBeta1, ptCut);
+  }
+
+  // Full T5 selection of one (inner, outer) triplet pair; a selected pair is counted per module and per MD and
+  // recorded (the first `capacity`).
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void selectQuintupletPair(TAcc const& acc,
+                                                           ModulesConst modules,
+                                                           MiniDoubletsConst mds,
+                                                           MiniDoubletsT5Counts mdT5Counts,
+                                                           SegmentsConst segments,
+                                                           TripletsConst triplets,
+                                                           MiniDoubletsOccupancyConst mdOccupancy,
+                                                           TripletsRangesConst tripletsRangesByMD,
+                                                           uint16_t lowerModule1,
+                                                           unsigned int innerTripletIndex,
+                                                           unsigned int outerTripletIndex,
+                                                           float bridgeRadius,
+                                                           const float ptCut,
+                                                           unsigned int* __restrict__ dBeta2Memo,
+                                                           unsigned int* __restrict__ moduleT5Count,
+                                                           unsigned int* __restrict__ nSelected,
+                                                           const unsigned int capacity,
+                                                           unsigned int* __restrict__ selectedT3s,
+                                                           float* __restrict__ selectedBridgeRadius,
+                                                           float* __restrict__ selectedDnnScore) {
+    if (!passQuintupletDBeta2Memo(
+            acc, modules, mds, segments, triplets, lowerModule1, innerTripletIndex, outerTripletIndex, ptCut, dBeta2Memo))
+      return;
+    float innerRadius, outerRadius, rzChi2, dnnScore;
+    if (!runQuintupletSelectionOuter(acc,
+                                     modules,
+                                     mds,
+                                     segments,
+                                     triplets,
+                                     mdOccupancy,
+                                     tripletsRangesByMD,
+                                     lowerModule1,
+                                     innerTripletIndex,
+                                     outerTripletIndex,
+                                     bridgeRadius,
+                                     innerRadius,
+                                     outerRadius,
+                                     rzChi2,
+                                     dnnScore))
+      return;
+    const unsigned int firstSegmentIndex = triplets.segmentIndices()[innerTripletIndex][0];
+    alpaka::atomicAdd(acc, &moduleT5Count[lowerModule1], 1u, alpaka::hierarchy::Blocks{});
+    alpaka::atomicAdd(acc,
+                      &mdT5Counts.connectedT5s0Max()[segments.mdIndices()[firstSegmentIndex][0]],
+                      1u,
+                      alpaka::hierarchy::Blocks{});
+    alpaka::atomicAdd(acc,
+                      &mdT5Counts.connectedT5s1Max()[segments.mdIndices()[firstSegmentIndex][1]],
+                      1u,
+                      alpaka::hierarchy::Blocks{});
+    const unsigned int slot = alpaka::atomicAdd(acc, nSelected, 1u, alpaka::hierarchy::Blocks{});
+    if (slot < capacity) {
+      selectedT3s[2 * slot] = innerTripletIndex;
+      selectedT3s[2 * slot + 1] = outerTripletIndex;
+      selectedBridgeRadius[slot] = bridgeRadius;
+      selectedDnnScore[slot] = dnnScore;
+    }
+  }
+
   // Runs the full T5 selection once per candidate pair: counts the selected pairs per module and per MD and records
   // them (the first `capacity`; createQuintuplets re-runs this kernel with a larger list if more are selected).
+  // On the GPU a block is one row of threads per inner triplet, which takes the keys in chunks: first one thread per
+  // key (first dBeta cut, bridge radius), then one thread per (key, outer triplet) pair, so all threads select pairs.
+  constexpr unsigned int kT5KeysPerChunk = 32;
   struct CountTripletConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -2283,6 +2368,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   float* __restrict__ selectedBridgeRadius,
                                   float* __restrict__ selectedDnnScore,
                                   unsigned int* __restrict__ dBeta2Memo) const {
+      // The block synchronizations below require the threads of a block to share one inner triplet.
+      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[1] == 1));
       const auto& mdIndices = segments.mdIndices();
       const auto& segIdx = triplets.segmentIndices();
       const auto& lmIdx = triplets.lowerModuleIndices();
@@ -2295,73 +2382,116 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int nKeys = nKeysByMD[secondMDOuter];
         const unsigned int keyOffset = keyOffsetByMD[secondMDOuter];
         const T5KeyMask passMask = dBetaPassMask[innerTripletIndex];
-        const unsigned int md0Index = mdIndices[segIdx[innerTripletIndex][0]][0];
-        const unsigned int md1Index = mdIndices[segIdx[innerTripletIndex][0]][1];
 
-        for (unsigned int k = 0; k < nKeys; ++k) {
-          //asynchronous stop; exact truncation here is not important
-          if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
-            break;
-          const unsigned int thirdSegIdx = keys[keyOffset + k];
-          float dBeta1;
-          if (k < kT5DBetaMaskBits ? !((passMask >> k) & 1u)
-                                   : !passQuintupletDBeta1(acc,
-                                                           modules,
-                                                           mds,
-                                                           segments,
-                                                           triplets,
-                                                           lowerModule1,
-                                                           innerTripletIndex,
-                                                           thirdSegIdx,
-                                                           dBeta1,
-                                                           ptCut))
-            continue;
-          const float bridgeRadius =
-              computeT5BridgeRadius(acc, mds, segments, triplets, innerTripletIndex, thirdSegIdx);
-
-          const unsigned int nOuterBySeg = tripletsRangesBySegment.n()[thirdSegIdx];
-          const unsigned int outerOffset = tripletsRangesBySegment.offset()[thirdSegIdx];
-          for (unsigned int outerIndex : cms::alpakatools::uniform_elements_x(acc, nOuterBySeg)) {
+        if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
+          // Serial backend: the keys in order, then the outer triplets of each key in order.
+          for (unsigned int key = 0; key < nKeys; ++key) {
+            //asynchronous stop; exact truncation here is not important
             if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
               break;
-            const unsigned int outerTripletIndex = tripletsBySegment.tripletIndex()[outerOffset + outerIndex];
-            if (!passQuintupletDBeta2Memo(acc,
-                                          modules,
-                                          mds,
-                                          segments,
-                                          triplets,
-                                          lowerModule1,
-                                          innerTripletIndex,
-                                          outerTripletIndex,
-                                          ptCut,
-                                          dBeta2Memo))
+            const unsigned int thirdSegIdx = keys[keyOffset + key];
+            if (!passQuintupletKey(acc,
+                                   modules,
+                                   mds,
+                                   segments,
+                                   triplets,
+                                   lowerModule1,
+                                   innerTripletIndex,
+                                   thirdSegIdx,
+                                   key,
+                                   passMask,
+                                   ptCut))
               continue;
-            float innerRadius, outerRadius, rzChi2, dnnScore;
-            if (!runQuintupletSelectionOuter(acc,
-                                             modules,
-                                             mds,
-                                             segments,
-                                             triplets,
-                                             mdOccupancy,
-                                             tripletsRangesByMD,
-                                             lowerModule1,
-                                             innerTripletIndex,
-                                             outerTripletIndex,
-                                             bridgeRadius,
-                                             innerRadius,
-                                             outerRadius,
-                                             rzChi2,
-                                             dnnScore))
-              continue;
-            alpaka::atomicAdd(acc, &moduleT5Count[lowerModule1], 1u, alpaka::hierarchy::Blocks{});
-            alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s0Max()[md0Index], 1u, alpaka::hierarchy::Blocks{});
-            alpaka::atomicAdd(acc, &mdT5Counts.connectedT5s1Max()[md1Index], 1u, alpaka::hierarchy::Blocks{});
-            const unsigned int slot = alpaka::atomicAdd(acc, nSelected, 1u, alpaka::hierarchy::Blocks{});
-            if (slot < capacity) {
-              selectedT3s[2 * slot] = innerTripletIndex;
-              selectedT3s[2 * slot + 1] = outerTripletIndex;
-              selectedBridgeRadius[slot] = bridgeRadius;
-              selectedDnnScore[slot] = dnnScore;
+            const float bridgeRadius =
+                computeT5BridgeRadius(acc, mds, segments, triplets, innerTripletIndex, thirdSegIdx);
+            const unsigned int nOuter = tripletsRangesBySegment.n()[thirdSegIdx];
+            const unsigned int outerOffset = tripletsRangesBySegment.offset()[thirdSegIdx];
+            for (unsigned int outerIndex = 0; outerIndex < nOuter; ++outerIndex) {
+              if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
+                break;
+              selectQuintupletPair(acc,
+                                   modules,
+                                   mds,
+                                   mdT5Counts,
+                                   segments,
+                                   triplets,
+                                   mdOccupancy,
+                                   tripletsRangesByMD,
+                                   lowerModule1,
+                                   innerTripletIndex,
+                                   tripletsBySegment.tripletIndex()[outerOffset + outerIndex],
+                                   bridgeRadius,
+                                   ptCut,
+                                   dBeta2Memo,
+                                   moduleT5Count,
+                                   nSelected,
+                                   capacity,
+                                   selectedT3s,
+                                   selectedBridgeRadius,
+                                   selectedDnnScore);
+            }
+          }
+        } else {
+          auto& chunkOuterOffset = alpaka::declareSharedVar<unsigned int[kT5KeysPerChunk], __COUNTER__>(acc);
+          auto& chunkNOuter = alpaka::declareSharedVar<unsigned int[kT5KeysPerChunk], __COUNTER__>(acc);
+          auto& chunkBridgeRadius = alpaka::declareSharedVar<float[kT5KeysPerChunk], __COUNTER__>(acc);
+          for (unsigned int firstKey = 0; firstKey < nKeys; firstKey += kT5KeysPerChunk) {
+            const unsigned int nChunkKeys = nKeys - firstKey < kT5KeysPerChunk ? nKeys - firstKey : kT5KeysPerChunk;
+            alpaka::syncBlockThreads(acc);  // the previous chunk is done with the shared arrays
+            for (unsigned int keyInChunk : cms::alpakatools::uniform_elements_x(acc, nChunkKeys)) {
+              const unsigned int key = firstKey + keyInChunk;
+              const unsigned int thirdSegIdx = keys[keyOffset + key];
+              const bool pass = passQuintupletKey(acc,
+                                                  modules,
+                                                  mds,
+                                                  segments,
+                                                  triplets,
+                                                  lowerModule1,
+                                                  innerTripletIndex,
+                                                  thirdSegIdx,
+                                                  key,
+                                                  passMask,
+                                                  ptCut);
+              chunkNOuter[keyInChunk] = pass ? tripletsRangesBySegment.n()[thirdSegIdx] : 0;
+              if (pass) {
+                chunkOuterOffset[keyInChunk] = tripletsRangesBySegment.offset()[thirdSegIdx];
+                chunkBridgeRadius[keyInChunk] =
+                    computeT5BridgeRadius(acc, mds, segments, triplets, innerTripletIndex, thirdSegIdx);
+              }
+            }
+            alpaka::syncBlockThreads(acc);
+            unsigned int nPairs = 0;
+            for (unsigned int keyInChunk = 0; keyInChunk < nChunkKeys; ++keyInChunk)
+              nPairs += chunkNOuter[keyInChunk];
+            // Pairs in key order; each thread walks forward to the key of its next pair.
+            unsigned int pairKey = 0, firstPairOfKey = 0;
+            for (unsigned int pair : cms::alpakatools::uniform_elements_x(acc, nPairs)) {
+              if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
+                break;
+              while (pair >= firstPairOfKey + chunkNOuter[pairKey]) {
+                firstPairOfKey += chunkNOuter[pairKey];
+                ++pairKey;
+              }
+              selectQuintupletPair(acc,
+                                   modules,
+                                   mds,
+                                   mdT5Counts,
+                                   segments,
+                                   triplets,
+                                   mdOccupancy,
+                                   tripletsRangesByMD,
+                                   lowerModule1,
+                                   innerTripletIndex,
+                                   tripletsBySegment.tripletIndex()[chunkOuterOffset[pairKey] + pair - firstPairOfKey],
+                                   chunkBridgeRadius[pairKey],
+                                   ptCut,
+                                   dBeta2Memo,
+                                   moduleT5Count,
+                                   nSelected,
+                                   capacity,
+                                   selectedT3s,
+                                   selectedBridgeRadius,
+                                   selectedDnnScore);
             }
           }
         }
