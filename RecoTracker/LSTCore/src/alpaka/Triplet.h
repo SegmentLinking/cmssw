@@ -382,11 +382,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dy = y3 - innerSegData.y1;
     const float drt_tl_axis = alpaka::math::sqrt(acc, dx * dx + dy * dy);
 
-    const float betaInCut =
-        alpaka::math::asin(
-            acc, alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax)) +
-        (0.02f / innerSegData.drt_InSeg);
-
     // Algebraic betaIn check, avoiding per-candidate atan2.
     // betaIn = sdIn_alpha - (phi(dx,dy) - anchorPhi1)
     //        = sdIn_alpha - atan2(x1*y3 - y1*x3, x1*x3 + y1*y3 - rt1^2)
@@ -400,12 +395,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float crossBetaIn = innerSegData.x1 * y3 - innerSegData.y1 * x3;
     const float dotBetaIn = x3 * innerSegData.x1 + y3 * innerSegData.y1 - innerSegData.rt1 * innerSegData.rt1;
     const float r2 = crossBetaIn * crossBetaIn + dotBetaIn * dotBetaIn;
-    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
-    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
-    // A triplet admitted only by the widened bound is flagged and used only in quintuplets.
-    constexpr float kT3PointingWiden = 1.7f;
-    const float sinWideCut = alpaka::math::sin(acc, kT3PointingWiden * betaInCut);
-    const float sinWideCutSq = sinWideCut * sinWideCut;
 
     float sinBetaInSq;
     bool cosPositive;
@@ -427,7 +416,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       sinBetaInSq = sinBetaIn * sinBetaIn;
       cosPositive = innerSegData.cos_alpha * dotBetaIn + innerSegData.sin_alpha * crossBetaIn > 0.f;
     }
-    if (not cosPositive or sinBetaInSq >= sinWideCutSq * r2)
+    if (not cosPositive)
+      return 0;
+
+    // A triplet admitted only by the widened bound is flagged and used only in quintuplets.
+    constexpr float kT3PointingWiden = 1.7f;
+    const float sinSlope =
+        alpaka::math::min(acc, (-innerSegData.rt_InSeg + drt_tl_axis) * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    const float resCut = 0.02f / innerSegData.drt_InSeg;
+    // For s, c >= 0 and w = 1.7 (s + c) < 1: 0 <= sin(1.7 (asin(s) + c)) <= w, so this rejects only what the wide cut
+    // below rejects (1e-4 margin for rounding) without the asin and the two sin.
+    const float wideBound = kT3PointingWiden * (sinSlope + resCut);
+    if (sinSlope >= 0.f and wideBound < 1.f and sinBetaInSq >= wideBound * wideBound * r2 * 1.0001f)
+      return 0;
+
+    const float betaInCut = alpaka::math::asin(acc, sinSlope) + resCut;
+    const float sinBetaInCut = alpaka::math::sin(acc, betaInCut);
+    const float sinBetaInCutSq = sinBetaInCut * sinBetaInCut;
+    const float sinWideCut = alpaka::math::sin(acc, kT3PointingWiden * betaInCut);
+    const float sinWideCutSq = sinWideCut * sinWideCut;
+    if (sinBetaInSq >= sinWideCutSq * r2)
       return 0;
     return (sinBetaInSq < sinBetaInCutSq * r2) ? 1 : 2;
   }
