@@ -110,6 +110,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     bool keepHostCopies_ = false;  // copy a device collection to host before it is released (standalone writer)
     double memoryAllocatedMB_ = 0;
     double memoryLiveMB_ = 0;
+    unsigned int nT4Compact_ = 0;  // T4 count after compactQuadruplets()
     double memoryPeakLiveMB_ = 0;
 
     void trackAllocatedMB(double mb);
