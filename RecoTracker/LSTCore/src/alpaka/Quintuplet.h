@@ -134,65 +134,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   }
 
-  //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
+  // Helix start of passT5RZConstraint from the inner triplet alone (its circle centre and MDs 1-3).
+  struct T5RZInnerTerms {
+    float x_init, y_init, z_init, rt_init, Px, Py, Pz, momentum, chargeTimesField;
+  };
+
   template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passT5RZConstraint(TAcc const& acc,
-                                                         ModulesConst modules,
-                                                         MiniDoubletsConst mds,
-                                                         unsigned int firstMDIndex,
-                                                         unsigned int secondMDIndex,
-                                                         unsigned int thirdMDIndex,
-                                                         unsigned int fourthMDIndex,
-                                                         unsigned int fifthMDIndex,
-                                                         uint16_t lowerModuleIndex1,
-                                                         uint16_t lowerModuleIndex2,
-                                                         uint16_t lowerModuleIndex3,
-                                                         uint16_t lowerModuleIndex4,
-                                                         uint16_t lowerModuleIndex5,
-                                                         float& rzChiSquared,
-                                                         float inner_pt,
-                                                         float innerRadius,
-                                                         float g,
-                                                         float f) {
-    //(g,f) is the center of the circle fitted by the innermost 3 points on x,y coordinates
-    const float rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
-    const float rt2 = mds.anchorRt()[secondMDIndex] / 100;
-    const float rt3 = mds.anchorRt()[thirdMDIndex] / 100;
-    const float rt4 = mds.anchorRt()[fourthMDIndex] / 100;
-    const float rt5 = mds.anchorRt()[fifthMDIndex] / 100;
-
-    const float z1 = mds.anchorZ()[firstMDIndex] / 100;
-    const float z2 = mds.anchorZ()[secondMDIndex] / 100;
-    const float z3 = mds.anchorZ()[thirdMDIndex] / 100;
-    const float z4 = mds.anchorZ()[fourthMDIndex] / 100;
-    const float z5 = mds.anchorZ()[fifthMDIndex] / 100;
-
-    // Using lst_layer numbering convention defined in ModuleMethods.h
-    const int layer1 = modules.lstLayers()[lowerModuleIndex1];
-    const int layer2 = modules.lstLayers()[lowerModuleIndex2];
-    const int layer3 = modules.lstLayers()[lowerModuleIndex3];
-    const int layer4 = modules.lstLayers()[lowerModuleIndex4];
-    const int layer5 = modules.lstLayers()[lowerModuleIndex5];
-
-    //slope computed using the internal T3s
-    const int moduleType1 = modules.moduleType()[lowerModuleIndex1];  //0 is ps, 1 is 2s
-    const int moduleType2 = modules.moduleType()[lowerModuleIndex2];
-    const int moduleType3 = modules.moduleType()[lowerModuleIndex3];
-    const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
-    const int moduleType5 = modules.moduleType()[lowerModuleIndex5];
-
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE T5RZInnerTerms computeT5RZInnerTerms(TAcc const& acc,
+                                                                      ModulesConst modules,
+                                                                      MiniDoubletsConst mds,
+                                                                      SegmentsConst segments,
+                                                                      TripletsConst triplets,
+                                                                      unsigned int innerTripletIndex) {
+    const uint16_t lowerModuleIndex3 = triplets.lowerModuleIndices()[innerTripletIndex][2];
+    const unsigned int secondSegmentIndex = triplets.segmentIndices()[innerTripletIndex][1];
+    const unsigned int firstMDIndex = segments.mdIndices()[triplets.segmentIndices()[innerTripletIndex][0]][0];
+    const unsigned int secondMDIndex = segments.mdIndices()[secondSegmentIndex][0];
+    const unsigned int thirdMDIndex = segments.mdIndices()[secondSegmentIndex][1];
+    const float innerRadius = triplets.radius()[innerTripletIndex];
+    const float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
+    const float z1 = mds.anchorZ()[firstMDIndex] / 100;               //in the unit of m instead of cm
+    const int moduleType3 = modules.moduleType()[lowerModuleIndex3];  //0 is ps, 1 is 2s
     const float x1 = mds.anchorX()[firstMDIndex] / 100;
-    const float x2 = mds.anchorX()[secondMDIndex] / 100;
     const float x3 = mds.anchorX()[thirdMDIndex] / 100;
-    const float x4 = mds.anchorX()[fourthMDIndex] / 100;
     const float y1 = mds.anchorY()[firstMDIndex] / 100;
-    const float y2 = mds.anchorY()[secondMDIndex] / 100;
     const float y3 = mds.anchorY()[thirdMDIndex] / 100;
-    const float y4 = mds.anchorY()[fourthMDIndex] / 100;
 
-    float residual = 0;
-    float error2 = 0;
-    float x_center = g / 100, y_center = f / 100;
+    // centre of the circle fitted by the innermost 3 points on x,y coordinates
+    float x_center = triplets.centerX()[innerTripletIndex] / 100,
+          y_center = triplets.centerY()[innerTripletIndex] / 100;
     float x_init = mds.anchorX()[thirdMDIndex] / 100;
     float y_init = mds.anchorY()[thirdMDIndex] / 100;
     float z_init = mds.anchorZ()[thirdMDIndex] / 100;
@@ -278,6 +248,82 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
     }
 
+    //to get Pz, we use pt/pz=ds/dz, ds is the arclength between MD1 and MD3.
+    float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
+    float BO =
+        alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
+    float AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init);
+    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO));
+    float ds = innerRadius / 100 * dPhi;
+
+    float Pz = (z_init - z1) / ds * Pt;
+    float momentum = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
+
+    float chargeTimesField = -2.f * k2Rinv1GeVf * 100 * charge;  // multiply by 100 to make the correct length units
+
+    return {x_init, y_init, z_init, rt_init, Px, Py, Pz, momentum, chargeTimesField};
+  }
+
+  //bounds can be found at http://uaf-10.t2.ucsd.edu/~bsathian/SDL/T5_RZFix/t5_rz_thresholds.txt
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool passT5RZConstraint(TAcc const& acc,
+                                                         ModulesConst modules,
+                                                         MiniDoubletsConst mds,
+                                                         T5RZInnerTerms const& rzInner,
+                                                         unsigned int firstMDIndex,
+                                                         unsigned int secondMDIndex,
+                                                         unsigned int thirdMDIndex,
+                                                         unsigned int fourthMDIndex,
+                                                         unsigned int fifthMDIndex,
+                                                         uint16_t lowerModuleIndex1,
+                                                         uint16_t lowerModuleIndex2,
+                                                         uint16_t lowerModuleIndex3,
+                                                         uint16_t lowerModuleIndex4,
+                                                         uint16_t lowerModuleIndex5,
+                                                         float& rzChiSquared,
+                                                         float inner_pt) {
+    const float rt1 = mds.anchorRt()[firstMDIndex] / 100;  //in the unit of m instead of cm
+    const float rt2 = mds.anchorRt()[secondMDIndex] / 100;
+    const float rt3 = mds.anchorRt()[thirdMDIndex] / 100;
+    const float rt4 = mds.anchorRt()[fourthMDIndex] / 100;
+    const float rt5 = mds.anchorRt()[fifthMDIndex] / 100;
+
+    const float z1 = mds.anchorZ()[firstMDIndex] / 100;
+    const float z2 = mds.anchorZ()[secondMDIndex] / 100;
+    const float z3 = mds.anchorZ()[thirdMDIndex] / 100;
+    const float z4 = mds.anchorZ()[fourthMDIndex] / 100;
+    const float z5 = mds.anchorZ()[fifthMDIndex] / 100;
+
+    // Using lst_layer numbering convention defined in ModuleMethods.h
+    const int layer1 = modules.lstLayers()[lowerModuleIndex1];
+    const int layer2 = modules.lstLayers()[lowerModuleIndex2];
+    const int layer3 = modules.lstLayers()[lowerModuleIndex3];
+    const int layer4 = modules.lstLayers()[lowerModuleIndex4];
+    const int layer5 = modules.lstLayers()[lowerModuleIndex5];
+
+    //slope computed using the internal T3s
+    const int moduleType1 = modules.moduleType()[lowerModuleIndex1];  //0 is ps, 1 is 2s
+    const int moduleType2 = modules.moduleType()[lowerModuleIndex2];
+    const int moduleType3 = modules.moduleType()[lowerModuleIndex3];
+    const int moduleType4 = modules.moduleType()[lowerModuleIndex4];
+    const int moduleType5 = modules.moduleType()[lowerModuleIndex5];
+
+    const float x1 = mds.anchorX()[firstMDIndex] / 100;
+    const float x2 = mds.anchorX()[secondMDIndex] / 100;
+    const float x3 = mds.anchorX()[thirdMDIndex] / 100;
+    const float x4 = mds.anchorX()[fourthMDIndex] / 100;
+    const float y1 = mds.anchorY()[firstMDIndex] / 100;
+    const float y2 = mds.anchorY()[secondMDIndex] / 100;
+    const float y3 = mds.anchorY()[thirdMDIndex] / 100;
+    const float y4 = mds.anchorY()[fourthMDIndex] / 100;
+
+    float residual = 0;
+    float error2 = 0;
+    const float x_init = rzInner.x_init, y_init = rzInner.y_init, z_init = rzInner.z_init, rt_init = rzInner.rt_init;
+    // p and a keep the names of the helix code below (as in computePT3RZChiSquared)
+    const float Pz = rzInner.Pz, p = rzInner.momentum, a = rzInner.chargeTimesField;
+    float Px = rzInner.Px, Py = rzInner.Py;
+
     // But if the initial T5 curve goes across quarters(i.e. cross axis to separate the quarters), need special redeclaration of Px,Py signs on these to avoid errors
     if (moduleType3 == 0) {  // 0 is ps
       if (x4 < x3 && x3 < x2)
@@ -299,19 +345,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       else if (y3 > y2 && y2 > y1)
         Py = alpaka::math::abs(acc, Py);
     }
-
-    //to get Pz, we use pt/pz=ds/dz, ds is the arclength between MD1 and MD3.
-    float AO = alpaka::math::sqrt(acc, (x1 - x_center) * (x1 - x_center) + (y1 - y_center) * (y1 - y_center));
-    float BO =
-        alpaka::math::sqrt(acc, (x_init - x_center) * (x_init - x_center) + (y_init - y_center) * (y_init - y_center));
-    float AB2 = (x1 - x_init) * (x1 - x_init) + (y1 - y_init) * (y1 - y_init);
-    float dPhi = alpaka::math::acos(acc, (AO * AO + BO * BO - AB2) / (2 * AO * BO));
-    float ds = innerRadius / 100 * dPhi;
-
-    float Pz = (z_init - z1) / ds * Pt;
-    float p = alpaka::math::sqrt(acc, Px * Px + Py * Py + Pz * Pz);
-
-    float a = -2.f * k2Rinv1GeVf * 100 * charge;  // multiply by 100 to make the correct length units
 
     float zsi, rtsi;
     int layeri, moduleTypei;
@@ -1833,6 +1866,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   unsigned int innerTripletIndex,
                                                                   unsigned int outerTripletIndex,
                                                                   float bridgeRadius,
+                                                                  T5RZInnerTerms const& rzInner,
                                                                   float& innerRadius,
                                                                   float& outerRadius,
                                                                   float& rzChiSquared,
@@ -1856,14 +1890,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     outerRadius = triplets.radius()[outerTripletIndex];
     innerRadius = triplets.radius()[innerTripletIndex];
 
-    float g = triplets.centerX()[innerTripletIndex];
-    float f = triplets.centerY()[innerTripletIndex];
-
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
 
     if (not passT5RZConstraint(acc,
                                modules,
                                mds,
+                               rzInner,
                                firstMDIndex,
                                secondMDIndex,
                                thirdMDIndex,
@@ -1875,10 +1907,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                lowerModuleIndex4,
                                lowerModuleIndex5,
                                rzChiSquared,
-                               inner_pt,
-                               innerRadius,
-                               g,
-                               f))
+                               inner_pt))
       return false;
 
     const uint16_t t5Lm[Params_T5::kBaseLayers] = {
@@ -1967,6 +1996,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                        innerTripletIndex,
                                        outerTripletIndex,
                                        bridgeRadius,
+                                       computeT5RZInnerTerms(acc, modules, mds, segments, triplets, innerTripletIndex),
                                        innerRadius,
                                        outerRadius,
                                        rzChiSquared,
@@ -2432,6 +2462,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                            unsigned int innerTripletIndex,
                                                            unsigned int outerTripletIndex,
                                                            float bridgeRadius,
+                                                           T5RZInnerTerms const& rzInner,
                                                            const float ptCut,
                                                            unsigned int* __restrict__ dBeta2Memo,
                                                            DBetaBoundInner const& boundInner,
@@ -2465,6 +2496,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                      innerTripletIndex,
                                      outerTripletIndex,
                                      bridgeRadius,
+                                     rzInner,
                                      innerRadius,
                                      outerRadius,
                                      rzChi2,
@@ -2532,11 +2564,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int nKeys = nKeysByMD[secondMDOuter];
         const unsigned int keyOffset = keyOffsetByMD[secondMDOuter];
         const T5KeyMask passMask = dBetaPassMask[innerTripletIndex];
+        if (passMask == 0 && nKeys <= kT5DBetaMaskBits)
+          continue;
 
         if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
           // Serial backend: the keys in order, then the outer triplets of each key in order.
           const DBetaBoundInner boundInner =
               makeDBetaBoundInner(acc, modules, mds, segments, triplets, innerTripletIndex);
+          const T5RZInnerTerms rzInner =
+              computeT5RZInnerTerms(acc, modules, mds, segments, triplets, innerTripletIndex);
           for (unsigned int key = 0; key < nKeys; ++key) {
             //asynchronous stop; exact truncation here is not important
             if (moduleT5Count[lowerModule1] > kNQuintupletThreshold)
@@ -2573,6 +2609,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    innerTripletIndex,
                                    tripletsBySegment.tripletIndex()[outerOffset + outerIndex],
                                    bridgeRadius,
+                                   rzInner,
                                    ptCut,
                                    dBeta2Memo,
                                    boundInner,
@@ -2637,6 +2674,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                    innerTripletIndex,
                                    tripletsBySegment.tripletIndex()[chunkOuterOffset[pairKey] + pair - firstPairOfKey],
                                    chunkBridgeRadius[pairKey],
+                                   computeT5RZInnerTerms(acc, modules, mds, segments, triplets, innerTripletIndex),
                                    ptCut,
                                    dBeta2Memo,
                                    DBetaBoundInner{},
