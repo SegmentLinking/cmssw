@@ -1,6 +1,8 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_Hit_h
 #define RecoTracker_LSTCore_src_alpaka_Hit_h
 
+#include <limits>
+
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/alpakastdAlgorithm.h"
 #include "HeterogeneousCore/AlpakaMath/interface/deltaPhi.h"
@@ -16,11 +18,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return cms::alpakatools::deltaPhi(acc, x1, y1, x2 - x1, y2 - y1);
   }
 
+  // Set in a packed hit index for an outer-tracker hit: its top bit.
+  constexpr unsigned int kPackedHitOTBit = 1u << (std::numeric_limits<unsigned int>::digits - 1);
+
   ALPAKA_FN_ACC ALPAKA_FN_INLINE unsigned int packedHitIdx(unsigned int ih,
                                                            HitsBaseConst hitsBase,
                                                            HitsITConst hitsIT) {
-    constexpr int kOTBit = 1 << 31;
-    return hitOrigIdx(hitsBase, hitsIT, ih) | (hitsBase.detid()[ih] == kPixelModuleId ? 0 : kOTBit);
+    return hitOrigIdx(hitsBase, hitsIT, ih) | (hitsBase.detid()[ih] == kPixelModuleId ? 0u : kPackedHitOTBit);
   }
 
   struct ModuleRangesKernel {
