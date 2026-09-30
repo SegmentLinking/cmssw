@@ -111,6 +111,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     double memoryAllocatedMB_ = 0;
     double memoryLiveMB_ = 0;
     double memoryPeakLiveMB_ = 0;
+    unsigned int nT4Compact_ = 0;  // T4 count after compactQuadruplets()
 
     void trackAllocatedMB(double mb);
     void trackTransientMB(double mb);  // live (peak) accounting only, not added to the allocated total
