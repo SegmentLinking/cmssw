@@ -262,20 +262,18 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         int n = 0;
         unsigned int firstLayer;
         for (auto const& hit : recHits) {
+          // getDetectorType is a linear search: only call it for the hits whose type decides.
           if (iType == lst::LSTObjType::T5) {
-            auto hType = tracker.getDetectorType(hit.geographicalId());
-            if (hType != TrackerGeometry::ModuleType::Ph2PSP && n < 2)
+            if (n < 2 && tracker.getDetectorType(hit.geographicalId()) != TrackerGeometry::ModuleType::Ph2PSP)
               continue;  // the first two should be P
           }
           if (iType == lst::LSTObjType::T4) {
             unsigned int hitLayer = tTopo.layer(hit.geographicalId());
-            auto hType = tracker.getDetectorType(hit.geographicalId());
             if (n == 0)
               firstLayer = hitLayer;
-            else {
-              if (hType == TrackerGeometry::ModuleType::Ph2PSS && hitLayer == firstLayer)
-                continue;
-            }
+            else if (hitLayer == firstLayer &&
+                     tracker.getDetectorType(hit.geographicalId()) == TrackerGeometry::ModuleType::Ph2PSS)
+              continue;
           }
           hitsForSeed.emplace_back(dynamic_cast<Hit>(&hit));
           n++;
