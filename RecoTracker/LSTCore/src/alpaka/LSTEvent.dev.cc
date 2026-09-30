@@ -25,6 +25,14 @@ using Acc3D = ALPAKA_ACCELERATOR_NAMESPACE::Acc3D;
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
 
+namespace {
+  // Size of a typed buffer in MB, for the memory accounting.
+  template <typename TBuf>
+  double bufferMB(TBuf const& buf) {
+    return alpaka::getExtentProduct(buf) * sizeof(alpaka::Elem<TBuf>) / 1e6;
+  }
+}  // namespace
+
 void LSTEvent::initSync() {
   alpaka::wait(queue_);  // other calls can be asynchronous
 
@@ -224,6 +232,16 @@ void LSTEvent::addPixelSegmentToEvent() {
 }
 
 void LSTEvent::createMiniDoublets() {
+  // Hit pairs accepted by CountMiniDoublets, one bit mask per lower hit (indexed by hit); transient.
+  const int32_t nHits = lstInputDC_->size()[0];
+  auto mdPassMask_buf = cms::alpakatools::make_device_buffer<uint64_t[]>(queue_, nHits);
+  double mdPassMaskMB = 0;
+  if (objectsStatistics_) {
+    mdPassMaskMB = bufferMB(mdPassMask_buf);
+    trackTransientMB(mdPassMaskMB);
+    lstWarning(std::format("[MEM] (transient) MiniDoublet pass masks: {} hits ({:.1f} MB)", nHits, mdPassMaskMB));
+  }
+
   if (!miniDoubletsDC_) {
     auto rangesOccupancy = rangesDC_->view();
 
@@ -252,6 +270,7 @@ void LSTEvent::createMiniDoublets() {
                         hitsDC_->const_view().extended(),
                         hitsDC_->const_view().ranges(),
                         rangesDC_->view(),
+                        mdPassMask_buf.data(),
                         ptCut_,
                         clustSizeCut_);
 
@@ -288,6 +307,9 @@ void LSTEvent::createMiniDoublets() {
     auto totOccupancyMDs_view = cms::alpakatools::make_device_view(queue_, mdsOccupancy.totOccupancyMDs());
     alpaka::memset(queue_, nMDs_view, 0u);
     alpaka::memset(queue_, totOccupancyMDs_view, 0u);
+  } else {
+    // CountMiniDoublets above fills the pass mask that CreateMiniDoublets reads.
+    lstLogicError("LSTEvent::createMiniDoublets: mini-doublets already created in this event");
   }
 
   auto connView = cms::alpakatools::make_device_view(queue_, miniDoubletsBuildDC_->view().connectedMax());
@@ -321,6 +343,7 @@ void LSTEvent::createMiniDoublets() {
                       miniDoubletsBuildDC_->view(),
                       miniDoubletsDC_->view().miniDoubletsOccupancy(),
                       rangesDC_->const_view(),
+                      mdPassMask_buf.data(),
                       ptCut_,
                       clustSizeCut_);
 
@@ -352,6 +375,7 @@ void LSTEvent::createMiniDoublets() {
 
   if (objectsStatistics_) {
     addMiniDoubletsToEventExplicit();
+    memoryLiveMB_ -= mdPassMaskMB;
   }
 
   // Last reader of the Hits collection.
@@ -359,8 +383,18 @@ void LSTEvent::createMiniDoublets() {
 }
 
 void LSTEvent::createSegmentsWithModuleMap() {
-  // Called once per event: the segments are created into a loose-sized candidate scratch (MD pair + outer
+  // Called once per event: the segments are created into a count-sized candidate scratch (MD pair + outer
   // module only), then written at exact, module-ordered slots by compactSegments(); the scratch is freed here.
+  // MD pairs accepted by CountMiniDoubletConnections, kSegPassMaskWords words per inner OT MD; transient.
+  auto segPassMask_buf = cms::alpakatools::make_device_buffer<uint64_t[]>(queue_, nTotalMDsOT_ * kSegPassMaskWords);
+  alpaka::memset(queue_, segPassMask_buf, 0u);
+  double segPassMaskMB = 0;
+  if (objectsStatistics_) {
+    segPassMaskMB = bufferMB(segPassMask_buf);
+    trackTransientMB(segPassMaskMB);
+    lstWarning(std::format("[MEM] (transient) Segment pass masks: {} MDs ({:.1f} MB)", nTotalMDsOT_, segPassMaskMB));
+  }
+
   auto const countMDConn_wd = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
 
   alpaka::exec<Acc3D>(queue_,
@@ -371,6 +405,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
                       miniDoubletsBuildDC_->view(),
                       miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                       rangesDC_->const_view(),
+                      segPassMask_buf.data(),
                       ptCut_);
 
   auto const createSegmentArrayRanges_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
@@ -426,11 +461,12 @@ void LSTEvent::createSegmentsWithModuleMap() {
                       candidatesDC.view().candidates(),
                       candidatesDC.view().segmentsOccupancy(),
                       rangesDC_->view(),
+                      segPassMask_buf.data(),
                       ptCut_);
 
   compactSegments(candidatesDC);
   if (objectsStatistics_)
-    memoryLiveMB_ -= candidatesMB;
+    memoryLiveMB_ -= candidatesMB + segPassMaskMB;
 
   auto const addSegmentRangesToEventExplicit_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
 
