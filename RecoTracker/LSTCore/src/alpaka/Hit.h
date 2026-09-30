@@ -59,7 +59,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         int iDetId = hitsBase.detid()[ihit];
 
         hitsExtended.rts()[ihit] = alpaka::math::sqrt(acc, ihit_x * ihit_x + ihit_y * ihit_y);
-        hitsExtended.phis()[ihit] = cms::alpakatools::phi(acc, ihit_x, ihit_y);
         auto found_pointer =
             alpaka_std::lower_bound(modules.mapdetId().data(), modules.mapdetId().data() + nModules, iDetId);
         ALPAKA_ASSERT_ACC(found_pointer != modules.mapdetId().data() + nModules);

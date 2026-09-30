@@ -127,8 +127,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return mod;
   }
 
+  // Terms of the segment selection that depend only on the outer MD's anchor rt: computed once per MD.
+  struct SegOuterMDTerms {
+    float sdSlopeSin;
+    float sdSlope;
+    float dzDrtScale;  // tan(asin(s))/asin(s), barrel
+    float drtDzScale;  // asin(s)/tan(asin(s)), endcap
+  };
+
   template <alpaka::concepts::Acc TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void dAlphaThreshold(TAcc const& acc,
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE SegOuterMDTerms segOuterMDTerms(TAcc const& acc, float rtOut, const float ptCut) {
+    SegOuterMDTerms terms;
+    terms.sdSlopeSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    terms.sdSlope = alpaka::math::asin(acc, terms.sdSlopeSin);
+    // Exact: tan(asin(s))/asin(s) = s/(asin(s)*sqrt(1-s^2)), eliminates tan call
+    terms.dzDrtScale =
+        terms.sdSlopeSin / (terms.sdSlope * alpaka::math::sqrt(acc, 1.f - terms.sdSlopeSin * terms.sdSlopeSin));
+    // Exact: asin(s)/tan(asin(s)) = asin(s)*sqrt(1-s^2)/s, eliminates tan call
+    terms.drtDzScale =
+        terms.sdSlope * alpaka::math::sqrt(acc, 1.f - terms.sdSlopeSin * terms.sdSlopeSin) / terms.sdSlopeSin;
+    return terms;
+  }
+
+  // SegOuterMDTerms of every OT MD, read by the count kernel (and CreateSegments' unrecorded tail) per MD pair.
+  struct FillSegOuterMDTerms {
+    ALPAKA_FN_ACC void operator()(
+        Acc1D const& acc, MiniDoubletsConst mds, unsigned int nMDs, SegOuterMDTerms* terms, const float ptCut) const {
+      for (unsigned int mdIndex : cms::alpakatools::uniform_elements(acc, nMDs))
+        terms[mdIndex] = segOuterMDTerms(acc, mds.anchorRt()[mdIndex], ptCut);
+    }
+  };
+
+  // Returns false (thresholds not filled) when the MD-MD cut |dAlphaInnerMDOuterMD| < dAlphaThresholdValues[2]
+  // is already failed with asin(s) replaced by its upper bound s/sqrt(1-s^2): the asin is then skipped.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool dAlphaThreshold(TAcc const& acc,
                                                       float* dAlphaThresholdValues,
                                                       ModuleSegData const& innerMod,
                                                       ModuleSegData const& outerMod,
@@ -144,15 +177,31 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                       unsigned int innerMDIndex,
                                                       unsigned int outerMDIndex,
                                                       const float ptCut,
+                                                      float dAlphaInnerMDOuterMD,
                                                       float& dAlphaBfieldOut,
                                                       float& dAlphaResMulsOut) {
     const float sdMuls = innerMod.sdMuls;
 
     //more accurate then outer rt - inner rt
     float segmentDr = alpaka::math::sqrt(acc, (yOut - yIn) * (yOut - yIn) + (xOut - xIn) * (xOut - xIn));
+    const float sinBfield = alpaka::math::min(acc, segmentDr * k2Rinv1GeVf / ptCut, kSinAlphaMax);
 
-    const float dAlpha_Bfield =
-        alpaka::math::asin(acc, alpaka::math::min(acc, segmentDr * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    // Unique stuff for the segment dudes alone
+    const float miniDelta = innerMod.moduleGapSize;
+    float dAlpha_res_inner =
+        0.02f / miniDelta * (innerMod.subdet == Barrel ? 1.0f : alpaka::math::abs(acc, zIn) / rtIn);
+    float dAlpha_res_outer =
+        0.02f / miniDelta * (outerMod.subdet == Barrel ? 1.0f : alpaka::math::abs(acc, zOut) / rtOut);
+
+    float dAlpha_res = dAlpha_res_inner + dAlpha_res_outer;
+    const float dAlphaResMuls = alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+
+    // 1e-5 relative margin: covers the float rounding of the bound and of asin (a few 1e-7).
+    const float asinUpper = sinBfield / alpaka::math::sqrt(acc, 1.f - sinBfield * sinBfield) * 1.00001f;
+    if (alpaka::math::abs(acc, dAlphaInnerMDOuterMD) >= asinUpper + dAlphaResMuls)
+      return false;
+
+    const float dAlpha_Bfield = alpaka::math::asin(acc, sinBfield);
 
     float sdLumForInnerMini2;
     float sdLumForOuterMini2;
@@ -171,15 +220,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                            (kDeltaZLum * kDeltaZLum) / (mdsBuild.dzs()[outerMDIndex] * mdsBuild.dzs()[outerMDIndex]);
     }
 
-    // Unique stuff for the segment dudes alone
-    const float miniDelta = innerMod.moduleGapSize;
-    float dAlpha_res_inner =
-        0.02f / miniDelta * (innerMod.subdet == Barrel ? 1.0f : alpaka::math::abs(acc, zIn) / rtIn);
-    float dAlpha_res_outer =
-        0.02f / miniDelta * (outerMod.subdet == Barrel ? 1.0f : alpaka::math::abs(acc, zOut) / rtOut);
-
-    float dAlpha_res = dAlpha_res_inner + dAlpha_res_outer;
-
     if (innerMod.subdet == Barrel and innerMod.side == Center) {
       dAlphaThresholdValues[0] = dAlpha_Bfield + alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
     } else {
@@ -195,11 +235,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
     //Inner to outer
-    dAlphaThresholdValues[2] = dAlpha_Bfield + alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+    dAlphaThresholdValues[2] = dAlpha_Bfield + dAlphaResMuls;
 
     // Returned for the line residual's resolution.
     dAlphaBfieldOut = dAlpha_Bfield;
-    dAlphaResMulsOut = alpaka::math::sqrt(acc, dAlpha_res * dAlpha_res + sdMuls * sdMuls);
+    dAlphaResMulsOut = dAlphaResMuls;
+    return true;
   }
 
   // Line residual cut in units of its resolution (99.4% of true above-cut segments pass).
@@ -468,6 +509,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& zLo,
                                                                   float& zHi,
 #endif
+                                                                  SegOuterMDTerms const& outerTerms,
                                                                   const float ptCut) {
 #ifndef CUT_VALUE_DEBUG
     float dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
@@ -485,10 +527,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     zOut = mds.anchorZ()[outerMDIndex];
     rtOut = mds.anchorRt()[outerMDIndex];
 
-    const float sdSlopeSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
-    float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
-    // Exact: tan(asin(s))/asin(s) = s/(asin(s)*sqrt(1-s^2)), eliminates tan call
-    float dzDrtScale = sdSlopeSin / (sdSlope * alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin));
+    const float sdSlopeSin = outerTerms.sdSlopeSin;
+    const float sdSlope = outerTerms.sdSlope;
+    const float dzDrtScale = outerTerms.dzDrtScale;
 
     const float zGeom = innerMod.layer <= 2 ? 2.f * kPixelPSZpitch : 2.f * kStrip2SZpitch;
 
@@ -519,31 +560,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 dPhi))
       return false;
 
-    float dAlphaBfield = 0.f;
-    float dAlphaResMuls = 0.f;
-    float dAlphaThresholdValues[3];
-    dAlphaThreshold(acc,
-                    dAlphaThresholdValues,
-                    innerMod,
-                    outerMod,
-                    mdsBuild,
-                    xIn,
-                    yIn,
-                    zIn,
-                    rtIn,
-                    xOut,
-                    yOut,
-                    zOut,
-                    rtOut,
-                    innerMDIndex,
-                    outerMDIndex,
-                    ptCut,
-                    dAlphaBfield,
-                    dAlphaResMuls);
-
     float innerMDAlpha = mdsBuild.dphichanges()[innerMDIndex];
     float outerMDAlpha = mdsBuild.dphichanges()[outerMDIndex];
     dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
+
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
+    float dAlphaThresholdValues[3];
+    if (!dAlphaThreshold(acc,
+                         dAlphaThresholdValues,
+                         innerMod,
+                         outerMod,
+                         mdsBuild,
+                         xIn,
+                         yIn,
+                         zIn,
+                         rtIn,
+                         xOut,
+                         yOut,
+                         zOut,
+                         rtOut,
+                         innerMDIndex,
+                         outerMDIndex,
+                         ptCut,
+                         dAlphaInnerMDOuterMD,
+                         dAlphaBfield,
+                         dAlphaResMuls))
+      return false;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
@@ -592,6 +635,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                   float& rtLo,
                                                                   float& rtHi,
 #endif
+                                                                  SegOuterMDTerms const& outerTerms,
                                                                   const float ptCut) {
 #ifndef CUT_VALUE_DEBUG
     float dAlphaInnerMDSegment, dAlphaOuterMDSegment, dAlphaInnerMDOuterMD;
@@ -609,7 +653,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     zOut = mds.anchorZ()[outerMDIndex];
     rtOut = mds.anchorRt()[outerMDIndex];
 
-    const float sdSlopeSin = alpaka::math::min(acc, rtOut * k2Rinv1GeVf / ptCut, kSinAlphaMax);
+    const float sdSlopeSin = outerTerms.sdSlopeSin;
     float rtGeom = ((rtIn < kDisks2SMinRadius && rtOut < kDisks2SMinRadius)
                         ? (2.f * kPixelPSZpitch)
                         : ((rtIn < kDisks2SMinRadius || rtOut < kDisks2SMinRadius) ? (kPixelPSZpitch + kStrip2SZpitch)
@@ -621,9 +665,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float dz = zOut - zIn;
     float dLum = alpaka::math::copysign(acc, kDeltaZLum, zIn);
-    float sdSlope = alpaka::math::asin(acc, sdSlopeSin);
-    // Exact: asin(s)/tan(asin(s)) = asin(s)*sqrt(1-s^2)/s, eliminates tan call
-    float drtDzScale = sdSlope * alpaka::math::sqrt(acc, 1.f - sdSlopeSin * sdSlopeSin) / sdSlopeSin;
+    const float sdSlope = outerTerms.sdSlope;
+    const float drtDzScale = outerTerms.drtDzScale;
 
     //rt should increase
     rtLo = alpaka::math::max(acc, rtIn * (1.f + dz / (zIn + dLum) * drtDzScale) - rtGeom, rtIn - 0.5f * rtGeom);
@@ -638,31 +681,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             acc, mds, innerMDIndex, outerMDIndex, xIn, yIn, xOut, yOut, rtIn, rtOut, sdSlopeSin, dPhi, sdSlope))
       return false;
 
-    float dAlphaBfield = 0.f;
-    float dAlphaResMuls = 0.f;
-    float dAlphaThresholdValues[3];
-    dAlphaThreshold(acc,
-                    dAlphaThresholdValues,
-                    innerMod,
-                    outerMod,
-                    mdsBuild,
-                    xIn,
-                    yIn,
-                    zIn,
-                    rtIn,
-                    xOut,
-                    yOut,
-                    zOut,
-                    rtOut,
-                    innerMDIndex,
-                    outerMDIndex,
-                    ptCut,
-                    dAlphaBfield,
-                    dAlphaResMuls);
-
     float innerMDAlpha = mdsBuild.dphichanges()[innerMDIndex];
     float outerMDAlpha = mdsBuild.dphichanges()[outerMDIndex];
     dAlphaInnerMDOuterMD = innerMDAlpha - outerMDAlpha;
+
+    float dAlphaBfield = 0.f;
+    float dAlphaResMuls = 0.f;
+    float dAlphaThresholdValues[3];
+    if (!dAlphaThreshold(acc,
+                         dAlphaThresholdValues,
+                         innerMod,
+                         outerMod,
+                         mdsBuild,
+                         xIn,
+                         yIn,
+                         zIn,
+                         rtIn,
+                         xOut,
+                         yOut,
+                         zOut,
+                         rtOut,
+                         innerMDIndex,
+                         outerMDIndex,
+                         ptCut,
+                         dAlphaInnerMDOuterMD,
+                         dAlphaBfield,
+                         dAlphaResMuls))
+      return false;
 
     float dAlphaInnerMDSegmentThreshold = dAlphaThresholdValues[0];
     float dAlphaOuterMDSegmentThreshold = dAlphaThresholdValues[1];
@@ -725,6 +770,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float& rtLo,
                                                             float& rtHi,
 #endif
+                                                            SegOuterMDTerms const& outerTerms,
                                                             const float ptCut) {
     if (innerMod.subdet == Barrel and outerMod.subdet == Barrel) {
 #ifdef CUT_VALUE_DEBUG
@@ -751,6 +797,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          zLo,
                                          zHi,
 #endif
+                                         outerTerms,
                                          ptCut);
     } else {
 #ifdef CUT_VALUE_DEBUG
@@ -777,6 +824,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          rtLo,
                                          rtHi,
 #endif
+                                         outerTerms,
                                          ptCut);
     }
   }
@@ -822,6 +870,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   SegmentsOccupancy segmentsOccupancy,
                                   ObjectRanges ranges,
                                   const uint64_t* segPassMask,
+                                  const SegOuterMDTerms* outerMDTerms,
                                   const float ptCut) const {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -890,6 +939,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                          rtLo,
                                          rtHi,
 #endif
+                                         outerMDTerms[outerMDIndex],
                                          ptCut))
                 continue;
             }
@@ -918,6 +968,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // One MD pair of CountMiniDoubletConnections: counts a passing pair for the inner MD and sets its pass-mask bit.
+  // Pairs beyond the mask get a slot without the selection, so the count stays a superset of creation.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void countSegmentPair(TAcc const& acc,
+                                                       ModuleSegData const& innerMod,
+                                                       ModuleSegData const& outerMod,
+                                                       MiniDoubletsConst mds,
+                                                       MiniDoubletsBuild mdsBuild,
+                                                       unsigned int innerMDIndex,
+                                                       unsigned int outerMDIndex,
+                                                       unsigned int bit,
+                                                       uint64_t* segPassMask,
+                                                       SegOuterMDTerms const& outerTerms,
+                                                       const float ptCut) {
+    if (bit >= kSegPassMaskBits) {
+      alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
+      return;
+    }
+    float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
+#ifdef CUT_VALUE_DEBUG
+    float dAlphaInner, dAlphaOuter, dAlphaIO, zLo, zHi, rtLo, rtHi;
+#endif
+    if (!runSegmentDefaultAlgo(acc,
+                               innerMod,
+                               outerMod,
+                               mds,
+                               mdsBuild,
+                               innerMDIndex,
+                               outerMDIndex,
+                               dPhi,
+                               dPhiMin,
+                               dPhiMax,
+                               dPhiChange,
+                               dPhiChangeMin,
+                               dPhiChangeMax,
+#ifdef CUT_VALUE_DEBUG
+                               dAlphaInner,
+                               dAlphaOuter,
+                               dAlphaIO,
+                               zLo,
+                               zHi,
+                               rtLo,
+                               rtHi,
+#endif
+                               outerTerms,
+                               ptCut))
+      return;
+    alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
+    alpaka::atomicOr(acc,
+                     &segPassMask[innerMDIndex * kSegPassMaskWords + bit / 64],
+                     uint64_t(1) << (bit % 64),
+                     alpaka::hierarchy::Threads{});
+  }
+
   struct CountMiniDoubletConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -926,6 +1030,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoubletsOccupancyConst mdsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint64_t* segPassMask,
+                                  const SegOuterMDTerms* outerMDTerms,
                                   const float ptCut) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
@@ -954,55 +1059,77 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           ModuleSegData outerMod = loadModuleSegData(modules, outerLowerModuleIndex, ptCut);
           const unsigned int slotOffset = slotOffsets[outerLowerModuleArrayIdx];
 
-          const unsigned int limit = nInnerMDs * nOuterMDs;
-
-          for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
-            const unsigned int innerMDArrayIdx = hitIndex / nOuterMDs;
-            const unsigned int outerMDArrayIdx = hitIndex % nOuterMDs;
-
-            const unsigned int innerMDIndex = mdRanges[innerLowerModuleIndex][0] + innerMDArrayIdx;
-            const unsigned int outerMDIndex = mdRanges[outerLowerModuleIndex][0] + outerMDArrayIdx;
-
-            // Pairs beyond the mask get a slot without the selection, so the count stays a superset of creation.
-            const unsigned int bit = slotOffset + outerMDArrayIdx;
-            if (bit >= kSegPassMaskBits) {
-              alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
-              continue;
+          if constexpr (cms::alpakatools::requires_single_thread_per_block_v<Acc3D>) {
+            // Same pair order as below, without a division per pair.
+            const unsigned int innerMDBegin = mdRanges[innerLowerModuleIndex][0];
+            const unsigned int outerMDBegin = mdRanges[outerLowerModuleIndex][0];
+            for (unsigned int innerMDArrayIdx = 0; innerMDArrayIdx < nInnerMDs; ++innerMDArrayIdx) {
+              for (unsigned int outerMDArrayIdx = 0; outerMDArrayIdx < nOuterMDs; ++outerMDArrayIdx) {
+                const unsigned int outerMDIndex = outerMDBegin + outerMDArrayIdx;
+                countSegmentPair(acc,
+                                 innerMod,
+                                 outerMod,
+                                 mds,
+                                 mdsBuild,
+                                 innerMDBegin + innerMDArrayIdx,
+                                 outerMDIndex,
+                                 slotOffset + outerMDArrayIdx,
+                                 segPassMask,
+                                 outerMDTerms[outerMDIndex],
+                                 ptCut);
+              }
             }
+          } else {
+            // GPU: the same pair body written out in the loop (through the helper it compiles to a slower kernel).
+            const unsigned int limit = nInnerMDs * nOuterMDs;
+            for (unsigned int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
+              const unsigned int innerMDArrayIdx = hitIndex / nOuterMDs;
+              const unsigned int outerMDArrayIdx = hitIndex % nOuterMDs;
 
-            float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
+              const unsigned int innerMDIndex = mdRanges[innerLowerModuleIndex][0] + innerMDArrayIdx;
+              const unsigned int outerMDIndex = mdRanges[outerLowerModuleIndex][0] + outerMDArrayIdx;
+
+              const unsigned int bit = slotOffset + outerMDArrayIdx;
+              if (bit >= kSegPassMaskBits) {
+                alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
+                continue;
+              }
+
+              float dPhi, dPhiMin, dPhiMax, dPhiChange, dPhiChangeMin, dPhiChangeMax;
 #ifdef CUT_VALUE_DEBUG
-            float dAlphaInner, dAlphaOuter, dAlphaIO, zLo, zHi, rtLo, rtHi;
+              float dAlphaInner, dAlphaOuter, dAlphaIO, zLo, zHi, rtLo, rtHi;
 #endif
-            if (!runSegmentDefaultAlgo(acc,
-                                       innerMod,
-                                       outerMod,
-                                       mds,
-                                       mdsBuild,
-                                       innerMDIndex,
-                                       outerMDIndex,
-                                       dPhi,
-                                       dPhiMin,
-                                       dPhiMax,
-                                       dPhiChange,
-                                       dPhiChangeMin,
-                                       dPhiChangeMax,
+              if (!runSegmentDefaultAlgo(acc,
+                                         innerMod,
+                                         outerMod,
+                                         mds,
+                                         mdsBuild,
+                                         innerMDIndex,
+                                         outerMDIndex,
+                                         dPhi,
+                                         dPhiMin,
+                                         dPhiMax,
+                                         dPhiChange,
+                                         dPhiChangeMin,
+                                         dPhiChangeMax,
 #ifdef CUT_VALUE_DEBUG
-                                       dAlphaInner,
-                                       dAlphaOuter,
-                                       dAlphaIO,
-                                       zLo,
-                                       zHi,
-                                       rtLo,
-                                       rtHi,
+                                         dAlphaInner,
+                                         dAlphaOuter,
+                                         dAlphaIO,
+                                         zLo,
+                                         zHi,
+                                         rtLo,
+                                         rtHi,
 #endif
-                                       ptCut))
-              continue;
-            alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
-            alpaka::atomicOr(acc,
-                             &segPassMask[innerMDIndex * kSegPassMaskWords + bit / 64],
-                             uint64_t(1) << (bit % 64),
-                             alpaka::hierarchy::Threads{});
+                                         outerMDTerms[outerMDIndex],
+                                         ptCut))
+                continue;
+              alpaka::atomicAdd(acc, &mdsBuild.connectedMax()[innerMDIndex], 1u, alpaka::hierarchy::Threads{});
+              alpaka::atomicOr(acc,
+                               &segPassMask[innerMDIndex * kSegPassMaskWords + bit / 64],
+                               uint64_t(1) << (bit % 64),
+                               alpaka::hierarchy::Threads{});
+            }
           }
         }
       }
@@ -1173,6 +1300,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                 zHi,
                                 rtLo,
                                 rtHi,
+                                segOuterMDTerms(acc, mds.anchorRt()[outerMDIndex], ptCut),
                                 ptCut);
 #else
           // Only the stored payload: the selection already passed in CreateSegments.
