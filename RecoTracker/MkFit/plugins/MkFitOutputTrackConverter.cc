@@ -94,6 +94,7 @@ private:
       const MagneticField& mf,
       const Propagator& propagatorAlong,
       const Propagator& propagatorOpposite,
+      const Propagator* propagatorToFirstHit,
       const MkFitGeometry& mkFitGeom,
       const TrackerTopology& tTopo,
       const TkClonerImpl& hitCloner,
@@ -122,6 +123,7 @@ private:
   const edm::EDGetTokenT<edm::View<TrajectorySeed>> seedToken_;
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorAlongToken_;
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
+  const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToFirstHitToken_;
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
   const edm::ESGetToken<TransientTrackingRecHitBuilder, TransientRecHitRecord> ttrhBuilderToken_;
   const edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> mkFitGeomToken_;
@@ -162,6 +164,10 @@ MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iC
           esConsumes<Propagator, TrackingComponentsRecord>(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
       propagatorOppositeToken_{esConsumes<Propagator, TrackingComponentsRecord>(
           iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
+      propagatorToFirstHitToken_{iConfig.getParameter<edm::ESInputTag>("propagatorToFirstHit").data().empty()
+                                     ? edm::ESGetToken<Propagator, TrackingComponentsRecord>()
+                                     : esConsumes<Propagator, TrackingComponentsRecord>(
+                                           iConfig.getParameter<edm::ESInputTag>("propagatorToFirstHit"))},
       mfToken_{esConsumes<MagneticField, IdealMagneticFieldRecord>()},
       ttrhBuilderToken_{esConsumes<TransientTrackingRecHitBuilder, TransientRecHitRecord>(
           iConfig.getParameter<edm::ESInputTag>("ttrhBuilder"))},
@@ -205,6 +211,10 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add("ttrhBuilder", edm::ESInputTag{"", "WithTrackAngle"});
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
   desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
+  desc.add("propagatorToFirstHit", edm::ESInputTag{"", ""})
+      ->setComment(
+          "propagator from the fitted state to the first hit surface; the fitted state already includes the material "
+          "of that layer, so a propagator without material; empty: propagatorAlong, then propagatorOpposite");
 
   desc.add<double>("qualityMaxInvPt", 100)->setComment("max(1/pt) for converted tracks");
   desc.add<double>("qualityMinTheta", 0.01)->setComment("lower bound on theta (or pi-theta) for converted tracks");
@@ -278,6 +288,7 @@ void MkFitOutputTrackConverter::produce(edm::StreamID iID, edm::Event& iEvent, c
                     iSetup.getData(mfToken_),
                     iSetup.getData(propagatorAlongToken_),
                     iSetup.getData(propagatorOppositeToken_),
+                    propagatorToFirstHitToken_.isInitialized() ? &iSetup.getData(propagatorToFirstHitToken_) : nullptr,
                     iSetup.getData(mkFitGeomToken_),
                     iSetup.getData(tTopoToken_),
                     tkBuilder->cloner(),
@@ -349,6 +360,7 @@ void MkFitOutputTrackConverter::convertCandidates(
     const MagneticField& mf,
     const Propagator& propagatorAlong,
     const Propagator& propagatorOpposite,
+    const Propagator* propagatorToFirstHit,
     const MkFitGeometry& mkFitGeom,
     const TrackerTopology& tTopo,
     const TkClonerImpl& hitCloner,
@@ -559,7 +571,9 @@ void MkFitOutputTrackConverter::convertCandidates(
     // Error is only rescaled for candidates propagated to first layer;
     // otherwise, candidates undergo backwardFit where error is already rescaled
 
-    auto tsosDet = convertInnermostState(fts, recHits, propagatorAlong, propagatorOpposite);
+    auto tsosDet = propagatorToFirstHit
+                       ? convertInnermostState(fts, recHits, *propagatorToFirstHit, *propagatorToFirstHit)
+                       : convertInnermostState(fts, recHits, propagatorAlong, propagatorOpposite);
 
     if (!tsosDet.first.isValid()) {
       edm::LogInfo("MkFitOutputTrackConverter")
