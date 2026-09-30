@@ -69,19 +69,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
         // hits above nHitsOT are from seed tracks: don't reindex the full OT hits (all below nHitsOT)
         if (ihit < nHitsOT || iDetId == kPixelModuleId) {
-          // Need to set initial value if index hasn't been seen before.
-          int old = alpaka::atomicCas(acc,
-                                      &(hitsRanges.hitRanges()[lastModuleIndex][0]),
-                                      -1,
-                                      static_cast<int>(ihit),
-                                      alpaka::hierarchy::Threads{});
-          // For subsequent visits, stores the min value.
-          if (old != -1)
-            alpaka::atomicMin(
-                acc, &hitsRanges.hitRanges()[lastModuleIndex][0], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
-
-          alpaka::atomicMax(
-              acc, &hitsRanges.hitRanges()[lastModuleIndex][1], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
+          // A hit whose neighbour has the same detId (and is ranged too) cannot be the module's min (max): skip the atomic.
+          if (ihit == 0 || hitsBase.detid()[ihit - 1] != hitsBase.detid()[ihit]) {
+            // Need to set initial value if index hasn't been seen before.
+            int old = alpaka::atomicCas(acc,
+                                        &(hitsRanges.hitRanges()[lastModuleIndex][0]),
+                                        -1,
+                                        static_cast<int>(ihit),
+                                        alpaka::hierarchy::Threads{});
+            // For subsequent visits, stores the min value.
+            if (old != -1)
+              alpaka::atomicMin(acc,
+                                &hitsRanges.hitRanges()[lastModuleIndex][0],
+                                static_cast<int>(ihit),
+                                alpaka::hierarchy::Threads{});
+          }
+          unsigned int const next = ihit + 1;
+          if (next >= static_cast<unsigned int>(nHits) || hitsBase.detid()[next] != hitsBase.detid()[ihit] ||
+              !(next < nHitsOT || iDetId == kPixelModuleId))
+            alpaka::atomicMax(
+                acc, &hitsRanges.hitRanges()[lastModuleIndex][1], static_cast<int>(ihit), alpaka::hierarchy::Threads{});
         }
       }
     }
