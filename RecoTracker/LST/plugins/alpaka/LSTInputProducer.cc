@@ -45,6 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const std::vector<edm::EDGetTokenT<TrajectorySeedCollection>> seedTokens_;
+    const bool producePixelSeeds_;
     const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
 
     const edm::EDPutTokenT<lst::LSTInputHostCollection> lstInputPutToken_;
@@ -61,7 +62,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         seedTokens_(
             edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("pixelSeeds"),
                                   [&](const edm::InputTag& tag) { return consumes<TrajectorySeedCollection>(tag); })),
-        lstPixelSeedsPutToken_(produces()),
+        producePixelSeeds_(iConfig.getParameter<bool>("producePixelSeeds")),
+        lstPixelSeedsPutToken_(producePixelSeeds_ ? edm::EDPutTokenT<TrajectorySeedCollection>(produces())
+                                                  : edm::EDPutTokenT<TrajectorySeedCollection>{}),
         lstInputPutToken_(produces()),
         lstOTHitsPutToken_(produces()) {}
 
@@ -76,6 +79,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     desc.add<std::vector<edm::InputTag>>(
         "pixelSeeds",
         std::vector<edm::InputTag>{edm::InputTag("initialStepSeeds"), edm::InputTag("highPtTripletStepSeeds")});
+    desc.add<bool>("producePixelSeeds", true)
+        ->setComment("put a copy of all pixelSeeds in the event, for consumers that need them as one collection");
 
     descriptions.addWithDefaultLabel(desc);
   }
@@ -219,7 +224,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         see_q.push_back(charge);
         see_hitIdx.emplace_back(std::move(hitIdx));
         see_hitType.emplace_back(std::move(hitType));
-        see_seeds.push_back(seed);
+        if (producePixelSeeds_)
+          see_seeds.push_back(seed);
       }
     }
 
@@ -249,7 +255,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         iEvent.queue());
 
     iEvent.emplace(lstInputPutToken_, std::move(lstInputHC));
-    iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
+    if (producePixelSeeds_)
+      iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
     iEvent.emplace(lstOTHitsPutToken_, lst::LSTOTHits{std::move(ph2_hits)});
   }
 

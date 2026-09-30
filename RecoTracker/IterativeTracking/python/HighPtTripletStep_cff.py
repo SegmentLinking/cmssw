@@ -287,8 +287,11 @@ trackingPhase2PU140.toModify(highPtTripletStepTrackCandidates,
 )
 
 from RecoTracker.LST.lstOutputConverter_cfi import lstOutputConverter as _lstOutputConverter
-(trackingPhase2PU140 & trackingLST).toReplaceWith(highPtTripletStepTrackCandidates, _lstOutputConverter.clone())
+(trackingPhase2PU140 & trackingLST).toReplaceWith(highPtTripletStepTrackCandidates, _lstOutputConverter.clone(
+    lstPixelSeeds = ['lstInputProducer']
+))
 highPtTripletStepSeedsPixelsWithLST = _lstOutputConverter.clone(
+    lstPixelSeeds = ['lstInputProducer'],
     includeNonpLSTSs = cms.bool(True)
 )
 
@@ -435,6 +438,8 @@ from RecoTracker.LST.lstInputProducer_cfi import lstInputProducer
 from RecoTracker.LST.lstProducerTask_cff import *
 
 _HighPtTripletStepTask_LST.add(siPhase2RecHits, lstGeometryESProducer, lstInputProducer, lstProducerTask)
+# the LST converters above and the Tier0 seed DQM read the copy of the input pixel seeds
+(trackingPhase2PU140 & trackingLST).toModify(lstInputProducer, producePixelSeeds = True)
 (trackingPhase2PU140 & trackingLST).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_LST)
 
 _HighPtTripletStepTask_LST_mkFit = _HighPtTripletStepTask_LST.copy()
@@ -458,7 +463,7 @@ highPtTripletStepTrackCandidatesSerialSync = highPtTripletStepTrackCandidates.cl
 (~seedingLST & trackingPhase2PU140 & alpakaValidationLST & trackingLST).toModify(highPtTripletStepTrackCandidatesSerialSync,
     lstOutput = "lstProducerSerialSync",
     lstInput = "lstInputProducerSerialSync",
-    lstPixelSeeds = "lstInputProducerSerialSync"
+    lstPixelSeeds = ["lstInputProducerSerialSync"]
 )
 highPtTripletStepTracksSerialSync = highPtTripletStepTracks.clone()
 (trackingPhase2PU140 & alpakaValidationLST & trackingLST).toModify(highPtTripletStepTracksSerialSync, src = "highPtTripletStepTrackCandidatesSerialSync")
@@ -478,7 +483,7 @@ _phase2LSTmkFitValidation = (
 _phase2LSTmkFitValidation.toModify(highPtTripletStepSeedsPixelsWithLSTSerialSync,
     lstOutput = "lstProducerSerialSync",
     lstInput = "lstInputProducerSerialSync",
-    lstPixelSeeds = "lstInputProducerSerialSync"
+    lstPixelSeeds = ["lstInputProducerSerialSync"]
 )
 _phase2LSTmkFitValidation.toModify(highPtTripletStepTrackCandidatesSerialSync,
     seeds = 'highPtTripletStepSeedsPixelsWithLSTSerialSync',
