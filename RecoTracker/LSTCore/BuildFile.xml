@@ -8,6 +8,7 @@
 <use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="RecoTracker/LSTGeometry"/>
 <flags ALPAKA_BACKENDS="1"/>
+<flags CUDA_FLAGS="--split-compile=1"/>
 <export>
   <lib name="1"/>
 </export>
