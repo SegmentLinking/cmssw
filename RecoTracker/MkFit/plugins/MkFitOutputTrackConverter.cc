@@ -476,6 +476,13 @@ void MkFitOutputTrackConverter::convertCandidates(
           << fts.curvilinearError().matrix() << "\ncandidate " << candIndex << "ignored";
       continue;
     }
+    // a negative or non-finite fit chi2 comes from a non-positive-definite covariance during the fit; the KF final fit
+    // rejects such trajectories (KFFittingSmoother::checkForNans)
+    if (!(cand.chi2() >= 0.f) || !std::isfinite(cand.chi2())) {
+      edm::LogInfo("MkFitOutputTrackConverter")
+          << "Candidate " << candIndex << " has chi2 " << cand.chi2() << ", ignored";
+      continue;
+    }
 
     //Sylvester's criterion, start from the smaller submatrix size
     double det = 0;
