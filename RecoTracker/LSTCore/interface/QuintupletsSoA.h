@@ -72,9 +72,8 @@ namespace lst {
   // Build-time record of a selected quintuplet, one per counting-kernel slot; the full quintuplet is written
   // afterwards to an exactly sized QuintupletsSoA.
   GENERATE_SOA_LAYOUT(QuintupletsLooseSoALayout,
-                      SOA_COLUMN(ArrayUx2, preAllocatedTripletIndices),  // candidate pairs (step 1)
-                      SOA_COLUMN(ArrayUx2, tripletIndices),              // selected pairs (step 2)
-                      SOA_COLUMN(ArrayUx2, byMDIndices),                 // slots in quintupletsByMD0/1
+                      SOA_COLUMN(ArrayUx2, tripletIndices),  // selected pairs
+                      SOA_COLUMN(ArrayUx2, byMDIndices),     // slots in quintupletsByMD0/1
                       SOA_COLUMN(float, bridgeRadius),
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(float, rzChiSquared),
