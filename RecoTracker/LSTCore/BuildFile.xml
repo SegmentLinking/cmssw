@@ -10,6 +10,7 @@
 <use name="ofast-flag" for="alpaka/serial"/>
 <flags ALPAKA_BACKENDS="1"/>
 <flags CUDA_FLAGS="--split-compile=1"/>
+<flags CUDA_FLAGS="--use_fast_math"/>
 <export>
   <lib name="1"/>
 </export>
