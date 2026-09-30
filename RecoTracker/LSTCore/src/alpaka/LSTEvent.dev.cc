@@ -1484,8 +1484,12 @@ void LSTEvent::createPixelTriplets() {
   alpaka::memcpy(queue_, connectedPixelSize_dev_buf, connectedPixelSize_host_buf, nInnerSegments);
   alpaka::memcpy(queue_, connectedPixelIndex_dev_buf, connectedPixelIndex_host_buf, nInnerSegments);
 
-  auto const createPixelTripletsFromMap_workDiv =
+  auto createPixelTripletsFromMap_workDiv =
       cms::alpakatools::make_workdiv<Acc3D>({4096, 16 /* above median of connected modules*/, 1}, {4, 1, 32});
+  // On the GPU a block is one (pLS, module) row: its threads share the pLS x segment tests of the module.
+  if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<Acc3D>)
+    createPixelTripletsFromMap_workDiv = cms::alpakatools::make_workdiv<Acc3D>(
+        {std::clamp(nInnerSegments, 1u, 1024u), 16, 1}, {1, 1, kPT3SegmentsPerChunk});
 
   alpaka::exec<Acc3D>(queue_,
                       createPixelTripletsFromMap_workDiv,
@@ -1495,10 +1499,13 @@ void LSTEvent::createPixelTriplets() {
                       rangesDC_->const_view(),
                       miniDoubletsDC_->const_view().miniDoublets(),
                       segmentsDC_->const_view().segments(),
+                      segmentsDC_->const_view().segmentsOccupancy(),
                       lstInputDC_->const_view().pixelSeeds(),
                       pixelSegmentsDC_->const_view(),
                       tripletsDC_->view().triplets(),
                       tripletsDC_->const_view().tripletsOccupancy(),
+                      tripletsDC_->const_view().tripletsBySegment(),
+                      tripletsListRangesDC_->const_view().tripletsRangesBySegment(),
                       pixelTripletsDC_->view(),
                       connectedPixelSize_dev_buf.data(),
                       connectedPixelIndex_dev_buf.data(),
