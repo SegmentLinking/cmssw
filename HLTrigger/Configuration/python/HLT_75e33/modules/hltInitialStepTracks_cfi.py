@@ -67,6 +67,10 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     ),
     NavigationSchool = cms.ESInputTag('', 'SimpleNavigationSchool'),
     measurementTrackerEvent = cms.InputTag("hltMeasurementTrackerEvent"),
+    beamSpot = cms.InputTag("hltOnlineBeamSpot"),
+    algorithmName = cms.string('initialStep'),
+    buildTracks = cms.InputTag("hltInitialStepTrackCandidatesMkFit"),
+    propagatorToFirstHit = cms.ESInputTag('', 'AnyDirectionAnalyticalPropagator'),
     mightGet = cms.optional.untracked.vstring
 )
 
