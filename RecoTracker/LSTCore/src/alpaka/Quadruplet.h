@@ -934,7 +934,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   // Quadruplets of the modules with >= kNTripletThreshold triplets, where every pair runs the full selection: flat
-  // over the (dense) triplet collection, 8 inner triplets per block, so one module is not left to one block.
+  // over the (dense) triplet collection, 32 inner triplets per block, so one module is not left to one block.
   // Same pair order within a module as CreateQuadruplets on the serial backend.
   struct CreateQuadrupletsDense {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
