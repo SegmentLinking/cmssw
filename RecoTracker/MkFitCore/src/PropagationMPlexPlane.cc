@@ -373,8 +373,11 @@ namespace {
     const float rho = kinv * ip;
     const float C = -(eta0 * p0[1] - eta1 * p0[0]) * rho * 0.5f * ip;
     const float sqb2m4ac = std::sqrt(B * B - 4.f * A * C);
-    const float s1 = (-B + sqb2m4ac) * 0.5f / C;
-    const float s2 = (-B - sqb2m4ac) * 0.5f / C;
+    // Roots as qRoot/C and A/qRoot: (-B +- sqrt(B^2-4AC))/2C cancels in float for the near root when C is small
+    // (high pT, or tracks crossing the module close to its normal).
+    const float qRoot = -0.5f * (B + std::copysign(sqb2m4ac, B));
+    const float s1 = qRoot / C;
+    const float s2 = A / qRoot;
 #ifdef DEBUG
     if (debug)
       std::cout << "A=" << A << " B=" << B << " C=" << C << " s1=" << s1 << " s2=" << s2 << std::endl;
