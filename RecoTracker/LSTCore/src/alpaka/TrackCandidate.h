@@ -188,6 +188,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Grid fill for CrossCleanT5 over the promoted (!isDup) pixel objects: pT5 j as j, pT3 j as nPT5 + j. Counts per
+  // cell (cellItems == nullptr), else scatter through the cursor.
+  struct FillPixelObjectGrid {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  PixelTripletsConst pixelTriplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int* __restrict__ cellCount,
+                                  unsigned int* __restrict__ cellItems) const {
+      const unsigned int nPT5 = pixelQuintuplets.nPixelQuintuplets();
+      for (unsigned int jx : cms::alpakatools::uniform_elements(acc, nPT5 + pixelTriplets.nPixelTriplets())) {
+        const bool isPT5 = (jx < nPT5);
+        const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
+        if (isPT5 ? pixelQuintuplets.isDup()[ptidx] : pixelTriplets.isDup()[ptidx])
+          continue;
+        const float eta = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
+        const float phi = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
+        const int cell = grid.cell(acc, eta, phi);
+        const unsigned int slot = alpaka::atomicAdd(acc, &cellCount[cell], 1u, alpaka::hierarchy::Blocks{});
+        if (cellItems != nullptr)
+          cellItems[slot] = jx;
+      }
+    }
+  };
+
+  // Only the T5's own isDup is written, so the decision does not depend on the visiting order: the pixel objects come
+  // from the 3x3 grid cells around the T5, a superset of the promoted ones inside the 0.15 window.
   struct CrossCleanT5 {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -195,7 +222,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuintupletsOccupancyConst quintupletsOccupancy,
                                   PixelQuintupletsConst pixelQuintuplets,
                                   PixelTripletsConst pixelTriplets,
-                                  ObjectRangesConst ranges) const {
+                                  ObjectRangesConst ranges,
+                                  EtaPhiGrid grid,
+                                  unsigned int const* __restrict__ cellStart,
+                                  unsigned int const* __restrict__ cellItems) const {
       for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
         if (ranges.quintupletModuleIndices()[lowmod] == -1)
           continue;
@@ -209,7 +239,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           const unsigned int nPT5 = pixelQuintuplets.nPixelQuintuplets();
-          const unsigned int loop_bound = nPT5 + pixelTriplets.nPixelTriplets();
 
           float eta1 = __H2F(quintuplets.eta()[iT5]);
           float phi1 = __H2F(quintuplets.phi()[iT5]);
@@ -220,39 +249,47 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // A pixel object deletes a quintuplet only on shared outer-tracker hits.
           constexpr int otThresh = 4;
 
-          // Cross-clean against both pT5s and pT3s
-          for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, loop_bound)) {
-            const bool isPT5 = (jx < nPT5);
-            const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
-            const float eta2 = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
-            const float phi2 = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
-            if (alpaka::math::abs(acc, eta1 - eta2) >= 0.15f ||
-                alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) >= 0.15f)
-              continue;
-            // Only a promoted (!isDup) pixel object may delete.
-            if (isPT5 ? pixelQuintuplets.isDup()[ptidx] : pixelTriplets.isDup()[ptidx])
-              continue;
+          // Cross-clean against both pT5s and pT3s (only promoted ones are in the grid)
+          const int etaBin = grid.etaBin(acc, eta1);
+          const int phiBin = grid.phiBin(acc, phi1);
+          const int etaBinEnd = alpaka::math::min(acc, etaBin + 1, grid.nEta - 1);
+          bool removed = false;
+          for (int eBin = alpaka::math::max(acc, etaBin - 1, 0); eBin <= etaBinEnd && !removed; ++eBin) {
+            for (int dPhiBin = -1; dPhiBin <= 1 && !removed; ++dPhiBin) {
+              const int cell = grid.cell(eBin, grid.wrapPhiBin(phiBin + dPhiBin));
+              for (unsigned int k : cms::alpakatools::uniform_elements_x(acc, cellStart[cell], cellStart[cell + 1])) {
+                const unsigned int jx = cellItems[k];
+                const bool isPT5 = (jx < nPT5);
+                const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
+                const float eta2 = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
+                const float phi2 = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
+                if (alpaka::math::abs(acc, eta1 - eta2) >= 0.15f ||
+                    alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) >= 0.15f)
+                  continue;
 
-            // Shared outer-tracker hits: the pixel object's hits after its pLS slots (for a pT5, its T5's hits).
-            unsigned int const* ptOTHits =
-                isPT5 ? quintuplets.hitIndices()[pixelQuintuplets.quintupletIndices()[ptidx]].data()
-                      : pixelTriplets.hitIndices()[ptidx].data() + Params_pLS::kHits;
-            const int nPtOTHits = isPT5 ? Params_T5::kHits : Params_pT3::kHits - Params_pLS::kHits;
-            int nOTMatched = 0;
-            for (int i = 0; i < Params_T5::kHits; ++i) {
-              const unsigned int hitI = iT5Hits[i];
-              if (hitI == lst::kTCEmptyHitIdx)
-                continue;
-              for (int j = 0; j < nPtOTHits; ++j) {
-                if (ptOTHits[j] == hitI) {
-                  nOTMatched++;
+                // Shared outer-tracker hits: the pixel object's hits after its pLS slots (for a pT5, its T5's hits).
+                unsigned int const* ptOTHits =
+                    isPT5 ? quintuplets.hitIndices()[pixelQuintuplets.quintupletIndices()[ptidx]].data()
+                          : pixelTriplets.hitIndices()[ptidx].data() + Params_pLS::kHits;
+                const int nPtOTHits = isPT5 ? Params_T5::kHits : Params_pT3::kHits - Params_pLS::kHits;
+                int nOTMatched = 0;
+                for (int i = 0; i < Params_T5::kHits; ++i) {
+                  const unsigned int hitI = iT5Hits[i];
+                  if (hitI == lst::kTCEmptyHitIdx)
+                    continue;
+                  for (int j = 0; j < nPtOTHits; ++j) {
+                    if (ptOTHits[j] == hitI) {
+                      nOTMatched++;
+                      break;
+                    }
+                  }
+                }
+                if (nOTMatched >= otThresh) {
+                  quintuplets.isDup()[iT5] |= 4;
+                  removed = true;
                   break;
                 }
               }
-            }
-            if (nOTMatched >= otThresh) {
-              quintuplets.isDup()[iT5] |= 4;
-              break;
             }
           }
         }
