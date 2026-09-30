@@ -1015,6 +1015,19 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
 
   auto nSurvivingTCs_host = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 5u);
   alpaka::memcpy(queue_, nSurvivingTCs_host, nSurvivingTCs_dev);
+
+  // Largest pLS hit indices, to size the pixel-hit bit set of CrossCleanpLS.
+  auto pixelHitKeyMax_dev = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 2u);
+  alpaka::memset(queue_, pixelHitKeyMax_dev, 0u);
+  alpaka::exec<Acc1D>(queue_,
+                      cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                      PixelHitKeyMax{},
+                      nLowerModules_,
+                      segmentsDC_->const_view().segmentsOccupancy(),
+                      pixelSegmentsDC_->const_view(),
+                      pixelHitKeyMax_dev.data());
+  auto pixelHitKeyMax_host = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 2u);
+  alpaka::memcpy(queue_, pixelHitKeyMax_host, pixelHitKeyMax_dev);
   // Objects the creation kernels found no reserved slot for (the counting kernels must be a superset).
   auto rangesView = rangesDC_->const_view();
   alpaka::memcpy(queue_,
@@ -1145,24 +1158,74 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       rangesDC_->const_view(),
                       nTotal);
 
-  auto const crossCleanpLS_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {32, 16});
+  // CrossCleanpLS: pixel-hit bits of the pT3/pT5 seeds and an (eta, phi) grid of the T5/pT3/pT5 TCs.
+  unsigned int const nKeysIT = pixelHitKeyMax_host.data()[0] + 1;
+  uint64_t const nHitKeys = uint64_t(nKeysIT) + pixelHitKeyMax_host.data()[1] + 1;
+  auto hitKeyBits_buf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, (nHitKeys + 31) / 32);
+  alpaka::memset(queue_, hitKeyBits_buf, 0u);
+  auto const grid = EtaPhiGrid::make(kCrossCleanGridWindow, kCrossCleanGridEtaMax);
+  auto cellCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, grid.nCells());
+  alpaka::memset(queue_, cellCount_buf, 0u);
+  auto cellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, grid.nCells() + 1);
+  auto cellTCs_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotal);
 
-  alpaka::exec<Acc2D>(queue_,
+  auto const crossCleanGrid_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+  alpaka::exec<Acc1D>(queue_,
+                      crossCleanGrid_workDiv,
+                      CountCrossCleanGrid{},
+                      modules_.const_view().modules(),
+                      rangesDC_->const_view(),
+                      pixelTripletsDC_->const_view(),
+                      trackCandidatesBaseDC_->const_view(),
+                      trackCandidatesExtendedDC_->const_view(),
+                      lstInputDC_->const_view().pixelSeeds(),
+                      pixelSegmentsDC_->const_view(),
+                      quintupletsDC_->const_view().quintuplets(),
+                      grid,
+                      nKeysIT,
+                      hitKeyBits_buf.data(),
+                      cellCount_buf.data());
+
+  alpaka::exec<Acc1D>(queue_,
+                      cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                      EtaPhiGridPrefix{},
+                      grid.nCells(),
+                      cellCount_buf.data(),
+                      cellStart_buf.data());
+
+  alpaka::exec<Acc1D>(queue_,
+                      crossCleanGrid_workDiv,
+                      FillCrossCleanGrid{},
+                      modules_.const_view().modules(),
+                      rangesDC_->const_view(),
+                      pixelTripletsDC_->const_view(),
+                      trackCandidatesBaseDC_->const_view(),
+                      trackCandidatesExtendedDC_->const_view(),
+                      lstInputDC_->const_view().pixelSeeds(),
+                      quintupletsDC_->const_view().quintuplets(),
+                      grid,
+                      cellCount_buf.data(),
+                      cellTCs_buf.data());
+
+  auto const crossCleanpLS_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+
+  alpaka::exec<Acc1D>(queue_,
                       crossCleanpLS_workDiv,
                       CrossCleanpLS{},
                       modules_.const_view().modules(),
                       rangesDC_->const_view(),
                       pixelTripletsDC_->const_view(),
-                      trackCandidatesBaseDC_->view(),
-                      trackCandidatesExtendedDC_->view(),
-                      segmentsDC_->const_view().segments(),
+                      trackCandidatesBaseDC_->const_view(),
+                      trackCandidatesExtendedDC_->const_view(),
                       segmentsDC_->const_view().segmentsOccupancy(),
                       lstInputDC_->const_view().pixelSeeds(),
                       pixelSegmentsDC_->view(),
-                      miniDoubletsDC_->const_view().miniDoublets(),
-                      lstInputDC_->const_view().hits(),
                       quintupletsDC_->const_view().quintuplets(),
-                      quadrupletsDC_->const_view().quadruplets());
+                      grid,
+                      nKeysIT,
+                      hitKeyBits_buf.data(),
+                      cellStart_buf.data(),
+                      cellTCs_buf.data());
 
   auto const addpLSasTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 384);
 
