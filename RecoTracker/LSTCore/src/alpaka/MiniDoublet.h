@@ -1237,9 +1237,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoubletsOccupancy mdsOccupancy,
                                   ObjectRanges ranges,
                                   HitsRangesConst hitsRanges) const {
-      // implementation is 1D with a single block
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
-
       for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
         if (mdsOccupancy.nMDs()[i] == 0 or hitsRanges.hitRanges()[i][0] == -1) {
           ranges.mdRanges()[i][0] = -1;

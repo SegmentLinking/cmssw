@@ -653,6 +653,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ObjectRangesConst ranges,
                                   unsigned int* nSurviving,
                                   bool tc_pls_triplets) const {
+      // The overflow counters ride along in nSurviving[7..11] ([5..6] = PixelHitKeyMax), read back in one copy.
+      if (cms::alpakatools::once_per_grid(acc)) {
+        nSurviving[7] = ranges.nSegmentOverflows();
+        nSurviving[8] = ranges.nTripletOverflows();
+        nSurviving[9] = ranges.nQuintupletOverflows();
+        nSurviving[10] = ranges.nT5byMDOverflows();
+        nSurviving[11] = ranges.nQuintupletCapDrops();
+      }
       // Count surviving pT5s
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int i : cms::alpakatools::uniform_elements(acc, nPixelQuintuplets)) {
@@ -709,9 +717,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   PixelSeedsConst pixelSeeds,
                                   ObjectRangesConst ranges,
                                   unsigned int nAllocated) const {
-      // implementation is 1D with a single block
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
-
       unsigned int nPixelTriplets = pixelTriplets.nPixelTriplets();
       unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
       for (unsigned int pixelTripletIndex : cms::alpakatools::uniform_elements(acc, nPixelTriplets)) {
@@ -850,9 +855,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   PixelSeedsConst pixelSeeds,
                                   ObjectRangesConst ranges,
                                   unsigned int nAllocated) const {
-      // implementation is 1D with a single block
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
-
       int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
       for (int pixelQuintupletIndex : cms::alpakatools::uniform_elements(acc, nPixelQuintuplets)) {
