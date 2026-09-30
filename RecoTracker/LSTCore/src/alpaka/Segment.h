@@ -3,6 +3,7 @@
 
 #include <limits>
 
+#include "HeterogeneousCore/AlpakaInterface/interface/prefixScan.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/CMSUnrollLoop.h"
 
@@ -1136,47 +1137,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Loose segment capacity of each lower module (the sum of its MDs' segment counters), one module per block; the
+  // module offsets follow module order on a serial backend. nTotalSegs and nSegmentOverflows are zeroed before.
   struct CreateSegmentArrayRanges {
-    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
                                   ObjectRanges ranges,
                                   MiniDoubletsBuildConst mdsBuild,
                                   MiniDoubletsOccupancyConst mdsOccupancy) const {
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
+      int& moduleCount = alpaka::declareSharedVar<int, __COUNTER__>(acc);
 
-      int& nTotalSegments = alpaka::declareSharedVar<int, __COUNTER__>(acc);
-      if (cms::alpakatools::once_per_block(acc))
-        nTotalSegments = 0;
-      alpaka::syncBlockThreads(acc);
-
-      for (uint16_t innerLowerModuleIndex : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
-        if (modules.nConnectedModules()[innerLowerModuleIndex] == 0) {
-          ranges.segmentModuleIndices()[innerLowerModuleIndex] = nTotalSegments;
-          ranges.segmentModuleOccupancy()[innerLowerModuleIndex] = 0;
-          continue;
-        }
+      for (uint16_t innerLowerModuleIndex : cms::alpakatools::uniform_groups_y(acc, modules.nLowerModules())) {
+        if (cms::alpakatools::once_per_block(acc))
+          moduleCount = 0;
+        alpaka::syncBlockThreads(acc);
 
         // Sum the connected counts of all MDs in this module.
         const unsigned int nInnerMDs = mdsOccupancy.nMDs()[innerLowerModuleIndex];
-        int occupancy = 0;
-        if (nInnerMDs != 0) {
+        if (modules.nConnectedModules()[innerLowerModuleIndex] != 0 && nInnerMDs != 0) {
           const unsigned int firstMD = ranges.mdRanges()[innerLowerModuleIndex][0];
-          for (unsigned int j = 0; j < nInnerMDs; ++j) {
-            occupancy += mdsBuild.connectedMax()[firstMD + j];
+          for (unsigned int j : cms::alpakatools::uniform_elements_x(acc, nInnerMDs)) {
+            alpaka::atomicAdd(acc,
+                              &moduleCount,
+                              static_cast<int>(mdsBuild.connectedMax()[firstMD + j]),
+                              alpaka::hierarchy::Threads{});
           }
         }
+        alpaka::syncBlockThreads(acc);
 
-        const int nTotSegs = alpaka::atomicAdd(acc, &nTotalSegments, occupancy, alpaka::hierarchy::Threads{});
-        ranges.segmentModuleIndices()[innerLowerModuleIndex] = nTotSegs;
-        ranges.segmentModuleOccupancy()[innerLowerModuleIndex] = occupancy;
-      }
-
-      // Wait for all threads to finish before reporting final values
-      alpaka::syncBlockThreads(acc);
-      if (cms::alpakatools::once_per_block(acc)) {
-        ranges.segmentModuleIndices()[modules.nLowerModules()] = nTotalSegments;
-        ranges.nTotalSegs() = nTotalSegments;
-        ranges.nSegmentOverflows() = 0;
+        if (cms::alpakatools::once_per_block(acc)) {
+          ranges.segmentModuleOccupancy()[innerLowerModuleIndex] = moduleCount;
+          ranges.segmentModuleIndices()[innerLowerModuleIndex] = alpaka::atomicAdd(
+              acc, &ranges.nTotalSegs(), static_cast<unsigned int>(moduleCount), alpaka::hierarchy::Blocks{});
+        }
+        alpaka::syncBlockThreads(acc);  // the next module resets moduleCount
       }
     }
   };
@@ -1186,9 +1180,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ModulesConst modules,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   ObjectRanges ranges) const {
-      // implementation is 1D with a single block
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
-
       for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
         if (segmentsOccupancy.nSegments()[i] == 0) {
           ranges.segmentRanges()[i][0] = -1;
@@ -1214,6 +1205,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       ALPAKA_ASSERT_ACC(nThreads <= kMaxThreads);
       const unsigned int tid = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0];
       auto& partial = alpaka::declareSharedVar<int[kMaxThreads], __COUNTER__>(acc);
+      auto& warpSums = alpaka::declareSharedVar<int[kMaxThreads / 16], __COUNTER__>(acc);
 
       // Each thread owns one contiguous chunk of modules, so the offsets follow module order.
       const unsigned int nLowerModules = modules.nLowerModules();
@@ -1226,18 +1218,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         sum += segmentsOccupancy.nSegments()[m];
       partial[tid] = sum;
       alpaka::syncBlockThreads(acc);
-      if (tid == 0) {
-        int total = 0;
-        for (unsigned int t = 0; t < nThreads; ++t) {
-          const int threadSum = partial[t];
-          partial[t] = total;
-          total += threadSum;
-        }
-        compactOffsets[nLowerModules] = total;
-        ranges.nTotalSegs() = total;
+      cms::alpakatools::blockPrefixScan(acc, partial, static_cast<int32_t>(nThreads), warpSums);  // inclusive
+      if (tid == nThreads - 1) {
+        compactOffsets[nLowerModules] = partial[tid];
+        ranges.nTotalSegs() = partial[tid];
       }
-      alpaka::syncBlockThreads(acc);
-      int offset = partial[tid];
+      int offset = partial[tid] - sum;
       for (unsigned int m = begin; m < end; ++m) {
         compactOffsets[m] = offset;
         offset += segmentsOccupancy.nSegments()[m];
