@@ -1247,66 +1247,129 @@ void LSTEvent::createQuintuplets() {
     trackAllocatedMB(mb);
     lstWarning(std::format("[MEM] MiniDoubletsT5Build: {} allocated ({:.1f} MB)", nTotalMDsOT_, mb));
   }
-  auto t5Counts = miniDoubletsT5BuildDC_->view().t5Counts();
-  auto connT50View = cms::alpakatools::make_device_view(queue_, t5Counts.connectedT5s0Max());
-  alpaka::memset(queue_, connT50View, 0u);
-  auto connT51View = cms::alpakatools::make_device_view(queue_, t5Counts.connectedT5s1Max());
-  alpaka::memset(queue_, connT51View, 0u);
 
-  auto const countConn_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+  // Keys of the T5 builders: segments that carry triplets, by inner MD (transient, this stage only).
+  auto nKeysByMD_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalMDsOT_);
+  alpaka::memset(queue_, nKeysByMD_buf, 0u);
+  auto keyOffsetByMD_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalMDsOT_);
+  auto keys_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalSegmentsOT_);
+  alpaka::exec<Acc1D>(queue_,
+                      cms::alpakatools::make_workdiv<Acc1D>(nLowerModules_, 128),
+                      FillT5KeysByMD{},
+                      modules_.const_view().modules(),
+                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                      segmentsDC_->const_view().segments(),
+                      segmentsDC_->const_view().segmentsOccupancy(),
+                      tripletsDC_->const_view().tripletsOccupancy(),
+                      tripletsListRangesDC_->const_view().tripletsRangesBySegment(),
+                      rangesDC_->const_view(),
+                      nKeysByMD_buf.data(),
+                      keyOffsetByMD_buf.data(),
+                      keys_buf.data());
 
-  // Per-triplet bits: which of the first 32 outer-triplet candidates pass the dBeta cuts of the counting kernel.
+  // Per-triplet bits: which of the first 64 keys of an inner triplet pass the first dBeta cut.
   const unsigned int nTripletSlots = tripletsDC_->const_view().triplets().metadata().size();
-  auto dBetaPassMask_buf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, nTripletSlots);
+  auto dBetaPassMask_buf = cms::alpakatools::make_device_buffer<T5KeyMask[]>(queue_, nTripletSlots);
   alpaka::memset(queue_, dBetaPassMask_buf, 0u);
-  // Per-triplet T5 counter (count -> create), live only in this stage.
-  auto t3ConnectedMax_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTripletSlots);
-  alpaka::memset(queue_, t3ConnectedMax_buf, 0u);
+
+  // One row of threads per inner triplet (8 per block), over all triplets; on the serial backend one pass in triplet
+  // order (the T5 slot order of a module), elsewhere capped at the CUDA grid-y limit.
+  unsigned int countConnBlocks = std::max(cms::alpakatools::divide_up_by(nTripletSlots, 8u), 1u);
+  if constexpr (not cms::alpakatools::requires_single_thread_per_block_v<Acc3D>)
+    countConnBlocks = std::min(countConnBlocks, 65535u);
+  auto const countConn_workDiv = cms::alpakatools::make_workdiv<Acc3D>({1, countConnBlocks, 1}, {1, 8, 32});
   alpaka::exec<Acc3D>(queue_,
                       countConn_workDiv,
-                      CountTripletConnections{},
+                      CountT5KeyCuts{},
                       modules_.const_view().modules(),
                       miniDoubletsDC_->const_view().miniDoublets(),
-                      miniDoubletsT5BuildDC_->view().t5Counts(),
                       segmentsDC_->const_view().segments(),
-                      tripletsDC_->view().triplets(),
-                      tripletsDC_->const_view().tripletsOccupancy(),
-                      tripletsDC_->const_view().tripletsByMD(),
-                      tripletsListRangesDC_->const_view().tripletsRangesByMD(),
-                      rangesDC_->const_view(),
-                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                      tripletsDC_->const_view().triplets(),
+                      nKeysByMD_buf.data(),
+                      keyOffsetByMD_buf.data(),
+                      keys_buf.data(),
+                      nTripletSlots,
                       ptCut_,
-                      dBetaPassMask_buf.data(),
-                      t3ConnectedMax_buf.data());
+                      dBetaPassMask_buf.data());
 
-  auto const createEligibleModulesListForQuintuplets_workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, 1024);
-
-  alpaka::exec<Acc1D>(queue_,
-                      createEligibleModulesListForQuintuplets_workDiv,
-                      CreateEligibleModulesListForQuintuplets{},
-                      modules_.const_view().modules(),
-                      tripletsDC_->const_view().tripletsOccupancy(),
-                      rangesDC_->view(),
-                      t3ConnectedMax_buf.data(),
-                      miniDoubletsT5BuildDC_->const_view().t5Counts(),
-                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
-                      miniDoubletsT5BuildDC_->view().quintupletsRangesByMD0(),
-                      miniDoubletsT5BuildDC_->view().quintupletsRangesByMD1());
-
+  // The counting kernel selects each pair once and records the selected pairs (transient, this stage only). T5s are
+  // a small fraction of the triplets; a larger list and a second run are needed only when more are selected.
+  unsigned int selectedCapacity = std::max(nTripletSlots / 4, 1024u);
+  auto moduleT5Count_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nLowerModules_);
+  auto nSelected_d = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 1u);
   auto nEligibleT5Modules_buf = cms::alpakatools::make_host_buffer<uint16_t>(queue_);
   auto nTotalQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTotalQuintuplets0_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   auto nTotalQuintuplets1_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
+  auto nSelected_buf = cms::alpakatools::make_host_buffer<unsigned int[]>(queue_, 1u);
   auto rangesOccupancy = rangesDC_->const_view();
   auto nEligibleT5Modules_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nEligibleT5Modules());
   auto nTotalQuintuplets_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuints());
   auto nTotalQuintuplets0_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuintsByMD0());
   auto nTotalQuintuplets1_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuintsByMD1());
-  alpaka::memcpy(queue_, nEligibleT5Modules_buf, nEligibleT5Modules_view_d);
-  alpaka::memcpy(queue_, nTotalQuintuplets_buf, nTotalQuintuplets_view_d);
-  alpaka::memcpy(queue_, nTotalQuintuplets0_buf, nTotalQuintuplets0_view_d);
-  alpaka::memcpy(queue_, nTotalQuintuplets1_buf, nTotalQuintuplets1_view_d);
-  alpaka::wait(queue_);  // wait for the values before using them
+  auto countQuintuplets = [&](unsigned int capacity) {
+    auto selectedT3s_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, 2 * capacity);
+    auto selectedBridgeRadius_buf = cms::alpakatools::make_device_buffer<float[]>(queue_, capacity);
+    auto selectedDnnScore_buf = cms::alpakatools::make_device_buffer<float[]>(queue_, capacity);
+    auto t5Counts = miniDoubletsT5BuildDC_->view().t5Counts();
+    auto connT50View = cms::alpakatools::make_device_view(queue_, t5Counts.connectedT5s0Max());
+    alpaka::memset(queue_, connT50View, 0u);
+    auto connT51View = cms::alpakatools::make_device_view(queue_, t5Counts.connectedT5s1Max());
+    alpaka::memset(queue_, connT51View, 0u);
+    alpaka::memset(queue_, moduleT5Count_buf, 0u);
+    alpaka::memset(queue_, nSelected_d, 0u);
+    alpaka::exec<Acc3D>(queue_,
+                        countConn_workDiv,
+                        CountTripletConnections{},
+                        modules_.const_view().modules(),
+                        miniDoubletsDC_->const_view().miniDoublets(),
+                        t5Counts,
+                        segmentsDC_->const_view().segments(),
+                        tripletsDC_->const_view().triplets(),
+                        tripletsDC_->const_view().tripletsBySegment(),
+                        tripletsListRangesDC_->const_view().tripletsRangesBySegment(),
+                        tripletsListRangesDC_->const_view().tripletsRangesByMD(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                        nKeysByMD_buf.data(),
+                        keyOffsetByMD_buf.data(),
+                        keys_buf.data(),
+                        nTripletSlots,
+                        ptCut_,
+                        dBetaPassMask_buf.data(),
+                        moduleT5Count_buf.data(),
+                        nSelected_d.data(),
+                        capacity,
+                        selectedT3s_buf.data(),
+                        selectedBridgeRadius_buf.data(),
+                        selectedDnnScore_buf.data());
+
+    alpaka::exec<Acc1D>(queue_,
+                        cms::alpakatools::make_workdiv<Acc1D>(1, 1024),
+                        CreateEligibleModulesListForQuintuplets{},
+                        modules_.const_view().modules(),
+                        tripletsDC_->const_view().tripletsOccupancy(),
+                        rangesDC_->view(),
+                        moduleT5Count_buf.data(),
+                        miniDoubletsT5BuildDC_->const_view().t5Counts(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                        miniDoubletsT5BuildDC_->view().quintupletsRangesByMD0(),
+                        miniDoubletsT5BuildDC_->view().quintupletsRangesByMD1());
+
+    alpaka::memcpy(queue_, nEligibleT5Modules_buf, nEligibleT5Modules_view_d);
+    alpaka::memcpy(queue_, nTotalQuintuplets_buf, nTotalQuintuplets_view_d);
+    alpaka::memcpy(queue_, nTotalQuintuplets0_buf, nTotalQuintuplets0_view_d);
+    alpaka::memcpy(queue_, nTotalQuintuplets1_buf, nTotalQuintuplets1_view_d);
+    alpaka::memcpy(queue_, nSelected_buf, nSelected_d);
+    alpaka::wait(queue_);  // wait for the values before using them
+    return std::make_tuple(selectedT3s_buf, selectedBridgeRadius_buf, selectedDnnScore_buf);
+  };
+  auto selected = countQuintuplets(selectedCapacity);
+  if (*nSelected_buf.data() > selectedCapacity) {
+    selectedCapacity = *nSelected_buf.data();
+    selected = countQuintuplets(selectedCapacity);
+  }
+  auto& [selectedT3s_buf, selectedBridgeRadius_buf, selectedDnnScore_buf] = selected;
+  const unsigned int nSelected = std::min(*nSelected_buf.data(), selectedCapacity);
 
   auto nEligibleT5Modules = *nEligibleT5Modules_buf.data();
   auto nTotalQuintuplets = *nTotalQuintuplets_buf.data();
@@ -1330,30 +1393,32 @@ void LSTEvent::createQuintuplets() {
       cms::alpakatools::make_device_view(queue_, looseOccupancy.totOccupancyQuintuplets());
   alpaka::memset(queue_, totOccupancyQuintuplets_view, 0u);
 
-  auto const createQuintuplets_workDiv =
-      cms::alpakatools::make_workdiv<Acc3D>({std::max((int)nEligibleT5Modules, 1), 1, 1}, {1, 8, 32});
-
-  alpaka::exec<Acc3D>(queue_,
-                      createQuintuplets_workDiv,
-                      CreateQuintuplets{},
-                      modules_.const_view().modules(),
-                      miniDoubletsDC_->const_view().miniDoublets(),
-                      miniDoubletsT5BuildDC_->const_view().t5Counts(),
-                      miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
-                      segmentsDC_->const_view().segments(),
-                      tripletsDC_->view().triplets(),
-                      tripletsDC_->const_view().tripletsOccupancy(),
-                      tripletsDC_->const_view().tripletsByMD(),
-                      tripletsListRangesDC_->const_view().tripletsRangesByMD(),
-                      looseDC.view().quintupletsLoose(),
-                      looseOccupancy,
-                      miniDoubletsT5BuildDC_->view().quintupletsRangesByMD0(),
-                      miniDoubletsT5BuildDC_->view().quintupletsRangesByMD1(),
-                      rangesDC_->view(),
-                      nEligibleT5Modules,
-                      ptCut_,
-                      dBetaPassMask_buf.data(),
-                      t3ConnectedMax_buf.data());
+  if (nSelected > 0) {
+    for (bool densePass : {true, false}) {
+      alpaka::exec<Acc1D>(queue_,
+                          cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nSelected, 256u), 256),
+                          AddSelectedQuintuplets{},
+                          modules_.const_view().modules(),
+                          miniDoubletsDC_->const_view().miniDoublets(),
+                          miniDoubletsT5BuildDC_->const_view().t5Counts(),
+                          miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                          segmentsDC_->const_view().segments(),
+                          tripletsDC_->view().triplets(),
+                          tripletsDC_->const_view().tripletsOccupancy(),
+                          tripletsListRangesDC_->const_view().tripletsRangesByMD(),
+                          looseDC.view().quintupletsLoose(),
+                          looseOccupancy,
+                          miniDoubletsT5BuildDC_->view().quintupletsRangesByMD0(),
+                          miniDoubletsT5BuildDC_->view().quintupletsRangesByMD1(),
+                          rangesDC_->view(),
+                          selectedT3s_buf.data(),
+                          selectedBridgeRadius_buf.data(),
+                          selectedDnnScore_buf.data(),
+                          nSelected,
+                          densePass,
+                          ptCut_);
+    }
+  }
 
   // Compact size: the selected quintuplets, laid out in module order.
   auto ranges = rangesDC_->view();
