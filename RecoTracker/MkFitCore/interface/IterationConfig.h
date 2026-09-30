@@ -132,6 +132,10 @@ namespace mkfit {
     bool m_backward_drop_seed_hits = false;
 
     int m_backward_fit_min_hits = -1;  // Min number of hits to keep when m_backward_drop_seed_hits is true
+    // If > 0, a backward-search extension is kept only if its new hits lie on this many pixel layers (one layer if
+    // |d0| to the beam spot is below m_backward_search_prompt_max_d0); otherwise the pre-search candidate is restored.
+    int m_backward_search_min_pixel_layers = 0;
+    float m_backward_search_prompt_max_d0 = 0.f;
 
     // seed cleaning params with good defaults (all configurable)
     float sc_ptthr_hpt = 2.0;
