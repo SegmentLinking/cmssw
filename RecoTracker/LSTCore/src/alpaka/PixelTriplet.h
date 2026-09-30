@@ -894,16 +894,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float etaErr = pixelData.etaErr;
     ptSLo = alpaka::math::max(acc, ptCut, ptSLo - 10.0f * alpaka::math::max(acc, ptErr, 0.005f * ptSLo));
     ptSLo = alpaka::math::min(acc, 10.0f, ptSLo);
-    float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, kSinAlphaMax));
     // Outer segment beginning rt divided by inner segment beginning rt;
     const float rtRelDiff = rt_OutLo / rt_InOut - 1.f;
-
-    // The track can bend in r-z plane slightly
-    const float dzDrtScale = alpaka::math::tan(acc, alpha1GeV_OutLo) / alpha1GeV_OutLo;
-    // adjust for fwd and bwd to keep zHi > zLo
-    const float dzDrtScaleHi = z_InUp * rtRelDiff < 0.f ? 1.f : dzDrtScale;
-    const float dzDrtScaleLo = z_InUp * rtRelDiff > 0.f ? 1.f : dzDrtScale;
     const float zpitch_InLo = 0.05f;
     bool isPLSinOT =
         pixelData.hitDetBits &
@@ -918,12 +910,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float dLum = alpaka::math::copysign(acc, kDeltaZLum, rtRelDiff);
     // could reduce dR uncertrainty using dzdrt
     const float dRtRelZ = isTilted_OutLo ? alpaka::math::abs(acc, rGeom / rt_InOut * z_InUp) : 0.f;
-    // dzDrtScale correction is only on outer end
-    zHi = z_InUp + dRtRelZ + (z_InUp + dLum) * rtRelDiff * dzDrtScaleHi + (zpitch_InOut + zpitch_OutLo);
-    zLo = z_InUp - dRtRelZ + (z_InUp - dLum) * rtRelDiff * dzDrtScaleLo - (zpitch_InOut + zpitch_OutLo);
-    if ((z_OutLo < zLo) || (z_OutLo > zHi))
-      return false;
-
     const float cosh2Eta = 1.f + (pz * pz) / (ptIn * ptIn);
 
     const float drt_OutLo_InUp = (rt_OutLo - rt_InUp);
@@ -954,6 +940,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     if ((z_OutLo < zLoPointed) || (z_OutLo > zHiPointed))
       return false;
 
+    // The pointed window above needs no trig; the r-z window below needs asin and tan, so it comes second.
+    float alpha1GeV_OutLo =
+        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    // The track can bend in r-z plane slightly
+    const float dzDrtScale = alpaka::math::tan(acc, alpha1GeV_OutLo) / alpha1GeV_OutLo;
+    // adjust for fwd and bwd to keep zHi > zLo
+    const float dzDrtScaleHi = z_InUp * rtRelDiff < 0.f ? 1.f : dzDrtScale;
+    const float dzDrtScaleLo = z_InUp * rtRelDiff > 0.f ? 1.f : dzDrtScale;
+    // dzDrtScale correction is only on outer end
+    zHi = z_InUp + dRtRelZ + (z_InUp + dLum) * rtRelDiff * dzDrtScaleHi + (zpitch_InOut + zpitch_OutLo);
+    zLo = z_InUp - dRtRelZ + (z_InUp - dLum) * rtRelDiff * dzDrtScaleLo - (zpitch_InOut + zpitch_OutLo);
+    if ((z_OutLo < zLo) || (z_OutLo > zHi))
+      return false;
+
     const float pvOffset = 0.1f / rt_OutLo;
     dPhiCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, muls2 + pvOffset * pvOffset);
 
@@ -977,7 +977,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         modules.subdets()[segmentOuterModuleIndex] == Endcap and modules.moduleType()[segmentOuterModuleIndex] == TwoS;
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
-    alpha_OutUp = cms::alpakatools::deltaPhi(acc, x_OutUp, y_OutUp, x_OutUp - x_OutLo, y_OutUp - y_OutLo);
+    alpha_OutUp = segments.dPhiChangeOuts()[segmentIndex];
 
     alpha_OutUp_highEdge = alpha_OutUp;
     alpha_OutUp_lowEdge = alpha_OutUp;
@@ -1153,25 +1153,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float zpitch_OutLo = (isPS_OutLo ? kPixelPSZpitch : kStrip2SZpitch);
     const float zGeom = zpitch_InLo + zpitch_OutLo;
 
-    const float slope = alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, kSinAlphaMax));
-    const float dzDrtScale = slope / alpaka::math::tan(acc, slope);  // account for a bend in r-z
-    const bool signZProd = (z_InUp < 0) ^ (z_OutLo < z_InUp);
-    const float dzDrtScaleLo = signZProd ? dzDrtScale : 1.f;
-    const float dzDrtScaleHi = signZProd ? 1.f : dzDrtScale;
-
     const float dLum = alpaka::math::copysign(acc, kDeltaZLum + zGeom, z_OutLo - z_InUp);
     bool isInnerMDPS = modules.moduleType()[segmentInnerModuleIndex] == PS;
 
     //FIXME: make this chosen by configuration for lay11,12 full PS
     const float rtGeom1 = isInnerMDPS ? kPixelPSZpitch : kStrip2SZpitch;
     const float zGeom1 = alpaka::math::copysign(acc, zGeom, z_InUp);  //used in B-E region
-    //slope correction only on the lower end
-    rtLo = rt_InUp * (1.f + (z_OutLo - z_InUp - zGeom1) / (z_InUp + dLum) * dzDrtScaleLo) - rtGeom1;
-    rtHi = rt_InUp * (1.f + (z_OutLo - z_InUp + zGeom1) / (z_InUp - dLum) * dzDrtScaleHi) + rtGeom1;
-
-    // Cut #2: rt condition
-    if ((rt_OutLo < rtLo) || (rt_OutLo > rtHi))
-      return false;
 
     const float dzOutIn = z_OutLo - z_InUp;
     const float cosh2Eta = 1.f + (pz * pz) / (ptIn * ptIn);
@@ -1196,12 +1183,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     const float rtLo_point = rt_InUp + drtMean - rtWindow;
     const float rtHi_point = rt_InUp + drtMean + rtWindow;
 
-    // Cut #3: rt-z pointed
+    // Cut #3: rt-z pointed (needs no trig, so it runs before Cut #2)
     if ((rt_OutLo < rtLo_point) || (rt_OutLo > rtHi_point))
       return false;
 
-    const float alpha1GeV_OutLo =
-        alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    const float slope = alpaka::math::asin(acc, alpaka::math::min(acc, rt_OutLo * k2Rinv1GeVf / ptCut, kSinAlphaMax));
+    const float dzDrtScale = slope / alpaka::math::tan(acc, slope);  // account for a bend in r-z
+    const bool signZProd = (z_InUp < 0) ^ (z_OutLo < z_InUp);
+    const float dzDrtScaleLo = signZProd ? dzDrtScale : 1.f;
+    const float dzDrtScaleHi = signZProd ? 1.f : dzDrtScale;
+    //slope correction only on the lower end
+    rtLo = rt_InUp * (1.f + (z_OutLo - z_InUp - zGeom1) / (z_InUp + dLum) * dzDrtScaleLo) - rtGeom1;
+    rtHi = rt_InUp * (1.f + (z_OutLo - z_InUp + zGeom1) / (z_InUp - dLum) * dzDrtScaleHi) + rtGeom1;
+
+    // Cut #2: rt condition
+    if ((rt_OutLo < rtLo) || (rt_OutLo > rtHi))
+      return false;
+
+    const float alpha1GeV_OutLo = slope;
     const float pvOffset = 0.1f / rt_OutLo;
     dPhiCut = alpha1GeV_OutLo + alpaka::math::sqrt(acc, muls2 + pvOffset * pvOffset);
 
@@ -1225,7 +1224,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     float alpha_OutUp, alpha_OutUp_highEdge, alpha_OutUp_lowEdge;
 
-    alpha_OutUp = cms::alpakatools::deltaPhi(acc, x_OutUp, y_OutUp, x_OutUp - x_OutLo, y_OutUp - y_OutLo);
+    alpha_OutUp = segments.dPhiChangeOuts()[segmentIndex];
     alpha_OutUp_highEdge = alpha_OutUp;
     alpha_OutUp_lowEdge = alpha_OutUp;
 
