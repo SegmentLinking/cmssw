@@ -8,22 +8,15 @@
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
-  // Eta-phi cell grid for windowed pair searches (|dEta| <= window and |dPhi| <= window). Cells are at least
-  // `window` wide in eta and in phi (phi periodic, eta clamped into the edge cells), so both objects of a pair
-  // inside the window sit in the same or in adjacent cells: the 3x3 neighbourhood of an object holds a superset
-  // of its window partners. Filled by count -> exclusive prefix -> scatter (no sort); the order inside a cell is
-  // arbitrary, so it suits decisions that do not depend on the visiting order.
-  // Usage: cellCount[nCells()] zeroed; count (atomicAdd on cellCount[cell]); EtaPhiGridPrefix (cellStart, and
-  // cellCount becomes the scatter cursor); scatter (cellItems[atomicAdd(cellCount[cell])] = object); then scan
-  // cellItems[cellStart[c] .. cellStart[c + 1]) for the neighbour cells c.
+  // Cells at least `window` wide (phi periodic, eta clamped into the edge cells): the 3x3 neighbourhood of an
+  // object holds all its |dEta|, |dPhi| <= window partners. Filled by count -> EtaPhiGridPrefix -> scatter.
   struct EtaPhiGrid {
     int nEta;
     int nPhi;
     float etaMin;
     float invWidth;
 
-    // nPhi = the largest number of cells of width >= window over 2 pi; the eta cells get the same width.
-    // Eta beyond +-etaMax goes to the edge cells (still a superset; etaMax only sets the cell count).
+    // nPhi = the largest number of cells of width >= window; same width in eta, |eta| > etaMax in the edge cells.
     static EtaPhiGrid make(float window, float etaMax) {
       EtaPhiGrid grid;
       grid.nPhi = static_cast<int>(2.f * kPi / window);
@@ -58,8 +51,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  // Single block of <= 1024 threads (a multiple of the warp size): cellStart[c] = exclusive prefix of cellCount over
-  // the cells, cellStart[nCells] = total; cellCount is overwritten with cellStart (the scatter cursor).
+  // One block of <= 1024 threads (a multiple of the warp size): cellStart = exclusive prefix of cellCount (plus the
+  // total at [nCells]), and cellCount is overwritten with cellStart to serve as the scatter cursor.
   struct EtaPhiGridPrefix {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   int nCells,
