@@ -244,15 +244,24 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
                                                     layer_gap_map_t *lgc_map) {
   const DetId detid = det->geographicalId();
 
+  // A composite det, listed besides its sensors: it gets no module entry and no material.
   bool doubleSide = false;  //double modules have double material
-  if (detid.subdetId() == SiStripSubdetector::TIB)
-    doubleSide = trackerTopo_->tibIsDoubleSide(detid);
-  else if (detid.subdetId() == SiStripSubdetector::TID)
-    doubleSide = trackerTopo_->tidIsDoubleSide(detid);
-  else if (detid.subdetId() == SiStripSubdetector::TOB)
-    doubleSide = trackerTopo_->tobIsDoubleSide(detid);
-  else if (detid.subdetId() == SiStripSubdetector::TEC)
-    doubleSide = trackerTopo_->tecIsDoubleSide(detid);
+  if (layerNrConv_.isPhase2()) {
+    // Phase 2: a stack (PS or 2S module) is listed besides its lower and upper sensors,
+    // with the same material as each of them. The phase-1 double-side tests below
+    // match a stack only in TOB layers 1-2 and TEC rings 1, 2, 5.
+    if (detid.subdetId() > PixelSubdetector::PixelEndcap)
+      doubleSide = !trackerTopo_->isLower(detid) && !trackerTopo_->isUpper(detid);
+  } else {
+    if (detid.subdetId() == SiStripSubdetector::TIB)
+      doubleSide = trackerTopo_->tibIsDoubleSide(detid);
+    else if (detid.subdetId() == SiStripSubdetector::TID)
+      doubleSide = trackerTopo_->tidIsDoubleSide(detid);
+    else if (detid.subdetId() == SiStripSubdetector::TOB)
+      doubleSide = trackerTopo_->tobIsDoubleSide(detid);
+    else if (detid.subdetId() == SiStripSubdetector::TEC)
+      doubleSide = trackerTopo_->tecIsDoubleSide(detid);
+  }
 
   float xy[4][2];
   float dz;
