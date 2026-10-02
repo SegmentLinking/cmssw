@@ -45,9 +45,11 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     qualityMaxPosErr = cms.double(100),
     qualitySignPt = cms.bool(True),
     NavigationSchool = cms.ESInputTag('', 'SimpleNavigationSchool'),
+    TrajectoryInEvent = cms.bool(False),
     measurementTrackerEvent = cms.InputTag("hltMeasurementTrackerEvent"),
     mightGet = cms.optional.untracked.vstring
 )
 
 from Configuration.ProcessModifiers.trackingMkFitFit_cff import trackingMkFitFit
 trackingMkFitFit.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksMkFitFit)
+(trackingMkFitFit & mtd_at_hlt).toModify(hltInitialStepTracks, TrajectoryInEvent = True)
