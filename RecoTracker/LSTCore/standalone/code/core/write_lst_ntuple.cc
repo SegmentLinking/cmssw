@@ -14,6 +14,8 @@ void createOutputBranches() {
   if (ana.jet_branches)
     createJetBranches();
 
+  if (ana.hit_branches)
+    createHitBranches();
   if (ana.md_branches)
     createMiniDoubletBranches();
   if (ana.ls_branches)
@@ -62,7 +64,9 @@ void fillOutputBranches(LSTEvent* event) {
   if (ana.t4dnn_branches)
     setT4DNNBranches(event);
 
-  auto const md_idx_map = (ana.md_branches ? setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac)
+  auto const hit_idx_map = (ana.hit_branches ? setHitBranches(event, n_accepted_simtrk)
+                                             : std::map<unsigned int, unsigned int>());
+  auto const md_idx_map = (ana.md_branches ? setMiniDoubletBranches(event, n_accepted_simtrk, matchfrac, hit_idx_map)
                                            : std::map<unsigned int, unsigned int>());
   auto const ls_idx_map = (ana.ls_branches ? setLineSegmentBranches(event, n_accepted_simtrk, matchfrac, md_idx_map)
                                            : std::map<unsigned int, unsigned int>());
@@ -260,6 +264,10 @@ void createSimTrackContainerBranches() {
     ana.tx->createBranch<std::vector<std::vector<int>>>("sim_recoHitDetId");  // list of recohit's detId
   }
 
+  if (ana.hit_branches) {
+    // list of idx to hits in hit_* container that this simulated track left
+    ana.tx->createBranch<std::vector<std::vector<int>>>("sim_hitIdxAll");
+  }
   if (ana.md_branches) {
     // list of idx to matches (> 0%) to md_* container
     ana.tx->createBranch<std::vector<std::vector<int>>>("sim_mdIdxAll");
@@ -349,6 +357,36 @@ void createTrackCandidateBranches() {
 }
 
 //________________________________________________________________________________________________________________________________
+void createHitBranches() {
+  // Hits (i.e. Reco hits given as input to LST, both Outer Tracker hits and pixel hits from the seeds)
+  //
+  //  The container will hold per entry a hit in the LST input hit collection.
+  //
+  ana.tx->createBranch<std::vector<bool>>("hit_isPixel");  // 1 if the hit is a pixel hit, 0 if Outer Tracker hit
+  ana.tx->createBranch<std::vector<int>>("hit_trkNtupIdx");  // idx of the hit in ph2_* (OT) or pix_* (pixel) of the tracking ntuple
+  ana.tx->createBranch<std::vector<float>>("hit_x");
+  ana.tx->createBranch<std::vector<float>>("hit_y");
+  ana.tx->createBranch<std::vector<float>>("hit_z");
+  ana.tx->createBranch<std::vector<float>>("hit_r");    // sqrt(x**2 + y**2)
+  ana.tx->createBranch<std::vector<float>>("hit_eta");
+  ana.tx->createBranch<std::vector<float>>("hit_phi");
+  // type of the module where the hit sits (type = 1 (PS), 0 (2S))
+  ana.tx->createBranch<std::vector<int>>("hit_type");
+  // layer index of the module where the hit sits (layer = 1 2 3 4 5 6 (barrel) 7 8 9 10 11 (endcap), 0 for pixel)
+  ana.tx->createBranch<std::vector<int>>("hit_layer");
+  // detId = detector unique ID that contains a lot of information that can be parsed later if needed
+  ana.tx->createBranch<std::vector<int>>("hit_detId");
+  // 1 if the hit is not linked to any simulated track (via its simhits), 0 if it is
+  ana.tx->createBranch<std::vector<int>>("hit_isFake");
+  // number of distinct simulated tracks linked to the hit (> 1 means the hit is shared)
+  ana.tx->createBranch<std::vector<int>>("hit_nSimTrk");
+  // idx of the simulated track linked to the hit (if shared, the first one linked; -999 if fake)
+  ana.tx->createBranch<std::vector<int>>("hit_simIdx");
+  // list of idx of all simulated tracks linked to the hit
+  ana.tx->createBranch<std::vector<std::vector<int>>>("hit_simIdxAll");
+}
+
+//________________________________________________________________________________________________________________________________
 void createMiniDoubletBranches() {
   // Mini-Doublets (i.e. Two reco hits paired in a single pT-module of Outer Tracker of CMS, a.k.a. MD)
   //
@@ -378,6 +416,10 @@ void createMiniDoubletBranches() {
   ana.tx->createBranch<std::vector<int>>("md_layer");
   // detId = detector unique ID that contains a lot of information that can be parsed later if needed
   ana.tx->createBranch<std::vector<int>>("md_detId");
+  if (ana.hit_branches) {
+    ana.tx->createBranch<std::vector<int>>("md_hitIdx0");  // index to the anchor hit
+    ana.tx->createBranch<std::vector<int>>("md_hitIdx1");  // index to the other hit
+  }
   ana.tx->createBranch<std::vector<int>>("md_isFake");  // 1 if md is fake 0 other if not
   ana.tx->createBranch<std::vector<int>>("md_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
   // list of idx of all matched (> 0%) simulated track
@@ -919,9 +961,118 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
 }
 
 //________________________________________________________________________________________________________________________________
+std::map<unsigned int, unsigned int> setHitBranches(LSTEvent* event, unsigned int n_accepted_simtrk) {
+  //--------------------------------------------
+  //
+  //
+  // Hits
+  //
+  //
+  //--------------------------------------------
+
+  auto const& trk_sim_pt = trk.getVF("sim_pt");
+  auto const& trk_ph2_subdet = trk.getVUS("ph2_subdet");
+  auto const& trk_ph2_layer = trk.getVUS("ph2_layer");
+  auto const& trk_ph2_detId = trk.getVU("ph2_detId");
+  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+
+  auto const& hitsBase = event->getInput<HitsBaseSoA>();
+
+  // Following are some vectors to keep track of the information to write to the ntuple
+  // N.B. following branch has a length for the entire sim track, but what actually will be written in sim_hitIdxAll branch is NOT that long
+  // Later in the code, it will restrict to only the ones to write out.
+  int n_total_simtrk = trk_sim_pt.size();
+  std::vector<std::vector<int>> sim_hitIdxAll(n_total_simtrk);
+  std::vector<std::vector<int>> hit_simIdxAll;
+
+  // global hit index that will be used to keep track of hit being outputted to the ntuple
+  // each time a hit is written out the following will be counted up
+  unsigned int hit_idx = 0;
+
+  // map to keep track of (SoA hitIdx) -> (hit_idx in ntuple output)
+  std::map<unsigned int, unsigned int> hit_idx_map;
+
+  // Loop over all the hits in the LST input (OT hits first, followed by the pixel hits from the seeds)
+  unsigned int nHits = hitsBase.metadata().size();
+  for (unsigned int hitIdx = 0; hitIdx < nHits; ++hitIdx) {
+    // From the SoA hit index "hitIdx" -> output ntuple's hit index is mapped
+    // This is useful later when connecting higher level objects to point to specific one in the ntuple
+    hit_idx_map[hitIdx] = hit_idx;
+
+    // Index of the hit in the ph2_* (OT) or pix_* (pixel) containers of the tracking ntuple
+    bool isPixel = hitsBase.detid()[hitIdx] == kPixelModuleId;
+    unsigned int trkNtupIdx = hitsBase.idxs()[hitIdx];
+
+    // A single hit has no match fraction: it is either linked to a simulated track through its simhits or not.
+    // Collect the distinct simulated tracks linked to this hit (more than one if the hit is shared)
+    std::vector<int> simidx;
+    for (int simhit_idx : (isPixel ? trk_pix_simHitIdx : trk_ph2_simHitIdx)[trkNtupIdx]) {
+      int simtrk_idx = trk_simhit_simTrkIdx[simhit_idx];
+      if (simtrk_idx >= 0 and std::find(simidx.begin(), simidx.end(), simtrk_idx) == simidx.end())
+        simidx.push_back(simtrk_idx);
+    }
+
+    float x = hitsBase.xs()[hitIdx];
+    float y = hitsBase.ys()[hitIdx];
+    float z = hitsBase.zs()[hitIdx];
+    lst_math::Hit hit(x, y, z, hitIdx);
+
+    // Obtain where the actual hit is located in terms of their layer, module, rod, and ring number
+    int subdet = isPixel ? 0 : trk_ph2_subdet[trkNtupIdx];
+    int is_endcap = subdet == 4;
+    // this accounting makes it so that you have layer 1 2 3 4 5 6 in the barrel, and 7 8 9 10 11 in the endcap. (becuase endcap is ph2_subdet == 4)
+    int layer = isPixel ? 0 : trk_ph2_layer[trkNtupIdx] + 6 * (is_endcap);
+    int detId = isPixel ? kPixelModuleId : trk_ph2_detId[trkNtupIdx];
+    // See https://github.com/SegmentLinking/TrackLooper/blob/158804cab7fd0976264a7bc4cee236f4986328c2/SDL/Module.cc and Module.h
+    int ring = isPixel ? 0 : (detId & (15 << 12)) >> 12;
+    int isPS = isPixel ? 0 : (is_endcap ? (layer <= 2 ? ring <= 10 : ring <= 7) : layer <= 3);
+
+    // Write out the ntuple
+    ana.tx->pushbackToBranch<bool>("hit_isPixel", isPixel);
+    ana.tx->pushbackToBranch<int>("hit_trkNtupIdx", trkNtupIdx);
+    ana.tx->pushbackToBranch<float>("hit_x", x);
+    ana.tx->pushbackToBranch<float>("hit_y", y);
+    ana.tx->pushbackToBranch<float>("hit_z", z);
+    ana.tx->pushbackToBranch<float>("hit_r", hit.rt());
+    ana.tx->pushbackToBranch<float>("hit_eta", hit.eta());
+    ana.tx->pushbackToBranch<float>("hit_phi", hit.phi());
+    ana.tx->pushbackToBranch<int>("hit_type", isPS);
+    ana.tx->pushbackToBranch<int>("hit_layer", layer);
+    ana.tx->pushbackToBranch<int>("hit_detId", detId);
+    ana.tx->pushbackToBranch<int>("hit_isFake", simidx.empty());
+    ana.tx->pushbackToBranch<int>("hit_nSimTrk", simidx.size());
+    ana.tx->pushbackToBranch<int>("hit_simIdx", simidx.empty() ? -999 : simidx[0]);
+
+    // For this hit, keep track of all the simidx that are linked
+    hit_simIdxAll.push_back(simidx);
+
+    // The book keeping of opposite mapping (sim -> hit) is done here
+    for (int sim_idx : simidx)
+      sim_hitIdxAll.at(sim_idx).push_back(hit_idx);
+
+    // Count up the hit_idx
+    hit_idx++;
+  }
+
+  // Now save the (obj -> simidx) mapping
+  ana.tx->setBranch<std::vector<std::vector<int>>>("hit_simIdxAll", hit_simIdxAll);
+
+  // Not all (sim->objIdx) will be saved but only for the sim that is from hard scatter and current bunch crossing
+  // So a restriction up to only "n_accepted_simtrk" done by chopping off the rest
+  // N.B. the reason we can simply take the first "n_accepted_simtrk" is because the tracking ntuple is organized such that those sim tracks show up on the first "n_accepted_simtrk" of tracks.
+  std::vector<std::vector<int>> sim_hitIdxAll_to_write(sim_hitIdxAll.begin(), sim_hitIdxAll.begin() + n_accepted_simtrk);
+  ana.tx->setBranch<std::vector<std::vector<int>>>("sim_hitIdxAll", sim_hitIdxAll_to_write);
+
+  return hit_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
 std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
                                                             unsigned int n_accepted_simtrk,
-                                                            float matchfrac) {
+                                                            float matchfrac,
+                                                            std::map<unsigned int, unsigned int> const& hit_idx_map) {
   //--------------------------------------------
   //
   //
@@ -1038,6 +1189,10 @@ std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<int>("md_type", isPS);
       ana.tx->pushbackToBranch<int>("md_layer", layer);
       ana.tx->pushbackToBranch<int>("md_detId", detId);
+      if (ana.hit_branches) {
+        ana.tx->pushbackToBranch<int>("md_hitIdx0", hit_idx_map.at(lowerHitIndex));
+        ana.tx->pushbackToBranch<int>("md_hitIdx1", hit_idx_map.at(upperHitIndex));
+      }
 
       // Compute whether this is a fake
       bool isfake = true;

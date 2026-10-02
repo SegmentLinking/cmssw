@@ -21,6 +21,7 @@ void createT3DNNBranches();
 void createT4DNNBranches();
 void createSimTrackContainerBranches();
 void createTrackCandidateBranches();
+void createHitBranches();
 void createMiniDoubletBranches();
 void createLineSegmentBranches();
 void createTripletBranches();
@@ -43,9 +44,11 @@ void setTrackCandidateBranches(LSTEvent* event,
                                std::map<unsigned int, unsigned int> pt5_idx_map,
                                std::map<unsigned int, unsigned int> t4_idx_map,
                                float matchfrac);
+std::map<unsigned int, unsigned int> setHitBranches(LSTEvent* event, unsigned int n_accepted_simtrk);
 std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
                                                             unsigned int n_accepted_simtrk,
-                                                            float matchfrac);
+                                                            float matchfrac,
+                                                            std::map<unsigned int, unsigned int> const& hit_idx_map);
 std::map<unsigned int, unsigned int> setLineSegmentBranches(LSTEvent* event,
                                                             unsigned int n_accepted_simtrk,
                                                             float matchfrac,

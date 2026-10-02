@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
       "2,no_pls_dupclean", "Disable pLS duplicate cleaning (both steps)")(
       "reduce_mem_by_full_precompute",
       "Run extra counting kernels to exactly size MD/LS/T3/T5/T4 buffers (lower mem, small runtime cost)")(
-      "h,help", "Print help")("md", "Write MD branches in output ntuple.")("ls", "Write LS branches in output ntuple.")(
+      "h,help", "Print help")("hit", "Write hit branches in output ntuple.")("md", "Write MD branches in output ntuple.")("ls", "Write LS branches in output ntuple.")(
       "t3", "Write T3 branches in output ntuple.")("t5", "Write T5 branches in output ntuple.")(
       "pls", "Write pLS branches in output ntuple.")("pt3", "Write pT3 branches in output ntuple.")(
       "pt5", "Write pT5 branches in output ntuple.")("occ", "Write occupancy branches in output ntuple.")(
@@ -260,6 +260,10 @@ int main(int argc, char **argv) {
   //_______________________________________________________________________________
   // --reduce_mem_by_full_precompute
   ana.reduce_mem_by_full_precompute = result["reduce_mem_by_full_precompute"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --hit
+  ana.hit_branches = result["hit"].as<bool>();
 
   //_______________________________________________________________________________
   // --md
