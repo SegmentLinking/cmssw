@@ -5,6 +5,7 @@ hltInputLST = cms.EDProducer('LSTInputProducer@alpaka',
     phase2OTRecHits = cms.InputTag('hltSiPhase2RecHits'),
     beamSpot = cms.InputTag('hltOnlineBeamSpot'),
     pixelSeeds = cms.VInputTag('hltInitialStepSeeds'),
+    producePixelSeeds = cms.bool(False),
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')
     )
