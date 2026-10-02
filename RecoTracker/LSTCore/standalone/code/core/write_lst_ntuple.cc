@@ -438,6 +438,7 @@ void createTripletBranches() {
   ana.tx->createBranch<std::vector<float>>("t3_pt");
   ana.tx->createBranch<std::vector<float>>("t3_eta");        // eta (computed based on last anchor hit's eta)
   ana.tx->createBranch<std::vector<float>>("t3_phi");        // phi (computed based on first anchor hit's phi)
+  ana.tx->createBranch<std::vector<int>>("t3_charge");
   ana.tx->createBranch<std::vector<int>>("t3_lsIdx0");       // index to the first LS
   ana.tx->createBranch<std::vector<int>>("t3_lsIdx1");       // index to the second LS
   ana.tx->createBranch<std::vector<int>>("t3_isFake");       // 1 if t3 is fake 0 other if not
@@ -1347,6 +1348,7 @@ std::map<unsigned int, unsigned int> setTripletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<float>("t3_pt", pt);
       ana.tx->pushbackToBranch<float>("t3_eta", eta);
       ana.tx->pushbackToBranch<float>("t3_phi", phi);
+      ana.tx->pushbackToBranch<int>("t3_charge", static_cast<int>(triplets.charge()[t3Idx]));
       bool isfake = true;
       for (size_t isim = 0; isim < simidx.size(); ++isim) {
         if (simidxfrac[isim] > matchfrac) {
