@@ -34,7 +34,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                             float pt,
                                                             float eta,
                                                             float phi,
-                                                            float scores,
                                                             uint8_t layer,
                                                             unsigned int quadrupletIndex,
                                                             float rzChiSquared,
@@ -60,7 +59,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     quadruplets.outerRadius()[quadrupletIndex] = __F2H(outerRadius);
     quadruplets.pt()[quadrupletIndex] = __F2H(pt);
 #ifdef CUT_VALUE_DEBUG
-    quadruplets.score_rphisum()[quadrupletIndex] = __F2H(scores);
     quadruplets.layer()[quadrupletIndex] = layer;
 #endif
     quadruplets.logicalLayers()[quadrupletIndex][0] = triplets.logicalLayers()[innerTripletIndex][0];
@@ -301,6 +299,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                MiniDoubletsConst mds,
                                                                SegmentsConst segments,
                                                                TripletsConst triplets,
+                                                               MiniDoubletsOccupancyConst mdOccupancy,
+                                                               TripletsRangesConst tripletsRangesByMD,
                                                                uint16_t lowerModuleIndex1,
                                                                uint16_t lowerModuleIndex2,
                                                                uint16_t lowerModuleIndex3,
@@ -350,6 +350,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     float outerRadius = triplets.radius()[outerTripletIndex];
     float inner_pt = 2 * k2Rinv1GeVf * innerRadius;
     float pt = (innerRadius + outerRadius) * k2Rinv1GeVf;
+
+    // only run dBeta selector for low/high pT to avoid removing displaced efficiency
+    if (pt > 10 || pt < 1) {
+      if (not runQuintupletdBetaAlgoSelector(acc,
+                                             modules,
+                                             mds,
+                                             segments,
+                                             lowerModuleIndex1,
+                                             lowerModuleIndex2,
+                                             lowerModuleIndex3,
+                                             lowerModuleIndex4,
+                                             firstSegmentIndex,
+                                             thirdSegmentIndex,
+                                             firstMDIndex,
+                                             secondMDIndex,
+                                             thirdMDIndex,
+                                             fourthMDIndex,
+                                             dBeta,
+                                             ptCut))
+        return false;
+    } else {
+      dBeta = 0;
+    }
+
+    if (not passT4RZConstraint(acc,
+                               modules,
+                               mds,
+                               firstMDIndex,
+                               secondMDIndex,
+                               thirdMDIndex,
+                               fourthMDIndex,
+                               lowerModuleIndex1,
+                               lowerModuleIndex2,
+                               lowerModuleIndex3,
+                               lowerModuleIndex4,
+                               rzChiSquared,
+                               inner_pt,
+                               innerRadius,
+                               inner_circleCenterX,
+                               inner_circleCenterY,
+                               innerT3charge))
+      return false;
+
+    // Reject if a mini-doublet direction disagrees with its triplet circle (flag set in Triplet.h).
+    if ((triplets.flags()[innerTripletIndex] | triplets.flags()[outerTripletIndex]) & kT3MdDirectionFail)
+      return false;
 
     // 4 categories for sigmas
     float sigmas2[4], delta1[4], delta2[4], slopes[4];
@@ -413,6 +459,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                              nonAnchorSigmas2,
                                                              nonAnchorChiSquared);
 
+    const uint16_t t4Lm[Params_T4::kLayers] = {
+        lowerModuleIndex1, lowerModuleIndex2, lowerModuleIndex3, lowerModuleIndex4};
+    const unsigned int t4Md[Params_T4::kLayers] = {firstMDIndex, secondMDIndex, thirdMDIndex, fourthMDIndex};
+    float t4Feat[dnn::t5dnn::kExtraFeatures];
+    computeDnnFeatures<Params_T4::kLayers, 0, 1, 3, 1>(
+        acc, modules, mds, mdOccupancy, tripletsRangesByMD, t4Lm, t4Md, t4Feat);
+
     bool inference = lst::t4dnn::runInference(acc,
                                               mds,
                                               modules,
@@ -436,57 +489,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                               triplets.displacedScore()[innerTripletIndex],
                                               triplets.fakeScore()[outerTripletIndex],
                                               triplets.promptScore()[outerTripletIndex],
-                                              triplets.displacedScore()[outerTripletIndex]);
+                                              triplets.displacedScore()[outerTripletIndex],
+                                              t4Feat);
 
     if (!inference) {
       return false;
     }
-    // only run dBeta selector for low/high pT to avoid removing displaced efficiency
-    if (pt > 10 || pt < 1) {
-      if (not runQuintupletdBetaAlgoSelector(acc,
-                                             modules,
-                                             mds,
-                                             segments,
-                                             lowerModuleIndex1,
-                                             lowerModuleIndex2,
-                                             lowerModuleIndex3,
-                                             lowerModuleIndex4,
-                                             firstSegmentIndex,
-                                             thirdSegmentIndex,
-                                             firstMDIndex,
-                                             secondMDIndex,
-                                             thirdMDIndex,
-                                             fourthMDIndex,
-                                             dBeta,
-                                             ptCut))
-        return false;
-    } else {
-      dBeta = 0;
-    }
-
-    if (not passT4RZConstraint(acc,
-                               modules,
-                               mds,
-                               firstMDIndex,
-                               secondMDIndex,
-                               thirdMDIndex,
-                               fourthMDIndex,
-                               lowerModuleIndex1,
-                               lowerModuleIndex2,
-                               lowerModuleIndex3,
-                               lowerModuleIndex4,
-                               rzChiSquared,
-                               inner_pt,
-                               innerRadius,
-                               inner_circleCenterX,
-                               inner_circleCenterY,
-                               innerT3charge))
-      return false;
-
-    // Reject if a mini-doublet direction disagrees with its triplet circle (flag set in Triplet.h).
-    if ((triplets.flags()[innerTripletIndex] | triplets.flags()[outerTripletIndex]) & kT3MdDirectionFail)
-      return false;
-
     nonAnchorChiSquared = computeChiSquared(acc,
                                             Params_T4::kLayers,
                                             nonAnchorxs,
@@ -512,6 +520,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsOccupancyConst tripletsOccupancy,
                                   TripletsBySegmentConst tripletsBySegment,
                                   TripletsRangesConst tripletsRangesBySegment,
+                                  MiniDoubletsOccupancyConst mdOccupancy,
+                                  TripletsRangesConst tripletsRangesByMD,
                                   Quadruplets quadruplets,
                                   QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
@@ -626,6 +636,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                       mds,
                                                       segments,
                                                       triplets,
+                                                      mdOccupancy,
+                                                      tripletsRangesByMD,
                                                       lowerModule1,
                                                       lowerModule2,
                                                       lowerModule3,
@@ -665,7 +677,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                   float phi = mds.anchorPhi()[layer3MDIndex];
                   float eta = mds.anchorEta()[layer3MDIndex];
 
-                  float scores = chiSquared + nonAnchorChiSquared;
                   addQuadrupletToMemory(triplets,
                                         quadruplets,
                                         innerTripletIndex,
@@ -679,7 +690,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         pt,
                                         eta,
                                         phi,
-                                        scores,
                                         layer,
                                         quadrupletIndex,
                                         rzChiSquared,
@@ -691,6 +701,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                         regressionCenterY,
                                         regressionRadius,
                                         nonAnchorRegressionRadius);
+#ifdef CUT_VALUE_DEBUG
+                  {
+                    const uint16_t t4Lm[Params_T4::kLayers] = {lowerModule1, lowerModule2, lowerModule3, lowerModule4};
+                    const unsigned int t4Md[Params_T4::kLayers] = {mdIndices[segIdx[innerTripletIndex][0]][0],
+                                                                   mdIndices[segIdx[innerTripletIndex][1]][0],
+                                                                   mdIndices[segIdx[innerTripletIndex][1]][1],
+                                                                   mdIndices[segIdx[outerTripletIndex][1]][1]};
+                    float t4Feat[dnn::t5dnn::kExtraFeatures];
+                    computeDnnFeatures<Params_T4::kLayers, 0, 1, 3, 1>(
+                        acc, modules, mds, mdOccupancy, tripletsRangesByMD, t4Lm, t4Md, t4Feat);
+                    for (unsigned int i = 0; i < dnn::t5dnn::kExtraFeatures; ++i)
+                      quadruplets.extraFeat()[quadrupletIndex][i] = t4Feat[i];
+                  }
+#endif
                 }
               }
               continue;
@@ -748,6 +772,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                   mds,
                                                   segments,
                                                   triplets,
+                                                  mdOccupancy,
+                                                  tripletsRangesByMD,
                                                   lowerModule1,
                                                   lowerModule2,
                                                   lowerModule3,
@@ -784,7 +810,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               float phi = mds.anchorPhi()[layer3MDIndex];
               float eta = mds.anchorEta()[layer3MDIndex];
 
-              float scores = chiSquared + nonAnchorChiSquared;
               addQuadrupletToMemory(triplets,
                                     quadruplets,
                                     innerTripletIndex,
@@ -798,7 +823,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     pt,
                                     eta,
                                     phi,
-                                    scores,
                                     layer,
                                     quadrupletIndex,
                                     rzChiSquared,
@@ -810,6 +834,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                     regressionCenterY,
                                     regressionRadius,
                                     nonAnchorRegressionRadius);
+#ifdef CUT_VALUE_DEBUG
+              {
+                const uint16_t t4Lm[Params_T4::kLayers] = {lowerModule1, lowerModule2, lowerModule3, lowerModule4};
+                const unsigned int t4Md[Params_T4::kLayers] = {mdIndices[segIdx[innerTripletIndex][0]][0],
+                                                               mdIndices[segIdx[innerTripletIndex][1]][0],
+                                                               mdIndices[segIdx[innerTripletIndex][1]][1],
+                                                               mdIndices[segIdx[outerTripletIndex][1]][1]};
+                float t4Feat[dnn::t5dnn::kExtraFeatures];
+                computeDnnFeatures<Params_T4::kLayers, 0, 1, 3, 1>(
+                    acc, modules, mds, mdOccupancy, tripletsRangesByMD, t4Lm, t4Md, t4Feat);
+                for (unsigned int i = 0; i < dnn::t5dnn::kExtraFeatures; ++i)
+                  quadruplets.extraFeat()[quadrupletIndex][i] = t4Feat[i];
+              }
+#endif
             }
           }
         }
@@ -837,6 +875,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsOccupancyConst tripletsOcc,
                                   TripletsBySegmentConst tripletsBySegment,
                                   TripletsRangesConst tripletsRangesBySegment,
+                                  MiniDoubletsOccupancyConst mdOccupancy,
+                                  TripletsRangesConst tripletsRangesByMD,
                                   ObjectRangesConst ranges,
                                   const float ptCut) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
@@ -908,6 +948,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        mds,
                                                        segments,
                                                        triplets,
+                                                       mdOccupancy,
+                                                       tripletsRangesByMD,
                                                        lowerModule1,
                                                        lowerModule2,
                                                        lowerModule3,

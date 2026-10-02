@@ -1,0 +1,1918 @@
+[
+ {
+  "ev": 1,
+  "sim": 95,
+  "pt": 166.36172485351562,
+  "dR": 0.0016061037313193083,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 37,
+  "gt5_fate": {
+   "AB": 36,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 1,
+  "sim": 155,
+  "pt": 80.78031921386719,
+  "dR": 0.006285364273935556,
+  "n_gp5": 2,
+  "n_alive": 1,
+  "n_gp5_strict": 2,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 21,
+  "gt5_fate": {
+   "AB": 18,
+   "partOfPT5(dead pT5)": 1,
+   "BeforeTC": 1,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 1,
+  "sim": 156,
+  "pt": 48.95363998413086,
+  "dR": 0.01651274971663952,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "alive_other": 1,
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 2,
+   "samepls": 2
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 2,
+  "gpls_quad": 2,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive",
+   "CCpLS:sharesPixHit_alivePT5"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 27,
+  "gt5_fate": {
+   "AB": 25,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 6,
+  "sim": 200,
+  "pt": 10.914031028747559,
+  "dR": 0.019001193344593048,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 3,
+   "dead": 6
+  },
+  "killer_pix": {
+   "pix": 9,
+   "samepls": 9
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 39,
+  "gt5_fate": {
+   "AB": 36,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 10,
+  "sim": 23,
+  "pt": 29.411746978759766,
+  "dR": 0.008726187981665134,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 3
+  },
+  "killer_pix": {
+   "pix": 3,
+   "samepls": 3
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 35,
+  "gt5_fate": {
+   "AB": 33,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 10,
+  "sim": 24,
+  "pt": 30.68870735168457,
+  "dR": 0.014540123753249645,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 5
+  },
+  "killer_pix": {
+   "pix": 5,
+   "samepls": 5
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 32,
+  "gt5_fate": {
+   "partOfPT5(dead pT5)": 1,
+   "AB": 31
+  }
+ },
+ {
+  "ev": 10,
+  "sim": 105,
+  "pt": 33.39208221435547,
+  "dR": 0.006506497040390968,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 6
+  },
+  "killer_pix": {
+   "pix": 6,
+   "samepls": 6
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 50,
+  "gt5_fate": {
+   "AB": 47,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 10,
+  "sim": 106,
+  "pt": 32.024200439453125,
+  "dR": 0.006601163186132908,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 3,
+   "alive_fake": 2
+  },
+  "killer_pix": {
+   "nopix": 4,
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 40,
+  "gt5_fate": {
+   "partOfPT5(dead pT5)": 1,
+   "AB": 38,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 11,
+  "sim": 229,
+  "pt": 158.8518524169922,
+  "dR": 0.0011291324626654387,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_other": 2,
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 3,
+   "samepls": 3
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 3,
+  "gpls_quad": 3,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "CCpLS:sharesPixHit_pT3TC",
+   "CCpLS:sharesPixHit_pT3TC",
+   "CCpLS:sharesPixHit_pT3TC"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 397,
+  "gt5_fate": {
+   "AB": 395,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 13,
+  "sim": 11,
+  "pt": 17.100318908691406,
+  "dR": 0.010358086787164211,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 86,
+  "gt5_fate": {
+   "AB": 86
+  }
+ },
+ {
+  "ev": 16,
+  "sim": 240,
+  "pt": 96.64158630371094,
+  "dR": 0.011753436177968979,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "alive_other": 1,
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1,
+   "nopix": 1
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 2,
+  "gpls_quad": 1,
+  "gpls_inpT5": 2,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "CCpLS:sharesPixHit_alivePT5",
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 45,
+  "gt5_fate": {
+   "AB": 44,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 17,
+  "sim": 36,
+  "pt": 9.81069564819336,
+  "dR": 0.01782633550465107,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 3,
+   "dead": 3
+  },
+  "killer_pix": {
+   "pix": 6,
+   "samepls": 6
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 56,
+  "gt5_fate": {
+   "AB": 52,
+   "partOfPT5(dead pT5)": 3,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 18,
+  "sim": 108,
+  "pt": 15.683883666992188,
+  "dR": 0.01890135370194912,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 16,
+  "gt5_fate": {
+   "AB": 15,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 18,
+  "sim": 212,
+  "pt": 47.51935577392578,
+  "dR": 0.013338450342416763,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.78571427",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 14,
+  "gt5_fate": {
+   "AB": 14
+  }
+ },
+ {
+  "ev": 18,
+  "sim": 251,
+  "pt": 16.382097244262695,
+  "dR": 0.005551584996283054,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 7
+  },
+  "killer_pix": {
+   "nopix": 3,
+   "pix": 4,
+   "samepls": 4
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 21,
+  "gt5_fate": {
+   "AB": 19,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 21,
+  "sim": 67,
+  "pt": 62.503761291503906,
+  "dR": 0.0031717964448034763,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 4
+  },
+  "killer_pix": {
+   "pix": 4,
+   "samepls": 4
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 2,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad",
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 416,
+  "gt5_fate": {
+   "AB": 411,
+   "partOfPT5(dead pT5)": 4,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 21,
+  "sim": 257,
+  "pt": 39.071842193603516,
+  "dR": 0.01312188245356083,
+  "n_gp5": 8,
+  "n_alive": 0,
+  "n_gp5_strict": 8,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 38,
+   "alive_fake": 3
+  },
+  "killer_pix": {
+   "pix": 29,
+   "samepls": 29,
+   "nopix": 12
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 49,
+  "gt5_fate": {
+   "AB": 45,
+   "partOfPT5(dead pT5)": 4
+  }
+ },
+ {
+  "ev": 21,
+  "sim": 288,
+  "pt": 130.34420776367188,
+  "dR": 0.006022181827574968,
+  "n_gp5": 4,
+  "n_alive": 0,
+  "n_gp5_strict": 4,
+  "rec_R1": false,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 15,
+   "alive_fake": 2
+  },
+  "killer_pix": {
+   "nopix": 6,
+   "pix": 11,
+   "samepls": 11
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 206,
+  "gt5_fate": {
+   "AB": 203,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 23,
+  "sim": 158,
+  "pt": 66.94639587402344,
+  "dR": 0.007002572529017925,
+  "n_gp5": 4,
+  "n_alive": 1,
+  "n_gp5_strict": 4,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 38,
+  "gt5_fate": {
+   "partOfPT5(dead pT5)": 3,
+   "AB": 33,
+   "partOfPT5(alive)": 1,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 32,
+  "sim": 104,
+  "pt": 230.76210021972656,
+  "dR": 0.008146035484969616,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 11,
+  "gt5_fate": {
+   "AB": 8,
+   "partOfPT5(alive)": 1,
+   "BeforeTC": 2
+  }
+ },
+ {
+  "ev": 33,
+  "sim": 195,
+  "pt": 55.02811050415039,
+  "dR": 0.018173549324274063,
+  "n_gp5": 3,
+  "n_alive": 1,
+  "n_gp5_strict": 3,
+  "alive_info": [
+   [
+    "TC",
+    "0.78571427",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 135,
+  "gt5_fate": {
+   "AB": 132,
+   "partOfPT5(alive)": 1,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 34,
+  "sim": 13,
+  "pt": 244.2333221435547,
+  "dR": 0.009070485830307007,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 2
+  },
+  "killer_pix": {
+   "pix": 2,
+   "samepls": 2
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 39,
+  "gt5_fate": {
+   "AB": 37,
+   "partOfPT5(dead pT5)": 1,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 37,
+  "sim": 58,
+  "pt": 42.18706130981445,
+  "dR": 0.007295410614460707,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 21,
+  "gt5_fate": {
+   "AB": 20,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 38,
+  "sim": 103,
+  "pt": 139.5727081298828,
+  "dR": 0.0047308397479355335,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": true,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 1,
+   "alive_other": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1,
+   "nopix": 1
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 51,
+  "gt5_fate": {
+   "AB": 49,
+   "partOfPT5(alive)": 1,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 42,
+  "sim": 225,
+  "pt": 122.85221862792969,
+  "dR": 0.0030715831089764833,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 7,
+   "alive_other": 2
+  },
+  "killer_pix": {
+   "pix": 9,
+   "samepls": 9
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 55,
+  "gt5_fate": {
+   "AB": 52,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 44,
+  "sim": 59,
+  "pt": 333.2021789550781,
+  "dR": 0.0015584223438054323,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 2
+  },
+  "killer_pix": {
+   "pix": 2,
+   "samepls": 2
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 3,
+  "gpls_quad": 3,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "CCpLS:sharesPixHit_alivePT5",
+   "CCpLS:sharesPixHit_alivePT5",
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 47,
+  "gt5_fate": {
+   "AB": 46,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 45,
+  "sim": 102,
+  "pt": 528.4574584960938,
+  "dR": 0.0014066060539335012,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 23,
+  "gt5_fate": {
+   "AB": 21,
+   "partOfPT5(dead pT5)": 1,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 49,
+  "sim": 122,
+  "pt": 37.40828323364258,
+  "dR": 0.012593262828886509,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 3,
+  "gt5_fate": {
+   "AB": 2,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 50,
+  "sim": 53,
+  "pt": 56.03239822387695,
+  "dR": 0.008916755206882954,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 5
+  },
+  "killer_pix": {
+   "nopix": 2,
+   "pix": 3,
+   "samepls": 3
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 2,
+  "gpls_quad": 2,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "CCpLS:sharesPixHit_alivePT5",
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 21,
+  "gt5_fate": {
+   "AB": 19,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 50,
+  "sim": 102,
+  "pt": 48.019657135009766,
+  "dR": 0.011728357523679733,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 100,
+  "gt5_fate": {
+   "AB": 99,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 51,
+  "sim": 59,
+  "pt": 51.905765533447266,
+  "dR": 0.018513565883040428,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 4,
+  "gt5_fate": {
+   "AB": 4
+  }
+ },
+ {
+  "ev": 53,
+  "sim": 186,
+  "pt": 95.67970275878906,
+  "dR": 0.008662494830787182,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.84615386",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 121,
+  "gt5_fate": {
+   "AB": 120,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 64,
+  "sim": 3,
+  "pt": 53.30549240112305,
+  "dR": 0.010673388838768005,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 3,
+   "alive_fake": 2
+  },
+  "killer_pix": {
+   "pix": 5,
+   "samepls": 5
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 29,
+  "gt5_fate": {
+   "AB": 27,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 67,
+  "sim": 14,
+  "pt": 331.7323913574219,
+  "dR": 0.0023687889333814383,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 2,
+  "gpls_quad": 2,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "other(CheckHitspLS2/T5-embed/dR)",
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 22,
+  "gt5_fate": {
+   "AB": 21,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 68,
+  "sim": 90,
+  "pt": 178.05833435058594,
+  "dR": 0.010386930778622627,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": true,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 1
+  },
+  "killer_pix": {
+   "nopix": 1
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 11,
+  "gt5_fate": {
+   "AB": 11
+  }
+ },
+ {
+  "ev": 69,
+  "sim": 111,
+  "pt": 354.08758544921875,
+  "dR": 0.004855682607740164,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.84615386",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 69,
+  "gt5_fate": {
+   "AB": 67,
+   "partOfPT5(dead pT5)": 1,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 73,
+  "sim": 77,
+  "pt": 28.313385009765625,
+  "dR": 0.01673320308327675,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 3,
+   "dead": 4
+  },
+  "killer_pix": {
+   "pix": 7,
+   "samepls": 7
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 55,
+  "gt5_fate": {
+   "AB": 52,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 74,
+  "sim": 126,
+  "pt": 119.79557800292969,
+  "dR": 0.016481637954711914,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.85714287",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 12,
+  "gt5_fate": {
+   "AB": 10,
+   "BeforeTC": 1,
+   "partOfPT5(alive)": 1
+  }
+ },
+ {
+  "ev": 76,
+  "sim": 166,
+  "pt": 125.58351135253906,
+  "dR": 0.00396395567804575,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 1,
+   "samepls": 1
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 55,
+  "gt5_fate": {
+   "AB": 54,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 78,
+  "sim": 156,
+  "pt": 41.322837829589844,
+  "dR": 0.006680159363895655,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 2,
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 3,
+   "samepls": 3
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 29,
+  "gt5_fate": {
+   "AB": 27,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 80,
+  "sim": 76,
+  "pt": 34.347984313964844,
+  "dR": 0.01265199389308691,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 5,
+   "alive_fake": 1
+  },
+  "killer_pix": {
+   "pix": 4,
+   "samepls": 4,
+   "nopix": 2
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 164,
+  "gt5_fate": {
+   "AB": 161,
+   "partOfPT5(dead pT5)": 2,
+   "BeforeTC": 1
+  }
+ },
+ {
+  "ev": 81,
+  "sim": 29,
+  "pt": 81.78694152832031,
+  "dR": 0.007107990328222513,
+  "n_gp5": 3,
+  "n_alive": 1,
+  "n_gp5_strict": 3,
+  "alive_info": [
+   [
+    "TC",
+    "0.78571427",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 65,
+  "gt5_fate": {
+   "AB": 63,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 81,
+  "sim": 125,
+  "pt": 89.07516479492188,
+  "dR": 0.00839937012642622,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 3,
+   "alive_other": 3
+  },
+  "killer_pix": {
+   "pix": 6,
+   "samepls": 6
+  },
+  "cause": "pT5-DEDUP: other-sim genuine winner (DISPLACEMENT)",
+  "n_gpls": 2,
+  "gpls_quad": 2,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive",
+   "CCpLS:sharesPixHit_alivePT5"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 26,
+  "gt5_fate": {
+   "AB": 23,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 82,
+  "sim": 42,
+  "pt": 83.78949737548828,
+  "dR": 0.002751325024291873,
+  "n_gp5": 1,
+  "n_alive": 0,
+  "n_gp5_strict": 1,
+  "rec_R1": true,
+  "rec_R2": true,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 1
+  },
+  "killer_pix": {
+   "nopix": 1
+  },
+  "cause": "pT5-DEDUP: killed only by DEAD pT5s (CHAIN-KILL)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 62,
+  "gt5_fate": {
+   "AB": 62
+  }
+ },
+ {
+  "ev": 82,
+  "sim": 140,
+  "pt": 47.2203254699707,
+  "dR": 0.002919580787420273,
+  "n_gp5": 12,
+  "n_alive": 0,
+  "n_gp5_strict": 12,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "dead": 81,
+   "alive_other": 3,
+   "alive_fake": 3
+  },
+  "killer_pix": {
+   "pix": 33,
+   "samepls": 33,
+   "nopix": 54
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 2,
+  "gpls_quad": 1,
+  "gpls_inpT5": 0,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad",
+   "other(CheckHitspLS2/T5-embed/dR)"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 71,
+  "gt5_fate": {
+   "AB": 68,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 85,
+  "sim": 226,
+  "pt": 24.40768051147461,
+  "dR": 0.006411369424313307,
+  "n_gp5": 6,
+  "n_alive": 0,
+  "n_gp5_strict": 6,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 13,
+   "alive_fake": 6
+  },
+  "killer_pix": {
+   "pix": 14,
+   "samepls": 14,
+   "nopix": 5
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 154,
+  "gt5_fate": {
+   "AB": 151,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 85,
+  "sim": 227,
+  "pt": 17.056325912475586,
+  "dR": 0.011384058743715286,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 3,
+   "alive_fake": 3
+  },
+  "killer_pix": {
+   "pix": 6,
+   "samepls": 6
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 0,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "notQuad"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 69,
+  "gt5_fate": {
+   "AB": 66,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 89,
+  "sim": 75,
+  "pt": 24.224592208862305,
+  "dR": 0.015192953869700432,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 2,
+   "dead": 1
+  },
+  "killer_pix": {
+   "pix": 3,
+   "samepls": 3
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 129,
+  "gt5_fate": {
+   "AB": 127,
+   "partOfPT5(dead pT5)": 2
+  }
+ },
+ {
+  "ev": 89,
+  "sim": 110,
+  "pt": 49.64725875854492,
+  "dR": 0.01054052822291851,
+  "n_gp5": 2,
+  "n_alive": 1,
+  "n_gp5_strict": 2,
+  "alive_info": [
+   [
+    "TC",
+    "0.78571427",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 201,
+  "gt5_fate": {
+   "AB": 200,
+   "partOfPT5(dead pT5)": 1
+  }
+ },
+ {
+  "ev": 89,
+  "sim": 113,
+  "pt": 14.715401649475098,
+  "dR": 0.018705453723669052,
+  "n_gp5": 1,
+  "n_alive": 1,
+  "n_gp5_strict": 1,
+  "alive_info": [
+   [
+    "TC",
+    "0.78571427",
+    0,
+    16
+   ]
+  ],
+  "cause": "TC-EXTENSION: ExtendTrackCandidatesFromDupT5 diluted match below 0.75",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 336,
+  "gt5_fate": {
+   "AB": 336
+  }
+ },
+ {
+  "ev": 91,
+  "sim": 138,
+  "pt": 50.1025505065918,
+  "dR": 0.015134760178625584,
+  "n_gp5": 3,
+  "n_alive": 0,
+  "n_gp5_strict": 3,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "alive_fake": 2,
+   "dead": 3
+  },
+  "killer_pix": {
+   "pix": 5,
+   "samepls": 5
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 73,
+  "gt5_fate": {
+   "AB": 70,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 94,
+  "sim": 4,
+  "pt": 309.4285888671875,
+  "dR": 0.01727009378373623,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "dead": 15,
+   "alive_fake": 2
+  },
+  "killer_pix": {
+   "nopix": 6,
+   "pix": 11,
+   "samepls": 7
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 2,
+  "gpls_quad": 2,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "CCpLS:sharesPixHit_alivePT5",
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 27,
+  "gt5_fate": {
+   "AB": 27
+  }
+ },
+ {
+  "ev": 96,
+  "sim": 23,
+  "pt": 123.94110107421875,
+  "dR": 0.01753244735300541,
+  "n_gp5": 2,
+  "n_alive": 0,
+  "n_gp5_strict": 2,
+  "rec_R1": false,
+  "rec_R2": false,
+  "rec_R3": false,
+  "killer_kinds": {
+   "alive_fake": 2,
+   "dead": 3
+  },
+  "killer_pix": {
+   "pix": 5,
+   "samepls": 5
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 178,
+  "gt5_fate": {
+   "AB": 174,
+   "BeforeTC": 1,
+   "partOfPT5(dead pT5)": 3
+  }
+ },
+ {
+  "ev": 96,
+  "sim": 98,
+  "pt": 28.281654357910156,
+  "dR": 0.008694985881447792,
+  "n_gp5": 4,
+  "n_alive": 0,
+  "n_gp5_strict": 4,
+  "rec_R1": true,
+  "rec_R2": false,
+  "rec_R3": true,
+  "killer_kinds": {
+   "alive_fake": 2,
+   "dead": 6
+  },
+  "killer_pix": {
+   "pix": 8,
+   "samepls": 8
+  },
+  "cause": "pT5-DEDUP: fake winner (CLEAN)",
+  "n_gpls": 1,
+  "gpls_quad": 1,
+  "gpls_inpT5": 1,
+  "gpls_TC": 0,
+  "gpls_fate": [
+   "ownPT5alive"
+  ],
+  "n_gpt3": 0,
+  "gpt3_TC": 0,
+  "gpt3_fate": [],
+  "n_gt5": 158,
+  "gt5_fate": {
+   "AB": 155,
+   "partOfPT5(dead pT5)": 3
+  }
+ }
+]

@@ -30,12 +30,12 @@ namespace lst {
                       SOA_COLUMN(FPX, outerRadius),  // outer triplet radius
                       SOA_COLUMN(FPX, pt),
 #ifdef CUT_VALUE_DEBUG
-                      SOA_COLUMN(FPX, score_rphisum),  // r-phi based score
                       SOA_COLUMN(float, nonAnchorRegressionRadius),
                       SOA_COLUMN(float, rzChiSquared),  // r-z only chi2
                       SOA_COLUMN(float, promptScore),
                       SOA_COLUMN(int, layer),
                       SOA_COLUMN(float, dBeta),
+                      SOA_COLUMN(Params_T5::ArrayFxExtraFeat, extraFeat),  // T4 DNN extra inputs (same as T5's)
 #endif
                       SOA_COLUMN(bool, partOfTC));
 

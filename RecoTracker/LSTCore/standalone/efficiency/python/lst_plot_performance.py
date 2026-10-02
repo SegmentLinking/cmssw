@@ -596,11 +596,12 @@ def draw_plot(effs, nums, dens, params):
     chargestr = get_chargestr(params["charge"])
 
     # Get Canvas
+    ext_legend = "_deltaR" in output_name
     c1 = r.TCanvas()
     c1.SetBottomMargin(0.15)
     c1.SetLeftMargin(0.15)
     c1.SetTopMargin(0.22)
-    c1.SetRightMargin(0.15)
+    c1.SetRightMargin(0.28 if ext_legend else 0.15)
 
     # Set logx
     if "_pt" in output_name:
@@ -627,7 +628,11 @@ def draw_plot(effs, nums, dens, params):
         set_label(eff, output_name, raw_number=False)
 
     nleg = len(legend_labels)
-    legend = r.TLegend(0.15,0.75-nleg*0.04,0.25,0.75)
+    if ext_legend:
+        # Place legend just outside the right edge of the axes box
+        legend = r.TLegend(0.73, 0.75 - nleg * 0.04, 0.87, 0.75)
+    else:
+        legend = r.TLegend(0.15, 0.75 - nleg * 0.04, 0.25, 0.75)
     for i, label in enumerate(legend_labels):
         legend.AddEntry(effs[i], label)
     legend.Draw("same")

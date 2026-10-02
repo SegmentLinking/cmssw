@@ -1,5 +1,6 @@
 #include "lst.h"
 #include "LSTPrepareInput.h"
+#include "TruthPixelSeeds.h"
 
 #include <typeinfo>
 
@@ -83,7 +84,14 @@ int main(int argc, char **argv) {
       "t4", "Write T4 branches in output ntuple.")("t4dnn", "Write T4 DNN branches in output ntuple.")(
       "allobj", "Write all object branches in output ntuple.")(
       "J,jet", "Accounts for specific jet branches in input root file for testing")(
-      "sim", "Write extra sim branches in output ntuple");
+      "sim", "Write extra sim branches in output ntuple")(
+      "idealpls", "Replace CMSSW pixel seeds with truth-derived ideal pLS (for testing the rest of LST in isolation)")(
+      "fillmissingpls",
+      "Keep real CMSSW pixel seeds, and additionally inject truth-derived pLS only for sim tracks with no real "
+      "seed match (for isolating the effect of CMSSW's seeding-supply gap specifically)")(
+      "nopt5dnn",
+      "Disable the DNN pre-filter gate in pT5 building (for testing whether it's a cause of dense-region "
+      "efficiency loss)");
 
   auto result = options.parse(argc, argv);
 
@@ -317,6 +325,18 @@ int main(int argc, char **argv) {
   // --sim
   ana.extra_sim_branches = result["sim"].as<bool>() || result["allobj"].as<bool>();
 
+  //_______________________________________________________________________________
+  // --idealpls
+  ana.use_truth_pls = result["idealpls"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --fillmissingpls
+  ana.fill_missing_pls = result["fillmissingpls"].as<bool>();
+
+  //_______________________________________________________________________________
+  // --nopt5dnn
+  ana.disable_pt5_dnn = result["nopt5dnn"].as<bool>();
+
   // Printing out the option settings overview
   std::cout << "=========================================================" << std::endl;
   std::cout << " Running for Acc = " << alpaka::getAccName<ALPAKA_ACCELERATOR_NAMESPACE::Acc3D>() << std::endl;
@@ -409,23 +429,120 @@ void run_lst() {
     const auto trk_ph2_clustSize =
         hasClustSize ? trk.getVUS("ph2_clustSize") : std::vector<uint16_t>(trk.getVF("ph2_x").size());
 
-    auto lstInputHC = prepareInput(trk.getVF("see_px"),
-                                   trk.getVF("see_py"),
-                                   trk.getVF("see_pz"),
-                                   trk.getVF("see_dxy"),
-                                   trk.getVF("see_dz"),
-                                   trk.getVF("see_ptErr"),
-                                   trk.getVF("see_etaErr"),
-                                   trk.getVF("see_stateTrajGlbX"),
-                                   trk.getVF("see_stateTrajGlbY"),
-                                   trk.getVF("see_stateTrajGlbZ"),
-                                   trk.getVF("see_stateTrajGlbPx"),
-                                   trk.getVF("see_stateTrajGlbPy"),
-                                   trk.getVF("see_stateTrajGlbPz"),
-                                   trk.getVI("see_q"),
-                                   trk.getVVI("see_hitIdx"),
-                                   trk.getVVI("see_hitType"),
-                                   trk.getVU("see_algo"),
+    // Either the real CMSSW seeds, or (--idealpls) synthetic truth-derived ones -- in both
+    // cases fed into the same, unmodified prepareInput() below.
+    std::vector<float> see_px, see_py, see_pz, see_dxy, see_dz, see_ptErr, see_etaErr;
+    std::vector<float> see_stateTrajGlbX, see_stateTrajGlbY, see_stateTrajGlbZ;
+    std::vector<float> see_stateTrajGlbPx, see_stateTrajGlbPy, see_stateTrajGlbPz;
+    std::vector<int> see_q;
+    std::vector<std::vector<int>> see_hitIdx, see_hitType;
+    std::vector<unsigned int> see_algo;
+
+    if (ana.use_truth_pls) {
+      TruthPixelSeedVectors truthSeeds = buildTruthPixelSeeds();
+      see_px = std::move(truthSeeds.see_px);
+      see_py = std::move(truthSeeds.see_py);
+      see_pz = std::move(truthSeeds.see_pz);
+      see_dxy = std::move(truthSeeds.see_dxy);
+      see_dz = std::move(truthSeeds.see_dz);
+      see_ptErr = std::move(truthSeeds.see_ptErr);
+      see_etaErr = std::move(truthSeeds.see_etaErr);
+      see_stateTrajGlbX = std::move(truthSeeds.see_stateTrajGlbX);
+      see_stateTrajGlbY = std::move(truthSeeds.see_stateTrajGlbY);
+      see_stateTrajGlbZ = std::move(truthSeeds.see_stateTrajGlbZ);
+      see_stateTrajGlbPx = std::move(truthSeeds.see_stateTrajGlbPx);
+      see_stateTrajGlbPy = std::move(truthSeeds.see_stateTrajGlbPy);
+      see_stateTrajGlbPz = std::move(truthSeeds.see_stateTrajGlbPz);
+      see_q = std::move(truthSeeds.see_q);
+      see_hitIdx = std::move(truthSeeds.see_hitIdx);
+      see_hitType = std::move(truthSeeds.see_hitType);
+      // see_algo left empty: skips prepareInput()'s own seed-algo filter (LSTPrepareInput.h:102)
+    } else if (ana.fill_missing_pls) {
+      // Real CMSSW seeds, kept as-is, plus synthetic truth-derived pLS appended only for sim
+      // tracks no real seed truth-matches at all -- isolates the seeding-supply gap specifically
+      // (see HANDOFF.md), as opposed to --idealpls's full replacement.
+      see_px = trk.getVF("see_px");
+      see_py = trk.getVF("see_py");
+      see_pz = trk.getVF("see_pz");
+      see_dxy = trk.getVF("see_dxy");
+      see_dz = trk.getVF("see_dz");
+      see_ptErr = trk.getVF("see_ptErr");
+      see_etaErr = trk.getVF("see_etaErr");
+      see_stateTrajGlbX = trk.getVF("see_stateTrajGlbX");
+      see_stateTrajGlbY = trk.getVF("see_stateTrajGlbY");
+      see_stateTrajGlbZ = trk.getVF("see_stateTrajGlbZ");
+      see_stateTrajGlbPx = trk.getVF("see_stateTrajGlbPx");
+      see_stateTrajGlbPy = trk.getVF("see_stateTrajGlbPy");
+      see_stateTrajGlbPz = trk.getVF("see_stateTrajGlbPz");
+      see_q = trk.getVI("see_q");
+      see_hitIdx = trk.getVVI("see_hitIdx");
+      see_hitType = trk.getVVI("see_hitType");
+      see_algo = trk.getVU("see_algo");
+
+      std::set<int> simTrkIdxsWithRealSeed = findSimTrkIdxsWithRealSeed(
+          see_hitIdx, see_hitType, trk.getVI("simhit_simTrkIdx"), trk.getVVI("ph2_simHitIdx"), trk.getVVI("pix_simHitIdx"));
+      TruthPixelSeedVectors fillSeeds = buildTruthPixelSeeds(simTrkIdxsWithRealSeed);
+
+      see_px.insert(see_px.end(), fillSeeds.see_px.begin(), fillSeeds.see_px.end());
+      see_py.insert(see_py.end(), fillSeeds.see_py.begin(), fillSeeds.see_py.end());
+      see_pz.insert(see_pz.end(), fillSeeds.see_pz.begin(), fillSeeds.see_pz.end());
+      see_dxy.insert(see_dxy.end(), fillSeeds.see_dxy.begin(), fillSeeds.see_dxy.end());
+      see_dz.insert(see_dz.end(), fillSeeds.see_dz.begin(), fillSeeds.see_dz.end());
+      see_ptErr.insert(see_ptErr.end(), fillSeeds.see_ptErr.begin(), fillSeeds.see_ptErr.end());
+      see_etaErr.insert(see_etaErr.end(), fillSeeds.see_etaErr.begin(), fillSeeds.see_etaErr.end());
+      see_stateTrajGlbX.insert(see_stateTrajGlbX.end(), fillSeeds.see_stateTrajGlbX.begin(), fillSeeds.see_stateTrajGlbX.end());
+      see_stateTrajGlbY.insert(see_stateTrajGlbY.end(), fillSeeds.see_stateTrajGlbY.begin(), fillSeeds.see_stateTrajGlbY.end());
+      see_stateTrajGlbZ.insert(see_stateTrajGlbZ.end(), fillSeeds.see_stateTrajGlbZ.begin(), fillSeeds.see_stateTrajGlbZ.end());
+      see_stateTrajGlbPx.insert(
+          see_stateTrajGlbPx.end(), fillSeeds.see_stateTrajGlbPx.begin(), fillSeeds.see_stateTrajGlbPx.end());
+      see_stateTrajGlbPy.insert(
+          see_stateTrajGlbPy.end(), fillSeeds.see_stateTrajGlbPy.begin(), fillSeeds.see_stateTrajGlbPy.end());
+      see_stateTrajGlbPz.insert(
+          see_stateTrajGlbPz.end(), fillSeeds.see_stateTrajGlbPz.begin(), fillSeeds.see_stateTrajGlbPz.end());
+      see_q.insert(see_q.end(), fillSeeds.see_q.begin(), fillSeeds.see_q.end());
+      see_hitIdx.insert(see_hitIdx.end(), fillSeeds.see_hitIdx.begin(), fillSeeds.see_hitIdx.end());
+      see_hitType.insert(see_hitType.end(), fillSeeds.see_hitType.begin(), fillSeeds.see_hitType.end());
+      // see_algo is non-empty (real seeds populated it), so every appended synthetic entry needs
+      // a value LSTPrepareInput.h:102's filter accepts (4 or 22) -- not left empty/sentinel,
+      // since this array is no longer all-real-or-all-synthetic.
+      see_algo.insert(see_algo.end(), fillSeeds.see_hitIdx.size(), 4u);
+    } else {
+      see_px = trk.getVF("see_px");
+      see_py = trk.getVF("see_py");
+      see_pz = trk.getVF("see_pz");
+      see_dxy = trk.getVF("see_dxy");
+      see_dz = trk.getVF("see_dz");
+      see_ptErr = trk.getVF("see_ptErr");
+      see_etaErr = trk.getVF("see_etaErr");
+      see_stateTrajGlbX = trk.getVF("see_stateTrajGlbX");
+      see_stateTrajGlbY = trk.getVF("see_stateTrajGlbY");
+      see_stateTrajGlbZ = trk.getVF("see_stateTrajGlbZ");
+      see_stateTrajGlbPx = trk.getVF("see_stateTrajGlbPx");
+      see_stateTrajGlbPy = trk.getVF("see_stateTrajGlbPy");
+      see_stateTrajGlbPz = trk.getVF("see_stateTrajGlbPz");
+      see_q = trk.getVI("see_q");
+      see_hitIdx = trk.getVVI("see_hitIdx");
+      see_hitType = trk.getVVI("see_hitType");
+      see_algo = trk.getVU("see_algo");
+    }
+
+    auto lstInputHC = prepareInput(see_px,
+                                   see_py,
+                                   see_pz,
+                                   see_dxy,
+                                   see_dz,
+                                   see_ptErr,
+                                   see_etaErr,
+                                   see_stateTrajGlbX,
+                                   see_stateTrajGlbY,
+                                   see_stateTrajGlbZ,
+                                   see_stateTrajGlbPx,
+                                   see_stateTrajGlbPy,
+                                   see_stateTrajGlbPz,
+                                   see_q,
+                                   see_hitIdx,
+                                   see_hitType,
+                                   see_algo,
                                    trk.getVU("ph2_detId"),
                                    trk_ph2_clustSize,
                                    trk.getVF("ph2_x"),
@@ -492,7 +609,7 @@ void run_lst() {
 
       timing_pLS = runPixelLineSegment(events.at(omp_get_thread_num()), ana.no_pls_dupclean);
       timing_T4 = runQuadruplet(events.at(omp_get_thread_num()));
-      timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()));
+      timing_pT5 = runPixelQuintuplet(events.at(omp_get_thread_num()), !ana.disable_pt5_dnn);
       timing_pT3 = runpT3(events.at(omp_get_thread_num()));
       timing_TC = runTrackCandidate(events.at(omp_get_thread_num()), ana.no_pls_dupclean, ana.tc_pls_triplets);
 

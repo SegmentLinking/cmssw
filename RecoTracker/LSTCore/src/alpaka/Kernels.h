@@ -187,6 +187,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct RemoveDupQuintupletsAfterBuild {
+    // Runtime-tunable cut values (set at launch from env vars; defaults = master).
+    float dEtaCut_ = 0.1f;
+    float dPhiCut_ = 0.1f;
+    int nMatchedCut_ = 0;  // > 0: fixed shared-hit threshold; <= 0: master's 60%-of-shorter-track rule
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   Quintuplets quintuplets,
@@ -214,10 +218,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
-            if (dEta > 0.1f)
+            if (dEta > dEtaCut_)
               continue;
 
-            if (alpaka::math::abs(acc, dPhi) > 0.1f)
+            if (alpaka::math::abs(acc, dPhi) > dPhiCut_)
               continue;
 
             int nMatched = checkHitsT5(ix, jx, quintuplets);
@@ -226,30 +230,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             unsigned int nLayersJx = quintuplets.nLayers()[jx];
             unsigned int nHitsIx = 2 * nLayersIx;
             unsigned int nHitsJx = 2 * nLayersJx;
-            int minNHitsForDup = static_cast<int>(0.6f * (nHitsIx < nHitsJx ? nHitsIx : nHitsJx));
+            int minNHitsForDup = nMatchedCut_ > 0 ? nMatchedCut_
+                                                  : static_cast<int>(0.6f * (nHitsIx < nHitsJx ? nHitsIx : nHitsJx));
             if (nMatched >= minNHitsForDup) {
-              // Tiebreak: longer track wins; otherwise rphisum at high pT, DNN score at low pT.
+              // Tiebreak: longer track wins; otherwise the higher DNN score.
               if (nLayersIx > nLayersJx) {
                 rmQuintupletFromMemory(quintuplets, jx);
               } else if (nLayersJx > nLayersIx) {
                 rmQuintupletFromMemory(quintuplets, ix);
+              } else if (dnnScore1 <= quintuplets.dnnScore()[jx]) {
+                rmQuintupletFromMemory(quintuplets, ix);
               } else {
-                float ptIx = __H2F(quintuplets.innerRadius()[ix]) * lst::k2Rinv1GeVf * 2;
-                float ptJx = __H2F(quintuplets.innerRadius()[jx]) * lst::k2Rinv1GeVf * 2;
-                if (ptIx > 5.0f || ptJx > 5.0f) {
-                  float rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
-                  float rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
-                  if (rphisum1 >= rphisum2)
-                    rmQuintupletFromMemory(quintuplets, ix);
-                  else
-                    rmQuintupletFromMemory(quintuplets, jx);
-                } else {
-                  float dnnScore2 = quintuplets.dnnScore()[jx];
-                  if (dnnScore1 <= dnnScore2)
-                    rmQuintupletFromMemory(quintuplets, ix);
-                  else
-                    rmQuintupletFromMemory(quintuplets, jx);
-                }
+                rmQuintupletFromMemory(quintuplets, jx);
               }
             }
           }
@@ -504,6 +496,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct RemoveDupQuintupletsBeforeTC {
+    // Runtime-tunable cut values (set at launch from env vars; defaults = master).
+    float dEtaCut_ = 0.1f;
+    float dPhiCut_ = 0.1f;
+    int nMatchedCut_ = 5;       // shared hits for the embedding-gated arm
+    float dnnD2Cut_ = 0.25f;    // embedding d² limit for that arm
+    int hardNMatchedCut_ = 10;  // shared hits that make a duplicate regardless of the embedding
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   Quintuplets quintuplets,
                                   QuintupletsOccupancyConst quintupletsOccupancy,
@@ -550,12 +548,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
               const float eta2 = __H2F(quintuplets.eta()[jx]);
               const float dEta = alpaka::math::abs(acc, eta1 - eta2);
-              if (dEta > 0.1f)
+              if (dEta > dEtaCut_)
                 continue;
 
               const float phi2 = __H2F(quintuplets.phi()[jx]);
               const float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-              if (alpaka::math::abs(acc, dPhi) > 0.1f)
+              if (alpaka::math::abs(acc, dPhi) > dPhiCut_)
                 continue;
 
               const int nMatched = checkHitsT5(ix, jx, quintuplets);
@@ -568,23 +566,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               }
 
               // 99th percentile of true-dup d2 distribution measured on 100 PU200 events.
-              constexpr float d2Thresh = 0.25f;
-              constexpr int minNHitsForDup_T5 = 5;
+              const float d2Thresh = dnnD2Cut_;
+              const int minNHitsForDup_T5 = nMatchedCut_;
               // Duplicate regardless of the embedding at this many shared hits.
-              constexpr int nHitsForHardDup_T5 = 10;
+              const int nHitsForHardDup_T5 = hardNMatchedCut_;
               if ((nMatched >= minNHitsForDup_T5 && d2 < d2Thresh) || nMatched >= nHitsForHardDup_T5) {
-                float ptIx = __H2F(quintuplets.innerRadius()[ix]) * lst::k2Rinv1GeVf * 2;
-                float ptJx = __H2F(quintuplets.innerRadius()[jx]) * lst::k2Rinv1GeVf * 2;
-                bool highPt = (ptIx > 5.0f || ptJx > 5.0f);
-                bool ixLoses;
-                if (highPt) {
-                  float rphisum1 = __H2F(quintuplets.score_rphisum()[ix]);
-                  float rphisum2 = __H2F(quintuplets.score_rphisum()[jx]);
-                  ixLoses = (rphisum1 > rphisum2) || (rphisum1 == rphisum2 && ix < jx);
-                } else {
-                  float dnnScore2 = quintuplets.dnnScore()[jx];
-                  ixLoses = (dnnScore1 < dnnScore2) || (dnnScore1 == dnnScore2 && ix < jx);
-                }
+                const float dnnScore2 = quintuplets.dnnScore()[jx];
+                const bool ixLoses = (dnnScore1 < dnnScore2) || (dnnScore1 == dnnScore2 && ix < jx);
                 if (ixLoses)
                   rmQuintupletFromMemory(quintuplets, ix, true);
                 else
@@ -611,7 +599,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int ix = quadrupletModuleIndices_lowmod + ix1;
           const float eta1 = __H2F(quadruplets.eta()[ix]);
           const float phi1 = __H2F(quadruplets.phi()[ix]);
-          const float score1 = quadruplets.displacedScore()[ix] - quadruplets.fakeScore()[ix];
+          const float score1 = quadruplets.displacedScore()[ix];
 
           for (unsigned int jx1 : cms::alpakatools::uniform_elements_x(acc, ix1 + 1, nQuadruplets_lowmod)) {
             unsigned int jx = quadrupletModuleIndices_lowmod + jx1;
@@ -627,7 +615,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             if (alpaka::math::abs(acc, dPhi) > 0.1f)
               continue;
 
-            const float score2 = quadruplets.displacedScore()[jx] - quadruplets.fakeScore()[jx];
+            const float score2 = quadruplets.displacedScore()[jx];
 
             int nMatched = checkHitsT4(ix, jx, quadruplets);
             const int minNHitsForDup_T4 = 5;
@@ -673,7 +661,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
             const float eta1 = __H2F(quadruplets.eta()[ix]);
             const float phi1 = __H2F(quadruplets.phi()[ix]);
-            const float score1 = quadruplets.displacedScore()[ix] - quadruplets.fakeScore()[ix];
+            const float score1 = quadruplets.displacedScore()[ix];
 
             for (unsigned int jx1 = 0; jx1 < nQuadruplets_lowmod2; jx1++) {
               unsigned int jx = quadrupletModuleIndices_lowmod2 + jx1;
@@ -694,7 +682,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               if (alpaka::math::abs(acc, dPhi) > 0.1f)
                 continue;
 
-              const float score2 = quadruplets.displacedScore()[jx] - quadruplets.fakeScore()[jx];
+              const float score2 = quadruplets.displacedScore()[jx];
 
               int nMatched = checkHitsT4(ix, jx, quadruplets);
               const int minNHitsForDup_T4 = 4;
@@ -745,6 +733,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct RemoveDupPixelQuintupletsFromMap {
+    // Runtime-tunable cut values (set at launch from env vars; defaults = master).
+    float dEtaCut_ = 0.2f;
+    float dPhiCut_ = 0.2f;
+    int nMatchedCut_ = 7;
+    // Ranking: 0 = master (lower score wins); 1 = more layers wins, then lower score.
+    int keyMode_ = 0;
     ALPAKA_FN_ACC void operator()(Acc2D const& acc, PixelQuintuplets pixelQuintuplets) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
@@ -756,18 +750,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           float eta2 = __H2F(pixelQuintuplets.eta()[jx]);
-          if (alpaka::math::abs(acc, eta1 - eta2) > 0.2f)
+          if (alpaka::math::abs(acc, eta1 - eta2) > dEtaCut_)
             continue;
 
           float phi2 = __H2F(pixelQuintuplets.phi()[jx]);
-          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > 0.2f)
+          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > dPhiCut_)
             continue;
 
           int nMatched = checkHitspT5(ix, jx, pixelQuintuplets);
           float score2 = __H2F(pixelQuintuplets.score()[jx]);
-          const int minNHitsForDup_pT5 = 7;
+          const int minNHitsForDup_pT5 = nMatchedCut_;
           if (nMatched >= minNHitsForDup_pT5) {
-            if (score1 > score2 or ((score1 == score2) and (ix > jx))) {
+            unsigned int nLayers1 = pixelQuintuplets.nLayers()[ix];
+            unsigned int nLayers2 = pixelQuintuplets.nLayers()[jx];
+            bool ixLoses = (keyMode_ == 1 && nLayers1 != nLayers2)
+                               ? nLayers1 < nLayers2
+                               : (score1 > score2 or ((score1 == score2) and (ix > jx)));
+            if (ixLoses) {
               rmPixelQuintupletFromMemory(pixelQuintuplets, ix);
               break;
             }
@@ -777,7 +776,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // partOfPT5 is set on a pT5's T5, T3s and pLS when the pT5 is built and was never cleared when pT5 dedup kills it.
+  // Launched twice after RemoveDupPixelQuintupletsFromMap: set_ = false clears the flags of dead pT5s, then
+  // set_ = true sets them again for surviving pT5s (objects shared with a surviving pT5 stay flagged).
+  struct ResetPartOfPT5 {
+    bool set_ = false;
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  uint16_t nLowerModules,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  Quintuplets quintuplets,
+                                  Triplets triplets,
+                                  PixelSegments pixelSegments,
+                                  ObjectRangesConst ranges) const {
+      unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
+      unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nPixelQuintuplets)) {
+        if (pixelQuintuplets.isDup()[i] == set_)
+          continue;
+        unsigned int t5 = pixelQuintuplets.quintupletIndices()[i];
+        quintuplets.partOfPT5()[t5] = set_;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][0]] = set_;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][1]] = set_;
+        pixelSegments.partOfPT5()[pixelQuintuplets.pixelSegmentIndices()[i] - pLS_offset] = set_;
+      }
+    }
+  };
+
   struct CheckHitspLS {
+    // true = count each shared pixel hit once (triplet pLS repeat their last hit in slot 3,
+    // which otherwise lets 2 distinct shared hits reach the 3-hit threshold). false = master.
+    bool distinctHits_ = false;
+
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
                                   SegmentsOccupancyConst segmentsOccupancy,
@@ -827,6 +856,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
           int npMatched = 0;
           for (int i = 0; i < Params_pLS::kHits; i++) {
+            if (distinctHits_) {
+              bool repeated = false;
+              for (int k = 0; k < i; k++)
+                repeated |= (phits1[k] == phits1[i]);
+              if (repeated)
+                continue;
+            }
             bool pmatched = false;
             for (int j = 0; j < Params_pLS::kHits; j++) {
               if (phits1[i] == phits2[j]) {

@@ -22,6 +22,7 @@ usage()
   echo "  -s    show log                  (Full compilation script to stdout)"
   echo "  -m    make clean binaries       (Make clean binaries before remake. e.g. when header files changed in LST/*.h)"
   echo "  -d    cut value ntuple          (With extra variables in a debug ntuple file)"
+  echo "  -r    retrained T5 DNN weights  (Use retrained T5 DNN weights instead of originals)"
   echo "  -p    primitive object ntuple   (With extra variables related to primitive objects)"
   echo "  -N    neural networks           (Toggle LST neural networks)"
   echo "  -C    CPU serial backend        (Compile for CPU)"
@@ -34,12 +35,13 @@ usage()
 }
 
 # Parsing command-line opts
-while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
+while getopts ":cxgsmdp3NCGRA2ehwrP:" OPTION; do
   case $OPTION in
     c) MAKECACHE=true;;
     s) SHOWLOG=true;;
     m) MAKECLEANBINARIES=true;;
     d) MAKECUTVALUES=true;;
+    r) MAKERETRAINEDWEIGHTS=true;;
     p) PRIMITIVE=true;;
     G) CUDABACKEND=true;;
     C) CPUBACKEND=true;;
@@ -56,6 +58,7 @@ if [ -z ${MAKECACHE} ]; then MAKECACHE=false; fi
 if [ -z ${SHOWLOG} ]; then SHOWLOG=false; fi
 if [ -z ${MAKECLEANBINARIES} ]; then MAKECLEANBINARIES=false; fi
 if [ -z ${MAKECUTVALUES} ]; then MAKECUTVALUES=false; fi
+if [ -z ${MAKERETRAINEDWEIGHTS} ]; then MAKERETRAINEDWEIGHTS=false; fi
 if [ -z ${PRIMITIVE} ]; then PRIMITIVE=false; fi
 if [ -z ${CPUBACKEND} ]; then CPUBACKEND=false; fi
 if [ -z ${CUDABACKEND} ]; then CUDABACKEND=false; fi
@@ -155,6 +158,11 @@ if $PRINTWARNINGS; then
     PRINTWARNINGSOPT="LSTWARNINGSFLAG=-DWARNINGS"
 fi
 
+RETRAINEDWEIGHTSOPT=
+if $MAKERETRAINEDWEIGHTS; then
+    RETRAINEDWEIGHTSOPT="T5DNNRETRAINEDFLAG=-DLST_T5DNN_RETRAINED"
+fi
+
 if [ -z "${MAXMAKETHREADS}" ]; then
     MAXMAKETHREADS=32
 fi
@@ -171,9 +179,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${RETRAINEDWEIGHTSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} ${RETRAINEDWEIGHTSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then

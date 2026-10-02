@@ -144,7 +144,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void createPixelTriplets();
     void createQuintuplets();
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
-    void createPixelQuintuplets();
+    void createPixelQuintuplets(bool runPT5DNN = true);
     void createQuadruplets();
 
     // functions that map the objects to the appropriate modules

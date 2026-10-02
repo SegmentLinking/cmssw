@@ -27,7 +27,7 @@ float runT3(LSTEvent* event);
 float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets);
 float runQuadruplet(LSTEvent* event);
 float runQuintuplet(LSTEvent* event);
-float runPixelQuintuplet(LSTEvent* event);
+float runPixelQuintuplet(LSTEvent* event, bool runPT5DNN = true);
 float runPixelLineSegment(LSTEvent* event, bool no_pls_dupclean);
 float runpT3(LSTEvent* event);
 

@@ -16,10 +16,10 @@ namespace lst {
                       SOA_COLUMN(Params_pT5::ArrayUxHits, hitIndices),              // hit indices
                       SOA_COLUMN(FPX, pixelRadius),                                 // pLS pt converted
 #ifdef CUT_VALUE_DEBUG
-                      SOA_COLUMN(float, rPhiChiSquared),         // chi2 from pLS to T5
-                      SOA_COLUMN(float, rPhiChiSquaredInwards),  // chi2 from T5 to pLS
+                      SOA_COLUMN(float, rPhiChiSquared),  // chi2 from pLS to T5
                       SOA_COLUMN(float, rzChiSquared),
 #endif
+                      SOA_COLUMN(float, rPhiChiSquaredInwards),  // chi2 from T5 to pLS; used for dedup ranking
                       SOA_COLUMN(FPX, quintupletRadius),  // T5 circle
                       SOA_COLUMN(FPX, eta),
                       SOA_COLUMN(FPX, phi),
@@ -27,6 +27,8 @@ namespace lst {
                       SOA_COLUMN(FPX, centerX),  // T3-based circle center x
                       SOA_COLUMN(FPX, centerY),  // T3-based circle center y
                       SOA_COLUMN(bool, isDup),
+                      SOA_COLUMN(bool, isDupTiebreaker),    // true when killed by index tiebreaker (score1==score2, ix>jx) rather than score
+                      SOA_COLUMN(bool, passedNMatchedCut),  // true if any competitor had nMatched >= 7 (hit-sharing threshold reached)
                       SOA_COLUMN(unsigned int, nLayers),
                       SOA_SCALAR(unsigned int, nPixelQuintuplets),
                       SOA_SCALAR(unsigned int, totOccupancyPixelQuintuplets));

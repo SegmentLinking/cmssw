@@ -96,7 +96,7 @@ void LST::run(Queue& queue,
 
   event.pixelLineSegmentCleaning(no_pls_dupclean);
 
-  event.createPixelQuintuplets();
+  event.createPixelQuintuplets(true);
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
     printf("# of Pixel Quintuplets produced: %d\n", event.getNumberOfPixelQuintuplets());

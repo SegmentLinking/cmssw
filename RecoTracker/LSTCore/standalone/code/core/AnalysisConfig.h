@@ -176,6 +176,16 @@ public:
 
   // Boolean to enable extra sim branches
   bool extra_sim_branches;
+
+  // Boolean to replace CMSSW pixel seeds with truth-derived ideal pLS
+  bool use_truth_pls;
+
+  // Boolean to fill in truth-derived pLS only for sim tracks with no real CMSSW seed match
+  bool fill_missing_pls;
+
+  // Boolean to disable the DNN pre-filter gate in pT5 building (for testing whether it's a
+  // cause of dense-region efficiency loss)
+  bool disable_pt5_dnn;
 };
 
 extern AnalysisConfig ana;

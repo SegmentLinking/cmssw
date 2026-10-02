@@ -279,12 +279,12 @@ float runPixelLineSegment(LSTEvent* event, bool no_pls_dupclean) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
-float runPixelQuintuplet(LSTEvent* event) {
+float runPixelQuintuplet(LSTEvent* event, bool runPT5DNN) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)
     std::cout << "Reco Pixel Quintuplet start" << std::endl;
   my_timer.Start();
-  event->createPixelQuintuplets();
+  event->createPixelQuintuplets(runPT5DNN);
   event->wait();  // device side event calls are asynchronous: wait to measure time or print
   float pt5_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)

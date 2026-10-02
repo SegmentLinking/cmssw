@@ -68,7 +68,9 @@ CMSSW_WERRORS_CPU    = -Werror=pointer-arith -Werror=overlength-strings -Werror=
                        -Wno-unused-parameter -Wno-unused-local-typedefs -Wno-attributes
 CMSSW_WERRORS_CUDA   = $(patsubst %,-Xcompiler %,$(CMSSW_WERRORS_CPU))
 CMSSW_WERRORS_ROCM   = $(CMSSW_WERRORS_CPU)
-T5CUTFLAGS           = $(T5DNNFLAG) $(T5RZCHI2FLAG)
+T5DNNRETRAINEDFLAG   =
+T5DNNRETRAINED_FLAGS = -DLST_T5DNN_RETRAINED
+T5CUTFLAGS           = $(T5DNNFLAG) $(T5RZCHI2FLAG) $(T5DNNRETRAINEDFLAG)
 
 LD_CPU               = g++
 SOFLAGS_CPU          = -g -shared -fPIC
@@ -129,13 +131,16 @@ explicit: $(LIBS)
 explicit_cutvalue: CUTVALUEFLAG = $(CUTVALUEFLAG_FLAGS)
 explicit_cutvalue: $(LIBS)
 
+explicit_retrained_t5dnn: T5DNNRETRAINEDFLAG = $(T5DNNRETRAINED_FLAGS)
+explicit_retrained_t5dnn: $(LIBS)
+
 clean:
 	rm -f *.opp
 	rm -f *.o
 	rm -f *.d
 	rm -f *.so
 
-.PHONY: clean explicit explicit_cutvalue format check check-fix
+.PHONY: clean explicit explicit_cutvalue explicit_retrained_t5dnn format check check-fix
 
 format:
 	clang-format --style=file:../.clang-format -i *.cc *.h

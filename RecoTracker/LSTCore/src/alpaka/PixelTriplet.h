@@ -574,7 +574,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                                  float& pixelRadiusError,
                                                                  const float ptCut,
                                                                  bool runDNN = true,
-                                                                 bool runChiSquaredCuts = true) {
+                                                                 bool runChiSquaredCuts = true,
+                                                                 bool skipCurvatureCuts = false) {
     uint16_t lowerModuleIndex = triplets.lowerModuleIndices()[tripletIndex][0];
     uint16_t middleModuleIndex = triplets.lowerModuleIndices()[tripletIndex][1];
     uint16_t upperModuleIndex = triplets.lowerModuleIndices()[tripletIndex][2];
@@ -584,7 +585,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     pixelRadiusError = pixelData.ptErr * kR1GeVf;
     tripletRadius = triplets.radius()[tripletIndex];
 
-    if (not passRadiusCriterion(acc,
+    // skipCurvatureCuts: bypass the pixel-curvature radius criterion and the DNN (both rely on the
+    // pixel-seed pT); the tracklet pointing cuts below still apply.
+    if (not skipCurvatureCuts and not passRadiusCriterion(acc,
                                 modules,
                                 pixelRadius,
                                 pixelRadiusError,
@@ -682,7 +685,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     // Module type of last anchor hit for the T3.
     const int module_type_3 = modules.moduleType()[upperModuleIndex];
 
-    if (runDNN and !lst::pt3dnn::runInference<WP>(acc,
+    if (runDNN and not skipCurvatureCuts and !lst::pt3dnn::runInference<WP>(acc,
                                                   rPhiChiSquared,
                                                   tripletRadius,
                                                   pixelRadius,
