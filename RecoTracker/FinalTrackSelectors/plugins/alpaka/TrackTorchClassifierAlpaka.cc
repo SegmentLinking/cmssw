@@ -23,13 +23,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         : FixedQueueEDProducer<>(iConfig),
           featuresInput_token_(consumes(iConfig.getParameter<edm::InputTag>("features"))),
           scoresPut_token_{produces()},
-          model_(iConfig.getParameter<edm::FileInPath>("modelPath").fullPath()) {}
+          model_(iConfig.getParameter<edm::FileInPath>("modelPath").fullPath()),
+          useOriginalAlgo_(iConfig.getParameter<bool>("useOriginalAlgo")) {}
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
       desc.add<edm::FileInPath>("modelPath",
                                 edm::FileInPath("RecoTracker/FinalTrackSelectors/data/TrackTorchClassifier/model.pt"));
       desc.add<edm::InputTag>("features", edm::InputTag("hltInitialStepTrackFeatureExtractor"));
+      desc.add<bool>("useOriginalAlgo", false)->setComment("Whether the model takes the track originalAlgo as input");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -43,22 +45,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto output_records = scores_device.view().records();
 
       cms::torch::alpakatools::TensorCollection<Queue> inputs(batch_size);
-      inputs.add<TrackTorchClassifierFeaturesSoA>("features",
-                                                  input_records.dxyBeamSpot(),
-                                                  input_records.dzBeamSpot(),
-                                                  input_records.dxyError(),
-                                                  input_records.dzError(),
-                                                  input_records.normalizedChi2(),
-                                                  input_records.eta(),
-                                                  input_records.phi(),
-                                                  input_records.etaError(),
-                                                  input_records.phiError(),
-                                                  input_records.ndof(),
-                                                  input_records.lostInnerHits(),
-                                                  input_records.lostOuterHits(),
-                                                  input_records.layersWithoutMeas(),
-                                                  input_records.validPixelHits(),
-                                                  input_records.validStripHits());
+      addInputs(inputs, input_records);
 
       cms::torch::alpakatools::TensorCollection<Queue> outputs(batch_size);
       outputs.add<TrackTorchClassifierScoresSoA>("scores", output_records.score());
@@ -82,22 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cms::torch::alpakatools::TensorCollection<Queue> dummy_inputs(warmupBatchSize);
         cms::torch::alpakatools::TensorCollection<Queue> dummy_outputs(warmupBatchSize);
 
-        dummy_inputs.add<TrackTorchClassifierFeaturesSoA>("features",
-                                                          input_records.dxyBeamSpot(),
-                                                          input_records.dzBeamSpot(),
-                                                          input_records.dxyError(),
-                                                          input_records.dzError(),
-                                                          input_records.normalizedChi2(),
-                                                          input_records.eta(),
-                                                          input_records.phi(),
-                                                          input_records.etaError(),
-                                                          input_records.phiError(),
-                                                          input_records.ndof(),
-                                                          input_records.lostInnerHits(),
-                                                          input_records.lostOuterHits(),
-                                                          input_records.layersWithoutMeas(),
-                                                          input_records.validPixelHits(),
-                                                          input_records.validStripHits());
+        addInputs(dummy_inputs, input_records);
 
         dummy_outputs.add<TrackTorchClassifierScoresSoA>("scores", output_records.score());
 
@@ -106,9 +78,41 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
   private:
+    template <typename Records, typename... Extra>
+    static void addFeatures(cms::torch::alpakatools::TensorCollection<Queue>& inputs,
+                            const Records& records,
+                            Extra... extra) {
+      inputs.add<TrackTorchClassifierFeaturesSoA>("features",
+                                                  records.dxyBeamSpot(),
+                                                  records.dzBeamSpot(),
+                                                  records.dxyError(),
+                                                  records.dzError(),
+                                                  records.normalizedChi2(),
+                                                  records.eta(),
+                                                  records.phi(),
+                                                  records.etaError(),
+                                                  records.phiError(),
+                                                  records.ndof(),
+                                                  records.lostInnerHits(),
+                                                  records.lostOuterHits(),
+                                                  records.layersWithoutMeas(),
+                                                  records.validPixelHits(),
+                                                  records.validStripHits(),
+                                                  extra...);
+    }
+
+    template <typename Records>
+    void addInputs(cms::torch::alpakatools::TensorCollection<Queue>& inputs, const Records& records) const {
+      if (useOriginalAlgo_)
+        addFeatures(inputs, records, records.originalAlgo());
+      else
+        addFeatures(inputs, records);
+    }
+
     const device::EDGetToken<TrackFeaturesDeviceCollection> featuresInput_token_;
     const device::EDPutToken<TrackScoresDeviceCollection> scoresPut_token_;
     torch::AlpakaModel model_;
+    const bool useOriginalAlgo_;
     const int warmupIterations_ = 3;
   };
 
