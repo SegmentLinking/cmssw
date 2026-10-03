@@ -32,9 +32,16 @@ std::unique_ptr<MagneticField> ParametrizedMagneticFieldFactory::get(string vers
     // V. Maroussov polynomial fit to mapping data
     throw cms::Exception("InvalidParameter") << "PolyFit3D is not supported anymore";
   } else if (version == "Parabolic") {
-    // FIXME implement configurable parameters to be passed to ctor
-    //   vector<double> params =  parameters.getParameter<vdouble>("parameters");
-    //   std::unique_ptr<MagneticField> result( new ParabolicParametrizedMagneticField(params));
+    // Optional explicit constants (c1, b0, b1, a); without them the built-in
+    // defaults are used, so existing configurations are unaffected.
+    if (parameters.existsAs<vector<double> >("parameters")) {
+      const auto params = parameters.getParameter<vector<double> >("parameters");
+      if (params.size() != 4)
+        throw cms::Exception("InvalidParameter")
+            << "Parabolic needs 4 parameters (c1, b0, b1, a), got " << params.size();
+      std::unique_ptr<MagneticField> result(new ParabolicParametrizedMagneticField(params));
+      return result;
+    }
     std::unique_ptr<MagneticField> result(new ParabolicParametrizedMagneticField());
     return result;
   } else {
