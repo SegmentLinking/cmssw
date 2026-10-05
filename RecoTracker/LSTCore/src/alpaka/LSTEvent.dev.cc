@@ -1925,6 +1925,22 @@ std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandi
   return std::make_unique<TrackCandidatesBaseDeviceCollection>(std::move(trackCandidatesBaseDC_.value()));
 }
 
+std::unique_ptr<ObjectRangesDeviceCollection> LSTEvent::releaseRangesDeviceCollection() {
+  return std::make_unique<ObjectRangesDeviceCollection>(std::move(rangesDC_.value()));
+}
+
+std::unique_ptr<MiniDoubletsDeviceCollection> LSTEvent::releaseMiniDoubletsDeviceCollection() {
+  return std::make_unique<MiniDoubletsDeviceCollection>(std::move(miniDoubletsDC_.value()));
+}
+
+std::unique_ptr<SegmentsDeviceCollection> LSTEvent::releaseSegmentsDeviceCollection() {
+  return std::make_unique<SegmentsDeviceCollection>(std::move(segmentsDC_.value()));
+}
+
+std::unique_ptr<TripletsDeviceCollection> LSTEvent::releaseTripletsDeviceCollection() {
+  return std::make_unique<TripletsDeviceCollection>(std::move(tripletsDC_.value()));
+}
+
 template <typename TSoA, typename TDev>
 typename TSoA::ConstView LSTEvent::getModules(bool sync) {
   if constexpr (std::is_same_v<TDev, DevHost>) {

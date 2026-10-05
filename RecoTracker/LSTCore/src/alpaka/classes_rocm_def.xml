@@ -6,4 +6,19 @@
   <class name="alpaka_rocm_async::lst::TrackCandidatesBaseDeviceCollection" persistent="false"/>
   <class name="edm::DeviceProduct<alpaka_rocm_async::lst::TrackCandidatesBaseDeviceCollection>" persistent="false"/>
   <class name="edm::Wrapper<edm::DeviceProduct<alpaka_rocm_async::lst::TrackCandidatesBaseDeviceCollection>>" persistent="false"/>
+  <class name="alpaka_rocm_async::lst::ObjectRangesDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_rocm_async::lst::ObjectRangesDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_rocm_async::lst::ObjectRangesDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_rocm_async::lst::MiniDoubletsDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_rocm_async::lst::MiniDoubletsDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_rocm_async::lst::MiniDoubletsDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_rocm_async::lst::SegmentsDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_rocm_async::lst::SegmentsDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_rocm_async::lst::SegmentsDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_rocm_async::lst::TripletsDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_rocm_async::lst::TripletsDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_rocm_async::lst::TripletsDeviceCollection>>" persistent="false"/>
 </lcgdict>

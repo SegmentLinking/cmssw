@@ -217,6 +217,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TDev = Device>
     TrackCandidatesExtendedConst getTrackCandidatesExtended(bool sync = true);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> releaseTrackCandidatesBaseDeviceCollection();
+    // Hand over the T3-level intermediate collections; only valid after the full pipeline has been enqueued
+    std::unique_ptr<ObjectRangesDeviceCollection> releaseRangesDeviceCollection();
+    std::unique_ptr<MiniDoubletsDeviceCollection> releaseMiniDoubletsDeviceCollection();
+    std::unique_ptr<SegmentsDeviceCollection> releaseSegmentsDeviceCollection();
+    std::unique_ptr<TripletsDeviceCollection> releaseTripletsDeviceCollection();
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getModules(bool sync = true);
   };

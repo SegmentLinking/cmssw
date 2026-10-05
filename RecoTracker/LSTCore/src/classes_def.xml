@@ -12,4 +12,33 @@
   <class name="lst::TrackCandidatesBaseHostCollection::Layout"/>
   <class name="lst::TrackCandidatesBaseSoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::TrackCandidatesBaseHostCollection>" splitLevel="0" persistent="false"/>
+  <class name="lst::ObjectRangesHostCollection"/>
+  <!-- lst::ObjectRangesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::ObjectRangesHostCollection::Layout"/>
+  <class name="lst::ObjectRangesSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::ObjectRangesHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::MiniDoubletsHostCollection"/>
+  <!-- lst::MiniDoubletsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::MiniDoubletsHostCollection::Layout"/>
+  <class name="lst::MiniDoubletsSoABlocksLayout<128,false>"/>
+  <class name="lst::MiniDoubletsSoALayout<128,false>"/>
+  <class name="lst::MiniDoubletsOccupancySoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::MiniDoubletsHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::SegmentsHostCollection"/>
+  <!-- lst::SegmentsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::SegmentsHostCollection::Layout"/>
+  <class name="lst::SegmentsSoABlocksLayout<128,false>"/>
+  <class name="lst::SegmentsSoALayout<128,false>"/>
+  <class name="lst::SegmentsOccupancySoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::SegmentsHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::TripletsHostCollection"/>
+  <!-- lst::TripletsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::TripletsHostCollection::Layout"/>
+  <class name="lst::TripletsSoABlocksLayout<128,false>"/>
+  <class name="lst::TripletsSoALayout<128,false>"/>
+  <class name="lst::TripletsOccupancySoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::TripletsHostCollection>" splitLevel="0" persistent="false"/>
 </lcgdict>

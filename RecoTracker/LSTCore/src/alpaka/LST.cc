@@ -139,4 +139,8 @@ void LST::run(Queue& queue,
   }
 
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
+  rangesDC_ = event.releaseRangesDeviceCollection();
+  miniDoubletsDC_ = event.releaseMiniDoubletsDeviceCollection();
+  segmentsDC_ = event.releaseSegmentsDeviceCollection();
+  tripletsDC_ = event.releaseTripletsDeviceCollection();
 }

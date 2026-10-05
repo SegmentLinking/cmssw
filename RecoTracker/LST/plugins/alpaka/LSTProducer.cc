@@ -16,7 +16,11 @@
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/global/EDProducer.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
+#include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/ObjectRangesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/TripletsDeviceCollection.h"
 
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
@@ -33,9 +37,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
           reduceMemByFullPrecompute_(config.getParameter<bool>("reduceMemByFullPrecompute")),
+          produceT3Collections_(config.getParameter<bool>("produceT3Collections")),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
           lstESToken_{esConsumes(edm::ESInputTag("", ptCutStr_))},
-          lstOutputToken_{produces()} {}
+          lstOutputToken_{produces()} {
+      if (produceT3Collections_) {
+        rangesToken_ = produces();
+        miniDoubletsToken_ = produces();
+        segmentsToken_ = produces();
+        tripletsToken_ = produces();
+      }
+    }
 
     void produce(edm::StreamID sid, device::Event& iEvent, const device::EventSetup& iSetup) const override {
       lst::LST lst;
@@ -56,6 +68,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
       iEvent.emplace(lstOutputToken_, std::move(*lstTrackCandidates.release()));
+
+      if (produceT3Collections_) {
+        iEvent.emplace(rangesToken_, std::move(*lst.getRanges()));
+        iEvent.emplace(miniDoubletsToken_, std::move(*lst.getMiniDoublets()));
+        iEvent.emplace(segmentsToken_, std::move(*lst.getSegments()));
+        iEvent.emplace(tripletsToken_, std::move(*lst.getTriplets()));
+      }
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -71,6 +90,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "If true, run extra counting kernels that exactly size the MD/LS/T3/T5/T4 "
               "buffers, reducing average per-event memory at a small CPU/GPU runtime cost. "
               "If false (default), buffers use cheaper, looser occupancy estimates.");
+      desc.add<bool>("produceT3Collections", false)
+          ->setComment(
+              "If true, also put the ObjectRanges, MiniDoublets, Segments and Triplets device collections "
+              "into the event (e.g. for T3-based downstream algorithms like transformer OC). Keeps them alive until end of event.");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -82,9 +105,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
     const bool reduceMemByFullPrecompute_;
+    const bool produceT3Collections_;
     const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
     const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;
+    device::EDPutToken<lst::ObjectRangesDeviceCollection> rangesToken_;
+    device::EDPutToken<lst::MiniDoubletsDeviceCollection> miniDoubletsToken_;
+    device::EDPutToken<lst::SegmentsDeviceCollection> segmentsToken_;
+    device::EDPutToken<lst::TripletsDeviceCollection> tripletsToken_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
