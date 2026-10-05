@@ -1013,6 +1013,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view(),
                       lstInputDC_->const_view().pixelSeeds(),
+                      pixelSegmentsDC_->view(),
                       rangesDC_->const_view(),
                       nTotal);
 
@@ -1600,6 +1601,19 @@ void LSTEvent::createPixelQuintuplets() {
                       segmentsDC_->const_view().segments(),
                       quintupletsDC_->const_view().quintuplets(),
                       pixelQuintupletsDC_->view());
+
+  auto const resetPartOfPT5_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+  for (bool set : {false, true}) {
+    alpaka::exec<Acc1D>(queue_,
+                        resetPartOfPT5_workDiv,
+                        ResetPartOfPT5{set},
+                        nLowerModules_,
+                        pixelQuintupletsDC_->const_view(),
+                        quintupletsDC_->view().quintuplets(),
+                        tripletsDC_->view().triplets(),
+                        pixelSegmentsDC_->view(),
+                        rangesDC_->const_view());
+  }
 
 #ifdef WARNINGS
   auto nPixelQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
