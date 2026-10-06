@@ -1,0 +1,10 @@
+# Spill-gate waivers. One line: <kernel regex> <arch regex> <reason>.
+# A waived spill is listed, not counted. Only kernels the menu does NOT launch on our GPUs (sm_89: L40, L4) belong
+# here, or architectures we cannot run; every line names its reason. Menu kernels whose spill is
+# kept by a decision are NOT waivers: test/register_spill_known.txt.
+fit::KernelFinalFitStage<\d,\s*(true|false),\s*true> sm_\d+ kStore = storeHitStates: only with mtd_at_hlt, which the device fit refuses
+fit::KernelFinalFitStage<\d,\s*(true|false),\s*(true|false)> sm_1(00|20) the menu's fit stages <2|5> (and <4, *, true>): 4-48 B on sm_100/sm_120 only (REG 255); not an HLT GPU, no hardware here ( (3), logged for review)
+nav::nextLayers sm_1(00|20) device navigation validation build (not launched by the menu); a later rewrite of it
+lstin::KernelPixSeedIn sm_1(00|20) PIXKF pixel-seed hit lists: 396-440 B on sm_100/sm_120 only (sm_89 no spill); not an HLT GPU, no hardware here (as the fit stages (3))
+navdevice::KernelNavSearch sm_(100|120) NAV_DEVICE search kernels; 66-250 B on sm_75/sm_80 and 236-448 B on sm_100/sm_120 only: no such GPU here
+navdevice::KernelNavStart sm_(100|120) NAV_DEVICE start kernel with the guarded compatible-layer sets; 4 B on sm_90, 32-52 B on sm_80/sm_100/sm_120 only: no such GPU here (logged for review)
