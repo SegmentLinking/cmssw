@@ -21,7 +21,7 @@ public:
   /// Default constructor, use default values for 3.8T map
   explicit ParabolicParametrizedMagneticField();
 
-  /// Constructor with explicit parameter list (b0, b1, c1, a)
+  /// Constructor with explicit parameter list (c1, b0, b1, a)
   explicit ParabolicParametrizedMagneticField(const std::vector<double>& parameters);
 
   /// Destructor
