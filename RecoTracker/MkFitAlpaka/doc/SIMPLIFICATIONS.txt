@@ -1,0 +1,190 @@
+MkFitAlpaka: physics-neutral simplifications vs MkFitCore (CMSSW_20_1_0_pre2). One line each: what, why neutral.
+Counters below come from a privately instrumented MkFitCore (MKFA_SEL_COUNTERS lines), on 100 ttbar + 100 QCD PU200 replay events (4.80M selectHitIndicesV2 candidate slots).
+---------------------------------------------------------------------------------------------------------------------
+[hit selection] selectHitIndicesV2: phi_c = PI - phi_c wrap (MkFinder.cc:846) and Bins::dphi dropped: both feed only
+         the RNT_DUMP_MkF_SelHitIdcs ntuple and dprintf. The wrap branch is reached in 4863 + 5887 of 4.80M slots; hit
+         lists, WSR and bins stay identical to MkFitCore in all of them.
+[hit selection] selectHitIndicesV2: m_iteration_hit_mask test dropped. The LST step has clustersToSkip = "" and Phase-2 (no strip
+         charge cut), so MkFitProducer passes all-false masks: MkFitCore counter "mask_denied" = 0 on all events. A later
+         iteration with clustersToSkip needs a per-hit mask column (one load + branch in the hit loop).
+         Guard: checkSupportedBuildConfig throws unless clustersToSkip is empty.
+[hit selection] passStripChargePCMfromTrack not ported: MkFitGeometryESProducer sets has_charge(false)
+         on every Phase-2 OT layer, MkFitCore counter "passStripChargePCM_calls" = 0 on all events.
+         Guard: checkSupportedConfig throws if any strip layer has_charge().
+[hit selection] RNT_DUMP_MkF_SelHitIdcs instrumentation and dprintf not ported (compile-time debug only).
+[hit selection] One candidate per thread (N = 1) on every backend instead of NN slots: every step of propagate-to-layer,
+         Bins and the hit loop is per slot in MkFitCore; serial results are bit-identical to MkFitCore.
+[hit selection] m_in_gap of WSR_Failed slots: MkFitCore leaves the previous call's value (not reset), the port writes false; never
+         read, since find_tracks_handle_missed_layers turns WSR_Failed into WSR_Outside and K3 skips Outside first
+         (MkFinder.cc:1823 before 1837).
+[clone engine] Per-seed selection without a general sort: equal option scores keep the input order (stable):
+         identical to MkFitCore for <= 16 options (libstdc++ uses insertion sort there) and whenever there is no exact
+         tie; 1 exact tie in 426k real seed-layer records, none with > 16 options.
+[clone engine] passStripChargePCMfromTrack: not called in K3b either (same reason as [select] above, has_charge() false on
+         every Phase-2 layer). Guard: as above.
+[seeds] Seed (phi, eta) binnor rank for events with < 256 seeds: binnor::finalize_registration uses std::sort
+        (unstable) there instead of the stable radix sort; the device always uses the stable order (key, input index).
+        Differs only for exact key ties in events with < 256 seeds (PU200: 1500-4000 seeds, never). Same as the per-seed selection above.
+[seeds] filter_comb_cands + export_best_comb_cands: MkFitCore compacts the passing seeds (stable swap loop) and then exports
+        them; the device exports the passing seeds directly at their stable prefix-scan position. Same rows, same order.
+[hits]  The device bin table is not memset per event: KernelFinalizeBins writes content and clears dead for every bin
+        (implementation only; EventOfHits identical to MkFitCore on 40 events).
+fit (GPU backends): no grouping of tracks by nFoundHits into NN-wide groups (one thread per track, N = 1): Matriplex slots are independent, so the per-track arithmetic is the same. CPU backends keep the MkFitCore grouping (kNN = 8).
+[final fit] pass-2 refits run with N = 1 per track on every backend (MkFitCore regroups them by the new hit count): slots are independent.
+[final fit] pass 2 (refit of tracks that lost outliers) runs right after pass 1 of the same track instead of after all pass-1 groups: tracks are independent.
+[final fit] the iC/iP buffer swap of fwdFitFitTracks/bkReFitFitTracks is a copy of the output state into the input state (same values, no index parity bookkeeping).
+[common] Shared adapters: one implementation of the MPlex loaders (src/alpaka/Packers.h, two input forms) and
+        of the ES -> PropagationFlags conversion (src/alpaka/PropagationFlagsAdapter.h); engine, bkfit and select call
+        them (the final fit keeps the same stores inline). Same stores, same flag values: every chain summary and unit
+        test is byte-identical to the per-component form on serial and on L40 and L4 GPUs.
+[common] find_tracks_handle_missed_layers: select's copy (SelHits.extra / post-WSR) runs only with diagnostics on; the
+        engine's K3b/K4 implementation (from wsrRaw) is the only one in the chain.
+[common] Configuration-dependent simplifications above (and the filter / cleaner / partitioner / scorer names, the
+        compile-time kMaxCandsPerSeed, one minHitsQF, seed-hit sorting, drop-seed-hits, prop-to-plane) are guarded by
+        interface/SupportedConfig.h: outside the validated envelope the job throws.
+[building] Sync-free driver: engine grids are sized from the event's seed capacity and every kernel reads the current
+        row count on the device (EngineBuffers::nRowsDev), skipping rows past it; the survivor compaction clears the
+        destination rows past the survivors. Implementation only: the same rows are processed in the same order.
+[building] K1 -> K2 candidate list: the exclusive scan of nActive and the list fill are one single-block kernel; same list
+        order (seed_cand_idx order: seed-major, ic ascending).
+[building] K2 writes the engine's CandSelHits / CandPropState rows itself; same values.
+[building] Engine tables, iteration parameters and propagation flags are built once per IOV (cached per device) instead
+        of per event; same contents.
+[building] The post-backward-search filter takes backward_params.minHitsQF (params_cur() of that filter) instead of
+        params.minHitsQF; both are 4 in mkfit-phase2-lstStep.json, so no change here; it follows MkFitCore if they differ.
+[final fit] CPE hook: when the CPE callback returns false the slot keeps the projected hit (position + error); MkFitCore (KalmanUtilsMPlex.cc:1556-1559, 1689-1712) leaves msPar_local/msErr_local uninitialised and still copies them. The menu callback always returns true and the device CPE returns false only for a pixel module without a CPE/GenError entry (0 in the validation): no physics change.
+[final fit] CPE errors port only what PixelCPEGeneric::localError reads from SiPixelGenError::qbin with IrradiationBiasCorrection = False (sigma/sx1/sx2/sy1/sy2 of the charge bin); the Lorentz-width/bias side outputs, the deltas and the qbin 4/5 flags are not computed (MkFitCore uses them only in LogDebug or with irradiation corrections / useLAWidthFromGenError, both off).
+fit (GPU backends): the fit runs as 6 stage kernels (pass-1 indices, pass-1 fwd, pass-1 bkw, outliers + pass-2 indices, pass-2 fwd, pass-2 bkw) with the state in the track row + per-track scratch: the same operations per track in the same order.
+[GPU] K2 on GPU backends is two kernels: K2a thread per candidate (propagation, Bins, WSR), K2b 16 lanes per
+      candidate over the MkFitCore scan order, per-lane best-6 by (ddphi, scan position) merged by lane 0. Without exact ddphi
+      ties this is the MkFitCore selection and order; a conservative exact-tie detector reruns MkFitCore's heap loop
+      (selectScanHeap, the same code as the serial selectHitIndicesV2) for the flagged candidates (MkFitCore order
+      kept). Implementation only: all stage summaries byte-identical to the one-kernel form on CUDA (ttbar + QCD).
+[GPU] selectHitIndicesV2 split into selectPrepare / selectHitScore / selectScanHeap (same statements, shared by the
+      serial and GPU paths); serial summaries unchanged.
+[GPU] K4 copy split on GPU backends: K4 records each output candidate's parent slot (CandUpdatesSoA::outSrc) and K5's
+      (seed, slot) threads copy (or copy + update) the state; same operands as K4's copy followed by the in-place update.
+[GPU] BuildProducer: seeds packed by io's packSeedsToDevice (no host staging copy on CPU backends); the TrackSoA
+      before the duplicate cleaner stays module scratch (not put). No physics content change.
+[hit input] Size-only OT MkFitClusterIndexToHit (MkFitAlpakaPhase2ClusterIndexToHit): one nullptr entry per OT cluster in place of the RecoTracker/MkFit OT hit converter; its readers use only the size (the build and fit modules' strip row base; the output conversion makes the OT hits on demand). Same size as convertHits.
+[hit input] Device hit input: the HitSoA rows are computed on the device from the local hit quantities with the hit converters' float formulas (toGlobal, ErrorFrameTransformer) written with explicit fmaf where the host compiler contracts (fma(a, b, c*d)); bitwise equal to the MkFitCore converters on 400 replay event-backends and 140 menu event-backends, so the contraction pattern is fixed, not left to each compiler.
+[CPU] CPU EventOfHits: on CPU backends the 7 binning kernels are one sequential kernel organised like MkFitCore
+      (hits grouped by layer while their infos are computed; per layer a bin histogram, the bin table written once, and a
+      stable two-digit counting sort, fine phi then bin = MkFitCore's LSD radix order (key, original index)). GPU
+      backends keep the parallel kernels. Order, bin table, hit infos and dead bins bit-identical to MkFitCore (serial and
+      CUDA, 10 ttbar + 20 ttbar-with-deads events).
+[GPU] Fit input on the device: MkFitFitProducer's candCutSel (MkFitFitProducer.cc:139-151) evaluated per row
+      of the device building TrackSoA (same predicate: |1/invpT|, getEta(theta) with the vdt approximations, nTotalHits)
+      and an order-preserving compaction (count + exclusive scan + copy), instead of the host TrackVec loop. The fit
+      reads the kept count on the device. Menu ttbar 100 ev, L40 and serial: fit output bit-identical to the
+      host-input fit (70/70 events, 132.5k tracks).
+[GPU] CPE cluster quantities (ClusterCpe) computed for EVERY pixel hit (not only those on the input tracks), on
+      the device from the pixel digi + cluster SoA: same digi selection as SiPixelDigisClustersFromSoAAlpaka,
+      AccretionCluster's 256-digi cap (first 256 in digi order) and SiPixelCluster's 255 span cap reproduced; integer
+      atomics only. Bitwise equal to the host clusterCpe() of the legacy clusters on 13.1M rows (ttbar 70 ev, 273
+      clusters > 256 pixels), CUDA and serial. Rows not on a track are never read: no physics content change.
+[GPU] EventOfHits device input: the per-module table (rotation, position, layer, uniqueIdInLayer) is an ES
+      product (MkFitAlpakaEventOfHitsModuleTableESProducer, one device copy per IOV) or, by default, a per-(device, IOV)
+      copy inside the module, instead of a 1.7 MB copy per event. Same contents (HitSoA identical).
+[GPU] K2b exact-tie detector: a full lane list records the score it EVICTS on an
+      insert (and every score it refuses, not only one equal to its maximum). Every evicted or refused score is >= v6,
+      so 'rej <= v6' is exactly a contending tie: the in-lane eviction case (MkFitCore keeps f, the port
+      would keep e) reruns MkFitCore's heap loop. The selection is MkFitCore's in every case; GPU only (K2b).
+[CPU] Per-stream scratch: the build module's clone-engine scratch (EngineBuffers x2, K2 list/props/
+      sels) and, on CPU backends, the device-hit input's raw host rows are allocated once per EDM stream at a grow-only
+      capacity (+25%) and reused every event (GPU backends allocate per event through the caching allocator).
+      Rows past the event's seed / hit count are never read; the reused seed rows are zeroed as the constructor does.
+      Outputs byte-identical.
+[output conversion] MkFitAlpakaOutputTrackConverter (replaces the MkFitOutputTrackConverter in the device-fit
+      menu): same CMSSW calls in the same order; each on-track rechit is
+      cloned once (MkFitOutputTrackConverter: three clones), ordering keys are computed once per hit, is_pixel comes from MkFitGeometry's
+      TrackerInfo, the unused MkFitSeedWrapper / MkFitEventOfHits inputs are dropped. Hit order: the MkFitOutputTrackConverter comparator
+      applied by a stable insertion instead of std::sort (no general sort). In-job vs MkFitOutputTrackConverter on the same
+      TrackSoA: parameters, covariances, chi2/ndof, all hit-pattern words, seed refs IDENTICAL (ttbar 133510 tracks,
+      QCD 195757, GPU; serial ttbar 85160); 47 / 79 tracks (3.5e-4 / 4.0e-4) list two hits that the MkFitOutputTrackConverter comparator ranks
+      equal or inconsistently (mixed mag2/perp2) in the other order in the TrackExtra (std::sort is not stable); with std::sort in its place every field
+      is identical. The direct readers of hltInitialStepTracks (vertices, feature extractor, classifiers, HP cloner,
+      cluster masking, MTV) use track parameters, the hit pattern or order-free hit sets. But
+      TrackListMerger is not order-free: hltGeneralTracks has allowFirstHitShare = True and
+      TrackListMerger.cc:590-596 compares recHit(0) of the two tracks. Measured (output
+      order, converter keys): hit 0 is not forced by the comparator ("ambiguous": some later hit not strictly after
+      it) for 32 of 265,921 ttbar tracks (1.2e-4) and 26 of 195,785 QCD tracks (1.3e-4); an outright inversion at
+      hit 0 never occurs; std::sort applied to the output order moves hit 0 for 14 / 7 tracks (5e-5 / 4e-5). So a
+      first-hit-share decision can differ from MkFitCore for at most ~1e-4 of the tracks (and only where such a track
+      shares a hit with another one). EXACT count (the insertion order vs std::sort on the same input order, in-job,
+      GPU menu): ttbar 200 ev, 265,941 tracks: hit 0 differs for 14
+      (5.3e-5), the last hit for 0, any position 341; QCD 100 ev, 195,755 tracks: 7 (3.6e-5) / 0 / 250. The
+      deterministic A/B runs (ttbar 100, QCD 60) were identical. 5k-event validation: hltGeneralTracks identical. Deterministic CPU menu A/B (ttbar 100): MTV, 68 trigger paths, vertex DQM and every
+      counting histogram of the tracking DQM identical.
+
+[memory] The menu no longer schedules the build's host wrapper hltInitialStepTrackCandidatesMkFit (its only
+      reader, hltInitialStepTrackCandidates, is unscheduled): MkFitAlpakaStatusCheck on the build status keeps its
+      status warnings; no device->host copy of the build TrackSoA.
+[output conversion] Device PCA: the converter takes the
+      state at the beam-line PCA from MkFitAlpakaOutConvStateProducer (interface/math/PcaToBeamLine.h: the CCS ->
+      curvilinear conversion, TSCBLBuilderNoMaterial's helix-line TTMD + EXT curvilinear Jacobian, the field at the
+      first-hit state from interface/math/TkBfield.h, vdt's double fast_sincos ported) instead of calling
+      TSCBLBuilderNoMaterial per track. Same operations as the host; not bitwise (device sin/cos/atan2, FMA). Rows
+      whose state lies outside the closed-form field volume, and rows where the device TTMD does not converge, are
+      done by the host TSCBL, so validity stays the host's except where the device converges and the host does not
+      (counted in-job against the host TSCBL). Rounding-level.
+      Same beam spot product as the host converter.
+[output conversion] The flat tables of the portable search (plugins/MkFitAlpakaNavFlatTablesBuilder.h) lay out each
+      layer as its TkDetLayers builder does. The search on them (interface/math/NavSearch.h) is transliterated from the
+      TkDetLayers search with the analytic propagator and no material; a host copy of that transliteration gave the same
+      missing inner/outer hit entries as DetLayer::compatibleDets with PropagatorWithMaterial in every call measured
+      (identical TrigReport / MTV counts in CPU A/B).
+[output conversion] The device PCA's AnalyticalCurvilinearJacobian and C' = J C J^T are functions
+      (pca::curvilinearJacobian, pca::similarity5 in PcaToBeamLine.h) shared with the navigation per-det test
+      (DetPlaneTest.h). Same code; rounding-level for the device PCA (serial ttbar 60: every PCACHECK count and maximum
+      identical, tracks bitwise equal to the host 2,444 -> 2,514 of 85,113).
+[navigation] The portable compatibleDets searches (interface/math/NavSearch.h) keep a DetGroup as {index,
+      indexSize, number of dets, first det}: DetGroupMerger only appends to a group, so its first det never changes and
+      the result order and front() (all the converter reads) are exact; 0 differences in 84,216 + 85,901 calls (every
+      layer kind) and in the kernel runs.
+[seed hand-off] LSTOutputConverter + MkFitSeedConverter -> one device module (MkFitAlpakaSeedHandoffK1)
+      writing the build module's seed rows from the LST TCs on the device (no host copy of the TCs, no rechit clones, no
+      TrajectorySeed objects, one CPE call per light seed). Checked against a host implementation of the same two
+      modules: seeds bitwise in every event (CPU ttbar 294,694 + QCD 433,155, GPU ttbar 147,784 seeds), hit order as
+      DEVIATIONS DEV-8; tracks bitwise with the seed collection absent (null TrackExtra seedRef).
+[performance] hltInputLSTDevice sizes its per-track buffers and grids by nSeedMap (the SoA's nTracks), not the SoA
+  capacity: the kernels already skipped t >= nSeedMap. CPU menu bitwise.
+[performance] KernelPixSeedPca / KernelOutConvPca split in two kernels through a scratch (same expressions; spill-free
+  on sm_89). In-job byte comparison with the old kernels: 0 differing rows on GPU and CPU.
+[performance] hltInputLSTDevice's pixel SoA row -> cluster key map is the inverse of the device EventOfHits' key -> row
+  map (same rechits, clusters and moduleStart + originalId; empty map = the old host pass). In-job: 0 of 11.2M rows differ.
+[performance] hltInputLSTDevice's CA-row -> OT key map from hltMkFitAlpakaOTRecHits' per-P-module first keys
+  ('caKeyStart') instead of a pass over the OT cluster detsets (in-job: 0 of 2.7M rows differ); its per-IOV geometry
+  table is shared by the stream instances (same table, built once per job instead of once per stream).
+[seed hand-off] The device hand-off builds the pLS / pT3 / pT5 pixel seeds from hltPhase2PixelTracks itself
+      (protoTrackHitsByRadius, includeFourthHit, the placeholder state) and writes pixelTrackOfSeed,
+      = the hits of LSTOutputConverter's pixel seeds + MkFitSeedConverter; it reads the pixel track's own rechits
+      where the converter cloned them (same det, cluster, local position). A failed dropOTHitsPurePLS refit skips the
+      seed (the converter read seeds[0] of an empty vector = UB); never seen.
+[host input] hltMkFitAlpakaOTRecHits on GPU backends: the host lists the cluster detsets; KernelOTExpand writes
+  module / detId / clustSize / strip per cluster key from the stored clusters (= Phase2TrackerCluster1D::size(),
+  firstStrip(), column(); decode checked against the accessors on the first event). In-job: 9.44M rows, 0 mismatches.
+[host input] The OT detset -> CPE table index uses a per-IOV DetId index (open addressing over the valid table
+  entries) instead of TrackerGeometry::idToDetUnit; the table is built at the run transition (RunCache). Same index by
+  construction (unique DetIds; an unknown DetId still throws); CPU tracks bitwise.
+[host input] hltMkFitEventOfHits fills the pixel MkFitClusterIndexToHit in its pass
+  over the legacy pixel rechits (convertHits' size rule); the RecoTracker/MkFit pixel hit converter leaves the menu.
+  In-job: 7.03M entries, 0 pointer differences (CPU + GPU).
+[navigation] The converter's compatibleLayers list of a (track, direction) is the device set
+  (KernelNavStart: the school's static candidate lists + the wellInside rule) in DetLayer pointer order (the school's
+  std::set order, NavFlatTables::pointerOrder per IOV) where the set's header row says every decision was outside its
+  margin (20 um / 1e-4) and the set starts at the host's own start layer; else NavigationSchool::compatibleLayers.
+  In-job check against the school: GPU ttbar 500 1,308,635 / 1,308,635 lists identical in content and order, serial ttbar 50
+  145,599 / 145,599; 0.14-0.15% of the lists go to the school.
+[navigation] The host fills of the device CPE cluster inputs (fillClusterCpe with an optional row mask, fillClusterRefs,
+  clusterCpe) moved from MkFitAlpakaFitDeviceProducer / MkFitAlpakaFitCpeTables.h into plugins/alpaka/MkFitAlpakaClusterCpeFill.h,
+  shared with MkFitAlpakaLstInputProducer (pixKFCpe). Same loops, same outputs (the tracks-only fill = the row-mask form).
+[navigation] Navigation binning guards in interface/math/NavSearch.h: bin / closest / window decisions within
+  kNavMarginAbs (2 um; kNavMarginAbs / r as an angle) of their edge go to the host search (kNavMarginal), as boundsMarginal.
+  Output-identical by construction (a guarded call is decided by the host search); in-job: GPU QCD 200 555,874 / 555,874 calls
+  identical, CPU ttbar 50 101,648 / 101,648; host-search calls +0.08%.
+[navigation] The phi-overlap guards of the endcap ring searches (ringGroups, singleRingGroups) add the window's own
+  rounding bound kNavWindowSpErr / sin(w) (16 ulps of the float sp of tkDetUtil::calculatePhiWindow's acos branch) to their
+  margin: one ulp of sp moves acos(sp) by 2.7e-5 rad for a 0.0022 rad window, so the host and device windows differ by ~5e-5
+  rad from identical inputs. Output-identical by construction; in-job GPU ttbar 500 868,231 / 868,231 and QCD 200
+  529,829 / 529,829 calls identical.
