@@ -1,0 +1,117 @@
+MkFitAlpaka: physics differences to the reference mkFit, for the mkFit developers
+=================================================================================
+Reference: CMSSW_20_1_0_pre2 mkFit (MkFitCore, MkFitCMS, MkFit) with the runtime field and per-module material of the final fit,
+MkFitCore built with -Ofast, the fine-grained Phase-2 material map (Brunella D'Anzi's PR) and the release JSON of the
+LST step (mkfit-phase2-lstStep.json). Everything not listed here reproduces the reference at the rounding level: every
+stage was compared with the reference on the same events against its own rounding differences (MkFitCore built for
+x86-64-v3 vs v2 and with / without -Ofast).
+Each entry: what the reference does (file:line), why it is wrong or worse, what the port does, the evidence, the switch.
+Code markers: "// DEVIATION DEV-<n>". ON = applied by customizeHLTforMkFitAlpaka.
+
+DEV-1  NaN guards of the final fit are dead in the -Ofast MkFitCore build (ON, no switch; port = MkFitCore source)
+  MkFitCore: MkFitter.cc:102 reFitOutputTracks "if (m_Chi2 != m_Chi2) continue;" and MkBuilder.cc:1545-1548 (fit_tracks,
+    NaN chi2 -> 1e6) are folded away under -ffinite-math-only (-Ofast): NaN states are written into the track, NaN
+    per-hit chi2 enter the outlier ranking (std::map keys).
+  Port: the same checks (src/alpaka/fit/FitKernels.h); the device code is built without -ffinite-math-only.
+  Evidence: replay ttbar 100 events, 193,069 fitted tracks: 59 MkFitCore tracks with NaN parameters, 0 in the port.
+  Proposed MkFitCore fix: a bit-test isNaN that survives -Ofast, used at both places (then MkFitCore == port).
+
+DEV-2  Seed states of the LST T5 / T4 / pT3 / pT5 seeds from a device Kalman fit (ON; known small regression)
+  Reference: LSTOutputConverter.cc:236-262 runs SeedFromConsecutiveHitsCreator::makeSeed on the host (FastHelix + initial
+    errors + one forward KF with PropagatorWithMaterial and the track-angle hit refit), MkFitSeedConverter.cc:107-160
+    converts the state. The largest host cost of the step.
+  Port: the host creator's structure on the device with mkFit's propagation and material (src/alpaka/seeds/
+    LstSeedKernels.h: FastHelix through the region origin, its initial errors, one forward pass, state at the last
+    hit, its rejections). A rejected T5 / T4 seed is dropped, a rejected pT3 / pT5 seed keeps its pixel seed (hits and
+    the DEV-7 state), as the converter (LSTOutputConverter.cc:268-272, :279). pLS seeds: DEV-7.
+  Evidence: paired efficiency -0.00013 (ttbar) / -0.00014 (QCD) +- 0.00001; every MTV bin within 2 sigma; fake and
+    duplicate rates equal or lower.
+
+DEV-3  Final-fit outlier test also at the first / last hit, and iterated removal (ON, edgeOutliers + outlierRounds 3)
+  MkFitCore: MkBuilder.cc fit_tracks (outlier block :1540-1575, remap :1660-1680): a hit is an outlier only when both
+    one-sided chi2 are large (pT > 1: f > 8 && b > 8 && f + b > 20). At the first and last fitted hit one pass starts
+    from the x100 prior, so its chi2 is ~0 and an end hit is never removed; one round, the refit is never checked.
+    KFFittingSmoother rejects any hit with chi2 > 20, end hits included, and iterates.
+  Port: the end hit is an outlier when the chi2 predicted from all other hits is > 20 (edgeChi2Cut); removal and refit
+    up to 3 rounds (FitKernels.h removeOutliers / outliersAndRefit).
+  Evidence: with DEV-4 + DEV-5 and the fine-grained material, hltGeneral efficiency (absolute %): +0.27 (ttbar) /
+    +0.26 (QCD) vs the reference mkFit fit; the mkFit-fit menu stays -0.21 +- 0.02 (ttbar) / -0.19 +- 0.04 (QCD) below the
+    KF menu. 500 ttbar + 500 QCD events: fake rate down, no MTV bin worse by > 2 sigma.
+  Note: this rule makes the MkFitCore fit itself ~7x more sensitive to rounding (MkFitCore + this rule vs itself across build
+    flags: 5.5e-4 of the hit lists differ instead of 7.6e-5); DEV-5 removes most of it.
+
+DEV-4  Candidates with a negative or non-finite fit chi2 are dropped in the output conversion (ON, dropNegativeChi2)
+  Reference: MkFitOutputTrackConverter converts any candidate that passes the state checks, whatever its chi2; such chi2
+    come from a non-positive-definite covariance, which KFFittingSmoother rejects.
+  Port: MkFitAlpakaOutputTrackConverter skips them after the positive-definite check.
+  Evidence: 2 tracks in 500 ttbar events; its share of the DEV-3 gain is ~0.
+
+DEV-5  A refit after outlier removal propagates to its first hit (ON, firstHitProp 1)
+  MkFitCore (MkFitter.cc:268 fwdFitFitTracks, :462 bkReFitFitTracks): the first hit of a pass is updated without
+    propagation ("already at the hit"). After outlier removal of the innermost hit that is false: the first update is
+    made off the hit's plane (5.0% of the refits in MkFitCore, median 0.68 cm; first-step chi2 median 2.2e3) and 4.4% of
+    those end non-positive-definite.
+  Port: the refits after outlier removal propagate to their first hit (FitKernels.h fitDirection, propFirst).
+  Evidence: MkFitCore with the same flag: first-step chi2 median 0.93, negative / NaN chi2 sums 71 -> 6 (ttbar 200);
+    MkFitCore MTV +0.00024 (ttbar), 0 bins beyond 2 sigma. In the port with DEV-3: CUDA-vs-serial hit-list differences
+    98 -> 16 per 193k tracks, paired efficiency +0.00005 over DEV-3 + DEV-4.
+
+DEV-6  Explicit track algorithm 'initialStep' in the output conversion (ON, algorithm)
+  Reference: MkFitOutputTrackConverter.cc:213-214 (and MkFitOutputConverter.cc:183) derive the algorithm from the seeds
+    label; hltInitialStepTrajectorySeedsLST gives undefAlgorithm. PFTrackAlgoTools::errorScale gives undefAlgorithm a
+    1e9 pT-error scale, so PFAlgo's rejectTracks_Bad drops ~12 good tracks per ttbar event.
+  Port: the algorithm is a parameter, set to the KF menu's 'initialStep'.
+  Evidence: tracks identical; tracks not used by PF 11.9 -> 0.3 per event (KF 0.6); PF charged sum pT, HT, MET and the
+    HT / MET / b-tag / tau paths move to the KF values.
+
+DEV-7  pLS parameters from a device emulation of the pixel-seed creator, computed before LST (ON; known regression)
+  Reference: hltInitialStepSeeds (SeedGeneratorFromProtoTracksEDProducer + SeedFromConsecutiveHitsCreator on the pixel
+    tracks) -> hltInputLST (state on the last hit, TSCBL, perigee ptError / etaError) -> LST's pLS. ~19 ms host.
+  Port: hltInputLSTDevice does the same per pixel track on the device (DEV-2's creator emulation, the device PCA, the
+    same error formulas); a device creator failure gives no pLS, as the host creator gives no seed.
+  Evidence: pLS fields vs the host: r3PCA q90 0.18 mm, dz q90 0.67 mm, ptPCA q90 2.6%; endcap ptErr wider (|eta| > 2.5:
+    q50 +10%). Paired efficiency ttbar -0.00030 +- 0.00030, QCD -0.00035 +- 0.00026 (hltGeneral); MTV within 2 sigma;
+    pulls and resolutions 3 of 960 tests beyond 3 sigma. With the KF-menu comparison: -0.05 (ttbar) / -0.02 (QCD) pp
+    at 0.9-10 GeV, from |eta| > 2.5. The remaining difference enters through LST's pLS selection
+    (ptIn > ptCut - 2 ptErr) and the endcap ptErr; refitting the pixel hits with the track angles matches the host
+    fields but loses forward efficiency (tried, not used).
+
+DEV-8  Seed hit order: equal sort keys in input order (ON)
+  Reference: LSTOutputConverter std::sorts the seed hits (inner tracker first, subdetector, det radius / |z|). Hits with
+    equal keys (e.g. overlapping modules of one layer or disk ring) keep their input order in lists of up to 16 hits;
+    in longer lists their order is libstdc++'s introsort order.
+  Port: equal keys in input order for any list length: a rank within each LST logical layer in the device seed
+    hand-off.
+  Evidence: bitwise equal to a host hand-off with std::stable_sort in 294,694 ttbar + 433,155 QCD seeds (CPU, 200 events
+    each). Vs LSTOutputConverter's order 1.4% (ttbar) / 1.5% (QCD) of the seeds differ, all with > 16 hits. Physics vs
+    the std::sort order (GPU, 500 ttbar + 500 QCD, paired): efficiency +0.01 +- 0.01 / +0.02 +- 0.02, displaced
+    2.5-63 cm +0.00 +- 0.03 / +0.06 +- 0.03, fake and duplicate rates unchanged.
+
+DEV-10 Final-fit outlier test near the outer end, one outlier per round (ON, NEAR_END_OUTLIERS)
+  MkFitCore: MkBuilder.cc fit_tracks (outlier block): a hit is an outlier only when both one-sided chi2 are large. Near a
+    track end one side is predicted from 1-2 hits plus the x100 prior, so hits 1-3 from an end are never removed (DEV-3
+    tests the end hit only), and all flagged hits of a round go at once. KFFittingSmoother (EstimateCut 20,
+    MaxNumberOfOutliers 6) removes one outlier per iteration, near-end hits included.
+  Port: with DEV-3, the nearEdgeHitsOuter (3) hits nearest the outer end are outliers when the forward pass has
+    chi2 > edgeChi2Cut; at most outliersPerRound (1) hit per round, the largest f + b first; rounds continue until a
+    round removes no hit (outlierRounds 0), as the KF fit-smoother's outlier loop, which has no iteration cap
+    (KFFittingSmootherESProducer.cc fitOne). Every round removes a hit and at least 3 stay, so a track takes at most
+    nFoundHits - 3 rounds (FitKernels.h removeOutliers / outliersAndRefit). Two conditions keep the test to forward
+    predictions that can test a hit:
+    - an outer hit, the end hit included, is tested only when the hits before it lie on at least 3 other detector
+      layers (the two sensors of a stacked module are one layer; three points fix the circle);
+    - a hit only this window flags counts only in a round in which no other hit of the track is flagged. On short
+      displaced tracks the forward prediction at the outer hits is built on hits that still hold an outlier; without
+      this condition true outer hits were removed (production radius 31.6-63 cm: -0.8 pp ttbar, -1.0 pp QCD).
+    nearEdgeHitsInner stays 1: at the inner end the backward prediction of hits 1-2 lacks the innermost hits that fix
+    dxy / dz and flags good pixel hits (with 3: dxy / dz q68 +1-3%, 1.1% of the tracks lose a pixel hit).
+    With a cap of 6 rounds, candidates ending in a run of 7-11 wrong outer hits kept part of the run and lost true
+    inner hits instead. Without it, 0.18% (ttbar) / 0.19% (QCD) of the tracks take more than 6 rounds, at most 16 / 18.
+    GPU: the first 6 rounds run as stage kernels, the tracks still refitting then finish in one tail kernel with the
+    same calls per track. Without the cap, paired per simulated track on 332 ttbar + 500 QCD events (CPU): hltGeneral
+    efficiency (pT > 1 GeV) +0.044 +- 0.014 pp (ttbar) / +0.039 +- 0.010 pp (QCD), pT > 10 GeV +0.14 / +0.07 pp,
+    production radius 2.5-31.6 cm +0.11 / +0.05 pp, no region lower; GPU (ttbar) +0.031 +- 0.014 pp.
+  Evidence: 2000 ttbar + 1000 QCD events with the fine-grained material, GPU, paired per simulated track against the
+    rule OFF: hltGeneral efficiency (pT > 1 GeV) +0.16 +- 0.01 pp (ttbar) / +0.18 +- 0.02 pp (QCD); production radius
+    31.6-63 cm +0.35 +- 0.17 / -0.07 +- 0.13 pp; fake rate 0.98 -> 0.92% / 1.22 -> 1.17%; pT pull core width unchanged
+    (1.078). The remaining efficiency difference to the KF menu: -0.22 -> -0.06 pp (ttbar), -0.30 -> -0.12 pp (QCD).
