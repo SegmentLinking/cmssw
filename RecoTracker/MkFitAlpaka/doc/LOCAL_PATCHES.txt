@@ -1,0 +1,12 @@
+Changes outside RecoTracker/MkFitAlpaka that the menu customise needs
+=====================================================================
+Each goes to its own pull request. Every change is switch-gated or a new module: with the switch off the package
+behaves as before.
+
+RecoTracker/PixelTrackFitting
+  1. PixelTrackProducerFromSoAAlpaka otClustersOnDemand: OT extension hits on demand.
+RecoLocalTracker/Phase2TrackerRecHits
+  2. Phase2TrackerRecHitOnDemand.h: one OT rechit from its cluster key.
+
+Other dependency: the mkFit final-fit update (the reference of the port's final fit: its propagation and update
+sequences, field constants, outlier rules and outer state).

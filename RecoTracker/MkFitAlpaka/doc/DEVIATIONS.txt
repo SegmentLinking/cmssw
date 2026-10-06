@@ -1,0 +1,85 @@
+MkFitAlpaka: physics differences to the reference mkFit, for the mkFit developers
+=================================================================================
+Reference: mkFit (MkFitCore, MkFitCMS, MkFit) with the final fit of trackingMkFitFit as MkFitCore has it (its own
+propagation and update sequences, the field constants fitted to the field map, per-module material, the outlier rules
+and the per-hit / outer states), MkFitCore built with -Ofast, and the release JSON of the LST step
+(mkfit-phase2-lstStep.json). Everything not listed here reproduces the reference at the rounding level: every stage
+was compared with the reference on the same events against its own rounding differences (MkFitCore built for
+x86-64-v3 vs v2 and with / without -Ofast).
+Each entry: what the reference does, why it is wrong or worse, what the port does, the evidence, the switch.
+Code markers: "// DEVIATION DEV-<n>". ON = applied by customizeHLTforMkFitAlpaka.
+
+Earlier entries now in the reference (the port follows MkFitCore there; numbers kept for the cross-references):
+  DEV-1  NaN guards of the final fit: MkFitCore tests isFinite, which -Ofast does not fold away.
+  DEV-3  outlier test of the innermost / outermost hit with the pass that predicts it (chi2 > 20), and outlier rounds
+         until a round removes no hit.
+  DEV-4  a fit with a non-finite or negative chi2 has failed (chi2 -1 after a failed backward pass, or an outlier kept
+         by the three-hit minimum): the output conversion drops it.
+  DEV-5  every fit pass propagates to its first hit (not only the refits after an outlier removal).
+  DEV-6  the track algorithm of the output conversion is a parameter (algorithmName, 'initialStep' in the menu).
+
+DEV-2  Seed states of the LST T5 / T4 / pT3 / pT5 seeds from a device Kalman fit (ON; known small regression)
+  Reference: LSTOutputConverter.cc:236-262 runs SeedFromConsecutiveHitsCreator::makeSeed on the host (FastHelix + initial
+    errors + one forward KF with PropagatorWithMaterial and the track-angle hit refit), MkFitSeedConverter.cc:107-160
+    converts the state. The largest host cost of the step.
+  Port: the host creator's structure on the device with mkFit's propagation and material (src/alpaka/seeds/
+    LstSeedKernels.h: FastHelix through the region origin, its initial errors, one forward pass, state at the last
+    hit, its rejections). A rejected T5 / T4 seed is dropped, a rejected pT3 / pT5 seed keeps its pixel seed (hits and
+    the DEV-7 state), as the converter (LSTOutputConverter.cc:268-272, :279). pLS seeds: DEV-7.
+  Evidence: paired efficiency -0.00013 (ttbar) / -0.00014 (QCD) +- 0.00001; every MTV bin within 2 sigma; fake and
+    duplicate rates equal or lower.
+
+DEV-7  pLS parameters from a device emulation of the pixel-seed creator, computed before LST (ON; known regression)
+  Reference: hltInitialStepSeeds (SeedGeneratorFromProtoTracksEDProducer + SeedFromConsecutiveHitsCreator on the pixel
+    tracks) -> hltInputLST (state on the last hit, TSCBL, perigee ptError / etaError) -> LST's pLS. ~19 ms host.
+  Port: hltInputLSTDevice does the same per pixel track on the device (DEV-2's creator emulation, the device PCA, the
+    same error formulas); a device creator failure gives no pLS, as the host creator gives no seed.
+  Evidence: pLS fields vs the host: r3PCA q90 0.18 mm, dz q90 0.67 mm, ptPCA q90 2.6%; endcap ptErr wider (|eta| > 2.5:
+    q50 +10%). Paired efficiency ttbar -0.00030 +- 0.00030, QCD -0.00035 +- 0.00026 (hltGeneral); MTV within 2 sigma;
+    pulls and resolutions 3 of 960 tests beyond 3 sigma. With the KF-menu comparison: -0.05 (ttbar) / -0.02 (QCD) pp
+    at 0.9-10 GeV, from |eta| > 2.5. The remaining difference enters through LST's pLS selection
+    (ptIn > ptCut - 2 ptErr) and the endcap ptErr; refitting the pixel hits with the track angles matches the host
+    fields but loses forward efficiency (tried, not used).
+
+DEV-8  Seed hit order: equal sort keys in input order (ON)
+  Reference: LSTOutputConverter std::sorts the seed hits (inner tracker first, subdetector, det radius / |z|). Hits with
+    equal keys (e.g. overlapping modules of one layer or disk ring) keep their input order in lists of up to 16 hits;
+    in longer lists their order is libstdc++'s introsort order.
+  Port: equal keys in input order for any list length: a rank within each LST logical layer in the device seed
+    hand-off.
+  Evidence: bitwise equal to a host hand-off with std::stable_sort in 294,694 ttbar + 433,155 QCD seeds (CPU, 200 events
+    each). Vs LSTOutputConverter's order 1.4% (ttbar) / 1.5% (QCD) of the seeds differ, all with > 16 hits. Physics vs
+    the std::sort order (GPU, 500 ttbar + 500 QCD, paired): efficiency +0.01 +- 0.01 / +0.02 +- 0.02, displaced
+    2.5-63 cm +0.00 +- 0.03 / +0.06 +- 0.03, fake and duplicate rates unchanged.
+
+DEV-10 Final-fit outlier test near the outer end, one outlier per round (ON, nearEdgeHitsOuter 3, outliersPerRound 1)
+  MkFitCore: MkBuilder::fit_tracks (outlier block): the outermost hit is an outlier when the forward pass has chi2 > 20,
+    the other hits only when both one-sided chi2 are large. Near the outer end the backward side is predicted from 1-2
+    hits plus the x100 prior, so hits 1-2 from the end are never removed, and all flagged hits of a round go at once.
+    KFFittingSmoother (EstimateCut 20, MaxNumberOfOutliers 6) removes one outlier per iteration, near-end hits
+    included.
+  Port: the nearEdgeHitsOuter (3) hits nearest the outer end are outliers when the forward pass has chi2 > 20; at most
+    outliersPerRound (1) hit per round, the largest f + b first; rounds continue until a round removes no hit, as in
+    MkFitCore. Two conditions keep the test to forward predictions that can test a hit:
+    - an outer hit, the outermost one included, is tested only when the hits before it lie on at least 3 other
+      detector layers (the two sensors of a stacked module are one layer; three points fix the circle);
+    - a hit only this window flags counts only in a round in which no other hit of the track is flagged. On short
+      displaced tracks the forward prediction at the outer hits is built on hits that still hold an outlier; without
+      this condition true outer hits were removed (production radius 31.6-63 cm: -0.8 pp ttbar, -1.0 pp QCD).
+    GPU: the first 6 rounds run as stage kernels, the tracks still refitting then finish in one tail kernel with the
+    same calls per track.
+  Evidence: 2000 ttbar + 1000 QCD events with the fine-grained material, GPU, paired per simulated track against the
+    rule OFF: hltGeneral efficiency (pT > 1 GeV) +0.16 +- 0.01 pp (ttbar) / +0.18 +- 0.02 pp (QCD); production radius
+    31.6-63 cm +0.35 +- 0.17 / -0.07 +- 0.13 pp; fake rate 0.98 -> 0.92% / 1.22 -> 1.17%; pT pull core width unchanged.
+
+DEV-11 Track building with the field constants fitted to the field map (ON, MkFitAlpakaESProducer buildingFitField)
+  MkFitCore: track building bends with Bz from the constants of CMSSW's ParabolicMf (MkFitGeometryESProducer copies
+    portableParabolicMagneticField::Parameters into Config::mag_*); the final fit uses its own constants, fitted to the
+    CMS field map over the tracker volume (Config::mag_fit_*). The ParabolicMf constants are low by 1.46% on average
+    against that map (up to 4.7% at the ends of the tracker), so the building's pT estimate is low by about as much.
+  Port: track building uses the final fit's constants (MaterialView::bField = mag_fit_*); the final fit and the device
+    seed fits are unchanged.
+  Evidence: 500 ttbar + 500 QCD PU200 events, L40, paired over files, the same code with and without the switch:
+    hltGeneral efficiency at sim pT 0.8-1 GeV +0.69 +- 0.11 (ttbar) / +0.73 +- 0.12 (QCD) absolute %, above 1 GeV
+    unchanged (+0.01 +- 0.01 / -0.01 +- 0.02), fake rate -0.005 +- 0.001 / +0.002 +- 0.002, +14.5 / +14.2 initial-step
+    tracks per event. The low-pT tracks pass the building's candidate pT cut (0.85 / 0.8 GeV) with the unbiased pT.
