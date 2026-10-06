@@ -1437,13 +1437,32 @@ namespace mkfit {
                              std::map<int, std::vector<int>> *remap) {
     //could be wrapped into some setup_fit
     const TrackerInfo &ti = m_job->m_trk_info;
-    PropagationFlags my_flags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
+    // The field-model fixes are enabled for the final fit only: propagateHelixToPlaneMPlex is also used in
+    // building, where they would change which hits are found (efficiency, fakes, HLT timing).
+    PropagationFlags my_flags = PropagationFlags(PF_use_param_b_field | PF_apply_material |
+                                                 (Config::refitBFieldAtMid ? PF_b_field_at_mid : PF_none) |
+                                                 (Config::refitRadialFieldCorr ? PF_radial_field_corr : PF_none));
     my_flags.tracker_info = &ti;
+    // Energy-loss sign from the pass (Config::refitElossSignFromPass): the forward pass loses energy on every
+    // step, the backward pass gains it, whatever order the refit visits the modules in.
+    PropagationFlags my_flags_bk = my_flags;
+    if (Config::refitElossSignFromPass) {
+      my_flags.eloss_by_pass = true;
+      my_flags.eloss_outward = true;
+      my_flags_bk.eloss_by_pass = true;
+      my_flags_bk.eloss_outward = false;
+    }
     //clean at the end
     mkfitter->refit_flags = &my_flags;
+    mkfitter->refit_flags_bk = &my_flags_bk;
     mkfitter->set_cpe(m_job->m_cpe_corr_func);
 
     mkfitter->m_event = m_event;
+
+    // per-hit states: each lane writes into its track's HitStatesOnTrack (reset: a refit after outlier removal
+    // uses fewer hits)
+    mkfitter->m_storeHitStates = m_hsOut != nullptr;
+    mkfitter->m_validateHitStates = m_hsFwdOut != nullptr && m_hsBwdOut != nullptr;
 
     int size_trks = (end_trk - start_trk);
     int size_hits = size_trks * nFoundHits;
@@ -1464,6 +1483,19 @@ namespace mkfit {
     for (int icand = start_trk; icand < end_trk; icand += NN) {
       // size
       const int end = std::min(icand + NN, end_trk);
+      for (int i = 0; i < NN; ++i) {
+        const int it = icand + i < end ? inds[icand + i] : -1;
+        auto lane = [&](std::vector<HitStatesOnTrack> *out) -> HitStatesOnTrack * {
+          if (!out || it < 0)
+            return nullptr;
+          HitStatesOnTrack &hs = (*out)[it];
+          hs.assign(m_tracks[it].nTotalHits(), HitStateOnTrack{});
+          return &hs;
+        };
+        mkfitter->m_hsOut[i] = lane(m_hsOut);
+        mkfitter->m_hsFwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsFwdOut) : nullptr;
+        mkfitter->m_hsBwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsBwdOut) : nullptr;
+      }
       // input candidate tracks
       mkfitter->fwdFitInputTracks(m_tracks, inds, icand, end);
       //prepare indices
@@ -1572,6 +1604,12 @@ namespace mkfit {
     std::cout << "here are N tracks " << m_tracks.size() << std::endl;
 #endif
     int N = 0;
+
+    for (auto *out : {m_hsOut, m_hsFwdOut, m_hsBwdOut})
+      if (out) {
+        out->clear();
+        out->resize(m_tracks.size());
+      }
 
     std::map<int, std::vector<int>> mapFoundHits;
     std::map<int, std::vector<int>> remap;
