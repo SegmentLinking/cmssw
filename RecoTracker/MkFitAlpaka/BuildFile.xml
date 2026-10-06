@@ -1,0 +1,34 @@
+<!-- Portable (Alpaka) mkFit: core library (src/*.cc host, src/alpaka/*.dev.cc per backend) -->
+<use name="alpaka"/>
+<use name="vdt_headers"/>
+<use name="FWCore/Utilities"/>
+<use name="FWCore/MessageLogger"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SoATemplate"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="RecoTracker/MkFitCore"/>
+<flags ALPAKA_BACKENDS="1"/>
+<!-- ptxas warns on a register spill; the spill gate is test/replay_kernel_registers.sh. No -Werror: a spill on a future
+     architecture must not break a release build. -->
+<flags CUDA_FLAGS="-Xptxas=-warn-spills"/>
+<export>
+  <lib name="1"/>
+</export>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<!-- The CPU backends (serial / TBB) get MkFitCore's flags (ofast-flag = -Ofast -fno-reciprocal-math -mrecip=none,
+     -fopenmp-simd) through USE_ALPAKA_<BACKEND>, which adds the tool to that backend's product only. Plain CXXFLAGS also
+     reach hipcc, so -Ofast never goes there; CUDA / ROCm device code stays strict.
+     Three -Ofast components are switched back off, each measured against MkFitCore: -fassociative-math (MkFitCore's
+     flags alone change the forward-stage results beyond MkFitCore's own rounding differences), -ffinite-math-only and
+     -fno-signed-zeros (each moves the vectorized plane propagation away from MkFitCore, to 2e-3 at q99). The speed
+     comes from -fno-trapping-math (if-conversion and vectorization of the per-slot bodies), which stays. The three are no-ops for
+     compilers without fast math; REM keeps the hipcc host line unchanged.
+     The trailing &#9; (tab) is needed: SCRAM writes use_public + use with no separator, which glues the tool name to the
+     parent-library use; make splits on the tab. -->
+<flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+<flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+<flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+<flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+<use name="DataFormats/SiPixelDigiSoA"/>
+<use name="DataFormats/SiPixelClusterSoA"/>
