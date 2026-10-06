@@ -357,3 +357,8 @@ fragment.schedule = cms.Schedule(*[
     fragment.HLTriggerFinalPath,
     fragment.HLTAnalyzerEndpath,
 ])
+
+### The mkFit chain of the initial step on the device with Alpaka (--procModifiers trackingMkFitFit,trackingMkFitAlpaka)
+from Configuration.ProcessModifiers.trackingMkFitAlpaka_cff import trackingMkFitAlpaka
+from RecoTracker.MkFitAlpaka.customizeHLTforMkFitAlpaka import customizeHLTforMkFitAlpaka as _customizeHLTforMkFitAlpaka
+modifyHLTforMkFitAlpaka_ = trackingMkFitAlpaka.makeProcessModifier(_customizeHLTforMkFitAlpaka)
