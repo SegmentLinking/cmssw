@@ -1,0 +1,28 @@
+<lcgdict>
+  <!-- Event products of MkFitAlpaka (device side, cuda); the host types are in src/classes_def.xml. -->
+  <class name="alpaka_cuda_async::mkfitdev::EventOfHitsDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::EventOfHitsDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::EventOfHitsDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkfitdev::TrackSoADeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::TrackSoADeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::TrackSoADeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkfitdev::CandStoreDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::CandStoreDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::CandStoreDeviceCollection>>" persistent="false"/>
+  <class name="alpaka_cuda_async::mkfitdev::MkFitStatusDeviceObject" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::MkFitStatusDeviceObject>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::MkFitStatusDeviceObject>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkfitdev::OTRecHitDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::OTRecHitDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::OTRecHitDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkfitdev::OutConvDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::OutConvDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::OutConvDeviceCollection>>" persistent="false"/>
+  <class name="alpaka_cuda_async::mkfitdev::NavResultDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkfitdev::NavResultDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkfitdev::NavResultDeviceCollection>>" persistent="false"/>
+</lcgdict>
