@@ -1,6 +1,7 @@
 # Phase-2 HLT: the mkFit chain of the LST initial step on the device with Alpaka (one code for GPU and CPU backends).
-# Apply with --customise RecoTracker/MkFitAlpaka/customizeHLTforMkFitAlpaka.customizeHLTforMkFitAlpaka on top of the
-# menu with --procModifiers trackingMkFitFit. Module labels of the menu are kept, so downstream InputTags resolve
+# Switched on with --procModifiers trackingMkFitFit,trackingMkFitAlpaka (HLT_75e33 menus), or applied with --customise
+# RecoTracker/MkFitAlpaka/customizeHLTforMkFitAlpaka.customizeHLTforMkFitAlpaka on top of the menu with --procModifiers
+# trackingMkFitFit. Module labels of the menu are kept, so downstream InputTags resolve
 # unchanged. What runs where:
 #   hltMkFitAlpakaOTRecHits         device OT rechits (also the CA OT hit SoA); the legacy OT rechit producer leaves the
 #                                   menu, its readers make the few OT hits they need on demand
@@ -616,7 +617,7 @@ def _pcaDevice(process):
 
 def customizeHLTforMkFitAlpaka(process, nearEndOutliers=None):
     """The mkFit chain of the LST initial step on the device (needs --procModifiers trackingMkFitFit)."""
-    if not hasattr(process, BUILD):
+    if not hasattr(process, BUILD) or hasattr(process, BUILD_DEVICE):  # not the mkFit-fit menu, or applied already
         return process
     _deviceFit(process)
     _deviceHits(process)
