@@ -684,9 +684,11 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       AddpT5asTrackCandidate{},
                       nLowerModules_,
                       pixelQuintupletsDC_->const_view(),
+                      quintupletsDC_->const_view().quintuplets(),
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view(),
                       lstInputDC_->const_view().pixelSeeds(),
+                      pixelSegmentsDC_->view(),
                       rangesDC_->const_view(),
                       nTotal);
 
@@ -941,6 +943,7 @@ void LSTEvent::createQuintuplets() {
                         tripletsDC_->const_view().tripletsByMD(),
                         tripletsDC_->const_view().tripletsRangesByMD(),
                         rangesDC_->const_view(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
                         ptCut_);
   };
   if (reduceMemByFullPrecompute_)
@@ -1001,8 +1004,6 @@ void LSTEvent::createQuintuplets() {
     alpaka::memset(queue_, isDup_view, 0u);
     auto nLayers_view = cms::alpakatools::make_device_view(queue_, quintuplets.nLayers());
     alpaka::memset(queue_, nLayers_view, 0u);
-    auto tightCutFlag_view = cms::alpakatools::make_device_view(queue_, quintuplets.tightCutFlag());
-    alpaka::memset(queue_, tightCutFlag_view, 0u);
     auto partOfPT5_view = cms::alpakatools::make_device_view(queue_, quintuplets.partOfPT5());
     alpaka::memset(queue_, partOfPT5_view, 0u);
   }
@@ -1214,6 +1215,19 @@ void LSTEvent::createPixelQuintuplets() {
                       RemoveDupPixelQuintupletsFromMap{},
                       pixelQuintupletsDC_->view());
 
+  auto const resetPartOfPT5_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
+  for (bool set : {false, true}) {
+    alpaka::exec<Acc1D>(queue_,
+                        resetPartOfPT5_workDiv,
+                        ResetPartOfPT5{set},
+                        nLowerModules_,
+                        pixelQuintupletsDC_->const_view(),
+                        quintupletsDC_->view().quintuplets(),
+                        tripletsDC_->view().triplets(),
+                        pixelSegmentsDC_->view(),
+                        rangesDC_->const_view());
+  }
+
 #ifdef WARNINGS
   auto nPixelQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
 
@@ -1240,6 +1254,8 @@ void LSTEvent::createQuadruplets() {
                         tripletsDC_->const_view().tripletsOccupancy(),
                         tripletsDC_->const_view().tripletsBySegment(),
                         tripletsDC_->const_view().tripletsRangesBySegment(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                        tripletsDC_->const_view().tripletsRangesByMD(),
                         rangesDC_->const_view(),
                         ptCut_);
   };
@@ -1303,6 +1319,8 @@ void LSTEvent::createQuadruplets() {
                         tripletsDC_->const_view().tripletsOccupancy(),
                         tripletsDC_->const_view().tripletsBySegment(),
                         tripletsDC_->const_view().tripletsRangesBySegment(),
+                        miniDoubletsDC_->const_view().miniDoubletsOccupancy(),
+                        tripletsDC_->const_view().tripletsRangesByMD(),
                         quadrupletsDC_->view().quadruplets(),
                         quadrupletsDC_->view().quadrupletsOccupancy(),
                         rangesDC_->const_view(),

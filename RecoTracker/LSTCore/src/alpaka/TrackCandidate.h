@@ -417,8 +417,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           for (unsigned int trackCandidateIndex : cms::alpakatools::uniform_elements_x(acc, nTrackCandidates)) {
             short type = candsBase.trackCandidateType()[trackCandidateIndex];
             unsigned int outerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][1];
-            // Deleted when a promoted candidate owns three of its hits, or two for a pixel quintuplet.
-            const int minShared = (type == LSTObjType::pT5) ? 2 : 3;
+            // Deleted when a promoted candidate owns three of its hits, or two for a pixel quintuplet or triplet.
+            // A T5 TC whose T5 is partOfPT5 can only be a demoted pT5, so it keeps the pT5 rule.
+            const bool demotedpT5 = type == LSTObjType::T5 && quintuplets.partOfPT5()[outerTrackletIdx];
+            const int minShared = (type == LSTObjType::pT5 || type == LSTObjType::pT3 || demotedpT5) ? 2 : 3;
             if (type == LSTObjType::T5 || type == LSTObjType::pT5) {
               unsigned int const* t5Hits = quintuplets.hitIndices()[outerTrackletIdx].data();
               if (nSharedHitsT4(t4Hits, t5Hits, Params_T5::kHits) >= minShared)
@@ -471,8 +473,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         unsigned int nQuints = quintupletsOccupancy.nQuintuplets()[idx];
         for (unsigned int jdx = 0; jdx < nQuints; ++jdx) {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
-          if (!quintuplets.isDup()[quintupletIndex] && !quintuplets.partOfPT5()[quintupletIndex] &&
-              quintuplets.tightCutFlag()[quintupletIndex])
+          if (!quintuplets.isDup()[quintupletIndex] && !quintuplets.partOfPT5()[quintupletIndex])
             alpaka::atomicAdd(acc, &nSurviving[2], 1u, alpaka::hierarchy::Threads{});
         }
       }
@@ -568,8 +569,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           unsigned int quintupletIndex = ranges.quintupletModuleIndices()[idx] + jdx;
           if (quintuplets.isDup()[quintupletIndex] or quintuplets.partOfPT5()[quintupletIndex])
             continue;
-          if (!(quintuplets.tightCutFlag()[quintupletIndex]))
-            continue;
 
           unsigned int trackCandidateIdx =
               alpaka::atomicAdd(acc, &candsBase.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
@@ -642,9 +641,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   uint16_t nLowerModules,
                                   PixelQuintupletsConst pixelQuintuplets,
+                                  QuintupletsConst quintuplets,
                                   TrackCandidatesBase candsBase,
                                   TrackCandidatesExtended candsExtended,
                                   PixelSeedsConst pixelSeeds,
+                                  PixelSegments pixelSegments,
                                   ObjectRangesConst ranges,
                                   unsigned int nAllocated) const {
       // implementation is 1D with a single block
@@ -665,6 +666,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           alpaka::atomicSub(acc, &candsBase.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
           break;
 
+        } else if (__H2F(pixelQuintuplets.score()[pixelQuintupletIndex]) > kpT5DemoteScore) {
+          // Above 5 GeV no chi2 cut checks the pixel-T5 pairing, so in dense environments a genuine T5 is often
+          // paired with a foreign pLS. Such a pT5 is written as a T5 TC and its pLS is kept dead.
+          alpaka::atomicAdd(acc, &candsExtended.nTrackCandidatesT5(), 1u, alpaka::hierarchy::Threads{});
+          unsigned int quintupletIndex = pixelQuintuplets.quintupletIndices()[pixelQuintupletIndex];
+          // bit 3: dead because its pT5 was demoted (so CrossCleanpLS / AddpLSasTrackCandidate skip it)
+          pixelSegments.isDup()[pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex] - pLS_offset] |= 8;
+          addTrackCandidateToMemory(candsBase,
+                                    candsExtended,
+                                    LSTObjType::T5,
+                                    quintupletIndex,
+                                    quintupletIndex,
+                                    quintuplets.logicalLayers()[quintupletIndex].data(),
+                                    quintuplets.lowerModuleIndices()[quintupletIndex].data(),
+                                    quintuplets.hitIndices()[quintupletIndex].data(),
+                                    -1 /*no pixel seed index for T5s*/,
+                                    quintuplets.regressionCenterX()[quintupletIndex],
+                                    quintuplets.regressionCenterY()[quintupletIndex],
+                                    quintuplets.regressionRadius()[quintupletIndex],
+                                    trackCandidateIdx,
+                                    quintupletIndex);
         } else {
           alpaka::atomicAdd(acc, &candsExtended.nTrackCandidatespT5(), 1u, alpaka::hierarchy::Threads{});
 
