@@ -7,6 +7,7 @@
 #include "RecoTracker/LSTCore/interface/ObjectRangesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/SegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/T3FeaturesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TripletsHostCollection.h"
 
 #endif

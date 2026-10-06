@@ -41,4 +41,10 @@
   <class name="lst::TripletsSoALayout<128,false>"/>
   <class name="lst::TripletsOccupancySoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::TripletsHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::T3FeaturesHostCollection"/>
+  <!-- lst::T3FeaturesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::T3FeaturesHostCollection::Layout"/>
+  <class name="lst::T3FeaturesSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::T3FeaturesHostCollection>" splitLevel="0" persistent="false"/>
 </lcgdict>
