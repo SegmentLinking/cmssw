@@ -110,7 +110,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     bool keepHostCopies_ = false;  // copy a device collection to host before it is released (standalone writer)
     double memoryAllocatedMB_ = 0;
     double memoryLiveMB_ = 0;
+    unsigned int nT4Compact_ = 0;  // T4 count after compactQuadruplets()
     double memoryPeakLiveMB_ = 0;
+
+    // pLS superbins and pixel types, read back at the MD-stage sync, and the pixel-map ranges built from them (pT5, pT3).
+    std::optional<cms::alpakatools::host_buffer<int[]>> superbinsHost_;
+    std::optional<cms::alpakatools::host_buffer<PixelType[]>> pixelTypesHost_;
+    std::optional<cms::alpakatools::device_buffer<Device, unsigned int[]>> connectedPixelSize_;
+    std::optional<cms::alpakatools::device_buffer<Device, unsigned int[]>> connectedPixelIndex_;
+    void copyPixelSeedTypesToHost();
+    void fillConnectedPixels();
 
     void trackAllocatedMB(double mb);
     void trackTransientMB(double mb);  // live (peak) accounting only, not added to the allocated total
