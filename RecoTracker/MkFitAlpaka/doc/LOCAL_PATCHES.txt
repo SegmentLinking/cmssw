@@ -7,6 +7,9 @@ RecoTracker/PixelTrackFitting
   1. PixelTrackProducerFromSoAAlpaka otClustersOnDemand: OT extension hits on demand.
 RecoLocalTracker/Phase2TrackerRecHits
   2. Phase2TrackerRecHitOnDemand.h: one OT rechit from its cluster key.
+Configuration/ProcessModifiers, HLTrigger/Configuration
+  3. Process modifier trackingMkFitAlpaka: HLT_75e33_cff and HLT_75e33_timing_cff apply customizeHLTforMkFitAlpaka
+     when it is chosen (--procModifiers trackingMkFitFit,trackingMkFitAlpaka).
 
 Other dependencies: the open LST / mkFit pull requests (memory compaction, T5 / T4 DNN retrain, mkFit and HLT
 LST-step fixes with the cms-data JSON update, LST timing), the parametrised-field pull requests, and the fine-grained
