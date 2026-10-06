@@ -3,6 +3,7 @@
 <use name="RecoLocalTracker/ClusterParameterEstimator"/>
 <use name="DataFormats/Phase2TrackerCluster"/>
 <use name="CondFormats/SiPhase2TrackerObjects"/>
+<use name="DataFormats/TrackerRecHit2D"/>
 <export>
   <lib name="1"/>
 </export>
