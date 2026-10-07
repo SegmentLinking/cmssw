@@ -425,8 +425,11 @@ namespace mkfit {
         ms_ref_p[i] = (i < N_proc && ipt > 0.f && sT > 0.f) ? 1.f / (ipt * sT) : 1.f;
       }
     }
-    const final_fit::Pass pass{
-        *refit_flags, *refit_ffflags, false, refit_ffflags->bkw_ms_fixed_momentum ? ms_ref_p : nullptr};
+    const final_fit::Pass pass{*refit_flags,
+                               *refit_ffflags,
+                               false,
+                               refit_ffflags->bkw_ms_fixed_momentum ? ms_ref_p : nullptr,
+                               refit_ffflags->bkw_sub_steps};
 
     for (int h = 0; h < nFoundHits; ++h)  //first loop over the group - need to use the mplex here
     {

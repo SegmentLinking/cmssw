@@ -47,6 +47,10 @@ namespace mkfit {
     // per track, instead of at the running estimate, which correlates the assumed noise with the estimate's own
     // error.  Only theta0 changes; the geometric factors and the energy loss use the current state.
     bool bkw_ms_fixed_momentum = true;
+    // Number of sub-steps of each propagation of the backward pass (1 = one step).  The parameters are carried
+    // through the sub-steps, each with the field model of a full step; the covariance is transported once, with
+    // the Jacobian of the whole step, and material is applied at the destination.
+    int bkw_sub_steps = 2;
   };
 
   class PropagationConfig {

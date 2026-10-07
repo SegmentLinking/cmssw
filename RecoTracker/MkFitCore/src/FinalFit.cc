@@ -1,6 +1,8 @@
 #include "FinalFit.h"
 #include "PlaneSteps.h"
 
+#include "PropagationMPlex.h"
+
 #include "RecoTracker/MkFitCore/interface/Config.h"
 #include "RecoTracker/MkFitCore/interface/PropagationConfig.h"
 #include "RecoTracker/MkFitCore/interface/cms_common_macros.h"
@@ -236,6 +238,90 @@ namespace mkfit::final_fit {
       }
     }
 
+    // The end of a propagation to a plane: transport the covariance with J, apply the material at the destination
+    // (the energy-loss sign from the pass, or from the path length s), bring phi into range, and restore the start
+    // state on lanes that failed.
+    void finish_on_plane(const TrackRef& in,
+                         const MPlexLS& inErr,
+                         const MPlexHV& plNrm,
+                         const MPlexLL& J,
+                         const MPlexQF& s,
+                         MPlexLS& outErr,
+                         MPlexLV& outPar,
+                         MPlexQI& outFailFlag,
+                         const Pass& pass,
+                         const MPlexQI* noMatEffPtr) {
+      transport_cov(J, inErr, outErr);
+
+      if (pass.pflags.apply_material) {
+        MaterialAt m;
+        material_grid(*pass.pflags.tracker_info, outPar, noMatEffPtr, in.n_proc, m);
+        if (pass.ffflags.eloss_sign_from_pass)
+          eloss_sign_of_pass(pass.outward, noMatEffPtr, in.n_proc, m);
+        else
+          eloss_sign_from_path(s, noMatEffPtr, in.n_proc, m);
+        apply_material(m, plNrm, outErr, outPar, in.n_proc, pass.ms_ref_p);
+      }
+
+      finish(in, inErr, outFailFlag, outPar, outErr);
+    }
+
+    // The first path-length estimate to the plane, the start of the path solve; the straight line where that is
+    // not finite, and zero where neither is.  It only partitions a step into sub-steps.
+    MPF first_path_estimate(const TrackRef& in, const PlaneRef& pl, const PropagationFlags& pflags) {
+      FieldAt f;
+      field_at_start(in, pflags, f);
+      StartTrig t;
+      start_trig(in, t);
+      PathSolve p;
+      path_init(in, t, pl, f, p);
+      MPF s0{0.0f};
+      for (int n = 0; n < in.n_proc; ++n) {
+        float s = p.s[n];
+        if (!mkfit::isFinite(s))
+          s = p.s_line[n];
+        s0[n] = mkfit::isFinite(s) ? s : 0.f;
+      }
+      return s0;
+    }
+
+    // One sub-step of fixed path length step (per lane; 0 = no move), parameters only, with the field model of a
+    // full step.
+    void fixed_length_sub_step(MPlexLV& par,
+                               const MPlexQI& chg,
+                               const MPF& step,
+                               const int N_proc,
+                               const PropagationFlags& pflags,
+                               const FinalFitFlags& ffflags) {
+      const TrackRef in{par, chg, N_proc};
+      // a drift with B at the start
+      FieldAt f;
+      field_at_start(in, pflags, f);
+      StartTrig t;
+      start_trig(in, t);
+      MPlexLV p1{0.0f};
+      drift(in, t, f, step, p1);
+      // b_field_at_mid: the drift again, with B at the chord midpoint
+      if (pflags.use_param_b_field && ffflags.b_field_at_mid) {
+        field_at_mid(in, p1, f);
+        drift(in, t, f, step, p1);
+      }
+      // radial_field_corr: half of the radial-field kick D before the drift and half after it, D between the
+      // uncorrected endpoints; the kicked drift keeps the midpoint field, which the kick moves only at second order
+      if (pflags.use_param_b_field && ffflags.radial_field_corr) {
+        const MPF dvec = brDeltaRPphiV(par, p1, chg);
+        MPlexLV ph = par;
+        applyDpPhiV(ph, 0.5f * dvec, N_proc);
+        const TrackRef inh{ph, chg, N_proc};
+        StartTrig th;
+        start_trig(inh, th);
+        drift(inh, th, f, step, p1);
+        applyDpPhiV(p1, 0.5f * dvec, N_proc);
+      }
+      squashPhiMPlex(p1, N_proc);
+      par = p1;
+    }
+
     // The Kalman update of the predicted state (psErr, psPar) with the hits, and its chi2.
     void update_on_plane(const MPlexLS& psErr,
                          const MPlexLV& psPar,
@@ -298,19 +384,60 @@ namespace mkfit::final_fit {
 
     step_to_plane(in, pl, pflags, pass.ffflags, outPar, s, &errorProp);
 
-    transport_cov(errorProp, inErr, outErr);
+    finish_on_plane(in, inErr, plNrm, errorProp, s, outErr, outPar, outFailFlag, pass, noMatEffPtr);
+  }
 
-    if (pflags.apply_material) {
-      MaterialAt m;
-      material_grid(*pflags.tracker_info, outPar, noMatEffPtr, N_proc, m);
-      if (pass.ffflags.eloss_sign_from_pass)
-        eloss_sign_of_pass(pass.outward, noMatEffPtr, N_proc, m);
-      else
-        eloss_sign_from_path(s, noMatEffPtr, N_proc, m);
-      apply_material(m, plNrm, outErr, outPar, N_proc, pass.ms_ref_p);
+  void propagate_sub_steps(const MPlexLS& inErr,
+                           const MPlexLV& inPar,
+                           const MPlexQI& inChg,
+                           const MPlexHV& plPnt,
+                           const MPlexHV& plNrm,
+                           MPlexLS& outErr,
+                           MPlexLV& outPar,
+                           MPlexQI& outFailFlag,
+                           const int N_proc,
+                           const Pass& pass,
+                           const int nSub,
+                           const bool* split,
+                           const MPlexQI* noMatEffPtr) {
+    const PropagationFlags& pflags = pass.pflags;
+    const FinalFitFlags& ffflags = pass.ffflags;
+    const TrackRef in{inPar, inChg, N_proc};
+    const PlaneRef pl{plPnt, plNrm};
+    outFailFlag.setVal(0);
+
+    // the first nSub - 1 sub-steps, of fixed path length (none with nSub == 1)
+    MPlexLV par = inPar;
+    MPF sTot{0.0f};
+    if (nSub > 1) {
+      MPF step = first_path_estimate(in, pl, pflags);
+      for (int n = 0; n < NN; ++n)
+        step[n] = (n < N_proc && (split == nullptr || split[n])) ? step[n] / nSub : 0.f;
+      for (int ks = 1; ks < nSub; ++ks) {
+        fixed_length_sub_step(par, inChg, step, N_proc, pflags, ffflags);
+        sTot = sTot + step;
+      }
     }
 
-    finish(in, inErr, outFailFlag, outPar, outErr);
+    // the last sub-step onto the plane, parameters only
+    MPF sLast{0.0f};
+    step_to_plane(TrackRef{par, inChg, N_proc}, pl, pflags, ffflags, outPar, sLast, nullptr);
+    sTot = sTot + sLast;
+
+    // the field of the whole step (at the chord midpoint with b_field_at_mid), and in it the Jacobian errorProp
+    // of the one-step transport from the start over the accumulated path length
+    FieldAt fW;
+    field_at_start(in, pflags, fW);
+    if (pflags.use_param_b_field && ffflags.b_field_at_mid)
+      field_at_mid(in, outPar, fW);
+    StartTrig t;
+    start_trig(in, t);
+    MPlexLV parJ{0.0f};
+    MPlexLL errorProp{0.0f};
+    drift(in, t, fW, sTot, parJ);
+    jacobian(in, t, parJ, fW, sTot, errorProp);
+
+    finish_on_plane(in, inErr, plNrm, errorProp, sTot, outErr, outPar, outFailFlag, pass, noMatEffPtr);
   }
 
   void propagate_update(const MPlexLS& psErr,
@@ -331,7 +458,42 @@ namespace mkfit::final_fit {
                         const MPlexQI* noMatEffPtr,
                         const MPlexQI* doCPE,
                         cpe_func cpe_corr_func) {
-    if (propToHit) {
+    // Sub-steps for the lanes not yet on their plane.
+    bool split[NN] = {false};
+    bool any_split = false;
+    if (propToHit && pass.n_sub > 1) {
+      for (int i = 0; i < N_proc; ++i) {
+        const float d = (plPnt.constAt(i, 0, 0) - psPar.constAt(i, 0, 0)) * plNrm.constAt(i, 0, 0) +
+                        (plPnt.constAt(i, 1, 0) - psPar.constAt(i, 1, 0)) * plNrm.constAt(i, 1, 0) +
+                        (plPnt.constAt(i, 2, 0) - psPar.constAt(i, 2, 0)) * plNrm.constAt(i, 2, 0);
+        if (d != 0.f) {
+          split[i] = true;
+          any_split = true;
+        }
+      }
+    }
+
+    if (any_split) {
+      MPlexLS propErr;
+      MPlexLV propPar;
+      propagate_sub_steps(
+          psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, pass.n_sub, split, noMatEffPtr);
+      update_on_plane(propErr,
+                      propPar,
+                      Chg,
+                      msErr,
+                      msPar,
+                      plNrm,
+                      plDir,
+                      plPnt,
+                      outErr,
+                      outPar,
+                      outChi2,
+                      N_proc,
+                      pass.pflags,
+                      doCPE,
+                      cpe_corr_func);
+    } else if (propToHit) {
       MPlexLS propErr;
       MPlexLV propPar;
       propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, noMatEffPtr);
