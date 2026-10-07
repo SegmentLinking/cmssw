@@ -383,8 +383,11 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
   const auto &p = det->position();
   auto z = det->rotation().z();
   auto x = det->rotation().x();
+  // module material: stored on the module and spread into the (|z|, r) grid below
+  const float bbxi = det->surface().mediumProperties().xi();
+  const float radL = det->surface().mediumProperties().radLen();
   layer_info.register_module(
-      {{p.x(), p.y(), p.z()}, {z.x(), z.y(), z.z()}, {x.x(), x.y(), x.z()}, detid.rawId(), shape_id});
+      {{p.x(), p.y(), p.z()}, {z.x(), z.y(), z.z()}, {x.x(), x.y(), x.z()}, detid.rawId(), shape_id, radL, bbxi});
   // Set some layer parameters (repeatedly, would require hard-coding otherwise)
   layer_info.set_subdet(detid.subdetId());
   layer_info.set_is_pixel(detid.subdetId() <= 2);
@@ -394,9 +397,6 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
 
   // Fill material
   {
-    // module material
-    const float bbxi = det->surface().mediumProperties().xi();
-    const float radL = det->surface().mediumProperties().radLen();
     // loop over bins to fill histogram with bbxi, radL and their weight, which the overlap surface in r-z with the cmsquare of a bin
     const float iBin = trk_info.mat_range_z() / trk_info.mat_nbins_z();
     const float jBin = trk_info.mat_range_r() / trk_info.mat_nbins_r();

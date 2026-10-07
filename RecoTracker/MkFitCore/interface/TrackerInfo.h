@@ -59,13 +59,17 @@ namespace mkfit {
     // the geometry binary, and the two bytes the compiler inserts after shapeid
     // were going to file uninitialised: two dumps of the SAME geometry then
     // differed in ~46 kB of 2.1 MB, which makes a byte comparison of two
-    // geometry files meaningless. sizeof(ModuleInfo) is unchanged at 44, so the
-    // file format and f_sizeof_moduleinfo are unaffected.
+    // geometry files meaningless.
     unsigned short pad_ = 0;
+    // The module's own material (MediumProperties): radiation length and Bethe-Bloch xi at normal incidence.
+    // The (|z|, r) material grid averages over every module overlapping a cell and has no phi dimension.
+    float radl = 0.f;
+    float bbxi = 0.f;
 
     ModuleInfo() = default;
-    ModuleInfo(SVector3 p, SVector3 zd, SVector3 xd, unsigned int did, unsigned short sid)
-        : pos(p), zdir(zd), xdir(xd), detid(did), shapeid(sid) {}
+    ModuleInfo(
+        SVector3 p, SVector3 zd, SVector3 xd, unsigned int did, unsigned short sid, float rl = 0.f, float bx = 0.f)
+        : pos(p), zdir(zd), xdir(xd), detid(did), shapeid(sid), radl(rl), bbxi(bx) {}
 
     SVector3 calc_ydir() const { return ROOT::Math::Cross(zdir, xdir); }
   };
