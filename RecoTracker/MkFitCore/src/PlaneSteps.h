@@ -43,14 +43,19 @@ namespace mkfit {
       MPlexQF kinv;
     };
 
+    // Trigonometry of the start state: sin and cos of the momentum's phi and theta.  Computed once per
+    // start state and read by every step that starts from it.
+    struct StartTrig {
+      MPlexQF sinP, cosP;
+      MPlexQF sinT, cosT;
+    };
+
     // The path length to the plane while it is being solved: s, and the start state's straight-line
-    // solution and polar angle, which every refinement reuses.  s starts at zero on every lane, so
-    // lanes beyond n_proc read zero.
+    // solution, which the closing step falls back to.  s starts at zero on every lane, so lanes beyond
+    // n_proc read zero.
     struct PathSolve {
       MPlexQF s{0.0f};
       MPlexQF s_line;
-      MPlexQF sinT;
-      MPlexQF cosT;
     };
 
     // Material to apply at the destination of a step: radiation length and Bethe-Bloch xi at
@@ -97,22 +102,26 @@ namespace mkfit {
     // The field at the start state: parametrised (pf.use_param_b_field) or constant.
     void field_at_start(const TrackRef& in, const PropagationFlags& pf, FieldAt& f);
 
+    // The trigonometry of the start state.
+    void start_trig(const TrackRef& in, StartTrig& t);
+
     // The path length from the start state to the plane in the field f: a first solve, refinements
     // from the state the current solution reaches, and the straight line where the helix solution is
     // not finite.  path_solve() does the three with Config::nSStepsInProp2Plane - 1 refinements.
-    void path_init(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
-    void path_refine(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
+    void path_init(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
+    void path_refine(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
     void path_close(const TrackRef& in, PathSolve& p);
-    void path_solve(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
+    void path_solve(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
 
     // The path length from the transverse one, when the caller already knows the crossing.
-    void path_from_perp(const TrackRef& in, const MPlexQF& sPerp, MPlexQF& s);
+    void path_from_perp(const TrackRef& in, const StartTrig& t, const MPlexQF& sPerp, MPlexQF& s);
 
     // Parameters after a helix step of path length s from the start state, in the field f.
-    void drift(const TrackRef& in, const FieldAt& f, const MPlexQF& s, MPlexLV& outPar);
+    void drift(const TrackRef& in, const StartTrig& t, const FieldAt& f, const MPlexQF& s, MPlexLV& outPar);
 
     // Transport Jacobian of the step from the start state to outPar, in the field f.
-    void jacobian(const TrackRef& in, const MPlexLV& outPar, const FieldAt& f, const MPlexQF& s, MPlexLL& J);
+    void jacobian(
+        const TrackRef& in, const StartTrig& t, const MPlexLV& outPar, const FieldAt& f, const MPlexQF& s, MPlexLL& J);
 
     // Covariance at the destination: J C J^T.
     void transport_cov(const MPlexLL& J, const MPlexLS& inErr, MPlexLS& outErr);

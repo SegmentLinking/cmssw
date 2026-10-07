@@ -91,13 +91,17 @@ namespace {
   }
 
   void parsFromPathL_impl(const MPlexLV& __restrict__ inPar,
+                          const MPlexQF& __restrict__ sin_mom_phi,
+                          const MPlexQF& __restrict__ cos_mom_phi,
+                          const MPlexQF& __restrict__ sin_mom_tht,
+                          const MPlexQF& __restrict__ cos_mom_tht,
                           MPlexLV& __restrict__ outPar,
                           const MPlexQF& __restrict__ kinv,
                           const MPlexQF& __restrict__ s) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
-    const MPF alpha = s * mpt::fast_sin(inPar(5, 0)) * inPar(3, 0) * kinv;
+    const MPF alpha = s * sin_mom_tht * inPar(3, 0) * kinv;
 
     MPF sinah, cosah;
     if constexpr (Config::useTrigApprox) {
@@ -105,12 +109,6 @@ namespace {
     } else {
       mpt::fast_sincos(0.5f * alpha, sinah, cosah);
     }
-
-    MPF sin_mom_phi, cos_mom_phi;
-    mpt::fast_sincos(inPar(4, 0), sin_mom_phi, cos_mom_phi);
-
-    MPF sin_mom_tht, cos_mom_tht;
-    mpt::fast_sincos(inPar(5, 0), sin_mom_tht, cos_mom_tht);
 
     outPar.aij(0, 0) = inPar(0, 0) + 2.f * sinah * (cos_mom_phi * cosah - sin_mom_phi * sinah) / (inPar(3, 0) * kinv);
     outPar.aij(1, 0) = inPar(1, 0) + 2.f * sinah * (sin_mom_phi * cosah + cos_mom_phi * sinah) / (inPar(3, 0) * kinv);
@@ -126,6 +124,10 @@ namespace {
   // (Bz along z, the field the step was taken in).
   void errPropFromPathL_impl(const MPlexLV& __restrict__ inPar,
                              const MPlexQI& __restrict__ inChg,
+                             const MPlexQF& __restrict__ sinPin,
+                             const MPlexQF& __restrict__ cosPin,
+                             const MPlexQF& __restrict__ sinT,
+                             const MPlexQF& __restrict__ cosT,
                              const MPlexLV& __restrict__ outPar,
                              const MPlexQF& __restrict__ bFld,
                              const MPlexQF& __restrict__ s,
@@ -134,12 +136,8 @@ namespace {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
-    MPF sinPin, cosPin;
-    mpt::fast_sincos(inPar(4, 0), sinPin, cosPin);
     MPF sinPout, cosPout;
     mpt::fast_sincos(outPar(4, 0), sinPout, cosPout);
-    MPF sinT, cosT;
-    mpt::fast_sincos(inPar(5, 0), sinT, cosT);
 
     // use code from AnalyticalCurvilinearJacobian::computeFullJacobian for error propagation in curvilinear coordinates, then convert to CCS
     // main difference from the above function is that we assume that the magnetic field is purely along z (which also implies that there is no change in pz)
@@ -375,18 +373,20 @@ namespace {
 
   // The path length to the plane (plPnt, plNrm) is solved in three parts: a first solve from the start
   // state, refinements from the state the current solution reaches, and the straight line where the
-  // helix solution is not finite.  s_line, sinT and cosT are the start state's straight-line solution
-  // and polar angle, which every refinement reuses.
+  // helix solution is not finite.  sinP, cosP, sinT and cosT are the start state's trigonometry; s_line
+  // is its straight-line solution.
 
   void pathInit_impl(const MPlexLV& __restrict__ inPar,
                      const MPlexQI& __restrict__ inChg,
                      const MPlexHV& __restrict__ plPnt,
                      const MPlexHV& __restrict__ plNrm,
+                     const MPlexQF& __restrict__ sinP,
+                     const MPlexQF& __restrict__ cosP,
+                     const MPlexQF& __restrict__ sinT,
+                     const MPlexQF& __restrict__ cosT,
                      const MPlexQF& __restrict__ kinv,
                      MPlexQF& __restrict__ s,
                      MPlexQF& __restrict__ sl,
-                     MPlexQF& __restrict__ sinT,
-                     MPlexQF& __restrict__ cosT,
                      const int N_proc) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
@@ -406,10 +406,6 @@ namespace {
     MPF delta0 = inPar(0, 0) - plPnt(0, 0);
     MPF delta1 = inPar(1, 0) - plPnt(1, 0);
     MPF delta2 = inPar(2, 0) - plPnt(2, 0);
-
-    MPF sinP, cosP;
-    mpt::fast_sincos(inPar(4, 0), sinP, cosP);
-    mpt::fast_sincos(inPar(5, 0), sinT, cosT);
 
     // determine solution for straight line
     sl = -(plNrm(0, 0) * delta0 + plNrm(1, 0) * delta1 + plNrm(2, 0) * delta2) /
@@ -440,16 +436,18 @@ namespace {
                        const MPlexQI& __restrict__ inChg,
                        const MPlexHV& __restrict__ plPnt,
                        const MPlexHV& __restrict__ plNrm,
-                       const MPlexQF& __restrict__ kinv,
+                       const MPlexQF& __restrict__ sinP0,
+                       const MPlexQF& __restrict__ cosP0,
                        const MPlexQF& __restrict__ sinT,
                        const MPlexQF& __restrict__ cosT,
+                       const MPlexQF& __restrict__ kinv,
                        MPlexQF& __restrict__ s,
                        const int N_proc) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
     MPlexLV outParTmp{0.0f};
-    parsFromPathL_impl(inPar, outParTmp, kinv, s);
+    parsFromPathL_impl(inPar, sinP0, cosP0, sinT, cosT, outParTmp, kinv, s);
 
     const MPF delta0 = outParTmp(0, 0) - plPnt(0, 0);
     const MPF delta1 = outParTmp(1, 0) - plPnt(1, 0);
@@ -517,34 +515,40 @@ namespace mkfit::plane {
     f.kinv *= f.b;
   }
 
-  void path_init(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
-    pathInit_impl(in.par, in.chg, pl.pnt, pl.nrm, f.kinv, p.s, p.s_line, p.sinT, p.cosT, in.n_proc);
+  void start_trig(const TrackRef& in, StartTrig& t) {
+    Matriplex::fast_sincos(in.par(4, 0), t.sinP, t.cosP);
+    Matriplex::fast_sincos(in.par(5, 0), t.sinT, t.cosT);
   }
 
-  void path_refine(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
-    pathRefine_impl(in.par, in.chg, pl.pnt, pl.nrm, f.kinv, p.sinT, p.cosT, p.s, in.n_proc);
+  void path_init(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
+    pathInit_impl(in.par, in.chg, pl.pnt, pl.nrm, t.sinP, t.cosP, t.sinT, t.cosT, f.kinv, p.s, p.s_line, in.n_proc);
+  }
+
+  void path_refine(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
+    pathRefine_impl(in.par, in.chg, pl.pnt, pl.nrm, t.sinP, t.cosP, t.sinT, t.cosT, f.kinv, p.s, in.n_proc);
   }
 
   void path_close(const TrackRef& in, PathSolve& p) { pathClose_impl(p.s_line, p.s, in.n_proc); }
 
-  void path_solve(const TrackRef& in, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
-    path_init(in, pl, f, p);
+  void path_solve(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
+    path_init(in, t, pl, f, p);
     CMS_UNROLL_LOOP_COUNT(Config::nSStepsInProp2Plane - 1)
     for (int i = 0; i < Config::nSStepsInProp2Plane - 1; ++i)
-      path_refine(in, pl, f, p);
+      path_refine(in, t, pl, f, p);
     path_close(in, p);
   }
 
-  void path_from_perp(const TrackRef& in, const MPlexQF& sPerp, MPlexQF& s) {
-    s = sPerp / Matriplex::fast_sin(in.par(5, 0));
+  void path_from_perp(const TrackRef& in, const StartTrig& t, const MPlexQF& sPerp, MPlexQF& s) {
+    s = sPerp / t.sinT;
   }
 
-  void drift(const TrackRef& in, const FieldAt& f, const MPlexQF& s, MPlexLV& outPar) {
-    parsFromPathL_impl(in.par, outPar, f.kinv, s);
+  void drift(const TrackRef& in, const StartTrig& t, const FieldAt& f, const MPlexQF& s, MPlexLV& outPar) {
+    parsFromPathL_impl(in.par, t.sinP, t.cosP, t.sinT, t.cosT, outPar, f.kinv, s);
   }
 
-  void jacobian(const TrackRef& in, const MPlexLV& outPar, const FieldAt& f, const MPlexQF& s, MPlexLL& J) {
-    errPropFromPathL_impl(in.par, in.chg, outPar, f.b, s, J, in.n_proc);
+  void jacobian(
+      const TrackRef& in, const StartTrig& t, const MPlexLV& outPar, const FieldAt& f, const MPlexQF& s, MPlexLL& J) {
+    errPropFromPathL_impl(in.par, in.chg, t.sinP, t.cosP, t.sinT, t.cosT, outPar, f.b, s, J, in.n_proc);
   }
 
   void transport_cov(const MPlexLL& J, const MPlexLS& inErr, MPlexLS& outErr) {
@@ -641,10 +645,12 @@ namespace mkfit {
 
     FieldAt f;
     field_at_start(in, pflags, f);
+    StartTrig t;
+    start_trig(in, t);
     PathSolve p;
-    path_solve(in, pl, f, p);
-    drift(in, f, p.s, outPar);
-    jacobian(in, outPar, f, p.s, errorProp);
+    path_solve(in, t, pl, f, p);
+    drift(in, t, f, p.s, outPar);
+    jacobian(in, t, outPar, f, p.s, errorProp);
     for (int n = 0; n < N_proc; ++n)
       pathL[n] = p.s[n];
   }
@@ -670,10 +676,12 @@ namespace mkfit {
 
     FieldAt f;
     field_at_start(in, pflags, f);
+    StartTrig t;
+    start_trig(in, t);
     PathSolve p;
-    path_solve(in, pl, f, p);
-    drift(in, f, p.s, outPar);
-    jacobian(in, outPar, f, p.s, errorProp);
+    path_solve(in, t, pl, f, p);
+    drift(in, t, f, p.s, outPar);
+    jacobian(in, t, outPar, f, p.s, errorProp);
 
 #ifdef DEBUG
     for (int n = 0; n < N_proc; ++n) {
