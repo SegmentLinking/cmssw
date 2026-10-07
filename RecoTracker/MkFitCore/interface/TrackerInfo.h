@@ -218,6 +218,11 @@ namespace mkfit {
     bool check_idcs(int i1, int i2) const { return i1 >= 0 && i1 < m_n1 && i2 >= 0 && i2 < m_n2; }
 
   private:
+    // TrackerInfo::write_bin_file() streams m_n1/m_n2 by taking the address of
+    // the rectvec itself and writing two ints, so their position is part of the
+    // geometry file format and it static_asserts on it.
+    friend class TrackerInfo;
+
     int m_n1, m_n2;
     std::vector<T> m_vec;
   };
@@ -261,8 +266,22 @@ namespace mkfit {
     const PropagationConfig& prop_config() const { return m_prop_config; }
     PropagationConfig& prop_config_nc() { return m_prop_config; }
 
-    void write_bin_file(const std::string& fname) const;
+    // geom_version is the geometry's identity, e.g. "Run4D127". Passed in rather
+    // than stored on the object because the caller is an EventSetup product that
+    // must not be mutated. Empty writes an empty stamp, which reads back as
+    // "unknown".
+    void write_bin_file(const std::string& fname, const std::string& geom_version = "") const;
     void read_bin_file(const std::string& fname);
+
+    // Fixed-size storage, because the value's only destination is a fixed-size
+    // field in the geometry file header. A std::string here would have to be
+    // truncated on the way out, silently: two versions sharing a 63-character
+    // prefix would then stamp identically, and a truncated stamp would falsely
+    // mismatch a full one. Setting an over-long value is an error instead.
+    static constexpr size_t s_geom_version_size = 64;
+
+    std::string geom_version() const { return m_geom_version; }
+    void set_geom_version(const std::string& v);
     void print_tracker(int level, int precision = 3) const;
 
     void create_material(int nBinZ, float rngZ, int nBinR, float rngR);
@@ -298,6 +317,12 @@ namespace mkfit {
     rectvec<Material> m_mat_vec;
 
     PropagationConfig m_prop_config;
+
+    // Identity of the geometry this TrackerInfo was built from, e.g. "Run4D127".
+    // Set by the dumper from its configuration (see write_bin_file) and read back
+    // from the binary; EMPTY means the dumper was not told. Not streamed as part
+    // of this object -- it lives in GeomFileHeader.
+    char m_geom_version[s_geom_version_size] = {0};
   };
 
 }  // end namespace mkfit
