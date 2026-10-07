@@ -250,12 +250,16 @@ namespace mkfit::final_fit {
                          MPlexLV& outPar,
                          MPlexQI& outFailFlag,
                          const Pass& pass,
-                         const MPlexQI* noMatEffPtr) {
+                         const MPlexQI* noMatEffPtr,
+                         const ModuleMaterial* modMat) {
       transport_cov(J, inErr, outErr);
 
       if (pass.pflags.apply_material) {
         MaterialAt m;
-        material_grid(*pass.pflags.tracker_info, outPar, noMatEffPtr, in.n_proc, m);
+        if (pass.ffflags.material_per_module && modMat)
+          material_given(modMat->radl, modMat->bbxi, noMatEffPtr, in.n_proc, m);
+        else
+          material_grid(*pass.pflags.tracker_info, outPar, noMatEffPtr, in.n_proc, m);
         if (pass.ffflags.eloss_sign_from_pass)
           eloss_sign_of_pass(pass.outward, noMatEffPtr, in.n_proc, m);
         else
@@ -373,7 +377,8 @@ namespace mkfit::final_fit {
                  MPlexQI& outFailFlag,
                  const int N_proc,
                  const Pass& pass,
-                 const MPlexQI* noMatEffPtr) {
+                 const MPlexQI* noMatEffPtr,
+                 const ModuleMaterial* modMat) {
     const PropagationFlags& pflags = pass.pflags;
     const TrackRef in{inPar, inChg, N_proc};
     const PlaneRef pl{plPnt, plNrm};
@@ -384,7 +389,7 @@ namespace mkfit::final_fit {
 
     step_to_plane(in, pl, pflags, pass.ffflags, outPar, s, &errorProp);
 
-    finish_on_plane(in, inErr, plNrm, errorProp, s, outErr, outPar, outFailFlag, pass, noMatEffPtr);
+    finish_on_plane(in, inErr, plNrm, errorProp, s, outErr, outPar, outFailFlag, pass, noMatEffPtr, modMat);
   }
 
   void propagate_sub_steps(const MPlexLS& inErr,
@@ -399,7 +404,8 @@ namespace mkfit::final_fit {
                            const Pass& pass,
                            const int nSub,
                            const bool* split,
-                           const MPlexQI* noMatEffPtr) {
+                           const MPlexQI* noMatEffPtr,
+                           const ModuleMaterial* modMat) {
     const PropagationFlags& pflags = pass.pflags;
     const FinalFitFlags& ffflags = pass.ffflags;
     const TrackRef in{inPar, inChg, N_proc};
@@ -437,7 +443,7 @@ namespace mkfit::final_fit {
     drift(in, t, fW, sTot, parJ);
     jacobian(in, t, parJ, fW, sTot, errorProp);
 
-    finish_on_plane(in, inErr, plNrm, errorProp, sTot, outErr, outPar, outFailFlag, pass, noMatEffPtr);
+    finish_on_plane(in, inErr, plNrm, errorProp, sTot, outErr, outPar, outFailFlag, pass, noMatEffPtr, modMat);
   }
 
   void propagate_update(const MPlexLS& psErr,
@@ -457,7 +463,8 @@ namespace mkfit::final_fit {
                         const bool propToHit,
                         const MPlexQI* noMatEffPtr,
                         const MPlexQI* doCPE,
-                        cpe_func cpe_corr_func) {
+                        cpe_func cpe_corr_func,
+                        const ModuleMaterial* modMat) {
     // Sub-steps for the lanes not yet on their plane.
     bool split[NN] = {false};
     bool any_split = false;
@@ -476,8 +483,20 @@ namespace mkfit::final_fit {
     if (any_split) {
       MPlexLS propErr;
       MPlexLV propPar;
-      propagate_sub_steps(
-          psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, pass.n_sub, split, noMatEffPtr);
+      propagate_sub_steps(psErr,
+                          psPar,
+                          Chg,
+                          plPnt,
+                          plNrm,
+                          propErr,
+                          propPar,
+                          outFailFlag,
+                          N_proc,
+                          pass,
+                          pass.n_sub,
+                          split,
+                          noMatEffPtr,
+                          modMat);
       update_on_plane(propErr,
                       propPar,
                       Chg,
@@ -496,7 +515,7 @@ namespace mkfit::final_fit {
     } else if (propToHit) {
       MPlexLS propErr;
       MPlexLV propPar;
-      propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, noMatEffPtr);
+      propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, noMatEffPtr, modMat);
       update_on_plane(propErr,
                       propPar,
                       Chg,

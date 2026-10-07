@@ -148,6 +148,7 @@ private:
   bool refitElossSignFromPass_;
   bool refitBkwMsFixedMomentum_;
   int refitBkwSubSteps_;
+  bool refitMaterialPerModule_;
 };
 
 MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfig) {
@@ -165,6 +166,7 @@ MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfi
   refitBkwSubSteps_ = iConfig.getParameter<int>("refitBkwSubSteps");
   if (refitBkwSubSteps_ < 1)
     throw cms::Exception("Configuration") << "refitBkwSubSteps must be >= 1";
+  refitMaterialPerModule_ = iConfig.getParameter<bool>("refitMaterialPerModule");
 }
 
 void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
@@ -193,6 +195,10 @@ void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &d
       ->setComment(
           "refit only: number of sub-steps of each propagation of the backward pass (fixed path length, parameters "
           "only, covariance with the whole-step Jacobian); 1 = one step");
+  desc.add<bool>("refitMaterialPerModule", true)
+      ->setComment(
+          "refit only: material of each crossed module from its own MediumProperties instead of the (|z|,r) grid, "
+          "which averages over the modules overlapping a 1 cm cell and has no phi dimension");
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -756,6 +762,7 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
     pconf.final_fit_ffflags.eloss_sign_from_pass = refitElossSignFromPass_;
     pconf.final_fit_ffflags.bkw_ms_fixed_momentum = refitBkwMsFixedMomentum_;
     pconf.final_fit_ffflags.bkw_sub_steps = refitBkwSubSteps_;
+    pconf.final_fit_ffflags.material_per_module = refitMaterialPerModule_;
     pconf.seed_fit_pflags = PropagationFlags(PF_none);
     pconf.pca_prop_pflags = PropagationFlags(PF_none);
     pconf.apply_tracker_info(trackerInfo.get());

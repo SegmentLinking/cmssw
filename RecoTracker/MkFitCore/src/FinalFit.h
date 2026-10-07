@@ -26,6 +26,13 @@ namespace mkfit {
       const int n_sub = 1;
     };
 
+    // The material of each lane's destination module (ModuleInfo::radl and bbxi), used in place of the material
+    // grid when FinalFitFlags::material_per_module is set.
+    struct ModuleMaterial {
+      const MPlexQF& radl;
+      const MPlexQF& bbxi;
+    };
+
     // Propagation of (inErr, inPar) to the planes (plPnt, plNrm), with material at the destination.
     void propagate(const MPlexLS& inErr,
                    const MPlexLV& inPar,
@@ -37,7 +44,8 @@ namespace mkfit {
                    MPlexQI& outFailFlag,
                    const int N_proc,
                    const Pass& pass,
-                   const MPlexQI* noMatEffPtr);
+                   const MPlexQI* noMatEffPtr,
+                   const ModuleMaterial* modMat);
 
     // Propagation of (inErr, inPar) to the planes in nSub sub-steps: the parameters through nSub - 1 drifts of
     // fixed path length s0/nSub (s0 = the first path-length estimate to the plane), each with the field model of a
@@ -55,7 +63,8 @@ namespace mkfit {
                              const Pass& pass,
                              const int nSub,
                              const bool* split,
-                             const MPlexQI* noMatEffPtr);
+                             const MPlexQI* noMatEffPtr,
+                             const ModuleMaterial* modMat);
 
     // Propagation to the hits' planes (unless propToHit is false: the state is already there), then the Kalman
     // update with the hits and its chi2.  A negative q/p after the update flips the charge.  With pass.n_sub > 1
@@ -77,7 +86,8 @@ namespace mkfit {
                           const bool propToHit,
                           const MPlexQI* noMatEffPtr,
                           const MPlexQI* doCPE,
-                          cpe_func cpe_corr_func);
+                          cpe_func cpe_corr_func,
+                          const ModuleMaterial* modMat);
 
   }  // namespace final_fit
 

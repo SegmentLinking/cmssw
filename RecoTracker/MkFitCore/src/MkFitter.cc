@@ -221,6 +221,8 @@ namespace mkfit {
     MPlexLV propPar;
 
     MPlexHV norm, dir, pnt;
+    MPlexQF mat_radl{0.0f}, mat_bbxi{0.0f};  // the module's own material (FinalFitFlags::material_per_module)
+    const final_fit::ModuleMaterial modMat{mat_radl, mat_bbxi};
 
     MPlexQI no_mat_effs;
     MPlexQI do_cpe;
@@ -297,6 +299,8 @@ namespace mkfit {
           pnt.At(i, 0, 0) = mi.pos[0];
           pnt.At(i, 1, 0) = mi.pos[1];
           pnt.At(i, 2, 0) = mi.pos[2];
+          mat_radl.At(i, 0, 0) = mi.radl;
+          mat_bbxi.At(i, 0, 0) = mi.bbxi;
 #ifdef DEBUG_FIT
           std::cout << "mi.pos[0] " << mi.pos[0] << " mi.pos[1] " << mi.pos[1] << " mi.pos[2] " << mi.pos[2]
                     << std::endl;
@@ -353,7 +357,8 @@ namespace mkfit {
                                   propHit,
                                   &no_mat_effs,
                                   &do_cpe,
-                                  m_cpe_corr_func);
+                                  m_cpe_corr_func,
+                                  &modMat);
 
 #ifdef DEBUG_FIT
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;
@@ -393,6 +398,8 @@ namespace mkfit {
     MPlexLV propPar;
 
     MPlexHV norm, dir, pnt;
+    MPlexQF mat_radl{0.0f}, mat_bbxi{0.0f};  // the module's own material (FinalFitFlags::material_per_module)
+    const final_fit::ModuleMaterial modMat{mat_radl, mat_bbxi};
 
     MPlexQI no_mat_effs;
     MPlexQI do_cpe;
@@ -481,6 +488,8 @@ namespace mkfit {
           pnt.At(i, 0, 0) = mi.pos[0];
           pnt.At(i, 1, 0) = mi.pos[1];
           pnt.At(i, 2, 0) = mi.pos[2];
+          mat_radl.At(i, 0, 0) = mi.radl;
+          mat_bbxi.At(i, 0, 0) = mi.bbxi;
 #ifdef DEBUG_FIT_BKW
           std::cout << "mi.pos[0] " << mi.pos[0] << " mi.pos[1] " << mi.pos[1] << " mi.pos[2] " << mi.pos[2]
                     << std::endl;
@@ -537,7 +546,8 @@ namespace mkfit {
                                   propHit,
                                   &no_mat_effs,
                                   &do_cpe,
-                                  m_cpe_corr_func);
+                                  m_cpe_corr_func,
+                                  &modMat);
 
 #ifdef DEBUG_FIT_BKW
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;

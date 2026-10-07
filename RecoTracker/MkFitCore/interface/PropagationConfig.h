@@ -51,6 +51,9 @@ namespace mkfit {
     // through the sub-steps, each with the field model of a full step; the covariance is transported once, with
     // the Jacobian of the whole step, and material is applied at the destination.
     int bkw_sub_steps = 2;
+    // Material of each crossed module from its own MediumProperties (ModuleInfo::radl, bbxi) instead of the
+    // (|z|, r) grid, which averages over the modules overlapping a cell and has no phi dimension.
+    bool material_per_module = true;
   };
 
   class PropagationConfig {
