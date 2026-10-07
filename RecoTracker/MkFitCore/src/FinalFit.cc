@@ -341,7 +341,8 @@ namespace mkfit::final_fit {
                          const int N_proc,
                          const PropagationFlags& pflags,
                          const MPlexQI* doCPE,
-                         cpe_func cpe_corr_func) {
+                         cpe_func cpe_corr_func,
+                         const LocalStatesOut* localStates) {
       const TrackRef pred{psPar, inChg, N_proc};
       const PlaneRef pl{plPnt, plNrm};
 
@@ -362,6 +363,19 @@ namespace mkfit::final_fit {
 
       LocalUpd U;
       update(L, R, U);
+      // the local states the caller asked for (a null pointer: not needed)
+      if (localStates) {
+        if (localStates->predPar)
+          *localStates->predPar = L.lp;
+        if (localStates->predErr)
+          *localStates->predErr = L.err;
+        if (localStates->updPar)
+          *localStates->updPar = U.lp;
+        if (localStates->updErr)
+          *localStates->updErr = U.err;
+        if (localStates->pzSign)
+          *localStates->pzSign = L.pz_sign;
+      }
       to_global(U, L, pl, inChg, bFld, outPar, outErr);
     }
 
@@ -464,7 +478,8 @@ namespace mkfit::final_fit {
                         const MPlexQI* noMatEffPtr,
                         const MPlexQI* doCPE,
                         cpe_func cpe_corr_func,
-                        const ModuleMaterial* modMat) {
+                        const ModuleMaterial* modMat,
+                        const LocalStatesOut* localStates) {
     // Sub-steps for the lanes not yet on their plane.
     bool split[NN] = {false};
     bool any_split = false;
@@ -511,7 +526,8 @@ namespace mkfit::final_fit {
                       N_proc,
                       pass.pflags,
                       doCPE,
-                      cpe_corr_func);
+                      cpe_corr_func,
+                      localStates);
     } else if (propToHit) {
       MPlexLS propErr;
       MPlexLV propPar;
@@ -530,7 +546,8 @@ namespace mkfit::final_fit {
                       N_proc,
                       pass.pflags,
                       doCPE,
-                      cpe_corr_func);
+                      cpe_corr_func,
+                      localStates);
     } else {
       update_on_plane(psErr,
                       psPar,
@@ -546,7 +563,8 @@ namespace mkfit::final_fit {
                       N_proc,
                       pass.pflags,
                       doCPE,
-                      cpe_corr_func);
+                      cpe_corr_func,
+                      localStates);
     }
     for (int n = 0; n < NN; ++n) {
       if (outPar.At(n, 3, 0) < 0) {
@@ -556,4 +574,138 @@ namespace mkfit::final_fit {
     }
   }
 
+  //==============================================================================
+  // Per-hit states of the final fit: two-filter smoother on a module plane
+  //==============================================================================
+
+  void smooth_local_states(const MPlex5V& xf,
+                           const MPlex5S& cf,
+                           const MPlex5V& xb,
+                           const MPlex5S& cb,
+                           MPlex5V& xs,
+                           MPlex5S& cs,
+                           MPlexQI& ok,
+                           const int N_proc) {
+    // S = Cf + Cb = L L^T (Cholesky, L = chol).  With Yf = L^-1 Cf (yFwd), Yb = L^-1 Cb (yBwd) and
+    // z = L^-1 (xb - xf) (zRes):
+    //   xs = xf + Cf S^-1 (xb - xf) = xf + Yf^T z,   Cs = Cf S^-1 Cb = Yf^T Yb.
+    // Only forward substitutions; Cs as a product, not Cf - Cf S^-1 Cf, so no cancellation when Cb << Cf.
+    // Single precision: Cholesky does not care about the scales of the five parameters.  Only a strongly ill-conditioned
+    // combination loses digits (at PU200 about one state in a few million, by a few tenths of its sigma).
+    // Every innermost loop runs over the NN lanes and vectorises; the elements of the symmetric inputs are read
+    // through row pointers taken outside them.
+    constexpr int D = 5;
+    // Work arrays in the Matriplex layout [row][column][lane], plain: GCC vectorises the lane loops over these, not
+    // over Matriplex accessors in the same loop nests.
+    float chol[D][D][NN];      // L, lower triangle
+    float cholInvDiag[D][NN];  // 1 / L(j, j)
+    float acc[NN];             // per-lane accumulator
+#pragma omp simd
+    for (int n = 0; n < NN; ++n)
+      ok(n, 0, 0) = 1;
+    for (int j = 0; j < D; ++j) {
+      const float* cfJJ = &cf.constAt(0, j, j);
+      const float* cbJJ = &cb.constAt(0, j, j);
+#pragma omp simd
+      for (int n = 0; n < NN; ++n)
+        acc[n] = cfJJ[n] + cbJJ[n];
+      for (int k = 0; k < j; ++k)
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          acc[n] -= chol[j][k][n] * chol[j][k][n];
+#pragma omp simd
+      for (int n = 0; n < NN; ++n) {
+        ok(n, 0, 0) &= acc[n] > 0.f;
+        acc[n] = acc[n] > 1.e-30f ? acc[n] : 1.e-30f;
+      }
+      // (a separate loop, so that the sqrt and the division vectorise also with trapping math)
+#pragma omp simd
+      for (int n = 0; n < NN; ++n) {
+        chol[j][j][n] = std::sqrt(acc[n]);
+        cholInvDiag[j][n] = 1.f / chol[j][j][n];
+      }
+      for (int i = j + 1; i < D; ++i) {
+        const float* cfIJ = &cf.constAt(0, i, j);
+        const float* cbIJ = &cb.constAt(0, i, j);
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          acc[n] = cfIJ[n] + cbIJ[n];
+        for (int k = 0; k < j; ++k)
+#pragma omp simd
+          for (int n = 0; n < NN; ++n)
+            acc[n] -= chol[i][k][n] * chol[j][k][n];
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          chol[i][j][n] = acc[n] * cholInvDiag[j][n];
+      }
+    }
+
+    // forward substitution L y = b for b = xb - xf and the five columns of Cf and of Cb
+    float zRes[D][NN], yFwd[D][D][NN], yBwd[D][D][NN];
+    for (int i = 0; i < D; ++i) {
+      const float* xbI = &xb.constAt(0, i, 0);
+      const float* xfI = &xf.constAt(0, i, 0);
+#pragma omp simd
+      for (int n = 0; n < NN; ++n)
+        zRes[i][n] = xbI[n] - xfI[n];
+      for (int k = 0; k < i; ++k)
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          zRes[i][n] -= chol[i][k][n] * zRes[k][n];
+#pragma omp simd
+      for (int n = 0; n < NN; ++n)
+        zRes[i][n] *= cholInvDiag[i][n];
+    }
+    for (int c = 0; c < D; ++c)
+      for (int i = 0; i < D; ++i) {
+        const float* cfIC = &cf.constAt(0, i, c);
+        const float* cbIC = &cb.constAt(0, i, c);
+#pragma omp simd
+        for (int n = 0; n < NN; ++n) {
+          yFwd[i][c][n] = cfIC[n];
+          yBwd[i][c][n] = cbIC[n];
+        }
+        for (int k = 0; k < i; ++k)
+#pragma omp simd
+          for (int n = 0; n < NN; ++n) {
+            yFwd[i][c][n] -= chol[i][k][n] * yFwd[k][c][n];
+            yBwd[i][c][n] -= chol[i][k][n] * yBwd[k][c][n];
+          }
+#pragma omp simd
+        for (int n = 0; n < NN; ++n) {
+          yFwd[i][c][n] *= cholInvDiag[i][n];
+          yBwd[i][c][n] *= cholInvDiag[i][n];
+        }
+      }
+
+    for (int i = 0; i < D; ++i) {
+      const float* xfI = &xf.constAt(0, i, 0);
+#pragma omp simd
+      for (int n = 0; n < NN; ++n)
+        acc[n] = xfI[n];
+      for (int k = 0; k < D; ++k)
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          acc[n] += yFwd[k][i][n] * zRes[k][n];
+      float* xsI = &xs.At(0, i, 0);
+#pragma omp simd
+      for (int n = 0; n < NN; ++n)
+        xsI[n] = acc[n];
+    }
+
+    for (int i = 0; i < D; ++i)
+      for (int j = 0; j <= i; ++j) {
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          acc[n] = yFwd[0][i][n] * yBwd[0][j][n];
+        for (int k = 1; k < D; ++k)
+#pragma omp simd
+          for (int n = 0; n < NN; ++n)
+            acc[n] += yFwd[k][i][n] * yBwd[k][j][n];
+        float* csIJ = &cs.At(0, i, j);
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          csIJ[n] = acc[n];
+      }
+  }
 }  // namespace mkfit::final_fit

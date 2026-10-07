@@ -33,6 +33,17 @@ namespace mkfit {
       const MPlexQF& bbxi;
     };
 
+    // Optional outputs of the update, in the local frame of the module plane (q/p, dx/dz, dy/dz, x, y) as the update
+    // computes them: the predicted and the updated state and the sign of the local z momentum.  Each pointer may be
+    // null.  For the final fit's per-hit states.
+    struct LocalStatesOut {
+      MPlex5V* predPar = nullptr;
+      MPlex5S* predErr = nullptr;
+      MPlex5V* updPar = nullptr;
+      MPlex5S* updErr = nullptr;
+      MPlexQI* pzSign = nullptr;
+    };
+
     // Propagation of (inErr, inPar) to the planes (plPnt, plNrm), with material at the destination.
     void propagate(const MPlexLS& inErr,
                    const MPlexLV& inPar,
@@ -87,7 +98,21 @@ namespace mkfit {
                           const MPlexQI* noMatEffPtr,
                           const MPlexQI* doCPE,
                           cpe_func cpe_corr_func,
-                          const ModuleMaterial* modMat);
+                          const ModuleMaterial* modMat,
+                          const LocalStatesOut* localStates = nullptr);
+
+    // Two-filter smoother on one module plane: combine two independent local estimates of the same state (the
+    // forward updated and the backward predicted one): xs = xf + Cf S^-1 (xb - xf), Cs = Cf S^-1 Cb, S = Cf + Cb.
+    // ok = 0 where S is not positive definite (a pivot of its Cholesky factorisation is not positive; a full test,
+    // not only of the diagonal).
+    void smooth_local_states(const MPlex5V& xf,
+                             const MPlex5S& cf,
+                             const MPlex5V& xb,
+                             const MPlex5S& cb,
+                             MPlex5V& xs,
+                             MPlex5S& cs,
+                             MPlexQI& ok,
+                             const int N_proc);
 
   }  // namespace final_fit
 
