@@ -411,25 +411,27 @@ namespace {
     sl = -(plNrm(0, 0) * delta0 + plNrm(1, 0) * delta1 + plNrm(2, 0) * delta2) /
          (plNrm(0, 0) * cosP * sinT + plNrm(1, 0) * sinP * sinT + plNrm(2, 0) * cosT);
 
-    //float s[nmax - nmin];
-    //first iteration outside the loop
-#pragma omp simd
-    for (int n = 0; n < N_proc; ++n) {
-      s[n] = (std::abs(plNrm(n, 2, 0)) < 1.f ? getS(delta0[n],
-                                                    delta1[n],
-                                                    delta2[n],
-                                                    plNrm(n, 0, 0),
-                                                    plNrm(n, 1, 0),
-                                                    plNrm(n, 2, 0),
-                                                    sinP[n],
-                                                    cosP[n],
-                                                    sinT[n],
-                                                    cosT[n],
-                                                    inPar(n, 3, 0),
-                                                    inChg(n, 0, 0),
-                                                    kinv[n])
-                                             : (plPnt.constAt(n, 2, 0) - inPar.constAt(n, 2, 0)) / cosT[n]);
-    }
+    // The helix and the disk solutions are computed for every lane without a branch, so that they vectorise (a
+    // select around the square root and the divisions keeps the loop scalar), and the plane type picks one after.
+    MPF sH, sZ;
+    for (int n = 0; n < NN; ++n)
+      sH[n] = getS(delta0[n],
+                   delta1[n],
+                   delta2[n],
+                   plNrm(n, 0, 0),
+                   plNrm(n, 1, 0),
+                   plNrm(n, 2, 0),
+                   sinP[n],
+                   cosP[n],
+                   sinT[n],
+                   cosT[n],
+                   inPar(n, 3, 0),
+                   inChg(n, 0, 0),
+                   kinv[n]);
+    for (int n = 0; n < NN; ++n)
+      sZ[n] = (plPnt.constAt(n, 2, 0) - inPar.constAt(n, 2, 0)) / cosT[n];
+    for (int n = 0; n < N_proc; ++n)
+      s[n] = std::abs(plNrm(n, 2, 0)) < 1.f ? sH[n] : sZ[n];
   }
 
   void pathRefine_impl(const MPlexLV& __restrict__ inPar,
@@ -453,24 +455,28 @@ namespace {
     mpt::fast_sincos(outParTmp(4, 0), sinP, cosP);
     // Note, sinT/cosT not updated
 
-#pragma omp simd
-    for (int n = 0; n < N_proc; ++n) {
-      s[n] += (std::abs(plNrm(n, 2, 0)) < 1.f
-                   ? getS(delta0[n],
-                          delta1[n],
-                          delta2[n],
-                          plNrm(n, 0, 0),
-                          plNrm(n, 1, 0),
-                          plNrm(n, 2, 0),
-                          sinP[n],
-                          cosP[n],
-                          sinT[n],
-                          cosT[n],
-                          inPar(n, 3, 0),
-                          inChg(n, 0, 0),
-                          kinv[n])
-                   : (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) / std::cos(outParTmp.constAt(n, 5, 0)));
-    }
+    // As in pathInit_impl: the helix solution for every lane, then the disk one, with its scalar cos, only on
+    // the lanes that need it.
+    MPF sH;
+    for (int n = 0; n < NN; ++n)
+      sH[n] = getS(delta0[n],
+                   delta1[n],
+                   delta2[n],
+                   plNrm(n, 0, 0),
+                   plNrm(n, 1, 0),
+                   plNrm(n, 2, 0),
+                   sinP[n],
+                   cosP[n],
+                   sinT[n],
+                   cosT[n],
+                   inPar(n, 3, 0),
+                   inChg(n, 0, 0),
+                   kinv[n]);
+    for (int n = 0; n < N_proc; ++n)
+      if (!(std::abs(plNrm(n, 2, 0)) < 1.f))
+        sH[n] = (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) / std::cos(outParTmp.constAt(n, 5, 0));
+    for (int n = 0; n < N_proc; ++n)
+      s[n] += sH[n];
   }
 
   void pathClose_impl(const MPlexQF& __restrict__ sl, MPlexQF& __restrict__ s, const int N_proc) {
