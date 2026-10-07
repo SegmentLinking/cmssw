@@ -142,7 +142,13 @@ namespace mkfit {
     void eloss_sign_of_pass(const bool outward, const MPlexQI* noMatEffPtr, const int N_proc, MaterialAt& m);
 
     // Multiple scattering and energy loss of the material m on the plane with normal plNrm.
-    void apply_material(const MaterialAt& m, const MPlexHV& plNrm, MPlexLS& err, MPlexLV& par, const int N_proc);
+    // ms_ref_p: per-lane |p| at which the scattering noise is evaluated; nullptr = the state's own momentum.
+    void apply_material(const MaterialAt& m,
+                        const MPlexHV& plNrm,
+                        MPlexLS& err,
+                        MPlexLV& par,
+                        const int N_proc,
+                        const float* ms_ref_p = nullptr);
 
     // Phi into [-pi, pi), and the start state (in, inErr) restored on lanes whose propagation failed.
     void finish(const TrackRef& in, const MPlexLS& inErr, const MPlexQI& failFlag, MPlexLV& par, MPlexLS& err);

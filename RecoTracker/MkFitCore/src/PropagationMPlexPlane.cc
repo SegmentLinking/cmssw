@@ -606,8 +606,9 @@ namespace mkfit::plane {
     }
   }
 
-  void apply_material(const MaterialAt& m, const MPlexHV& plNrm, MPlexLS& err, MPlexLV& par, const int N_proc) {
-    applyMaterialEffects(m.radl, m.xi, m.sign, plNrm, err, par, N_proc);
+  void apply_material(
+      const MaterialAt& m, const MPlexHV& plNrm, MPlexLS& err, MPlexLV& par, const int N_proc, const float* ms_ref_p) {
+    applyMaterialEffects(m.radl, m.xi, m.sign, plNrm, err, par, N_proc, ms_ref_p);
   }
 
   void finish(const TrackRef& in, const MPlexLS& inErr, const MPlexQI& failFlag, MPlexLV& par, MPlexLS& err) {

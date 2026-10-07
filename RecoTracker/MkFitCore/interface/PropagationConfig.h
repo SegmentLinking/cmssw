@@ -43,6 +43,10 @@ namespace mkfit {
     // order the fit visits them in; the path-length sign is wrong on every step the fit takes backwards, e.g.
     // between the two sensors of a PS module visited in reverse order.
     bool eloss_sign_from_pass = true;
+    // Multiple-scattering noise of the backward pass at the |p| of its start state (the forward result), fixed
+    // per track, instead of at the running estimate, which correlates the assumed noise with the estimate's own
+    // error.  Only theta0 changes; the geometric factors and the energy loss use the current state.
+    bool bkw_ms_fixed_momentum = true;
   };
 
   class PropagationConfig {

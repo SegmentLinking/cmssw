@@ -146,6 +146,7 @@ private:
   bool refitBFieldAtMid_;
   bool refitRadialFieldCorr_;
   bool refitElossSignFromPass_;
+  bool refitBkwMsFixedMomentum_;
 };
 
 MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfig) {
@@ -159,6 +160,7 @@ MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfi
   refitBFieldAtMid_ = iConfig.getParameter<bool>("refitBFieldAtMid");
   refitRadialFieldCorr_ = iConfig.getParameter<bool>("refitRadialFieldCorr");
   refitElossSignFromPass_ = iConfig.getParameter<bool>("refitElossSignFromPass");
+  refitBkwMsFixedMomentum_ = iConfig.getParameter<bool>("refitBkwMsFixedMomentum");
 }
 
 void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
@@ -179,6 +181,10 @@ void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &d
       ->setComment(
           "refit only: energy-loss sign from the pass (forward loses, backward gains) instead of from each step's "
           "path-length sign, which is wrong wherever the refit visits two modules in reverse order");
+  desc.add<bool>("refitBkwMsFixedMomentum", true)
+      ->setComment(
+          "refit only: multiple-scattering noise of the backward pass at the momentum of its start state (the "
+          "forward result), fixed per track, instead of at the running estimate");
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -740,6 +746,7 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
     pconf.final_fit_ffflags.b_field_at_mid = refitBFieldAtMid_;
     pconf.final_fit_ffflags.radial_field_corr = refitRadialFieldCorr_;
     pconf.final_fit_ffflags.eloss_sign_from_pass = refitElossSignFromPass_;
+    pconf.final_fit_ffflags.bkw_ms_fixed_momentum = refitBkwMsFixedMomentum_;
     pconf.seed_fit_pflags = PropagationFlags(PF_none);
     pconf.pca_prop_pflags = PropagationFlags(PF_none);
     pconf.apply_tracker_info(trackerInfo.get());

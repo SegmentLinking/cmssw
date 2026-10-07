@@ -15,12 +15,14 @@ namespace mkfit {
 
   namespace final_fit {
 
-    // What stays fixed over one pass of the final fit: the propagation flags, the final fit's own choices, and
-    // the direction of the pass (the forward pass runs outward).
+    // What stays fixed over one pass of the final fit: the propagation flags, the final fit's own choices, the
+    // direction of the pass (the forward pass runs outward), and the per-lane |p| at which the scattering noise
+    // is evaluated (nullptr: the running estimate).
     struct Pass {
       const PropagationFlags& pflags;
       const FinalFitFlags& ffflags;
       const bool outward;
+      const float* ms_ref_p = nullptr;
     };
 
     // Propagation of (inErr, inPar) to the planes (plPnt, plNrm), with material at the destination.

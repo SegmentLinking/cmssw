@@ -83,7 +83,8 @@ namespace mkfit {
                             const MPlexHV& plNrm,
                             MPlexLS& outErr,
                             MPlexLV& outPar,
-                            const int N_proc) {
+                            const int N_proc,
+                            const float* msRefP) {
 #pragma omp simd
     for (int n = 0; n < NN; ++n) {
       if (n >= N_proc)
@@ -120,7 +121,13 @@ namespace mkfit {
         continue;
       // const float thetaMSC = 0.0136f*std::sqrt(radL)*(1.f+0.038f*vdt::fast_logf(radL))/(beta*p);// eq 32.15
       // const float thetaMSC2 = thetaMSC*thetaMSC;
-      const float thetaMSC = 0.0136f * (1.f + 0.038f * vdt::fast_logf(radL)) / (beta * p);  // eq 32.15
+      // msRefP: theta0 at a fixed reference momentum instead of the running estimate.  Noise evaluated at the
+      // running estimate correlates the assumed noise with the estimate's own error, which biases the
+      // curvature of a scattering-dominated fit high (pT low).  Only theta0 changes: the geometric factors
+      // below still use the current state, and energy loss is untouched.
+      const float pMS = msRefP ? msRefP[n] : p;
+      const float betaMS = msRefP ? std::sqrt(pMS * pMS / (pMS * pMS + mpi2)) : beta;
+      const float thetaMSC = 0.0136f * (1.f + 0.038f * vdt::fast_logf(radL)) / (betaMS * pMS);  // eq 32.15
       const float thetaMSC2 = thetaMSC * thetaMSC * radL;
       if /*constexpr*/ (Config::usePtMultScat) {
         outErr.At(n, 3, 3) += thetaMSC2 * pz * pz * ipt2 * ipt2;

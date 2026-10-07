@@ -307,7 +307,7 @@ namespace mkfit::final_fit {
         eloss_sign_of_pass(pass.outward, noMatEffPtr, N_proc, m);
       else
         eloss_sign_from_path(s, noMatEffPtr, N_proc, m);
-      apply_material(m, plNrm, outErr, outPar, N_proc);
+      apply_material(m, plNrm, outErr, outPar, N_proc, pass.ms_ref_p);
     }
 
     finish(in, inErr, outFailFlag, outPar, outErr);

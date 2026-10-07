@@ -9,6 +9,7 @@
 //#define DEBUG_FIT_BKW
 #include "Debug.h"
 
+#include <cmath>
 #include <sstream>
 
 namespace mkfit {
@@ -415,6 +416,18 @@ namespace mkfit {
       hitIndex[i] = indices_R2Z[i].size();
     }
 
+    // FinalFitFlags::bkw_ms_fixed_momentum: the multiple-scattering noise of the whole backward pass at the |p| of
+    // its start state (the forward result), fixed per track, not at the running estimate.
+    float ms_ref_p[NN];
+    if (refit_ffflags->bkw_ms_fixed_momentum) {
+      for (int i = 0; i < NN; ++i) {
+        const float ipt = m_Par[i1].constAt(i, 3, 0), sT = std::sin(m_Par[i1].constAt(i, 5, 0));
+        ms_ref_p[i] = (i < N_proc && ipt > 0.f && sT > 0.f) ? 1.f / (ipt * sT) : 1.f;
+      }
+    }
+    const final_fit::Pass pass{
+        *refit_flags, *refit_ffflags, false, refit_ffflags->bkw_ms_fixed_momentum ? ms_ref_p : nullptr};
+
     for (int h = 0; h < nFoundHits; ++h)  //first loop over the group - need to use the mplex here
     {
 #ifdef DEBUG_FIT_BKW
@@ -517,7 +530,7 @@ namespace mkfit {
                                   m_FailFlag,
                                   outChi2,
                                   N_proc,
-                                  final_fit::Pass{*refit_flags, *refit_ffflags, false},
+                                  pass,
                                   propHit,
                                   &no_mat_effs,
                                   &do_cpe,
