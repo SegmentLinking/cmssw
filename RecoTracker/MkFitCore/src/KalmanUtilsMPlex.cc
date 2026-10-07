@@ -1552,6 +1552,7 @@ namespace mkfit {
 
     MPlex2V msPar_local;
     MPlex2S msErr_local;
+    MPlexQI cpe_ok{0};  // the CPE succeeded: its local position and error replace the measurement
 
     for (int n = 0; n < NN; ++n) {
       if (doCPE && doCPE->constAt(n, 0, 0) >= 0 && cpe_corr_func) {
@@ -1568,6 +1569,7 @@ namespace mkfit {
         msErr_local(n, 0, 0) = lh[2];
         msErr_local(n, 0, 1) = lh[3];
         msErr_local(n, 1, 1) = lh[4];
+        cpe_ok(n, 0, 0) = 1;
       }
     }
 
@@ -1691,9 +1693,8 @@ namespace mkfit {
     RotateResidualsOnPlane(rot, md, mslo);
 #pragma omp simd
     //copy CPE pos for pixel hits if all ok
-    //need to add a CPE bool check
     for (int n = 0; n < NN; ++n) {
-      if (doCPE && doCPE->constAt(n, 0, 0) >= 0 && cpe_corr_func) {
+      if (cpe_ok(n, 0, 0)) {
         mslo(n, 0, 0) = msPar_local(n, 0, 0);
         mslo(n, 0, 1) = msPar_local(n, 0, 1);
       }
@@ -1713,7 +1714,7 @@ namespace mkfit {
 #pragma omp simd
     //copy CPE error for pixel hits if all ok
     for (int n = 0; n < NN; ++n) {
-      if (doCPE && doCPE->constAt(n, 0, 0) >= 0 && cpe_corr_func) {
+      if (cpe_ok(n, 0, 0)) {
         msErr_loc(n, 0, 0) = msErr_local(n, 0, 0);
         msErr_loc(n, 0, 1) = msErr_local(n, 0, 1);
         msErr_loc(n, 1, 1) = msErr_local(n, 1, 1);
