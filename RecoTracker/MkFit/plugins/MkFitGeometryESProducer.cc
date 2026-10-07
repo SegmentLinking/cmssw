@@ -1,5 +1,6 @@
 #include "FWCore/Framework/interface/ModuleFactory.h"
 #include "FWCore/Framework/interface/ESProducer.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrackerCommon/interface/TrackerDetSide.h"
@@ -669,6 +670,25 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
   // Material grid
   aggregateMaterialInfo(*trackerInfo, material_histogram);
   fillLayers(*trackerInfo);
+
+  // Safety net: every module must resolve to non-zero material through the very same
+  // lookup the propagator uses.  A zero here is silent in reco -- applyMaterialEffects()
+  // simply skips the hit -- so fail at geometry-build time instead.
+  {
+    unsigned int n_zero = 0;
+    for (const auto &det : trackerGeom_->dets()) {
+      const auto &mp = det->surface().mediumProperties();
+      if (!mp.isValid() || mp.xi() <= 0.f)
+        continue;
+      const auto &p = det->position();
+      if (trackerInfo->material_checked(std::abs(p.z()), p.perp()).bbxi <= 0.f)
+        ++n_zero;
+    }
+    if (n_zero > 0)
+      throw cms::Exception("LogicError") << "MkFitGeometryESProducer: " << n_zero
+                                         << " modules with material resolve to zero in the mkFit material grid; "
+                                         << "tracks through them would get no energy loss and no multiple scattering.";
+  }
 
   // Propagation configuration
   {
