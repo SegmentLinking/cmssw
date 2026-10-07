@@ -1444,10 +1444,8 @@ namespace mkfit {
                              std::map<int, std::vector<int>> *remap) {
     //could be wrapped into some setup_fit
     const TrackerInfo &ti = m_job->m_trk_info;
-    PropagationFlags my_flags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
-    my_flags.tracker_info = &ti;
     //clean at the end
-    mkfitter->refit_flags = &my_flags;
+    mkfitter->refit_flags = &ti.prop_config().final_fit_pflags;
     mkfitter->set_cpe(m_job->m_cpe_corr_func);
 
     mkfitter->m_event = m_event;

@@ -436,8 +436,7 @@ namespace {
                        const MPlexQI& __restrict__ inChg,
                        const MPlexHV& __restrict__ plPnt,
                        const MPlexHV& __restrict__ plNrm,
-                       const MPlexQF& __restrict__ sinP0,
-                       const MPlexQF& __restrict__ cosP0,
+                       const MPlexLV& __restrict__ outParTmp,
                        const MPlexQF& __restrict__ sinT,
                        const MPlexQF& __restrict__ cosT,
                        const MPlexQF& __restrict__ kinv,
@@ -445,9 +444,6 @@ namespace {
                        const int N_proc) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
-
-    MPlexLV outParTmp{0.0f};
-    parsFromPathL_impl(inPar, sinP0, cosP0, sinT, cosT, outParTmp, kinv, s);
 
     const MPF delta0 = outParTmp(0, 0) - plPnt(0, 0);
     const MPF delta1 = outParTmp(1, 0) - plPnt(1, 0);
@@ -524,8 +520,15 @@ namespace mkfit::plane {
     pathInit_impl(in.par, in.chg, pl.pnt, pl.nrm, t.sinP, t.cosP, t.sinT, t.cosT, f.kinv, p.s, p.s_line, in.n_proc);
   }
 
+  void path_refine_from(
+      const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, const MPlexLV& at, PathSolve& p) {
+    pathRefine_impl(in.par, in.chg, pl.pnt, pl.nrm, at, t.sinT, t.cosT, f.kinv, p.s, in.n_proc);
+  }
+
   void path_refine(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p) {
-    pathRefine_impl(in.par, in.chg, pl.pnt, pl.nrm, t.sinP, t.cosP, t.sinT, t.cosT, f.kinv, p.s, in.n_proc);
+    MPlexLV at{0.0f};
+    drift(in, t, f, p.s, at);
+    path_refine_from(in, t, pl, f, at, p);
   }
 
   void path_close(const TrackRef& in, PathSolve& p) { pathClose_impl(p.s_line, p.s, in.n_proc); }

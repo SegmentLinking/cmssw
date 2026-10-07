@@ -1,6 +1,7 @@
 #include "MkFitter.h"
 
 #include "KalmanUtilsMPlex.h"
+#include "FinalFit.h"
 #include "MatriplexPackers.h"
 
 //#define DEBUG
@@ -334,24 +335,24 @@ namespace mkfit {
       }
 #endif
 
-      kalmanPropagateAndUpdateAndChi2Plane(m_Err[i1],
-                                           m_Par[i1],
-                                           m_Chg,
-                                           m_msErr,
-                                           m_msPar,
-                                           norm,
-                                           dir,
-                                           pnt,
-                                           m_Err[i2],
-                                           m_Par[i2],
-                                           m_FailFlag,
-                                           outChi2,
-                                           N_proc,
-                                           *refit_flags,
-                                           propHit,
-                                           &no_mat_effs,
-                                           &do_cpe,
-                                           m_cpe_corr_func);
+      final_fit::propagate_update(m_Err[i1],
+                                  m_Par[i1],
+                                  m_Chg,
+                                  m_msErr,
+                                  m_msPar,
+                                  norm,
+                                  dir,
+                                  pnt,
+                                  m_Err[i2],
+                                  m_Par[i2],
+                                  m_FailFlag,
+                                  outChi2,
+                                  N_proc,
+                                  *refit_flags,
+                                  propHit,
+                                  &no_mat_effs,
+                                  &do_cpe,
+                                  m_cpe_corr_func);
 
 #ifdef DEBUG_FIT
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;
@@ -503,24 +504,24 @@ namespace mkfit {
       }
 #endif
 
-      kalmanPropagateAndUpdateAndChi2Plane(m_Err[i1],
-                                           m_Par[i1],
-                                           m_Chg,
-                                           m_msErr,
-                                           m_msPar,
-                                           norm,
-                                           dir,
-                                           pnt,
-                                           m_Err[i2],
-                                           m_Par[i2],
-                                           m_FailFlag,
-                                           outChi2,
-                                           N_proc,
-                                           *refit_flags,
-                                           propHit,
-                                           &no_mat_effs,
-                                           &do_cpe,
-                                           m_cpe_corr_func);
+      final_fit::propagate_update(m_Err[i1],
+                                  m_Par[i1],
+                                  m_Chg,
+                                  m_msErr,
+                                  m_msPar,
+                                  norm,
+                                  dir,
+                                  pnt,
+                                  m_Err[i2],
+                                  m_Par[i2],
+                                  m_FailFlag,
+                                  outChi2,
+                                  N_proc,
+                                  *refit_flags,
+                                  propHit,
+                                  &no_mat_effs,
+                                  &do_cpe,
+                                  m_cpe_corr_func);
 
 #ifdef DEBUG_FIT_BKW
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;

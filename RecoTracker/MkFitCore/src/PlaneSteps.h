@@ -108,8 +108,12 @@ namespace mkfit {
     // The path length from the start state to the plane in the field f: a first solve, refinements
     // from the state the current solution reaches, and the straight line where the helix solution is
     // not finite.  path_solve() does the three with Config::nSStepsInProp2Plane - 1 refinements.
+    // path_refine() is drift() to the current solution followed by path_refine_from() that state, at;
+    // a caller can change the field between the two.
     void path_init(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
     void path_refine(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
+    void path_refine_from(
+        const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, const MPlexLV& at, PathSolve& p);
     void path_close(const TrackRef& in, PathSolve& p);
     void path_solve(const TrackRef& in, const StartTrig& t, const PlaneRef& pl, const FieldAt& f, PathSolve& p);
 

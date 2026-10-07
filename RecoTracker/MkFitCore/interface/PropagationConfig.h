@@ -36,7 +36,8 @@ namespace mkfit {
     PropagationFlags finding_inter_layer_pflags;
     PropagationFlags finding_intra_layer_pflags;
     PropagationFlags backward_fit_pflags;
-    PropagationFlags forward_fit_pflags;
+    // The final fit, MkBuilder::fit_tracks(), both passes.
+    PropagationFlags final_fit_pflags;
     PropagationFlags seed_fit_pflags;
     PropagationFlags pca_prop_pflags;
 
