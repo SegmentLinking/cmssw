@@ -7,6 +7,11 @@ namespace mkfit {
     bool usePropToPlane = false;
     bool usePtMultScat = false;
 
+    float mag_c1 = 3.81036;
+    float mag_b0 = -2.03767e-06;
+    float mag_b1 = 7.34495e-06;
+    float mag_a = 3.01291e-07;
+
     // Multi threading configuration
 #if defined(MKFIT_STANDALONE)
     int numThreadsFinder = 1;

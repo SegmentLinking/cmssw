@@ -349,6 +349,7 @@ namespace mkfit {
                                   outChi2,
                                   N_proc,
                                   *refit_flags,
+                                  *refit_ffflags,
                                   propHit,
                                   &no_mat_effs,
                                   &do_cpe,
@@ -518,6 +519,7 @@ namespace mkfit {
                                   outChi2,
                                   N_proc,
                                   *refit_flags,
+                                  *refit_ffflags,
                                   propHit,
                                   &no_mat_effs,
                                   &do_cpe,
@@ -557,6 +559,7 @@ namespace mkfit {
     m_event = nullptr;
     //refit_flags
     refit_flags = nullptr;
+    refit_ffflags = nullptr;
     //cpe
     m_cpe_corr_func = nullptr;
   }

@@ -58,12 +58,14 @@ namespace mkfit {
     extern bool usePropToPlane;
     extern bool usePtMultScat;
 
-    // Config for Bfield. Note: for now the same for CMS-phase1 and CylCowWLids.
+    // Config for Bfield.  bFieldFromZR() below: Bz = (mag_b0 z^2 + mag_b1 z + mag_c1) (mag_a r^2 + 1), the form of
+    // ParabolicParametrizedMagneticField, with constants fitted to the CMS field map over the tracker volume (defaults
+    // in Config.cc; MkFitGeometryESProducer sets them from bFieldParams).
     constexpr float Bfield = 3.8112;
-    constexpr float mag_c1 = 3.8114;
-    constexpr float mag_b0 = -3.94991e-06;
-    constexpr float mag_b1 = 7.53701e-06;
-    constexpr float mag_a = 2.43878e-11;
+    extern float mag_c1;
+    extern float mag_b0;
+    extern float mag_b1;
+    extern float mag_a;
 
     // Config for SelectHitIndices
     // Use extra arrays to store phi and q of hits.

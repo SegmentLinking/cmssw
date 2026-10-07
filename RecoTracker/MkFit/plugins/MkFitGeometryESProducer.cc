@@ -140,6 +140,11 @@ private:
   const TrackerGeometry *trackerGeom_ = nullptr;
   mkfit::LayerNumberConverter layerNrConv_ = {mkfit::TkLayout::phase1};
   layer_module_shape_vec_t layerModuleShapeVec_;
+
+  // constants of mkfit::Config::bFieldFromZR, and the final fit's field-model switches
+  std::vector<double> bFieldParams_;
+  bool refitBFieldAtMid_;
+  bool refitRadialFieldCorr_;
 };
 
 MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfig) {
@@ -147,10 +152,27 @@ MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfi
   geomToken_ = cc.consumes();
   ttopoToken_ = cc.consumes();
   trackerToken_ = cc.consumes();
+  bFieldParams_ = iConfig.getParameter<std::vector<double>>("bFieldParams");
+  if (bFieldParams_.size() != 4)
+    throw cms::Exception("Configuration") << "bFieldParams needs 4 values {c1, b0, b1, a}";
+  refitBFieldAtMid_ = iConfig.getParameter<bool>("refitBFieldAtMid");
+  refitRadialFieldCorr_ = iConfig.getParameter<bool>("refitRadialFieldCorr");
 }
 
 void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
   edm::ParameterSetDescription desc;
+  desc.add<std::vector<double>>("bFieldParams", {3.81036, -2.03767e-06, 7.34495e-06, 3.01291e-07})
+      ->setComment(
+          "{c1, b0, b1, a} of mkFit's parametrised Bz = (b0 z^2 + b1 z + c1)(a r^2 + 1), fitted to the CMS field "
+          "map over the tracker volume (0.03 % rms)");
+  desc.add<bool>("refitBFieldAtMid", true)
+      ->setComment(
+          "refit only: sample B at the chord midpoint of each propagate-to-plane step rather than at its start, "
+          "so that the outward and inward propagations are inverses of each other");
+  desc.add<bool>("refitRadialFieldCorr", true)
+      ->setComment(
+          "refit only: correct each propagate-to-plane step for the radial field Br = -(r/2) dBz/dz, "
+          "antisymmetrically (half of the change in r*p_phi at each end of the step)");
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -599,6 +621,12 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
 
   const float *qBinDefaults = nullptr;
 
+  // parametrised field of building and fit (mkfit::Config::bFieldFromZR), for every geometry
+  mkfit::Config::mag_c1 = bFieldParams_[0];
+  mkfit::Config::mag_b0 = bFieldParams_[1];
+  mkfit::Config::mag_b1 = bFieldParams_[2];
+  mkfit::Config::mag_a = bFieldParams_[3];
+
   // std::string path = "Geometry/TrackerCommonData/data/";
   if (trackerGeom_->isThere(GeomDetEnumerators::P1PXB) || trackerGeom_->isThere(GeomDetEnumerators::P1PXEC)) {
     edm::LogInfo("MkFitGeometryESProducer") << "Extracting PhaseI geometry";
@@ -703,6 +731,8 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
       pconf.finding_intra_layer_pflags = PropagationFlags(PF_none);
     pconf.backward_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
     pconf.final_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
+    pconf.final_fit_ffflags.b_field_at_mid = refitBFieldAtMid_;
+    pconf.final_fit_ffflags.radial_field_corr = refitRadialFieldCorr_;
     pconf.seed_fit_pflags = PropagationFlags(PF_none);
     pconf.pca_prop_pflags = PropagationFlags(PF_none);
     pconf.apply_tracker_info(trackerInfo.get());

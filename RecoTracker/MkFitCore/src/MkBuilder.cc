@@ -1446,6 +1446,7 @@ namespace mkfit {
     const TrackerInfo &ti = m_job->m_trk_info;
     //clean at the end
     mkfitter->refit_flags = &ti.prop_config().final_fit_pflags;
+    mkfitter->refit_ffflags = &ti.prop_config().final_fit_ffflags;
     mkfitter->set_cpe(m_job->m_cpe_corr_func);
 
     mkfitter->m_event = m_event;

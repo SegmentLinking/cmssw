@@ -7,6 +7,7 @@
 namespace mkfit {
 
   class PropagationFlags;
+  struct FinalFitFlags;
 
   // The final fit's propagation to the module planes and its Kalman update on them (MkFitter, called from
   // MkBuilder::fit_tracks()), composed from the steps in PlaneSteps.h.  The final fit has its own sequences so that
@@ -25,6 +26,7 @@ namespace mkfit {
                    MPlexQI& outFailFlag,
                    const int N_proc,
                    const PropagationFlags& pflags,
+                   const FinalFitFlags& ffflags,
                    const MPlexQI* noMatEffPtr);
 
     // Propagation to the hits' planes (unless propToHit is false: the state is already there), then the Kalman
@@ -43,6 +45,7 @@ namespace mkfit {
                           MPlexQF& outChi2,
                           const int N_proc,
                           const PropagationFlags& pflags,
+                          const FinalFitFlags& ffflags,
                           const bool propToHit,
                           const MPlexQI* noMatEffPtr,
                           const MPlexQI* doCPE,

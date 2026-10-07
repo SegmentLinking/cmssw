@@ -29,6 +29,17 @@ namespace mkfit {
           copy_input_state_on_fail(pfe & PF_copy_input_state_on_fail) {}
   };
 
+  // Choices of the final fit, MkBuilder::fit_tracks(), read by its own sequences (FinalFit.cc).
+  struct FinalFitFlags {
+    // Sample B at the chord midpoint of each propagation to a plane instead of at its start, so that the
+    // outward and inward propagations are inverses of each other.  With the parametrised field only.
+    bool b_field_at_mid = true;
+    // Correct each propagation to a plane for the radial field component Br = -(r/2) dBz/dz, which the
+    // constant-Bz helix neglects, antisymmetrically: half of the change in r*p_phi at each end of the step.
+    // With the parametrised field only.
+    bool radial_field_corr = true;
+  };
+
   class PropagationConfig {
   public:
     bool backward_fit_to_pca = false;
@@ -38,6 +49,7 @@ namespace mkfit {
     PropagationFlags backward_fit_pflags;
     // The final fit, MkBuilder::fit_tracks(), both passes.
     PropagationFlags final_fit_pflags;
+    FinalFitFlags final_fit_ffflags;
     PropagationFlags seed_fit_pflags;
     PropagationFlags pca_prop_pflags;
 

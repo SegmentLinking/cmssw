@@ -1,13 +1,240 @@
 #include "FinalFit.h"
 #include "PlaneSteps.h"
 
+#include "RecoTracker/MkFitCore/interface/Config.h"
 #include "RecoTracker/MkFitCore/interface/PropagationConfig.h"
+#include "RecoTracker/MkFitCore/interface/cms_common_macros.h"
+
+#include <vdt/atan2.h>
+#include <cstring>
 
 namespace mkfit::final_fit {
 
   using namespace plane;
 
   namespace {
+
+    using MPF = MPlexQF;
+
+    // ---- vdt::fast_atan2f over a whole Matriplex, vectorised whatever the floating-point flags.
+    // With trapping math GCC does not if-convert the branches inside vdt::fast_atan2f, and Matriplex::fast_atan2 runs
+    // lane by lane ("not vectorized: control flow in loop").  Here the same operations, in the same order, are written
+    // with GCC vector extensions, every branch an explicit blend of values that are all computed.  Bit-identical to
+    // Matriplex::fast_atan2 on 1e9 inputs (log-uniform 1e-6..1e3, both signs, zeros, y ~ x).
+    typedef float vfloat __attribute__((vector_size(NN * sizeof(float))));
+    typedef int vint __attribute__((vector_size(NN * sizeof(int))));
+
+    MPF atan2V(const MPF& Y, const MPF& X) {
+      vfloat y, x;
+      std::memcpy(&y, Y.fArray, sizeof(y));
+      std::memcpy(&x, X.fArray, sizeof(x));
+      const vfloat zero = vfloat{} + 0.f, one = vfloat{} + 1.f;
+      const vfloat ax = (vfloat)((vint)x & 0x7fffffff), ay = (vfloat)((vint)y & 0x7fffffff);
+      const vint swp = ay > ax;
+      const vfloat xx = swp ? ay : ax;
+      const vfloat yy = swp ? ax : ay;
+      const vfloat oneIfXXZero = (xx == zero) ? one : zero;
+      const vfloat t = yy / xx;
+      const vint red = t > 0.4142135623730950f;
+      const vfloat z = red ? (t - 1.0f) / (t + 1.0f) : t;
+      const vfloat z2 = z * z;
+      vfloat ret =
+          ((((8.05374449538e-2f * z2 - 1.38776856032E-1f) * z2 + 1.99777106478E-1f) * z2 - 3.33329491539E-1f) * z2 * z +
+           z);
+      ret *= (1.f - oneIfXXZero);
+      ret = (y == zero) ? zero : ret;
+      ret = red ? ret + vdt::details::PIO4F : ret;
+      ret = swp ? vdt::details::PIO2F - ret : ret;
+      ret = (x < zero) ? vdt::details::PIF - ret : ret;
+      ret = (y < zero) ? -ret : ret;
+      MPF R;
+      std::memcpy(R.fArray, &ret, sizeof(ret));
+      return R;
+    }
+
+    // ---- Radial-field correction (FinalFitFlags::radial_field_corr) ----------------------------------
+    //
+    // The propagation models B as purely along z and constant over the step.  The real solenoid field is
+    // axially symmetric with Br = -(r/2) dBz/dz (div B = 0), and such a field conserves the canonical
+    // angular momentum
+    //     L_z = r * p_phi + q * k * Psi(r,z) / (2 pi)
+    // with Psi the flux enclosed at (r,z).  The constant-Bz helix conserves the same quantity with the
+    // uniform flux q*k*Bc*r^2/2, so over a step it misses a change D of r*p_phi.  For the parametrised
+    // field Bz = Z(z) (a r^2 + 1), Z = b0 z^2 + b1 z + c1, the flux is analytic,
+    //     G = q*k*Z(z)*(a r^4/4 + r^2/2),
+    // so no extra field lookup and no new constant is needed.  p_r is untouched and |p| is conserved, so
+    // pT and theta both move -- the degree of freedom the constant-Bz helix freezes.
+    //
+    // D is exactly antisymmetric under swapping the step's endpoints.  It is applied as two half-kicks,
+    // D/(2 r0) before the helix step and D/(2 r1) after it, each converted with the radius where it is
+    // applied: reversing the step sends D -> -D and swaps r0 <-> r1, so the step stays its own inverse
+    // (a one-sided D/r1 is not, and makes the two refit passes disagree).
+
+    // D = d(r*p_phi) over one step for every lane, B field midpoint Bc = Zmid (a rmid^2 + 1).
+    //   D/qk = D2*[ Zm*a*S/4 + (Zm - Bc)/2 ] + dZ*(f0 + f1)/2,  D2 = r0^2 - r1^2,  S = r0^2 + r1^2,
+    //   f = a r^4/4 + r^2/2,  Zm = (Z0 + Z1)/2,  dZ = Z0 - Z1.
+    // D2 and dZ flip sign under the swap and nothing else does.  Every difference is written in factored
+    // form so that no two large, nearly equal numbers are subtracted in float.
+    MPlexQF brDeltaRPphiV(const MPlexLV& inPar, const MPlexLV& outPar, const MPlexQI& inChg) {
+      namespace mpt = Matriplex;
+      using MPF = MPlexQF;
+      const MPF x0 = inPar(0, 0), y0 = inPar(1, 0), z0 = inPar(2, 0);
+      const MPF x1 = outPar(0, 0), y1 = outPar(1, 0), z1 = outPar(2, 0);
+      const MPF r0sq = x0 * x0 + y0 * y0;
+      const MPF r1sq = x1 * x1 + y1 * y1;
+      // q * sol_over_100, without materialising q: +sol where the charge is positive
+      const MPF qk = mpt::negate_if_ltz(MPF(Const::sol_over_100), inChg);
+      const MPF Z0 = (MPF(Config::mag_b0) * z0 + MPF(Config::mag_b1)) * z0 + MPF(Config::mag_c1);
+      const MPF Z1 = (MPF(Config::mag_b0) * z1 + MPF(Config::mag_b1)) * z1 + MPF(Config::mag_c1);
+      const MPF dz = z0 - z1;
+      const MPF dZ = dz * (MPF(Config::mag_b0) * (z0 + z1) + MPF(Config::mag_b1));
+      const MPF zmid = 0.5f * (z0 + z1);
+      const MPF xm = 0.5f * (x0 + x1), ym = 0.5f * (y0 + y1);
+      const MPF rmid2 = xm * xm + ym * ym;
+      const MPF Zmid = (MPF(Config::mag_b0) * zmid + MPF(Config::mag_b1)) * zmid + MPF(Config::mag_c1);
+      const MPF Zm = 0.5f * (Z0 + Z1);
+      // (Zm - Bc) in factored form: Zm - Zmid = b0 dz^2 / 4
+      const MPF ZmB = 0.25f * MPF(Config::mag_b0) * dz * dz - Zmid * MPF(Config::mag_a) * rmid2;
+      const MPF D = r0sq - r1sq;
+      const MPF S = r0sq + r1sq;
+      const MPF f0 = 0.25f * MPF(Config::mag_a) * r0sq * r0sq + 0.5f * r0sq;
+      const MPF f1 = 0.25f * MPF(Config::mag_a) * r1sq * r1sq + 0.5f * r1sq;
+      return qk * (D * (0.25f * Zm * MPF(Config::mag_a) * S + 0.5f * ZmB) + 0.5f * dZ * (f0 + f1));
+    }
+
+    // Rotate p_phi by a kick half_d / r at every lane's own position r, keeping p_r and |p|.  Vectorised
+    // (vdt sincos via Matriplex, atan2V); lanes whose guards fail are left untouched.
+    void applyDpPhiV(MPlexLV& par, const MPlexQF& half_d, const int N_proc) {
+      namespace mpt = Matriplex;
+      using MPF = MPlexQF;
+      const MPF x = par(0, 0), y = par(1, 0);
+      const MPF rsq = x * x + y * y;
+      const MPF ipt = par(3, 0);
+
+      // Clamp the guarded quantities so every lane can be evaluated; failing lanes are
+      // discarded at write-back, exactly as the scalar version leaves them untouched.
+      MPF rsq_s = rsq, ipt_s = ipt;
+      for (int n = 0; n < NN; ++n) {
+        if (!(rsq_s[n] > 1.e-8f))
+          rsq_s[n] = 1.f;
+        if (!(std::abs(ipt_s[n]) > 1.e-9f))
+          ipt_s[n] = 1.f;
+      }
+
+      MPF sinP, cosP, sinT, cosT;
+      mpt::fast_sincos(par(4, 0), sinP, cosP);
+      mpt::fast_sincos(par(5, 0), sinT, cosT);
+      MPF sinT_s = sinT;
+      for (int n = 0; n < NN; ++n)
+        if (!(std::abs(sinT_s[n]) > 1.e-9f))
+          sinT_s[n] = 1.f;
+
+      const MPF pt = mpt::negate_if_ltz(MPF(1.f) / ipt_s, ipt_s);  // = 1/|ipt|
+      const MPF px = pt * cosP, py = pt * sinP;
+      const MPF ptot = pt / sinT_s;
+      const MPF pz = ptot * cosT;
+      const MPF r = mpt::sqrt(rsq_s);
+      const MPF invr = MPF(1.f) / r;
+      const MPF dpphi = half_d / r;
+      const MPF pr = (x * px + y * py) * invr;
+      const MPF pphi = (x * py - y * px) * invr + dpphi;
+      const MPF pt_new = mpt::sqrt(pr * pr + pphi * pphi);
+      const MPF a2 = ptot * ptot - pt_new * pt_new;
+
+      MPF a2_s = a2;
+      for (int n = 0; n < NN; ++n)
+        if (!(a2_s[n] > 0.f))
+          a2_s[n] = 1.f;
+      const MPF newphi = atan2V((y * pr + x * pphi) * invr, (x * pr - y * pphi) * invr);
+      MPF pzn = mpt::sqrt(a2_s);
+      for (int n = 0; n < NN; ++n)
+        pzn[n] = std::copysign(pzn[n], pz[n]);
+      const MPF newtheta = atan2V(pt_new, pzn);
+      const MPF newipt = MPF(1.f) / pt_new;
+
+      for (int n = 0; n < N_proc; ++n) {
+        if (!(rsq[n] > 1.e-8f) || !(std::abs(ipt[n]) > 1.e-9f) || !(std::abs(sinT[n]) > 1.e-9f))
+          continue;
+        if (!(a2[n] > 0.f) || !(pt_new[n] > 1.e-9f))
+          continue;
+        par.At(n, 3, 0) = newipt[n];
+        par.At(n, 4, 0) = newphi[n];
+        par.At(n, 5, 0) = newtheta[n];
+      }
+    }
+
+    // ---- Steps of the final fit's propagation (see PlaneSteps.h for the shared ones)
+
+    // The field at the chord midpoint between the start state and at: B and kinv for the rest of the step.
+    void field_at_mid(const TrackRef& in, const MPlexLV& at, FieldAt& f) {
+      const MPF z = 0.5f * (in.par(2, 0) + at(2, 0));
+      const MPF x = 0.5f * (in.par(0, 0) + at(0, 0));
+      const MPF y = 0.5f * (in.par(1, 0) + at(1, 0));
+      for (int n = 0; n < NN; ++n)
+        f.b[n] = Config::bFieldFromZR(z[n], hipo(x[n], y[n]));
+      f.kinv = Matriplex::negate_if_ltz(MPF(-Const::sol_over_100), in.chg) * f.b;
+    }
+
+    // A helix step from in to the plane pl: the path solve, with the field re-sampled at the chord midpoint
+    // after each drift of the refinement when ffflags.b_field_at_mid, then the drift onto the plane and, if J
+    // is given, its Jacobian, in the field the step was taken in.
+    void helix_step(const TrackRef& in,
+                    const PlaneRef& pl,
+                    const PropagationFlags& pflags,
+                    const FinalFitFlags& ffflags,
+                    MPlexLV& outPar,
+                    MPlexQF& s,
+                    MPlexLL* J) {
+      FieldAt f;
+      field_at_start(in, pflags, f);
+      StartTrig t;
+      start_trig(in, t);
+      PathSolve p;
+      path_init(in, t, pl, f, p);
+      // Where the first solve has no root, the refinement starts from the straight line (0 where that is not
+      // finite either): a drift by a non-finite path length would make the midpoint field, and with it the whole
+      // step, non-finite, beyond what the straight-line fallback of path_close() restores.
+      for (int n = 0; n < in.n_proc; ++n)
+        if (!mkfit::isFinite(p.s[n]))
+          p.s[n] = mkfit::isFinite(p.s_line[n]) ? p.s_line[n] : 0.f;
+      for (int i = 0; i < Config::nSStepsInProp2Plane - 1; ++i) {
+        MPlexLV at{0.0f};
+        drift(in, t, f, p.s, at);
+        if (pflags.use_param_b_field && ffflags.b_field_at_mid)
+          field_at_mid(in, at, f);
+        path_refine_from(in, t, pl, f, at, p);
+      }
+      path_close(in, p);
+      drift(in, t, f, p.s, outPar);
+      if (J)
+        jacobian(in, t, outPar, f, p.s, *J);
+      s = p.s;
+    }
+
+    // The helix step with the radial-field correction when ffflags.radial_field_corr: D from the uncorrected
+    // step, half of it as a kick at the start, the helix step from the kicked state, the other half at the end.
+    // The Jacobian is that of the helix step: it describes the transport, not the correction, which is a
+    // first-order effect on the weighting and not on the mean.
+    void step_to_plane(const TrackRef& in,
+                       const PlaneRef& pl,
+                       const PropagationFlags& pflags,
+                       const FinalFitFlags& ffflags,
+                       MPlexLV& outPar,
+                       MPlexQF& s,
+                       MPlexLL* J) {
+      if (pflags.use_param_b_field && ffflags.radial_field_corr) {
+        MPlexLV par0{0.0f};
+        MPlexQF s0{0.0f};
+        helix_step(in, pl, pflags, ffflags, par0, s0, nullptr);
+        const MPF halfD = 0.5f * brDeltaRPphiV(in.par, par0, in.chg);
+        MPlexLV parH = in.par;
+        applyDpPhiV(parH, halfD, in.n_proc);
+        helix_step(TrackRef{parH, in.chg, in.n_proc}, pl, pflags, ffflags, outPar, s, J);
+        applyDpPhiV(outPar, halfD, in.n_proc);
+      } else {
+        helix_step(in, pl, pflags, ffflags, outPar, s, J);
+      }
+    }
 
     // The Kalman update of the predicted state (psErr, psPar) with the hits, and its chi2.
     void update_on_plane(const MPlexLS& psErr,
@@ -60,28 +287,23 @@ namespace mkfit::final_fit {
                  MPlexQI& outFailFlag,
                  const int N_proc,
                  const PropagationFlags& pflags,
+                 const FinalFitFlags& ffflags,
                  const MPlexQI* noMatEffPtr) {
     const TrackRef in{inPar, inChg, N_proc};
     const PlaneRef pl{plPnt, plNrm};
 
     MPlexLL errorProp{0.0f};
+    MPlexQF s{0.0f};
     outFailFlag.setVal(0.f);
 
-    FieldAt f;
-    field_at_start(in, pflags, f);
-    StartTrig t;
-    start_trig(in, t);
-    PathSolve p;
-    path_solve(in, t, pl, f, p);
-    drift(in, t, f, p.s, outPar);
-    jacobian(in, t, outPar, f, p.s, errorProp);
+    step_to_plane(in, pl, pflags, ffflags, outPar, s, &errorProp);
 
     transport_cov(errorProp, inErr, outErr);
 
     if (pflags.apply_material) {
       MaterialAt m;
       material_grid(*pflags.tracker_info, outPar, noMatEffPtr, N_proc, m);
-      eloss_sign_from_path(p.s, noMatEffPtr, N_proc, m);
+      eloss_sign_from_path(s, noMatEffPtr, N_proc, m);
       apply_material(m, plNrm, outErr, outPar, N_proc);
     }
 
@@ -102,6 +324,7 @@ namespace mkfit::final_fit {
                         MPlexQF& outChi2,
                         const int N_proc,
                         const PropagationFlags& pflags,
+                        const FinalFitFlags& ffflags,
                         const bool propToHit,
                         const MPlexQI* noMatEffPtr,
                         const MPlexQI* doCPE,
@@ -109,7 +332,7 @@ namespace mkfit::final_fit {
     if (propToHit) {
       MPlexLS propErr;
       MPlexLV propPar;
-      propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pflags, noMatEffPtr);
+      propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pflags, ffflags, noMatEffPtr);
       update_on_plane(propErr,
                       propPar,
                       Chg,
