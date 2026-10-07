@@ -38,6 +38,11 @@ namespace mkfit {
     // constant-Bz helix neglects, antisymmetrically: half of the change in r*p_phi at each end of the step.
     // With the parametrised field only.
     bool radial_field_corr = true;
+    // Sign of the energy loss from the fit pass, not from the sign of each step's path length: the forward
+    // pass loses energy on every step, the backward pass gains it.  The particle crosses every module whatever
+    // order the fit visits them in; the path-length sign is wrong on every step the fit takes backwards, e.g.
+    // between the two sensors of a PS module visited in reverse order.
+    bool eloss_sign_from_pass = true;
   };
 
   class PropagationConfig {

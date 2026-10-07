@@ -15,6 +15,14 @@ namespace mkfit {
 
   namespace final_fit {
 
+    // What stays fixed over one pass of the final fit: the propagation flags, the final fit's own choices, and
+    // the direction of the pass (the forward pass runs outward).
+    struct Pass {
+      const PropagationFlags& pflags;
+      const FinalFitFlags& ffflags;
+      const bool outward;
+    };
+
     // Propagation of (inErr, inPar) to the planes (plPnt, plNrm), with material at the destination.
     void propagate(const MPlexLS& inErr,
                    const MPlexLV& inPar,
@@ -25,8 +33,7 @@ namespace mkfit {
                    MPlexLV& outPar,
                    MPlexQI& outFailFlag,
                    const int N_proc,
-                   const PropagationFlags& pflags,
-                   const FinalFitFlags& ffflags,
+                   const Pass& pass,
                    const MPlexQI* noMatEffPtr);
 
     // Propagation to the hits' planes (unless propToHit is false: the state is already there), then the Kalman
@@ -44,8 +51,7 @@ namespace mkfit {
                           MPlexQI& outFailFlag,
                           MPlexQF& outChi2,
                           const int N_proc,
-                          const PropagationFlags& pflags,
-                          const FinalFitFlags& ffflags,
+                          const Pass& pass,
                           const bool propToHit,
                           const MPlexQI* noMatEffPtr,
                           const MPlexQI* doCPE,
