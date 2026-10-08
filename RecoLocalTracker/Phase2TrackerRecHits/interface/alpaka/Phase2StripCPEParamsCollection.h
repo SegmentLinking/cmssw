@@ -1,0 +1,14 @@
+#ifndef RecoLocalTracker_Phase2TrackerRecHits_interface_alpaka_Phase2StripCPEParamsCollection_h
+#define RecoLocalTracker_Phase2TrackerRecHits_interface_alpaka_Phase2StripCPEParamsCollection_h
+
+#include "DataFormats/Portable/interface/alpaka/PortableCollection.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPEParamsHost.h"
+
+namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  using Phase2StripCPEParamsCollection = PortableCollection<Phase2StripCPEParamsSoA>;
+
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+
+#endif  // RecoLocalTracker_Phase2TrackerRecHits_interface_alpaka_Phase2StripCPEParamsCollection_h
