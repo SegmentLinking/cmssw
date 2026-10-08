@@ -1510,9 +1510,10 @@ namespace mkfit {
           //95% qunatiles for FWD and BWD didn't work
           //float TF = 23.7 * j / nFoundHits + 0.8;
           //float TB = 23.6 * (nFoundHits - 1 - j) / nFoundHits + 3.6;
-          if (chi2fwd[j + nFoundHits * i] != chi2fwd[j + nFoundHits * i])
+          // isFinite, not x != x: -Ofast assumes finite math and folds x != x to false
+          if (!isFinite(chi2fwd[j + nFoundHits * i]))
             chi2fwd[j + nFoundHits * i] = 1000000;
-          if (chi2bkwd[nFoundHits - 1 - j + nFoundHits * i] != chi2bkwd[nFoundHits - 1 - j + nFoundHits * i])
+          if (!isFinite(chi2bkwd[nFoundHits - 1 - j + nFoundHits * i]))
             chi2bkwd[nFoundHits - 1 - j + nFoundHits * i] = 1000000;
           float scorer =
               (chi2fwd[j + nFoundHits * i]) +
