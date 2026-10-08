@@ -1,5 +1,7 @@
-#ifndef RecoTracker_MkFitCore_src_Matriplex_Matriplex_h
-#define RecoTracker_MkFitCore_src_Matriplex_Matriplex_h
+#ifndef RecoTracker_MkFitCore_interface_portable_Matriplex_Matriplex_h
+#define RecoTracker_MkFitCore_interface_portable_Matriplex_Matriplex_h
+
+#include <stdexcept>
 
 #include "MatriplexCommon.h"
 
@@ -19,11 +21,7 @@ namespace std {
   }
 }  // namespace std
 #else
-#include "vdt/sqrt.h"
-#include "vdt/sin.h"
-#include "vdt/cos.h"
-#include "vdt/tan.h"
-#include "vdt/atan2.h"
+#include "RecoTracker/MkFitCore/interface/portable/Matriplex/MatriplexVdt.h"
 #endif
 #endif
 
@@ -32,7 +30,7 @@ namespace Matriplex {
   //------------------------------------------------------------------------------
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  class __attribute__((aligned(MPLEX_ALIGN))) Matriplex {
+  class alignas(mplexAlign<T, N>()) Matriplex {
   public:
     typedef T value_type;
 
@@ -47,30 +45,30 @@ namespace Matriplex {
 
     T fArray[kTotSize];
 
-    Matriplex() {}
-    Matriplex(T v) { setVal(v); }
+    MKFIT_HOST_DEVICE Matriplex() {}
+    MKFIT_HOST_DEVICE Matriplex(T v) { setVal(v); }
 
-    idx_t plexSize() const { return N; }
+    MKFIT_HOST_DEVICE idx_t plexSize() const { return N; }
 
-    void setVal(T v) {
+    MKFIT_HOST_DEVICE void setVal(T v) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] = v;
       }
     }
 
-    void add(const Matriplex& v) {
+    MKFIT_HOST_DEVICE void add(const Matriplex& v) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] += v.fArray[i];
       }
     }
 
-    void scale(T scale) {
+    MKFIT_HOST_DEVICE void scale(T scale) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] *= scale;
       }
     }
 
-    Matriplex& negate() {
+    MKFIT_HOST_DEVICE Matriplex& negate() {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] = -fArray[i];
       }
@@ -78,7 +76,7 @@ namespace Matriplex {
     }
 
     template <typename TT>
-    Matriplex& negate_if_ltz(const Matriplex<TT, D1, D2, N>& sign) {
+    MKFIT_HOST_DEVICE Matriplex& negate_if_ltz(const Matriplex<TT, D1, D2, N>& sign) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         if (sign.fArray[i] < 0)
           fArray[i] = -fArray[i];
@@ -86,42 +84,42 @@ namespace Matriplex {
       return *this;
     }
 
-    T operator[](idx_t xx) const { return fArray[xx]; }
-    T& operator[](idx_t xx) { return fArray[xx]; }
+    MKFIT_HOST_DEVICE T operator[](idx_t xx) const { return fArray[xx]; }
+    MKFIT_HOST_DEVICE T& operator[](idx_t xx) { return fArray[xx]; }
 
-    const T& constAt(idx_t n, idx_t i, idx_t j) const { return fArray[(i * D2 + j) * N + n]; }
+    MKFIT_HOST_DEVICE const T& constAt(idx_t n, idx_t i, idx_t j) const { return fArray[(i * D2 + j) * N + n]; }
 
-    T& At(idx_t n, idx_t i, idx_t j) { return fArray[(i * D2 + j) * N + n]; }
+    MKFIT_HOST_DEVICE T& At(idx_t n, idx_t i, idx_t j) { return fArray[(i * D2 + j) * N + n]; }
 
-    T& operator()(idx_t n, idx_t i, idx_t j) { return fArray[(i * D2 + j) * N + n]; }
-    const T& operator()(idx_t n, idx_t i, idx_t j) const { return fArray[(i * D2 + j) * N + n]; }
+    MKFIT_HOST_DEVICE T& operator()(idx_t n, idx_t i, idx_t j) { return fArray[(i * D2 + j) * N + n]; }
+    MKFIT_HOST_DEVICE const T& operator()(idx_t n, idx_t i, idx_t j) const { return fArray[(i * D2 + j) * N + n]; }
 
     // reduction operators
 
     using QReduced = Matriplex<T, 1, 1, N>;
 
-    QReduced ReduceFixedIJ(idx_t i, idx_t j) const {
+    MKFIT_HOST_DEVICE QReduced ReduceFixedIJ(idx_t i, idx_t j) const {
       QReduced t;
       for (idx_t n = 0; n < N; ++n) {
         t[n] = constAt(n, i, j);
       }
       return t;
     }
-    QReduced rij(idx_t i, idx_t j) const { return ReduceFixedIJ(i, j); }
-    QReduced operator()(idx_t i, idx_t j) const { return ReduceFixedIJ(i, j); }
+    MKFIT_HOST_DEVICE QReduced rij(idx_t i, idx_t j) const { return ReduceFixedIJ(i, j); }
+    MKFIT_HOST_DEVICE QReduced operator()(idx_t i, idx_t j) const { return ReduceFixedIJ(i, j); }
 
     struct QAssigner {
       Matriplex& m_matriplex;
       const int m_i, m_j;
 
-      QAssigner(Matriplex& m, int i, int j) : m_matriplex(m), m_i(i), m_j(j) {}
-      Matriplex& operator=(const QReduced& qvec) {
+      MKFIT_HOST_DEVICE QAssigner(Matriplex& m, int i, int j) : m_matriplex(m), m_i(i), m_j(j) {}
+      MKFIT_HOST_DEVICE Matriplex& operator=(const QReduced& qvec) {
         for (idx_t n = 0; n < N; ++n) {
           m_matriplex(n, m_i, m_j) = qvec[n];
         }
         return m_matriplex;
       }
-      Matriplex& operator=(T qscalar) {
+      MKFIT_HOST_DEVICE Matriplex& operator=(T qscalar) {
         for (idx_t n = 0; n < N; ++n) {
           m_matriplex(n, m_i, m_j) = qscalar;
         }
@@ -129,89 +127,89 @@ namespace Matriplex {
       }
     };
 
-    QAssigner AssignFixedIJ(idx_t i, idx_t j) { return QAssigner(*this, i, j); }
-    QAssigner aij(idx_t i, idx_t j) { return AssignFixedIJ(i, j); }
+    MKFIT_HOST_DEVICE QAssigner AssignFixedIJ(idx_t i, idx_t j) { return QAssigner(*this, i, j); }
+    MKFIT_HOST_DEVICE QAssigner aij(idx_t i, idx_t j) { return AssignFixedIJ(i, j); }
 
     // assignment operators
 
-    Matriplex& operator=(T t) {
+    MKFIT_HOST_DEVICE Matriplex& operator=(T t) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = t;
       return *this;
     }
 
-    Matriplex& operator+=(T t) {
+    MKFIT_HOST_DEVICE Matriplex& operator+=(T t) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] += t;
       return *this;
     }
 
-    Matriplex& operator-=(T t) {
+    MKFIT_HOST_DEVICE Matriplex& operator-=(T t) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] -= t;
       return *this;
     }
 
-    Matriplex& operator*=(T t) {
+    MKFIT_HOST_DEVICE Matriplex& operator*=(T t) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] *= t;
       return *this;
     }
 
-    Matriplex& operator/=(T t) {
+    MKFIT_HOST_DEVICE Matriplex& operator/=(T t) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] /= t;
       return *this;
     }
 
-    Matriplex& operator+=(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& operator+=(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] += a.fArray[i];
       return *this;
     }
 
-    Matriplex& operator-=(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& operator-=(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] -= a.fArray[i];
       return *this;
     }
 
-    Matriplex& operator*=(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& operator*=(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] *= a.fArray[i];
       return *this;
     }
 
-    Matriplex& operator/=(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& operator/=(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] /= a.fArray[i];
       return *this;
     }
 
-    Matriplex operator-() {
+    MKFIT_HOST_DEVICE Matriplex operator-() {
       Matriplex t;
       for (idx_t i = 0; i < kTotSize; ++i)
         t.fArray[i] = -fArray[i];
       return t;
     }
 
-    Matriplex& abs(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& abs(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::abs(a.fArray[i]);
       return *this;
     }
-    Matriplex& abs() {
+    MKFIT_HOST_DEVICE Matriplex& abs() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::abs(fArray[i]);
       return *this;
     }
 
-    Matriplex& sqr(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& sqr(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = a.fArray[i] * a.fArray[i];
       return *this;
     }
-    Matriplex& sqr() {
+    MKFIT_HOST_DEVICE Matriplex& sqr() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = fArray[i] * fArray[i];
       return *this;
@@ -220,58 +218,58 @@ namespace Matriplex {
     //---------------------------------------------------------
     // transcendentals, std version
 
-    Matriplex& sqrt(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& sqrt(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::sqrt(a.fArray[i]);
       return *this;
     }
-    Matriplex& sqrt() {
+    MKFIT_HOST_DEVICE Matriplex& sqrt() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::sqrt(fArray[i]);
       return *this;
     }
 
-    Matriplex& hypot(const Matriplex& a, const Matriplex& b) {
+    MKFIT_HOST_DEVICE Matriplex& hypot(const Matriplex& a, const Matriplex& b) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] = a.fArray[i] * a.fArray[i] + b.fArray[i] * b.fArray[i];
       }
       return sqrt();
     }
 
-    Matriplex& sin(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& sin(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::sin(a.fArray[i]);
       return *this;
     }
-    Matriplex& sin() {
+    MKFIT_HOST_DEVICE Matriplex& sin() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::sin(fArray[i]);
       return *this;
     }
 
-    Matriplex& cos(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& cos(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::cos(a.fArray[i]);
       return *this;
     }
-    Matriplex& cos() {
+    MKFIT_HOST_DEVICE Matriplex& cos() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::cos(fArray[i]);
       return *this;
     }
 
-    Matriplex& tan(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& tan(const Matriplex& a) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::tan(a.fArray[i]);
       return *this;
     }
-    Matriplex& tan() {
+    MKFIT_HOST_DEVICE Matriplex& tan() {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::tan(fArray[i]);
       return *this;
     }
 
-    Matriplex& atan2(const Matriplex& y, const Matriplex& x) {
+    MKFIT_HOST_DEVICE Matriplex& atan2(const Matriplex& y, const Matriplex& x) {
       for (idx_t i = 0; i < kTotSize; ++i)
         fArray[i] = std::atan2(y.fArray[i], x.fArray[i]);
       return *this;
@@ -299,45 +297,47 @@ namespace Matriplex {
       _ass_ vdt::fast_##_func_(__VA_ARGS__);
 #endif
 
-    Matriplex& fast_isqrt(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& fast_isqrt(const Matriplex& a) {
       VDT_INVOKE(ASS, isqrt, A_ARR);
       return *this;
     }
-    Matriplex& fast_isqrt() {
+    MKFIT_HOST_DEVICE Matriplex& fast_isqrt() {
       VDT_INVOKE(ASS, isqrt, ARR);
       return *this;
     }
 
-    Matriplex& fast_sin(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& fast_sin(const Matriplex& a) {
       VDT_INVOKE(ASS, sin, A_ARR);
       return *this;
     }
-    Matriplex& fast_sin() {
+    MKFIT_HOST_DEVICE Matriplex& fast_sin() {
       VDT_INVOKE(ASS, sin, ARR);
       return *this;
     }
 
-    Matriplex& fast_cos(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& fast_cos(const Matriplex& a) {
       VDT_INVOKE(ASS, cos, A_ARR);
       return *this;
     }
-    Matriplex& fast_cos() {
+    MKFIT_HOST_DEVICE Matriplex& fast_cos() {
       VDT_INVOKE(ASS, cos, ARR);
       return *this;
     }
 
-    void fast_sincos(Matriplex& s, Matriplex& c) const { VDT_INVOKE(, sincos, ARR, s.fArray[i], c.fArray[i]); }
+    MKFIT_HOST_DEVICE void fast_sincos(Matriplex& s, Matriplex& c) const {
+      VDT_INVOKE(, sincos, ARR, s.fArray[i], c.fArray[i]);
+    }
 
-    Matriplex& fast_tan(const Matriplex& a) {
+    MKFIT_HOST_DEVICE Matriplex& fast_tan(const Matriplex& a) {
       VDT_INVOKE(ASS, tan, A_ARR);
       return *this;
     }
-    Matriplex& fast_tan() {
+    MKFIT_HOST_DEVICE Matriplex& fast_tan() {
       VDT_INVOKE(ASS, tan, ARR);
       return *this;
     }
 
-    Matriplex& fast_atan2(const Matriplex& y, const Matriplex& x) {
+    MKFIT_HOST_DEVICE Matriplex& fast_atan2(const Matriplex& y, const Matriplex& x) {
       VDT_INVOKE(ASS, atan2, y.fArray[i], x.fArray[i]);
       return *this;
     }
@@ -349,32 +349,32 @@ namespace Matriplex {
 #undef A_ARR
 #endif
 
-    void sincos4(Matriplex& s, Matriplex& c) const {
+    MKFIT_HOST_DEVICE void sincos4(Matriplex& s, Matriplex& c) const {
       for (idx_t i = 0; i < kTotSize; ++i)
         internal::sincos4(fArray[i], s.fArray[i], c.fArray[i]);
     }
 
     //---------------------------------------------------------
 
-    void copySlot(idx_t n, const Matriplex& m) {
+    MKFIT_HOST_DEVICE void copySlot(idx_t n, const Matriplex& m) {
       for (idx_t i = n; i < kTotSize; i += N) {
         fArray[i] = m.fArray[i];
       }
     }
 
-    void copyIn(idx_t n, const T* arr) {
+    MKFIT_HOST_DEVICE void copyIn(idx_t n, const T* arr) {
       for (idx_t i = n; i < kTotSize; i += N) {
         fArray[i] = *(arr++);
       }
     }
 
-    void copyIn(idx_t n, const Matriplex& m, idx_t in) {
+    MKFIT_HOST_DEVICE void copyIn(idx_t n, const Matriplex& m, idx_t in) {
       for (idx_t i = n; i < kTotSize; i += N, in += N) {
         fArray[i] = m[in];
       }
     }
 
-    void copy(idx_t n, idx_t in) {
+    MKFIT_HOST_DEVICE void copy(idx_t n, idx_t in) {
       for (idx_t i = n; i < kTotSize; i += N, in += N) {
         fArray[i] = fArray[in];
       }
@@ -453,7 +453,7 @@ namespace Matriplex {
 
 #else
 
-    void slurpIn(const T* arr, int vi[N], const int N_proc = N) {
+    MKFIT_HOST_DEVICE void slurpIn(const T* arr, int vi[N], const int N_proc = N) {
       // Separate N_proc == N case (gains about 7% in fit test).
       if (N_proc == N) {
         for (int i = 0; i < kSize; ++i) {
@@ -472,7 +472,7 @@ namespace Matriplex {
 
 #endif
 
-    void copyOut(idx_t n, T* arr) const {
+    MKFIT_HOST_DEVICE void copyOut(idx_t n, T* arr) const {
       for (idx_t i = n; i < kTotSize; i += N) {
         *(arr++) = fArray[i];
       }
@@ -487,118 +487,118 @@ namespace Matriplex {
   //==============================================================================
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t = a;
     t.negate();
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> negate(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> negate(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t = a;
     t.negate();
     return t;
   }
 
   template <typename T, typename TT, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> negate_if_ltz(const MPlex<T, D1, D2, N>& a, const MPlex<TT, D1, D2, N>& sign) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> negate_if_ltz(const MPlex<T, D1, D2, N>& a, const MPlex<TT, D1, D2, N>& sign) {
     MPlex<T, D1, D2, N> t = a;
     t.negate_if_ltz(sign);
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator+(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator+(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t += b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t -= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator*(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator*(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t *= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator/(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator/(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t /= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator+(const MPlex<T, D1, D2, N>& a, T b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator+(const MPlex<T, D1, D2, N>& a, T b) {
     MPlex<T, D1, D2, N> t = a;
     t += b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a, T b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator-(const MPlex<T, D1, D2, N>& a, T b) {
     MPlex<T, D1, D2, N> t = a;
     t -= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator*(const MPlex<T, D1, D2, N>& a, T b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator*(const MPlex<T, D1, D2, N>& a, T b) {
     MPlex<T, D1, D2, N> t = a;
     t *= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator/(const MPlex<T, D1, D2, N>& a, T b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator/(const MPlex<T, D1, D2, N>& a, T b) {
     MPlex<T, D1, D2, N> t = a;
     t /= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator+(T a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator+(T a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t += b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator-(T a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator-(T a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t -= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator*(T a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator*(T a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t *= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> operator/(T a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> operator/(T a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t = a;
     t /= b;
     return t;
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> abs(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> abs(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.abs(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> sqr(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> sqr(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.sqr(a);
   }
@@ -607,31 +607,31 @@ namespace Matriplex {
   // transcendentals, std version
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> sqrt(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> sqrt(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.sqrt(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> hypot(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> hypot(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t;
     return t.hypot(a, b);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> sin(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> sin(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.sin(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> cos(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> cos(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.cos(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  void sincos(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
+  MKFIT_HOST_DEVICE void sincos(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
     for (idx_t i = 0; i < a.kTotSize; ++i) {
       s.fArray[i] = std::sin(a.fArray[i]);
       c.fArray[i] = std::cos(a.fArray[i]);
@@ -639,13 +639,13 @@ namespace Matriplex {
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> tan(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> tan(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.tan(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> atan2(const MPlex<T, D1, D2, N>& y, const MPlex<T, D1, D2, N>& x) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> atan2(const MPlex<T, D1, D2, N>& y, const MPlex<T, D1, D2, N>& x) {
     MPlex<T, D1, D2, N> t;
     return t.atan2(y, x);
   }
@@ -656,36 +656,36 @@ namespace Matriplex {
 #ifdef MPLEX_VDT
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> fast_isqrt(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> fast_isqrt(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.fast_isqrt(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> fast_sin(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> fast_sin(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.fast_sin(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> fast_cos(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> fast_cos(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.fast_cos(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  void fast_sincos(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
+  MKFIT_HOST_DEVICE void fast_sincos(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
     a.fast_sincos(s, c);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> fast_tan(const MPlex<T, D1, D2, N>& a) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> fast_tan(const MPlex<T, D1, D2, N>& a) {
     MPlex<T, D1, D2, N> t;
     return t.fast_tan(a);
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> fast_atan2(const MPlex<T, D1, D2, N>& y, const MPlex<T, D1, D2, N>& x) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> fast_atan2(const MPlex<T, D1, D2, N>& y, const MPlex<T, D1, D2, N>& x) {
     MPlex<T, D1, D2, N> t;
     return t.fast_atan2(y, x);
   }
@@ -693,17 +693,17 @@ namespace Matriplex {
 #endif
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  void sincos4(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
+  MKFIT_HOST_DEVICE void sincos4(const MPlex<T, D1, D2, N>& a, MPlex<T, D1, D2, N>& s, MPlex<T, D1, D2, N>& c) {
     a.sincos4(s, c);
   }
 
   //---------------------------------------------------------
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  void min_max(const MPlex<T, D1, D2, N>& a,
-               const MPlex<T, D1, D2, N>& b,
-               MPlex<T, D1, D2, N>& min,
-               MPlex<T, D1, D2, N>& max) {
+  MKFIT_HOST_DEVICE void min_max(const MPlex<T, D1, D2, N>& a,
+                                 const MPlex<T, D1, D2, N>& b,
+                                 MPlex<T, D1, D2, N>& min,
+                                 MPlex<T, D1, D2, N>& max) {
     for (idx_t i = 0; i < a.kTotSize; ++i) {
       min.fArray[i] = std::min(a.fArray[i], b.fArray[i]);
       max.fArray[i] = std::max(a.fArray[i], b.fArray[i]);
@@ -711,7 +711,7 @@ namespace Matriplex {
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> min(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> min(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t;
     for (idx_t i = 0; i < a.kTotSize; ++i) {
       t.fArray[i] = std::min(a.fArray[i], b.fArray[i]);
@@ -720,7 +720,7 @@ namespace Matriplex {
   }
 
   template <typename T, idx_t D1, idx_t D2, idx_t N>
-  MPlex<T, D1, D2, N> max(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
+  MKFIT_HOST_DEVICE MPlex<T, D1, D2, N> max(const MPlex<T, D1, D2, N>& a, const MPlex<T, D1, D2, N>& b) {
     MPlex<T, D1, D2, N> t;
     for (idx_t i = 0; i < a.kTotSize; ++i) {
       t.fArray[i] = std::max(a.fArray[i], b.fArray[i]);
@@ -733,7 +733,9 @@ namespace Matriplex {
   //==============================================================================
 
   template <typename T, idx_t D1, idx_t D2, idx_t D3, idx_t N>
-  void multiplyGeneral(const MPlex<T, D1, D2, N>& A, const MPlex<T, D2, D3, N>& B, MPlex<T, D1, D3, N>& C) {
+  MKFIT_HOST_DEVICE void multiplyGeneral(const MPlex<T, D1, D2, N>& A,
+                                         const MPlex<T, D2, D3, N>& B,
+                                         MPlex<T, D1, D3, N>& C) {
     for (idx_t i = 0; i < D1; ++i) {
       for (idx_t j = 0; j < D3; ++j) {
         const idx_t ijo = N * (i * D3 + j);
@@ -767,7 +769,9 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct MultiplyCls<T, 3, N> {
-    static void multiply(const MPlex<T, 3, 3, N>& A, const MPlex<T, 3, 3, N>& B, MPlex<T, 3, 3, N>& C) {
+    MKFIT_HOST_DEVICE static void multiply(const MPlex<T, 3, 3, N>& A,
+                                           const MPlex<T, 3, 3, N>& B,
+                                           MPlex<T, 3, 3, N>& C) {
       const T* a = A.fArray;
       ASSUME_ALIGNED(a, 64);
       const T* b = B.fArray;
@@ -792,7 +796,9 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct MultiplyCls<T, 6, N> {
-    static void multiply(const MPlex<T, 6, 6, N>& A, const MPlex<T, 6, 6, N>& B, MPlex<T, 6, 6, N>& C) {
+    MKFIT_HOST_DEVICE static void multiply(const MPlex<T, 6, 6, N>& A,
+                                           const MPlex<T, 6, 6, N>& B,
+                                           MPlex<T, 6, 6, N>& C) {
       const T* a = A.fArray;
       ASSUME_ALIGNED(a, 64);
       const T* b = B.fArray;
@@ -878,7 +884,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void multiply(const MPlex<T, D, D, N>& A, const MPlex<T, D, D, N>& B, MPlex<T, D, D, N>& C) {
+  MKFIT_HOST_DEVICE void multiply(const MPlex<T, D, D, N>& A, const MPlex<T, D, D, N>& B, MPlex<T, D, D, N>& C) {
 #ifdef DEBUG
     printf("Multipl %d %d\n", D, N);
 #endif
@@ -899,7 +905,7 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct CramerInverter<T, 2, N> {
-    static void invert(MPlex<T, 2, 2, N>& A, double* determ = nullptr) {
+    MKFIT_HOST_DEVICE static void invert(MPlex<T, 2, 2, N>& A, double* determ = nullptr) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -924,7 +930,7 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct CramerInverter<T, 3, N> {
-    static void invert(MPlex<T, 3, 3, N>& A, double* determ = nullptr) {
+    MKFIT_HOST_DEVICE static void invert(MPlex<T, 3, 3, N>& A, double* determ = nullptr) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -962,7 +968,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void invertCramer(MPlex<T, D, D, N>& A, double* determ = nullptr) {
+  MKFIT_HOST_DEVICE void invertCramer(MPlex<T, D, D, N>& A, double* determ = nullptr) {
     CramerInverter<T, D, N>::invert(A, determ);
   }
 
@@ -979,7 +985,7 @@ namespace Matriplex {
   struct CholeskyInverter<T, 3, N> {
     // Note: this only works on symmetric matrices.
     // Optimized version for positive definite matrices, no checks.
-    static void invert(MPlex<T, 3, 3, N>& A) {
+    MKFIT_HOST_DEVICE static void invert(MPlex<T, 3, 3, N>& A) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -1016,7 +1022,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void invertCholesky(MPlex<T, D, D, N>& A) {
+  MKFIT_HOST_DEVICE void invertCholesky(MPlex<T, D, D, N>& A) {
     CholeskyInverter<T, D, N>::invert(A);
   }
 
