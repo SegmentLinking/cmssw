@@ -12,6 +12,7 @@ from ..modules.hltPhase2PixelTracksSeedLayers_cfi import hltPhase2PixelTracksSee
 from ..modules.hltPhase2PixelTracksSoA_cfi import hltPhase2PixelTracksSoA
 from ..modules.hltPhase2PixelTrackTorchHighPuritySelector_cfi import hltPhase2PixelTrackTorchHighPuritySelector
 from ..modules.hltPhase2PixelVertices_cfi import *
+from ..modules.hltSiPhase2RecHitsSoA_cfi import hltSiPhase2RecHitsSoA
 from ..sequences.HLTPhase2PixelVertexingSequence_cfi import *
 from ..sequences.HLTBeamSpotSequence_cfi import HLTBeamSpotSequence
 
@@ -19,6 +20,7 @@ HLTPhase2PixelTracksAndVerticesSequence = cms.Sequence(
     HLTBeamSpotSequence
     +hltPhase2PixelFitterByHelixProjections # Currently needed by tracker muons
     +hltPhase2PixelTrackFilterByKinematics  # Currently needed by tracker muons
+    +hltSiPhase2RecHitsSoA
     +hltPhase2OtRecHitsSoA
     +hltPhase2PixelTracksSoA
     +hltPhase2PixelTrackTorchHighPuritySelector
@@ -47,6 +49,7 @@ alpakaValidationHLT.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequenceSerialS
         +hltPhase2PixelTracksAndHighPtStepTrackingRegions # needed by highPtTripletStep iteration
         +hltPhase2PixelFitterByHelixProjections # needed by tracker muons
         +hltPhase2PixelTrackFilterByKinematics  # needed by tracker muons
+        +hltSiPhase2RecHitsSoA
         +hltPhase2OtRecHitsSoA
         +hltPhase2PixelTracksSoASerialSync
         +hltPhase2PixelTrackTorchHighPuritySelectorSerialSync
