@@ -11,6 +11,7 @@
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "RecoLocalTracker/ClusterParameterEstimator/interface/ClusterParameterEstimator.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPEPosition.h"
 
 class Phase2StripCPE final : public ClusterParameterEstimator<Phase2TrackerCluster1D> {
 public:
@@ -19,10 +20,8 @@ public:
   using Phase2TrackerTopology = PixelTopology;
 
   struct Param {
-    Param() : topology(nullptr) {}
-    Phase2TrackerTopology const* topology;
+    phase2StripCPE::ModuleParams position;
     LocalError localErr;
-    float coveredStrips;
   };
 
   static void fillPSetDescription(edm::ParameterSetDescription& desc);
@@ -34,6 +33,10 @@ public:
                  const SiPhase2OuterTrackerLorentzAngle&);
   LocalValues localParameters(const Phase2TrackerCluster1D& cluster, const GeomDetUnit& det) const override;
   LocalVector driftDirection(const Phase2TrackerGeomDetUnit& det) const;
+
+  // the parameters of the OT modules, indexed by GeomDetUnit::index() from firstModuleIndex() on
+  unsigned int firstModuleIndex() const { return m_off; }
+  Param const& moduleParam(unsigned int detIndex) const { return m_Params[detIndex - m_off]; }
 
 private:
   void fillParam();
