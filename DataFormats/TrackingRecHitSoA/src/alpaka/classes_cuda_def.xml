@@ -2,5 +2,8 @@
   <class name="alpaka_cuda_async::reco::TrackingRecHitsSoACollection" persistent="false"/>
   <class name="edm::DeviceProduct<alpaka_cuda_async::reco::TrackingRecHitsSoACollection>" persistent="false"/>
   <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::reco::TrackingRecHitsSoACollection>>" persistent="false"/>
+  <class name="alpaka_cuda_async::reco::Phase2OTRecHitsSoACollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::reco::Phase2OTRecHitsSoACollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::reco::Phase2OTRecHitsSoACollection>>" persistent="false"/>
 </lcgdict>
 

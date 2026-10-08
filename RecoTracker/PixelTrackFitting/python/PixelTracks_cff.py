@@ -131,7 +131,7 @@ def _modifyForPPonAAandNotPhase2(producer):
 from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtension
 phase2CAExtension.toReplaceWith(pixelTracksAlpaka,_pixelTracksAlpakaPhase2Extended.clone(
     pixelRecHitSrc = "siPixelRecHitsPreSplittingAlpaka",
-    trackerRecHitsSoA = "phase2OTRecHitsSoAConverter"
+    trackerRecHitsSoA = "phase2OTRecHitsSoA"
 ))
 
 # pixel tracks SoA producer on the cpu, for validation
@@ -157,7 +157,7 @@ phase2CAExtension.toReplaceWith(pixelTracks, _pixelTrackProducerFromSoAAlpaka.cl
     minQuality = cms.string('tight'),
     trackSrc = cms.InputTag("pixelTracksAlpaka"),
     outerTrackerRecHitSrc = cms.InputTag("siPhase2RecHits"),
-    outerTrackerRecHitSoAConverterSrc = cms.InputTag("phase2OTRecHitsSoAConverter"),
+    outerTrackerRecHitSoAConverterSrc = cms.InputTag("phase2OTRecHitsSoA"),
     useOTExtension = cms.bool(True),
     requireQuadsFromConsecutiveLayers = cms.bool(True)
 ))

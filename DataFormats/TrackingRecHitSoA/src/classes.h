@@ -2,6 +2,7 @@
 #define DataFormats_TrackingRecHitSoA_src_classes_h
 
 #include "DataFormats/Common/interface/Wrapper.h"
+#include "DataFormats/TrackingRecHitSoA/interface/Phase2OTRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
