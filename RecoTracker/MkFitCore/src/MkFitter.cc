@@ -267,7 +267,6 @@ namespace mkfit {
 #endif
       no_mat_effs.setVal(0);
       do_cpe.setVal(-1);
-      bool propHit = h == 0 ? false : true;  // just update when the position is already at the hit
 
       for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
       {
@@ -319,6 +318,8 @@ namespace mkfit {
             std::cout << "layers are " << m_HoTArr[i][index].layer << " and  "
                       << m_HoTArr[i][indices[hitIndex[i]]].layer << std::endl;
 #endif
+          // the pass propagates to its first hit too, without material there: its start state need not lie on
+          // that hit's plane (the built track, or the previous fit of a track refitted after outlier removal)
           if (index == indices.back())
             no_mat_effs[i] = 1;
         }
@@ -370,7 +371,6 @@ namespace mkfit {
                                   outChi2,
                                   N_proc,
                                   final_fit::Pass{*refit_flags, *refit_ffflags, true},
-                                  propHit,
                                   &no_mat_effs,
                                   &do_cpe,
                                   m_cpe_corr_func,
@@ -464,8 +464,7 @@ namespace mkfit {
 #endif
       no_mat_effs.setVal(0);
       do_cpe.setVal(-1);
-      bool propHit = h == 0 ? false : true;  // just update when the position is already at the hit
-      int bkHot[NN];                         // HitOnTrack position of each lane's hit (per-hit states)
+      int bkHot[NN];  // HitOnTrack position of each lane's hit (per-hit states)
 
       for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
       {
@@ -582,7 +581,6 @@ namespace mkfit {
                                   outChi2,
                                   N_proc,
                                   pass,
-                                  propHit,
                                   &no_mat_effs,
                                   &do_cpe,
                                   m_cpe_corr_func,

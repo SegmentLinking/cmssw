@@ -77,9 +77,9 @@ namespace mkfit {
                              const MPlexQI* noMatEffPtr,
                              const ModuleMaterial* modMat);
 
-    // Propagation to the hits' planes (unless propToHit is false: the state is already there), then the Kalman
-    // update with the hits and its chi2, with the updated covariance in Joseph form.  A negative q/p after the update
-    // flips the charge.  With pass.n_sub > 1 the lanes not yet on their plane are propagated in sub-steps.
+    // Propagation to the hits' planes, then the Kalman update with the hits and its chi2, with the updated covariance
+    // in Joseph form.  A negative q/p after the update flips the charge.  With pass.n_sub > 1 the lanes not yet on
+    // their plane are propagated in sub-steps.
     void propagate_update(const MPlexLS& psErr,
                           const MPlexLV& psPar,
                           MPlexQI& Chg,
@@ -94,7 +94,6 @@ namespace mkfit {
                           MPlexQF& outChi2,
                           const int N_proc,
                           const Pass& pass,
-                          const bool propToHit,
                           const MPlexQI* noMatEffPtr,
                           const MPlexQI* doCPE,
                           cpe_func cpe_corr_func,

@@ -530,7 +530,6 @@ namespace mkfit::final_fit {
                         MPlexQF& outChi2,
                         const int N_proc,
                         const Pass& pass,
-                        const bool propToHit,
                         const MPlexQI* noMatEffPtr,
                         const MPlexQI* doCPE,
                         cpe_func cpe_corr_func,
@@ -539,7 +538,7 @@ namespace mkfit::final_fit {
     // Sub-steps for the lanes not yet on their plane.
     bool split[NN] = {false};
     bool any_split = false;
-    if (propToHit && pass.n_sub > 1) {
+    if (pass.n_sub > 1) {
       for (int i = 0; i < N_proc; ++i) {
         const float d = (plPnt.constAt(i, 0, 0) - psPar.constAt(i, 0, 0)) * plNrm.constAt(i, 0, 0) +
                         (plPnt.constAt(i, 1, 0) - psPar.constAt(i, 1, 0)) * plNrm.constAt(i, 1, 0) +
@@ -551,9 +550,9 @@ namespace mkfit::final_fit {
       }
     }
 
-    if (any_split) {
-      MPlexLS propErr;
-      MPlexLV propPar;
+    MPlexLS propErr;
+    MPlexLV propPar;
+    if (any_split)
       propagate_sub_steps(psErr,
                           psPar,
                           Chg,
@@ -568,60 +567,24 @@ namespace mkfit::final_fit {
                           split,
                           noMatEffPtr,
                           modMat);
-      update_on_plane(propErr,
-                      propPar,
-                      Chg,
-                      msErr,
-                      msPar,
-                      plNrm,
-                      plDir,
-                      plPnt,
-                      outErr,
-                      outPar,
-                      outChi2,
-                      N_proc,
-                      pass.pflags,
-                      doCPE,
-                      cpe_corr_func,
-                      localStates);
-    } else if (propToHit) {
-      MPlexLS propErr;
-      MPlexLV propPar;
+    else
       propagate(psErr, psPar, Chg, plPnt, plNrm, propErr, propPar, outFailFlag, N_proc, pass, noMatEffPtr, modMat);
-      update_on_plane(propErr,
-                      propPar,
-                      Chg,
-                      msErr,
-                      msPar,
-                      plNrm,
-                      plDir,
-                      plPnt,
-                      outErr,
-                      outPar,
-                      outChi2,
-                      N_proc,
-                      pass.pflags,
-                      doCPE,
-                      cpe_corr_func,
-                      localStates);
-    } else {
-      update_on_plane(psErr,
-                      psPar,
-                      Chg,
-                      msErr,
-                      msPar,
-                      plNrm,
-                      plDir,
-                      plPnt,
-                      outErr,
-                      outPar,
-                      outChi2,
-                      N_proc,
-                      pass.pflags,
-                      doCPE,
-                      cpe_corr_func,
-                      localStates);
-    }
+    update_on_plane(propErr,
+                    propPar,
+                    Chg,
+                    msErr,
+                    msPar,
+                    plNrm,
+                    plDir,
+                    plPnt,
+                    outErr,
+                    outPar,
+                    outChi2,
+                    N_proc,
+                    pass.pflags,
+                    doCPE,
+                    cpe_corr_func,
+                    localStates);
     for (int n = 0; n < NN; ++n) {
       if (outPar.At(n, 3, 0) < 0) {
         Chg.At(n, 0, 0) = -Chg.At(n, 0, 0);
