@@ -1436,6 +1436,11 @@ namespace mkfit {
   // ReFit
   //==============================================================================
 
+  namespace {
+    // outlier cut for the innermost and outermost hits: the EstimateCut of the CKF final fit (KFFittingSmoother)
+    constexpr float kEndHitChi2Cut = 20.f;
+  }  // namespace
+
   void MkBuilder::fit_tracks(MkFitter *mkfitter,
                              int nFoundHits,
                              std::vector<int> inds,
@@ -1530,7 +1535,7 @@ namespace mkfit {
         }
         std::cout << "\n ";
 #endif
-        std::map<float, int> scorerAndIdx;
+        std::multimap<float, int> scorerAndIdx;  // worst first; hits with equal scores are all kept
         for (int j = 0; j < nFoundHits; j++) {
           //95% qunatiles for FWD and BWD didn't work
           //float TF = 23.7 * j / nFoundHits + 0.8;
@@ -1543,7 +1548,7 @@ namespace mkfit {
           float scorer =
               (chi2fwd[j + nFoundHits * i]) +
               (chi2bkwd[nFoundHits - 1 - j + nFoundHits * i]);  //simpler alternative to metric based on quantiles
-          scorerAndIdx[-scorer] = j;
+          scorerAndIdx.emplace(-scorer, j);
         }
 
         int remove_i = 0;
@@ -1553,12 +1558,15 @@ namespace mkfit {
           std::cout << "scorer " << idscore.first << " " << chi2fwd[idscore.second + nFoundHits * i] << " "
                     << chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i] << " \n";
 #endif
-          if ((m_tracks[inds[i + start_trk]].pT() > 1 && -idscore.first > 20 &&
-               chi2fwd[idscore.second + nFoundHits * i] > 8 &&
-               chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i] > 8) ||
-              (m_tracks[inds[i + start_trk]].pT() <= 1 && -idscore.first > 15 &&
-               chi2fwd[idscore.second + nFoundHits * i] > 7 &&
-               chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i] > 7)) {
+          // The innermost and the outermost hit have no information on one side (the pass that starts there updates
+          // the inflated start state with them), so they are tested with the pass that predicts them from all the
+          // other hits, at the cut of the CKF final fit (KFFittingSmoother EstimateCut).
+          const float chi2F = chi2fwd[idscore.second + nFoundHits * i];
+          const float chi2B = chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i];
+          const bool innermost = idscore.second == 0, outermost = idscore.second == nFoundHits - 1;
+          if ((innermost && chi2B > kEndHitChi2Cut) || (outermost && chi2F > kEndHitChi2Cut) ||
+              (m_tracks[inds[i + start_trk]].pT() > 1 && -idscore.first > 20 && chi2F > 8 && chi2B > 8) ||
+              (m_tracks[inds[i + start_trk]].pT() <= 1 && -idscore.first > 15 && chi2F > 7 && chi2B > 7)) {
             if ((nFoundHits - remove_i) <= 3)
               continue;  // 3 hits is the minimum...
             remove_i++;
@@ -1668,25 +1676,31 @@ namespace mkfit {
     }
     std::cout << "total REMAP " << n << std::endl;
 #endif
-    for (auto &m : remap) {
-      int size = m.second.size();
-      int ntimes = size / NN;
+    // Refit the tracks with removed hits and test them again, until a round removes nothing (as the CKF final fit
+    // iterates); every round removes at least one hit and a track keeps at least 3, so this ends.
+    while (!remap.empty()) {
+      std::map<int, std::vector<int>> nextRemap;
+      for (auto &m : remap) {
+        int size = m.second.size();
+        int ntimes = size / NN;
 #ifdef DEBUG_FIT
-      std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
-      std::cout << "ntimes " << ntimes << " size  " << size << " extra " << size - NN * ntimes << std::endl;
+        std::cout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << std::endl;
+        std::cout << "ntimes " << ntimes << " size  " << size << " extra " << size - NN * ntimes << std::endl;
 #endif
-      for (int i = 0; i < ntimes; i++) {
+        for (int i = 0; i < ntimes; i++) {
 #ifdef DEBUG_FIT
-        check_tracks(m.second, NN * i, NN * (i + 1));
+          check_tracks(m.second, NN * i, NN * (i + 1));
 #endif
-        fit_tracks(mkfitter.get(), m.first, m.second, NN * i, NN * (i + 1));
+          fit_tracks(mkfitter.get(), m.first, m.second, NN * i, NN * (i + 1), &nextRemap);
+        }
+#ifdef DEBUG_FIT
+        if (size % NN)
+          check_tracks(m.second, NN * ntimes, size);
+#endif
+        if (size % NN)
+          fit_tracks(mkfitter.get(), m.first, m.second, NN * ntimes, size, &nextRemap);
       }
-#ifdef DEBUG_FIT
-      if (size % NN)
-        check_tracks(m.second, NN * ntimes, size);
-#endif
-      if (size % NN)
-        fit_tracks(mkfitter.get(), m.first, m.second, NN * ntimes, size);
+      remap.swap(nextRemap);
     }
     mkfitter.release();
   }
