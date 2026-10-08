@@ -202,7 +202,7 @@ MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iC
       navToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("NavigationSchool"))},
       algo_{reco::TrackBase::algoByName(
           TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data())},
-      bsToken_(consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"))),
+      bsToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
       trajectoryInEvent_{iConfig.getParameter<bool>("TrajectoryInEvent")},
       validateHitStates_{iConfig.getUntrackedParameter<bool>("validateHitStates")} {
   produces<reco::TrackCollection>();
@@ -223,6 +223,7 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add("mkFitSeeds", edm::InputTag{"mkFitSeedConverter"});
   desc.add("src", edm::InputTag{"mkFitProducer"});
   desc.add("seeds", edm::InputTag{"initialStepSeeds"});
+  desc.add("beamSpot", edm::InputTag{"offlineBeamSpot"});
   desc.add("ttrhBuilder", edm::ESInputTag{"", "WithTrackAngle"});
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
   desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
