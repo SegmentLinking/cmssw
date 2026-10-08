@@ -78,8 +78,8 @@ namespace mkfit {
                              const ModuleMaterial* modMat);
 
     // Propagation to the hits' planes (unless propToHit is false: the state is already there), then the Kalman
-    // update with the hits and its chi2.  A negative q/p after the update flips the charge.  With pass.n_sub > 1
-    // the lanes not yet on their plane are propagated in sub-steps.
+    // update with the hits and its chi2, with the updated covariance in Joseph form.  A negative q/p after the update
+    // flips the charge.  With pass.n_sub > 1 the lanes not yet on their plane are propagated in sub-steps.
     void propagate_update(const MPlexLS& psErr,
                           const MPlexLV& psPar,
                           MPlexQI& Chg,
@@ -102,7 +102,8 @@ namespace mkfit {
                           const LocalStatesOut* localStates = nullptr);
 
     // Two-filter smoother on one module plane: combine two independent local estimates of the same state (the
-    // forward updated and the backward predicted one): xs = xf + Cf S^-1 (xb - xf), Cs = Cf S^-1 Cb, S = Cf + Cb.
+    // forward updated and the backward predicted one): xs = xf + Cf S^-1 (xb - xf), Cs = Cf S^-1 Cb (computed in Joseph
+    // form), S = Cf + Cb.
     // ok = 0 where S is not positive definite (a pivot of its Cholesky factorisation is not positive; a full test,
     // not only of the diagonal).
     void smooth_local_states(const MPlex5V& xf,

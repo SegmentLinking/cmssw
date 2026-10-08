@@ -326,6 +326,62 @@ namespace mkfit::final_fit {
       par = p1;
     }
 
+    // The Kalman update in the local frame, with the covariance in Joseph form, as KFUpdator:
+    //   C' = (I - K H) C (I - K H)^T + K V K^T,
+    // V the hit's local covariance.  Positive semi-definite by construction, also in single precision, where
+    // (I - K H) C loses definiteness when a hit shrinks a variance a lot.  H picks the local position (parameters 3
+    // and 4), which the products below use directly.  The gain and the parameters are computed as in plane::update().
+    // Row pointers are taken outside the lane loops: through the offset table of a symmetric Matriplex inside them,
+    // the addresses are not affine and the loops do not vectorise.
+    void update_joseph(const LocalPred& L, const LocalMeas& M, const Residual& R, LocalUpd& U) {
+      constexpr int D = 5;
+      const MPlex5S& predErr = L.err;
+      // K, K V and (I - K H) C, in the Matriplex layout [row][column][lane] as plain arrays: GCC vectorises the lane
+      // loops over these, not over Matriplex accessors in the same loop nests
+      float gain[D][2][NN], gainV[D][2][NN], fwdTerm[D][D][NN];
+      const float* sInv00 = &R.s_inv.constAt(0, 0, 0);
+      const float* sInv01 = &R.s_inv.constAt(0, 0, 1);
+      const float* sInv11 = &R.s_inv.constAt(0, 1, 1);
+      const float* hitV00 = &M.err.constAt(0, 0, 0);
+      const float* hitV01 = &M.err.constAt(0, 0, 1);
+      const float* hitV11 = &M.err.constAt(0, 1, 1);
+      const float* res0 = &R.r.constAt(0, 0, 0);
+      const float* res1 = &R.r.constAt(0, 1, 0);
+      for (int i = 0; i < D; ++i) {
+        const float* cI3 = &predErr.constAt(0, i, 3);
+        const float* cI4 = &predErr.constAt(0, i, 4);
+        const float* parI = &L.lp.constAt(0, i, 0);
+        float* updParI = &U.lp.At(0, i, 0);
+#pragma omp simd
+        for (int n = 0; n < NN; ++n) {
+          gain[i][0][n] = sInv00[n] * cI3[n] + sInv01[n] * cI4[n];
+          gain[i][1][n] = sInv01[n] * cI3[n] + sInv11[n] * cI4[n];
+          updParI[n] = parI[n] + gain[i][0][n] * res0[n] + gain[i][1][n] * res1[n];
+          gainV[i][0][n] = gain[i][0][n] * hitV00[n] + gain[i][1][n] * hitV01[n];
+          gainV[i][1][n] = gain[i][0][n] * hitV01[n] + gain[i][1][n] * hitV11[n];
+        }
+      }
+      for (int j = 0; j < D; ++j) {
+        const float* c3J = &predErr.constAt(0, 3, j);
+        const float* c4J = &predErr.constAt(0, 4, j);
+        for (int i = 0; i < D; ++i) {
+          const float* cIJ = &predErr.constAt(0, i, j);
+#pragma omp simd
+          for (int n = 0; n < NN; ++n)
+            fwdTerm[i][j][n] = cIJ[n] - gain[i][0][n] * c3J[n] - gain[i][1][n] * c4J[n];
+        }
+      }
+      // C' = (I - K H) C (I - K H)^T + K V K^T
+      for (int i = 0; i < D; ++i)
+        for (int j = 0; j <= i; ++j) {
+          float* updErrIJ = &U.err.At(0, i, j);
+#pragma omp simd
+          for (int n = 0; n < NN; ++n)
+            updErrIJ[n] = fwdTerm[i][j][n] - fwdTerm[i][3][n] * gain[j][0][n] - fwdTerm[i][4][n] * gain[j][1][n] +
+                          gainV[i][0][n] * gain[j][0][n] + gainV[i][1][n] * gain[j][1][n];
+        }
+    }
+
     // The Kalman update of the predicted state (psErr, psPar) with the hits, and its chi2.
     void update_on_plane(const MPlexLS& psErr,
                          const MPlexLV& psPar,
@@ -362,7 +418,7 @@ namespace mkfit::final_fit {
       chi2(R, outChi2);
 
       LocalUpd U;
-      update(L, R, U);
+      update_joseph(L, M, R, U);
       // the local states the caller asked for (a null pointer: not needed)
       if (localStates) {
         if (localStates->predPar)
@@ -586,14 +642,12 @@ namespace mkfit::final_fit {
                            MPlex5S& cs,
                            MPlexQI& ok,
                            const int N_proc) {
-    // S = Cf + Cb = L L^T (Cholesky, L = chol).  With Yf = L^-1 Cf (yFwd), Yb = L^-1 Cb (yBwd) and
-    // z = L^-1 (xb - xf) (zRes):
-    //   xs = xf + Cf S^-1 (xb - xf) = xf + Yf^T z,   Cs = Cf S^-1 Cb = Yf^T Yb.
-    // Only forward substitutions; Cs as a product, not Cf - Cf S^-1 Cf, so no cancellation when Cb << Cf.
-    // Single precision: Cholesky does not care about the scales of the five parameters.  Only a strongly ill-conditioned
-    // combination loses digits (at PU200 about one state in a few million, by a few tenths of its sigma).
-    // Every innermost loop runs over the NN lanes and vectorises; the elements of the symmetric inputs are read
-    // through row pointers taken outside them.
+    // S = Cf + Cb = L L^T (Cholesky, L = chol).  With Yf = L^-1 Cf (yFwd) and z = L^-1 (xb - xf) (zRes):
+    //   xs = xf + Cf S^-1 (xb - xf) = xf + Yf^T z,
+    //   Cs = (I - K) Cf (I - K)^T + K Cb K^T with the gain K = Cf S^-1 (Joseph form; equal to Cf S^-1 Cb).
+    // Cs as a sum of two congruences, not Cf - Cf S^-1 Cf, so no cancellation when Cb << Cf, and positive
+    // semi-definite also in single precision.  Every innermost loop runs over the NN lanes and vectorises; the
+    // elements of the symmetric inputs are read through row pointers taken outside them.
     constexpr int D = 5;
     // Work arrays in the Matriplex layout [row][column][lane], plain: GCC vectorises the lane loops over these, not
     // over Matriplex accessors in the same loop nests.
@@ -640,8 +694,8 @@ namespace mkfit::final_fit {
       }
     }
 
-    // forward substitution L y = b for b = xb - xf and the five columns of Cf and of Cb
-    float zRes[D][NN], yFwd[D][D][NN], yBwd[D][D][NN];
+    // forward substitution L y = b for b = xb - xf and the five columns of Cf
+    float zRes[D][NN], yFwd[D][D][NN];
     for (int i = 0; i < D; ++i) {
       const float* xbI = &xb.constAt(0, i, 0);
       const float* xfI = &xf.constAt(0, i, 0);
@@ -659,23 +713,16 @@ namespace mkfit::final_fit {
     for (int c = 0; c < D; ++c)
       for (int i = 0; i < D; ++i) {
         const float* cfIC = &cf.constAt(0, i, c);
-        const float* cbIC = &cb.constAt(0, i, c);
 #pragma omp simd
-        for (int n = 0; n < NN; ++n) {
+        for (int n = 0; n < NN; ++n)
           yFwd[i][c][n] = cfIC[n];
-          yBwd[i][c][n] = cbIC[n];
-        }
         for (int k = 0; k < i; ++k)
 #pragma omp simd
-          for (int n = 0; n < NN; ++n) {
+          for (int n = 0; n < NN; ++n)
             yFwd[i][c][n] -= chol[i][k][n] * yFwd[k][c][n];
-            yBwd[i][c][n] -= chol[i][k][n] * yBwd[k][c][n];
-          }
 #pragma omp simd
-        for (int n = 0; n < NN; ++n) {
+        for (int n = 0; n < NN; ++n)
           yFwd[i][c][n] *= cholInvDiag[i][n];
-          yBwd[i][c][n] *= cholInvDiag[i][n];
-        }
       }
 
     for (int i = 0; i < D; ++i) {
@@ -693,15 +740,51 @@ namespace mkfit::final_fit {
         xsI[n] = acc[n];
     }
 
+    // the gain, K^T = S^-1 Cf, by back substitution L^T K^T = Yf
+    float gainT[D][D][NN];
+    for (int c = 0; c < D; ++c)
+      for (int i = D - 1; i >= 0; --i) {
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          acc[n] = yFwd[i][c][n];
+        for (int k = i + 1; k < D; ++k)
+#pragma omp simd
+          for (int n = 0; n < NN; ++n)
+            acc[n] -= chol[k][i][n] * gainT[k][c][n];
+#pragma omp simd
+        for (int n = 0; n < NN; ++n)
+          gainT[i][c][n] = acc[n] * cholInvDiag[i][n];
+      }
+    // fwdTerm = (I - K) Cf and gainCb = K Cb, with K(i, m) = gainT(m, i)
+    float fwdTerm[D][D][NN], gainCb[D][D][NN];
+    for (int i = 0; i < D; ++i)
+      for (int j = 0; j < D; ++j) {
+        const float* cfIJ = &cf.constAt(0, i, j);
+#pragma omp simd
+        for (int n = 0; n < NN; ++n) {
+          fwdTerm[i][j][n] = cfIJ[n];
+          gainCb[i][j][n] = 0.f;
+        }
+        for (int m = 0; m < D; ++m) {
+          const float* cfMJ = &cf.constAt(0, m, j);
+          const float* cbMJ = &cb.constAt(0, m, j);
+#pragma omp simd
+          for (int n = 0; n < NN; ++n) {
+            fwdTerm[i][j][n] -= gainT[m][i][n] * cfMJ[n];
+            gainCb[i][j][n] += gainT[m][i][n] * cbMJ[n];
+          }
+        }
+      }
+    // Cs = fwdTerm (I - K)^T + gainCb K^T
     for (int i = 0; i < D; ++i)
       for (int j = 0; j <= i; ++j) {
 #pragma omp simd
         for (int n = 0; n < NN; ++n)
-          acc[n] = yFwd[0][i][n] * yBwd[0][j][n];
-        for (int k = 1; k < D; ++k)
+          acc[n] = fwdTerm[i][j][n];
+        for (int m = 0; m < D; ++m)
 #pragma omp simd
           for (int n = 0; n < NN; ++n)
-            acc[n] += yFwd[k][i][n] * yBwd[k][j][n];
+            acc[n] += (gainCb[i][m][n] - fwdTerm[i][m][n]) * gainT[m][j][n];
         float* csIJ = &cs.At(0, i, j);
 #pragma omp simd
         for (int n = 0; n < NN; ++n)
