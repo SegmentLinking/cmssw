@@ -8,8 +8,6 @@
 
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
 
-#include "DataFormats/SiPixelDetId/interface/PixelSubdetector.h"
-#include "DataFormats/SiStripDetId/interface/StripSubdetector.h"
 #include "DataFormats/TrajectoryState/interface/LocalTrajectoryParameters.h"
 #include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
@@ -70,6 +68,9 @@
 #include "RecoTracker/MeasurementDet/interface/MeasurementTrackerEvent.h"
 #include "TrackingTools/KalmanUpdators/interface/Chi2MeasurementEstimator.h"
 
+#include <limits>
+#include <unordered_map>
+
 namespace {
   // a final-fit state on a hit's module (mkfit::HitStateOnTrack: that module's local frame)
   TrajectoryStateOnSurface toTSOS(const mkfit::HitStateOnTrack& st, const GeomDet& det, const MagneticField& mf) {
@@ -84,17 +85,6 @@ namespace {
         &mf);
   }
 
-  template <typename T>
-  bool isPhase1Barrel(T subdet) {
-    return subdet == PixelSubdetector::PixelBarrel || subdet == StripSubdetector::TIB ||
-           subdet == StripSubdetector::TOB;
-  }
-
-  template <typename T>
-  bool isPhase1Endcap(T subdet) {
-    return subdet == PixelSubdetector::PixelEndcap || subdet == StripSubdetector::TID ||
-           subdet == StripSubdetector::TEC;
-  }
 }  // namespace
 
 class MkFitOutputTrackConverter : public edm::global::EDProducer<> {
@@ -513,6 +503,7 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     // hits
     edm::OwnVector<TrackingRecHit> recHits;
     std::vector<std::pair<const TrackingRecHit*, int>> hitHoT;  // rec hit -> HitOnTrack position
+    std::vector<std::pair<float, float>> hitR2Z;                // mkFit hit R^2 and z, as hitHoT
     // nTotalHits() gives sum of valid hits (nFoundHits()) and invalid/missing hits.
     const int nhits = cand.nTotalHits();
     //std::cout << candIndex << ": " << nhits << " " << cand.nFoundHits() << std::endl;
@@ -567,6 +558,8 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
           }
         }
         hitHoT.emplace_back(&recHits.back(), i);
+        const auto* mkHitPos = eventOfHits[hitOnTrack.layer].refHit(hitOnTrack.index).posArray();
+        hitR2Z.emplace_back(mkHitPos[0] * mkHitPos[0] + mkHitPos[1] * mkHitPos[1], mkHitPos[2]);
         LogTrace("MkFitOutputTrackConverter")
             << "  pos " << recHits.back().globalPosition().x() << " " << recHits.back().globalPosition().y() << " "
             << recHits.back().globalPosition().z() << " mag2 " << recHits.back().globalPosition().mag2() << " detid "
@@ -575,58 +568,23 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
       }
     }
 
-    // MkFit hits are *not* in the order of propagation, sort by 3D radius for now (as we don't have loopers)
-    // TODO: Improve the sorting (extract keys? maybe even bubble sort would work well as the hits are almost in the correct order)
-    recHits.sort([&tTopo, &isPhase1](const auto& a, const auto& b) {
-      //const GeomDetEnumerators::SubDetector asub = a.det()->subDetector();
-      //const GeomDetEnumerators::SubDetector bsub = b.det()->subDetector();
-      //const auto& apos = a.globalPosition();
-      //const auto& bpos = b.globalPosition();
-      // For Phase-1, can rely on subdetector index
-      if (isPhase1) {
-        const auto asub_ph1 = a.geographicalId().subdetId();
-        const auto bsub_ph1 = b.geographicalId().subdetId();
-        const auto& apos_ph1 = a.globalPosition();
-        const auto& bpos_ph1 = b.globalPosition();
-        if (asub_ph1 != bsub_ph1) {
-          // Subdetector order (BPix, FPix, TIB, TID, TOB, TEC) corresponds also the navigation
-          return asub_ph1 < bsub_ph1;
-        } else {
-          //if (GeomDetEnumerators::isBarrel(asub)) {
-          if (isPhase1Barrel(asub_ph1)) {
-            return apos_ph1.perp2() < bpos_ph1.perp2();
-          } else {
-            return std::abs(apos_ph1.z()) < std::abs(bpos_ph1.z());
-          }
+    // The hits in the order of the final fit (MkFitter::reFitIndices): by R^2 + (z - z0)^2 of the mkFit hit positions,
+    // z0 the z of the hit with the smallest R, ties by HitOnTrack position.  recHits[0] is then the hit on whose plane
+    // the fit's innermost state lies.
+    std::unordered_map<const TrackingRecHit*, std::pair<float, int>> fitOrder;
+    {
+      float minR2 = std::numeric_limits<float>::max(), z0 = 0.f;
+      for (const auto& [r2, z] : hitR2Z)
+        if (r2 < minR2) {
+          minR2 = r2;
+          z0 = z;
         }
+      for (unsigned int k = 0; k < hitHoT.size(); ++k) {
+        const float dz = hitR2Z[k].second - z0;
+        fitOrder.emplace(hitHoT[k].first, std::make_pair(hitR2Z[k].first + dz * dz, hitHoT[k].second));
       }
-
-      // For Phase-2, can not rely uniquely on subdetector index
-      const GeomDetEnumerators::SubDetector asub = a.det()->subDetector();
-      const GeomDetEnumerators::SubDetector bsub = b.det()->subDetector();
-      const auto& apos = a.globalPosition();
-      const auto& bpos = b.globalPosition();
-      const auto aid = a.geographicalId().rawId();
-      const auto bid = b.geographicalId().rawId();
-      const auto asubid = a.geographicalId().subdetId();
-      const auto bsubid = b.geographicalId().subdetId();
-      if (GeomDetEnumerators::isBarrel(asub) || GeomDetEnumerators::isBarrel(bsub)) {
-        // For barrel tilted modules, or in case (only) one of the two modules is barrel, use 3D position
-        if ((asubid == StripSubdetector::TOB && tTopo.tobSide(aid) < 3) ||
-            (bsubid == StripSubdetector::TOB && tTopo.tobSide(bid) < 3) ||
-            !(GeomDetEnumerators::isBarrel(asub) && GeomDetEnumerators::isBarrel(bsub))) {
-          return apos.mag2() < bpos.mag2();
-        }
-        // For fully barrel comparisons and no tilt, use 2D position
-        else {
-          return apos.perp2() < bpos.perp2();
-        }
-      }
-      // For fully endcap comparisons, use z position
-      else {
-        return std::abs(apos.z()) < std::abs(bpos.z());
-      }
-    });
+    }
+    recHits.sort([&fitOrder](const auto& a, const auto& b) { return fitOrder.at(&a) < fitOrder.at(&b); });
 
     // seed
     const auto seedIndex = cand.label();
@@ -689,13 +647,38 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
 
     trk.appendHits(recHits.begin(), recHits.end(), tTopo);
 
+    // the HitOnTrack position of every (sorted) rec hit; with per-hit states, each must have a valid one
+    std::vector<int> hot;
+    hot.reserve(recHits.size());
+    for (const auto& h : recHits)
+      for (const auto& [ptr, pos] : hitHoT)
+        if (ptr == &h) {
+          hot.push_back(pos);
+          break;
+        }
+    if (!mkFitOutput.hitStates().empty()) {
+      const auto& hs = mkFitOutput.hitStates()[candIndex];
+      bool ok = hot.size() == recHits.size();
+      for (int pos : hot)
+        ok = ok && pos < (int)hs.size() && hs[pos].valid;
+      if (!ok) {
+        edm::LogInfo("MkFitOutputTrackConverter") << "Candidate " << candIndex << " has no valid final-fit state at "
+                                                  << "every hit, ignoring the candidate";
+        continue;
+      }
+    }
+    // the state for the navigation outward: the smoothed state at the outermost hit when there are per-hit states,
+    // else the innermost one
+    const auto outerTsos = mkFitOutput.hitStates().empty()
+                               ? tsosState
+                               : toTSOS(mkFitOutput.hitStates()[candIndex][hot.back()], *recHits.back().det(), mf);
+
     //extra hits (taken from TrackProducerBase<T>::setSecondHitPattern)
     const auto* outerLayer = detLayers.at(mkFitGeom.mkFitLayerNumber(recHits.back().geographicalId()));
     const auto* innerLayer = detLayers.at(mkFitGeom.mkFitLayerNumber(recHits.front().geographicalId()));
     auto const& innerCompLayers =
         navSchool.compatibleLayers(*innerLayer, fts, oppositeToMomentum);  //fts only innermost hit here
-    auto const& outerCompLayers =
-        navSchool.compatibleLayers(*outerLayer, fts, alongMomentum);  //fts only innermost hit here
+    auto const& outerCompLayers = navSchool.compatibleLayers(*outerLayer, *outerTsos.freeState(), alongMomentum);
 
     //use negative sigma=-3.0 in order to use a more conservative definition of isInside() for Bounds classes.
     Chi2MeasurementEstimator estimator(30., -3.0, 0.5, 2.0, 0.5, 1.e12);  // same as defauts....
@@ -722,8 +705,7 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     for (auto it : outerCompLayers) {
       if (it->basicComponents().empty())
         continue;
-      //tsosState is innermost (not good, but does it mean anyhting is fully wrong?)
-      auto const& detWithState = it->compatibleDets(tsosState, propagatorAlong, estimator);
+      auto const& detWithState = it->compatibleDets(outerTsos, propagatorAlong, estimator);
       if (detWithState.empty())
         continue;
       DetId id = detWithState.front().first->geographicalId();
@@ -736,27 +718,6 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
         trk.appendHitPattern(tmpHit, tTopo);
       }
     }  //loop layers
-
-    // the HitOnTrack position of every (sorted) rec hit; with per-hit states, each must have a valid one
-    std::vector<int> hot;
-    hot.reserve(recHits.size());
-    for (const auto& h : recHits)
-      for (const auto& [ptr, pos] : hitHoT)
-        if (ptr == &h) {
-          hot.push_back(pos);
-          break;
-        }
-    if (!mkFitOutput.hitStates().empty()) {
-      const auto& hs = mkFitOutput.hitStates()[candIndex];
-      bool ok = hot.size() == recHits.size();
-      for (int pos : hot)
-        ok = ok && pos < (int)hs.size() && hs[pos].valid;
-      if (!ok) {
-        edm::LogInfo("MkFitOutputTrackConverter") << "Candidate " << candIndex << " has no valid final-fit state at "
-                                                  << "every hit, ignoring the candidate";
-        continue;
-      }
-    }
 
     trks.push_back(trk);
 
