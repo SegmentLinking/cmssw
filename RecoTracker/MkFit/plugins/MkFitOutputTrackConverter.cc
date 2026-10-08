@@ -3,6 +3,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Utilities/interface/do_nothing_deleter.h"
+#include "FWCore/Utilities/interface/isFinite.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "Geometry/CommonTopologies/interface/GeomDetEnumerators.h"
@@ -450,14 +451,16 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
     LogTrace("MkFitOutputTrackConverter") << "Candidate " << candIndex << " pT " << cand.pT() << " eta "
                                           << cand.momEta() << " phi " << cand.momPhi() << " chi2 " << cand.chi2();
 
-    // state: check for basic quality first
+    // state and chi2: check for basic quality first (a fit with a non-finite or negative chi2 has failed, as
+    // KFFittingSmoother treats it)
     if (cand.state().invpT() > qualityMaxInvPt_ || (qualitySignPt_ && cand.state().invpT() < 0) ||
         cand.state().theta() < qualityMinTheta_ || (M_PI - cand.state().theta()) < qualityMinTheta_ ||
         cand.state().posRsq() > qualityMaxRsq_ || std::abs(cand.state().z()) > qualityMaxZ_ ||
         (cand.state().errors.At(0, 0) + cand.state().errors.At(1, 1) + cand.state().errors.At(2, 2)) >
-            qualityMaxPosErrSq_) {
-      edm::LogInfo("MkFitOutputTrackConverter")
-          << "Candidate " << candIndex << " failed state quality checks" << cand.state().parameters;
+            qualityMaxPosErrSq_ ||
+        edm::isNotFinite(cand.chi2()) || cand.chi2() < 0.f) {
+      edm::LogInfo("MkFitOutputTrackConverter") << "Candidate " << candIndex << " failed state quality checks"
+                                                << cand.state().parameters << " chi2 " << cand.chi2();
       continue;
     }
 
