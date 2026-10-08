@@ -177,7 +177,9 @@ MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iC
       measurementTrackerEventToken_{consumes(iConfig.getParameter<edm::InputTag>("measurementTrackerEvent"))},
       navToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("NavigationSchool"))},
       algo_{reco::TrackBase::algoByName(
-          TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data())},
+          iConfig.getParameter<std::string>("AlgorithmName").empty()
+              ? TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data()
+              : iConfig.getParameter<std::string>("AlgorithmName"))},
       bsToken_(consumes<reco::BeamSpot>(edm::InputTag("offlineBeamSpot"))) {
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
@@ -193,6 +195,7 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add("mkFitSeeds", edm::InputTag{"mkFitSeedConverter"});
   desc.add("src", edm::InputTag{"mkFitProducer"});
   desc.add("seeds", edm::InputTag{"initialStepSeeds"});
+  desc.add<std::string>("AlgorithmName", "")->setComment("track algorithm; if empty, the seeds label without 'Seeds'");
   desc.add("ttrhBuilder", edm::ESInputTag{"", "WithTrackAngle"});
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
   desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
