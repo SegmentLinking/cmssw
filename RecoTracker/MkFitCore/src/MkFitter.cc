@@ -98,10 +98,11 @@ namespace mkfit {
       if (!bkw)
         std::cout << "before trk nTotalHits " << trk.nTotalHits() << " trk nFoundHits " << trk.nFoundHits()
                   << std::endl;
-      if (m_Chi2(itrack, 0, 0) != m_Chi2(itrack, 0, 0))
+      if (!isFinite(m_Chi2(itrack, 0, 0)))
         std::cout << "nan " << itrack << "nan " << i << std::endl;
 #endif
-      if (m_Chi2(itrack, 0, 0) != m_Chi2(itrack, 0, 0))
+      // isFinite, not x != x: -Ofast assumes finite math and folds x != x to false
+      if (!isFinite(m_Chi2(itrack, 0, 0)))
         continue;  //trick for the nan so the track is not dead
 
       m_Err[iO].copyOut(itrack, trk.errors_nc().Array());
