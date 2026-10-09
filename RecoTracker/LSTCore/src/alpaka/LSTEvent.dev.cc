@@ -3,6 +3,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/CopyToDevice.h"
 
 #include "LSTEvent.h"
+#include "RecoTracker/LSTCore/interface/alpaka/T3Features.h"
 
 #include "Hit.h"
 #include "Kernels.h"
@@ -69,6 +70,7 @@ void LSTEvent::resetEventSync() {
   segmentsDC_.reset();
   pixelSegmentsDC_.reset();
   tripletsDC_.reset();
+  t3FeaturesDC_.reset();
   quintupletsDC_.reset();
   trackCandidatesBaseDC_.reset();
   trackCandidatesExtendedDC_.reset();
@@ -83,6 +85,7 @@ void LSTEvent::resetEventSync() {
   segmentsHC_.reset();
   pixelSegmentsHC_.reset();
   tripletsHC_.reset();
+  t3FeaturesHC_.reset();
   quintupletsHC_.reset();
   pixelTripletsHC_.reset();
   pixelQuintupletsHC_.reset();
@@ -913,6 +916,12 @@ void LSTEvent::createPixelTriplets() {
 
   alpaka::exec<Acc2D>(
       queue_, removeDupPixelTripletsFromMap_workDiv, RemoveDupPixelTripletsFromMap{}, pixelTripletsDC_->view());
+}
+
+void LSTEvent::createT3Features(float maxT3Pt) {
+  t3FeaturesHC_.reset();  // drop any stale host copy
+  t3FeaturesDC_.emplace(makeT3Features(
+      queue_, *lstInputDC_, *rangesDC_, *miniDoubletsDC_, *segmentsDC_, *tripletsDC_, maxT3Pt));
 }
 
 void LSTEvent::createQuintuplets() {
@@ -1866,6 +1875,23 @@ PixelTripletsConst LSTEvent::getPixelTriplets(bool sync) {
   return pixelTripletsHC_->const_view();
 }
 template PixelTripletsConst LSTEvent::getPixelTriplets<>(bool);
+
+template <typename TDev>
+T3FeaturesConst LSTEvent::getT3Features(bool sync) {
+  if constexpr (std::is_same_v<TDev, DevHost>) {
+    return t3FeaturesDC_->const_view();
+  } else {
+    if (!t3FeaturesHC_) {
+      t3FeaturesHC_.emplace(
+          cms::alpakatools::CopyToHost<::PortableCollection<TDev, T3FeaturesSoA>>::copyAsync(queue_, *t3FeaturesDC_));
+
+      if (sync)
+        alpaka::wait(queue_);  // host consumers expect filled data
+    }
+  }
+  return t3FeaturesHC_->const_view();
+}
+template T3FeaturesConst LSTEvent::getT3Features<>(bool);
 
 template <typename TDev>
 PixelQuintupletsConst LSTEvent::getPixelQuintuplets(bool sync) {

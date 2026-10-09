@@ -154,6 +154,42 @@ float runT3(LSTEvent* event) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
+float runT3Features(LSTEvent* event, float maxT3Pt) {
+  TStopwatch my_timer;
+  if (ana.verbose >= 2)
+    std::cout << "Reco T3 features start" << std::endl;
+  my_timer.Start();
+  event->createT3Features(maxT3Pt);
+  event->wait();  // device side event calls are asynchronous: wait to measure time or print
+  float t3features_elapsed = my_timer.RealTime();
+  if (ana.verbose >= 2)
+    std::cout << "Reco T3 features processing time: " << t3features_elapsed << " secs" << std::endl;
+
+  if (ana.verbose >= 2) {
+    // self-check: rows must be the T3s with pt < maxT3Pt, in (lower module, slot) order as in the ntuple
+    auto const features = event->getT3Features();
+    auto const triplets = event->getTriplets<::lst::TripletsSoA>();
+    auto const occupancy = event->getTriplets<::lst::TripletsOccupancySoA>();
+    auto const ranges = event->getRanges();
+    unsigned int row = 0, nBadOrder = 0;
+    for (int mod = 0; mod < occupancy.metadata().size(); ++mod) {
+      for (unsigned int i = 0; i < occupancy.nTriplets()[mod]; ++i) {
+        unsigned int t3 = ranges.tripletModuleIndices()[mod] + i;
+        if (!(__H2F(triplets.radius()[t3]) * ALPAKA_ACCELERATOR_NAMESPACE::lst::k2Rinv1GeVf * 2 < maxT3Pt))
+          continue;
+        if (row < features.nT3s() && features.tripletIndex()[row] != t3)
+          ++nBadOrder;
+        ++row;
+      }
+    }
+    std::cout << "# of T3 feature rows: " << features.nT3s() << " (expected " << row << ", out of order " << nBadOrder
+              << ")" << (features.nT3s() == row && nBadOrder == 0 ? " OK" : " MISMATCH") << std::endl;
+  }
+
+  return t3features_elapsed;
+}
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
 float runpT3(LSTEvent* event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)

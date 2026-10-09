@@ -14,6 +14,7 @@
 #include "RecoTracker/LSTCore/interface/SegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/T3FeaturesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TripletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ObjectRangesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/ModulesHostCollection.h"
@@ -29,6 +30,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/SegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelSegmentsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/T3FeaturesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TripletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ModulesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ObjectRangesDeviceCollection.h"
@@ -67,6 +69,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<SegmentsDeviceCollection> segmentsDC_;
     std::optional<PixelSegmentsDeviceCollection> pixelSegmentsDC_;
     std::optional<TripletsDeviceCollection> tripletsDC_;
+    std::optional<T3FeaturesDeviceCollection> t3FeaturesDC_;
     std::optional<QuintupletsDeviceCollection> quintupletsDC_;
     std::optional<QuadrupletsDeviceCollection> quadrupletsDC_;
     std::optional<TrackCandidatesBaseDeviceCollection> trackCandidatesBaseDC_;
@@ -82,6 +85,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<SegmentsHostCollection> segmentsHC_;
     std::optional<PixelSegmentsHostCollection> pixelSegmentsHC_;
     std::optional<TripletsHostCollection> tripletsHC_;
+    std::optional<T3FeaturesHostCollection> t3FeaturesHC_;
     std::optional<TrackCandidatesBaseHostCollection> trackCandidatesBaseHC_;
     std::optional<TrackCandidatesExtendedHostCollection> trackCandidatesExtendedHC_;
     std::optional<ModulesHostCollection> modulesHC_;
@@ -138,6 +142,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void addPixelSegmentToEventFinalize();
     void createSegmentsWithModuleMap();
     void createTriplets();
+    // Transformer model inputs: 49 features per T3 with pt < maxT3Pt (see T3FeaturesSoA.h); call after createTriplets
+    void createT3Features(float maxT3Pt);
     void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets);
     void createPixelTriplets();
     void createQuintuplets();
@@ -208,6 +214,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     typename TSoA::ConstView getQuintuplets(bool sync = true);
     template <typename TDev = Device>
     PixelTripletsConst getPixelTriplets(bool sync = true);
+    template <typename TDev = Device>
+    T3FeaturesConst getT3Features(bool sync = true);
     template <typename TDev = Device>
     PixelSegmentsConst getPixelSegments(bool sync = true);
     template <typename TDev = Device>

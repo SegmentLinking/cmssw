@@ -488,6 +488,9 @@ void run_lst() {
       timing_MD = runMiniDoublet(events.at(omp_get_thread_num()), evt);
       timing_LS = runSegment(events.at(omp_get_thread_num()));
       timing_T3 = runT3(events.at(omp_get_thread_num()));
+#ifdef LST_TRANSFORMER
+      runT3Features(events.at(omp_get_thread_num()), 2000.f);  // MAX_T3_PT in transformer-oc t3_processing.py
+#endif
       timing_T5 = runQuintuplet(events.at(omp_get_thread_num()));
 
       timing_pLS = runPixelLineSegment(events.at(omp_get_thread_num()), ana.no_pls_dupclean);

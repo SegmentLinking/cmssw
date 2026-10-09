@@ -24,6 +24,7 @@ float runSegment(LSTEvent* event);
 float runT4(LSTEvent* event);
 float runT4x(LSTEvent* event);
 float runT3(LSTEvent* event);
+float runT3Features(LSTEvent* event, float maxT3Pt);
 float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_triplets);
 float runQuadruplet(LSTEvent* event);
 float runQuintuplet(LSTEvent* event);
