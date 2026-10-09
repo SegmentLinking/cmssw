@@ -41,7 +41,7 @@ namespace mkfit {
     m_Err[iC].scale(100.0f);
   }
 
-  void MkFitter::bkReFitInputTracks(TrackVec &cands, std::vector<int> inds, int beg, int end) {
+  void MkFitter::bkReFitInputTracks(TrackVec &cands, std::vector<int> inds, int beg, int end, int nFoundHits) {
     // Uses HitOnTrack vector from Track directly + a local cursor array to current hit.
 #ifdef DEBUG_FIT_BKW
     std::cout << " -- bkReFitInputTracks " << std::endl;
@@ -64,8 +64,9 @@ namespace mkfit {
 
     m_Chi2.setVal(0);
 
+    // the slot the forward pass ended in: it fitted the group's nFoundHits hits
     int index;
-    if (cands[inds[beg]].nFoundHits() % 2 == 0)
+    if (nFoundHits % 2 == 0)
       index = iC;
     else
       index = iP;

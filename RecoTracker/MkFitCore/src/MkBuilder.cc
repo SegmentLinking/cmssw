@@ -1504,7 +1504,7 @@ namespace mkfit {
       // fwdFitOutput
       mkfitter->reFitOutputTracks(m_tracks, inds, icand, end, nFoundHits);
       // input candidate tracks
-      mkfitter->bkReFitInputTracks(m_tracks, inds, icand, end);
+      mkfitter->bkReFitInputTracks(m_tracks, inds, icand, end, nFoundHits);
       // fit the tracks from the input in bkw direction
       mkfitter->bkReFitFitTracks(m_job->m_event_of_hits, end - icand, nFoundHits, indices_R2, chi2bkwd);
       // fwdFitOutput
@@ -1623,7 +1623,13 @@ namespace mkfit {
         std::cout << "index " << t.getHitIdx(i) << " layer " << t.getHitLyr(i) << std::endl;
       }
 #endif
-      int foundh = t.nFoundHits();
+      // Grouped by the number of hits the fit uses, the hits with index >= 0 (MkFitter::reFitIndices): every lane
+      // of a group then has exactly the group's number of hits. nFoundHits() also counts hits removed by the cluster
+      // charge cut (Hit::kHitCCCFilterIdx), which have no hit to fit.
+      int foundh = 0;
+      for (int ih = 0; ih < t.nTotalHits(); ++ih)
+        if (t.getHitIdx(ih) >= 0)
+          ++foundh;
       if (mapFoundHits.count(foundh)) {
         mapFoundHits[foundh].push_back(N);
       } else

@@ -31,7 +31,7 @@ namespace mkfit {
                          int nFoundHits,
                          std::vector<std::vector<int>> indices_R2Z,
                          float *chi2);
-    void bkReFitInputTracks(TrackVec &cands, std::vector<int> inds, int beg, int end);
+    void bkReFitInputTracks(TrackVec &cands, std::vector<int> inds, int beg, int end, int nFoundHits);
     void bkReFitFitTracks(const EventOfHits &eventofhits,
                           const int N_proc,
                           int nFoundHits,
