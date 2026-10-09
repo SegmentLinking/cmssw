@@ -83,7 +83,16 @@ int main(int argc, char **argv) {
       "t4", "Write T4 branches in output ntuple.")("t4dnn", "Write T4 DNN branches in output ntuple.")(
       "allobj", "Write all object branches in output ntuple.")(
       "J,jet", "Accounts for specific jet branches in input root file for testing")(
-      "sim", "Write extra sim branches in output ntuple");
+      "sim", "Write extra sim branches in output ntuple")(
+      "t3features_dump",
+      "Write the transformer T3 feature rows of every event to this binary file (needs a -T build)",
+      cxxopts::value<std::string>())(
+      "transformer_model",
+      "Run this TorchScript transformer model on the T3s of every event (needs a -T build)",
+      cxxopts::value<std::string>())(
+      "transformer_dump",
+      "Write the transformer beta and latent outputs of every event to this binary file (needs --transformer_model)",
+      cxxopts::value<std::string>());
 
   auto result = options.parse(argc, argv);
 
@@ -310,6 +319,34 @@ int main(int argc, char **argv) {
   ana.t4dnn_branches = result["t4dnn"].as<bool>() || result["allobj"].as<bool>();
 
   //_______________________________________________________________________________
+  // --t3features_dump
+  if (result.count("t3features_dump")) {
+#ifndef LST_TRANSFORMER
+    std::cout << "ERROR: --t3features_dump needs a build with the transformer flag (lst_make_tracklooper -T)" << std::endl;
+    exit(1);
+#endif
+    ana.t3features_dump_path = result["t3features_dump"].as<std::string>();
+  }
+
+  //_______________________________________________________________________________
+  // --transformer_model, --transformer_dump
+  if (result.count("transformer_model") or result.count("transformer_dump")) {
+#ifndef LST_TRANSFORMER
+    std::cout << "ERROR: --transformer_model/--transformer_dump need a build with the transformer flag "
+                 "(lst_make_tracklooper -T)"
+              << std::endl;
+    exit(1);
+#endif
+    if (not result.count("transformer_model")) {
+      std::cout << "ERROR: --transformer_dump needs --transformer_model" << std::endl;
+      exit(1);
+    }
+    ana.transformer_model_path = result["transformer_model"].as<std::string>();
+    if (result.count("transformer_dump"))
+      ana.transformer_dump_path = result["transformer_dump"].as<std::string>();
+  }
+
+  //_______________________________________________________________________________
   // --jet (Not triggered by allobj since most files don't have jet info)
   ana.jet_branches = result["jet"].as<bool>();
 
@@ -453,6 +490,19 @@ void run_lst() {
   }
   float timeForEventCreation = full_timer.RealTime() * 1000;
 
+#ifdef LST_TRANSFORMER
+  std::ofstream t3features_dump;
+  if (!ana.t3features_dump_path.empty())
+    t3features_dump.open(ana.t3features_dump_path, std::ios::binary);
+  const bool runTransformerModel = !ana.transformer_model_path.empty();
+  if (runTransformerModel)
+    loadTransformerModel(ana.transformer_model_path);
+  std::vector<TransformerOutput> transformerOutputs(ana.streams);
+  std::ofstream transformer_dump;
+  if (!ana.transformer_dump_path.empty())
+    transformer_dump.open(ana.transformer_dump_path, std::ios::binary);
+#endif
+
   std::vector<std::vector<float>> timevec;
   full_timer.Reset();
   full_timer.Start();
@@ -490,6 +540,17 @@ void run_lst() {
       timing_T3 = runT3(events.at(omp_get_thread_num()));
 #ifdef LST_TRANSFORMER
       runT3Features(events.at(omp_get_thread_num()), 2000.f);  // MAX_T3_PT in transformer-oc t3_processing.py
+      if (t3features_dump.is_open()) {
+#pragma omp critical
+        dumpT3Features(events.at(omp_get_thread_num()), evt, t3features_dump);
+      }
+      if (runTransformerModel) {
+        runTransformer(events.at(omp_get_thread_num()), transformerOutputs.at(omp_get_thread_num()));
+        if (transformer_dump.is_open()) {
+#pragma omp critical
+          dumpTransformerOutput(transformerOutputs.at(omp_get_thread_num()), evt, transformer_dump);
+        }
+      }
 #endif
       timing_T5 = runQuintuplet(events.at(omp_get_thread_num()));
 

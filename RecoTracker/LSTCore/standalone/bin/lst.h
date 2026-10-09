@@ -21,6 +21,7 @@
 #include "AnalysisConfig.h"
 #include "trkCore.h"
 #include "write_lst_ntuple.h"
+#include "TransformerModel.h"
 
 #include "TSystem.h"
 

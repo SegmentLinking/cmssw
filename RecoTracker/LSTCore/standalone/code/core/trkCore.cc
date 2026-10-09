@@ -190,6 +190,18 @@ float runT3Features(LSTEvent* event, float maxT3Pt) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
+void dumpT3Features(LSTEvent* event, int evt, std::ofstream& out) {
+  // per event: int32 evt, uint32 nT3s, float32 features[nT3s][49], uint32 tripletIndex[nT3s]
+  auto const features = event->getT3Features();
+  unsigned int const nT3s = features.nT3s();
+  out.write(reinterpret_cast<char const*>(&evt), sizeof(evt));
+  out.write(reinterpret_cast<char const*>(&nT3s), sizeof(nT3s));
+  for (unsigned int i = 0; i < nT3s; ++i)
+    out.write(reinterpret_cast<char const*>(features.features()[i].data()), sizeof(float) * lst::t3features::kN);
+  out.write(reinterpret_cast<char const*>(features.tripletIndex().data()), sizeof(unsigned int) * nT3s);
+}
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
 float runpT3(LSTEvent* event) {
   TStopwatch my_timer;
   if (ana.verbose >= 2)

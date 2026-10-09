@@ -176,6 +176,15 @@ public:
 
   // Boolean to enable extra sim branches
   bool extra_sim_branches;
+
+  // Output file for the transformer T3 feature rows (empty: no dump)
+  std::string t3features_dump_path;
+
+  // TorchScript model for transformer inference on T3s (empty: model not run)
+  std::string transformer_model_path;
+
+  // Output file for the transformer beta and latent outputs (empty: no dump)
+  std::string transformer_dump_path;
 };
 
 extern AnalysisConfig ana;
