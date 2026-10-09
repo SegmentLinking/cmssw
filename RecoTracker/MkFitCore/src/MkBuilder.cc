@@ -1438,7 +1438,7 @@ namespace mkfit {
     //could be wrapped into some setup_fit
     const TrackerInfo &ti = m_job->m_trk_info;
     PropagationFlags my_flags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
-    my_flags.tracker_info = &ti;
+    my_flags.env = ti.propagation_env();
     //clean at the end
     mkfitter->refit_flags = &my_flags;
     mkfitter->set_cpe(m_job->m_cpe_corr_func);

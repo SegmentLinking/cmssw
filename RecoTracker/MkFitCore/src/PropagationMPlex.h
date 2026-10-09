@@ -3,126 +3,101 @@
 
 #include "Matrix.h"
 
+#include "RecoTracker/MkFitCore/interface/portable/PropagationMPlex.h"
+
 namespace mkfit {
 
-  class PropagationFlags;
+  using portable::applyMaterialEffects;
+  using portable::helixAtPlane;
+  using portable::helixAtRFromIterativeCCS;
+  using portable::helixAtRFromIterativeCCSFullJac;
+  using portable::helixAtZ;
+  using portable::MultHelixPropFull;
+  using portable::MultHelixPropTranspFull;
+  using portable::propagateHelixToPlaneMPlex;
+  using portable::propagateHelixToRMPlex;
+  using portable::propagateHelixToZMPlex;
+  using portable::propagateLineToRMPlex;
+  using portable::squashPhiMPlex;
+  using portable::squashPhiMPlexGeneral;
 
-  inline void squashPhiMPlex(MPlexLV& par, const int N_proc) {
-#pragma omp simd
-    for (int n = 0; n < NN; ++n) {
-      if (n < N_proc) {
-        if (par(n, 4, 0) >= Const::PI)
-          par(n, 4, 0) -= Const::TwoPI;
-        if (par(n, 4, 0) < -Const::PI)
-          par(n, 4, 0) += Const::TwoPI;
-      }
-    }
-  }
-
-  inline void squashPhiMPlexGeneral(MPlexLV& par, const int N_proc) {
-#pragma omp simd
-    for (int n = 0; n < NN; ++n) {
-      par(n, 4, 0) -= std::floor(0.5f * Const::InvPI * (par(n, 4, 0) + Const::PI)) * Const::TwoPI;
-    }
-  }
-
-  // Barrel / R: PropagationMPlex.cc
-
-  void propagateLineToRMPlex(const MPlexLS& psErr,
-                             const MPlexLV& psPar,
-                             const MPlexHS& msErr,
-                             const MPlexHV& msPar,
-                             MPlexLS& outErr,
-                             MPlexLV& outPar,
-                             const int N_proc);
-
-  void propagateHelixToRMPlex(const MPlexLS& inErr,
-                              const MPlexLV& inPar,
-                              const MPlexQI& inChg,
-                              const MPlexQF& msRad,
-                              MPlexLS& outErr,
-                              MPlexLV& outPar,
-                              MPlexQI& outFailFlag,
-                              const int N_proc,
-                              const PropagationFlags& pflags,
-                              const MPlexQI* noMatEffPtr = nullptr);
-
-  void helixAtRFromIterativeCCSFullJac(const MPlexLV& inPar,
-                                       const MPlexQI& inChg,
-                                       const MPlexQF& msRad,
-                                       MPlexLV& outPar,
-                                       MPlexLL& errorProp,
-                                       MPlexQI& outFailFlag,
-                                       const int N_proc);
-
-  void helixAtRFromIterativeCCS(const MPlexLV& inPar,
-                                const MPlexQI& inChg,
-                                const MPlexQF& msRad,
-                                MPlexLV& outPar,
-                                MPlexLL& errorProp,
-                                MPlexQI& outFailFlag,
-                                const int N_proc,
-                                const PropagationFlags& pflags);
-
-  // Endcap / Z: PropagationMPlexEndcap.cc
-
-  void propagateHelixToZMPlex(const MPlexLS& inErr,
-                              const MPlexLV& inPar,
-                              const MPlexQI& inChg,
-                              const MPlexQF& msZ,
-                              MPlexLS& outErr,
-                              MPlexLV& outPar,
-                              MPlexQI& outFailFlag,
-                              const int N_proc,
-                              const PropagationFlags& pflags,
-                              const MPlexQI* noMatEffPtr = nullptr);
-
-  void helixAtZ(const MPlexLV& inPar,
-                const MPlexQI& inChg,
-                const MPlexQF& msZ,
-                MPlexLV& outPar,
-                MPlexLL& errorProp,
-                MPlexQI& outFailFlag,
-                const int N_proc,
-                const PropagationFlags& pflags);
-
-  // Plane: PropagationMPlexPlane.cc
-
-  void helixAtPlane(const MPlexLV& inPar,
-                    const MPlexQI& inChg,
-                    const MPlexHV& plPnt,
-                    const MPlexHV& plNrm,
-                    MPlexQF& pathL,
-                    MPlexLV& outPar,
-                    MPlexLL& errorProp,
-                    MPlexQI& outFailFlag,
-                    const int N_proc,
-                    const PropagationFlags& pflags);
-
-  void propagateHelixToPlaneMPlex(const MPlexLS& inErr,
-                                  const MPlexLV& inPar,
-                                  const MPlexQI& inChg,
-                                  const MPlexHV& plPnt,
-                                  const MPlexHV& plNrm,
-                                  MPlexLS& outErr,
-                                  MPlexLV& outPar,
-                                  MPlexQI& outFailFlag,
-                                  const int N_proc,
-                                  const PropagationFlags& pflags,
-                                  const MPlexQI* noMatEffPtr = nullptr);
-
-  // Common functions: PropagationMPlexCommon.cc
-
-  void applyMaterialEffects(const MPlexQF& hitsRl,
-                            const MPlexQF& hitsXi,
-                            const MPlexQF& propSign,
-                            const MPlexHV& plNrm,
-                            MPlexLS& outErr,
-                            MPlexLV& outPar,
-                            const int N_proc);
-
-  void MultHelixPropFull(const MPlexLL& A, const MPlexLS& B, MPlexLL& C);
-  void MultHelixPropTranspFull(const MPlexLL& A, const MPlexLL& B, MPlexLS& C);
+  // MkFitCore's instantiations, in src/PropagationMPlex*.cc: no other translation unit compiles these functions.
+  extern template void portable::applyMaterialEffects<NN>(const MPlexQF<NN>&,
+                                                          const MPlexQF<NN>&,
+                                                          const MPlexQF<NN>&,
+                                                          const MPlexHV<NN>&,
+                                                          MPlexLS<NN>&,
+                                                          MPlexLV<NN>&,
+                                                          const int,
+                                                          const PropagationEnv&);
+  extern template void portable::MultHelixPropFull<NN>(const MPlexLL<NN>&, const MPlexLS<NN>&, MPlexLL<NN>&);
+  extern template void portable::MultHelixPropTranspFull<NN>(const MPlexLL<NN>&, const MPlexLL<NN>&, MPlexLS<NN>&);
+  extern template void portable::propagateLineToRMPlex<NN>(const MPlexLS<NN>&,
+                                                           const MPlexLV<NN>&,
+                                                           const MPlexHS<NN>&,
+                                                           const MPlexHV<NN>&,
+                                                           MPlexLS<NN>&,
+                                                           MPlexLV<NN>&,
+                                                           const int);
+  extern template void portable::propagateHelixToRMPlex<NN>(const MPlexLS<NN>&,
+                                                            const MPlexLV<NN>&,
+                                                            const MPlexQI<NN>&,
+                                                            const MPlexQF<NN>&,
+                                                            MPlexLS<NN>&,
+                                                            MPlexLV<NN>&,
+                                                            MPlexQI<NN>&,
+                                                            const int,
+                                                            const PropagationFlags&,
+                                                            const MPlexQI<NN>*);
+  extern template void portable::helixAtRFromIterativeCCSFullJac<NN>(
+      const MPlexLV<NN>&, const MPlexQI<NN>&, const MPlexQF<NN>&, MPlexLV<NN>&, MPlexLL<NN>&, const int);
+  extern template void portable::helixAtRFromIterativeCCS<NN>(const MPlexLV<NN>&,
+                                                              const MPlexQI<NN>&,
+                                                              const MPlexQF<NN>&,
+                                                              MPlexLV<NN>&,
+                                                              MPlexLL<NN>&,
+                                                              MPlexQI<NN>&,
+                                                              const int,
+                                                              const PropagationFlags&);
+  extern template void portable::propagateHelixToZMPlex<NN>(const MPlexLS<NN>&,
+                                                            const MPlexLV<NN>&,
+                                                            const MPlexQI<NN>&,
+                                                            const MPlexQF<NN>&,
+                                                            MPlexLS<NN>&,
+                                                            MPlexLV<NN>&,
+                                                            MPlexQI<NN>&,
+                                                            const int,
+                                                            const PropagationFlags&,
+                                                            const MPlexQI<NN>*);
+  extern template void portable::helixAtZ<NN>(const MPlexLV<NN>&,
+                                              const MPlexQI<NN>&,
+                                              const MPlexQF<NN>&,
+                                              MPlexLV<NN>&,
+                                              MPlexLL<NN>&,
+                                              MPlexQI<NN>&,
+                                              const int,
+                                              const PropagationFlags&);
+  extern template void portable::helixAtPlane<NN>(const MPlexLV<NN>&,
+                                                  const MPlexQI<NN>&,
+                                                  const MPlexHV<NN>&,
+                                                  const MPlexHV<NN>&,
+                                                  MPlexQF<NN>&,
+                                                  MPlexLV<NN>&,
+                                                  MPlexLL<NN>&,
+                                                  MPlexQI<NN>&,
+                                                  const int,
+                                                  const PropagationFlags&);
+  extern template void portable::propagateHelixToPlaneMPlex<NN>(const MPlexLS<NN>&,
+                                                                const MPlexLV<NN>&,
+                                                                const MPlexQI<NN>&,
+                                                                const MPlexHV<NN>&,
+                                                                const MPlexHV<NN>&,
+                                                                MPlexLS<NN>&,
+                                                                MPlexLV<NN>&,
+                                                                MPlexQI<NN>&,
+                                                                const int,
+                                                                const PropagationFlags&,
+                                                                const MPlexQI<NN>*);
 
 }  // end namespace mkfit
 #endif
