@@ -68,6 +68,7 @@
 #include "RecoTracker/MeasurementDet/interface/MeasurementTrackerEvent.h"
 #include "TrackingTools/KalmanUpdators/interface/Chi2MeasurementEstimator.h"
 
+#include <algorithm>
 #include <limits>
 #include <unordered_map>
 
@@ -683,6 +684,23 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
 
     //use negative sigma=-3.0 in order to use a more conservative definition of isInside() for Bounds classes.
     Chi2MeasurementEstimator estimator(30., -3.0, 0.5, 2.0, 0.5, 1.e12);  // same as defauts....
+
+    // Lost hits between the innermost and the outermost hit (beyond them, the navigation below finds the missing
+    // ones): the hits the final fit removed as outliers, recorded on their own modules as the CKF fit records its
+    // outliers. They follow the valid hits, so the track hits of the hit pattern stay in step with the rec hits.
+    {
+      const auto [firstPos, lastPos] = std::minmax_element(hot.begin(), hot.end());
+      for (int pos = *firstPos + 1; pos < *lastPos; ++pos) {
+        const auto& lostHoT = cand.getHitOnTrack(pos);
+        if (!mkfit::Hit::isFitOutlierIdx(lostHoT.index))
+          continue;
+        auto const& hits =
+            eventOfHits[lostHoT.layer].is_pixel() ? pixelClusterIndexToHit.hits() : stripClusterIndexToHit.hits();
+        InvalidTrackingRecHit lostHit(*hits[mkfit::Hit::hitIdxOfFitOutlier(lostHoT.index)]->det(),
+                                      TrackingRecHit::missing);
+        trk.appendHitPattern(lostHit, tTopo);
+      }
+    }
 
     //inner
     for (auto it : innerCompLayers) {
