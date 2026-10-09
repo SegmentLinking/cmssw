@@ -547,9 +547,7 @@ namespace mkfit::plane {
     path_close(in, p);
   }
 
-  void path_from_perp(const TrackRef& in, const StartTrig& t, const MPlexQF& sPerp, MPlexQF& s) {
-    s = sPerp / t.sinT;
-  }
+  void path_from_perp(const TrackRef& in, const StartTrig& t, const MPlexQF& sPerp, MPlexQF& s) { s = sPerp / t.sinT; }
 
   void drift(const TrackRef& in, const StartTrig& t, const FieldAt& f, const MPlexQF& s, MPlexLV& outPar) {
     parsFromPathL_impl(in.par, t.sinP, t.cosP, t.sinT, t.cosT, outPar, f.kinv, s);
