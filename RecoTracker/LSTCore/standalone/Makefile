@@ -31,6 +31,18 @@ CUTVALUEFLAG_FLAGS = -DCUT_VALUE_DEBUG
 PRIMITIVEFLAG =
 PRIMITIVEFLAG_FLAGS = -DPRIMITIVE_STUDY
 
+# Optional transformer model inference with libtorch (TRANSFORMER=1, i.e. lst_make_tracklooper -T).
+# Only the lst binaries link libtorch; the LST library stays torch-free. Toggling requires a clean build (-m).
+# RPATH (--disable-new-dtags) so that the libtorch found at build time is also the one used at run time.
+TORCHFLAGS =
+TORCHLDFLAGS =
+TORCHLDFLAGS_CUDA =
+ifeq ($(TRANSFORMER),1)
+TORCHFLAGS = -DLST_TRANSFORMER -isystem ${TORCH_ROOT}/include -isystem ${TORCH_ROOT}/include/torch/csrc/api/include
+TORCHLDFLAGS = -L${TORCH_ROOT}/lib -Wl,--disable-new-dtags -Wl,-rpath,${TORCH_ROOT}/lib -Wl,--no-as-needed -ltorch -ltorch_cpu -lc10 -Wl,--as-needed
+TORCHLDFLAGS_CUDA = -Wl,--no-as-needed -ltorch_cuda -lc10_cuda -Wl,--as-needed
+endif
+
 all: rooutil efficiency $(EXES)
 
 cutvalue: CUTVALUEFLAG = ${CUTVALUEFLAG_FLAGS}
@@ -46,20 +58,20 @@ cutvalue_primitive: rooutil efficiency $(EXES)
 
 bin/lst_cpu: LSTLIB=-llst_cpu
 bin/lst_cpu: bin/lst_cpu.o $(OBJECTS_CPU)
-	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CPU) -o $@
+	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CPU) $(TORCHLDFLAGS) -o $@
 bin/lst_cuda: LSTLIB=-llst_cuda
 bin/lst_cuda: bin/lst_cuda.o $(OBJECTS_CUDA)
-	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CUDA) $(LDFLAGS_CUDA) -o $@
+	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CUDA) $(LDFLAGS_CUDA) $(TORCHLDFLAGS) $(TORCHLDFLAGS_CUDA) -o $@
 bin/lst_rocm: LSTLIB=-llst_rocm
 bin/lst_rocm: bin/lst_rocm.o $(OBJECTS_ROCM)
-	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_ROCM) $(LDFLAGS_ROCM) -o $@
+	$(CXX) $(LDFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $^ $(ROOTLIBS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_ROCM) $(LDFLAGS_ROCM) $(TORCHLDFLAGS) -o $@
 
 %_cpu.o: %.cc rooutil
-	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CPU) $< -c -o $@
+	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CPU) $(TORCHFLAGS) $< -c -o $@
 %_cuda.o: %.cc rooutil
-	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CUDA) $(CUDAINCLUDE) $< -c -o $@
+	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_CUDA) $(CUDAINCLUDE) $(TORCHFLAGS) $< -c -o $@
 %_rocm.o: %.cc rooutil
-	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_ROCM) $(ROCMINCLUDE) $< -c -o $@
+	$(CXX) $(CXXFLAGS) $(EXTRAFLAGS) $(INCLUDEFLAGS) $(ALPAKAFLAGS) $(CUTVALUEFLAG) $(PRIMITIVEFLAG) $(DOQUINTUPLET) $(ALPAKA_ROCM) $(ROCMINCLUDE) $(TORCHFLAGS) $< -c -o $@
 
 rooutil:
 	$(MAKE) -C code/rooutil/

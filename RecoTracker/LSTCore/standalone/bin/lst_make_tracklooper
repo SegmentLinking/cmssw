@@ -29,12 +29,13 @@ usage()
   echo "  -R    ROCm backend              (Compile for ROCm)"
   echo "  -A    All backends              (Compile for all backends, including ROCm)"
   echo "  -w    Warning mode              (Print extra warning outputs)"
+  echo "  -T    transformer inference     (Link libtorch into the lst binaries; use with -m when toggling)"
   echo
   exit
 }
 
 # Parsing command-line opts
-while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
+while getopts ":cxgsmdp3NCGRA2ehwTP:" OPTION; do
   case $OPTION in
     c) MAKECACHE=true;;
     s) SHOWLOG=true;;
@@ -46,6 +47,7 @@ while getopts ":cxgsmdp3NCGRA2ehwP:" OPTION; do
     R) ROCMBACKEND=true;;
     A) ALLBACKENDS=true;;
     w) PRINTWARNINGS=true;;
+    T) TRANSFORMER=true;;
     h) usage;;
     :) usage;;
   esac
@@ -62,6 +64,7 @@ if [ -z ${CUDABACKEND} ]; then CUDABACKEND=false; fi
 if [ -z ${ROCMBACKEND} ]; then ROCMBACKEND=false; fi
 if [ -z ${ALLBACKENDS} ]; then ALLBACKENDS=false; fi
 if [ -z ${PRINTWARNINGS} ]; then PRINTWARNINGS=false; fi
+if [ -z ${TRANSFORMER} ]; then TRANSFORMER=false; fi
 
 # Default to only CPU and CUDA backends
 if [ "${CPUBACKEND}" == false ] && [ "${CUDABACKEND}" == false ] && [ "${ROCMBACKEND}" == false ]; then
@@ -98,6 +101,7 @@ echo "  CPUBACKEND        : ${CPUBACKEND}"                    | tee -a ${LOG}
 echo "  CUDABACKEND       : ${CUDABACKEND}"                   | tee -a ${LOG}
 echo "  ROCMBACKEND       : ${ROCMBACKEND}"                   | tee -a ${LOG}
 echo "  PRINTWARNINGS     : ${PRINTWARNINGS}"                 | tee -a ${LOG}
+echo "  TRANSFORMER       : ${TRANSFORMER}"                   | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
 echo "  (cf. Run > sh $(basename $0) -h to see all options)"  | tee -a ${LOG}
 echo ""                                                       | tee -a ${LOG}
@@ -155,6 +159,15 @@ if $PRINTWARNINGS; then
     PRINTWARNINGSOPT="LSTWARNINGSFLAG=-DWARNINGS"
 fi
 
+TRANSFORMEROPT=
+if $TRANSFORMER; then
+    if [ -z "${TORCH_ROOT}" ] || [ ! -d "${TORCH_ROOT}/lib" ]; then
+        echo "ERROR: -T needs TORCH_ROOT (libtorch); source setup.sh again" | tee -a ${LOG}
+        exit 1
+    fi
+    TRANSFORMEROPT="TRANSFORMER=1"
+fi
+
 if [ -z "${MAXMAKETHREADS}" ]; then
     MAXMAKETHREADS=32
 fi
@@ -208,9 +221,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} -j ${MAXMAKETHREADS} 2>&1 | tee -a ${LOG}
+    make EXES="${EXES}" ${TRANSFORMEROPT} ${TRACKLOOPERTARGET} -j ${MAXMAKETHREADS} 2>&1 | tee -a ${LOG}
 else
-    make EXES="${EXES}" ${TRACKLOOPERTARGET} -j ${MAXMAKETHREADS} >> ${LOG} 2>&1
+    make EXES="${EXES}" ${TRANSFORMEROPT} ${TRACKLOOPERTARGET} -j ${MAXMAKETHREADS} >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f bin/lst_cpu ]; then
