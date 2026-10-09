@@ -1,3 +1,4 @@
+#include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
 #include "DataFormats/TrackerRecHit2D/interface/SiPixelRecHitCollection.h"
 #include "DataFormats/TrackCandidate/interface/TrackCandidateCollection.h"
@@ -25,7 +26,11 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
+#include <algorithm>
 #include <ranges>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 class LSTOutputConverter : public edm::stream::EDProducer<> {
 public:
@@ -170,6 +175,11 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
   TrajectorySeedCollection seeds;
   using Hit = SeedingHitSet::ConstRecHitPointer;
   std::vector<Hit> hitsForSeed;
+  // the order in which the track crosses the hits of a candidate (below): outer tracker, subdetector, r or |z| of the
+  // hit, r or |z| of its sensor; reused for every candidate
+  using CrossingKey = std::tuple<bool, int, float, float>;
+  std::vector<std::pair<uint32_t, GlobalPoint>> lowerHitPositions;  // module -> its lower sensor's hit
+  std::vector<std::pair<const TrackingRecHit*, CrossingKey>> crossingOrder;
 
   LogDebug("LSTOutputConverter") << "nTrackCandidates " << nTrackCandidates;
   for (unsigned int i = 0; i < nTrackCandidates; i++) {
@@ -213,25 +223,38 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         }
       }
 
-      recHits.sort([](const auto& a, const auto& b) {
-        const auto asub = a.det()->subDetector();
-        const auto bsub = b.det()->subDetector();
-        if (GeomDetEnumerators::isInnerTracker(asub) && GeomDetEnumerators::isOuterTracker(bsub)) {
-          return true;
-        } else if (GeomDetEnumerators::isOuterTracker(asub) && GeomDetEnumerators::isInnerTracker(bsub)) {
-          return false;
-        } else if (asub != bsub) {
-          return asub < bsub;
-        } else {
-          const auto& apos = a.surface();
-          const auto& bpos = b.surface();
-          if (GeomDetEnumerators::isBarrel(asub)) {
-            return apos->rSpan().first < bpos->rSpan().first;
-          } else {
-            return std::abs(apos->zSpan().first) < std::abs(bpos->zSpan().first);
-          }
-        }
-      });
+      // The hits in the order the track crosses them: inner tracker first, then by subdetector, then by the position
+      // of the hit (r in the barrel, |z| in the endcaps). The edge of the module is not enough: in the tilted part of
+      // the outer-tracker barrel, a module crossed later can start at a smaller r. The two sensors of an outer-tracker
+      // module take the position of the lower sensor's hit (the macro-pixel one in a PS module), since a strip hit lies
+      // at the center of its strip, which in a tilted module can be well off in r; between the two, the sensor nearer
+      // the beam line (barrel) or the interaction point (endcaps) comes first. Which sensor is the lower one depends on
+      // how the module is mounted, not on which one the track crosses first.
+      lowerHitPositions.clear();
+      for (auto const& hit : recHits)
+        if (GeomDetEnumerators::isOuterTracker(hit.det()->subDetector()) && tTopo.isLower(hit.geographicalId()))
+          lowerHitPositions.emplace_back(tTopo.stack(hit.geographicalId()), hit.globalPosition());
+      crossingOrder.clear();
+      for (auto const& hit : recHits) {
+        const auto sub = hit.det()->subDetector();
+        const bool outer = GeomDetEnumerators::isOuterTracker(sub);
+        auto lower = lowerHitPositions.end();
+        if (outer)
+          lower = std::ranges::find(
+              lowerHitPositions, tTopo.stack(hit.geographicalId()), &std::pair<uint32_t, GlobalPoint>::first);
+        const GlobalPoint position = lower != lowerHitPositions.end() ? lower->second : hit.globalPosition();
+        const auto& sensor = hit.surface()->position();
+        const bool barrel = GeomDetEnumerators::isBarrel(sub);
+        crossingOrder.emplace_back(&hit,
+                                   CrossingKey(outer,
+                                               int(sub),
+                                               barrel ? position.perp() : std::abs(position.z()),
+                                               barrel ? sensor.perp() : std::abs(sensor.z())));
+      }
+      auto crossingKey = [&crossingOrder](const TrackingRecHit& hit) -> CrossingKey const& {
+        return std::ranges::find(crossingOrder, &hit, &std::pair<const TrackingRecHit*, CrossingKey>::first)->second;
+      };
+      recHits.sort([&crossingKey](const auto& a, const auto& b) { return crossingKey(a) < crossingKey(b); });
 
       // For T5/T4: makeSeed is needed whenever seeds or TCs are produced, since the resulting
       // seed is the only source of initial state for T5/T4 track candidates.
