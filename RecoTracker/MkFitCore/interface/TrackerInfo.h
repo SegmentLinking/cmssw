@@ -55,10 +55,16 @@ namespace mkfit {
     SVector3 xdir;  // the precise / "phi" direction
     unsigned int detid;
     unsigned short shapeid;
+    // The module's own material (MediumProperties): radiation length and Bethe-Bloch xi at normal incidence.
+    // The (|z|, r) material grid averages over every module overlapping a cell and has no phi dimension; the
+    // refit can use these instead (Config::refitMaterialPerModule).
+    float radl = 0.f;
+    float bbxi = 0.f;
 
     ModuleInfo() = default;
-    ModuleInfo(SVector3 p, SVector3 zd, SVector3 xd, unsigned int did, unsigned short sid)
-        : pos(p), zdir(zd), xdir(xd), detid(did), shapeid(sid) {}
+    ModuleInfo(
+        SVector3 p, SVector3 zd, SVector3 xd, unsigned int did, unsigned short sid, float rl = 0.f, float bx = 0.f)
+        : pos(p), zdir(zd), xdir(xd), detid(did), shapeid(sid), radl(rl), bbxi(bx) {}
 
     SVector3 calc_ydir() const {
       return {zdir[1] * xdir[2] - zdir[2] * xdir[1],

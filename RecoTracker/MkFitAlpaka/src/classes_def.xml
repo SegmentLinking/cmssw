@@ -1,0 +1,50 @@
+<lcgdict>
+  <!-- Event products of MkFitAlpaka (host side). Transient: they are never written to files. -->
+  <class name="mkfitdev::EventOfHitsHostCollection" persistent="false"/>
+  <!-- mkfitdev::EventOfHitsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="mkfitdev::EventOfHitsHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::EventOfHitsBlocksLayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::HitSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::LayerSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::BinnedHitSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::BinSoALayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::EventOfHitsHostCollection>" splitLevel="0" persistent="false"/>
+  <!-- the device EventOfHits product of the CPU backends -->
+  <class name="mkfitdev::EventOfHitsPooledHostCollection" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::EventOfHitsPooledHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkfitdev::TrackSoAHostCollection" persistent="false"/>
+  <class name="mkfitdev::TrackSoAHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::TrackLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::TrackSoAHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkfitdev::CandStoreHostCollection" persistent="false"/>
+  <class name="mkfitdev::CandStoreHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::CandStoreBlocksLayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::SeedCandsSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::CandSlotsSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::CandHotsSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::CandOptionsSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::CandExtrasSoALayout<128,false>" persistent="false"/>
+  <class name="mkfitdev::CandUpdatesSoALayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::CandStoreHostCollection>" splitLevel="0" persistent="false"/>
+  <!-- per-event status product -->
+  <class name="mkfitdev::MkFitStatus" persistent="false"/>
+  <class name="mkfitdev::MkFitStatusHostObject" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::MkFitStatusHostObject>" splitLevel="0" persistent="false"/>
+  <!-- device OT rechits -->
+  <class name="mkfitdev::OTRecHitHostCollection" persistent="false"/>
+  <class name="mkfitdev::OTRecHitHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::OTRecHitSoALayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::OTRecHitHostCollection>" splitLevel="0" persistent="false"/>
+  <!-- device precomputation for the output conversion (PCA) -->
+  <class name="mkfitdev::OutConvHostCollection" persistent="false"/>
+  <class name="mkfitdev::OutConvHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::OutConvLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::OutConvHostCollection>" splitLevel="0" persistent="false"/>
+  <!-- device missing-hit navigation -->
+  <class name="mkfitdev::NavResultHostCollection" persistent="false"/>
+  <class name="mkfitdev::NavResultHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::NavResultLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::NavResultHostCollection>" splitLevel="0" persistent="false"/>
+</lcgdict>

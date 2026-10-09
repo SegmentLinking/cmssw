@@ -8,6 +8,7 @@
 //#define DEBUG_FIT_BKW
 #include "Debug.h"
 
+#include <cmath>
 #include <sstream>
 
 namespace mkfit {
@@ -161,8 +162,8 @@ namespace mkfit {
           std::cout << R2 << " R2 -- z " << z << " index " << local_m << " i/Nproc " << i << " / " << N_proc
                     << std::endl;
 #endif
-          int sign = L.is_barrel() > 0 ? 1 : -1;
-          r2z.push_back(std::make_pair(sign * R2, z));
+          // NB: the sort below uses R2 and z only -- barrel/endcap does not enter it.
+          r2z.push_back(std::make_pair(R2, z));
           indices.push_back(local_m);
           if (R2 < minR2) {
             minR2 = R2;
@@ -175,7 +176,7 @@ namespace mkfit {
       std::map<float, std::vector<int>> index_RorZ;
       std::vector<int> sorted_indices;
       for (int i = 0; i < (int)r2z.size(); i++) {
-        float r2 = r2z[i].first > 0 ? r2z[i].first : -r2z[i].first;
+        float r2 = r2z[i].first;
         float z = r2z[i].second - z_minR;
 #ifdef DEBUG_FIT
         std::cout << "SORTING by 3dR" << "R2 " << r2z[i].first << " z " << r2z[i].second << " z0 " << z_minR
@@ -219,6 +220,7 @@ namespace mkfit {
     MPlexLV propPar;
 
     MPlexHV norm, dir, pnt;
+    MPlexQF mat_radl{0.0f}, mat_bbxi{0.0f};  // per-module material (Config::refitMaterialPerModule)
 
     MPlexQI no_mat_effs;
     MPlexQI do_cpe;
@@ -242,6 +244,12 @@ namespace mkfit {
     int i1 = iC;  //local copy
     int i2 = iP;  //local copy
 
+    if (m_storeHitStates && (int)m_fwdLocPar.size() < nFoundHits) {
+      m_fwdLocPar.resize(nFoundHits);
+      m_fwdLocErr.resize(nFoundHits);
+      m_fwdPzSign.resize(nFoundHits);
+    }
+
     int hitIndex[N_proc];
 
     for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
@@ -256,6 +264,7 @@ namespace mkfit {
 #endif
       no_mat_effs.setVal(0);
       do_cpe.setVal(-1);
+      bool propHit = h == 0 ? false : true;  // just update when the position is already at the hit
 
       for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
       {
@@ -294,6 +303,8 @@ namespace mkfit {
           pnt.At(i, 0, 0) = mi.pos[0];
           pnt.At(i, 1, 0) = mi.pos[1];
           pnt.At(i, 2, 0) = mi.pos[2];
+          mat_radl.At(i, 0, 0) = mi.radl;
+          mat_bbxi.At(i, 0, 0) = mi.bbxi;
 #ifdef DEBUG_FIT
           std::cout << "mi.pos[0] " << mi.pos[0] << " mi.pos[1] " << mi.pos[1] << " mi.pos[2] " << mi.pos[2]
                     << std::endl;
@@ -333,6 +344,15 @@ namespace mkfit {
       }
 #endif
 
+      // per-hit states: keep the updated state in the module's local frame (not needed at the innermost hit,
+      // h = 0, where the smoothed state is the backward one)
+      LocalStatesOut fwdLoc;
+      const bool keepLoc = m_storeHitStates && (h > 0 || m_validateHitStates);
+      if (keepLoc) {
+        fwdLoc.updPar = &m_fwdLocPar[h];
+        fwdLoc.updErr = &m_fwdLocErr[h];
+        fwdLoc.pzSign = &m_fwdPzSign[h];
+      }
       kalmanPropagateAndUpdateAndChi2Plane(m_Err[i1],
                                            m_Par[i1],
                                            m_Chg,
@@ -347,10 +367,15 @@ namespace mkfit {
                                            outChi2,
                                            N_proc,
                                            *refit_flags,
-                                           true,
+                                           propHit,
                                            &no_mat_effs,
                                            &do_cpe,
-                                           m_cpe_corr_func);
+                                           m_cpe_corr_func,
+                                           &mat_radl,
+                                           &mat_bbxi,
+                                           keepLoc ? &fwdLoc : nullptr);
+      if (m_storeHitStates && h == nFoundHits - 1)
+        m_fwdChi2Outer = outChi2;
 
 #ifdef DEBUG_FIT
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;
@@ -390,6 +415,7 @@ namespace mkfit {
     MPlexLV propPar;
 
     MPlexHV norm, dir, pnt;
+    MPlexQF mat_radl{0.0f}, mat_bbxi{0.0f};  // per-module material (Config::refitMaterialPerModule)
 
     MPlexQI no_mat_effs;
     MPlexQI do_cpe;
@@ -413,6 +439,18 @@ namespace mkfit {
       hitIndex[i] = indices_R2Z[i].size();
     }
 
+    PropagationFlags bk_flags = refit_flags_bk ? *refit_flags_bk : *refit_flags;
+    // Config::refitBkwMsFixedMomentum: the multiple-scattering noise of the whole backward pass at the |p| of
+    // its start state (the forward result), fixed per track, not at the running estimate.
+    float ms_ref_p[NN];
+    if (Config::refitBkwMsFixedMomentum) {
+      for (int i = 0; i < NN; ++i) {
+        const float ipt = m_Par[i1].constAt(i, 3, 0), sT = std::sin(m_Par[i1].constAt(i, 5, 0));
+        ms_ref_p[i] = (i < N_proc && ipt > 0.f && sT > 0.f) ? 1.f / (ipt * sT) : 1.f;
+      }
+      bk_flags.ms_ref_p = ms_ref_p;
+    }
+
     for (int h = 0; h < nFoundHits; ++h)  //first loop over the group - need to use the mplex here
     {
 #ifdef DEBUG_FIT_BKW
@@ -420,12 +458,18 @@ namespace mkfit {
 #endif
       no_mat_effs.setVal(0);
       do_cpe.setVal(-1);
+      bool propHit = h == 0 ? false : true;  // just update when the position is already at the hit
+      int bkHot[NN];                         // HitOnTrack position of each lane's hit (per-hit states)
 
       for (int i = 0; i < N_proc; ++i)  //loop over tracks in group
       {
-        auto indices = indices_R2Z[i];
-        std::reverse(indices.begin(), indices.end());
-        int index = indices[hitIndex[i] - 1];
+        // The backward pass walks the same sorted list outer->inner.  Index it from
+        // the back directly: reverse(v)[k-1] == v[v.size()-k].  Copying and reversing
+        // the vector for every hit of every track produced the same indices.
+        const auto &indices = indices_R2Z[i];
+        const int nidx = (int)indices.size();
+        int index = indices[nidx - hitIndex[i]];
+        bkHot[i] = index;
 #ifdef DEBUG_FIT_BKW
         std::cout << "DEBUG hitIndex " << hitIndex[i] << std::endl;
         std::cout << "DEBUG i " << index << std::endl;
@@ -459,6 +503,8 @@ namespace mkfit {
           pnt.At(i, 0, 0) = mi.pos[0];
           pnt.At(i, 1, 0) = mi.pos[1];
           pnt.At(i, 2, 0) = mi.pos[2];
+          mat_radl.At(i, 0, 0) = mi.radl;
+          mat_bbxi.At(i, 0, 0) = mi.bbxi;
 #ifdef DEBUG_FIT_BKW
           std::cout << "mi.pos[0] " << mi.pos[0] << " mi.pos[1] " << mi.pos[1] << " mi.pos[2] " << mi.pos[2]
                     << std::endl;
@@ -467,11 +513,11 @@ namespace mkfit {
           std::cout << "at the track " << i << " / " << N_proc << " check the material " << std::endl;
 
           std::cout << "at the hit " << index << " Don't remove the material" << std::endl;
-          if (hitIndex[i] < (int)indices.size())
+          if (hitIndex[i] < nidx)
             std::cout << "layers are " << m_HoTArr[i][index].layer << " and  "
-                      << m_HoTArr[i][indices[hitIndex[i]]].layer << std::endl;
+                      << m_HoTArr[i][indices[nidx - 1 - hitIndex[i]]].layer << std::endl;
 #endif
-          if (index == indices.back())
+          if (index == indices.front())  // == back() of the reversed copy: the outermost hit
             no_mat_effs[i] = 1;
         }
         hitIndex[i]--;
@@ -498,24 +544,105 @@ namespace mkfit {
       }
 #endif
 
-      kalmanPropagateAndUpdateAndChi2Plane(m_Err[i1],
-                                           m_Par[i1],
-                                           m_Chg,
-                                           m_msErr,
-                                           m_msPar,
-                                           norm,
-                                           dir,
-                                           pnt,
-                                           m_Err[i2],
-                                           m_Par[i2],
-                                           m_FailFlag,
-                                           outChi2,
-                                           N_proc,
-                                           *refit_flags,
-                                           true,
-                                           &no_mat_effs,
-                                           &do_cpe,
-                                           m_cpe_corr_func);
+      // Config::refitBkwSubSteps > 1: propagate in that many sub-steps (parameters only, whole-step Jacobian; see
+      // propagateHelixToPlaneSubStepMPlex), then update.  A single propagation over a long step mis-bends by up
+      // to ~0.3 % near the solenoid ends, which the fit absorbs as a pT-low bias at |eta| 1.2-2.5.
+      bool subProp = false;
+      bool splitLane[NN] = {false};
+      if (propHit && Config::refitBkwSubSteps > 1) {
+        for (int i = 0; i < N_proc; ++i) {
+          const float d = (pnt.constAt(i, 0, 0) - m_Par[i1].constAt(i, 0, 0)) * norm.constAt(i, 0, 0) +
+                          (pnt.constAt(i, 1, 0) - m_Par[i1].constAt(i, 1, 0)) * norm.constAt(i, 1, 0) +
+                          (pnt.constAt(i, 2, 0) - m_Par[i1].constAt(i, 2, 0)) * norm.constAt(i, 2, 0);
+          if (d != 0.f) {
+            splitLane[i] = true;
+            subProp = true;
+          }
+        }
+      }
+      // per-hit states: the backward predicted state (between the hits) or the updated one (innermost hit), in the
+      // module's local frame as the update computes it
+      const bool innermost = h == nFoundHits - 1;
+      MPlex5V bkPredPar, bkUpdPar;
+      MPlex5S bkPredErr, bkUpdErr;
+      MPlexQI bkPzSign;
+      LocalStatesOut bkLoc;
+      if (m_storeHitStates) {
+        if ((h > 0 && !innermost) || m_validateHitStates) {
+          bkLoc.predPar = &bkPredPar;
+          bkLoc.predErr = &bkPredErr;
+        }
+        if (innermost) {
+          bkLoc.updPar = &bkUpdPar;
+          bkLoc.updErr = &bkUpdErr;
+        }
+        bkLoc.pzSign = &bkPzSign;
+      }
+      const LocalStatesOut *bkLocPtr = m_storeHitStates ? &bkLoc : nullptr;
+      if (subProp) {
+        MPlexLS propErr;
+        MPlexLV propPar;
+        propagateHelixToPlaneSubStepMPlex(m_Err[i1],
+                                          m_Par[i1],
+                                          m_Chg,
+                                          pnt,
+                                          norm,
+                                          propErr,
+                                          propPar,
+                                          m_FailFlag,
+                                          N_proc,
+                                          bk_flags,
+                                          Config::refitBkwSubSteps,
+                                          splitLane,
+                                          &no_mat_effs,
+                                          &mat_radl,
+                                          &mat_bbxi);
+        kalmanPropagateAndUpdateAndChi2Plane(propErr,
+                                             propPar,
+                                             m_Chg,
+                                             m_msErr,
+                                             m_msPar,
+                                             norm,
+                                             dir,
+                                             pnt,
+                                             m_Err[i2],
+                                             m_Par[i2],
+                                             m_FailFlag,
+                                             outChi2,
+                                             N_proc,
+                                             bk_flags,
+                                             false,  // already propagated
+                                             &no_mat_effs,
+                                             &do_cpe,
+                                             m_cpe_corr_func,
+                                             &mat_radl,
+                                             &mat_bbxi,
+                                             bkLocPtr);
+      } else
+        kalmanPropagateAndUpdateAndChi2Plane(m_Err[i1],
+                                             m_Par[i1],
+                                             m_Chg,
+                                             m_msErr,
+                                             m_msPar,
+                                             norm,
+                                             dir,
+                                             pnt,
+                                             m_Err[i2],
+                                             m_Par[i2],
+                                             m_FailFlag,
+                                             outChi2,
+                                             N_proc,
+                                             bk_flags,
+                                             propHit,
+                                             &no_mat_effs,
+                                             &do_cpe,
+                                             m_cpe_corr_func,
+                                             &mat_radl,
+                                             &mat_bbxi,
+                                             bkLocPtr);
+
+      if (m_storeHitStates)
+        storeHitStates(h, nFoundHits, N_proc, bkHot, bkPredPar, bkPredErr, bkUpdPar, bkUpdErr, bkPzSign, outChi2);
 
 #ifdef DEBUG_FIT_BKW
       std::cout << " i1 " << i1 << " iP " << iP << " iC " << iC << std::endl;
@@ -545,12 +672,79 @@ namespace mkfit {
     }  //end of loop over n hits
   }  //end of fit func
 
+  void MkFitter::storeHitStates(const int h,
+                                const int nFoundHits,
+                                const int N_proc,
+                                const int *hot,
+                                const MPlex5V &bkPredPar,
+                                const MPlex5S &bkPredErr,
+                                const MPlex5V &bkUpdPar,
+                                const MPlex5S &bkUpdErr,
+                                const MPlexQI &bkPzSign,
+                                const MPlexQF &bkChi2) {
+    // The smoothed state at the h-th hit of the backward pass, as CMSSW's KFTrajectorySmoother: the forward updated
+    // state at the outermost hit, the backward updated state at the innermost one, and in between the combination
+    // of the forward updated and the backward predicted state.
+    const int hf = nFoundHits - 1 - h;  // the same hit in the forward pass
+    const bool outermost = h == 0, innermost = h == nFoundHits - 1;
+    MPlex5V sPar;
+    MPlex5S sErr;
+    MPlexQI ok;
+    const MPlex5V *xs = &sPar;
+    const MPlex5S *cs = &sErr;
+    const MPlexQI *pz = &bkPzSign;
+    signed char kind = HitStateOnTrack::Combined;
+    if (outermost) {
+      xs = &m_fwdLocPar[hf];
+      cs = &m_fwdLocErr[hf];
+      pz = &m_fwdPzSign[hf];
+      kind = HitStateOnTrack::ForwardOnly;
+    } else if (innermost) {
+      xs = &bkUpdPar;
+      cs = &bkUpdErr;
+      kind = HitStateOnTrack::BackwardOnly;
+    } else {
+      smoothLocalStatesPlane(m_fwdLocPar[hf], m_fwdLocErr[hf], bkPredPar, bkPredErr, sPar, sErr, ok, N_proc);
+    }
+    auto fill = [](HitStateOnTrack &o, const MPlex5V &par, const MPlex5S &err, int n) {
+      bool fin = true;
+      for (int i = 0; i < 5; ++i) {
+        o.par[i] = par.constAt(n, i, 0);
+        for (int j = 0; j <= i; ++j)
+          o.err[i * (i + 1) / 2 + j] = err.constAt(n, i, j);
+        const float d = o.err[i * (i + 3) / 2];
+        fin = fin && std::isfinite(o.par[i]) && std::isfinite(d) && d > 0.f;
+      }
+      return fin;
+    };
+    for (int n = 0; n < N_proc; ++n) {
+      if (m_hsOut[n]) {
+        HitStateOnTrack &o = (*m_hsOut[n])[hot[n]];
+        o.valid = fill(o, *xs, *cs, n) && (kind != HitStateOnTrack::Combined || ok.constAt(n, 0, 0));
+        o.chi2 = outermost ? m_fwdChi2Outer.constAt(n, 0, 0) : bkChi2.constAt(n, 0, 0);
+        o.pzSign = pz->constAt(n, 0, 0);
+        o.kind = kind;
+      }
+      if (m_validateHitStates && m_hsFwdOut[n] && m_hsBwdOut[n]) {
+        HitStateOnTrack &of = (*m_hsFwdOut[n])[hot[n]];
+        of.valid = fill(of, m_fwdLocPar[hf], m_fwdLocErr[hf], n);
+        of.pzSign = m_fwdPzSign[hf].constAt(n, 0, 0);
+        of.kind = kind;
+        HitStateOnTrack &ob = (*m_hsBwdOut[n])[hot[n]];
+        ob.valid = fill(ob, bkPredPar, bkPredErr, n);
+        ob.pzSign = bkPzSign.constAt(n, 0, 0);
+        ob.kind = kind;
+      }
+    }
+  }
+
   //------------------------------------------------------------------------------
 
   void MkFitter::release() {
     m_event = nullptr;
     //refit_flags
     refit_flags = nullptr;
+    refit_flags_bk = nullptr;
     //cpe
     m_cpe_corr_func = nullptr;
   }
