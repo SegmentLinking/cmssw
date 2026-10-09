@@ -297,10 +297,18 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
         seedCreator_->init(region, iSetup, nullptr);
         seeds.clear();
         seedCreator_->makeSeed(seeds, hitsForSeed);
-        if (seeds.empty())
+        if (seeds.empty()) {
           edm::LogInfo("LSTOutputConverter") << "failed to convert a pLS object to a seed" << i << iSeed;
-        seed = seeds[0];
-        seedRef = edm::RefToBase<TrajectorySeed>(edm::Ref(outputTSRP, outputTS.size()));
+          // keep the pLS as it came in, with its outer-tracker hits
+          seed = pixelSeeds[iSeed];
+          seedRef = {pixelSeedsRBP, iSeed};
+          recHits.clear();
+          for (auto const& hit : seed.recHits())
+            recHits.push_back(hit.clone());
+        } else {
+          seed = seeds[0];
+          seedRef = edm::RefToBase<TrajectorySeed>(edm::Ref(outputTSRP, outputTS.size()));
+        }
       }
       outputTS.emplace_back(seed);
       if (produceSeeds_)  // matches the logic for iEvent.emplace
