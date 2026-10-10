@@ -650,6 +650,323 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     }
   };
 
+  // Circle state at the outermost fitted node
+  struct OuterCircleState {
+    riemannFit::Vector2d point;  //!< (x_e, y_e): the corrected outermost node eB
+    riemannFit::Vector3d par;    //!< (phi_e, x_T, kappa), with the signed kappa = q * (1/R + u_n)
+    riemannFit::Matrix3d cov;
+    int32_t qCharge;   //!< particle charge
+    int32_t mRef;      //!< inner node m of the reference chord (m, n-1)
+    bool refFallback;  //!< true if no node passed the baseline rule and mRef = 0 is the fallback
+  };
+
+  // Line state at the outermost fitted node
+  struct OuterLineState {
+    riemannFit::Vector2d par;  //!< (cotan(theta), z_e), with z_e the fitted z at sTransverse(n-1)
+    riemannFit::Matrix2d cov;
+    int32_t mRef;      //!< inner node m of the reference chord (m, n-1)
+    bool refFallback;  //!< true if no node passed the baseline rule and mRef = 0 is the fallback
+  };
+
+  // Chooses the inner node m of the outer reference chord (m, n-1), shared by the circle and the line:
+  // the outermost earlier node whose transverse distance from the last hit exceeds 2 cm.
+  template <alpaka::concepts::Acc TAcc, typename M3xN>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int outerReferenceNode(const TAcc& acc, const M3xN& hits, bool& fallback) {
+    constexpr int n = M3xN::ColsAtCompileTime;
+    constexpr double kBaseMin2 = 2.0 * 2.0;  // minimum squared transverse baseline, cm^2
+    for (int j = n - 2; j >= 0; --j) {
+      if (riemannFit::sqr(hits(0, n - 1) - hits(0, j)) + riemannFit::sqr(hits(1, n - 1) - hits(1, j)) > kBaseMin2) {
+        fallback = false;
+        return j;
+      }
+    }
+    fallback = true;
+    return 0;
+  }
+
+  // Computes the circle state at the corrected node b and its Jacobian w.r.t. (u_a, u_b, u_n)
+  // hitA: xy coordinates of the hit at node a.
+  // hitB: xy coordinates of the hit at node b.
+  // rhatA: unit vector from the pre-fitted center to hit a.
+  // rhatB: unit vector from the pre-fitted center to hit b.
+  // uA: fitted interception at node a.
+  // zA: distance of hit a from the pre-fitted circle (zInSZplane of circleFit).
+  // uB: fitted interception at node b.
+  // zB: distance of hit b from the pre-fitted circle (zInSZplane of circleFit).
+  // uN: fitted curvature correction.
+  // radius: pre-fitted radius.
+  // circle_results: point, par and qCharge are filled; qCharge must be set by the caller.
+  // jacobian: d(phi_e, x_T, kappa)/d(u_a, u_b, u_n).
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void outerCircleExtraction(const TAcc& acc,
+                                                            const riemannFit::Vector2d& hitA,
+                                                            const riemannFit::Vector2d& hitB,
+                                                            const riemannFit::Vector2d& rhatA,
+                                                            const riemannFit::Vector2d& rhatB,
+                                                            const double uA,
+                                                            const double zA,
+                                                            const double uB,
+                                                            const double zB,
+                                                            const double uN,
+                                                            const double radius,
+                                                            OuterCircleState& circle_results,
+                                                            riemannFit::Matrix3d& jacobian) {
+    const riemannFit::Vector2d dVec = hitA + (-zA + uA) * rhatA;
+    const riemannFit::Vector2d eVec = hitB + (-zB + uB) * rhatB;
+    const riemannFit::Vector2d eMinusd = eVec - dVec;
+    const double eMinusd2 = eMinusd.squaredNorm();
+    const double chordLength = alpaka::math::sqrt(acc, eMinusd2);
+    const double kappa = circle_results.qCharge * (1. / radius + uN);
+    const double halfSine = 0.5 * kappa * chordLength;  // sine of the signed half turning angle over the chord
+    const double phiE = alpaka::math::atan2(acc, eMinusd(1), eMinusd(0)) - alpaka::math::asin(acc, halfSine);
+
+    circle_results.point = eVec;
+    circle_results.par << phiE, 0., kappa;
+
+    const double tmp1 = 1. / eMinusd2;
+    const double tmp2 = 0.5 * kappa / (chordLength * alpaka::math::sqrt(acc, 1. - riemannFit::sqr(halfSine)));
+    const double tmp3 = 0.5 * chordLength / alpaka::math::sqrt(acc, 1. - riemannFit::sqr(halfSine));
+    // U = (-sin(phi_e), cos(phi_e)): x_T moves only with u_b, by rhat_b . U
+    const double dxTdub = -rhatB(0) * alpaka::math::sin(acc, phiE) + rhatB(1) * alpaka::math::cos(acc, phiE);
+    jacobian << (eMinusd(1) * rhatA(0) - eMinusd(0) * rhatA(1)) * tmp1 + tmp2 * eMinusd.dot(rhatA),
+        (eMinusd(0) * rhatB(1) - eMinusd(1) * rhatB(0)) * tmp1 - tmp2 * eMinusd.dot(rhatB),
+        -circle_results.qCharge * tmp3, 0, dxTdub, 0, 0, 0, circle_results.qCharge;
+  }
+
+  // Performs the Broken Line circle fit as circleFit() does, but extracts the state at the outermost
+  // fitted node instead of at the closest approach
+  // hits: hits coordinates.
+  // hits_ge: hits covariance matrix.
+  // fast_fit: pre-fit result in the form (X0,Y0,R,tan(theta)).
+  // bField: magnetic field in Gev/cm/c.
+  // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
+  // circle_results: struct to be filled (see OuterCircleState).
+  // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void circleFitOuter(const TAcc& acc,
+                                                     const M3xN& hits,
+                                                     const M6xN& hits_ge,
+                                                     const V4& fast_fit,
+                                                     const double bField,
+                                                     const PreparedBrokenLineData<n>& data,
+                                                     OuterCircleState& circle_results) {
+    circle_results.qCharge = data.qCharge;
+    const auto& radii = data.radii;
+    const auto& sTransverse = data.sTransverse;
+    const auto& sTotal = data.sTotal;
+    const double slope = -circle_results.qCharge / fast_fit(3);
+    riemannFit::VectorNd<n> varBeta = data.varBeta;
+    varBeta *= 1. + riemannFit::sqr(slope);  // the kink angles are projected!
+
+    riemannFit::VectorNd<n> zInSZplane;
+    for (u_int i = 0; i < n; i++) {
+      zInSZplane(i) = radii.block(0, i, 2, 1).norm() - fast_fit(2);
+    }
+
+    riemannFit::Matrix2d vMat;           // covariance matrix
+    riemannFit::VectorNd<n> weightsVec;  // weights
+    riemannFit::Matrix2d rotMat;         // rotation matrix point by point
+    for (u_int i = 0; i < n; i++) {
+      vMat(0, 0) = hits_ge.col(i)[0];               // x errors
+      vMat(0, 1) = vMat(1, 0) = hits_ge.col(i)[1];  // cov_xy
+      vMat(1, 1) = hits_ge.col(i)[2];               // y errors
+      rotMat = rotationMatrix(acc, -radii(0, i) / radii(1, i));
+      weightsVec(i) =
+          1. / ((rotMat * vMat * rotMat.transpose())(1, 1));  // compute the orthogonal weight point by point
+    }
+
+    riemannFit::VectorNplusONEd<n> r_uVec;
+    r_uVec(n) = 0;
+    for (u_int i = 0; i < n; i++) {
+      r_uVec(i) = weightsVec(i) * zInSZplane(i);
+    }
+
+    riemannFit::MatrixNplusONEd<n> c_uMat;
+    c_uMat.block(0, 0, n, n) = matrixC_u(acc, weightsVec, sTransverse, varBeta);
+    c_uMat(n, n) = 0;
+    //add the border to the c_uMat matrix
+    for (u_int i = 0; i < n; i++) {
+      c_uMat(i, n) = 0;
+      if (i > 0 && i < n - 1) {
+        c_uMat(i, n) +=
+            -(sTransverse(i + 1) - sTransverse(i - 1)) * (sTransverse(i + 1) - sTransverse(i - 1)) /
+            (2. * varBeta(i) * (sTransverse(i + 1) - sTransverse(i)) * (sTransverse(i) - sTransverse(i - 1)));
+      }
+      if (i > 1) {
+        c_uMat(i, n) +=
+            (sTransverse(i) - sTransverse(i - 2)) / (2. * varBeta(i - 1) * (sTransverse(i) - sTransverse(i - 1)));
+      }
+      if (i < n - 2) {
+        c_uMat(i, n) +=
+            (sTransverse(i + 2) - sTransverse(i)) / (2. * varBeta(i + 1) * (sTransverse(i + 1) - sTransverse(i)));
+      }
+      c_uMat(n, i) = c_uMat(i, n);
+      if (i > 0 && i < n - 1)
+        c_uMat(n, n) += riemannFit::sqr(sTransverse(i + 1) - sTransverse(i - 1)) / (4. * varBeta(i));
+    }
+
+    riemannFit::MatrixNplusONEd<n> iMat;
+    math::cholesky::invert(c_uMat, iMat);
+    riemannFit::VectorNplusONEd<n> uVec = iMat * r_uVec;  // obtain the fitted parameters by solving the linear system
+
+    // compute (phi_e, x_T, kappa) at the corrected outermost node, from the chord (m, n-1)...
+
+    const int m = outerReferenceNode(acc, hits, circle_results.refFallback);
+    circle_results.mRef = m;
+
+    riemannFit::Matrix3d jacobian;
+    outerCircleExtraction(acc,
+                          hits.block(0, m, 2, 1),
+                          hits.block(0, n - 1, 2, 1),
+                          radii.block(0, m, 2, 1) / radii.block(0, m, 2, 1).norm(),
+                          radii.block(0, n - 1, 2, 1) / radii.block(0, n - 1, 2, 1).norm(),
+                          uVec(m),
+                          zInSZplane(m),
+                          uVec(n - 1),
+                          zInSZplane(n - 1),
+                          uVec(n),
+                          fast_fit(2),
+                          circle_results,
+                          jacobian);
+
+    circle_results.cov << iMat(m, m), iMat(m, n - 1), iMat(m, n), iMat(n - 1, m), iMat(n - 1, n - 1), iMat(n - 1, n),
+        iMat(n, m), iMat(n, n - 1), iMat(n, n);
+
+    circle_results.cov = jacobian * circle_results.cov * jacobian.transpose();
+
+    //...adding the m.s. correction along the whole chord, as circleFit() does for the first two hits
+
+    circle_results.cov(0, 0) +=
+        (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope);
+  }
+
+  // Changes the line parameters fitted at the nodes (a, b) in the rotated SZ system into the state at
+  // node b in the original sz system
+  // uA: fitted interception at node a.
+  // uB: fitted interception at node b.
+  // uCov: covariance matrix of (u_a, u_b).
+  // sTotalA: sTotal of node a.
+  // sTotalB: sTotal of node b.
+  // sTransverseB: sTransverse of node b.
+  // rotMat: rotation matrix of the SZ system, as in lineFit().
+  // varSlopeMS: multiple scattering variance added to the slope in the rotated system.
+  // line_results: par and cov are filled.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void outerLineExtraction(const TAcc& acc,
+                                                          const double uA,
+                                                          const double uB,
+                                                          const riemannFit::Matrix2d& uCov,
+                                                          const double sTotalA,
+                                                          const double sTotalB,
+                                                          const double sTransverseB,
+                                                          const riemannFit::Matrix2d& rotMat,
+                                                          const double varSlopeMS,
+                                                          OuterLineState& line_results) {
+    // line parameters in the system in which node b is the origin and with axis along SZ
+    const double idiff = 1. / (sTotalB - sTotalA);
+    line_results.par << (uB - uA) * idiff, uB;
+    line_results.cov << (uCov(0, 0) - 2 * uCov(0, 1) + uCov(1, 1)) * riemannFit::sqr(idiff) + varSlopeMS,
+        (uCov(1, 1) - uCov(0, 1)) * idiff, (uCov(1, 1) - uCov(0, 1)) * idiff, uCov(1, 1);
+
+    // translate to the original SZ system
+    riemannFit::Matrix2d jacobian;
+    jacobian(0, 0) = 1.;
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = -sTotalB;
+    jacobian(1, 1) = 1.;
+    line_results.par(1) += -line_results.par(0) * sTotalB;
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+
+    // rotate to the original sz system
+    auto tmp = rotMat(0, 0) - line_results.par(0) * rotMat(0, 1);
+    jacobian(1, 1) = 1. / tmp;
+    jacobian(0, 0) = jacobian(1, 1) * jacobian(1, 1);
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = line_results.par(1) * rotMat(0, 1) * jacobian(0, 0);
+    line_results.par(1) = line_results.par(1) * jacobian(1, 1);
+    line_results.par(0) = (rotMat(0, 1) + line_results.par(0) * rotMat(0, 0)) * jacobian(1, 1);
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+
+    // move from Zip to z_e = Zip + cotan(theta) * sTransverse(b)
+    jacobian(0, 0) = 1.;
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = sTransverseB;
+    jacobian(1, 1) = 1.;
+    line_results.par(1) += line_results.par(0) * sTransverseB;
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+  }
+
+  // Performs the Broken Line line fit as lineFit() does, but extracts the state at the outermost fitted
+  // node instead of at the closest approach
+  // hits: hits coordinates (used only to choose the reference node, as in circleFitOuter()).
+  // hits_ge: hits covariance matrix.
+  // fast_fit: pre-fit result in the form (X0,Y0,R,tan(theta)).
+  // bField: magnetic field in Gev/cm/c.
+  // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
+  // line_results: struct to be filled (see OuterLineState).
+  // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void lineFitOuter(const TAcc& acc,
+                                                   const M3xN& hits,
+                                                   const M6xN& hits_ge,
+                                                   const V4& fast_fit,
+                                                   const double bField,
+                                                   const PreparedBrokenLineData<n>& data,
+                                                   OuterLineState& line_results) {
+    const auto& radii = data.radii;
+    const auto& sTotal = data.sTotal;
+    const auto& zInSZplane = data.zInSZplane;
+    const auto& varBeta = data.varBeta;
+
+    const double slope = -data.qCharge / fast_fit(3);
+    riemannFit::Matrix2d rotMat = rotationMatrix(acc, slope);
+
+    riemannFit::Matrix3d vMat = riemannFit::Matrix3d::Zero();  // covariance matrix XYZ
+    riemannFit::Matrix2x3d jacobXYZtosZ =
+        riemannFit::Matrix2x3d::Zero();  // jacobian for computation of the error on s (xyz -> sz)
+    riemannFit::VectorNd<n> weights = riemannFit::VectorNd<n>::Zero();
+    for (u_int i = 0; i < n; i++) {
+      vMat(0, 0) = hits_ge.col(i)[0];               // x errors
+      vMat(0, 1) = vMat(1, 0) = hits_ge.col(i)[1];  // cov_xy
+      vMat(0, 2) = vMat(2, 0) = hits_ge.col(i)[3];  // cov_xz
+      vMat(1, 1) = hits_ge.col(i)[2];               // y errors
+      vMat(2, 1) = vMat(1, 2) = hits_ge.col(i)[4];  // cov_yz
+      vMat(2, 2) = hits_ge.col(i)[5];               // z errors
+      auto tmp = 1. / radii.block(0, i, 2, 1).norm();
+      jacobXYZtosZ(0, 0) = data.qCharge * radii(1, i) * tmp;
+      jacobXYZtosZ(0, 1) = -data.qCharge * radii(0, i) * tmp;
+      jacobXYZtosZ(1, 2) = 1.;
+      weights(i) = 1. / ((rotMat * jacobXYZtosZ * vMat * jacobXYZtosZ.transpose() * rotMat.transpose())(
+                            1, 1));  // compute the orthogonal weight point by point
+    }
+
+    riemannFit::VectorNd<n> r_u;
+    for (u_int i = 0; i < n; i++) {
+      r_u(i) = weights(i) * zInSZplane(i);
+    }
+    riemannFit::MatrixNd<n> iMat;
+    math::cholesky::invert(matrixC_u(acc, weights, sTotal, varBeta), iMat);
+
+    riemannFit::VectorNd<n> uVec = iMat * r_u;  // obtain the fitted parameters by solving the linear system
+
+    const int m = outerReferenceNode(acc, hits, line_results.refFallback);
+    line_results.mRef = m;
+
+    riemannFit::Matrix2d uCov;
+    uCov << iMat(m, m), iMat(m, n - 1), iMat(n - 1, m), iMat(n - 1, n - 1);
+
+    outerLineExtraction(acc,
+                        uVec(m),
+                        uVec(n - 1),
+                        uCov,
+                        sTotal(m),
+                        sTotal(n - 1),
+                        data.sTransverse(n - 1),
+                        rotMat,
+                        multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope),
+                        line_results);
+  }
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline
 
 #endif  // RecoTracker_PixelTrackFitting_interface_alpaka_BrokenLine_h
