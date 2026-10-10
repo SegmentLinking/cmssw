@@ -41,7 +41,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }  // namespace
 
   // The OT hits of the CA (CAHitNtupletAlpakaPhase2OT) from the device OT rechits, with the module starts the
-  // pixel-track converter reads on the host
+  // pixel-track converter reads on the host and the first OT rechit of each module
   class Phase2OTCAHitsAlpaka : public global::EDProducer<edm::RunCache<CAModules>> {
   public:
     explicit Phase2OTCAHitsAlpaka(edm::ParameterSet const& iConfig)
@@ -53,7 +53,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           geometryToken_{esConsumes()},
           geometryRunToken_{esConsumes<edm::Transition::BeginRun>()},
           hitsToken_{produces()},
-          moduleStartToken_{produces()} {}
+          moduleStartToken_{produces()},
+          recHitStartToken_{produces("recHitStart")} {}
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
@@ -108,10 +109,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               static_cast<uint32_t>(&*detSet.begin() - firstCluster), 0, static_cast<uint32_t>(detSet.size())};
       }
       std::vector<uint32_t> moduleStart(caModules.nModules + 1);
+      std::vector<uint32_t> recHitStart(caModules.nModules);
       uint32_t nHits = 0;
       for (uint32_t module = 0; module < caModules.nModules; ++module) {
         modulesHost[module].firstHit = nHits;
         moduleStart[module] = nPixelHits + nHits;
+        recHitStart[module] = modulesHost[module].firstRecHit;
         nHits += modulesHost[module].nHits;
       }
       moduleStart[caModules.nModules] = nPixelHits + nHits;
@@ -130,6 +133,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                  hits.view().hitModules());
       iEvent.emplace(hitsToken_, std::move(hits));
       iEvent.emplace(moduleStartToken_, std::move(moduleStart));
+      iEvent.emplace(recHitStartToken_, std::move(recHitStart));
     }
 
   private:
@@ -141,6 +145,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometryRunToken_;
     const device::EDPutToken<reco::TrackingRecHitsSoACollection> hitsToken_;
     const edm::EDPutTokenT<std::vector<uint32_t>> moduleStartToken_;
+    // the OT rechit row of the first hit of each CA module (CA hit moduleStart[i] + k is OT rechit recHitStart[i] + k)
+    const edm::EDPutTokenT<std::vector<uint32_t>> recHitStartToken_;
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
