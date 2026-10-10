@@ -130,6 +130,11 @@ def customiseTrackingNtupleHLT(process):
     from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
     hltPhase2LegacyTracking.toModify(_seedProducers, names = ["hltInitialStepSeeds", "hltHighPtTripletStepSeeds"])
     trackingLST.toModify(_seedProducers, names = ["hltInputLST", "hltInitialStepTrackCandidates"])
+    # the LST track candidates then refer to the hltInputLST seed copy read by the ntuple
+    def _useLSTSeedCopy(proc):
+        proc.hltInputLST.producePixelSeeds = True
+        proc.hltInitialStepTrackCandidates.lstPixelSeeds = ["hltInputLST"]
+    trackingLST.toModify(process, _useLSTSeedCopy)
 
     (_seedSelectors, _tmpTask) = _TrackValidation_cff._addSeedToTrackProducers(_seedProducers.names, globals())
     _seedSelectorsTask = cms.Task()
