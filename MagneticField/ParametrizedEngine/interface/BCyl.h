@@ -1,5 +1,5 @@
-#ifndef ParametrizedEngine_BCyl_h
-#define ParametrizedEngine_BCyl_h
+#ifndef MagneticField_ParametrizedEngine_interface_BCyl_h
+#define MagneticField_ParametrizedEngine_interface_BCyl_h
 /** 
  *
  *
@@ -11,6 +11,8 @@
  *    Out:   B[3]: Br,Bf,Bz    (T)    (getBrfz)
  *
  *    Valid for r<1.15m and |z|<2.80m
+ *
+ *    constexpr, so that a copy of BCycl can also be evaluated in GPU kernels
  *
  *  \author V.Karimaki 080228, 080407
  *  new float version V.I. October 2012
@@ -41,10 +43,10 @@ namespace magfieldparam {
   namespace bcylDetails {
 
     template <typename T>
-    inline void ffunkti(T u, T* __restrict__ ff) __attribute__((always_inline));
+    constexpr void ffunkti(T u, T* __restrict__ ff) __attribute__((always_inline));
 
     template <typename T>
-    inline void ffunkti(T u, T* __restrict__ ff) {
+    constexpr void ffunkti(T u, T* __restrict__ ff) {
       // Function and its 3 derivatives
       T a, b, a2, u2;
       u2 = u * u;
@@ -57,20 +59,20 @@ namespace magfieldparam {
       ff[3] = a2 * ff[1] * (T(1) - 4 * u2);
     }
 
-    inline double myExp(double x) { return std::exp(x); }
-    inline float myExp(float x) { return unsafe_expf<3>(x); }
+    constexpr double myExp(double x) { return std::exp(x); }
+    constexpr float myExp(float x) { return unsafe_expf<3>(x); }
 
   }  // namespace bcylDetails
 
   template <typename T>
   class BCycl {
   public:
-    BCycl(BCylParam<T> const& ipar) : pars(ipar) {}
+    constexpr BCycl(BCylParam<T> const& ipar) : pars(ipar) {}
 
-    void operator()(T r2, T z, T& Br, T& Bz) const { compute(r2, z, Br, Bz); }
+    constexpr void operator()(T r2, T z, T& Br, T& Bz) const { compute(r2, z, Br, Bz); }
 
     // in meters and T  (Br needs to be multiplied by r)
-    void compute(T r2, T z, T& Br, T& Bz) const {
+    constexpr void compute(T r2, T z, T& Br, T& Bz) const {
       using namespace bcylDetails;
       //  if (r<1.15&&fabs(z)<2.8) // NOTE: check omitted, is done already by the wrapper! (NA)
       z -= pars.prm[3];  // max Bz point is shifted in z

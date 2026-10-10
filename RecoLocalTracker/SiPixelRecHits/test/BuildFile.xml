@@ -18,3 +18,22 @@
 
 <library file="CPEAccessTester.cc" name="CPEAccessTester">
 </library>
+
+<library file="alpaka/TestPixelCPETrackAngles.cc alpaka/PixelCPETrackAnglesTestKernel.dev.cc" name="TestPixelCPETrackAnglesPortable">
+  <use name="alpaka"/>
+  <use name="DataFormats/SiPixelCluster"/>
+  <use name="DataFormats/TrajectoryState"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/Utilities"/>
+  <use name="Geometry/Records"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoLocalTracker/SiPixelRecHits"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</library>
+
+<test name="testPixelCPETrackAnglesCPU" command="cmsRun ${LOCALTOP}/src/RecoLocalTracker/SiPixelRecHits/test/testPixelCPETrackAngles_cfg.py --accelerators cpu"/>
+<test name="testPixelCPETrackAnglesCUDA" command="cmsRun ${LOCALTOP}/src/RecoLocalTracker/SiPixelRecHits/test/testPixelCPETrackAngles_cfg.py --accelerators gpu-nvidia">
+  <!-- dependence only to trigger the unit test when NVIDIA GPU is (expected to be) present -->
+  <use name="cuda"/>
+</test>
