@@ -61,7 +61,7 @@ hltPhase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitial
 _hltInitialStepTrackCandidatesLST = cms.EDProducer('LSTOutputConverter',
     lstOutput = cms.InputTag('hltLST'),
     lstInput = cms.InputTag('hltInputLST'),
-    lstPixelSeeds = cms.InputTag('hltInputLST'),
+    lstPixelSeeds = cms.VInputTag('hltInputLST'),
     includeT5s = cms.bool(True),
     includeNonpLSTSs = cms.bool(False),
     dropOTHitsPurePLS = cms.bool(True),

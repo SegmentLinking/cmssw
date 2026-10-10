@@ -10,9 +10,7 @@
 
 namespace lst {
   GENERATE_SOA_LAYOUT(QuintupletsSoALayout,
-                      SOA_COLUMN(ArrayUx2,
-                                 preAllocatedTripletIndices),  // pre-allocated the theoretical max triplet indices
-                      SOA_COLUMN(ArrayUx2, tripletIndices),    // inner and outer triplet indices
+                      SOA_COLUMN(ArrayUx2, tripletIndices),                        // inner and outer triplet indices
                       SOA_COLUMN(Params_T5::ArrayU16xLayers, lowerModuleIndices),  // lower module index in each layer
                       SOA_COLUMN(Params_T5::ArrayU8xLayers, logicalLayers),        // layer ID
                       SOA_COLUMN(Params_T5::ArrayUxHits, hitIndices),              // hit indices
@@ -28,19 +26,15 @@ namespace lst {
                       SOA_COLUMN(float, regressionCenterX),
                       SOA_COLUMN(float, regressionCenterY),
                       SOA_COLUMN(float, dnnScore),
-                      SOA_COLUMN(FPX, innerRadius),   // inner triplet circle radius
-                      SOA_COLUMN(FPX, bridgeRadius),  // "middle"/bridge triplet radius
-                      SOA_COLUMN(FPX, outerRadius),   // outer triplet radius
-                      SOA_COLUMN(FPX, pt)
 #ifdef CUT_VALUE_DEBUG
-                          ,
+                      SOA_COLUMN(FPX, bridgeRadius),    // "middle"/bridge triplet radius
                       SOA_COLUMN(float, rzChiSquared),  // r-z only chi2
                       SOA_COLUMN(float, chiSquared),
                       SOA_COLUMN(float, nonAnchorChiSquared),
                       SOA_COLUMN(float, dBeta1),
-                      SOA_COLUMN(float, dBeta2)
+                      SOA_COLUMN(float, dBeta2),
 #endif
-  );
+                      SOA_COLUMN(FPX, innerRadius));  // inner triplet circle radius (outer: triplets.radius of T3 1)
 
   using QuintupletsSoA = QuintupletsSoALayout<>;
   using Quintuplets = QuintupletsSoA::View;
@@ -72,6 +66,25 @@ namespace lst {
   using QuintupletsByMD = QuintupletsByMDSoA::View;
   using QuintupletsByMDConst = QuintupletsByMDSoA::ConstView;
 
+  // Build-time record of a selected quintuplet, one per counting-kernel slot; the full quintuplet is written
+  // afterwards to an exactly sized QuintupletsSoA.
+  GENERATE_SOA_LAYOUT(QuintupletsLooseSoALayout,
+                      SOA_COLUMN(ArrayUx2, preAllocatedTripletIndices),  // candidate pairs (step 1)
+                      SOA_COLUMN(ArrayUx2, tripletIndices),              // selected pairs (step 2)
+                      SOA_COLUMN(ArrayUx2, byMDIndices),                 // slots in quintupletsByMD0/1
+                      SOA_COLUMN(float, bridgeRadius),
+                      SOA_COLUMN(float, dnnScore),
+#ifdef CUT_VALUE_DEBUG
+                      SOA_COLUMN(float, rzChiSquared),
+                      SOA_COLUMN(float, dBeta1),
+                      SOA_COLUMN(float, dBeta2),
+#endif
+                      SOA_COLUMN(bool, tightCutFlag));
+
+  using QuintupletsLooseSoA = QuintupletsLooseSoALayout<>;
+  using QuintupletsLoose = QuintupletsLooseSoA::View;
+  using QuintupletsLooseConst = QuintupletsLooseSoA::ConstView;
+
   GENERATE_SOA_BLOCKS(QuintupletsSoABlocksLayout,
                       SOA_BLOCK(quintuplets, QuintupletsSoALayout),
                       SOA_BLOCK(quintupletsOccupancy, QuintupletsOccupancySoALayout),
@@ -81,6 +94,14 @@ namespace lst {
   using QuintupletsSoABlocks = QuintupletsSoABlocksLayout<>;
   using QuintupletsSoABlocksView = QuintupletsSoABlocks::View;
   using QuintupletsSoABlocksConstView = QuintupletsSoABlocks::ConstView;
+
+  GENERATE_SOA_BLOCKS(QuintupletsLooseSoABlocksLayout,
+                      SOA_BLOCK(quintupletsLoose, QuintupletsLooseSoALayout),
+                      SOA_BLOCK(quintupletsOccupancy, QuintupletsOccupancySoALayout),
+                      SOA_BLOCK(quintupletsByMD0, QuintupletsByMDSoALayout),
+                      SOA_BLOCK(quintupletsByMD1, QuintupletsByMDSoALayout))
+
+  using QuintupletsLooseSoABlocks = QuintupletsLooseSoABlocksLayout<>;
 
   // Template based accessor for getting specific SoA views. Needed in LSTEvent.dev.cc
   template <typename TSoA>

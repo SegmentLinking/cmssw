@@ -227,9 +227,7 @@ namespace mkfit {
       Reg_End,
       Reg_Count = Reg_End
     };
-    struct Material {
-      float bbxi{0}, radl{0};
-    };
+    using Material = PropagationEnv::Material;
 
     void reserve_layers(int n_brl, int n_ec_pos, int n_ec_neg);
     void create_layers(int n_brl, int n_ec_pos, int n_ec_neg);
@@ -271,6 +269,9 @@ namespace mkfit {
     float material_radl(int binZ, int binR) const { return m_mat_vec(binZ, binR).radl; }
     float& material_bbxi(int binZ, int binR) { return m_mat_vec(binZ, binR).bbxi; }
     float& material_radl(int binZ, int binR) { return m_mat_vec(binZ, binR).radl; }
+
+    // The Config:: settings and the material map read by the propagation, for PropagationFlags::env.
+    PropagationEnv propagation_env() const;
 
     Material material_checked(float z, float r) const {
       const int zbin = mat_bin_z(z), rbin = mat_bin_r(r);

@@ -1,8 +1,13 @@
 <use name="DataFormats/Common"/>
+<use name="DataFormats/GeometrySurface"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SoATemplate"/>
+<use name="FWCore/Utilities"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
 <use name="alpaka"/>
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
-<use name="RecoTracker/LSTCore"/>
+<use name="RecoTracker/LSTCore" source_only="1"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>

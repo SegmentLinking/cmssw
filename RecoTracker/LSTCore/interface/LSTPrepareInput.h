@@ -8,16 +8,13 @@
 
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTInputHostCollection.h"
+#include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
 
 namespace lst {
 
   inline ROOT::Math::XYZVector calculateR3FromPCA(const ROOT::Math::XYZVector& p3, float dxy, float dz) {
-    const float pt = p3.rho();
-    const float p = p3.r();
-    const float vz = dz * pt * pt / p / p;
-
-    const float vx = -dxy * p3.y() / pt - p3.x() / p * p3.z() / p * dz;
-    const float vy = dxy * p3.x() / pt - p3.y() / p * p3.z() / p * dz;
+    float vx, vy, vz;
+    pixelSegmentPCAPosition(p3.x(), p3.y(), p3.z(), dxy, dz, vx, vy, vz);
     return {vx, vy, vz};
   }
 
@@ -44,9 +41,6 @@ namespace lst {
                                              std::vector<float> const& ph2_x,
                                              std::vector<float> const& ph2_y,
                                              std::vector<float> const& ph2_z,
-#ifndef LST_STANDALONE
-                                             std::vector<TrackingRecHit const*> const& ph2_hits,
-#endif
                                              float const ptCut,
                                              TQueue const& queue) {
     std::vector<float> trkX;
@@ -126,16 +120,8 @@ namespace lst {
         float pz = p3LH.z();
 
         int charge = see_q[iSeed];
-        PixelType pixtype = PixelType::kInvalid;
-
-        if (ptIn >= 2.0)
-          pixtype = PixelType::kHighPt;
-        else if (ptIn >= (ptCut - 2 * ptErr) and ptIn < 2.0) {
-          if (pixelSegmentDeltaPhiChange >= 0)
-            pixtype = PixelType::kLowPtPosCurv;
-          else
-            pixtype = PixelType::kLowPtNegCurv;
-        } else
+        PixelType pixtype = pixelSegmentType(ptIn, ptErr, pixelSegmentDeltaPhiChange, ptCut);
+        if (pixtype == PixelType::kInvalid)
           continue;
 
         firstHit_vec.push_back(hit_size + count);
@@ -150,34 +136,38 @@ namespace lst {
         auto constexpr intPixel = static_cast<int>(HitType::Pixel);
         auto const& hIdxs = see_hitIdx[iSeed];
         for (unsigned int iSH = 0; iSH < nHitsToSoA; iSH++) {
-          auto iH = iSH + 1 == nHitsToSoA ? see_hitIdx[iSeed].size() - 1 : iSH;  // include the last
+          auto iH = pixelSegmentHitOfSlot(iSH, nHitsToSoA, see_hitIdx[iSeed].size());
           hitId.push_back(hTypes[iH] == intPixel ? kPixelModuleId : ph2_detId[hIdxs[iH]]);
           hitClustSize.push_back(hTypes[iH] == intPixel ? 1 : ph2_clustSize[hIdxs[iH]]);
         }
         uint8_t hitDetBits = 0;
         uint8_t nToBits = std::min(kMaxPLSHitBitsInHitsSoA, static_cast<unsigned int>(see_hitIdx[iSeed].size()));
         for (int iSH = 0; iSH < nToBits; iSH++) {
-          auto iH = iSH + 1 == nToBits ? see_hitIdx[iSeed].size() - 1 : iSH;  // include the last
+          auto iH = pixelSegmentHitOfSlot(iSH, nToBits, see_hitIdx[iSeed].size());
           hitDetBits |= (hTypes[iH] != intPixel) << iSH;
         }
         hitDetBits_vec.push_back(hitDetBits);
 
         // eventually these trk[XYZ] should be moved to the PixelSeeds SoA
-        trkX.push_back(r3PCA.x());
-        trkY.push_back(r3PCA.y());
-        trkZ.push_back(r3PCA.z());
-        trkX.push_back(p3PCA.rho());
         float p3PCA_Eta = p3PCA.eta();
-        trkY.push_back(p3PCA_Eta);
         float p3PCA_Phi = p3PCA.phi();
-        trkZ.push_back(p3PCA_Phi);
-        trkX.push_back(r3LH.x());
-        trkY.push_back(r3LH.y());
-        trkZ.push_back(r3LH.z());
-        for (unsigned int iH = 3; iH < nHitsToSoA; iH++) {
-          trkX.push_back(r3LH.x());
-          trkY.push_back(see_dxy[iSeed]);
-          trkZ.push_back(see_dz[iSeed]);
+        const PixelSegmentKinematics kinematics{float(r3PCA.x()),
+                                                float(r3PCA.y()),
+                                                float(r3PCA.z()),
+                                                float(p3PCA.rho()),
+                                                p3PCA_Eta,
+                                                p3PCA_Phi,
+                                                float(r3LH.x()),
+                                                float(r3LH.y()),
+                                                float(r3LH.z()),
+                                                see_dxy[iSeed],
+                                                see_dz[iSeed]};
+        for (unsigned int iSH = 0; iSH < nHitsToSoA; iSH++) {
+          float x, y, z;
+          pixelSegmentHitColumns(kinematics, iSH, x, y, z);
+          trkX.push_back(x);
+          trkY.push_back(y);
+          trkZ.push_back(z);
         }
         assert(trkX.size() == count);
 
@@ -203,14 +193,7 @@ namespace lst {
           isQuad = true;
           hitIdxs.push_back(see_hitIdx[iSeed].back());
         }
-        float neta = 25.;
-        float nphi = 72.;
-        float nz = 25.;
-        int etabin = (p3PCA_Eta + 2.6) / ((2 * 2.6) / neta);
-        int phibin = (p3PCA_Phi + std::numbers::pi_v<float>) / ((2. * std::numbers::pi_v<float>) / nphi);
-        int dzbin = (std::clamp(see_dz[iSeed], -30.f, 30.f) + 30) / (2 * 30 / nz);
-        int isuperbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
-        superbin_vec.push_back(isuperbin);
+        superbin_vec.push_back(pixelSegmentSuperbin(p3PCA_Eta, p3PCA_Phi, see_dz[iSeed]));
         pixelType_vec.push_back(pixtype);
         isQuad_vec.push_back(isQuad);
       }
@@ -223,7 +206,7 @@ namespace lst {
       nPixelSeeds = n_max_pixel_segments_per_module;
     }
 
-    LSTInputHostCollection lstInputHC(queue, nHitsIT + nHitsOT, nPixelSeeds);
+    LSTInputHostCollection lstInputHC(queue, nHitsIT + nHitsOT, nPixelSeeds, nHitsIT);
 
     auto hits = lstInputHC.view().hits();
     hits.nHitsOT() = nHitsOT;
@@ -232,20 +215,15 @@ namespace lst {
     std::copy_n(ph2_z.data(), nHitsOT, hits.zs().data());
     std::copy_n(ph2_detId.data(), nHitsOT, hits.detid().data());
     std::copy_n(ph2_clustSize.data(), nHitsOT, hits.clustsize().data());
-#ifndef LST_STANDALONE
-    std::copy_n(ph2_hits.data(), nHitsOT, hits.hits().data());
-#endif
 
     std::copy_n(trkX.data(), nHitsIT, hits.xs().data() + nHitsOT);
     std::copy_n(trkY.data(), nHitsIT, hits.ys().data() + nHitsOT);
     std::copy_n(trkZ.data(), nHitsIT, hits.zs().data() + nHitsOT);
     std::copy_n(hitId.data(), nHitsIT, hits.detid().data() + nHitsOT);
     std::copy_n(hitClustSize.data(), nHitsIT, hits.clustsize().data() + nHitsOT);
-#ifndef LST_STANDALONE
-    std::fill_n(hits.hits().data() + nHitsOT, nHitsIT, nullptr);
-#endif
 
-    std::copy_n(hitIdxs.data(), nHitsIT + nHitsOT, hits.idxs().data());
+    // the OT part of hitIdxs is the identity (hitOrigIdx); only the pLS section is stored
+    std::copy_n(hitIdxs.data() + nHitsOT, nHitsIT, lstInputHC.view().hitsIT().idxs().data());
 
     auto pixelSeeds = lstInputHC.view().pixelSeeds();
     std::copy_n(firstHit_vec.data(), nPixelSeeds, pixelSeeds.firstHit().data());

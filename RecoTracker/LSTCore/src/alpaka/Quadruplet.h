@@ -516,8 +516,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return true;
   };
 
-  template <bool ReduceMem>
-  struct CreateQuadrupletsT {
+  struct CreateQuadruplets {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   MiniDoubletsConst mds,
@@ -530,7 +529,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuadrupletsOccupancy quadrupletsOccupancy,
                                   ObjectRangesConst ranges,
                                   uint16_t nEligibleT4Modules,
-                                  const float ptCut) const {
+                                  const float ptCut,
+                                  unsigned int const* __restrict__ t3ConnectedLSMax) const {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
 
@@ -593,7 +593,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const auto innerTripletOffset = tripIdx[lowerModule1];
         for (unsigned int innerTripletArrayIndex : cms::alpakatools::uniform_elements_y(acc, nInnerTriplets)) {
           const unsigned int innerTripletIndex = innerTripletOffset + innerTripletArrayIndex;
-          if (triplets.connectedLSMax()[innerTripletIndex] == 0)
+          if (t3ConnectedLSMax[innerTripletIndex] == 0)
             continue;
           // partOf{PT5, T5, PT3} is implicit, see CountTripletLSConnectionsT
           // Triplets admitted only by the widened pointing bound are used only in quintuplets.
@@ -626,7 +626,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               continue;
 
             // If densely connected, do not attempt parallel processing to avoid truncation
-            if (ReduceMem || nInnerTriplets >= kNTripletThreshold || nOuterTriplets >= kNTripletThreshold) {
+            if (nInnerTriplets >= kNTripletThreshold || nOuterTriplets >= kNTripletThreshold) {
               const uint16_t lowerModule4 = lmIdx[outerTripletIndex][2];
 
               float outerRadius = triplets.radius()[outerTripletIndex];
@@ -734,9 +734,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           }
         }
 
-        if constexpr (ReduceMem)
-          continue;
-
         alpaka::syncBlockThreads(acc);
         if (matchCount == 0) {
           continue;
@@ -837,9 +834,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  using CreateQuadruplets = CreateQuadrupletsT<false>;
-  using CreateQuadrupletsReduceMem = CreateQuadrupletsT<true>;
-
   ALPAKA_FN_ACC ALPAKA_FN_INLINE bool isValidQuadRegion(ModulesConst modules, uint16_t lowerModule) {
     const short layer = modules.layers()[lowerModule];
     const short subdet = modules.subdets()[lowerModule];
@@ -847,8 +841,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return (subdet == Barrel && layer > 2) || (subdet == Endcap);
   }
 
-  template <bool ReduceMem>
-  struct CountTripletLSConnectionsT {
+  struct CountTripletLSConnections {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
                                   MiniDoubletsConst mds,
@@ -858,7 +851,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   TripletsBySegmentConst tripletsBySegment,
                                   TripletsRangesConst tripletsRangesBySegment,
                                   ObjectRangesConst ranges,
-                                  const float ptCut) const {
+                                  const float ptCut,
+                                  unsigned int* __restrict__ t3ConnectedLSMax) const {
       // The atomicAdd below with hierarchy::Threads{} requires one block in x, y dimensions.
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[1] == 1) &&
                         (alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[2] == 1));
@@ -914,8 +908,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
               continue;  //don't create T4s for T3s accounted in pT3s
 
             // Will only perform runQuadrupletDefaultAlgorithm() checks if densely connected
-            if (!ReduceMem && nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
-              alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+            if (nInnerTriplets < kNTripletThreshold && nOuterTriplets < kNTripletThreshold) {
+              alpaka::atomicAdd(acc, &t3ConnectedLSMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
             } else {
               const uint16_t lowerModule3 = lmIdx[outerTripletIndex][1];
               const uint16_t lowerModule4 = lmIdx[outerTripletIndex][2];
@@ -947,7 +941,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                        displacedScore,
                                                        fakeScore);
               if (ok) {
-                alpaka::atomicAdd(acc, &triplets.connectedLSMax()[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
+                alpaka::atomicAdd(acc, &t3ConnectedLSMax[innerTripletIndex], 1u, alpaka::hierarchy::Threads{});
               }
             }
           }
@@ -956,15 +950,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  using CountTripletLSConnections = CountTripletLSConnectionsT<false>;
-  using CountTripletLSConnectionsReduceMem = CountTripletLSConnectionsT<true>;
-
   struct CreateEligibleModulesListForQuadruplets {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
                                   TripletsOccupancyConst tripletsOcc,
                                   ObjectRanges ranges,
-                                  Triplets triplets) const {
+                                  unsigned int const* __restrict__ t3ConnectedLSMax) const {
       // Single-block kernel
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
 
@@ -989,7 +980,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         const unsigned int firstTripletIdx = ranges.tripletModuleIndices()[lowerModule];
         for (unsigned int t = 0; t < nInnerTriplets; ++t) {
           unsigned int tripletIndex = firstTripletIdx + t;
-          dynamic_count += triplets.connectedLSMax()[tripletIndex];
+          dynamic_count += t3ConnectedLSMax[tripletIndex];
         }
 
         if (dynamic_count == 0)
@@ -1008,27 +999,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       if (cms::alpakatools::once_per_block(acc)) {
         ranges.nEligibleT4Modules() = static_cast<uint16_t>(nEligibleT4Modulesx);
         ranges.nTotalQuads() = static_cast<unsigned int>(nTotalQuadrupletsx);
-      }
-    }
-  };
-
-  struct AddQuadrupletRangesToEventExplicit {
-    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                  ModulesConst modules,
-                                  QuadrupletsOccupancyConst quadrupletsOccupancy,
-                                  ObjectRanges ranges) const {
-      // implementation is 1D with a single block
-      ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
-
-      for (uint16_t i : cms::alpakatools::uniform_elements(acc, modules.nLowerModules())) {
-        if (quadrupletsOccupancy.nQuadruplets()[i] == 0 or ranges.quadrupletModuleIndices()[i] == -1) {
-          ranges.quadrupletRanges()[i][0] = -1;
-          ranges.quadrupletRanges()[i][1] = -1;
-        } else {
-          ranges.quadrupletRanges()[i][0] = ranges.quadrupletModuleIndices()[i];
-          ranges.quadrupletRanges()[i][1] =
-              ranges.quadrupletModuleIndices()[i] + quadrupletsOccupancy.nQuadruplets()[i] - 1;
-        }
       }
     }
   };

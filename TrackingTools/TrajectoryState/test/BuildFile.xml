@@ -6,3 +6,12 @@
 <bin file="testTSOS.cpp"/>
 <bin file="testProxy.cpp"/>
 <bin file="testChurn.cpp"/>
+
+<bin file="alpaka/testCurvilinear2PerigeeJacobian.dev.cc" name="testCurvilinear2PerigeeJacobian">
+  <use name="alpaka"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>

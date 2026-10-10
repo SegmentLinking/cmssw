@@ -6,6 +6,7 @@
 <use name="FWCore/ParameterSet"/>
 <use name="Geometry/Records"/>
 <use name="Geometry/CommonTopologies" source_only="1"/>
+<use name="RecoTracker/MkFitCore" source_only="1"/>
 <use name="DataFormats/TrajectorySeed"/>
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="Geometry/TrackerGeometryBuilder"/>

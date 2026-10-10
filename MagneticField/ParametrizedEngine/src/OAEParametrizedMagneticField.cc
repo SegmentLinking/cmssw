@@ -7,7 +7,7 @@
 #include <FWCore/ParameterSet/interface/ParameterSet.h>
 #include <FWCore/MessageLogger/interface/MessageLogger.h>
 
-#include "TkBfield.h"
+#include "MagneticField/ParametrizedEngine/interface/TkBfield.h"
 
 using namespace std;
 using namespace magfieldparam;
@@ -33,17 +33,11 @@ GlobalVector OAEParametrizedMagneticField::inTesla(const GlobalPoint& gp) const 
   }
 }
 
-namespace {
-  constexpr float ooh = 1. / 100;
-}
-
 GlobalVector OAEParametrizedMagneticField::inTeslaUnchecked(const GlobalPoint& gp) const {
-  float x[3] = {gp.x() * ooh, gp.y() * ooh, gp.z() * ooh};
+  float x[3] = {gp.x() * kOAECmToM, gp.y() * kOAECmToM, gp.z() * kOAECmToM};
   float B[3];
   theParam.getBxyz(x, B);
   return GlobalVector(B[0], B[1], B[2]);
 }
 
-bool OAEParametrizedMagneticField::isDefined(const GlobalPoint& gp) const {
-  return (gp.perp2() < (115.f * 115.f) && fabs(gp.z()) < 280.f);
-}
+bool OAEParametrizedMagneticField::isDefined(const GlobalPoint& gp) const { return isDefinedOAE(gp.perp2(), gp.z()); }

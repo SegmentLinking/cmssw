@@ -23,7 +23,9 @@
 #include "TrackingTools/TrajectoryState/interface/PerigeeConversions.h"
 
 #include "RecoTracker/LSTCore/interface/LSTInputHostCollection.h"
+#include "RecoTracker/LSTCore/interface/LSTOTHits.h"
 #include "RecoTracker/LSTCore/interface/LSTPrepareInput.h"
+#include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -44,9 +46,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     const std::vector<edm::EDGetTokenT<TrajectorySeedCollection>> seedTokens_;
-    const edm::EDPutTokenT<TrajectorySeedCollection> lstPixelSeedsPutToken_;
 
     const edm::EDPutTokenT<lst::LSTInputHostCollection> lstInputPutToken_;
+    // OT hit pointers stay on the host (read only by LSTOutputConverter), same order as the OT hits of lstInput
+    const edm::EDPutTokenT<lst::LSTOTHits> lstOTHitsPutToken_;
   };
 
   LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
@@ -58,8 +61,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         seedTokens_(
             edm::vector_transform(iConfig.getParameter<std::vector<edm::InputTag>>("pixelSeeds"),
                                   [&](const edm::InputTag& tag) { return consumes<TrajectorySeedCollection>(tag); })),
-        lstPixelSeedsPutToken_(produces()),
-        lstInputPutToken_(produces()) {}
+        lstInputPutToken_(produces()),
+        lstOTHitsPutToken_(produces()) {}
 
   void LSTInputProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
     edm::ParameterSetDescription desc;
@@ -128,7 +131,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::vector<int> see_q;
     std::vector<std::vector<int>> see_hitIdx;
     std::vector<std::vector<int>> see_hitType;
-    TrajectorySeedCollection see_seeds;
 
     for (auto const& seedToken : seedTokens_) {
       auto const& seeds = iEvent.get(seedToken);
@@ -157,25 +159,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           px = mom.x();
           py = mom.y();
           pz = mom.z();
-          dxy = (-(pos.x() - bsPos.x()) * mom.y() + (pos.y() - bsPos.y()) * mom.x()) / mom.perp();
-          dz = (pos.z() - bsPos.z()) - ((pos.x() - bsPos.x()) * mom.x() + (pos.y() - bsPos.y()) * mom.y()) /
-                                           mom.perp() * (mom.z() / mom.perp());
+          lst::pixelSegmentImpactParameters(
+              pos.x(), pos.y(), pos.z(), mom.x(), mom.y(), mom.z(), mom.perp(), bsPos.x(), bsPos.y(), bsPos.z(), dxy, dz);
 
-          // Compute ptErr and etaErr replicating reco::TrackBase::ptError() and etaError()
+          // ptErr and etaErr as reco::TrackBase::ptError() and etaError()
           PerigeeTrajectoryError periErr = PerigeeConversions::ftsToPerigeeError(fts);
           auto const& errMat = periErr.covarianceMatrix();
-          double pt = mom.perp();
-          double p = mom.mag();
-          double pz = mom.z();
-          double q = static_cast<double>(charge);
-          // Full error propagation matching reco::TrackBase::ptError2():
-          //   pt2*p2/q2 * cov(qoverp,qoverp) + 2*sqrt(p2*pt2)/q * pz * cov(qoverp,lambda) + pz2 * cov(lambda,lambda)
-          double pt2 = pt * pt;
-          double p2 = p * p;
-          ptErr = std::sqrt(pt2 * p2 / (q * q) * errMat(0, 0) + 2.0 * std::sqrt(p2 * pt2) / q * pz * errMat(0, 1) +
-                            pz * pz * errMat(1, 1));
-          // etaError() = sqrt(cov(lambda,lambda)) * p/pt
-          etaErr = std::sqrt(errMat(1, 1)) * p / pt;
+          lst::pixelSegmentMomentumErrors(mom.perp(),
+                                          mom.mag(),
+                                          mom.z(),
+                                          static_cast<double>(charge),
+                                          errMat(0, 0),
+                                          errMat(0, 1),
+                                          errMat(1, 1),
+                                          ptErr,
+                                          etaErr);
         }
 
         std::vector<int> hitIdx;
@@ -215,7 +213,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         see_q.push_back(charge);
         see_hitIdx.emplace_back(std::move(hitIdx));
         see_hitType.emplace_back(std::move(hitType));
-        see_seeds.push_back(seed);
       }
     }
 
@@ -241,12 +238,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                         ph2_x,
                                         ph2_y,
                                         ph2_z,
-                                        ph2_hits,
                                         ptCut_,
                                         iEvent.queue());
 
     iEvent.emplace(lstInputPutToken_, std::move(lstInputHC));
-    iEvent.emplace(lstPixelSeedsPutToken_, std::move(see_seeds));
+    iEvent.emplace(lstOTHitsPutToken_, lst::LSTOTHits{std::move(ph2_hits)});
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

@@ -3,33 +3,11 @@
 
 #include "RecoTracker/MkFitCore/interface/Config.h"
 #include "RecoTracker/MkFitCore/interface/MatrixSTypes.h"
-
-namespace mkfit {
-
-  inline float hipo(float x, float y) { return std::sqrt(x * x + y * y); }
-
-  inline float hipo_sqr(float x, float y) { return x * x + y * y; }
-
-  inline void sincos4(const float x, float& sin, float& cos) {
-    // Had this writen with explicit division by factorial.
-    // The *whole* fitting test ran like 2.5% slower on MIC, sigh.
-
-    const float x2 = x * x;
-    cos = 1.f - 0.5f * x2 + 0.04166667f * x2 * x2;
-    sin = x - 0.16666667f * x * x2;
-  }
-}  // end namespace mkfit
+#include "RecoTracker/MkFitCore/interface/portable/MPlexTypes.h"
 
 //==============================================================================
 
 // Matriplex dimensions and typedefs
-
-// Provide fast_xyzz() Matriplex methods and operators using VDT.
-#define MPLEX_VDT
-// Define the following to have fast_xyzz() functions actually call std:: stuff.
-// #define MPLEX_VDT_USE_STD
-
-#include "Matriplex/MatriplexSym.h"
 
 #ifndef MPT_SIZE
 #if defined(__AVX512F__)
@@ -46,9 +24,6 @@ namespace mkfit {
 namespace mkfit {
 
   constexpr Matriplex::idx_t NN = MPT_SIZE;  // "Length" of MPlex.
-
-  constexpr Matriplex::idx_t LL = 6;  // Dimension of large/long  MPlex entities
-  constexpr Matriplex::idx_t HH = 3;  // Dimension of small/short MPlex entities
 
   typedef Matriplex::Matriplex<float, LL, LL, NN> MPlexLL;
   typedef Matriplex::Matriplex<float, LL, 1, NN> MPlexLV;

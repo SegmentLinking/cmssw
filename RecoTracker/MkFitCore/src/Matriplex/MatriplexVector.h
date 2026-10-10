@@ -1,7 +1,7 @@
 #ifndef RecoTracker_MkFitCore_src_Matriplex_MatriplexVector_h
 #define RecoTracker_MkFitCore_src_Matriplex_MatriplexVector_h
 
-#include "Matriplex.h"
+#include "RecoTracker/MkFitCore/interface/portable/Matriplex/Matriplex.h"
 #include "Memory.h"
 #include <vector>
 #include <cassert>

@@ -9,6 +9,9 @@
 
 <library file="alpaka/*.cc" name="RecoLocalTrackerPhase2OTRecHitsSoAPluginsPortable">
   <use name="alpaka"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Phase2TrackerCluster"/>
   <use name="DataFormats/Portable"/>
   <use name="RecoTracker/Record"/>
   <use name="DataFormats/TrackingRecHitSoA"/>
