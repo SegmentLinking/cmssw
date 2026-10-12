@@ -681,6 +681,8 @@ void createOCBranches() {
   ana.tx->createBranch<std::vector<int>>("oc_nT3s");  // number of T3s in the cluster
   if (ana.t3_branches)
     ana.tx->createBranch<std::vector<std::vector<int>>>("oc_t3Idx");  // indices of the T3s
+  // beta (condensation likelihood) of the T3s from the transformer model, in the order of oc_t3Idx
+  ana.tx->createBranch<std::vector<std::vector<float>>>("oc_t3Beta");
   ana.tx->createBranch<std::vector<std::vector<int>>>("oc_hitIdxs");  // indices of the (unique) hits
   ana.tx->createBranch<std::vector<int>>("oc_nLayers");               // number of distinct layers with a hit
   // pt, eta, phi of the T3 with the innermost anchor hit (smallest rt)
@@ -1641,10 +1643,13 @@ void setOCBranches(LSTEvent* event,
 
   // T3s (GPU t3Idx) of every cluster, in the order of the model rows
   std::vector<std::vector<unsigned int>> clusterT3Idxs(transformerOutput.nClusters);
+  std::vector<std::vector<float>> clusterT3Betas(transformerOutput.nClusters);
   for (unsigned int row = 0; row < transformerOutput.nT3s; ++row) {
     int label = transformerOutput.clusterLabel[row];
-    if (label >= 0)
+    if (label >= 0) {
       clusterT3Idxs[label].push_back(transformerOutput.tripletIndex[row]);
+      clusterT3Betas[label].push_back(transformerOutput.beta[row]);
+    }
   }
 
   int n_total_simtrk = trk_sim_pt.size();
@@ -1691,6 +1696,7 @@ void setOCBranches(LSTEvent* event,
     ana.tx->pushbackToBranch<int>("oc_nT3s", clusterT3Idxs[oc_idx].size());
     if (ana.t3_branches)
       ana.tx->pushbackToBranch<std::vector<int>>("oc_t3Idx", t3Idxs);
+    ana.tx->pushbackToBranch<std::vector<float>>("oc_t3Beta", clusterT3Betas[oc_idx]);
     ana.tx->pushbackToBranch<std::vector<int>>("oc_hitIdxs", std::vector<int>(hit_idx.begin(), hit_idx.end()));
     ana.tx->pushbackToBranch<int>("oc_nLayers", layers.size());
     // same definitions as t3_pt, t3_eta, t3_phi
