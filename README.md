@@ -25,8 +25,8 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 
 - `release`: (string) Specify the CMSSW release version to use for the tests. If not specified, the latest Integration Build (IB) will be used. If specified, it will be used as reference instead of the master branch.
 
-- `sample`: (string) Sample to use for the CMSSW and HLT tests. It has no effect on the other workflows. The available options are:
-  - `ttbar`: Use the ttbar sample (100 events). This is the default.
+- `sample`: (string) Sample to use for the standalone, CMSSW, and HLT tests. It has no effect on the SCRAM checks. The available options are:
+  - `ttbar`: Use the ttbar sample (175 events for standalone, 100 events for CMSSW and HLT). This is the default.
   - `qcd`: Use the QCD sample (50 events).
 
 - `packages`: (string or list) Package or list of extra packages to be added. By default, `RecoTracker/LSTCore` and `RecoTracker/LST` are added, along with packages that were changed in the PR. However, in cases where the master branch contains changes not reflected in the latest IB, it may be necessary to manually specify additional packages to ensure the tests run correctly.

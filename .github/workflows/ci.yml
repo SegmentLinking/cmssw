@@ -146,6 +146,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
@@ -166,6 +167,7 @@ jobs:
                 'required-prs': '${{ env.required-prs }}',
                 'runs-on': 'self-hosted',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }

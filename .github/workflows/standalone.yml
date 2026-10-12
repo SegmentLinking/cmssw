@@ -22,6 +22,14 @@ on:
         description: Run the low pT setup
         required: false
         type: boolean
+      sample:
+        description: Sample to run on
+        required: false
+        type: choice
+        options:
+          - ttbar
+          - qcd
+        default: ttbar
       release:
         description: CMSSW release to use for testing
         required: false
@@ -32,7 +40,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}
   cancel-in-progress: true
 
 permissions:
@@ -48,6 +56,7 @@ jobs:
       required-prs: ${{ inputs.required-prs }}
       runs-on: ${{ inputs.runs-on }}
       low-pt: ${{ inputs.low-pt }}
+      sample: ${{ inputs.sample }}
       release: ${{ inputs.release }}
       packages: ${{ inputs.packages }}
     secrets:
