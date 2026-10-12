@@ -165,26 +165,10 @@ float runT3Features(LSTEvent* event, float maxT3Pt) {
   if (ana.verbose >= 2)
     std::cout << "Reco T3 features processing time: " << t3features_elapsed << " secs" << std::endl;
 
-  if (ana.verbose >= 2) {
-    // self-check: rows must be the T3s with pt < maxT3Pt, in (lower module, slot) order as in the ntuple
-    auto const features = event->getT3Features();
-    auto const triplets = event->getTriplets<::lst::TripletsSoA>();
-    auto const occupancy = event->getTriplets<::lst::TripletsOccupancySoA>();
-    auto const ranges = event->getRanges();
-    unsigned int row = 0, nBadOrder = 0;
-    for (int mod = 0; mod < occupancy.metadata().size(); ++mod) {
-      for (unsigned int i = 0; i < occupancy.nTriplets()[mod]; ++i) {
-        unsigned int t3 = ranges.tripletModuleIndices()[mod] + i;
-        if (!(__H2F(triplets.radius()[t3]) * ALPAKA_ACCELERATOR_NAMESPACE::lst::k2Rinv1GeVf * 2 < maxT3Pt))
-          continue;
-        if (row < features.nT3s() && features.tripletIndex()[row] != t3)
-          ++nBadOrder;
-        ++row;
-      }
-    }
-    std::cout << "# of T3 feature rows: " << features.nT3s() << " (expected " << row << ", out of order " << nBadOrder
-              << ")" << (features.nT3s() == row && nBadOrder == 0 ? " OK" : " MISMATCH") << std::endl;
-  }
+  // No host copies of the ranges or triplets here: on GPU they are cached in the event, and the copy would be taken
+  // before the later steps fill them (e.g. the T5 and T4 module indices of the ranges).
+  if (ana.verbose >= 2)
+    std::cout << "# of T3 feature rows: " << event->getT3Features().nT3s() << std::endl;
 
   return t3features_elapsed;
 }
@@ -588,6 +572,65 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(
   // Sort indices based on 'values'
   auto indices = sort_indices(result_frac);
   // Reorder 'vec1' and 'vec2' based on the sorted indices
+  std::vector<int> sorted_result(result.size());
+  std::vector<float> sorted_result_frac(result_frac.size());
+  for (size_t i = 0; i < indices.size(); ++i) {
+    sorted_result[i] = result[indices[i]];
+    sorted_result_frac[i] = result_frac[indices[i]];
+  }
+  return std::make_tuple(sorted_result, sorted_result_frac);
+}
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
+std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracsFromCounts(
+    std::vector<unsigned int> const& hitidxs,
+    std::vector<lst::HitType> const& hittypes,
+    std::vector<int> const& trk_simhit_simTrkIdx,
+    std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac,
+    float* pmatched) {
+  std::vector<std::pair<unsigned int, lst::HitType>> uniqueHits;
+  for (size_t i = 0; i < hitidxs.size(); ++i) {
+    auto item = std::make_pair(hitidxs[i], hittypes[i]);
+    if (std::find(uniqueHits.begin(), uniqueHits.end(), item) == uniqueHits.end())
+      uniqueHits.push_back(item);
+  }
+  int nhits_input = uniqueHits.size();
+
+  // number of hits with at least one sim hit of the sim track
+  std::map<int, int> counts;
+  for (auto const& [hitidx, hittype] : uniqueHits) {
+    auto const& simHitIdxs = hittype == lst::HitType::Phase2OT ? trk_ph2_simHitIdx : trk_pix_simHitIdx;
+    std::vector<int> simtrk_idxs_per_hit;
+    for (auto simhit_idx : simHitIdxs.at(hitidx)) {
+      int simtrk_idx = trk_simhit_simTrkIdx[simhit_idx];
+      if (simtrk_idx < 0)
+        continue;
+      if (std::find(simtrk_idxs_per_hit.begin(), simtrk_idxs_per_hit.end(), simtrk_idx) == simtrk_idxs_per_hit.end())
+        simtrk_idxs_per_hit.push_back(simtrk_idx);
+    }
+    for (auto simtrk_idx : simtrk_idxs_per_hit)
+      counts[simtrk_idx]++;
+  }
+
+  // A sim track with more than half of the hits wins every combination in which it is chosen in all of its hits,
+  // so its best fraction is its count over the number of hits.
+  std::vector<int> result;
+  std::vector<float> result_frac;
+  float max_percent_matched = 0.0f;
+  for (auto const& [simtrk_idx, count] : counts) {
+    float percent_matched = static_cast<float>(count) / nhits_input;
+    if (percent_matched > matchfrac) {
+      result.push_back(simtrk_idx);
+      result_frac.push_back(percent_matched);
+    }
+    max_percent_matched = std::max(max_percent_matched, percent_matched);
+  }
+  if (pmatched != nullptr)
+    *pmatched = max_percent_matched;
+
+  auto indices = sort_indices(result_frac);
   std::vector<int> sorted_result(result.size());
   std::vector<float> sorted_result_frac(result_frac.size());
   for (size_t i = 0; i < indices.size(); ++i) {

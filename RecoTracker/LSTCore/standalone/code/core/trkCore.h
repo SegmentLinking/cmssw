@@ -53,6 +53,17 @@ std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracs(
     bool verbose = false,
     float matchfrac = 0.75,
     float* pmatched = nullptr);
+// Same result as matchedSimTrkIdxsAndFracs for matchfrac >= 0.5, from per-track hit counts instead of the
+// enumeration of all per-hit sim track combinations (which is not feasible for objects with many hits).
+// pmatched is the largest fraction of hits shared with one sim track.
+std::tuple<std::vector<int>, std::vector<float>> matchedSimTrkIdxsAndFracsFromCounts(
+    std::vector<unsigned int> const& hitidxs,
+    std::vector<lst::HitType> const& hittypes,
+    std::vector<int> const& trk_simhit_simTrkIdx,
+    std::vector<std::vector<int>> const& trk_ph2_simHitIdx,
+    std::vector<std::vector<int>> const& trk_pix_simHitIdx,
+    float matchfrac = 0.75,
+    float* pmatched = nullptr);
 int getDenomSimTrkType(int isimtrk,
                        std::vector<int> const& trk_sim_q,
                        std::vector<float> const& trk_sim_pt,

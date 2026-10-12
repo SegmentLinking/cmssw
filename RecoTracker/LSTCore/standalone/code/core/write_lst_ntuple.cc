@@ -33,6 +33,8 @@ void createOutputBranches() {
 
   if (ana.occ_branches)
     createOccupancyBranches();
+  if (ana.oc_branches)
+    createOCBranches();
 
   // DNN branches
   if (ana.t5dnn_branches)
@@ -44,7 +46,7 @@ void createOutputBranches() {
 }
 
 //________________________________________________________________________________________________________________________________
-void fillOutputBranches(LSTEvent* event) {
+void fillOutputBranches(LSTEvent* event, TransformerOutput const* transformerOutput) {
   float matchfrac = 0.75;
 
   unsigned int n_accepted_simtrk = setSimTrackContainerBranches(event);
@@ -72,6 +74,8 @@ void fillOutputBranches(LSTEvent* event) {
                                            : std::map<unsigned int, unsigned int>());
   auto const t5_idx_map = (ana.t5_branches ? setQuintupletBranches(event, n_accepted_simtrk, matchfrac, t3_idx_map)
                                            : std::map<unsigned int, unsigned int>());
+  if (ana.oc_branches and transformerOutput != nullptr)
+    setOCBranches(event, *transformerOutput, n_accepted_simtrk, matchfrac, t3_idx_map);
   auto const pls_idx_map =
       (ana.pls_branches ? setPixelLineSegmentBranches(event, n_accepted_simtrk, matchfrac, ls_idx_map)
                         : std::map<unsigned int, unsigned int>());
@@ -307,6 +311,12 @@ void createSimTrackContainerBranches() {
     ana.tx->createBranch<std::vector<std::vector<int>>>("sim_t4IdxAll");
     // list of match fraction for each match (> 0%) to t4_* container
     ana.tx->createBranch<std::vector<std::vector<float>>>("sim_t4IdxAllFrac");
+  }
+  if (ana.oc_branches) {
+    // list of idx to matches (> 0%) to oc_* container
+    ana.tx->createBranch<std::vector<std::vector<int>>>("sim_ocIdxAll");
+    // list of match fraction for each match (> 0%) to oc_* container
+    ana.tx->createBranch<std::vector<std::vector<float>>>("sim_ocIdxAllFrac");
   }
 }
 
@@ -659,6 +669,32 @@ void createOccupancyBranches() {
   ana.tx->createBranch<std::vector<int>>("t4_occupancies");
   ana.tx->createBranch<int>("pT3_occupancies");
   ana.tx->createBranch<int>("pT5_occupancies");
+}
+
+//________________________________________________________________________________________________________________________________
+void createOCBranches() {
+  // Transformer clusters (object condensation, a.k.a. OC)
+  //
+  //  The container will hold per entry a cluster of T3s: the T3s with the same DBSCAN label in the latent space of
+  //  the transformer model. The hits of a cluster are the union of the hits of its T3s.
+  //
+  ana.tx->createBranch<std::vector<int>>("oc_nT3s");  // number of T3s in the cluster
+  if (ana.t3_branches)
+    ana.tx->createBranch<std::vector<std::vector<int>>>("oc_t3Idx");  // indices of the T3s
+  ana.tx->createBranch<std::vector<std::vector<int>>>("oc_hitIdxs");  // indices of the (unique) hits
+  ana.tx->createBranch<std::vector<int>>("oc_nLayers");               // number of distinct layers with a hit
+  // pt, eta, phi of the T3 with the innermost anchor hit (smallest rt)
+  ana.tx->createBranch<std::vector<float>>("oc_pt");
+  ana.tx->createBranch<std::vector<float>>("oc_eta");
+  ana.tx->createBranch<std::vector<float>>("oc_phi");
+  ana.tx->createBranch<std::vector<float>>("oc_pMatched");   // largest fraction of hits shared with one sim track
+  ana.tx->createBranch<std::vector<int>>("oc_isFake");       // 1 if oc is fake 0 other if not
+  ana.tx->createBranch<std::vector<int>>("oc_isDuplicate");  // 1 if oc is duplicate 0 other if not
+  ana.tx->createBranch<std::vector<int>>("oc_simIdx");  // idx of best matched (highest nhit and > 75%) simulated track
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<int>>>("oc_simIdxAll");
+  // list of idx of all matched (> 0%) simulated track
+  ana.tx->createBranch<std::vector<std::vector<float>>>("oc_simIdxAllFrac");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -1577,6 +1613,154 @@ std::map<unsigned int, unsigned int> setQuadrupletBranches(LSTEvent* event,
   ana.tx->setBranch<std::vector<int>>("t4_isDuplicate", t4_isDuplicate);
 
   return t4_idx_map;
+}
+
+//________________________________________________________________________________________________________________________________
+void setOCBranches(LSTEvent* event,
+                   TransformerOutput const& transformerOutput,
+                   unsigned int n_accepted_simtrk,
+                   float matchfrac,
+                   std::map<unsigned int, unsigned int> const& t3_idx_map) {
+  //--------------------------------------------
+  //
+  //
+  // Transformer cluster
+  //
+  //
+  //--------------------------------------------
+
+  auto const& trk_sim_pt = trk.getVF("sim_pt");
+  auto const& trk_simhit_simTrkIdx = trk.getVI("simhit_simTrkIdx");
+  auto const& trk_ph2_simHitIdx = trk.getVVI("ph2_simHitIdx");
+  auto const& trk_pix_simHitIdx = trk.getVVI("pix_simHitIdx");
+
+  auto const& hitsBase = event->getInput<HitsBaseSoA>();
+  auto const& hitsEvt = event->getHits<HitsExtendedSoA>();
+  auto const& modules = event->getModules<ModulesSoA>();
+  auto const& triplets = event->getTriplets<TripletsSoA>();
+
+  // T3s (GPU t3Idx) of every cluster, in the order of the model rows
+  std::vector<std::vector<unsigned int>> clusterT3Idxs(transformerOutput.nClusters);
+  for (unsigned int row = 0; row < transformerOutput.nT3s; ++row) {
+    int label = transformerOutput.clusterLabel[row];
+    if (label >= 0)
+      clusterT3Idxs[label].push_back(transformerOutput.tripletIndex[row]);
+  }
+
+  int n_total_simtrk = trk_sim_pt.size();
+  std::vector<int> sim_oc_matched(n_accepted_simtrk);
+  std::vector<std::vector<int>> sim_ocIdxAll(n_total_simtrk);
+  std::vector<std::vector<float>> sim_ocIdxAllFrac(n_total_simtrk);
+  std::vector<std::vector<int>> oc_simIdxAll;
+  std::vector<std::vector<float>> oc_simIdxAllFrac;
+  for (unsigned int oc_idx = 0; oc_idx < clusterT3Idxs.size(); ++oc_idx) {
+    // union of the hits of the T3s, and the T3 with the innermost anchor hit
+    std::vector<unsigned int> hits;
+    std::vector<int> layers;
+    std::vector<int> t3Idxs;
+    unsigned int innermostT3Idx = 0;
+    std::vector<unsigned int> innermostT3Hits;
+    float innermostRt = std::numeric_limits<float>::max();
+    for (unsigned int t3Idx : clusterT3Idxs[oc_idx]) {
+      if (ana.t3_branches)
+        t3Idxs.push_back(t3_idx_map.at(t3Idx));
+      std::vector<unsigned int> t3Hits = getHitsFromT3(event, t3Idx);
+      for (size_t i = 0; i < t3Hits.size(); ++i) {
+        unsigned int hit = t3Hits[i];
+        if (std::find(hits.begin(), hits.end(), hit) == hits.end()) {
+          hits.push_back(hit);
+          unsigned int module_idx = hitsEvt.moduleIndices()[hit];
+          int layer = modules.layers()[module_idx] + 6 * (modules.subdets()[module_idx] == 4);
+          if (std::find(layers.begin(), layers.end(), layer) == layers.end())
+            layers.push_back(layer);
+        }
+        // anchor hits are the even ones
+        float rt = std::hypot(hitsBase.xs()[hit], hitsBase.ys()[hit]);
+        if (i % 2 == 0 and rt < innermostRt) {
+          innermostRt = rt;
+          innermostT3Idx = t3Idx;
+          innermostT3Hits = t3Hits;
+        }
+      }
+    }
+    auto [hit_idx, hit_type] = convertHitsToHitIdxsAndHitTypes(event, hits);
+    float percent_matched;
+    auto [simidx, simidxfrac] = matchedSimTrkIdxsAndFracsFromCounts(
+        hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx, matchfrac, &percent_matched);
+
+    ana.tx->pushbackToBranch<int>("oc_nT3s", clusterT3Idxs[oc_idx].size());
+    if (ana.t3_branches)
+      ana.tx->pushbackToBranch<std::vector<int>>("oc_t3Idx", t3Idxs);
+    ana.tx->pushbackToBranch<std::vector<int>>("oc_hitIdxs", std::vector<int>(hit_idx.begin(), hit_idx.end()));
+    ana.tx->pushbackToBranch<int>("oc_nLayers", layers.size());
+    // same definitions as t3_pt, t3_eta, t3_phi
+    lst_math::Hit hitA(
+        hitsBase.xs()[innermostT3Hits[0]], hitsBase.ys()[innermostT3Hits[0]], hitsBase.zs()[innermostT3Hits[0]]);
+    lst_math::Hit hitC(
+        hitsBase.xs()[innermostT3Hits[4]], hitsBase.ys()[innermostT3Hits[4]], hitsBase.zs()[innermostT3Hits[4]]);
+    ana.tx->pushbackToBranch<float>("oc_pt", __H2F(triplets.radius()[innermostT3Idx]) * k2Rinv1GeVf * 2);
+    ana.tx->pushbackToBranch<float>("oc_eta", hitC.eta());
+    ana.tx->pushbackToBranch<float>("oc_phi", hitA.phi());
+    ana.tx->pushbackToBranch<float>("oc_pMatched", percent_matched);
+
+    bool isfake = true;
+    for (size_t isim = 0; isim < simidx.size(); ++isim) {
+      if (simidxfrac[isim] > matchfrac) {
+        isfake = false;
+        break;
+      }
+    }
+    ana.tx->pushbackToBranch<int>("oc_isFake", isfake);
+    oc_simIdxAll.push_back(simidx);
+    oc_simIdxAllFrac.push_back(simidxfrac);
+    for (size_t is = 0; is < simidx.size(); ++is) {
+      int sim_idx = simidx.at(is);
+      if (sim_idx < n_accepted_simtrk) {
+        sim_oc_matched.at(sim_idx) += 1;
+      }
+      float sim_idx_frac = simidxfrac.at(is);
+      if (sim_idx < n_total_simtrk) {
+        sim_ocIdxAll.at(sim_idx).push_back(oc_idx);
+        sim_ocIdxAllFrac.at(sim_idx).push_back(sim_idx_frac);
+      }
+    }
+    int oc_simIdx = -999;
+    float oc_simIdxBestFrac = 0;
+    for (size_t isim = 0; isim < simidx.size(); ++isim) {
+      int thisidx = simidx[isim];
+      float thisfrac = simidxfrac[isim];
+      if (thisfrac > oc_simIdxBestFrac and thisfrac > matchfrac) {
+        oc_simIdxBestFrac = thisfrac;
+        oc_simIdx = thisidx;
+      }
+    }
+    ana.tx->pushbackToBranch<int>("oc_simIdx", oc_simIdx);
+  }
+  ana.tx->setBranch<std::vector<std::vector<int>>>("oc_simIdxAll", oc_simIdxAll);
+  ana.tx->setBranch<std::vector<std::vector<float>>>("oc_simIdxAllFrac", oc_simIdxAllFrac);
+  std::vector<std::vector<int>> sim_ocIdxAll_to_write;
+  std::vector<std::vector<float>> sim_ocIdxAllFrac_to_write;
+  std::copy(sim_ocIdxAll.begin(), sim_ocIdxAll.begin() + n_accepted_simtrk, std::back_inserter(sim_ocIdxAll_to_write));
+  std::copy(sim_ocIdxAllFrac.begin(),
+            sim_ocIdxAllFrac.begin() + n_accepted_simtrk,
+            std::back_inserter(sim_ocIdxAllFrac_to_write));
+  ana.tx->setBranch<std::vector<std::vector<int>>>("sim_ocIdxAll", sim_ocIdxAll_to_write);
+  ana.tx->setBranch<std::vector<std::vector<float>>>("sim_ocIdxAllFrac", sim_ocIdxAllFrac_to_write);
+
+  std::vector<int> oc_isDuplicate(oc_simIdxAll.size());
+  for (unsigned int i = 0; i < oc_simIdxAll.size(); i++) {
+    bool isDuplicate = false;
+    for (unsigned int isim = 0; isim < oc_simIdxAll[i].size(); isim++) {
+      int simidx = oc_simIdxAll[i][isim];
+      if (simidx < n_accepted_simtrk) {
+        if (sim_oc_matched[simidx] > 1) {
+          isDuplicate = true;
+        }
+      }
+    }
+    oc_isDuplicate[i] = isDuplicate;
+  }
+  ana.tx->setBranch<std::vector<int>>("oc_isDuplicate", oc_isDuplicate);
 }
 
 //________________________________________________________________________________________________________________________________

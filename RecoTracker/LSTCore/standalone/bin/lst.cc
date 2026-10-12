@@ -352,6 +352,7 @@ int main(int argc, char **argv) {
     if (result.count("transformer_dump"))
       ana.transformer_dump_path = result["transformer_dump"].as<std::string>();
   }
+  ana.oc_branches = result.count("transformer_model") > 0;
   ana.transformer_eps = result["transformer_eps"].as<double>();
   ana.transformer_beta_threshold = result["transformer_beta_threshold"].as<float>();
 
@@ -595,7 +596,12 @@ void run_lst() {
           TTree *t = (TTree *)f->Get(ana.input_tree_name.Data());
           trk.Init(t);
           trk.GetEntry(trkev);
+#ifdef LST_TRANSFORMER
+          fillOutputBranches(events.at(omp_get_thread_num()),
+                             runTransformerModel ? &transformerOutputs.at(omp_get_thread_num()) : nullptr);
+#else
           fillOutputBranches(events.at(omp_get_thread_num()));
+#endif
           f->Close();
         }
       }

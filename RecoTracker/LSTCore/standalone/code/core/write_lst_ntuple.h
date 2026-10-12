@@ -10,6 +10,7 @@
 #include "AnalysisConfig.h"
 #include "trkCore.h"
 #include "AccessHelper.h"
+#include "TransformerModel.h"
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 
@@ -30,8 +31,9 @@ void createPixelLineSegmentBranches();
 void createPixelTripletBranches();
 void createPixelQuintupletBranches();
 void createOccupancyBranches();
+void createOCBranches();
 
-void fillOutputBranches(LSTEvent* event);
+void fillOutputBranches(LSTEvent* event, TransformerOutput const* transformerOutput = nullptr);
 void setOccupancyBranches(LSTEvent* event);
 void setGenJetBranches(LSTEvent* event);
 unsigned int setSimTrackContainerBranches(LSTEvent* event);
@@ -76,6 +78,11 @@ std::map<unsigned int, unsigned int> setPixelQuintupletBranches(LSTEvent* event,
                                                                 float matchfrac,
                                                                 std::map<unsigned int, unsigned int> const& pls_idx_map,
                                                                 std::map<unsigned int, unsigned int> const& t5_idx_map);
+void setOCBranches(LSTEvent* event,
+                   TransformerOutput const& transformerOutput,
+                   unsigned int n_accepted_simtrk,
+                   float matchfrac,
+                   std::map<unsigned int, unsigned int> const& t3_idx_map);
 
 void fillT5DNNBranches(LSTEvent* event, unsigned int T3);
 void fillT3DNNBranches(LSTEvent* event, unsigned int iT3);

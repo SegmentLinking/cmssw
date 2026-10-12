@@ -189,6 +189,9 @@ public:
   // DBSCAN on the transformer latent space: radius, and the beta prefilter (T3s with beta <= threshold are noise)
   double transformer_eps;
   float transformer_beta_threshold;
+
+  // Boolean to enable the transformer cluster (oc) branches: set when the transformer model is run
+  bool oc_branches;
 };
 
 extern AnalysisConfig ana;

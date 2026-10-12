@@ -1,9 +1,8 @@
 #ifndef TransformerModel_h
 #define TransformerModel_h
 
-// Transformer (object condensation) inference on LST T3s with libtorch: only in builds with the transformer
-// flag (lst_make_tracklooper -T). libtorch headers are kept out of this header.
-#ifdef LST_TRANSFORMER
+// Transformer (object condensation) inference on LST T3s with libtorch: the functions exist only in builds with
+// the transformer flag (lst_make_tracklooper -T). libtorch headers are kept out of this header.
 
 #include "LSTEvent.h"
 
@@ -23,6 +22,8 @@ struct TransformerOutput {
   unsigned int nClusters = 0;
   std::vector<int> clusterLabel;  // [nT3s], 0..nClusters-1, or -1 (noise, or beta not above the threshold)
 };
+
+#ifdef LST_TRANSFORMER
 
 // Load the exported TorchScript model (transformer-oc export/export_torchscript.py) once per job, on the device
 // of the backend (CUDA for lst_cuda, CPU otherwise).
