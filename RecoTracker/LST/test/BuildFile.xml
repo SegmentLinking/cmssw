@@ -1,0 +1,8 @@
+<library file="LSTT3FeatureValidator.cc" name="RecoTrackerLSTTestPlugins">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="RecoTracker/LSTCore"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
