@@ -14,6 +14,14 @@
 #endif
 #endif
 
+// Compile-time switch for fitting the pixel-seed rec hits in the Broken Line Fit.
+//   1 -- the pixel seed's rec hit positions and errors are carried through LSTInputSoA
+//        and the BLF fits them alongside the outer tracker hits.
+//   0 -- none of that machinery is built at all.
+#ifndef LST_BLF_PIXEL_HITS
+#define LST_BLF_PIXEL_HITS 1
+#endif
+
 namespace lst {
 
   // Named constants for pixelTypes
@@ -128,6 +136,8 @@ namespace lst {
 
   using ArrayIx2 = edm::StdArray<int, 2>;
   using ArrayUx2 = edm::StdArray<unsigned int, 2>;
+  using ArrayFx3 = edm::StdArray<float, 3>;
+  using ArrayFx6 = edm::StdArray<float, 6>;
 
 }  //namespace lst
 
