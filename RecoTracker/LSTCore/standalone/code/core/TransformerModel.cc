@@ -10,8 +10,10 @@
 #include "AnalysisConfig.h"
 #include "TStopwatch.h"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 
 namespace {
@@ -79,12 +81,111 @@ float runTransformer(LSTEvent* event, TransformerOutput& out) {
 }
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
+float runTransformerClustering(TransformerOutput& out, double eps, float betaThreshold) {
+  TStopwatch my_timer;
+  if (ana.verbose >= 2)
+    std::cout << "Reco transformer clustering start" << std::endl;
+  my_timer.Start();
+
+  unsigned int const nT3s = out.nT3s;
+  unsigned int const dim = out.latentDim;
+  out.nClusters = 0;
+  out.clusterLabel.assign(nT3s, -1);
+
+  // beta prefilter: only these rows enter DBSCAN
+  std::vector<int64_t> selected;
+  for (unsigned int i = 0; i < nT3s; ++i)
+    if (out.beta[i] > betaThreshold)
+      selected.push_back(i);
+  int64_t const nSelected = selected.size();
+
+  // With min_samples = 2 (the point itself counts) every point with a neighbour within eps is a core point, so
+  // there are no border points and the clusters are the connected components of the eps-graph with >= 2 points.
+  // v1: candidate pairs from squared distances in float32 on the torch device, with a margin; the decision
+  // is taken on the host in double precision; components with a union-find whose root is the smallest row.
+  std::vector<int64_t> parent(nSelected);
+  std::iota(parent.begin(), parent.end(), 0);
+  auto find = [&parent](int64_t a) {
+    while (parent[a] != a) {
+      parent[a] = parent[parent[a]];
+      a = parent[a];
+    }
+    return a;
+  };
+
+  if (nSelected > 1) {
+    torch::NoGradGuard noGrad;
+    double const eps2 = eps * eps;
+    float const candidateMax = eps2 + 1e-4;  // float32 rounding of the squared distances is O(1e-6)
+    int64_t const chunk = 1024;
+
+    auto x = torch::from_blob(out.latent.data(), {static_cast<int64_t>(nT3s), static_cast<int64_t>(dim)}, torch::kFloat32)
+                 .index_select(0, torch::from_blob(selected.data(), {nSelected}, torch::kInt64))
+                 .to(kTorchDevice);
+    auto norm2 = (x * x).sum(1);
+    for (int64_t start = 0; start < nSelected; start += chunk) {
+      int64_t const stop = std::min(start + chunk, nSelected);
+      // rows [start, stop) against rows [start, nSelected): every pair is seen once
+      auto d2 = norm2.slice(0, start, stop).unsqueeze(1) + norm2.slice(0, start).unsqueeze(0) -
+                2 * torch::mm(x.slice(0, start, stop), x.slice(0, start).t());
+      auto candidates = torch::nonzero(d2 <= candidateMax).to(torch::kCPU).contiguous();
+      int64_t const* pairs = candidates.data_ptr<int64_t>();
+      for (int64_t k = 0; k < candidates.size(0); ++k) {
+        int64_t const a = start + pairs[2 * k];
+        int64_t const b = start + pairs[2 * k + 1];
+        if (b <= a)
+          continue;
+        int64_t const rootA = find(a);
+        int64_t const rootB = find(b);
+        if (rootA == rootB)
+          continue;
+        float const* va = &out.latent[selected[a] * dim];
+        float const* vb = &out.latent[selected[b] * dim];
+        double dist2 = 0;
+        for (unsigned int c = 0; c < dim; ++c) {
+          double const diff = static_cast<double>(va[c]) - static_cast<double>(vb[c]);
+          dist2 += diff * diff;
+        }
+        if (dist2 <= eps2)
+          parent[std::max(rootA, rootB)] = std::min(rootA, rootB);
+      }
+    }
+  }
+
+  // sklearn numbers the clusters in the order of their first point
+  std::vector<int> size(nSelected, 0);
+  for (int64_t a = 0; a < nSelected; ++a)
+    size[find(a)]++;
+  std::vector<int> label(nSelected, -1);
+  unsigned int nClustered = 0;
+  for (int64_t a = 0; a < nSelected; ++a) {
+    int64_t const root = find(a);
+    if (size[root] < 2)
+      continue;
+    if (label[root] < 0)
+      label[root] = out.nClusters++;
+    out.clusterLabel[selected[a]] = label[root];
+    nClustered++;
+  }
+  float clustering_elapsed = my_timer.RealTime();
+
+  if (ana.verbose >= 2) {
+    std::cout << "Reco transformer clustering processing time: " << clustering_elapsed << " secs" << std::endl;
+    std::cout << "# of transformer clusters: " << out.nClusters << " (" << nClustered << " of " << nSelected
+              << " T3s with beta > " << betaThreshold << ", eps " << eps << ")" << std::endl;
+  }
+
+  return clustering_elapsed;
+}
+
+//___________________________________________________________________________________________________________________________________________________________________________________________
 void dumpTransformerOutput(TransformerOutput const& out, int evt, std::ofstream& file) {
   file.write(reinterpret_cast<char const*>(&evt), sizeof(evt));
   file.write(reinterpret_cast<char const*>(&out.nT3s), sizeof(out.nT3s));
   file.write(reinterpret_cast<char const*>(&out.latentDim), sizeof(out.latentDim));
   file.write(reinterpret_cast<char const*>(out.beta.data()), sizeof(float) * out.beta.size());
   file.write(reinterpret_cast<char const*>(out.latent.data()), sizeof(float) * out.latent.size());
+  file.write(reinterpret_cast<char const*>(out.clusterLabel.data()), sizeof(int) * out.clusterLabel.size());
 }
 
 #endif  // LST_TRANSFORMER

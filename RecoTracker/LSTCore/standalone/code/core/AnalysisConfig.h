@@ -183,8 +183,12 @@ public:
   // TorchScript model for transformer inference on T3s (empty: model not run)
   std::string transformer_model_path;
 
-  // Output file for the transformer beta and latent outputs (empty: no dump)
+  // Output file for the transformer beta, latent and cluster label outputs (empty: no dump)
   std::string transformer_dump_path;
+
+  // DBSCAN on the transformer latent space: radius, and the beta prefilter (T3s with beta <= threshold are noise)
+  double transformer_eps;
+  float transformer_beta_threshold;
 };
 
 extern AnalysisConfig ana;

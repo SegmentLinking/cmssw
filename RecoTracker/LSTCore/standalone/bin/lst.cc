@@ -91,8 +91,15 @@ int main(int argc, char **argv) {
       "Run this TorchScript transformer model on the T3s of every event (needs a -T build)",
       cxxopts::value<std::string>())(
       "transformer_dump",
-      "Write the transformer beta and latent outputs of every event to this binary file (needs --transformer_model)",
-      cxxopts::value<std::string>());
+      "Write the transformer beta, latent and cluster label outputs of every event to this binary file (needs "
+      "--transformer_model)",
+      cxxopts::value<std::string>())(
+      "transformer_eps",
+      "DBSCAN radius in the transformer latent space",
+      cxxopts::value<double>()->default_value("0.05"))(
+      "transformer_beta_threshold",
+      "Only T3s with beta above this value enter the DBSCAN clustering",
+      cxxopts::value<float>()->default_value("0.005"));
 
   auto result = options.parse(argc, argv);
 
@@ -345,6 +352,8 @@ int main(int argc, char **argv) {
     if (result.count("transformer_dump"))
       ana.transformer_dump_path = result["transformer_dump"].as<std::string>();
   }
+  ana.transformer_eps = result["transformer_eps"].as<double>();
+  ana.transformer_beta_threshold = result["transformer_beta_threshold"].as<float>();
 
   //_______________________________________________________________________________
   // --jet (Not triggered by allobj since most files don't have jet info)
@@ -546,6 +555,8 @@ void run_lst() {
       }
       if (runTransformerModel) {
         runTransformer(events.at(omp_get_thread_num()), transformerOutputs.at(omp_get_thread_num()));
+        runTransformerClustering(
+            transformerOutputs.at(omp_get_thread_num()), ana.transformer_eps, ana.transformer_beta_threshold);
         if (transformer_dump.is_open()) {
 #pragma omp critical
           dumpTransformerOutput(transformerOutputs.at(omp_get_thread_num()), evt, transformer_dump);
