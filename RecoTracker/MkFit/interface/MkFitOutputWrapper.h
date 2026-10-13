@@ -14,13 +14,8 @@ class MkFitOutputWrapper {
 public:
   MkFitOutputWrapper();
   MkFitOutputWrapper(mkfit::TrackVec tracks, bool propagatedToFirstLayer);
-  // with the final fit's per-hit states, one HitStatesOnTrack per track (see mkfit::HitStateOnTrack); fwd and bwd
-  // (validation only) hold the two states each smoothed state combines
-  MkFitOutputWrapper(mkfit::TrackVec tracks,
-                     bool propagatedToFirstLayer,
-                     std::vector<mkfit::HitStatesOnTrack> hitStates,
-                     std::vector<mkfit::HitStatesOnTrack> hitStatesFwd = {},
-                     std::vector<mkfit::HitStatesOnTrack> hitStatesBwd = {});
+  // with the final fit's per-hit states (see mkfit::FinalFitHitStates)
+  MkFitOutputWrapper(mkfit::TrackVec tracks, bool propagatedToFirstLayer, mkfit::FinalFitHitStates hitStates);
   ~MkFitOutputWrapper();
 
   MkFitOutputWrapper(MkFitOutputWrapper const&) = delete;
@@ -30,16 +25,14 @@ public:
 
   mkfit::TrackVec const& tracks() const { return tracks_; }
   bool propagatedToFirstLayer() const { return propagatedToFirstLayer_; }
-  std::vector<mkfit::HitStatesOnTrack> const& hitStates() const { return hitStates_; }
-  std::vector<mkfit::HitStatesOnTrack> const& hitStatesFwd() const { return hitStatesFwd_; }
-  std::vector<mkfit::HitStatesOnTrack> const& hitStatesBwd() const { return hitStatesBwd_; }
+  mkfit::HitStatesOnTracks const& hitStates() const { return hitStates_.smoothed; }
+  mkfit::HitStatesOnTracks const& hitStatesFwd() const { return hitStates_.fwd; }
+  mkfit::HitStatesOnTracks const& hitStatesBwd() const { return hitStates_.bwd; }
 
 private:
   mkfit::TrackVec tracks_;
   bool propagatedToFirstLayer_;
-  std::vector<mkfit::HitStatesOnTrack> hitStates_;
-  std::vector<mkfit::HitStatesOnTrack> hitStatesFwd_;
-  std::vector<mkfit::HitStatesOnTrack> hitStatesBwd_;
+  mkfit::FinalFitHitStates hitStates_;
 };
 
 #endif

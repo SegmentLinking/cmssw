@@ -672,7 +672,7 @@ namespace mkfit {
     };
     for (int n = 0; n < N_proc; ++n) {
       if (m_hsOut[n]) {
-        HitStateOnTrack &o = (*m_hsOut[n])[hot[n]];
+        HitStateOnTrack &o = m_hsOut[n][hot[n]];
         o.valid = fill(o, *xs, *cs, n) && (kind != HitStateOnTrack::Combined || ok.constAt(n, 0, 0));
         o.pzSign = pz->constAt(n, 0, 0);
         o.kind = kind;
@@ -693,11 +693,11 @@ namespace mkfit {
         o.chi2 = outermost ? m_fwdChi2Outer.constAt(n, 0, 0) : bkChi2.constAt(n, 0, 0);
       }
       if (m_validateHitStates && m_hsFwdOut[n] && m_hsBwdOut[n]) {
-        HitStateOnTrack &of = (*m_hsFwdOut[n])[hot[n]];
+        HitStateOnTrack &of = m_hsFwdOut[n][hot[n]];
         of.valid = fill(of, m_fwdLocPar[hf], m_fwdLocErr[hf], n);
         of.pzSign = m_fwdPzSign[hf].constAt(n, 0, 0);
         of.kind = kind;
-        HitStateOnTrack &ob = (*m_hsBwdOut[n])[hot[n]];
+        HitStateOnTrack &ob = m_hsBwdOut[n][hot[n]];
         ob.valid = fill(ob, bkPredPar, bkPredErr, n);
         ob.pzSign = bkPzSign.constAt(n, 0, 0);
         ob.kind = kind;

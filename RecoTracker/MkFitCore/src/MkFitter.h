@@ -71,16 +71,16 @@ namespace mkfit {
     const FinalFitFlags *refit_ffflags = nullptr;
     cpe_func m_cpe_corr_func = nullptr;
 
-    // Per-hit states of the final fit (MkBuilder::set_hit_states_output).  m_hsOut[i]: the HitStatesOnTrack of the
+    // Per-hit states of the final fit (MkBuilder::set_hit_states_output).  m_hsOut[i]: the states of the
     // track in lane i (nullptr = not stored); m_hsFwdOut / m_hsBwdOut (validation only): the forward updated and
     // backward predicted states the smoother combines.  m_fwdLoc*: forward updated state at the h-th hit of the
     // forward pass in the module's local frame (as the update computes it), kept for the backward pass;
     // m_fwdChi2Outer: the forward chi2 of the outermost hit.
     bool m_storeHitStates = false;
     bool m_validateHitStates = false;
-    HitStatesOnTrack *m_hsOut[NN];
-    HitStatesOnTrack *m_hsFwdOut[NN];
-    HitStatesOnTrack *m_hsBwdOut[NN];
+    HitStateOnTrack *m_hsOut[NN];
+    HitStateOnTrack *m_hsFwdOut[NN];
+    HitStateOnTrack *m_hsBwdOut[NN];
     std::vector<MPlex5V> m_fwdLocPar;
     std::vector<MPlex5S> m_fwdLocErr;
     std::vector<MPlexQI> m_fwdPzSign;

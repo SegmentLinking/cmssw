@@ -10,14 +10,8 @@ MkFitOutputWrapper::MkFitOutputWrapper(mkfit::TrackVec tracks, bool propagatedTo
 
 MkFitOutputWrapper::MkFitOutputWrapper(mkfit::TrackVec tracks,
                                        bool propagatedToFirstLayer,
-                                       std::vector<mkfit::HitStatesOnTrack> hitStates,
-                                       std::vector<mkfit::HitStatesOnTrack> hitStatesFwd,
-                                       std::vector<mkfit::HitStatesOnTrack> hitStatesBwd)
-    : tracks_{std::move(tracks)},
-      propagatedToFirstLayer_{propagatedToFirstLayer},
-      hitStates_{std::move(hitStates)},
-      hitStatesFwd_{std::move(hitStatesFwd)},
-      hitStatesBwd_{std::move(hitStatesBwd)} {}
+                                       mkfit::FinalFitHitStates hitStates)
+    : tracks_{std::move(tracks)}, propagatedToFirstLayer_{propagatedToFirstLayer}, hitStates_{std::move(hitStates)} {}
 
 MkFitOutputWrapper::~MkFitOutputWrapper() = default;
 

@@ -1451,10 +1451,10 @@ namespace mkfit {
 
     mkfitter->m_event = m_event;
 
-    // per-hit states: each lane writes into its track's HitStatesOnTrack (reset: a refit after outlier removal
+    // per-hit states: each lane writes into its track's entries (reset: a refit after outlier removal
     // uses fewer hits)
     mkfitter->m_storeHitStates = m_hsOut != nullptr;
-    mkfitter->m_validateHitStates = m_hsFwdOut != nullptr && m_hsBwdOut != nullptr;
+    mkfitter->m_validateHitStates = m_hsOut && m_hsOut->validate;
 
     int size_trks = (end_trk - start_trk);
     int size_hits = size_trks * nFoundHits;
@@ -1477,16 +1477,17 @@ namespace mkfit {
       const int end = std::min(icand + NN, end_trk);
       for (int i = 0; i < NN; ++i) {
         const int it = icand + i < end ? inds[icand + i] : -1;
-        auto lane = [&](std::vector<HitStatesOnTrack> *out) -> HitStatesOnTrack * {
-          if (!out || it < 0)
+        auto lane = [&](HitStatesOnTracks &out) -> HitStateOnTrack * {
+          if (it < 0)
             return nullptr;
-          HitStatesOnTrack &hs = (*out)[it];
-          hs.assign(m_tracks[it].nTotalHits(), HitStateOnTrack{});
-          return &hs;
+          const auto hs = out[it];
+          assert(int(hs.size()) == m_tracks[it].nTotalHits());
+          std::fill(hs.begin(), hs.end(), HitStateOnTrack{});
+          return hs.data();
         };
-        mkfitter->m_hsOut[i] = lane(m_hsOut);
-        mkfitter->m_hsFwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsFwdOut) : nullptr;
-        mkfitter->m_hsBwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsBwdOut) : nullptr;
+        mkfitter->m_hsOut[i] = m_hsOut ? lane(m_hsOut->smoothed) : nullptr;
+        mkfitter->m_hsFwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsOut->fwd) : nullptr;
+        mkfitter->m_hsBwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsOut->bwd) : nullptr;
       }
       // input candidate tracks
       mkfitter->fwdFitInputTracks(m_tracks, inds, icand, end);
@@ -1598,11 +1599,8 @@ namespace mkfit {
 #endif
     int N = 0;
 
-    for (auto *out : {m_hsOut, m_hsFwdOut, m_hsBwdOut})
-      if (out) {
-        out->clear();
-        out->resize(m_tracks.size());
-      }
+    if (m_hsOut)
+      m_hsOut->reset(m_tracks.size(), [this](int i) { return m_tracks[i].nTotalHits(); });
 
     std::map<int, std::vector<int>> mapFoundHits;
     std::map<int, std::vector<int>> remap;

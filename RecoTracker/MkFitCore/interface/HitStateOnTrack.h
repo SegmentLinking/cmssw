@@ -1,6 +1,7 @@
 #ifndef RecoTracker_MkFitCore_interface_HitStateOnTrack_h
 #define RecoTracker_MkFitCore_interface_HitStateOnTrack_h
 
+#include <span>
 #include <vector>
 
 namespace mkfit {
@@ -19,7 +20,53 @@ namespace mkfit {
     signed char kind;  // how the smoothed state was obtained (Kind)
     bool valid = false;
   };
-  using HitStatesOnTrack = std::vector<HitStateOnTrack>;
+
+  // The HitStateOnTrack entries of a set of tracks in one array: track i has one entry per HitOnTrack position, from
+  // m_offsets[i] to m_offsets[i + 1].  operator[](i) gives the entries of track i.  Empty: no tracks, or not stored.
+  class HitStatesOnTracks {
+  public:
+    // Entries for n tracks, nHits(i) for track i, all invalid.
+    template <typename F>
+    void reset(int n, F&& nHits) {
+      m_offsets.resize(n + 1);
+      m_offsets[0] = 0;
+      for (int i = 0; i < n; ++i)
+        m_offsets[i + 1] = m_offsets[i] + nHits(i);
+      m_states.assign(m_offsets[n], HitStateOnTrack{});
+    }
+
+    int size() const { return m_offsets.empty() ? 0 : int(m_offsets.size()) - 1; }
+    bool empty() const { return size() == 0; }
+
+    std::span<HitStateOnTrack> operator[](int i) {
+      return {m_states.data() + m_offsets[i], m_states.data() + m_offsets[i + 1]};
+    }
+    std::span<const HitStateOnTrack> operator[](int i) const {
+      return {m_states.data() + m_offsets[i], m_states.data() + m_offsets[i + 1]};
+    }
+
+  private:
+    std::vector<HitStateOnTrack> m_states;
+    std::vector<int> m_offsets;
+  };
+
+  // The per-hit states of the final fit: the smoothed state at every hit; with validate, also the forward updated and
+  // the backward predicted state each smoothed state combines.
+  struct FinalFitHitStates {
+    HitStatesOnTracks smoothed;
+    HitStatesOnTracks fwd;
+    HitStatesOnTracks bwd;
+    bool validate = false;
+
+    template <typename F>
+    void reset(int n, F&& nHits) {
+      smoothed.reset(n, nHits);
+      if (validate) {
+        fwd.reset(n, nHits);
+        bwd.reset(n, nHits);
+      }
+    }
+  };
 
 }  // namespace mkfit
 

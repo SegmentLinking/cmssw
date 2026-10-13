@@ -168,11 +168,11 @@ void MkFitFitProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
     return true;
   };
 
-  std::vector<mkfit::HitStatesOnTrack> hitStates, hitStatesFwd, hitStatesBwd;
+  mkfit::FinalFitHitStates hitStates;
+  hitStates.validate = validateHitStates_;
   auto& builder = streamCache(iID)->get();
   if (storeHitStates_)
-    builder.set_hit_states_output(
-        &hitStates, validateHitStates_ ? &hitStatesFwd : nullptr, validateHitStates_ ? &hitStatesBwd : nullptr);
+    builder.set_hit_states_output(&hitStates);
   auto lambda = [&]() {
     mkfit::run_MkFitFit(mkFitGeom.trackerInfo(), mkFitIterConfig, eventOfHits.get(), builder, intracks, tracks, cpe);
   };
@@ -186,8 +186,7 @@ void MkFitFitProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
 
   builder.set_hit_states_output(nullptr);
   if (storeHitStates_)
-    iEvent.emplace(
-        putToken_, std::move(tracks), true, std::move(hitStates), std::move(hitStatesFwd), std::move(hitStatesBwd));
+    iEvent.emplace(putToken_, std::move(tracks), true, std::move(hitStates));
   else
     iEvent.emplace(putToken_, std::move(tracks), true);
 }

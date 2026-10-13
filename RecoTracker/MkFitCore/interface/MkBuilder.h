@@ -130,16 +130,9 @@ namespace mkfit {
                     std::map<int, std::vector<int>> *remap = nullptr);
     void check_tracks(std::vector<int> inds, int start_trk, int end_trk);
 
-    // Per-hit states of the final fit (fittracks): when set, one HitStatesOnTrack per track of ref_tracks(), indexed
-    // by HitOnTrack position.  fwd and bwd (validation only) receive the two states the smoother combines.  nullptr
-    // (the default) stores nothing.
-    void set_hit_states_output(std::vector<HitStatesOnTrack> *smoothed,
-                               std::vector<HitStatesOnTrack> *fwd = nullptr,
-                               std::vector<HitStatesOnTrack> *bwd = nullptr) {
-      m_hsOut = smoothed;
-      m_hsFwdOut = smoothed ? fwd : nullptr;
-      m_hsBwdOut = smoothed ? bwd : nullptr;
-    }
+    // Per-hit states of the final fit (fittracks): when set, the states of every track of ref_tracks(), indexed by
+    // track and HitOnTrack position.  nullptr (the default) stores nothing.
+    void set_hit_states_output(FinalFitHitStates *hs) { m_hsOut = hs; }
 
   private:
     void fit_one_seed_set(TrackVec &simtracks, int itrack, int end, MkFitter *mkfttr, const bool is_brl[]);
@@ -164,9 +157,7 @@ namespace mkfit {
 
     bool m_silent;
 
-    std::vector<HitStatesOnTrack> *m_hsOut = nullptr;
-    std::vector<HitStatesOnTrack> *m_hsFwdOut = nullptr;
-    std::vector<HitStatesOnTrack> *m_hsBwdOut = nullptr;
+    FinalFitHitStates *m_hsOut = nullptr;
   };
 
 }  // end namespace mkfit
