@@ -72,8 +72,8 @@ jobs:
           echo "Sample: $SAMPLE"
           echo "sample=$SAMPLE" >> $GITHUB_ENV
           # First try to get procmodifiers specific to pr and target branches
-          PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.pr | @csv")
-          PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.target | @csv")
+          PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | select(tag == \"!!map\") | .pr | @csv")
+          PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | select(tag == \"!!map\") | .target | @csv")
           # If empty or null, try to get general procmodifiers
           if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
             PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv" 2>/dev/null || echo "")
