@@ -190,7 +190,9 @@ jobs:
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
               }
             });
       - name: Start CMSSW tests (GPU)
@@ -211,7 +213,9 @@ jobs:
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
                 'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
               }
             });
       - name: Start HLT tests (CPU)

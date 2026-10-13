@@ -31,7 +31,7 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 
 - `packages`: (string or list) Package or list of extra packages to be added. By default, `RecoTracker/LSTCore` and `RecoTracker/LST` are added, along with packages that were changed in the PR. However, in cases where the master branch contains changes not reflected in the latest IB, it may be necessary to manually specify additional packages to ensure the tests run correctly.
 
-- `procmodifiers`: (string, list, or dict) Process modifiers to use for the HLT tests. Empty by default. If a string or list, the procmodifiers will be used for both the PR and target branches. If different procmodifiers are needed for PR and target branches, it should be specified as a dictionary with `pr` and `target` keys, each of which can be a string or a list.
+- `procmodifiers`: (string, list, or dict) Process modifiers to use for the CMSSW and HLT tests. They replace the default ones, so all the wanted procmodifiers must be listed. The default is `trackingIters01,trackingLST` for the CMSSW tests and none for the HLT tests. If a string or list, the procmodifiers will be used for both the PR and target branches. If different procmodifiers are needed for PR and target branches, it should be specified as a dictionary with `pr` and `target` keys, each of which can be a string or a list.
 
 ### Examples
 
@@ -51,8 +51,8 @@ release: CMSSW_16_1_0_pre1
 sample: qcd
 packages: [HeterogeneousCore/AlpakaInterface, DataFormats/Portable]
 procmodifiers:
-  pr: [phase2CAExtension, singleIterPatatrack]
-  target: [phase2CAExtension]
+  pr: [trackingIters01, trackingLST, seedingLST]
+  target: [trackingIters01, trackingLST]
 ```
 
 Note that lists can also be specified using multiple lines as follows.

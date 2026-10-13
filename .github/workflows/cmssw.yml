@@ -38,9 +38,17 @@ on:
         description: Comma-separated list of extra packages to add
         required: false
         type: string
+      procmodifiers-pr:
+        description: Comma-separated list of process modifiers to apply to the PR branch (defaults to trackingIters01,trackingLST)
+        required: false
+        type: string
+      procmodifiers-target:
+        description: Comma-separated list of process modifiers to apply to the target branch (defaults to trackingIters01,trackingLST)
+        required: false
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}-${{ inputs.procmodifiers-pr }}-${{ inputs.procmodifiers-target }}
   cancel-in-progress: true
 
 permissions:
@@ -59,6 +67,8 @@ jobs:
       sample: ${{ inputs.sample }}
       release: ${{ inputs.release }}
       packages: ${{ inputs.packages }}
+      procmodifiers-pr: ${{ inputs.procmodifiers-pr }}
+      procmodifiers-target: ${{ inputs.procmodifiers-target }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
