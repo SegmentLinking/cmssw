@@ -155,8 +155,18 @@ namespace {
     const MPF bF = Const::sol_over_100 * bFld;
     const MPF q = -bF * qbp;
     const MPF theta = q * s;
-    MPF sint, cost;
-    mpt::fast_sincos(theta, sint, cost);
+    // from the half angle: 1 - cos and theta - sin without cancellation at small turning angle
+    MPF sinth, costh;
+    mpt::fast_sincos(0.5f * theta, sinth, costh);
+    const MPF sint = 2.f * sinth * costh;
+    const MPF omcost = 2.f * sinth * sinth;
+    const MPF cost = 1.f - omcost;
+    MPF tmsint;
+    for (int n = 0; n < NN; ++n) {
+      const float t2 = theta[n] * theta[n];
+      tmsint[n] = std::abs(theta[n]) < 0.1f ? theta[n] * t2 / 6.f * (1.f - t2 / 20.f * (1.f - t2 / 42.f))
+                                            : theta[n] - sint[n];
+    }
     const MPF dx1 = inPar(0, 0) - outPar(0, 0);
     const MPF dx2 = inPar(1, 0) - outPar(1, 0);
     const MPF dx3 = inPar(2, 0) - outPar(2, 0);
@@ -171,8 +181,6 @@ namespace {
     const MPF v22 = cosT * u21;
     const MPF v23 = sinT;
     // now prepare the transport matrix
-    const MPF omcost = 1.f - cost;
-    const MPF tmsint = theta - sint;
 
     MPlex55 errorPropCurv{0.0f};
     //   1/p - doesn't change since |p1| = |p2|
