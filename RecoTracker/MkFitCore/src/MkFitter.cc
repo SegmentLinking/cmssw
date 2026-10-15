@@ -101,9 +101,15 @@ namespace mkfit {
       if (!isFinite(m_Chi2(itrack, 0, 0)))
         std::cout << "nan " << itrack << "nan " << i << std::endl;
 #endif
-      // isFinite, not x != x: -Ofast assumes finite math and folds x != x to false
-      if (!isFinite(m_Chi2(itrack, 0, 0)))
-        continue;  //trick for the nan so the track is not dead
+      // isFinite, not x != x: -Ofast assumes finite math and folds x != x to false.  A failed forward pass keeps the
+      // track's previous state, from which the backward pass refits it; a failed backward pass, which gives the
+      // track's final state, is a failed fit: the chi2 is set negative, and the converter drops the candidate
+      // (whether or not per-hit states are stored)
+      if (!isFinite(m_Chi2(itrack, 0, 0))) {
+        if (bkw)
+          trk.setChi2(-1.f);
+        continue;
+      }
 
       m_Err[iO].copyOut(itrack, trk.errors_nc().Array());
       m_Par[iO].copyOut(itrack, trk.parameters_nc().Array());
