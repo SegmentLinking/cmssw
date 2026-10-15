@@ -161,11 +161,14 @@ namespace {
     const MPF sint = 2.f * sinth * costh;
     const MPF omcost = 2.f * sinth * sinth;
     const MPF cost = 1.f - omcost;
+    // theta - sin(theta): below theta = 1 from its series to theta^9, which is accurate to float precision there (the
+    // first omitted term is below 2e-7 of the sum); above it the difference loses less than a digit
     MPF tmsint;
     for (int n = 0; n < NN; ++n) {
       const float t2 = theta[n] * theta[n];
-      tmsint[n] = std::abs(theta[n]) < 0.1f ? theta[n] * t2 / 6.f * (1.f - t2 / 20.f * (1.f - t2 / 42.f))
-                                            : theta[n] - sint[n];
+      tmsint[n] = std::abs(theta[n]) < 1.f
+                      ? theta[n] * t2 / 6.f * (1.f - t2 / 20.f * (1.f - t2 / 42.f * (1.f - t2 / 72.f)))
+                      : theta[n] - sint[n];
     }
     const MPF dx1 = inPar(0, 0) - outPar(0, 0);
     const MPF dx2 = inPar(1, 0) - outPar(1, 0);
