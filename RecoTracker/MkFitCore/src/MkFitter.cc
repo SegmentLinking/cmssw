@@ -349,10 +349,10 @@ namespace mkfit {
       }
 #endif
 
-      // per-hit states: keep the updated state in the module's local frame (not needed at the innermost hit,
-      // h = 0, where the smoothed state is the backward one)
+      // per-hit states: keep the updated state in the module's local frame (at the innermost hit, h = 0, only as
+      // the fallback where the backward one cannot be used)
       final_fit::LocalStatesOut fwdLoc;
-      const bool keepLoc = m_storeHitStates && (h > 0 || m_validateHitStates);
+      const bool keepLoc = m_storeHitStates;
       if (keepLoc) {
         fwdLoc.updPar = &m_fwdLocPar[h];
         fwdLoc.updErr = &m_fwdLocErr[h];
@@ -550,8 +550,8 @@ namespace mkfit {
       }
 #endif
 
-      // per-hit states: the backward predicted state (between the hits) or the updated one (innermost hit), in the
-      // module's local frame as the update computes it
+      // per-hit states: the backward predicted state (between the hits) or the updated one (innermost hit, and the
+      // outermost one where the forward pass failed), in the module's local frame as the update computes it
       const bool innermost = h == nFoundHits - 1;
       MPlex5V bkPredPar, bkUpdPar;
       MPlex5S bkPredErr, bkUpdErr;
@@ -562,7 +562,7 @@ namespace mkfit {
           bkLoc.predPar = &bkPredPar;
           bkLoc.predErr = &bkPredErr;
         }
-        if (innermost) {
+        if (innermost || h == 0) {
           bkLoc.updPar = &bkUpdPar;
           bkLoc.updErr = &bkUpdErr;
         }
@@ -668,9 +668,23 @@ namespace mkfit {
       if (m_hsOut[n]) {
         HitStateOnTrack &o = (*m_hsOut[n])[hot[n]];
         o.valid = fill(o, *xs, *cs, n) && (kind != HitStateOnTrack::Combined || ok.constAt(n, 0, 0));
-        o.chi2 = outermost ? m_fwdChi2Outer.constAt(n, 0, 0) : bkChi2.constAt(n, 0, 0);
         o.pzSign = pz->constAt(n, 0, 0);
         o.kind = kind;
+        // a smoothed state that cannot be used (the combination failed, a variance is not positive, or the forward
+        // pass failed and the backward pass refitted from the track's previous state): the forward updated state at
+        // this hit instead, else the backward one (updated at the outermost hit, predicted between the end hits), so
+        // that the track keeps a usable state at every hit
+        if (!o.valid && !outermost) {
+          o.valid = fill(o, m_fwdLocPar[hf], m_fwdLocErr[hf], n);
+          o.pzSign = m_fwdPzSign[hf].constAt(n, 0, 0);
+          o.kind = HitStateOnTrack::ForwardOnly;
+        }
+        if (!o.valid && !innermost) {
+          o.valid = outermost ? fill(o, bkUpdPar, bkUpdErr, n) : fill(o, bkPredPar, bkPredErr, n);
+          o.pzSign = bkPzSign.constAt(n, 0, 0);
+          o.kind = HitStateOnTrack::BackwardOnly;
+        }
+        o.chi2 = outermost ? m_fwdChi2Outer.constAt(n, 0, 0) : bkChi2.constAt(n, 0, 0);
       }
       if (m_validateHitStates && m_hsFwdOut[n] && m_hsBwdOut[n]) {
         HitStateOnTrack &of = (*m_hsFwdOut[n])[hot[n]];
