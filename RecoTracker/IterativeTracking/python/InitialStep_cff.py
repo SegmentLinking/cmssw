@@ -504,7 +504,7 @@ _initialStepTracksMkFitFit = _mkFitOutputTrackConverter.clone(
 )
 _trackingMkFitFitPhase2 = trackingMkFitFit & trackingMkFitInitialStep & trackingPhase2PU140
 _trackingMkFitFitPhase2.toReplaceWith(initialStepTracks, _initialStepTracksMkFitFit)
-(_trackingMkFitFitPhase2 & phase2_timing_layer).toModify(initialStepTracks, TrajectoryInEvent = True)
+(_trackingMkFitFitPhase2 & phase2_timing_layer).toModify(initialStepTracks, trajectoryInEvent = True)
 _InitialStepTask_trackingMkFitFit = InitialStepTask.copy()
 _InitialStepTask_trackingMkFitFit.add(initialStepTrackCandidatesMkFitFit)
 _trackingMkFitFitPhase2.toReplaceWith(InitialStepTask, _InitialStepTask_trackingMkFitFit)

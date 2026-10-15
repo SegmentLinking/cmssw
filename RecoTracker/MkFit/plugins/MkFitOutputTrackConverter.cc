@@ -166,7 +166,7 @@ private:
   const int algo_;
   const edm::EDGetTokenT<reco::BeamSpot> bsToken_;
 
-  // TrajectoryInEvent: also produce the Trajectories and their association to the tracks (as TrackProducer); needs
+  // trajectoryInEvent: also produce the Trajectories and their association to the tracks (as TrackProducer); needs
   // the final fit's per-hit states (MkFitFitProducer storeHitStates).  With per-hit states the TrackExtras are filled
   // in full either way.
   const bool trajectoryInEvent_;
@@ -201,11 +201,11 @@ MkFitOutputTrackConverter::MkFitOutputTrackConverter(edm::ParameterSet const& iC
       measurementTrackerEventToken_{consumes(iConfig.getParameter<edm::InputTag>("measurementTrackerEvent"))},
       navToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("NavigationSchool"))},
       algo_{reco::TrackBase::algoByName(
-          iConfig.getParameter<std::string>("AlgorithmName").empty()
+          iConfig.getParameter<std::string>("algorithmName").empty()
               ? TString(iConfig.getParameter<edm::InputTag>("seeds").label()).ReplaceAll("Seeds", "").Data()
-              : iConfig.getParameter<std::string>("AlgorithmName"))},
+              : iConfig.getParameter<std::string>("algorithmName"))},
       bsToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpot"))),
-      trajectoryInEvent_{iConfig.getParameter<bool>("TrajectoryInEvent")},
+      trajectoryInEvent_{iConfig.getParameter<bool>("trajectoryInEvent")},
       validateHitStates_{iConfig.getUntrackedParameter<bool>("validateHitStates")} {
   produces<reco::TrackCollection>();
   produces<TrackingRecHitCollection>();
@@ -225,7 +225,7 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add("mkFitSeeds", edm::InputTag{"mkFitSeedConverter"});
   desc.add("src", edm::InputTag{"mkFitProducer"});
   desc.add("seeds", edm::InputTag{"initialStepSeeds"});
-  desc.add<std::string>("AlgorithmName", "")->setComment("track algorithm; if empty, the seeds label without 'Seeds'");
+  desc.add<std::string>("algorithmName", "")->setComment("track algorithm; if empty, the seeds label without 'Seeds'");
   desc.add("beamSpot", edm::InputTag{"offlineBeamSpot"});
   desc.add("ttrhBuilder", edm::ESInputTag{"", "WithTrackAngle"});
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
@@ -239,7 +239,7 @@ void MkFitOutputTrackConverter::fillDescriptions(edm::ConfigurationDescriptions&
   desc.add<bool>("qualitySignPt", true)->setComment("check sign of 1/pt for converted tracks");
 
   desc.add<edm::ESInputTag>("NavigationSchool", edm::ESInputTag{"", "SimpleNavigationSchool"});
-  desc.add<bool>("TrajectoryInEvent", false)
+  desc.add<bool>("trajectoryInEvent", false)
       ->setComment("also produce Trajectories and the trajectory-track association; needs per-hit states (src)");
   desc.addUntracked<bool>("validateHitStates", false)
       ->setComment("compare the per-hit smoothed states with TrajectoryStateCombiner (validation only)");
@@ -315,7 +315,7 @@ void MkFitOutputTrackConverter::produce(edm::StreamID iID, edm::Event& iEvent, c
   const auto& hitStates = mkFitOutput.hitStates();
   const bool haveStates = !hitStates.empty();
   if (trajectoryInEvent_ && !haveStates && !mkFitOutput.tracks().empty())
-    throw cms::Exception("Configuration") << "MkFitOutputTrackConverter: TrajectoryInEvent needs the final fit's "
+    throw cms::Exception("Configuration") << "MkFitOutputTrackConverter: trajectoryInEvent needs the final fit's "
                                              "per-hit states (MkFitFitProducer storeHitStates = True)";
   const auto& mf = iSetup.getData(mfToken_);
   const auto& detLayers = mkFitGeom.detLayers();

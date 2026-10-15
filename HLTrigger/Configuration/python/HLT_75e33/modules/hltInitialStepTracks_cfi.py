@@ -33,7 +33,7 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     mkFitSeeds = cms.InputTag("hltInitialStepMkFitSeeds"),
     src = cms.InputTag("hltInitialStepTrackCandidatesMkFitFit"),
     seeds = cms.InputTag("hltInitialStepTrajectorySeedsLST"),
-    AlgorithmName = cms.string('initialStep'),
+    algorithmName = cms.string('initialStep'),
     beamSpot = cms.InputTag("hltOnlineBeamSpot"),
     ttrhBuilder = cms.ESInputTag('', 'hltESPTTRHBuilderWithTrackAngle'),
     propagatorAlong = cms.ESInputTag('', 'PropagatorWithMaterial'),
@@ -45,11 +45,11 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     qualityMaxPosErr = cms.double(100),
     qualitySignPt = cms.bool(True),
     NavigationSchool = cms.ESInputTag('', 'SimpleNavigationSchool'),
-    TrajectoryInEvent = cms.bool(False),
+    trajectoryInEvent = cms.bool(False),
     measurementTrackerEvent = cms.InputTag("hltMeasurementTrackerEvent"),
     mightGet = cms.optional.untracked.vstring
 )
 
 from Configuration.ProcessModifiers.trackingMkFitFit_cff import trackingMkFitFit
 trackingMkFitFit.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksMkFitFit)
-(trackingMkFitFit & mtd_at_hlt).toModify(hltInitialStepTracks, TrajectoryInEvent = True)
+(trackingMkFitFit & mtd_at_hlt).toModify(hltInitialStepTracks, trajectoryInEvent = True)
