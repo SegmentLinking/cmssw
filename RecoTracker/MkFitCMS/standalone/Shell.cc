@@ -2,7 +2,7 @@
 
 #include "RecoTracker/MkFitCore/src/Debug.h"
 
-// #include "RecoTracker/MkFitCore/src/Matriplex/MatriplexCommon.h"
+// #include "RecoTracker/MkFitCore/interface/portable/Matriplex/MatriplexCommon.h"
 
 #include "RecoTracker/MkFitCMS/interface/runFunctions.h"
 

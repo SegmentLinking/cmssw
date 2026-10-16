@@ -11,12 +11,28 @@ namespace mkfit {
   //==============================================================================
 
   void PropagationConfig::apply_tracker_info(const TrackerInfo* ti) {
-    finding_inter_layer_pflags.tracker_info = ti;
-    finding_intra_layer_pflags.tracker_info = ti;
-    backward_fit_pflags.tracker_info = ti;
-    forward_fit_pflags.tracker_info = ti;
-    seed_fit_pflags.tracker_info = ti;
-    pca_prop_pflags.tracker_info = ti;
+    const PropagationEnv env = ti->propagation_env();
+    finding_inter_layer_pflags.env = env;
+    finding_intra_layer_pflags.env = env;
+    backward_fit_pflags.env = env;
+    forward_fit_pflags.env = env;
+    seed_fit_pflags.env = env;
+    pca_prop_pflags.env = env;
+  }
+
+  PropagationEnv TrackerInfo::propagation_env() const {
+    PropagationEnv env;
+    env.mag_c1 = Config::mag_c1;
+    env.mag_b0 = Config::mag_b0;
+    env.mag_b1 = Config::mag_b1;
+    env.mag_a = Config::mag_a;
+    env.use_pt_mult_scat = Config::usePtMultScat;
+    env.material = m_mat_vec.vector().data();
+    env.mat_nbins_z = m_mat_vec.n1();
+    env.mat_nbins_r = m_mat_vec.n2();
+    env.mat_fac_z = m_mat_fac_z;
+    env.mat_fac_r = m_mat_fac_r;
+    return env;
   }
 
   //==============================================================================
