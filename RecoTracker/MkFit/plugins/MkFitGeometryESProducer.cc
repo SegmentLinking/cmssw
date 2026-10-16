@@ -104,6 +104,15 @@ private:
   const TrackerGeometry *trackerGeom_ = nullptr;
   mkfit::LayerNumberConverter layerNrConv_ = {mkfit::TkLayout::phase1};
   layer_module_shape_vec_t layerModuleShapeVec_;
+
+  // constants of mkfit::Config::bFieldFromZR, and the refit's field-model switches
+  std::vector<double> bFieldParams_;
+  bool refitBFieldAtMid_;
+  bool refitRadialFieldCorr_;
+  bool refitElossSignFromPass_;
+  bool refitBkwMsFixedMomentum_;
+  int refitBkwSubSteps_;
+  bool refitMaterialPerModule_;
 };
 
 MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfig) {
@@ -111,10 +120,51 @@ MkFitGeometryESProducer::MkFitGeometryESProducer(const edm::ParameterSet &iConfi
   geomToken_ = cc.consumes();
   ttopoToken_ = cc.consumes();
   trackerToken_ = cc.consumes();
+  bFieldParams_ = iConfig.getParameter<std::vector<double>>("bFieldParams");
+  if (bFieldParams_.size() != 4)
+    throw cms::Exception("Configuration") << "bFieldParams needs 4 values {c1, b0, b1, a}";
+  refitBFieldAtMid_ = iConfig.getParameter<bool>("refitBFieldAtMid");
+  refitRadialFieldCorr_ = iConfig.getParameter<bool>("refitRadialFieldCorr");
+  refitElossSignFromPass_ = iConfig.getParameter<bool>("refitElossSignFromPass");
+  refitBkwMsFixedMomentum_ = iConfig.getParameter<bool>("refitBkwMsFixedMomentum");
+  refitBkwSubSteps_ = iConfig.getParameter<int>("refitBkwSubSteps");
+  if (refitBkwSubSteps_ < 1)
+    throw cms::Exception("Configuration") << "refitBkwSubSteps must be >= 1";
+  refitMaterialPerModule_ = iConfig.getParameter<bool>("refitMaterialPerModule");
 }
 
 void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &descriptions) {
   edm::ParameterSetDescription desc;
+  desc.add<std::vector<double>>("bFieldParams", {3.81036, -2.03767e-06, 7.34495e-06, 3.01291e-07})
+      ->setComment(
+          "{c1, b0, b1, a} of mkFit's parametrised Bz = (b0 z^2 + b1 z + c1)(a r^2 + 1), fitted to the CMS field "
+          "map over the tracker volume (0.03 % rms; the map is the same in Run 3 and Phase 2).  The older constants "
+          "{3.8114, -3.94991e-06, 7.53701e-06, 2.43878e-11}, also those of CMSSW's ParabolicMf, are low by 1.46 % "
+          "on average there");
+  desc.add<bool>("refitBFieldAtMid", true)
+      ->setComment(
+          "refit only: sample B at the chord midpoint of each propagate-to-plane step rather than at its start, "
+          "so that the outward and inward propagations are inverses of each other");
+  desc.add<bool>("refitRadialFieldCorr", true)
+      ->setComment(
+          "refit only: correct each propagate-to-plane step for the radial field Br = -(r/2) dBz/dz, "
+          "antisymmetrically (half of the change in r*p_phi at each end of the step)");
+  desc.add<bool>("refitElossSignFromPass", true)
+      ->setComment(
+          "refit only: energy-loss sign from the pass (forward loses, backward gains) instead of from each step's "
+          "path-length sign, which is wrong wherever the refit visits two modules in reverse order");
+  desc.add<bool>("refitBkwMsFixedMomentum", true)
+      ->setComment(
+          "refit only: multiple-scattering noise of the backward pass at the momentum of its start state (the "
+          "forward result), fixed per track, instead of at the running estimate");
+  desc.add<int>("refitBkwSubSteps", 2)
+      ->setComment(
+          "refit only: number of sub-steps of each propagation of the backward pass (fixed path length, parameters "
+          "only, covariance with the whole-step Jacobian); 1 = one step");
+  desc.add<bool>("refitMaterialPerModule", true)
+      ->setComment(
+          "refit only: material of each crossed module from its own MediumProperties instead of the (|z|,r) grid, "
+          "which averages over the modules overlapping a 1 cm cell and has no phi dimension");
   descriptions.addWithDefaultLabel(desc);
 }
 
@@ -315,6 +365,23 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
     (*lgc_map)[lay].add_current();
   }
 
+  // The material histogram below is filled over the module's r-z bounding box, but
+  // TrackerInfo::material_checked() is later queried at the point where the track
+  // crosses the module.  The four corners sampled above do not bound that point:
+  // for a barrel module r is *minimal* along the local x=0 line, and for a
+  // trapezoidal endcap module the smallest r is the midpoint of the short edge.
+  // Sampling only the corners therefore biases the deposit outward in r, and when
+  // a bin boundary falls in between the crossed bin is left empty -- material_checked()
+  // then returns zero material, i.e. no energy loss and no multiple scattering, for
+  // perfectly good hits.  Add the x=0 edge midpoints to the material box to close this.
+  // Note: deliberately not passed to considerPoint(), so the layer bounding boxes --
+  // to which mkFit's hit/miss logic is tuned -- stay bit-for-bit unchanged.
+  for (const float y_mid : {xy[0][1], xy[1][1]}) {
+    for (const float z_mid : {-dz, dz}) {
+      findRZBox(det->surface().toGlobal(Local3DPoint(0.f, y_mid, z_mid)), rbox_min, rbox_max, zbox_min, zbox_max);
+    }
+  }
+
   // Double-sided module (join of two modules) information is not used in mkFit and
   // also not needed for the material calculation.
   // NOTE: This check should actually be performed even before the bounding box calculation
@@ -330,8 +397,11 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
   const auto &p = det->position();
   auto z = det->rotation().z();
   auto x = det->rotation().x();
+  // module material: stored on the module (per-module material in the refit) and spread into the grid below
+  const float bbxi = det->surface().mediumProperties().xi();
+  const float radL = det->surface().mediumProperties().radLen();
   layer_info.register_module(
-      {{p.x(), p.y(), p.z()}, {z.x(), z.y(), z.z()}, {x.x(), x.y(), x.z()}, detid.rawId(), shape_id});
+      {{p.x(), p.y(), p.z()}, {z.x(), z.y(), z.z()}, {x.x(), x.y(), x.z()}, detid.rawId(), shape_id, radL, bbxi});
   // Set some layer parameters (repeatedly, would require hard-coding otherwise)
   layer_info.set_subdet(detid.subdetId());
   layer_info.set_is_pixel(detid.subdetId() <= 2);
@@ -341,9 +411,6 @@ void MkFitGeometryESProducer::fillShapeAndPlacement(const GeomDet *det,
 
   // Fill material
   {
-    // module material
-    const float bbxi = det->surface().mediumProperties().xi();
-    const float radL = det->surface().mediumProperties().radLen();
     // loop over bins to fill histogram with bbxi, radL and their weight, which the overlap surface in r-z with the cmsquare of a bin
     const float iBin = trk_info.mat_range_z() / trk_info.mat_nbins_z();
     const float jBin = trk_info.mat_range_r() / trk_info.mat_nbins_r();
@@ -546,6 +613,12 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
 
   const float *qBinDefaults = nullptr;
 
+  // parametrised field of building and fit (mkfit::Config::bFieldFromZR), for every geometry
+  mkfit::Config::mag_c1 = bFieldParams_[0];
+  mkfit::Config::mag_b0 = bFieldParams_[1];
+  mkfit::Config::mag_b1 = bFieldParams_[2];
+  mkfit::Config::mag_a = bFieldParams_[3];
+
   // std::string path = "Geometry/TrackerCommonData/data/";
   if (trackerGeom_->isThere(GeomDetEnumerators::P1PXB) || trackerGeom_->isThere(GeomDetEnumerators::P1PXEC)) {
     edm::LogInfo("MkFitGeometryESProducer") << "Extracting PhaseI geometry";
@@ -618,6 +691,25 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
   aggregateMaterialInfo(*trackerInfo, material_histogram);
   fillLayers(*trackerInfo);
 
+  // Safety net: every module must resolve to non-zero material through the very same
+  // lookup the propagator uses.  A zero here is silent in reco -- applyMaterialEffects()
+  // simply skips the hit -- so make it loud at geometry-build time instead.
+  {
+    unsigned int n_zero = 0;
+    for (const auto &det : trackerGeom_->dets()) {
+      const auto &mp = det->surface().mediumProperties();
+      if (!mp.isValid() || mp.xi() <= 0.f)
+        continue;
+      const auto &p = det->position();
+      if (trackerInfo->material_checked(std::abs(p.z()), p.perp()).bbxi <= 0.f)
+        ++n_zero;
+    }
+    if (n_zero > 0)
+      edm::LogWarning("MkFitGeometryESProducer")
+          << n_zero << " modules with material resolve to zero in the mkFit material grid; "
+          << "tracks through them will get no energy loss and no multiple scattering.";
+  }
+
   // Propagation configuration
   {
     using namespace mkfit;
@@ -632,6 +724,13 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
     pconf.backward_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
     pconf.forward_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
     pconf.seed_fit_pflags = PropagationFlags(PF_none);
+    // the refit (MkBuilder::fit_tracks) builds its own flags from these
+    Config::refitBFieldAtMid = refitBFieldAtMid_;
+    Config::refitRadialFieldCorr = refitRadialFieldCorr_;
+    Config::refitElossSignFromPass = refitElossSignFromPass_;
+    Config::refitBkwMsFixedMomentum = refitBkwMsFixedMomentum_;
+    Config::refitBkwSubSteps = refitBkwSubSteps_;
+    Config::refitMaterialPerModule = refitMaterialPerModule_;
     pconf.pca_prop_pflags = PropagationFlags(PF_none);
     pconf.apply_tracker_info(trackerInfo.get());
   }
