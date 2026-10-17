@@ -18,6 +18,8 @@
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/QuadrupletsSoA.h"
 
+#include "PixelQuintupletAccessors.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void rmQuintupletFromMemory(Quintuplets quintuplets,
                                                              unsigned int quintupletIndex,
@@ -79,14 +81,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT5(unsigned int ix,
                                                   unsigned int jx,
+                                                  MiniDoubletsConst mds,
+                                                  SegmentsConst segments,
+                                                  QuintupletsConst quintuplets,
                                                   PixelQuintupletsConst pixelQuintuplets) {
     unsigned int hits1[Params_pT5::kHits];
     unsigned int hits2[Params_pT5::kHits];
-
-    for (int i = 0; i < Params_pT5::kHits; i++) {
-      hits1[i] = pixelQuintuplets.hitIndices()[ix][i];
-      hits2[i] = pixelQuintuplets.hitIndices()[jx][i];
-    }
+    getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, ix, hits1);
+    getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, jx, hits2);
 
     int nMatched = 0;
     for (int i = 0; i < Params_pT5::kHits; i++) {
@@ -574,13 +576,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // One module per z block; its inner T4s are spread over the y blocks (no isDup read: order-independent).
   struct RemoveDupQuadrupletsAfterBuild {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
-                                  ModulesConst modules,
                                   Quadruplets quadruplets,
                                   QuadrupletsOccupancyConst quadrupletsOccupancy,
                                   ObjectRangesConst ranges) const {
-      for (auto lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
+      for (auto iter : cms::alpakatools::uniform_elements_z(acc, ranges.nEligibleT4Modules())) {
+        const uint16_t lowmod = ranges.indicesOfEligibleT4Modules()[iter];
         unsigned int nQuadruplets_lowmod = quadrupletsOccupancy.nQuadruplets()[lowmod];
         int quadrupletModuleIndices_lowmod = ranges.quadrupletModuleIndices()[lowmod];
 
@@ -621,69 +624,52 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Same ordered pairs as a loop over T4 module pairs m1 <= m2 (module order); the loser gets isDup |= 2 and only
+  // isDup & 1 (after-build dups) is read, so the result does not depend on the visiting order.
+  // Needs the compact (dense, module-ordered) T4 layout: one T4 per y element, its partners spread over x.
   struct RemoveDupQuadrupletsBeforeTC {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   Quadruplets quadruplets,
-                                  QuadrupletsOccupancyConst quadrupletsOccupancy,
-                                  ObjectRangesConst ranges) const {
-      for (unsigned int lowmodIdx1 : cms::alpakatools::uniform_elements_y(acc, ranges.nEligibleT4Modules())) {
-        uint16_t lowmod1 = ranges.indicesOfEligibleT4Modules()[lowmodIdx1];
-        unsigned int nQuadruplets_lowmod1 = quadrupletsOccupancy.nQuadruplets()[lowmod1];
-        if (nQuadruplets_lowmod1 == 0)
+                                  ObjectRangesConst ranges,
+                                  const unsigned int nQuadruplets) const {
+      for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nQuadruplets)) {
+        if ((quadruplets.isDup()[ix] & 1))
           continue;
 
-        unsigned int quadrupletModuleIndices_lowmod1 = ranges.quadrupletModuleIndices()[lowmod1];
+        const unsigned int firstPartner = ranges.quadrupletModuleIndices()[quadruplets.lowerModuleIndices()[ix][0]];
+        const float eta1 = __H2F(quadruplets.eta()[ix]);
+        const float phi1 = __H2F(quadruplets.phi()[ix]);
+        const float score1 = quadruplets.displacedScore()[ix];
 
-        for (unsigned int lowmodIdx2 :
-             cms::alpakatools::uniform_elements_x(acc, lowmodIdx1, ranges.nEligibleT4Modules())) {
-          uint16_t lowmod2 = ranges.indicesOfEligibleT4Modules()[lowmodIdx2];
-          unsigned int nQuadruplets_lowmod2 = quadrupletsOccupancy.nQuadruplets()[lowmod2];
-          if (nQuadruplets_lowmod2 == 0)
+        for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, firstPartner, nQuadruplets)) {
+          if (ix == jx)
             continue;
 
-          unsigned int quadrupletModuleIndices_lowmod2 = ranges.quadrupletModuleIndices()[lowmod2];
+          if ((quadruplets.isDup()[jx] & 1))
+            continue;
 
-          for (unsigned int ix1 = 0; ix1 < nQuadruplets_lowmod1; ix1 += 1) {
-            unsigned int ix = quadrupletModuleIndices_lowmod1 + ix1;
-            if ((quadruplets.isDup()[ix] & 1))
-              continue;
+          const float eta2 = __H2F(quadruplets.eta()[jx]);
+          const float phi2 = __H2F(quadruplets.phi()[jx]);
+          float dEta = alpaka::math::abs(acc, eta1 - eta2);
+          float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
-            const float eta1 = __H2F(quadruplets.eta()[ix]);
-            const float phi1 = __H2F(quadruplets.phi()[ix]);
-            const float score1 = quadruplets.displacedScore()[ix];
+          if (dEta > 0.1f)
+            continue;
 
-            for (unsigned int jx1 = 0; jx1 < nQuadruplets_lowmod2; jx1++) {
-              unsigned int jx = quadrupletModuleIndices_lowmod2 + jx1;
-              if (ix == jx)
-                continue;
+          if (alpaka::math::abs(acc, dPhi) > 0.1f)
+            continue;
 
-              if ((quadruplets.isDup()[jx] & 1))
-                continue;
+          const float score2 = quadruplets.displacedScore()[jx];
 
-              const float eta2 = __H2F(quadruplets.eta()[jx]);
-              const float phi2 = __H2F(quadruplets.phi()[jx]);
-              float dEta = alpaka::math::abs(acc, eta1 - eta2);
-              float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
-              if (dEta > 0.1f)
-                continue;
-
-              if (alpaka::math::abs(acc, dPhi) > 0.1f)
-                continue;
-
-              const float score2 = quadruplets.displacedScore()[jx];
-
-              int nMatched = checkHitsT4(ix, jx, quadruplets);
-              const int minNHitsForDup_T4 = 4;
-              if (nMatched >= minNHitsForDup_T4) {
-                if (score1 > score2) {
-                  rmQuadrupletFromMemory(quadruplets, jx, true);
-                } else if (score1 < score2) {
-                  rmQuadrupletFromMemory(quadruplets, ix, true);
-                } else {
-                  rmQuadrupletFromMemory(quadruplets, (ix < jx ? ix : jx), true);
-                }
-              }
+          int nMatched = checkHitsT4(ix, jx, quadruplets);
+          const int minNHitsForDup_T4 = 4;
+          if (nMatched >= minNHitsForDup_T4) {
+            if (score1 > score2) {
+              rmQuadrupletFromMemory(quadruplets, jx, true);
+            } else if (score1 < score2) {
+              rmQuadrupletFromMemory(quadruplets, ix, true);
+            } else {
+              rmQuadrupletFromMemory(quadruplets, (ix < jx ? ix : jx), true);
             }
           }
         }
@@ -722,7 +708,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct RemoveDupPixelQuintupletsFromMap {
-    ALPAKA_FN_ACC void operator()(Acc2D const& acc, PixelQuintuplets pixelQuintuplets) const {
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  MiniDoubletsConst mds,
+                                  SegmentsConst segments,
+                                  QuintupletsConst quintuplets,
+                                  PixelQuintuplets pixelQuintuplets) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
       for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
         float eta1 = __H2F(pixelQuintuplets.eta()[ix]);
@@ -740,7 +730,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > 0.2f)
             continue;
 
-          int nMatched = checkHitspT5(ix, jx, pixelQuintuplets);
+          int nMatched = checkHitspT5(ix, jx, mds, segments, quintuplets, pixelQuintuplets);
           float score2 = __H2F(pixelQuintuplets.score()[jx]);
           const int minNHitsForDup_pT5 = 7;
           if (nMatched >= minNHitsForDup_pT5) {
