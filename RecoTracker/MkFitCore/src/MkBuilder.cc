@@ -1554,6 +1554,7 @@ namespace mkfit {
         }
 
         int remove_i = 0;
+        bool blocked = false;  // an outlier that the minimum of three hits keeps on the track
         for (auto idscore : scorerAndIdx) {
           //if(idscore.first<0)
 #ifdef DEBUG_FIT
@@ -1569,13 +1570,20 @@ namespace mkfit {
           if ((innermost && chi2B > kEndHitChi2Cut) || (outermost && chi2F > kEndHitChi2Cut) ||
               (m_tracks[inds[i + start_trk]].pT() > 1 && -idscore.first > 20 && chi2F > 8 && chi2B > 8) ||
               (m_tracks[inds[i + start_trk]].pT() <= 1 && -idscore.first > 15 && chi2F > 7 && chi2B > 7)) {
-            if ((nFoundHits - remove_i) <= 3)
+            if ((nFoundHits - remove_i) <= 3) {
+              blocked = true;
               continue;  // 3 hits is the minimum...
+            }
             remove_i++;
             n_removed[i] += 1;
             m_tracks[inds[i + start_trk]].removeHit(sortedIdxs[nFoundHits - 1 - idscore.second + nFoundHits * i]);
           }
         }
+        // An outlier that cannot be removed without going below three hits, with no other hit removed (so no refit
+        // will test it again): the fit has failed, as KFFittingSmoother rejects a track left with too few hits; the
+        // negative chi2 makes the converter drop the candidate.
+        if (blocked && remove_i == 0)
+          m_tracks[inds[i + start_trk]].setChi2(-1.f);
       }
 
       for (int i = 0; i < end_trk - start_trk; i++) {
