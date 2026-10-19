@@ -15,7 +15,9 @@ namespace lst {
                       SOA_COLUMN(float, zs),
                       SOA_COLUMN(unsigned int, detid),
                       SOA_COLUMN(uint16_t, clustsize),
-                      SOA_SCALAR(unsigned int, nHitsOT))
+                      SOA_COLUMN(lst::ArrayFx6, cov),
+                      SOA_SCALAR(unsigned int, nHitsOT),
+                      SOA_SCALAR(float, B))
 
   GENERATE_SOA_LAYOUT(PixelSeedsSoALayout,
                       SOA_COLUMN(unsigned int, firstHit),
@@ -37,7 +39,12 @@ namespace lst {
                       SOA_COLUMN(float, phi))
 
   // Original index of each hit of the pLS section (hits nHitsOT and up); an OT hit's original index is its own index.
-  GENERATE_SOA_LAYOUT(HitsITSoALayout, SOA_COLUMN(unsigned int, idxs))
+  GENERATE_SOA_LAYOUT(HitsITSoALayout,
+                      SOA_COLUMN(unsigned int, idxs),
+                      SOA_COLUMN(float, xs),
+                      SOA_COLUMN(float, ys),
+                      SOA_COLUMN(float, zs),
+                      SOA_COLUMN(lst::ArrayFx6, cov))
 
   GENERATE_SOA_BLOCKS(LSTInputSoALayout,
                       SOA_BLOCK(hits, HitsBaseSoALayout),
