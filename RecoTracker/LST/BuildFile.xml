@@ -3,6 +3,9 @@
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="RecoTracker/LSTCore"/>
+<use name="TrackingTools/AnalyticalJacobians" source_only="1"/>
+<use name="TrackingTools/PatternTools" source_only="1"/>
+<use name="TrackingTools/TrajectoryState" source_only="1"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>
