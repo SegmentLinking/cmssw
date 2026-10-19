@@ -8,6 +8,7 @@
 
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/OwnVector.h"
+#include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TracksSoACollection.h"
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
@@ -34,6 +35,7 @@
 #include "RecoTracker/LST/interface/BLFCurvilinearJacobian.h"
 #include "RecoTracker/LST/interface/alpaka/LSTSeedFitModulesCollection.h"
 #include "RecoTracker/LSTCore/interface/LSTOTHits.h"
+#include "RecoTracker/LSTCore/interface/LSTPixelSeedRefs.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelSeedStatesDeviceCollection.h"
@@ -71,7 +73,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           lstInputPutToken_(produces()),
           seedStatesPutToken_(produces()),
           lstOTHitsPutToken_(produces()),
-          seedsPutToken_(produces()) {
+          seedsPutToken_(produces()),
+          lstPixelSeedRefsPutToken_(produces()) {
       // the inner-tracker-only fit is compiled for kITFitHits hits only
       if (maxITHitsToDropOTHitsPurePLS_ > static_cast<int>(::lstInputDevice::kITFitHits))
         throw edm::Exception(edm::errors::Configuration)
@@ -247,7 +250,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if (seeds.size() != totals.nSeeds)
         throw edm::Exception(edm::errors::LogicError)
             << "LSTInputDeviceProducer: seeds " << seeds.size() << " != fitted pixel tracks " << totals.nSeeds;
-      iEvent.emplace(seedsPutToken_, std::move(seeds));
+      auto const seedsHandle = iEvent.emplace(seedsPutToken_, std::move(seeds));
+
+      // references to the seeds, in the order of the pixel seeds of the LST input, for LSTOutputConverter
+      std::vector<edm::Ref<TrajectorySeedCollection>> seedRefs;
+      seedRefs.reserve(seedsHandle->size());
+      for (unsigned int iSeed = 0; iSeed < seedsHandle->size(); ++iSeed)
+        seedRefs.emplace_back(seedsHandle, iSeed);
+      iEvent.emplace(lstPixelSeedRefsPutToken_, lst::LSTPixelSeedRefs{std::move(seedRefs)});
 
       edmIndex_.reset();
       counters_.reset();
@@ -327,6 +337,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDPutToken<lst::PixelSeedStatesDeviceCollection> seedStatesPutToken_;
     const edm::EDPutTokenT<lst::LSTOTHits> lstOTHitsPutToken_;
     const edm::EDPutTokenT<TrajectorySeedCollection> seedsPutToken_;
+    const edm::EDPutTokenT<lst::LSTPixelSeedRefs> lstPixelSeedRefsPutToken_;
 
     // per-event buffers and values from acquire to produce
     uint32_t nTracks_ = 0;

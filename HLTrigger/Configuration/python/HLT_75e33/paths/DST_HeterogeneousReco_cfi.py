@@ -7,7 +7,6 @@ from ..modules.hltHgcalSoALayerClustersProducer_cfi import hltHgcalSoALayerClust
 from ..modules.hltHgcalSoARecHitsLayerClustersProducer_cfi import hltHgcalSoARecHitsLayerClustersProducer
 from ..modules.hltHgcalSoARecHitsProducer_cfi import hltHgcalSoARecHitsProducer
 from ..modules.hltInputLST_cfi import hltInputLST
-from ..modules.hltInitialStepSeeds_cfi import hltInitialStepSeeds
 from ..modules.hltInitialStepTrajectorySeedsLST_cfi import hltInitialStepTrajectorySeedsLST
 from ..modules.hltL1GTAcceptFilter_cfi import hltL1GTAcceptFilter
 from ..modules.hltLST_cfi import hltLST
@@ -48,8 +47,7 @@ HLTPixelTrackingSequence = cms.Sequence(
 )
 
 HLTLSTSequence = cms.Sequence(
-    hltInitialStepSeeds
-    + hltInputLST
+    hltInputLST
     + hltLST
 )
 
