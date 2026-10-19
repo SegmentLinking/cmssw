@@ -3,6 +3,7 @@
 #include "FWCore/Utilities/interface/Exception.h"
 
 #include "DataFormats/TrackerCommon/interface/TrackerTopology.h"
+#include "MagneticField/Portable/interface/ParabolicMagneticField.h"
 #include "DataFormats/TrackerCommon/interface/TrackerDetSide.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "RecoTracker/TkDetLayers/interface/GeometricSearchTracker.h"
@@ -173,8 +174,8 @@ void MkFitGeometryESProducer::fillDescriptions(edm::ConfigurationDescriptions &d
   edm::ParameterSetDescription desc;
   desc.add<std::vector<double>>("bFieldParams", {3.81036, -2.03767e-06, 7.34495e-06, 3.01291e-07})
       ->setComment(
-          "{c1, b0, b1, a} of mkFit's parametrised Bz = (b0 z^2 + b1 z + c1)(a r^2 + 1), fitted to the CMS field "
-          "map over the tracker volume (0.03 % rms)");
+          "{c1, b0, b1, a} of the final fit's parametrised Bz = (b0 z^2 + b1 z + c1)(a r^2 + 1), fitted to the CMS "
+          "field map over the tracker volume (0.03 % rms); track building uses those of ParabolicMf");
   desc.add<bool>("refitBFieldAtMid", true)
       ->setComment(
           "refit only: sample B at the chord midpoint of each propagate-to-plane step rather than at its start, "
@@ -647,11 +648,16 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
 
   const float *qBinDefaults = nullptr;
 
-  // parametrised field of building and fit (mkfit::Config::bFieldFromZR), for every geometry
-  mkfit::Config::mag_c1 = bFieldParams_[0];
-  mkfit::Config::mag_b0 = bFieldParams_[1];
-  mkfit::Config::mag_b1 = bFieldParams_[2];
-  mkfit::Config::mag_a = bFieldParams_[3];
+  // parametrised field, for every geometry: track building with the constants of CMSSW's ParabolicMf, the final fit
+  // with its own, fitted to the field map (mkfit::Config)
+  mkfit::Config::mag_c1 = portableParabolicMagneticField::Parameters::c1;
+  mkfit::Config::mag_b0 = portableParabolicMagneticField::Parameters::b0;
+  mkfit::Config::mag_b1 = portableParabolicMagneticField::Parameters::b1;
+  mkfit::Config::mag_a = portableParabolicMagneticField::Parameters::a;
+  mkfit::Config::mag_fit_c1 = bFieldParams_[0];
+  mkfit::Config::mag_fit_b0 = bFieldParams_[1];
+  mkfit::Config::mag_fit_b1 = bFieldParams_[2];
+  mkfit::Config::mag_fit_a = bFieldParams_[3];
 
   // std::string path = "Geometry/TrackerCommonData/data/";
   if (trackerGeom_->isThere(GeomDetEnumerators::P1PXB) || trackerGeom_->isThere(GeomDetEnumerators::P1PXEC)) {
@@ -756,7 +762,7 @@ std::unique_ptr<MkFitGeometry> MkFitGeometryESProducer::produce(const TrackerRec
     else
       pconf.finding_intra_layer_pflags = PropagationFlags(PF_none);
     pconf.backward_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
-    pconf.final_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material);
+    pconf.final_fit_pflags = PropagationFlags(PF_use_param_b_field | PF_apply_material | PF_use_fit_b_field);
     pconf.final_fit_ffflags.b_field_at_mid = refitBFieldAtMid_;
     pconf.final_fit_ffflags.radial_field_corr = refitRadialFieldCorr_;
     pconf.final_fit_ffflags.eloss_sign_from_pass = refitElossSignFromPass_;

@@ -58,14 +58,22 @@ namespace mkfit {
     extern bool usePropToPlane;
     extern bool usePtMultScat;
 
-    // Config for Bfield.  bFieldFromZR() below: Bz = (mag_b0 z^2 + mag_b1 z + mag_c1) (mag_a r^2 + 1), the form of
-    // ParabolicParametrizedMagneticField, with constants fitted to the CMS field map over the tracker volume (defaults
-    // in Config.cc; MkFitGeometryESProducer sets them from bFieldParams).
+    // Config for Bfield.  bFieldFromZR() below: Bz = (b0 z^2 + b1 z + c1) (a r^2 + 1), the form of
+    // ParabolicParametrizedMagneticField, with two sets of constants (defaults in Config.cc):
+    // - mag_*: track building, which bends with Bz alone; the constants of CMSSW's parabolic field (ParabolicMf),
+    //   tuned to reproduce the field integral with the radial component folded into Bz (MkFitGeometryESProducer sets
+    //   them from portableParabolicMagneticField::Parameters);
+    // - mag_fit_*: the final fit (PropagationFlags::use_fit_b_field), which adds the radial component explicitly;
+    //   Bz fitted to the CMS field map over the tracker volume (MkFitGeometryESProducer sets them from bFieldParams).
     constexpr float Bfield = 3.8112;
     extern float mag_c1;
     extern float mag_b0;
     extern float mag_b1;
     extern float mag_a;
+    extern float mag_fit_c1;
+    extern float mag_fit_b0;
+    extern float mag_fit_b1;
+    extern float mag_fit_a;
 
     // Config for SelectHitIndices
     // Use extra arrays to store phi and q of hits.
@@ -134,6 +142,13 @@ namespace mkfit {
 
     inline float bFieldFromZR(const float z, const float r) {
       return (Config::mag_b0 * z * z + Config::mag_b1 * z + Config::mag_c1) * (Config::mag_a * r * r + 1.f);
+    }
+    inline float bFieldFromZRFit(const float z, const float r) {
+      return (Config::mag_fit_b0 * z * z + Config::mag_fit_b1 * z + Config::mag_fit_c1) *
+             (Config::mag_fit_a * r * r + 1.f);
+    }
+    inline float bFieldFromZR(const float z, const float r, const bool fit) {
+      return fit ? bFieldFromZRFit(z, r) : bFieldFromZR(z, r);
     }
 
   };  // namespace Config

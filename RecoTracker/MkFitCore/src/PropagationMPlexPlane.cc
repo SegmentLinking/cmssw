@@ -53,10 +53,10 @@ namespace {
 
   using MPF = MPlexQF;
 
-  MPF getBFieldFromZXY(const MPF& z, const MPF& x, const MPF& y) {
+  MPF getBFieldFromZXY(const MPF& z, const MPF& x, const MPF& y, const bool fit) {
     MPF b;
     for (int n = 0; n < NN; ++n)
-      b[n] = Config::bFieldFromZR(z[n], hipo(x[n], y[n]));
+      b[n] = Config::bFieldFromZR(z[n], hipo(x[n], y[n]), fit);
     return b;
   }
 
@@ -521,7 +521,7 @@ namespace mkfit::plane {
   void field_at_start(const TrackRef& in, const PropagationFlags& pf, FieldAt& f) {
     f.kinv = Matriplex::negate_if_ltz(MPlexQF(-Const::sol_over_100), in.chg);
     if (pf.use_param_b_field) {
-      f.b = getBFieldFromZXY(in.par(2, 0), in.par(0, 0), in.par(1, 0));
+      f.b = getBFieldFromZXY(in.par(2, 0), in.par(0, 0), in.par(1, 0), pf.use_fit_b_field);
     } else {
       f.b.setVal(Config::Bfield);
     }

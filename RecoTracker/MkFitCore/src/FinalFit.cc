@@ -86,22 +86,22 @@ namespace mkfit::final_fit {
       const MPF r1sq = x1 * x1 + y1 * y1;
       // q * sol_over_100, without materialising q: +sol where the charge is positive
       const MPF qk = mpt::negate_if_ltz(MPF(Const::sol_over_100), inChg);
-      const MPF Z0 = (MPF(Config::mag_b0) * z0 + MPF(Config::mag_b1)) * z0 + MPF(Config::mag_c1);
-      const MPF Z1 = (MPF(Config::mag_b0) * z1 + MPF(Config::mag_b1)) * z1 + MPF(Config::mag_c1);
+      const MPF Z0 = (MPF(Config::mag_fit_b0) * z0 + MPF(Config::mag_fit_b1)) * z0 + MPF(Config::mag_fit_c1);
+      const MPF Z1 = (MPF(Config::mag_fit_b0) * z1 + MPF(Config::mag_fit_b1)) * z1 + MPF(Config::mag_fit_c1);
       const MPF dz = z0 - z1;
-      const MPF dZ = dz * (MPF(Config::mag_b0) * (z0 + z1) + MPF(Config::mag_b1));
+      const MPF dZ = dz * (MPF(Config::mag_fit_b0) * (z0 + z1) + MPF(Config::mag_fit_b1));
       const MPF zmid = 0.5f * (z0 + z1);
       const MPF xm = 0.5f * (x0 + x1), ym = 0.5f * (y0 + y1);
       const MPF rmid2 = xm * xm + ym * ym;
-      const MPF Zmid = (MPF(Config::mag_b0) * zmid + MPF(Config::mag_b1)) * zmid + MPF(Config::mag_c1);
+      const MPF Zmid = (MPF(Config::mag_fit_b0) * zmid + MPF(Config::mag_fit_b1)) * zmid + MPF(Config::mag_fit_c1);
       const MPF Zm = 0.5f * (Z0 + Z1);
       // (Zm - Bc) in factored form: Zm - Zmid = b0 dz^2 / 4
-      const MPF ZmB = 0.25f * MPF(Config::mag_b0) * dz * dz - Zmid * MPF(Config::mag_a) * rmid2;
+      const MPF ZmB = 0.25f * MPF(Config::mag_fit_b0) * dz * dz - Zmid * MPF(Config::mag_fit_a) * rmid2;
       const MPF D = r0sq - r1sq;
       const MPF S = r0sq + r1sq;
-      const MPF f0 = 0.25f * MPF(Config::mag_a) * r0sq * r0sq + 0.5f * r0sq;
-      const MPF f1 = 0.25f * MPF(Config::mag_a) * r1sq * r1sq + 0.5f * r1sq;
-      return qk * (D * (0.25f * Zm * MPF(Config::mag_a) * S + 0.5f * ZmB) + 0.5f * dZ * (f0 + f1));
+      const MPF f0 = 0.25f * MPF(Config::mag_fit_a) * r0sq * r0sq + 0.5f * r0sq;
+      const MPF f1 = 0.25f * MPF(Config::mag_fit_a) * r1sq * r1sq + 0.5f * r1sq;
+      return qk * (D * (0.25f * Zm * MPF(Config::mag_fit_a) * S + 0.5f * ZmB) + 0.5f * dZ * (f0 + f1));
     }
 
     // Rotate p_phi by a kick half_d / r at every lane's own position r, keeping p_r and |p|.  Vectorised
@@ -173,7 +173,7 @@ namespace mkfit::final_fit {
       const MPF x = 0.5f * (in.par(0, 0) + at(0, 0));
       const MPF y = 0.5f * (in.par(1, 0) + at(1, 0));
       for (int n = 0; n < NN; ++n)
-        f.b[n] = Config::bFieldFromZR(z[n], hipo(x[n], y[n]));
+        f.b[n] = Config::bFieldFromZRFit(z[n], hipo(x[n], y[n]));
       f.kinv = Matriplex::negate_if_ltz(MPF(-Const::sol_over_100), in.chg) * f.b;
     }
 
@@ -403,7 +403,7 @@ namespace mkfit::final_fit {
       const PlaneRef pl{plPnt, plNrm};
 
       MPlexQF bFld;
-      local_field(pred, pflags.use_param_b_field, bFld);
+      local_field(pred, pflags.use_param_b_field, bFld, pflags.use_fit_b_field);
 
       LocalPred L;
       to_local(pred, psErr, pl, plDir, bFld, L);

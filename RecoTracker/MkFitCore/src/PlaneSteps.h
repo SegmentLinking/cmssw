@@ -156,7 +156,8 @@ namespace mkfit {
     // ---- Kalman operation on a plane (KalmanUtilsMPlex.cc)
 
     // sol/100 * Bz at the predicted state: the field both local-frame Jacobians are evaluated in.
-    void local_field(const TrackRef& pred, const bool use_param_b_field, MPlexQF& bFld);
+    // fit_b_field: the parametrised field of the final fit (Config::bFieldFromZRFit)
+    void local_field(const TrackRef& pred, const bool use_param_b_field, MPlexQF& bFld, const bool fit_b_field = false);
 
     // The predicted state and its covariance psErr in the local frame of the plane (pl.nrm, plDir).
     void to_local(const TrackRef& pred,

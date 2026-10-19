@@ -9,7 +9,8 @@ namespace mkfit {
     PF_none = 0,
     PF_use_param_b_field = 0x1,
     PF_apply_material = 0x2,
-    PF_copy_input_state_on_fail = 0x4
+    PF_copy_input_state_on_fail = 0x4,
+    PF_use_fit_b_field = 0x8
   };
 
   class PropagationFlags {
@@ -18,15 +19,18 @@ namespace mkfit {
     bool use_param_b_field : 1;
     bool apply_material : 1;
     bool copy_input_state_on_fail : 1;
+    bool use_fit_b_field : 1;  // the parametrised field of the final fit (Config::bFieldFromZRFit)
     // Could add: bool use_trig_approx       -- now Config::useTrigApprox = true
     // Could add: int  n_prop_to_r_iters : 8 -- now Config::Niter = 5
 
-    PropagationFlags() : use_param_b_field(false), apply_material(false), copy_input_state_on_fail(false) {}
+    PropagationFlags()
+        : use_param_b_field(false), apply_material(false), copy_input_state_on_fail(false), use_fit_b_field(false) {}
 
     PropagationFlags(int pfe)
         : use_param_b_field(pfe & PF_use_param_b_field),
           apply_material(pfe & PF_apply_material),
-          copy_input_state_on_fail(pfe & PF_copy_input_state_on_fail) {}
+          copy_input_state_on_fail(pfe & PF_copy_input_state_on_fail),
+          use_fit_b_field(pfe & PF_use_fit_b_field) {}
   };
 
   // Choices of the final fit, MkBuilder::fit_tracks(), read by its own sequences (FinalFit.cc).

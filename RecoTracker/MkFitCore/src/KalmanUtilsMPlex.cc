@@ -1449,14 +1449,14 @@ namespace mkfit {
   namespace plane {
 
     // sol/100 * Bz at the predicted state: the field both local-frame Jacobians are evaluated in.
-    void local_field(const TrackRef& pred, const bool use_param_b_field, MPlexQF& bFld) {
+    void local_field(const TrackRef& pred, const bool use_param_b_field, MPlexQF& bFld, const bool fit_b_field) {
       const MPlexLV& psPar = pred.par;
 #pragma omp simd
       for (int n = 0; n < NN; ++n) {
-        bFld(n, 0, 0) =
-            use_param_b_field
-                ? 0.01f * Const::sol * Config::bFieldFromZR(psPar(n, 2, 0), hipo(psPar(n, 0, 0), psPar(n, 1, 0)))
-                : 0.01f * Const::sol * Config::Bfield;
+        bFld(n, 0, 0) = use_param_b_field ? 0.01f * Const::sol *
+                                                Config::bFieldFromZR(
+                                                    psPar(n, 2, 0), hipo(psPar(n, 0, 0), psPar(n, 1, 0)), fit_b_field)
+                                          : 0.01f * Const::sol * Config::Bfield;
       }
     }
 
