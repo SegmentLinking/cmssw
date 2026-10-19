@@ -1458,8 +1458,9 @@ namespace mkfit {
 
     // per-hit states: each lane writes into its track's entries (reset: a refit after outlier removal
     // uses fewer hits)
-    mkfitter->m_storeHitStates = m_hsOut != nullptr;
-    mkfitter->m_validateHitStates = m_hsOut && m_hsOut->validate;
+    mkfitter->m_storeHitStates = m_hsOut && m_hsOut->perHit;
+    mkfitter->m_validateHitStates = mkfitter->m_storeHitStates && m_hsOut->validate;
+    mkfitter->m_storeOuter = m_hsOut != nullptr;
 
     int size_trks = (end_trk - start_trk);
     int size_hits = size_trks * nFoundHits;
@@ -1490,7 +1491,8 @@ namespace mkfit {
           std::fill(hs.begin(), hs.end(), HitStateOnTrack{});
           return hs.data();
         };
-        mkfitter->m_hsOut[i] = m_hsOut ? lane(m_hsOut->smoothed) : nullptr;
+        mkfitter->m_hsOut[i] = mkfitter->m_storeHitStates ? lane(m_hsOut->smoothed) : nullptr;
+        mkfitter->m_outerOut[i] = m_hsOut && it >= 0 ? &(m_hsOut->outer[it] = OuterHitState{}) : nullptr;
         mkfitter->m_hsFwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsOut->fwd) : nullptr;
         mkfitter->m_hsBwdOut[i] = mkfitter->m_validateHitStates ? lane(m_hsOut->bwd) : nullptr;
       }

@@ -667,11 +667,12 @@ void MkFitOutputTrackConverter::convertCandidates(const MkFitOutputWrapper& mkFi
         continue;
       }
     }
-    // the state for the navigation outward: the smoothed state at the outermost hit when there are per-hit states,
-    // else the innermost one
-    const auto outerTsos = mkFitOutput.hitStates().empty()
-                               ? tsosState
-                               : toTSOS(mkFitOutput.hitStates()[candIndex][hot.back()], *recHits.back().det(), mf);
+    // the state for the navigation outward: the final fit's state at its outermost hit when that is the outermost
+    // rec hit (the same with and without per-hit states), else the innermost one
+    const auto& outer = mkFitOutput.outerStates();
+    const bool useOuter =
+        !outer.empty() && !hot.empty() && outer[candIndex].hot == hot.back() && outer[candIndex].state.valid;
+    const auto outerTsos = useOuter ? toTSOS(outer[candIndex].state, *recHits.back().det(), mf) : tsosState;
 
     //extra hits (taken from TrackProducerBase<T>::setSecondHitPattern)
     const auto* outerLayer = detLayers.at(mkFitGeom.mkFitLayerNumber(recHits.back().geographicalId()));

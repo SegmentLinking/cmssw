@@ -255,7 +255,7 @@ namespace mkfit {
     int i1 = iC;  //local copy
     int i2 = iP;  //local copy
 
-    if (m_storeHitStates && (int)m_fwdLocPar.size() < nFoundHits) {
+    if ((m_storeHitStates || m_storeOuter) && (int)m_fwdLocPar.size() < nFoundHits) {
       m_fwdLocPar.resize(nFoundHits);
       m_fwdLocErr.resize(nFoundHits);
       m_fwdPzSign.resize(nFoundHits);
@@ -357,9 +357,9 @@ namespace mkfit {
 #endif
 
       // per-hit states: keep the updated state in the module's local frame (at the innermost hit, h = 0, only as
-      // the fallback where the backward one cannot be used)
+      // the fallback where the backward one cannot be used); the outer state needs it at the outermost hit only
       final_fit::LocalStatesOut fwdLoc;
-      const bool keepLoc = m_storeHitStates;
+      const bool keepLoc = m_storeHitStates || (m_storeOuter && h == nFoundHits - 1);
       if (keepLoc) {
         fwdLoc.updPar = &m_fwdLocPar[h];
         fwdLoc.updErr = &m_fwdLocErr[h];
@@ -384,7 +384,7 @@ namespace mkfit {
                                   m_cpe_corr_func,
                                   &modMat,
                                   keepLoc ? &fwdLoc : nullptr);
-      if (m_storeHitStates && h == nFoundHits - 1)
+      if (keepLoc && h == nFoundHits - 1)
         m_fwdChi2Outer = outChi2;
 
 #ifdef DEBUG_FIT
@@ -564,12 +564,13 @@ namespace mkfit {
       MPlex5S bkPredErr, bkUpdErr;
       MPlexQI bkPzSign;
       final_fit::LocalStatesOut bkLoc;
-      if (m_storeHitStates) {
-        if ((h > 0 && !innermost) || m_validateHitStates) {
+      const bool keepBkLoc = m_storeHitStates || (m_storeOuter && h == 0);
+      if (keepBkLoc) {
+        if (m_storeHitStates && ((h > 0 && !innermost) || m_validateHitStates)) {
           bkLoc.predPar = &bkPredPar;
           bkLoc.predErr = &bkPredErr;
         }
-        if (innermost || h == 0) {
+        if ((m_storeHitStates && innermost) || h == 0) {
           bkLoc.updPar = &bkUpdPar;
           bkLoc.updErr = &bkUpdErr;
         }
@@ -593,9 +594,9 @@ namespace mkfit {
                                   &do_cpe,
                                   m_cpe_corr_func,
                                   &modMat,
-                                  m_storeHitStates ? &bkLoc : nullptr);
+                                  keepBkLoc ? &bkLoc : nullptr);
 
-      if (m_storeHitStates)
+      if (keepBkLoc)
         storeHitStates(h, nFoundHits, N_proc, bkHot, bkPredPar, bkPredErr, bkUpdPar, bkUpdErr, bkPzSign, outChi2);
 
 #ifdef DEBUG_FIT_BKW
@@ -672,8 +673,11 @@ namespace mkfit {
       return fin;
     };
     for (int n = 0; n < N_proc; ++n) {
-      if (m_hsOut[n]) {
-        HitStateOnTrack &o = m_hsOut[n][hot[n]];
+      // the per-hit state, or at the outermost hit without per-hit states only the outer state
+      OuterHitState *outer = outermost ? m_outerOut[n] : nullptr;
+      HitStateOnTrack *po = m_hsOut[n] ? &m_hsOut[n][hot[n]] : outer ? &outer->state : nullptr;
+      if (po) {
+        HitStateOnTrack &o = *po;
         o.valid = fill(o, *xs, *cs, n) && (kind != HitStateOnTrack::Combined || ok.constAt(n, 0, 0));
         o.pzSign = pz->constAt(n, 0, 0);
         o.kind = kind;
@@ -692,6 +696,10 @@ namespace mkfit {
           o.kind = HitStateOnTrack::BackwardOnly;
         }
         o.chi2 = outermost ? m_fwdChi2Outer.constAt(n, 0, 0) : bkChi2.constAt(n, 0, 0);
+        if (outer) {
+          outer->state = o;
+          outer->hot = hot[n];
+        }
       }
       if (m_validateHitStates && m_hsFwdOut[n] && m_hsBwdOut[n]) {
         HitStateOnTrack &of = m_hsFwdOut[n][hot[n]];

@@ -28,6 +28,8 @@ public:
   mkfit::HitStatesOnTracks const& hitStates() const { return hitStates_.smoothed; }
   mkfit::HitStatesOnTracks const& hitStatesFwd() const { return hitStates_.fwd; }
   mkfit::HitStatesOnTracks const& hitStatesBwd() const { return hitStates_.bwd; }
+  // the final fit's state at each track's outermost hit (empty: not from the final fit)
+  std::vector<mkfit::OuterHitState> const& outerStates() const { return hitStates_.outer; }
 
 private:
   mkfit::TrackVec tracks_;

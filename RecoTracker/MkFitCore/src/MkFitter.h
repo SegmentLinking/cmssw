@@ -78,7 +78,9 @@ namespace mkfit {
     // m_fwdChi2Outer: the forward chi2 of the outermost hit.
     bool m_storeHitStates = false;
     bool m_validateHitStates = false;
+    bool m_storeOuter = false;  // the state at the outermost hit, m_outerOut[i] (also without per-hit states)
     HitStateOnTrack *m_hsOut[NN];
+    OuterHitState *m_outerOut[NN];
     HitStateOnTrack *m_hsFwdOut[NN];
     HitStateOnTrack *m_hsBwdOut[NN];
     std::vector<MPlex5V> m_fwdLocPar;

@@ -50,18 +50,30 @@ namespace mkfit {
     std::vector<int> m_offsets;
   };
 
-  // The per-hit states of the final fit: the smoothed state at every hit; with validate, also the forward updated and
-  // the backward predicted state each smoothed state combines.
+  // The state at the outermost hit the final fit used, and that hit's HitOnTrack position (-1: none): the smoothed
+  // state there, as the per-hit states have it.
+  struct OuterHitState {
+    HitStateOnTrack state;
+    int hot = -1;
+  };
+
+  // The outputs of the final fit besides the tracks: the state at the outermost hit of every track (always), and with
+  // perHit the smoothed state at every hit; with validate, also the forward updated and the backward predicted state
+  // each smoothed state combines.
   struct FinalFitHitStates {
+    std::vector<OuterHitState> outer;
     HitStatesOnTracks smoothed;
     HitStatesOnTracks fwd;
     HitStatesOnTracks bwd;
+    bool perHit = true;
     bool validate = false;
 
     template <typename F>
     void reset(int n, F&& nHits) {
-      smoothed.reset(n, nHits);
-      if (validate) {
+      outer.assign(n, OuterHitState{});
+      if (perHit)
+        smoothed.reset(n, nHits);
+      if (perHit && validate) {
         fwd.reset(n, nHits);
         bwd.reset(n, nHits);
       }

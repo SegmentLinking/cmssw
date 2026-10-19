@@ -168,11 +168,13 @@ void MkFitFitProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
     return true;
   };
 
+  // the state at each track's outermost hit always (the converter navigates outward from it), the per-hit states
+  // with storeHitStates
   mkfit::FinalFitHitStates hitStates;
+  hitStates.perHit = storeHitStates_;
   hitStates.validate = validateHitStates_;
   auto& builder = streamCache(iID)->get();
-  if (storeHitStates_)
-    builder.set_hit_states_output(&hitStates);
+  builder.set_hit_states_output(&hitStates);
   auto lambda = [&]() {
     mkfit::run_MkFitFit(mkFitGeom.trackerInfo(), mkFitIterConfig, eventOfHits.get(), builder, intracks, tracks, cpe);
   };
@@ -185,10 +187,7 @@ void MkFitFitProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
   }
 
   builder.set_hit_states_output(nullptr);
-  if (storeHitStates_)
-    iEvent.emplace(putToken_, std::move(tracks), true, std::move(hitStates));
-  else
-    iEvent.emplace(putToken_, std::move(tracks), true);
+  iEvent.emplace(putToken_, std::move(tracks), true, std::move(hitStates));
 }
 
 DEFINE_FWK_MODULE(MkFitFitProducer);
