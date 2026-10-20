@@ -33,6 +33,9 @@
 #include "RecoTracker/LSTCore/interface/alpaka/ModulesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/ObjectRangesDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/EndcapGeometryDevDeviceCollection.h"
+#ifndef LST_STANDALONE
+#include "RecoTracker/LSTCore/interface/alpaka/TCSeedStatesDeviceCollection.h"
+#endif
 
 #include "HeterogeneousCore/AlpakaInterface/interface/host.h"
 
@@ -83,6 +86,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     std::optional<TrackCandidatesExtendedDeviceCollection> trackCandidatesExtendedDC_;
     std::optional<PixelTripletsDeviceCollection> pixelTripletsDC_;
     std::optional<PixelQuintupletsDeviceCollection> pixelQuintupletsDC_;
+#ifndef LST_STANDALONE
+    std::optional<TCSeedStatesDeviceCollection> tcSeedStatesDC_;
+#endif
 
     //CPU interface stuff
     std::optional<LSTInputHostCollection> lstInputHC_;
@@ -162,6 +168,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void pixelLineSegmentCleaning(bool no_pls_dupclean);
     void createPixelQuintuplets();
     void createQuadruplets();
+#ifndef LST_STANDALONE
+    // The Broken Line Fit seed state of every track candidate, after createTrackCandidates. Not in the standalone
+    // build, which does not use Eigen.
+    void fitTCSeedStates();
+#endif
 
     // functions that map the objects to the appropriate modules
     void addMiniDoubletsToEventExplicit();
@@ -239,6 +250,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     template <typename TDev = Device>
     TrackCandidatesExtendedConst getTrackCandidatesExtended(bool sync = true);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> releaseTrackCandidatesBaseDeviceCollection();
+#ifndef LST_STANDALONE
+    std::unique_ptr<TCSeedStatesDeviceCollection> releaseTCSeedStatesDeviceCollection();
+#endif
     template <typename TSoA, typename TDev = Device>
     typename TSoA::ConstView getModules(bool sync = true);
   };

@@ -15,6 +15,9 @@
 #include "TrackCandidate.h"
 #include "Triplet.h"
 #include "Quadruplet.h"
+#ifndef LST_STANDALONE
+#include "RecoTracker/LSTCore/interface/alpaka/TCSeedStateFit.h"
+#endif
 
 #include <format>
 
@@ -82,6 +85,9 @@ void LSTEvent::resetEventSync() {
   pixelTripletsDC_.reset();
   pixelQuintupletsDC_.reset();
   quadrupletsDC_.reset();
+#ifndef LST_STANDALONE
+  tcSeedStatesDC_.reset();
+#endif
 
   lstInputHC_.reset();
   hitsHC_.reset();
@@ -2367,6 +2373,40 @@ template TrackCandidatesExtendedConst LSTEvent::getTrackCandidatesExtended<>(boo
 std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandidatesBaseDeviceCollection() {
   return std::make_unique<TrackCandidatesBaseDeviceCollection>(std::move(trackCandidatesBaseDC_.value()));
 }
+
+#ifndef LST_STANDALONE
+void LSTEvent::fitTCSeedStates() {
+  // one row per track candidate, in track-candidate order
+  const unsigned int nTCs = std::min<unsigned int>(getNumberOfTrackCandidates(), trackCandidatesBaseDC_->size());
+  tcSeedStatesDC_.emplace(queue_, nTCs, nTCs);
+  // the scratch buffers of the fit, freed in queue order when they go out of scope, after the kernels that use them
+  auto inputs = cms::alpakatools::make_device_buffer<tcSeedState::FitInput[]>(queue_, nTCs);
+  auto states = cms::alpakatools::make_device_buffer<::lst::FittedState[]>(queue_, nTCs);
+  auto lists = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, tcSeedState::kNumFitSizes * nTCs);
+  auto counters = cms::alpakatools::make_device_buffer<tcSeedState::Counters>(queue_);
+  if (objectsStatistics_) {
+    double mb = alpaka::getExtentProduct(tcSeedStatesDC_->buffer()) / 1e6;
+    trackAllocatedMB(mb);
+    lstWarning(std::format("[MEM] TCSeedStates: {} allocated ({:.1f} MB)", nTCs, mb));
+    double scratchMB = (alpaka::getExtentProduct(inputs) * sizeof(tcSeedState::FitInput) +
+                        alpaka::getExtentProduct(states) * sizeof(::lst::FittedState) +
+                        alpaka::getExtentProduct(lists) * sizeof(uint32_t) + sizeof(tcSeedState::Counters)) /
+                       1e6;
+    trackTransientMB(scratchMB);
+    memoryLiveMB_ -= scratchMB;
+  }
+  tcSeedState::fitSeedStates(queue_,
+                             lstInputDC_->const_view(),
+                             trackCandidatesBaseDC_->const_view(),
+                             nTCs,
+                             tcSeedStatesDC_->view(),
+                             {inputs.data(), states.data(), lists.data(), counters.data()});
+}
+
+std::unique_ptr<TCSeedStatesDeviceCollection> LSTEvent::releaseTCSeedStatesDeviceCollection() {
+  return std::make_unique<TCSeedStatesDeviceCollection>(std::move(tcSeedStatesDC_.value()));
+}
+#endif
 
 template <typename TSoA, typename TDev>
 typename TSoA::ConstView LSTEvent::getModules(bool sync) {

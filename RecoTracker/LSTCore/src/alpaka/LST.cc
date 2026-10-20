@@ -17,7 +17,8 @@ void LST::run(Queue& queue,
               LSTESData<Device> const* deviceESData,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
-              bool tc_pls_triplets) {
+              bool tc_pls_triplets,
+              bool produceTCSeedStates) {
   auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData);
 
   event.addInputToEvent(lstInputDC);
@@ -133,9 +134,23 @@ void LST::run(Queue& queue,
     printf("        # of pLS TrackCandidates produced: %d\n", event.getNumberOfPLSTrackCandidates());
     printf("        # of T5 TrackCandidates produced: %d\n", event.getNumberOfT5TrackCandidates());
     printf("        # of T4 TrackCandidates produced: %d\n", event.getNumberOfT4TrackCandidates());
+  }
+
+#ifndef LST_STANDALONE
+  // only when asked for: otherwise nothing is allocated or launched
+  if (produceTCSeedStates)
+    event.fitTCSeedStates();
+#endif
+
+  // after the last allocation of the event, so that the summary includes the seed-state fit
+  if (verbose) {
     lstWarning(std::format("[MEM] Peak live: {:.1f} MB", event.getMemoryPeakLiveMB()));
     lstWarning(std::format("[MEM] Total: {:.1f} MB", event.getMemoryAllocatedMB()));
   }
 
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
+#ifndef LST_STANDALONE
+  // set on every call, so that an LST run again without the seed states does not hand out those of an earlier event
+  tcSeedStatesDC_ = produceTCSeedStates ? event.releaseTCSeedStatesDeviceCollection() : nullptr;
+#endif
 }
