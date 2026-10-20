@@ -1,5 +1,6 @@
 <use name="alpaka"/>
 <use name="boost_header"/>
+<use name="eigen"/>
 <use name="root"/>
 <use name="FWCore/MessageLogger"/>
 <use name="DataFormats/Common"/>
@@ -7,7 +8,9 @@
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="DataFormats/TrajectorySeed"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="HeterogeneousCore/AlpakaMath"/>
 <use name="RecoTracker/LSTGeometry"/>
+<use name="RecoTracker/PixelTrackFitting" source_only="1"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>

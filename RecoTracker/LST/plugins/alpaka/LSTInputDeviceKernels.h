@@ -10,13 +10,17 @@
 #include "DataFormats/TrackingRecHitSoA/interface/TrackingRecHitsSoA.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/LST/interface/LSTSeedFitModulesHost.h"
-#include "RecoTracker/LST/interface/PixelSegmentClosestApproach.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTInputSoA.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
+#include "RecoTracker/LSTCore/interface/SeedStateFitTypes.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
 
 namespace lstInputDevice {
+
+  // the fit types are shared with LSTCore's fit
+  using ::lst::FitHit;
+  using ::lst::FittedState;
 
   // The Broken Line Fit of a pixel track (the full fit) uses all its hits up to kMaxFitHits; above it, kMaxFitHits
   // hits taken with a uniform stride, the first and the last hit kept. Tracks with fewer than kMinFitHits hits are
@@ -33,22 +37,6 @@ namespace lstInputDevice {
   static_assert(kMinFitHits > kITFitHits);
   constexpr uint32_t kNumFitLists = kMaxFitHits - kITFitHits + 1;
   ALPAKA_FN_HOST_ACC constexpr uint32_t fitList(uint32_t nFit) { return nFit - kITFitHits; }
-
-  // A hit as it enters the fit: global position (cm) and global covariance (cm^2) in the order of the Broken Line
-  // Fit's hit errors: xx, xy, yy, xz, yz, zz.
-  struct FitHit {
-    float x, y, z;
-    float cov[6];
-  };
-
-  // A fitted state as the seed-state product stores it.
-  struct FittedState {
-    ::lst::BLFStateRow row;
-    uint32_t stateHit;    // lst::encodeStateHitPixel of the position in the pixel track of the state's hit
-    uint8_t status;       // lst::SeedStateStatus
-    uint8_t nFit;         // fitted hits, 0 if unfit
-    uint8_t refFallback;  // the reference node of the outer chord is the first fitted node
-  };
 
   // The hits of the fits of one pixel track.
   struct FitInput {

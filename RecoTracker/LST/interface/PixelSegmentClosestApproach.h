@@ -9,6 +9,7 @@
 #include "RecoTracker/LST/interface/BLFCurvilinearJacobian.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
+#include "RecoTracker/LSTCore/interface/SeedStateFitTypes.h"
 #include "TrackingTools/PatternTools/interface/beamLineClosestApproach.h"
 #include "TrackingTools/TrajectoryState/interface/curvilinear2PerigeeJacobian.h"
 
@@ -29,15 +30,6 @@ namespace lst {
     float ptErr, etaErr;  // as pixelSegmentMomentumErrors, from the perigee (transverse curvature, theta) errors
     int8_t charge;
     uint8_t status;
-  };
-
-  // One stored Broken Line Fit state at the outermost fitted node.
-  struct BLFStateRow {
-    float x, y, z;
-    float phi, cotTheta, kappa;
-    float covCircle[6];
-    float covLine[3];
-    int8_t charge;
   };
 
   class UniformField {
