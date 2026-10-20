@@ -13,7 +13,8 @@ namespace lst {
   // Outcome of the Broken Line Fit and of its checks for one seed state.
   enum class SeedStateStatus : uint8_t {
     kOk = 0,
-    // No fit was attempted or possible: no reco::Track, hit count out of range, or IT-only state not computed.
+    // No fit was attempted or possible. Pixel track: no reco::Track, hit count out of range, or IT-only state not
+    // computed. Track candidate: a pLS, or fewer hits than the smallest fit size after the hit selection.
     kNotFitted,
     // A parameter or a covariance element is not finite.
     kNonFinite,
@@ -25,6 +26,7 @@ namespace lst {
 
   // The stateHit encoding: bit 31 clear = an OT hit, the rest is its LSTOTHits index;
   // bit 31 set = position k in the row's pixel track, the rest is k.
+  // A row with no hit to sit on has lst::kInvalidU32Idx, which has bit 31 set: check it before decoding.
   constexpr uint32_t kStateHitPixelBit = 0x80000000u;
 
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr uint32_t encodeStateHitOT(uint32_t otHitIndex) { return otHitIndex; }
