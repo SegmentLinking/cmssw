@@ -6,6 +6,7 @@
 #include "RecoTracker/LSTCore/interface/LSTOTHits.h"
 #include "RecoTracker/LSTCore/interface/LSTPixelSeedRefs.h"
 #include "RecoTracker/LSTCore/interface/PixelSeedStatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/TCSeedStatesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
 
 #endif

@@ -102,9 +102,32 @@ namespace lst {
                       SOA_BLOCK(itState, SeedStateSoALayout),
                       SOA_BLOCK(extra, PixelSeedStateExtraSoALayout))
 
+  // Per-event counters of the track-candidate product. They partition the rows: every row is counted in exactly
+  // one of nNotFittedPLS, nTooFewHits, nNonFinite, nChargeMismatch, nNonPositiveVariance, or has status kOk,
+  // so the number of rows with status kOk is nTCs minus the sum of the other five counters.
+  GENERATE_SOA_LAYOUT(TCSeedStateExtraSoALayout,
+                      // Rows of the product, one per track candidate.
+                      SOA_SCALAR(uint32_t, nTCs),
+                      // pLS track candidates: no fit, the seed state is the pixel-track one.
+                      // Rows counted here and in nTooFewHits both have status kNotFitted; the counters tell them apart.
+                      SOA_SCALAR(uint32_t, nNotFittedPLS),
+                      // Fewer hits than the smallest fit size after hit selection.
+                      SOA_SCALAR(uint32_t, nTooFewHits),
+                      // Fit rejections, with status kNonFinite, kChargeMismatch and kNonPositiveVariance respectively.
+                      SOA_SCALAR(uint32_t, nNonFinite),
+                      SOA_SCALAR(uint32_t, nChargeMismatch),
+                      SOA_SCALAR(uint32_t, nNonPositiveVariance))
+
+  // Product of the track candidates (T5, T4, pT3, pT5, pLS): one row per track candidate, in track-candidate order.
+  GENERATE_SOA_BLOCKS(TCSeedStatesSoALayout,
+                      SOA_BLOCK(state, SeedStateSoALayout),
+                      SOA_BLOCK(extra, TCSeedStateExtraSoALayout))
+
   using SeedStateSoA = SeedStateSoALayout<>;
   using PixelSeedStateExtraSoA = PixelSeedStateExtraSoALayout<>;
   using PixelSeedStatesSoA = PixelSeedStatesSoALayout<>;
+  using TCSeedStateExtraSoA = TCSeedStateExtraSoALayout<>;
+  using TCSeedStatesSoA = TCSeedStatesSoALayout<>;
 
   using SeedState = SeedStateSoA::View;
   using SeedStateConst = SeedStateSoA::ConstView;
@@ -112,6 +135,10 @@ namespace lst {
   using PixelSeedStateExtraConst = PixelSeedStateExtraSoA::ConstView;
   using PixelSeedStatesView = PixelSeedStatesSoA::View;
   using PixelSeedStatesConstView = PixelSeedStatesSoA::ConstView;
+  using TCSeedStateExtra = TCSeedStateExtraSoA::View;
+  using TCSeedStateExtraConst = TCSeedStateExtraSoA::ConstView;
+  using TCSeedStatesView = TCSeedStatesSoA::View;
+  using TCSeedStatesConstView = TCSeedStatesSoA::ConstView;
 
 }  // namespace lst
 

@@ -16,6 +16,13 @@
   <class name="lst::PixelSeedStateExtraSoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::PixelSeedStatesHostCollection>" splitLevel="0" persistent="false"/>
 
+  <class name="lst::TCSeedStatesHostCollection"/>
+  <!-- lst::TCSeedStatesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::TCSeedStatesHostCollection::Layout"/>
+  <class name="lst::TCSeedStatesSoALayout<128,false>"/>
+  <class name="lst::TCSeedStateExtraSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::TCSeedStatesHostCollection>" splitLevel="0" persistent="false"/>
+
   <class name="lst::LSTOTHits" persistent="false">
     <field name="hits" transient="true"/>
   </class>
