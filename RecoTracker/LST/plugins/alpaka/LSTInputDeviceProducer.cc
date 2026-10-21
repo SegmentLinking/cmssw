@@ -1,15 +1,15 @@
 #include <Eigen/Core>  // before the SoA headers with Eigen columns
 
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <optional>
+#include <span>
 #include <vector>
 
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
-#include "DataFormats/Common/interface/OwnVector.h"
 #include "DataFormats/Common/interface/Ref.h"
 #include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackSoA/interface/alpaka/TracksSoACollection.h"
 #include "DataFormats/TrackerRecHit2D/interface/Phase2TrackerRecHit1D.h"
 #include "DataFormats/TrackingRecHitSoA/interface/alpaka/Phase2OTRecHitsSoACollection.h"
@@ -19,6 +19,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/Utilities/interface/EDMException.h"
+#include "FWCore/Utilities/interface/ESInputTag.h"
 #include "FWCore/Utilities/interface/InputTag.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDGetToken.h"
@@ -32,18 +33,16 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
-#include "RecoTracker/LST/interface/BLFCurvilinearJacobian.h"
+#include "RecoTracker/LST/interface/BLFSeedFromState.h"
 #include "RecoTracker/LST/interface/alpaka/LSTSeedFitModulesCollection.h"
 #include "RecoTracker/LSTCore/interface/LSTOTHits.h"
 #include "RecoTracker/LSTCore/interface/LSTPixelSeedRefs.h"
+#include "RecoTracker/LSTCore/interface/LSTPixelTrackHits.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelSeedStatesDeviceCollection.h"
-#include "TrackingTools/TrajectoryParametrization/interface/CurvilinearTrajectoryError.h"
-#include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
-#include "TrackingTools/TrajectoryState/interface/FreeTrajectoryState.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
-#include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
+#include "TrackingTools/GeomPropagators/interface/Propagator.h"
+#include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 
 #include "LSTInputDeviceKernels.h"
 
@@ -51,13 +50,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   // LST's input made on the device. Each pixel track is fitted with the Broken Line Fit, its state taken at its last
   // hit; its pLS is computed from that state as LSTInputProducer computes it from a seed. The states of the fitted
-  // tracks go to the seed-state product, and the seeds for LSTOutputConverter are made on the host from them.
+  // tracks go to the seed-state product and their rechits to a pointer product, both in seed-index order; with
+  // produceSeeds, the seeds of the fitted tracks are also made on the host from the states and those rechits.
   class LSTInputDeviceProducer : public stream::SynchronizingEDProducer<> {
   public:
     explicit LSTInputDeviceProducer(edm::ParameterSet const& iConfig)
         : SynchronizingEDProducer<>(iConfig),
           ptCut_(iConfig.getParameter<double>("ptCut")),
           maxITHitsToDropOTHitsPurePLS_(iConfig.getParameter<int>("maxITHitsToDropOTHitsPurePLS")),
+          produceSeeds_(iConfig.getParameter<bool>("produceSeeds")),
           pixelTracksSoAToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelTracksSoA"))),
           pixelTracksToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelTracks"))),
           pixelTrackIndexToken_(consumes(iConfig.getParameter<edm::InputTag>("pixelTracks"))),
@@ -70,11 +71,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           beamSpotToken_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
           modulesToken_(esConsumes()),
           magneticFieldToken_(esConsumes()),
+          propagatorToken_(produceSeeds_ ? edm::ESGetToken<Propagator, TrackingComponentsRecord>{esConsumes(
+                                               iConfig.getParameter<edm::ESInputTag>("propagator"))}
+                                         : edm::ESGetToken<Propagator, TrackingComponentsRecord>{}),
           lstInputPutToken_(produces()),
           seedStatesPutToken_(produces()),
           lstOTHitsPutToken_(produces()),
-          seedsPutToken_(produces()),
-          lstPixelSeedRefsPutToken_(produces()) {
+          lstPixelTrackHitsPutToken_(produces()),
+          seedsPutToken_(produceSeeds_ ? edm::EDPutTokenT<TrajectorySeedCollection>{produces()}
+                                       : edm::EDPutTokenT<TrajectorySeedCollection>{}),
+          lstPixelSeedRefsPutToken_(produceSeeds_ ? edm::EDPutTokenT<lst::LSTPixelSeedRefs>{produces()}
+                                                  : edm::EDPutTokenT<lst::LSTPixelSeedRefs>{}) {
       // the inner-tracker-only fit is compiled for kITFitHits hits only
       if (maxITHitsToDropOTHitsPurePLS_ > static_cast<int>(::lstInputDevice::kITFitHits))
         throw edm::Exception(edm::errors::Configuration)
@@ -93,7 +100,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "maxITHitsToDropOTHitsPurePLS, and be at most 3");
       desc.add<edm::InputTag>("pixelTracksSoA", edm::InputTag("hltPhase2PixelTrackTorchHighPuritySelector"));
       desc.add<edm::InputTag>("pixelTracks", edm::InputTag("hltPhase2PixelTracks"))
-          ->setComment("the reco::Tracks of pixelTracksSoA and their index map; one seed per fitted track");
+          ->setComment("the reco::Tracks of pixelTracksSoA and their index map, for the fitted tracks' rechits");
       desc.add<edm::InputTag>("pixelRecHitsSoA", edm::InputTag("hltPhase2SiPixelRecHitsSoA"));
       desc.add<edm::InputTag>("caOTHits", edm::InputTag("hltPhase2OtRecHitsSoA"))
           ->setComment("the CA's OT hits: their module starts and the first OT rechit of each module");
@@ -101,6 +108,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("otRecHits", edm::InputTag("hltSiPhase2RecHits"))
           ->setComment("the OT rechits of otRecHitsSoA, in the same order, for LSTOutputConverter");
       desc.add<edm::InputTag>("beamSpot", edm::InputTag("hltOnlineBeamSpot"));
+      desc.add<bool>("produceSeeds", false)
+          ->setComment(
+              "also make the seeds of the fitted pixel tracks, in seed-index order: each state stepped onto the "
+              "surface of its last hit with the propagator, or attached to it without propagation if the step fails");
+      desc.add<edm::ESInputTag>("propagator", edm::ESInputTag("", "AnyDirectionAnalyticalPropagator"))
+          ->setComment("the any-direction analytical propagator of the seeds; used only with produceSeeds");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -232,32 +245,66 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             << "LSTInputDeviceProducer: OT rechits " << otHits.size() << " != device OT rechits " << nOTHits;
       iEvent.emplace(lstOTHitsPutToken_, lst::LSTOTHits{std::move(otHits)});
 
-      // the seeds of the fitted pixel tracks in track order: their hits and the fitted state on the last hit
+      // the rechits of the fitted pixel tracks in seed-index order, each track's in track order
       auto const& pixelTracks = iEvent.get(pixelTracksToken_);
-      auto const& magneticField = iSetup.getData(magneticFieldToken_);
-      TrajectorySeedCollection seeds;
-      seeds.reserve(totals.nSeeds);
+      std::vector<uint32_t> offsets;
+      offsets.reserve(totals.nSeeds + 1);
+      offsets.push_back(0);
+      std::vector<TrackingRecHit const*> pixelHits;
       for (uint32_t track = 0; track < nTracks_; ++track) {
-        auto const& state = statesHost_->data()[track];
-        if (state.status != static_cast<uint8_t>(::lst::SeedStateStatus::kOk))
+        if (statesHost_->data()[track].status != static_cast<uint8_t>(::lst::SeedStateStatus::kOk))
           continue;
-        auto const& pixelTrack = pixelTracks[edmIndex_->data()[track]];
-        edm::OwnVector<TrackingRecHit> hits;
-        for (auto const& hit : pixelTrack.recHits())
-          hits.push_back(hit->clone());
-        seeds.emplace_back(seedState(state.row, bField_, hits.back(), magneticField), hits, alongMomentum);
+        const int32_t edmTrack = edmIndex_->data()[track];
+        if (edmTrack < 0)
+          throw edm::Exception(edm::errors::LogicError)
+              << "LSTInputDeviceProducer: fitted pixel track " << track << " has no reco::Track";
+        for (auto const& hit : pixelTracks[edmTrack].recHits())
+          pixelHits.push_back(&*hit);
+        offsets.push_back(static_cast<uint32_t>(pixelHits.size()));
       }
-      if (seeds.size() != totals.nSeeds)
-        throw edm::Exception(edm::errors::LogicError)
-            << "LSTInputDeviceProducer: seeds " << seeds.size() << " != fitted pixel tracks " << totals.nSeeds;
-      auto const seedsHandle = iEvent.emplace(seedsPutToken_, std::move(seeds));
+      if (offsets.size() - 1 != totals.nSeeds)
+        throw edm::Exception(edm::errors::LogicError) << "LSTInputDeviceProducer: rechits of " << offsets.size() - 1
+                                                      << " pixel tracks != fitted pixel tracks " << totals.nSeeds;
+      auto const pixelTrackHits =
+          iEvent.emplace(lstPixelTrackHitsPutToken_, lst::LSTPixelTrackHits{std::move(offsets), std::move(pixelHits)});
 
-      // references to the seeds, in the order of the pixel seeds of the LST input, for LSTOutputConverter
-      std::vector<edm::Ref<TrajectorySeedCollection>> seedRefs;
-      seedRefs.reserve(seedsHandle->size());
-      for (unsigned int iSeed = 0; iSeed < seedsHandle->size(); ++iSeed)
-        seedRefs.emplace_back(seedsHandle, iSeed);
-      iEvent.emplace(lstPixelSeedRefsPutToken_, lst::LSTPixelSeedRefs{std::move(seedRefs)});
+      // the seeds of the fitted pixel tracks in seed-index order; the device keeps only the states that pass
+      // lst::checkState, which blfSeedFromState applies too; dropping a seed would shift the seed indices of the
+      // next ones
+      if (produceSeeds_) {
+        auto const& magneticField = iSetup.getData(magneticFieldToken_);
+        auto const& propagator = iSetup.getData(propagatorToken_);
+        auto const& seedHitOffsets = pixelTrackHits->offsets;
+        auto const& seedHits = pixelTrackHits->hits;
+        TrajectorySeedCollection seeds;
+        seeds.reserve(totals.nSeeds);
+        for (uint32_t track = 0; track < nTracks_; ++track) {
+          auto const& state = statesHost_->data()[track];
+          if (state.status != static_cast<uint8_t>(::lst::SeedStateStatus::kOk))
+            continue;
+          const uint32_t seed = seeds.size();
+          const std::span<TrackingRecHit const* const> hits(seedHits.data() + seedHitOffsets[seed],
+                                                            seedHitOffsets[seed + 1] - seedHitOffsets[seed]);
+          auto result = ::lst::blfSeedFromState(
+              state.row, state.nFit, bField_, hits, magneticField, propagator, /*attachIfStepFails=*/true);
+          if (result.status != ::lst::BLFSeedStatus::kOk &&
+              result.status != ::lst::BLFSeedStatus::kAttachedAfterFailedStep)
+            throw edm::Exception(edm::errors::LogicError) << "LSTInputDeviceProducer: no seed for fitted pixel track "
+                                                          << track << ", status " << static_cast<int>(result.status);
+          seeds.push_back(std::move(*result.seed));
+        }
+        if (seeds.size() != totals.nSeeds)
+          throw edm::Exception(edm::errors::LogicError)
+              << "LSTInputDeviceProducer: seeds " << seeds.size() << " != fitted pixel tracks " << totals.nSeeds;
+        auto const seedsHandle = iEvent.emplace(seedsPutToken_, std::move(seeds));
+
+        // references to the seeds, in the order of the pixel seeds of the LST input, for LSTOutputConverter
+        std::vector<edm::Ref<TrajectorySeedCollection>> seedRefs;
+        seedRefs.reserve(seedsHandle->size());
+        for (unsigned int iSeed = 0; iSeed < seedsHandle->size(); ++iSeed)
+          seedRefs.emplace_back(seedsHandle, iSeed);
+        iEvent.emplace(lstPixelSeedRefsPutToken_, lst::LSTPixelSeedRefs{std::move(seedRefs)});
+      }
 
       edmIndex_.reset();
       counters_.reset();
@@ -296,32 +343,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                     "one fitTracks call and one compilation unit per number of fitted hits");
     }
 
-    // The fitted state as the persistent state on the last hit: the free state at the stored point, with momentum
-    // B / |kappa| (cos phi, sin phi, cot(theta)), the charge, and the curvilinear error of the stored covariance. The
-    // state is attached to the last hit's surface as it is, not propagated onto it.
-    static PTrajectoryStateOnDet seedState(::lst::BLFStateRow const& row,
-                                           float bField,
-                                           TrackingRecHit const& lastHit,
-                                           MagneticField const& magneticField) {
-      double covariance[5][5];
-      ::lst::blfToCurvilinearCovariance(row.kappa, row.cotTheta, bField, row.covCircle, row.covLine, covariance);
-      AlgebraicSymMatrix55 curvilinear;
-      for (int i = 0; i < 5; ++i)
-        for (int j = i; j < 5; ++j)
-          curvilinear(i, j) = covariance[i][j];
-      const float pt = bField / std::abs(row.kappa);
-      const FreeTrajectoryState freeState(
-          GlobalTrajectoryParameters(GlobalPoint(row.x, row.y, row.z),
-                                     GlobalVector(pt * std::cos(row.phi), pt * std::sin(row.phi), pt * row.cotTheta),
-                                     row.charge,
-                                     &magneticField),
-          CurvilinearTrajectoryError(curvilinear));
-      return trajectoryStateTransform::persistentState(TrajectoryStateOnSurface(freeState, lastHit.det()->surface()),
-                                                       lastHit.geographicalId().rawId());
-    }
-
     const float ptCut_;
     const int maxITHitsToDropOTHitsPurePLS_;
+    const bool produceSeeds_;
     const device::EDGetToken<reco::TracksSoACollection> pixelTracksSoAToken_;
     const edm::EDGetTokenT<::reco::TrackCollection> pixelTracksToken_;
     const edm::EDGetTokenT<std::vector<uint32_t>> pixelTrackIndexToken_;
@@ -333,9 +357,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::EDGetTokenT<::reco::BeamSpot> beamSpotToken_;
     const device::ESGetToken<lst::LSTSeedFitModulesCollection, TrackerDigiGeometryRecord> modulesToken_;
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> magneticFieldToken_;
+    const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToken_;
     const device::EDPutToken<lst::LSTInputDeviceCollection> lstInputPutToken_;
     const device::EDPutToken<lst::PixelSeedStatesDeviceCollection> seedStatesPutToken_;
     const edm::EDPutTokenT<lst::LSTOTHits> lstOTHitsPutToken_;
+    const edm::EDPutTokenT<lst::LSTPixelTrackHits> lstPixelTrackHitsPutToken_;
     const edm::EDPutTokenT<TrajectorySeedCollection> seedsPutToken_;
     const edm::EDPutTokenT<lst::LSTPixelSeedRefs> lstPixelSeedRefsPutToken_;
 

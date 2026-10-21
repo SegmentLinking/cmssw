@@ -10,6 +10,8 @@ hltInputLST = cms.EDProducer('LSTInputDeviceProducer@alpaka',
     otRecHitsSoA = cms.InputTag('hltSiPhase2RecHitsSoA'),
     otRecHits = cms.InputTag('hltSiPhase2RecHits'),
     beamSpot = cms.InputTag('hltOnlineBeamSpot'),
+    produceSeeds = cms.bool(True),
+    propagator = cms.ESInputTag('', 'AnyDirectionAnalyticalPropagator'),
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')
     )

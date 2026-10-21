@@ -70,8 +70,9 @@
   <use name="RecoTracker/LSTCore" source_only="1"/>
   <use name="RecoTracker/PixelTrackFitting" source_only="1"/>
   <use name="TrackingTools/AnalyticalJacobians"/>
+  <use name="TrackingTools/GeomPropagators"/>
   <use name="TrackingTools/PatternTools"/>
-  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/Records"/>
   <use name="TrackingTools/TrajectoryState"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
