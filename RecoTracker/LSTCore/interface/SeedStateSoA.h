@@ -7,22 +7,9 @@
 #include "DataFormats/SoATemplate/interface/SoABlocks.h"
 
 #include "RecoTracker/LSTCore/interface/Common.h"
+#include "RecoTracker/LSTCore/interface/SeedStateFitTypes.h"
 
 namespace lst {
-
-  // Outcome of the Broken Line Fit and of its checks for one seed state.
-  enum class SeedStateStatus : uint8_t {
-    kOk = 0,
-    // No fit was attempted or possible. Pixel track: no reco::Track, hit count out of range, or IT-only state not
-    // computed. Track candidate: a pLS, or fewer hits than the smallest fit size after the hit selection.
-    kNotFitted,
-    // A parameter or a covariance element is not finite.
-    kNonFinite,
-    // sign(kappa) differs from the charge (kappa = 0 counts as a mismatch).
-    kChargeMismatch,
-    // A diagonal variance of the native covariance blocks is not positive.
-    kNonPositiveVariance,
-  };
 
   // The stateHit encoding: bit 31 clear = an OT hit, the rest is its LSTOTHits index;
   // bit 31 set = position k in the row's pixel track, the rest is k.
@@ -42,6 +29,33 @@ namespace lst {
   // The LSTOTHits index (OT hit) or the position in the pixel track (pixel hit) of an encoded stateHit.
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr uint32_t stateHitIndex(uint32_t stateHit) {
     return stateHit & ~kStateHitPixelBit;
+  }
+
+  // A stateHit decoded and checked against the hits it can address.
+  enum class StateHitKind : uint8_t {
+    kInvalid,     // lst::kInvalidU32Idx: the row has no hit to sit on
+    kOT,          // index is the LSTOTHits index
+    kPixel,       // index is the position in the row's pixel track
+    kOutOfRange,  // an OT index not below nOTHits, or a pixel-track position not below nPixelTrackHits
+  };
+
+  struct DecodedStateHit {
+    StateHitKind kind;
+    uint32_t index;  // the decoded index; meaningful for kOT and kPixel only
+  };
+
+  // nOTHits: the number of LSTOTHits hits; nPixelTrackHits: the hit count of the row's pixel track, 0 if it has none.
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr DecodedStateHit decodeStateHit(uint32_t stateHit,
+                                                                               uint32_t nOTHits,
+                                                                               uint32_t nPixelTrackHits) {
+    // tested first: the sentinel has the pixel bit set
+    if (stateHit == kInvalidU32Idx)
+      return {StateHitKind::kInvalid, stateHit};
+    const uint32_t index = stateHitIndex(stateHit);
+    const bool inRange = stateHitIsPixel(stateHit) ? index < nPixelTrackHits : index < nOTHits;
+    if (!inRange)
+      return {StateHitKind::kOutOfRange, index};
+    return {stateHitIsPixel(stateHit) ? StateHitKind::kPixel : StateHitKind::kOT, index};
   }
 
   // Broken Line Fit state at the outermost fitted node, for seeding. One row per object.

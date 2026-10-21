@@ -35,25 +35,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     state.refFallback = 0;
   }
 
-  // The status of a stored state: every parameter and covariance element finite, else kNonFinite; sign(kappa) equal
-  // to the charge (kappa = 0 is a mismatch), else kChargeMismatch; the diagonal variances of the native covariance
-  // blocks positive, else kNonPositiveVariance.
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE ::lst::SeedStateStatus checkState(::lst::BLFStateRow const& row) {
-    bool finite = std::isfinite(row.x) && std::isfinite(row.y) && std::isfinite(row.z) && std::isfinite(row.phi) &&
-                  std::isfinite(row.cotTheta) && std::isfinite(row.kappa);
-    for (int i = 0; i < 6; ++i)
-      finite = finite && std::isfinite(row.covCircle[i]);
-    for (int i = 0; i < 3; ++i)
-      finite = finite && std::isfinite(row.covLine[i]);
-    if (!finite)
-      return ::lst::SeedStateStatus::kNonFinite;
-    if (!((row.kappa > 0.f && row.charge > 0) || (row.kappa < 0.f && row.charge < 0)))
-      return ::lst::SeedStateStatus::kChargeMismatch;
-    if (!(row.covCircle[0] > 0.f && row.covCircle[2] > 0.f && row.covCircle[5] > 0.f && row.covLine[0] > 0.f &&
-          row.covLine[2] > 0.f))
-      return ::lst::SeedStateStatus::kNonPositiveVariance;
-    return ::lst::SeedStateStatus::kOk;
-  }
+  // the checks of a stored state, shared with the host (RecoTracker/LSTCore/interface/SeedStateFitTypes.h)
+  using ::lst::checkState;
 
   // The Broken Line Fit of N hits, inside out, in the global frame, double precision with float hit errors,
   // the state at the last hit: fastFit, prepareBrokenLineData, lineFitOuter, circleFitOuter, in this order

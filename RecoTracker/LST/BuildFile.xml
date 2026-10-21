@@ -10,7 +10,15 @@
 <use name="RecoTracker/LSTCore" source_only="1"/>
 <use name="TrackingTools/AnalyticalJacobians" source_only="1"/>
 <use name="TrackingTools/PatternTools" source_only="1"/>
-<use name="TrackingTools/TrajectoryState" source_only="1"/>
+<!-- linked by the host seed building from the stored states -->
+<use name="DataFormats/Math"/>
+<use name="DataFormats/TrackingRecHit"/>
+<use name="DataFormats/TrajectorySeed"/>
+<use name="Geometry/CommonTopologies"/>
+<use name="MagneticField/Engine"/>
+<use name="TrackingTools/GeomPropagators"/>
+<use name="TrackingTools/TrajectoryParametrization"/>
+<use name="TrackingTools/TrajectoryState"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
   <lib name="1"/>
