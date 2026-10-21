@@ -1,5 +1,7 @@
-#ifndef RecoTracker_MkFitCore_src_Matriplex_MatriplexSym_h
-#define RecoTracker_MkFitCore_src_Matriplex_MatriplexSym_h
+#ifndef RecoTracker_MkFitCore_interface_portable_Matriplex_MatriplexSym_h
+#define RecoTracker_MkFitCore_interface_portable_Matriplex_MatriplexSym_h
+
+#include <stdexcept>
 
 #include "MatriplexCommon.h"
 #include "Matriplex.h"
@@ -23,7 +25,7 @@ namespace Matriplex {
   //------------------------------------------------------------------------------
 
   template <typename T, idx_t D, idx_t N>
-  class __attribute__((aligned(MPLEX_ALIGN))) MatriplexSym {
+  class alignas(mplexAlign<T, N>()) MatriplexSym {
   public:
     typedef T value_type;
 
@@ -38,68 +40,76 @@ namespace Matriplex {
 
     T fArray[kTotSize];
 
-    MatriplexSym() {}
-    MatriplexSym(T v) { setVal(v); }
+    MKFIT_HOST_DEVICE MatriplexSym() {}
+    MKFIT_HOST_DEVICE MatriplexSym(T v) { setVal(v); }
 
-    idx_t plexSize() const { return N; }
+    MKFIT_HOST_DEVICE idx_t plexSize() const { return N; }
 
-    void setVal(T v) {
+    MKFIT_HOST_DEVICE void setVal(T v) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] = v;
       }
     }
 
-    void add(const MatriplexSym& v) {
+    MKFIT_HOST_DEVICE void add(const MatriplexSym& v) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] += v.fArray[i];
       }
     }
 
-    void scale(T scale) {
+    MKFIT_HOST_DEVICE void scale(T scale) {
       for (idx_t i = 0; i < kTotSize; ++i) {
         fArray[i] *= scale;
       }
     }
 
-    T operator[](idx_t xx) const { return fArray[xx]; }
-    T& operator[](idx_t xx) { return fArray[xx]; }
+    MKFIT_HOST_DEVICE T operator[](idx_t xx) const { return fArray[xx]; }
+    MKFIT_HOST_DEVICE T& operator[](idx_t xx) { return fArray[xx]; }
 
     const idx_t* offsets() const { return gSymOffsets[D]; }
-    idx_t off(idx_t i) const { return gSymOffsets[D][i]; }
+    MKFIT_HOST_DEVICE idx_t off(idx_t i) const {
+#ifdef MKFIT_DEVICE_COMPILATION
+      // closed form of gSymOffsets, a host table
+      const idx_t row = i / D, col = i % D;
+      return row >= col ? row * (row + 1) / 2 + col : col * (col + 1) / 2 + row;
+#else
+      return gSymOffsets[D][i];
+#endif
+    }
 
-    const T& constAt(idx_t n, idx_t i, idx_t j) const { return fArray[off(i * D + j) * N + n]; }
+    MKFIT_HOST_DEVICE const T& constAt(idx_t n, idx_t i, idx_t j) const { return fArray[off(i * D + j) * N + n]; }
 
-    T& At(idx_t n, idx_t i, idx_t j) { return fArray[off(i * D + j) * N + n]; }
+    MKFIT_HOST_DEVICE T& At(idx_t n, idx_t i, idx_t j) { return fArray[off(i * D + j) * N + n]; }
 
-    T& operator()(idx_t n, idx_t i, idx_t j) { return At(n, i, j); }
-    const T& operator()(idx_t n, idx_t i, idx_t j) const { return constAt(n, i, j); }
+    MKFIT_HOST_DEVICE T& operator()(idx_t n, idx_t i, idx_t j) { return At(n, i, j); }
+    MKFIT_HOST_DEVICE const T& operator()(idx_t n, idx_t i, idx_t j) const { return constAt(n, i, j); }
 
-    MatriplexSym& operator=(const MatriplexSym& m) {
+    MKFIT_HOST_DEVICE MatriplexSym& operator=(const MatriplexSym& m) {
       memcpy(fArray, m.fArray, sizeof(T) * kTotSize);
       return *this;
     }
 
     MatriplexSym(const MatriplexSym& m) = default;
 
-    void copySlot(idx_t n, const MatriplexSym& m) {
+    MKFIT_HOST_DEVICE void copySlot(idx_t n, const MatriplexSym& m) {
       for (idx_t i = n; i < kTotSize; i += N) {
         fArray[i] = m.fArray[i];
       }
     }
 
-    void copyIn(idx_t n, const T* arr) {
+    MKFIT_HOST_DEVICE void copyIn(idx_t n, const T* arr) {
       for (idx_t i = n; i < kTotSize; i += N) {
         fArray[i] = *(arr++);
       }
     }
 
-    void copyIn(idx_t n, const MatriplexSym& m, idx_t in) {
+    MKFIT_HOST_DEVICE void copyIn(idx_t n, const MatriplexSym& m, idx_t in) {
       for (idx_t i = n; i < kTotSize; i += N, in += N) {
         fArray[i] = m[in];
       }
     }
 
-    void copy(idx_t n, idx_t in) {
+    MKFIT_HOST_DEVICE void copy(idx_t n, idx_t in) {
       for (idx_t i = n; i < kTotSize; i += N, in += N) {
         fArray[i] = fArray[in];
       }
@@ -176,7 +186,7 @@ namespace Matriplex {
 
 #else
 
-    void slurpIn(const T* arr, int vi[N], const int N_proc = N) {
+    MKFIT_HOST_DEVICE void slurpIn(const T* arr, int vi[N], const int N_proc = N) {
       // Separate N_proc == N case (gains about 7% in fit test).
       if (N_proc == N) {
         for (int i = 0; i < kSize; ++i) {
@@ -195,13 +205,13 @@ namespace Matriplex {
 
 #endif
 
-    void copyOut(idx_t n, T* arr) const {
+    MKFIT_HOST_DEVICE void copyOut(idx_t n, T* arr) const {
       for (idx_t i = n; i < kTotSize; i += N) {
         *(arr++) = fArray[i];
       }
     }
 
-    void setDiagonal3x3(idx_t n, T d) {
+    MKFIT_HOST_DEVICE void setDiagonal3x3(idx_t n, T d) {
       T* p = fArray + n;
 
       p[0 * N] = d;
@@ -212,7 +222,7 @@ namespace Matriplex {
       p[5 * N] = d;
     }
 
-    MatriplexSym& subtract(const MatriplexSym& a, const MatriplexSym& b) {
+    MKFIT_HOST_DEVICE MatriplexSym& subtract(const MatriplexSym& a, const MatriplexSym& b) {
       // Does *this = a - b;
 
 #pragma omp simd
@@ -227,7 +237,7 @@ namespace Matriplex {
     // Operations specific to Kalman fit in 6 parameter space
     // ==================================================================
 
-    void addNoiseIntoUpperLeft3x3(T noise) {
+    MKFIT_HOST_DEVICE void addNoiseIntoUpperLeft3x3(T noise) {
       T* p = fArray;
       ASSUME_ALIGNED(p, 64);
 
@@ -239,7 +249,7 @@ namespace Matriplex {
       }
     }
 
-    void invertUpperLeft3x3() {
+    MKFIT_HOST_DEVICE void invertUpperLeft3x3() {
       typedef T TT;
 
       T* a = fArray;
@@ -267,7 +277,7 @@ namespace Matriplex {
       }
     }
 
-    Matriplex<T, 1, 1, N> ReduceFixedIJ(idx_t i, idx_t j) const {
+    MKFIT_HOST_DEVICE Matriplex<T, 1, 1, N> ReduceFixedIJ(idx_t i, idx_t j) const {
       Matriplex<T, 1, 1, N> t;
       for (idx_t n = 0; n < N; ++n) {
         t[n] = constAt(n, i, j);
@@ -292,7 +302,9 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct SymMultiplyCls<T, 3, N> {
-    static void multiply(const MPlexSym<T, 3, N>& A, const MPlexSym<T, 3, N>& B, MPlex<T, 3, 3, N>& C) {
+    MKFIT_HOST_DEVICE static void multiply(const MPlexSym<T, 3, N>& A,
+                                           const MPlexSym<T, 3, N>& B,
+                                           MPlex<T, 3, 3, N>& C) {
       const T* a = A.fArray;
       ASSUME_ALIGNED(a, 64);
       const T* b = B.fArray;
@@ -319,7 +331,9 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct SymMultiplyCls<T, 6, N> {
-    static void multiply(const MPlexSym<float, 6, N>& A, const MPlexSym<float, 6, N>& B, MPlex<float, 6, 6, N>& C) {
+    MKFIT_HOST_DEVICE static void multiply(const MPlexSym<float, 6, N>& A,
+                                           const MPlexSym<float, 6, N>& B,
+                                           MPlex<float, 6, 6, N>& C) {
       const T* a = A.fArray;
       ASSUME_ALIGNED(a, 64);
       const T* b = B.fArray;
@@ -345,7 +359,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void multiply(const MPlexSym<T, D, N>& A, const MPlexSym<T, D, N>& B, MPlex<T, D, D, N>& C) {
+  MKFIT_HOST_DEVICE void multiply(const MPlexSym<T, D, N>& A, const MPlexSym<T, D, N>& B, MPlex<T, D, D, N>& C) {
     SymMultiplyCls<T, D, N>::multiply(A, B, C);
   }
 
@@ -362,7 +376,7 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct CramerInverterSym<T, 2, N> {
-    static void invert(MPlexSym<T, 2, N>& A, double* determ = nullptr) {
+    MKFIT_HOST_DEVICE static void invert(MPlexSym<T, 2, N>& A, double* determ = nullptr) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -386,7 +400,7 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct CramerInverterSym<T, 3, N> {
-    static void invert(MPlexSym<T, 3, N>& A, double* determ = nullptr) {
+    MKFIT_HOST_DEVICE static void invert(MPlexSym<T, 3, N>& A, double* determ = nullptr) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -418,7 +432,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void invertCramerSym(MPlexSym<T, D, N>& A, double* determ = nullptr) {
+  MKFIT_HOST_DEVICE void invertCramerSym(MPlexSym<T, D, N>& A, double* determ = nullptr) {
     CramerInverterSym<T, D, N>::invert(A, determ);
   }
 
@@ -433,7 +447,7 @@ namespace Matriplex {
 
   template <typename T, idx_t N>
   struct CholeskyInverterSym<T, 3, N> {
-    static void invert(MPlexSym<T, 3, N>& A) {
+    MKFIT_HOST_DEVICE static void invert(MPlexSym<T, 3, N>& A) {
       typedef T TT;
 
       T* a = A.fArray;
@@ -469,7 +483,7 @@ namespace Matriplex {
   };
 
   template <typename T, idx_t D, idx_t N>
-  void invertCholeskySym(MPlexSym<T, D, N>& A) {
+  MKFIT_HOST_DEVICE void invertCholeskySym(MPlexSym<T, D, N>& A) {
     CholeskyInverterSym<T, D, N>::invert(A);
   }
 
