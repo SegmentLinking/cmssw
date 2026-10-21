@@ -9,13 +9,18 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/EDMException.h"
 #include "FWCore/Utilities/interface/Exception.h"
 #include "Geometry/CommonTopologies/interface/GeomDet.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+#include "RecoTracker/LST/interface/BLFSeedFromState.h"
 #include "RecoTracker/LSTCore/interface/LSTOTHits.h"
 #include "RecoTracker/LSTCore/interface/LSTPixelSeedRefs.h"
+#include "RecoTracker/LSTCore/interface/LSTPixelTrackHits.h"
+#include "RecoTracker/LSTCore/interface/PixelSeedStatesHostCollection.h"
+#include "RecoTracker/LSTCore/interface/TCSeedStatesHostCollection.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesHostCollection.h"
 #include "RecoTracker/TkSeedingLayers/interface/SeedingHitSet.h"
 
@@ -27,7 +32,66 @@
 #include "TrackingTools/Records/interface/TrackingComponentsRecord.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 
+#include <cmath>
+#include <cstdint>
+#include <optional>
 #include <ranges>
+#include <span>
+#include <vector>
+
+#include "RecoTracker/LST/plugins/LSTSeedHitList.h"
+
+namespace {
+
+  // The inner-tracker-only seed states of the LST input exist for tracks with exactly this many inner-tracker hits.
+  constexpr int kITOnlyStateHits = 3;
+
+  // The rechit accessors of the seed hit lists (LSTSeedHitList.h), as the makeSeed mode reads the rechits.
+  class SeedRecHitAccess {
+  public:
+    SeedRecHitAccess(TrackerGeometry const& tracker, TrackerTopology const& topology)
+        : tracker_(tracker), topology_(topology) {}
+
+    lst::SeedHitOrderKey orderKey(TrackingRecHit const* hit) const {
+      auto const* surface = hit->surface();
+      return {hit->det()->subDetector(), surface->rSpan().first, std::abs(surface->zSpan().first)};
+    }
+    bool sharesInput(TrackingRecHit const* taken, TrackingRecHit const* other) const {
+      return taken->sharesInput(other, TrackingRecHit::all);
+    }
+    bool inPixelSubdetector(TrackingRecHit const* hit) const {
+      return hit->geographicalId().subdetId() <= PixelSubdetector::PixelEndcap;
+    }
+    bool isPSPixelSensor(TrackingRecHit const* hit) const {
+      return tracker_.getDetectorType(hit->geographicalId()) == TrackerGeometry::ModuleType::Ph2PSP;
+    }
+    bool isPSStripSensor(TrackingRecHit const* hit) const {
+      return tracker_.getDetectorType(hit->geographicalId()) == TrackerGeometry::ModuleType::Ph2PSS;
+    }
+    unsigned int layer(TrackingRecHit const* hit) const { return topology_.layer(hit->geographicalId()); }
+
+  private:
+    TrackerGeometry const& tracker_;
+    TrackerTopology const& topology_;
+  };
+
+  lst::BLFStateRow stateRow(lst::SeedStateConst const& states, uint32_t i) {
+    lst::BLFStateRow row{};
+    row.x = states.x()[i];
+    row.y = states.y()[i];
+    row.z = states.z()[i];
+    row.phi = states.phi()[i];
+    row.cotTheta = states.cotTheta()[i];
+    row.kappa = states.kappa()[i];
+    for (int k = 0; k < 6; ++k)
+      row.covCircle[k] = states.covCircle()[i][k];
+    for (int k = 0; k < 3; ++k)
+      row.covLine[k] = states.covLine()[i][k];
+    row.charge = states.charge()[i];
+    return row;
+  }
+
+}  // namespace
 
 class LSTOutputConverter : public edm::stream::EDProducer<> {
 public:
@@ -38,7 +102,9 @@ public:
 
 private:
   void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) override;
+  void produceSeedsFromStates(edm::Event& iEvent, const edm::EventSetup& iSetup) const;
 
+  const bool seedsFromStates_;
   const edm::EDGetTokenT<lst::TrackCandidatesBaseHostCollection> lstOutputToken_;
   const edm::EDGetTokenT<lst::LSTOTHits> lstOTHitsToken_;
   const edm::EDGetTokenT<lst::LSTPixelSeedRefs> lstPixelSeedRefsToken_;
@@ -53,6 +119,10 @@ private:
   const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorOppositeToken_;
   const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tGeomToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> tTopoToken_;
+  const edm::EDGetTokenT<lst::PixelSeedStatesHostCollection> pixelSeedStatesToken_;
+  const edm::EDGetTokenT<lst::TCSeedStatesHostCollection> tcSeedStatesToken_;
+  const edm::EDGetTokenT<lst::LSTPixelTrackHits> pixelTrackHitsToken_;
+  const edm::ESGetToken<Propagator, TrackingComponentsRecord> propagatorToken_;
   std::unique_ptr<SeedCreator> seedCreator_;
   const edm::EDPutTokenT<TrajectorySeedCollection> trajectorySeedPutToken_;
   const edm::EDPutTokenT<TrajectorySeedCollection> trajectorySeedpLSPutToken_;
@@ -69,9 +139,12 @@ private:
 };
 
 LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
-    : lstOutputToken_(consumes(iConfig.getParameter<edm::InputTag>("lstOutput"))),
+    : seedsFromStates_(iConfig.getParameter<bool>("seedsFromStates")),
+      lstOutputToken_(consumes(iConfig.getParameter<edm::InputTag>("lstOutput"))),
       lstOTHitsToken_{consumes(iConfig.getParameter<edm::InputTag>("lstInput"))},
-      lstPixelSeedRefsToken_{consumes(iConfig.getParameter<edm::InputTag>("lstInput"))},
+      lstPixelSeedRefsToken_{seedsFromStates_
+                                 ? edm::EDGetTokenT<lst::LSTPixelSeedRefs>{}
+                                 : consumes<lst::LSTPixelSeedRefs>(iConfig.getParameter<edm::InputTag>("lstInput"))},
       includeT5s_(iConfig.getParameter<bool>("includeT5s")),
       includeNonpLSTSs_(iConfig.getParameter<bool>("includeNonpLSTSs")),
       dropOTHitsPurePLS_(iConfig.getParameter<bool>("dropOTHitsPurePLS")),
@@ -79,13 +152,31 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       produceSeeds_(iConfig.getParameter<bool>("produceSeeds")),
       produceTrackCandidates_(iConfig.getParameter<bool>("produceTrackCandidates")),
       mfToken_(esConsumes()),
-      propagatorAlongToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))},
-      propagatorOppositeToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))},
+      propagatorAlongToken_{seedsFromStates_ ? edm::ESGetToken<Propagator, TrackingComponentsRecord>{}
+                                             : edm::ESGetToken<Propagator, TrackingComponentsRecord>{esConsumes(
+                                                   iConfig.getParameter<edm::ESInputTag>("propagatorAlong"))}},
+      propagatorOppositeToken_{seedsFromStates_ ? edm::ESGetToken<Propagator, TrackingComponentsRecord>{}
+                                                : edm::ESGetToken<Propagator, TrackingComponentsRecord>{esConsumes(
+                                                      iConfig.getParameter<edm::ESInputTag>("propagatorOpposite"))}},
       tGeomToken_(esConsumes()),
       tTopoToken_(esConsumes()),
-      seedCreator_(SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator",
-                                                     iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"),
-                                                     consumesCollector())),
+      pixelSeedStatesToken_(seedsFromStates_ ? consumes<lst::PixelSeedStatesHostCollection>(
+                                                   iConfig.getParameter<edm::InputTag>("pixelSeedStates"))
+                                             : edm::EDGetTokenT<lst::PixelSeedStatesHostCollection>{}),
+      tcSeedStatesToken_(seedsFromStates_ ? consumes<lst::TCSeedStatesHostCollection>(
+                                                iConfig.getParameter<edm::InputTag>("tcSeedStates"))
+                                          : edm::EDGetTokenT<lst::TCSeedStatesHostCollection>{}),
+      pixelTrackHitsToken_(seedsFromStates_
+                               ? consumes<lst::LSTPixelTrackHits>(iConfig.getParameter<edm::InputTag>("pixelTrackHits"))
+                               : edm::EDGetTokenT<lst::LSTPixelTrackHits>{}),
+      propagatorToken_(seedsFromStates_ ? edm::ESGetToken<Propagator, TrackingComponentsRecord>{esConsumes(
+                                              iConfig.getParameter<edm::ESInputTag>("propagator"))}
+                                        : edm::ESGetToken<Propagator, TrackingComponentsRecord>{}),
+      seedCreator_(seedsFromStates_
+                       ? std::unique_ptr<SeedCreator>{}
+                       : SeedCreatorFactory::get()->create("SeedFromConsecutiveHitsCreator",
+                                                           iConfig.getParameter<edm::ParameterSet>("SeedCreatorPSet"),
+                                                           consumesCollector())),
       trajectorySeedPutToken_(produces<TrajectorySeedCollection>("")),
       trajectorySeedpLSPutToken_(produceSeeds_ ? produces<TrajectorySeedCollection>("pLSTSsLST")
                                                : edm::EDPutTokenT<TrajectorySeedCollection>{}),
@@ -108,7 +199,16 @@ LSTOutputConverter::LSTOutputConverter(edm::ParameterSet const& iConfig)
       t4t5TCsSeedStopInfoPutToken_(produceTrackCandidates_ ? produces<std::vector<SeedStopInfo>>("t4t5TCsLST")
                                                            : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}),
       pTTCsSeedStopInfoPutToken_(produceTrackCandidates_ ? produces<std::vector<SeedStopInfo>>("pTTCsLST")
-                                                         : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}) {}
+                                                         : edm::EDPutTokenT<std::vector<SeedStopInfo>>{}) {
+  if (seedsFromStates_ && produceTrackCandidates_)
+    throw edm::Exception(edm::errors::Configuration)
+        << "LSTOutputConverter: seedsFromStates makes seeds only and cannot be used with produceTrackCandidates";
+  if (seedsFromStates_ && dropOTHitsPurePLS_ && maxITHitsToDropOTHitsPurePLS_ > kITOnlyStateHits)
+    throw edm::Exception(edm::errors::Configuration)
+        << "LSTOutputConverter: with seedsFromStates and dropOTHitsPurePLS, maxITHitsToDropOTHitsPurePLS = "
+        << maxITHitsToDropOTHitsPurePLS_ << " is larger than the " << kITOnlyStateHits
+        << " hits of the inner-tracker-only seed states of the pLS seeds rebuilt without their OT hits";
+}
 
 void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
@@ -123,6 +223,22 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
   desc.add<bool>("produceTrackCandidates", true);
   desc.add("propagatorAlong", edm::ESInputTag{"", "PropagatorWithMaterial"});
   desc.add("propagatorOpposite", edm::ESInputTag{"", "PropagatorWithMaterialOpposite"});
+  desc.add<bool>("seedsFromStates", false)
+      ->setComment(
+          "make every seed from the stored Broken Line Fit states with no refit, each state stepped onto the surface "
+          "of its seed's last hit; seeds only (produceTrackCandidates must be false), with dropOTHitsPurePLS "
+          "maxITHitsToDropOTHitsPurePLS at most 3; the pixel seeds of lstInput, the two propagators above and "
+          "SeedCreatorPSet are then not used");
+  desc.add<edm::InputTag>("pixelSeedStates", edm::InputTag("lstInputProducer"))
+      ->setComment(
+          "with seedsFromStates: the seed states of the fitted pixel tracks of the LST input, in seed-index order");
+  desc.add<edm::InputTag>("tcSeedStates", edm::InputTag("lstProducer"))
+      ->setComment("with seedsFromStates: the seed states of the track candidates, in track-candidate order");
+  desc.add<edm::InputTag>("pixelTrackHits", edm::InputTag("lstInputProducer"))
+      ->setComment(
+          "with seedsFromStates: the rechits of the fitted pixel tracks of the LST input, in seed-index order");
+  desc.add<edm::ESInputTag>("propagator", edm::ESInputTag("", "AnyDirectionAnalyticalPropagator"))
+      ->setComment("with seedsFromStates: the any-direction analytical propagator of the step onto the last hit");
 
   edm::ParameterSetDescription psd0;
   psd0.add<std::string>("ComponentName", std::string("SeedFromConsecutiveHitsCreator"));
@@ -139,6 +255,11 @@ void LSTOutputConverter::fillDescriptions(edm::ConfigurationDescriptions& descri
 }
 
 void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+  if (seedsFromStates_) {
+    produceSeedsFromStates(iEvent, iSetup);
+    return;
+  }
+
   // Setup
   auto const& lstOutput = iEvent.get(lstOutputToken_);
   // the input pixel seeds, indexed by the LST pixel seed index
@@ -372,6 +493,169 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
     iEvent.emplace(trackCandidatepTTCPutToken_, std::move(outputpTTC));
     iEvent.emplace(trackCandidatepLSTCPutToken_, std::move(outputpLSTC));
   }
+}
+
+// The seeds from the stored states, in track-candidate order with the outputs of the makeSeed mode: a pLS from its
+// pixel-track state; a T5 or a T4 from its track-candidate state, or no seed; a pT3 or a pT5 from its track-candidate
+// state, or else the seed of its pixel track. A pixel-track state always gives a seed, attached to the surface of its
+// last hit if the step fails: the LST input keeps only the states that pass the checks of the seed function.
+void LSTOutputConverter::produceSeedsFromStates(edm::Event& iEvent, const edm::EventSetup& iSetup) const {
+  using Hit = TrackingRecHit const*;
+  auto const tcs = iEvent.get(lstOutputToken_).const_view();
+  const uint32_t nTrackCandidates = tcs.nTrackCandidates();
+  auto const& otHits = iEvent.get(lstOTHitsToken_).hits;
+  auto const pixelStates = iEvent.get(pixelSeedStatesToken_).const_view();
+  const lst::SeedStateConst pixelState = pixelStates.state();
+  const lst::SeedStateConst pixelITState = pixelStates.itState();
+  const lst::PixelSeedStateExtraConst pixelExtra = pixelStates.extra();
+  const lst::SeedStateConst tcState = iEvent.get(tcSeedStatesToken_).const_view().state();
+  auto const& pixelTrackHits = iEvent.get(pixelTrackHitsToken_);
+  auto const& magneticField = iSetup.getData(mfToken_);
+  auto const& propagator = iSetup.getData(propagatorToken_);
+  const SeedRecHitAccess access(iSetup.getData(tGeomToken_), iSetup.getData(tTopoToken_));
+
+  const uint32_t nPixelRows = pixelState.metadata().size();
+  if (static_cast<uint32_t>(tcState.metadata().size()) != nTrackCandidates)
+    throw edm::Exception(edm::errors::LogicError)
+        << "LSTOutputConverter: " << tcState.metadata().size() << " track-candidate seed states for "
+        << nTrackCandidates << " track candidates";
+  if (static_cast<uint32_t>(pixelITState.metadata().size()) != nPixelRows ||
+      static_cast<uint32_t>(pixelExtra.metadata().size()) != nPixelRows ||
+      pixelTrackHits.offsets.size() != nPixelRows + 1 || pixelTrackHits.offsets.back() != pixelTrackHits.hits.size())
+    throw edm::Exception(edm::errors::LogicError)
+        << "LSTOutputConverter: the pixel-track seed states (" << nPixelRows << ", " << pixelITState.metadata().size()
+        << " and " << pixelExtra.metadata().size() << " rows) and the rechit offsets (" << pixelTrackHits.offsets.size()
+        << " entries) of the pixel tracks do not match";
+
+  auto const trackHits = [&pixelTrackHits](uint32_t seedIndex) {
+    auto const& offsets = pixelTrackHits.offsets;
+    return std::span<Hit const>(pixelTrackHits.hits.data() + offsets[seedIndex],
+                                offsets[seedIndex + 1] - offsets[seedIndex]);
+  };
+
+  // the seed of pixel track seedIndex: its full state on all its hits, or for a pLS rebuilt without its OT hits the
+  // inner-tracker-only state on its inner-tracker hits when that state exists
+  auto const pixelTrackSeed = [&](uint32_t seedIndex, bool isPLS) {
+    auto const hits = trackHits(seedIndex);
+    const lst::DecodedStateHit full = lst::decodeStateHit(pixelState.stateHit()[seedIndex], 0, hits.size());
+    if (full.kind != lst::StateHitKind::kPixel || full.index + 1 != hits.size())
+      throw edm::Exception(edm::errors::LogicError)
+          << "LSTOutputConverter: the seed state of pixel track " << seedIndex << " is not on its last hit";
+    lst::PLSSeedHits choice{false, false, static_cast<uint32_t>(hits.size())};
+    if (isPLS)
+      choice =
+          lst::plsSeedHits<Hit>(hits,
+                                dropOTHitsPurePLS_,
+                                maxITHitsToDropOTHitsPurePLS_,
+                                pixelITState.status()[seedIndex] == static_cast<uint8_t>(lst::SeedStateStatus::kOk),
+                                pixelITState.stateHit()[seedIndex],
+                                pixelExtra.nITHits()[seedIndex],
+                                access);
+    if (choice.rebuildWithoutOT && !choice.itOnly)
+      LogDebug("LSTOutputConverter") << "pLS of pixel track " << seedIndex
+                                     << " kept with its OT hits: no usable inner-tracker-only state";
+    const lst::SeedStateConst& states = choice.itOnly ? pixelITState : pixelState;
+    auto result = lst::blfSeedFromState(stateRow(states, seedIndex),
+                                        states.nFit()[seedIndex],
+                                        states.B(),
+                                        hits.first(choice.nHits),
+                                        magneticField,
+                                        propagator,
+                                        /*attachIfStepFails=*/true);
+    if (result.status != lst::BLFSeedStatus::kOk && result.status != lst::BLFSeedStatus::kAttachedAfterFailedStep)
+      throw edm::Exception(edm::errors::LogicError)
+          << "LSTOutputConverter: no seed for the " << (choice.itOnly ? "inner-tracker-only " : "")
+          << "seed state of pixel track " << seedIndex << ", status " << static_cast<int>(result.status);
+    return std::move(*result.seed);
+  };
+
+  std::vector<lst::OTSlotHit<Hit>> otSlotHits;
+  std::vector<lst::SeedHitEntry<Hit>> entries;
+  std::vector<Hit> seedHits;
+  // the seed of track candidate i (pT3, pT5, T5, T4) from its own state, if it has one
+  auto const trackCandidateSeed = [&](uint32_t i, lst::LSTObjType type, uint32_t seedIndex) {
+    std::optional<TrajectorySeed> seed;
+    if (tcState.status()[i] != static_cast<uint8_t>(lst::SeedStateStatus::kOk))
+      return seed;
+    const bool isT5orT4 = (type == lst::LSTObjType::T5 || type == lst::LSTObjType::T4);
+    auto const pixelHits = isT5orT4 ? std::span<Hit const>() : trackHits(seedIndex);
+    otSlotHits.clear();
+    for (int layerSlot = lst::Params_TC::kPixelLayerSlots; layerSlot < lst::Params_TC::kLayers; ++layerSlot)
+      for (int hitSlot = 0; hitSlot < lst::Params_TC::kHitsPerLayer; ++hitSlot) {
+        const uint32_t hitIdx = tcs.hitIndices()[i][layerSlot][hitSlot];
+        if (hitIdx == lst::kTCEmptyHitIdx)
+          continue;
+        if (hitIdx >= otHits.size())
+          throw edm::Exception(edm::errors::LogicError)
+              << "LSTOutputConverter: track candidate " << i << " has OT hit " << hitIdx << " of " << otHits.size();
+        otSlotHits.push_back({otHits[hitIdx], hitIdx});
+      }
+    const uint32_t stateHit = tcState.stateHit()[i];
+    const lst::DecodedStateHit decoded = lst::decodeStateHit(stateHit, otHits.size(), pixelHits.size());
+    // an OT state hit is identified among the collected hits by the input it shares with its rechit, as the pixel
+    // track's copy of an OT hit it carries is a distinct rechit
+    const Hit stateOTHit = decoded.kind == lst::StateHitKind::kOT ? otHits[decoded.index] : nullptr;
+    const auto list =
+        (decoded.kind == lst::StateHitKind::kOT || decoded.kind == lst::StateHitKind::kPixel)
+            ? lst::tcSeedHitList<Hit>(type, pixelHits, otSlotHits, stateHit, stateOTHit, access, entries, seedHits)
+            : lst::SeedHitListResult{lst::SeedHitListStatus::kStateHitNotInList, false};
+    if (list.status == lst::SeedHitListStatus::kStateHitNotInList)
+      throw edm::Exception(edm::errors::LogicError)
+          << "LSTOutputConverter: the seed state of track candidate " << i
+          << " is on a hit that is not one of its hits, stateHit " << stateHit;
+    if (list.status == lst::SeedHitListStatus::kStateHitDroppedBySubset) {
+      LogDebug("LSTOutputConverter") << "track candidate " << i << " type " << static_cast<int>(type)
+                                     << ": the hit subset of its seed drops the hit of its state, no seed";
+      return seed;
+    }
+    auto result = lst::blfSeedFromState(stateRow(tcState, i),
+                                        tcState.nFit()[i],
+                                        tcState.B(),
+                                        seedHits,
+                                        magneticField,
+                                        propagator,
+                                        /*attachIfStepFails=*/false);
+    LogDebug("LSTOutputConverter") << "track candidate " << i << " type " << static_cast<int>(type) << ": seed status "
+                                   << static_cast<int>(result.status) << ", " << seedHits.size() << " hits"
+                                   << (list.stateHitMoved ? ", the state's hit moved last" : "");
+    seed = std::move(result.seed);
+    return seed;
+  };
+
+  TrajectorySeedCollection outputTS, outputpLSTS;
+  outputTS.reserve(nTrackCandidates);
+  outputpLSTS.reserve(nTrackCandidates);
+  LogDebug("LSTOutputConverter") << "nTrackCandidates " << nTrackCandidates << ", seeds from the stored states";
+  for (uint32_t i = 0; i < nTrackCandidates; ++i) {
+    const lst::LSTObjType type = tcs.trackCandidateType()[i];
+    const bool isT5orT4 = (type == lst::LSTObjType::T5 || type == lst::LSTObjType::T4);
+    const uint32_t seedIndex = tcs.pixelSeedIndex()[i];
+    if (tcState.type()[i] != type || tcState.pixelSeedIndex()[i] != (isT5orT4 ? lst::kInvalidU32Idx : seedIndex))
+      throw edm::Exception(edm::errors::LogicError)
+          << "LSTOutputConverter: track candidate " << i << " (type " << static_cast<int>(type) << ", pixel seed "
+          << seedIndex << ") and its seed state (type " << static_cast<int>(tcState.type()[i]) << ", pixel seed "
+          << tcState.pixelSeedIndex()[i] << ") disagree";
+    if (!isT5orT4 && seedIndex >= nPixelRows)
+      throw edm::Exception(edm::errors::LogicError)
+          << "LSTOutputConverter: track candidate " << i << " has pixel seed " << seedIndex << " of " << nPixelRows;
+    // the makeSeed mode makes no seed without produceSeeds, and no pT3 or pT5 seed without includeNonpLSTSs
+    if (!produceSeeds_ || (!isT5orT4 && type != lst::LSTObjType::pLS && !includeNonpLSTSs_))
+      continue;
+    if (type == lst::LSTObjType::pLS) {
+      outputTS.push_back(pixelTrackSeed(seedIndex, /*isPLS=*/true));
+      outputpLSTS.push_back(outputTS.back());
+      continue;
+    }
+    auto seed = trackCandidateSeed(i, type, seedIndex);
+    if (seed)
+      outputTS.push_back(std::move(*seed));
+    else if (!isT5orT4)
+      outputTS.push_back(pixelTrackSeed(seedIndex, /*isPLS=*/false));
+  }
+
+  iEvent.emplace(trajectorySeedPutToken_, std::move(outputTS));
+  if (produceSeeds_)
+    iEvent.emplace(trajectorySeedpLSPutToken_, std::move(outputpLSTS));
 }
 
 DEFINE_FWK_MODULE(LSTOutputConverter);
