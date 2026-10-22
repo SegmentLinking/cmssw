@@ -109,7 +109,29 @@ namespace mkfit {
                                   MPlexQI& outFailFlag,
                                   const int N_proc,
                                   const PropagationFlags& pflags,
-                                  const MPlexQI* noMatEffPtr = nullptr);
+                                  const MPlexQI* noMatEffPtr = nullptr,
+                                  // per-lane module material (Config::refitMaterialPerModule); when null or
+                                  // disabled the (|z|,r) grid is used
+                                  const MPlexQF* matRadl = nullptr,
+                                  const MPlexQF* matBbxi = nullptr);
+
+  // Propagation to a plane in nSub sub-steps (parameters only; covariance with the whole-step Jacobian; material
+  // at the destination).  split[n] = false keeps lane n as one step (nullptr = split all lanes).
+  void propagateHelixToPlaneSubStepMPlex(const MPlexLS& inErr,
+                                         const MPlexLV& inPar,
+                                         const MPlexQI& inChg,
+                                         const MPlexHV& plPnt,
+                                         const MPlexHV& plNrm,
+                                         MPlexLS& outErr,
+                                         MPlexLV& outPar,
+                                         MPlexQI& outFailFlag,
+                                         const int N_proc,
+                                         const PropagationFlags& pflags,
+                                         const int nSub,
+                                         const bool* split = nullptr,
+                                         const MPlexQI* noMatEffPtr = nullptr,
+                                         const MPlexQF* matRadl = nullptr,
+                                         const MPlexQF* matBbxi = nullptr);
 
   // Common functions: PropagationMPlexCommon.cc
 
@@ -119,7 +141,8 @@ namespace mkfit {
                             const MPlexHV& plNrm,
                             MPlexLS& outErr,
                             MPlexLV& outPar,
-                            const int N_proc);
+                            const int N_proc,
+                            const float* msRefP = nullptr);  // see PropagationFlags::ms_ref_p
 
   void MultHelixPropFull(const MPlexLL& A, const MPlexLS& B, MPlexLL& C);
   void MultHelixPropTranspFull(const MPlexLL& A, const MPlexLL& B, MPlexLS& C);

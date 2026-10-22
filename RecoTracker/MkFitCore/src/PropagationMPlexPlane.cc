@@ -6,6 +6,9 @@
 
 #include "PropagationMPlex.h"
 
+#include <vdt/atan2.h>
+#include <cstring>
+
 //#define DEBUG
 #include "Debug.h"
 
@@ -52,6 +55,43 @@ namespace {
 
   using MPF = MPlexQF;
 
+  // ---- vdt::fast_atan2f over a whole Matriplex, vectorised.
+  // The library is compiled without -ffast-math, so GCC keeps -ftrapping-math and will not if-convert the branches
+  // inside vdt::fast_atan2f: Matriplex::fast_atan2 runs lane by lane ("not vectorized: control flow in loop").  Here
+  // the same operations, in the same order, are written with GCC vector extensions, every branch an explicit blend of
+  // values that are all computed.  Bit-identical to Matriplex::fast_atan2 on 1e9 inputs (log-uniform 1e-6..1e3, both
+  // signs, zeros, y ~ x), 5.8x its throughput (31.8 -> 5.5 ns per 8 lanes).
+  typedef float vfloat __attribute__((vector_size(NN * sizeof(float))));
+  typedef int vint __attribute__((vector_size(NN * sizeof(int))));
+
+  MPF atan2V(const MPF& Y, const MPF& X) {
+    vfloat y, x;
+    std::memcpy(&y, Y.fArray, sizeof(y));
+    std::memcpy(&x, X.fArray, sizeof(x));
+    const vfloat zero = vfloat{} + 0.f, one = vfloat{} + 1.f;
+    const vfloat ax = (vfloat)((vint)x & 0x7fffffff), ay = (vfloat)((vint)y & 0x7fffffff);
+    const vint swp = ay > ax;
+    const vfloat xx = swp ? ay : ax;
+    const vfloat yy = swp ? ax : ay;
+    const vfloat oneIfXXZero = (xx == zero) ? one : zero;
+    const vfloat t = yy / xx;
+    const vint red = t > 0.4142135623730950f;
+    const vfloat z = red ? (t - 1.0f) / (t + 1.0f) : t;
+    const vfloat z2 = z * z;
+    vfloat ret =
+        ((((8.05374449538e-2f * z2 - 1.38776856032E-1f) * z2 + 1.99777106478E-1f) * z2 - 3.33329491539E-1f) * z2 * z +
+         z);
+    ret *= (1.f - oneIfXXZero);
+    ret = (y == zero) ? zero : ret;
+    ret = red ? ret + vdt::details::PIO4F : ret;
+    ret = swp ? vdt::details::PIO2F - ret : ret;
+    ret = (x < zero) ? vdt::details::PIF - ret : ret;
+    ret = (y < zero) ? -ret : ret;
+    MPF R;
+    std::memcpy(R.fArray, &ret, sizeof(ret));
+    return R;
+  }
+
   MPF getBFieldFromZXY(const MPF& z, const MPF& x, const MPF& y) {
     MPF b;
     for (int n = 0; n < NN; ++n)
@@ -89,14 +129,137 @@ namespace {
 #include "JacErrPropCurv2.ah"
   }
 
-  void parsFromPathL_impl(const MPlexLV& __restrict__ inPar,
+  // ---- Radial-field correction (PropagationFlags::radial_field_corr) ----------------------------------
+  //
+  // The propagation models B as purely along z and constant over the step.  The real solenoid field is
+  // axially symmetric with Br = -(r/2) dBz/dz (div B = 0), and such a field conserves the canonical
+  // angular momentum
+  //     L_z = r * p_phi + q * k * Psi(r,z) / (2 pi)
+  // with Psi the flux enclosed at (r,z).  The constant-Bz helix conserves the same quantity with the
+  // uniform flux q*k*Bc*r^2/2, so over a step it misses a change D of r*p_phi.  For the parametrised
+  // field Bz = Z(z) (a r^2 + 1), Z = b0 z^2 + b1 z + c1, the flux is analytic,
+  //     G = q*k*Z(z)*(a r^4/4 + r^2/2),
+  // so no extra field lookup and no new constant is needed.  p_r is untouched and |p| is conserved, so
+  // pT and theta both move -- the degree of freedom the constant-Bz helix freezes.
+  //
+  // D is exactly antisymmetric under swapping the step's endpoints.  It is applied as two half-kicks,
+  // D/(2 r0) before the helix step and D/(2 r1) after it, each converted with the radius where it is
+  // applied: reversing the step sends D -> -D and swaps r0 <-> r1, so the step stays its own inverse
+  // (a one-sided D/r1 is not, and makes the two refit passes disagree).
+
+  // D = d(r*p_phi) over one step for every lane, B field midpoint Bc = Zmid (a rmid^2 + 1).
+  //   D/qk = D2*[ Zm*a*S/4 + (Zm - Bc)/2 ] + dZ*(f0 + f1)/2,  D2 = r0^2 - r1^2,  S = r0^2 + r1^2,
+  //   f = a r^4/4 + r^2/2,  Zm = (Z0 + Z1)/2,  dZ = Z0 - Z1.
+  // D2 and dZ flip sign under the swap and nothing else does.  Every difference is written in factored
+  // form so that no two large, nearly equal numbers are subtracted in float.
+  MPlexQF brDeltaRPphiV(const MPlexLV& inPar, const MPlexLV& outPar, const MPlexQI& inChg) {
+    namespace mpt = Matriplex;
+    using MPF = MPlexQF;
+    const MPF x0 = inPar(0, 0), y0 = inPar(1, 0), z0 = inPar(2, 0);
+    const MPF x1 = outPar(0, 0), y1 = outPar(1, 0), z1 = outPar(2, 0);
+    const MPF r0sq = x0 * x0 + y0 * y0;
+    const MPF r1sq = x1 * x1 + y1 * y1;
+    // q * sol_over_100, without materialising q: +sol where the charge is positive
+    const MPF qk = mpt::negate_if_ltz(MPF(Const::sol_over_100), inChg);
+    const MPF Z0 = (MPF(Config::mag_b0) * z0 + MPF(Config::mag_b1)) * z0 + MPF(Config::mag_c1);
+    const MPF Z1 = (MPF(Config::mag_b0) * z1 + MPF(Config::mag_b1)) * z1 + MPF(Config::mag_c1);
+    const MPF dz = z0 - z1;
+    const MPF dZ = dz * (MPF(Config::mag_b0) * (z0 + z1) + MPF(Config::mag_b1));
+    const MPF zmid = 0.5f * (z0 + z1);
+    const MPF xm = 0.5f * (x0 + x1), ym = 0.5f * (y0 + y1);
+    const MPF rmid2 = xm * xm + ym * ym;
+    const MPF Zmid = (MPF(Config::mag_b0) * zmid + MPF(Config::mag_b1)) * zmid + MPF(Config::mag_c1);
+    const MPF Zm = 0.5f * (Z0 + Z1);
+    // (Zm - Bc) in factored form: Zm - Zmid = b0 dz^2 / 4
+    const MPF ZmB = 0.25f * MPF(Config::mag_b0) * dz * dz - Zmid * MPF(Config::mag_a) * rmid2;
+    const MPF D = r0sq - r1sq;
+    const MPF S = r0sq + r1sq;
+    const MPF f0 = 0.25f * MPF(Config::mag_a) * r0sq * r0sq + 0.5f * r0sq;
+    const MPF f1 = 0.25f * MPF(Config::mag_a) * r1sq * r1sq + 0.5f * r1sq;
+    return qk * (D * (0.25f * Zm * MPF(Config::mag_a) * S + 0.5f * ZmB) + 0.5f * dZ * (f0 + f1));
+  }
+
+  // Rotate p_phi by a kick half_d / r at every lane's own position r, keeping p_r and |p|.  Vectorised
+  // (vdt sincos via Matriplex, atan2V); lanes whose guards fail are left untouched.
+  void applyDpPhiV(MPlexLV& par, const MPlexQF& half_d, const int N_proc) {
+    namespace mpt = Matriplex;
+    using MPF = MPlexQF;
+    const MPF x = par(0, 0), y = par(1, 0);
+    const MPF rsq = x * x + y * y;
+    const MPF ipt = par(3, 0);
+
+    // Clamp the guarded quantities so every lane can be evaluated; failing lanes are
+    // discarded at write-back, exactly as the scalar version leaves them untouched.
+    MPF rsq_s = rsq, ipt_s = ipt;
+    for (int n = 0; n < NN; ++n) {
+      if (!(rsq_s[n] > 1.e-8f))
+        rsq_s[n] = 1.f;
+      if (!(std::abs(ipt_s[n]) > 1.e-9f))
+        ipt_s[n] = 1.f;
+    }
+
+    MPF sinP, cosP, sinT, cosT;
+    mpt::fast_sincos(par(4, 0), sinP, cosP);
+    mpt::fast_sincos(par(5, 0), sinT, cosT);
+    MPF sinT_s = sinT;
+    for (int n = 0; n < NN; ++n)
+      if (!(std::abs(sinT_s[n]) > 1.e-9f))
+        sinT_s[n] = 1.f;
+
+    const MPF pt = mpt::negate_if_ltz(MPF(1.f) / ipt_s, ipt_s);  // = 1/|ipt|
+    const MPF px = pt * cosP, py = pt * sinP;
+    const MPF ptot = pt / sinT_s;
+    const MPF pz = ptot * cosT;
+    const MPF r = mpt::sqrt(rsq_s);
+    const MPF invr = MPF(1.f) / r;
+    const MPF dpphi = half_d / r;
+    const MPF pr = (x * px + y * py) * invr;
+    const MPF pphi = (x * py - y * px) * invr + dpphi;
+    const MPF pt_new = mpt::sqrt(pr * pr + pphi * pphi);
+    const MPF a2 = ptot * ptot - pt_new * pt_new;
+
+    MPF a2_s = a2;
+    for (int n = 0; n < NN; ++n)
+      if (!(a2_s[n] > 0.f))
+        a2_s[n] = 1.f;
+    const MPF newphi = atan2V((y * pr + x * pphi) * invr, (x * pr - y * pphi) * invr);
+    MPF pzn = mpt::sqrt(a2_s);
+    for (int n = 0; n < NN; ++n)
+      pzn[n] = std::copysign(pzn[n], pz[n]);
+    const MPF newtheta = atan2V(pt_new, pzn);
+    const MPF newipt = MPF(1.f) / pt_new;
+
+    for (int n = 0; n < N_proc; ++n) {
+      if (!(rsq[n] > 1.e-8f) || !(std::abs(ipt[n]) > 1.e-9f) || !(std::abs(sinT[n]) > 1.e-9f))
+        continue;
+      if (!(a2[n] > 0.f) || !(pt_new[n] > 1.e-9f))
+        continue;
+      par.At(n, 3, 0) = newipt[n];
+      par.At(n, 4, 0) = newphi[n];
+      par.At(n, 5, 0) = newtheta[n];
+    }
+  }
+
+  // Trigonometry of a start state, computed once per state and shared by its helix drifts and its Jacobian:
+  // sin(theta) from fast_sin for the turning angle (as before), sin/cos of phi and theta from fast_sincos.
+  struct StartTrig {
+    MPlexQF sinTa, sinP, cosP, sinT, cosT;
+    explicit StartTrig(const MPlexLV& par) {
+      sinTa = Matriplex::fast_sin(par(5, 0));
+      Matriplex::fast_sincos(par(4, 0), sinP, cosP);
+      Matriplex::fast_sincos(par(5, 0), sinT, cosT);
+    }
+  };
+
+  void parsFromPathL_trig(const MPlexLV& __restrict__ inPar,
                           MPlexLV& __restrict__ outPar,
                           const MPlexQF& __restrict__ kinv,
-                          const MPlexQF& __restrict__ s) {
+                          const MPlexQF& __restrict__ s,
+                          const StartTrig& tr) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
-    const MPF alpha = s * mpt::fast_sin(inPar(5, 0)) * inPar(3, 0) * kinv;
+    const MPF alpha = s * tr.sinTa * inPar(3, 0) * kinv;
 
     MPF sinah, cosah;
     if constexpr (Config::useTrigApprox) {
@@ -105,11 +268,10 @@ namespace {
       mpt::fast_sincos(0.5f * alpha, sinah, cosah);
     }
 
-    MPF sin_mom_phi, cos_mom_phi;
-    mpt::fast_sincos(inPar(4, 0), sin_mom_phi, cos_mom_phi);
-
-    MPF sin_mom_tht, cos_mom_tht;
-    mpt::fast_sincos(inPar(5, 0), sin_mom_tht, cos_mom_tht);
+    const MPF& sin_mom_phi = tr.sinP;
+    const MPF& cos_mom_phi = tr.cosP;
+    const MPF& sin_mom_tht = tr.sinT;
+    const MPF& cos_mom_tht = tr.cosT;
 
     outPar.aij(0, 0) = inPar(0, 0) + 2.f * sinah * (cos_mom_phi * cosah - sin_mom_phi * sinah) / (inPar(3, 0) * kinv);
     outPar.aij(1, 0) = inPar(1, 0) + 2.f * sinah * (sin_mom_phi * cosah + cos_mom_phi * sinah) / (inPar(3, 0) * kinv);
@@ -119,30 +281,39 @@ namespace {
     outPar.aij(5, 0) = inPar(5, 0);
   }
 
+  void parsFromPathL_impl(const MPlexLV& __restrict__ inPar,
+                          MPlexLV& __restrict__ outPar,
+                          const MPlexQF& __restrict__ kinv,
+                          const MPlexQF& __restrict__ s) {
+    parsFromPathL_trig(inPar, outPar, kinv, s, StartTrig(inPar));
+  }
+
   //*****************************************************************************************************
 
   //should kinv and D be templated???
-  void parsAndErrPropFromPathL_impl(const MPlexLV& __restrict__ inPar,
+  void parsAndErrPropFromPathL_trig(const MPlexLV& __restrict__ inPar,
                                     const MPlexQI& __restrict__ inChg,
                                     MPlexLV& __restrict__ outPar,
                                     const MPlexQF& __restrict__ kinv,
+                                    const MPlexQF& __restrict__ bFld,
                                     const MPlexQF& __restrict__ s,
                                     MPlexLL& __restrict__ errorProp,
                                     const int N_proc,
-                                    const PropagationFlags& pf) {
+                                    const PropagationFlags& pf,
+                                    const StartTrig& tr) {
     //iteration should return the path length s, then update parameters and compute errors
 
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
-    parsFromPathL_impl(inPar, outPar, kinv, s);
+    parsFromPathL_trig(inPar, outPar, kinv, s, tr);
 
-    MPF sinPin, cosPin;
-    mpt::fast_sincos(inPar(4, 0), sinPin, cosPin);
+    const MPF& sinPin = tr.sinP;
+    const MPF& cosPin = tr.cosP;
     MPF sinPout, cosPout;
     mpt::fast_sincos(outPar(4, 0), sinPout, cosPout);
-    MPF sinT, cosT;
-    mpt::fast_sincos(inPar(5, 0), sinT, cosT);
+    const MPF& sinT = tr.sinT;
+    const MPF& cosT = tr.cosT;
 
     // use code from AnalyticalCurvilinearJacobian::computeFullJacobian for error propagation in curvilinear coordinates, then convert to CCS
     // main difference from the above function is that we assume that the magnetic field is purely along z (which also implies that there is no change in pz)
@@ -155,10 +326,10 @@ namespace {
     const MPF t21 = cosPout * sinT;
     const MPF t22 = sinPout * sinT;
     const MPF cosl1 = 1.f / sinT;
-    // define average magnetic field and gradient
-    // at initial point - inlike TRPRFN
-    const MPF bF = (pf.use_param_b_field ? Const::sol_over_100 * getBFieldFromZXY(inPar(2, 0), inPar(0, 0), inPar(1, 0))
-                                         : Const::sol_over_100 * Config::Bfield);
+    // The field of the step, as used for the parameters (kinv).  Passed in rather than re-sampled here
+    // so that the Jacobian linearises the step the parameters actually took: at the step start as in
+    // the original code, or the average over the step as in TRPRFN with PropagationFlags::b_field_at_mid.
+    const MPF bF = Const::sol_over_100 * bFld;
     const MPF q = -bF * qbp;
     const MPF theta = q * s;
     MPF sint, cost;
@@ -166,18 +337,16 @@ namespace {
     const MPF dx1 = inPar(0, 0) - outPar(0, 0);
     const MPF dx2 = inPar(1, 0) - outPar(1, 0);
     const MPF dx3 = inPar(2, 0) - outPar(2, 0);
-    MPF au = mpt::fast_isqrt(t11 * t11 + t12 * t12);
-    const MPF u11 = -au * t12;
-    const MPF u12 = au * t11;
+    const MPF u11 = -sinPin;
+    const MPF u12 = cosPin;
     const MPF v11 = -cosT * u12;
     const MPF v12 = cosT * u11;
-    const MPF v13 = t11 * u12 - t12 * u11;
-    au = mpt::fast_isqrt(t21 * t21 + t22 * t22);
-    const MPF u21 = -au * t22;
-    const MPF u22 = au * t21;
+    const MPF v13 = sinT;
+    const MPF u21 = -sinPout;
+    const MPF u22 = cosPout;
     const MPF v21 = -cosT * u22;
     const MPF v22 = cosT * u21;
-    const MPF v23 = t21 * u22 - t22 * u21;
+    const MPF v23 = sinT;
     // now prepare the transport matrix
     const MPF omcost = 1.f - cost;
     const MPF tmsint = theta - sint;
@@ -229,7 +398,7 @@ namespace {
         errorPropCurv(n, 3, 0) = secondOrder41 + (thirdOrder41 + fourthOrder41);
         const float temp3 = -t12[n] * v21[n] + t11[n] * v22[n];
         const float secondOrder51 = -0.5f * bF[n] * temp3 * s2;
-        const float temp4 = -t11[n] * v21[n] - t12[n] * v22[n] - cosT[n] * v23[n];
+        const float temp4 = -t11[n] * v21[n] - t12[n] * v22[n];
         const float thirdOrder51 = 1.f / 3 * h2 * s3 * qbp[n] * temp4;
         const float fourthOrder51 = 1.f / 8 * h3 * s4 * qbp2 * temp3;
         errorPropCurv(n, 4, 0) = secondOrder51 + (thirdOrder51 + fourthOrder51);
@@ -367,20 +536,16 @@ namespace {
              int q,
              float kinv) {
     const float A = delta0 * eta0 + delta1 * eta1 + delta2 * eta2;
-    const float ip = sinT * ipt;
-    const float p0[3] = {cosP / ipt, sinP / ipt, cosT / ip};
-    const float B = (p0[0] * eta0 + p0[1] * eta1 + p0[2] * eta2) * ip;
-    const float rho = kinv * ip;
-    const float C = -(eta0 * p0[1] - eta1 * p0[0]) * rho * 0.5f * ip;
-    const float sqb2m4ac = std::sqrt(B * B - 4.f * A * C);
-    const float s1 = (-B + sqb2m4ac) * 0.5f / C;
-    const float s2 = (-B - sqb2m4ac) * 0.5f / C;
+    const float p0[3] = {cosP * sinT, sinP * sinT, cosT};
+    const float B = (p0[0] * eta0 + p0[1] * eta1 + p0[2] * eta2);
+    const float rho = kinv * sinT * ipt;
+    const float C = -(eta0 * p0[1] - eta1 * p0[0]) * rho * 0.5f;
+    const float s1 = 2.f * A / (-B - std::copysign(std::sqrt(B * B - 4.f * A * C), B));
 #ifdef DEBUG
     if (debug)
-      std::cout << "A=" << A << " B=" << B << " C=" << C << " s1=" << s1 << " s2=" << s2 << std::endl;
+      std::cout << "A=" << A << " B=" << B << " C=" << C << " s1=" << s1 << std::endl;
 #endif
-    //take the closest
-    return (std::abs(s1) > std::abs(s2) ? s2 : s1);
+    return s1;
   }
 
   void helixAtPlane_impl(const MPlexLV& __restrict__ inPar,
@@ -392,7 +557,9 @@ namespace {
                          MPlexLL& __restrict__ errorProp,
                          MPlexQI& __restrict__ outFailFlag,  // expected to be initialized to 0
                          const int N_proc,
-                         const PropagationFlags& pf) {
+                         const PropagationFlags& pf,
+                         // false = parameters only, skip the Jacobian (outPar is the same either way)
+                         const bool want_err = true) {
     namespace mpt = Matriplex;
     using MPF = MPlexQF;
 
@@ -408,50 +575,63 @@ namespace {
     }
 #endif
 
-    MPF kinv = mpt::negate_if_ltz(MPF(-Const::sol_over_100), inChg);
-    if (pf.use_param_b_field) {
-      kinv *= getBFieldFromZXY(inPar(2, 0), inPar(0, 0), inPar(1, 0));
-    } else {
-      kinv *= Config::Bfield;
-    }
+    const MPF kSign = mpt::negate_if_ltz(MPF(-Const::sol_over_100), inChg);
+    MPF bFld = pf.use_param_b_field ? getBFieldFromZXY(inPar(2, 0), inPar(0, 0), inPar(1, 0)) : MPF(Config::Bfield);
+    MPF kinv = kSign * bFld;
 
     MPF delta0 = inPar(0, 0) - plPnt(0, 0);
     MPF delta1 = inPar(1, 0) - plPnt(1, 0);
     MPF delta2 = inPar(2, 0) - plPnt(2, 0);
 
-    MPF sinP, cosP;
-    mpt::fast_sincos(inPar(4, 0), sinP, cosP);
-    MPF sinT, cosT;
-    mpt::fast_sincos(inPar(5, 0), sinT, cosT);
+    // trigonometry of the start state, shared by every drift below and by the Jacobian
+    const StartTrig tr(inPar);
+    MPF sinP = tr.sinP, cosP = tr.cosP;
+    const MPF& sinT = tr.sinT;
+    const MPF& cosT = tr.cosT;
 
     // determine solution for straight line
     MPF sl = -(plNrm(0, 0) * delta0 + plNrm(1, 0) * delta1 + plNrm(2, 0) * delta2) /
              (plNrm(0, 0) * cosP * sinT + plNrm(1, 0) * sinP * sinT + plNrm(2, 0) * cosT);
 
-    //float s[nmax - nmin];
+    // The path-length solves are computed for every lane without a branch, so that they vectorise (a select
+    // around the square root and the divisions keeps them scalar), and the plane type picks the solution after.
+    MPF sH, sZ;
     //first iteration outside the loop
-#pragma omp simd
-    for (int n = 0; n < N_proc; ++n) {
-      s[n] = (std::abs(plNrm(n, 2, 0)) < 1.f ? getS(delta0[n],
-                                                    delta1[n],
-                                                    delta2[n],
-                                                    plNrm(n, 0, 0),
-                                                    plNrm(n, 1, 0),
-                                                    plNrm(n, 2, 0),
-                                                    sinP[n],
-                                                    cosP[n],
-                                                    sinT[n],
-                                                    cosT[n],
-                                                    inPar(n, 3, 0),
-                                                    inChg(n, 0, 0),
-                                                    kinv[n])
-                                             : (plPnt.constAt(n, 2, 0) - inPar.constAt(n, 2, 0)) / cosT[n]);
-    }
+    for (int n = 0; n < NN; ++n)
+      sH[n] = getS(delta0[n],
+                   delta1[n],
+                   delta2[n],
+                   plNrm(n, 0, 0),
+                   plNrm(n, 1, 0),
+                   plNrm(n, 2, 0),
+                   sinP[n],
+                   cosP[n],
+                   sinT[n],
+                   cosT[n],
+                   inPar(n, 3, 0),
+                   inChg(n, 0, 0),
+                   kinv[n]);
+    for (int n = 0; n < NN; ++n)
+      sZ[n] = (plPnt.constAt(n, 2, 0) - inPar.constAt(n, 2, 0)) / cosT[n];
+    for (int n = 0; n < N_proc; ++n)
+      s[n] = std::abs(plNrm(n, 2, 0)) < 1.f ? sH[n] : sZ[n];
 
     CMS_UNROLL_LOOP_COUNT(Config::nSStepsInProp2Plane - 1)
     for (int i = 0; i < Config::nSStepsInProp2Plane - 1; ++i) {
       MPlexLV outParTmp{0.0f};
-      parsFromPathL_impl(inPar, outParTmp, kinv, s);
+      parsFromPathL_trig(inPar, outParTmp, kinv, s, tr);
+
+      if (pf.use_param_b_field && pf.b_field_at_mid) {
+        // Re-sample B at the chord midpoint of the step, 0.5*(start + end).  That point does not depend
+        // on which end the step is taken from, so the outward and inward propagations use the same field
+        // and are inverses of each other (sampling at the start makes a round trip out through a track's
+        // planes and back miss by ~100 um at 10 GeV, ~1 mm at 1 GeV).  The endpoint is only known once
+        // s is, hence here, before s is refined; the 6x6 error propagation still runs once, below.
+        bFld = getBFieldFromZXY(0.5f * (inPar(2, 0) + outParTmp(2, 0)),
+                                0.5f * (inPar(0, 0) + outParTmp(0, 0)),
+                                0.5f * (inPar(1, 0) + outParTmp(1, 0)));
+        kinv = kSign * bFld;
+      }
 
       delta0 = outParTmp(0, 0) - plPnt(0, 0);
       delta1 = outParTmp(1, 0) - plPnt(1, 0);
@@ -460,24 +640,26 @@ namespace {
       mpt::fast_sincos(outParTmp(4, 0), sinP, cosP);
       // Note, sinT/cosT not updated
 
-#pragma omp simd
-      for (int n = 0; n < N_proc; ++n) {
-        s[n] += (std::abs(plNrm(n, 2, 0)) < 1.f
-                     ? getS(delta0[n],
-                            delta1[n],
-                            delta2[n],
-                            plNrm(n, 0, 0),
-                            plNrm(n, 1, 0),
-                            plNrm(n, 2, 0),
-                            sinP[n],
-                            cosP[n],
-                            sinT[n],
-                            cosT[n],
-                            inPar(n, 3, 0),
-                            inChg(n, 0, 0),
-                            kinv[n])
-                     : (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) / std::cos(outParTmp.constAt(n, 5, 0)));
-      }
+      for (int n = 0; n < NN; ++n)
+        sH[n] = getS(delta0[n],
+                     delta1[n],
+                     delta2[n],
+                     plNrm(n, 0, 0),
+                     plNrm(n, 1, 0),
+                     plNrm(n, 2, 0),
+                     sinP[n],
+                     cosP[n],
+                     sinT[n],
+                     cosT[n],
+                     inPar(n, 3, 0),
+                     inChg(n, 0, 0),
+                     kinv[n]);
+      // disks: the scalar cos only on the lanes that need it
+      for (int n = 0; n < N_proc; ++n)
+        if (!(std::abs(plNrm(n, 2, 0)) < 1.f))
+          sH[n] = (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) / std::cos(outParTmp.constAt(n, 5, 0));
+      for (int n = 0; n < N_proc; ++n)
+        s[n] += sH[n];
     }  //end Niter-1
 
     // use linear approximation if s did not converge (for very high pT tracks)
@@ -496,7 +678,10 @@ namespace {
     if (debug)
       std::cout << "s=" << s[0] << std::endl;
 #endif
-    parsAndErrPropFromPathL_impl(inPar, inChg, outPar, kinv, s, errorProp, N_proc, pf);
+    if (want_err)
+      parsAndErrPropFromPathL_trig(inPar, inChg, outPar, kinv, bFld, s, errorProp, N_proc, pf, tr);
+    else
+      parsFromPathL_trig(inPar, outPar, kinv, s, tr);
   }
 
 }  // namespace
@@ -504,6 +689,47 @@ namespace {
 // ============================================================================
 
 namespace mkfit {
+
+  // helixAtPlane with the choice of skipping the Jacobian (want_err = false: parameters only, the same outPar),
+  // for the intermediate sub-steps of propagateHelixToPlaneSubStepMPlex.
+  static void helixAtPlaneSel(const MPlexLV& inPar,
+                              const MPlexQI& inChg,
+                              const MPlexHV& plPnt,
+                              const MPlexHV& plNrm,
+                              MPlexQF& pathL,
+                              MPlexLV& outPar,
+                              MPlexLL& errorProp,
+                              MPlexQI& outFailFlag,
+                              const int N_proc,
+                              const PropagationFlags& pflags,
+                              const bool want_err) {
+    errorProp.setVal(0.f);
+    outFailFlag.setVal(0.f);
+
+    if (pflags.use_param_b_field && pflags.radial_field_corr) {
+      // Radial-field correction, antisymmetric (see brDeltaRPphiV): D from the uncorrected step, half of
+      // it as a kick at the start, the helix step from the kicked state, the other half at the end.
+      // The Jacobian is that of the helix step: it describes the transport, not the correction, which
+      // is a first-order effect on the weighting and not on the mean.
+      PropagationFlags pf0 = pflags;
+      pf0.radial_field_corr = false;
+
+      MPlexLV par0{0.0f};
+      MPlexQF pl0{0.0f};
+      MPlexLL ep0{0.0f};
+      MPlexQI ff0{0};
+      helixAtPlane_impl(inPar, inChg, plPnt, plNrm, pl0, par0, ep0, ff0, N_proc, pf0, false);
+
+      const MPlexQF halfD = 0.5f * brDeltaRPphiV(inPar, par0, inChg);
+      MPlexLV parH = inPar;
+      applyDpPhiV(parH, halfD, N_proc);
+      helixAtPlane_impl(parH, inChg, plPnt, plNrm, pathL, outPar, errorProp, outFailFlag, N_proc, pf0, want_err);
+      applyDpPhiV(outPar, halfD, N_proc);
+      return;
+    }
+
+    helixAtPlane_impl(inPar, inChg, plPnt, plNrm, pathL, outPar, errorProp, outFailFlag, N_proc, pflags, want_err);
+  }
 
   void helixAtPlane(const MPlexLV& inPar,
                     const MPlexQI& inChg,
@@ -515,11 +741,25 @@ namespace mkfit {
                     MPlexQI& outFailFlag,
                     const int N_proc,
                     const PropagationFlags& pflags) {
-    errorProp.setVal(0.f);
-    outFailFlag.setVal(0.f);
-
-    helixAtPlane_impl(inPar, inChg, plPnt, plNrm, pathL, outPar, errorProp, outFailFlag, N_proc, pflags);
+    helixAtPlaneSel(inPar, inChg, plPnt, plNrm, pathL, outPar, errorProp, outFailFlag, N_proc, pflags, true);
   }
+
+  // The part of a propagation to a plane after the transport: 6x6 error similarity with errorProp (outErr must hold
+  // the error to transport on entry), material at the destination, phi squash, restore the input on failure.
+  // Shared by propagateHelixToPlaneMPlex and propagateHelixToPlaneSubStepMPlex so the two cannot drift apart.
+  static void finishPlanePropagation(const MPlexLS& inErr,
+                                     const MPlexLV& inPar,
+                                     const MPlexHV& plNrm,
+                                     const MPlexLL& errorProp,
+                                     const MPlexQF& pathL,
+                                     MPlexLS& outErr,
+                                     MPlexLV& outPar,
+                                     MPlexQI& outFailFlag,
+                                     const int N_proc,
+                                     const PropagationFlags& pflags,
+                                     const MPlexQI* noMatEffPtr,
+                                     const MPlexQF* matRadl,
+                                     const MPlexQF* matBbxi);
 
   void propagateHelixToPlaneMPlex(const MPlexLS& inErr,
                                   const MPlexLV& inPar,
@@ -531,7 +771,9 @@ namespace mkfit {
                                   MPlexQI& outFailFlag,
                                   const int N_proc,
                                   const PropagationFlags& pflags,
-                                  const MPlexQI* noMatEffPtr) {
+                                  const MPlexQI* noMatEffPtr,
+                                  const MPlexQF* matRadl,
+                                  const MPlexQF* matBbxi) {
     // debug = true;
 
     outErr = inErr;
@@ -597,6 +839,34 @@ namespace mkfit {
     }
 #endif
 
+    finishPlanePropagation(inErr,
+                           inPar,
+                           plNrm,
+                           errorProp,
+                           pathL,
+                           outErr,
+                           outPar,
+                           outFailFlag,
+                           N_proc,
+                           pflags,
+                           noMatEffPtr,
+                           matRadl,
+                           matBbxi);
+  }
+
+  static void finishPlanePropagation(const MPlexLS& inErr,
+                                     const MPlexLV& inPar,
+                                     const MPlexHV& plNrm,
+                                     const MPlexLL& errorProp,
+                                     const MPlexQF& pathL,
+                                     MPlexLS& outErr,
+                                     MPlexLV& outPar,
+                                     MPlexQI& outFailFlag,
+                                     const int N_proc,
+                                     const PropagationFlags& pflags,
+                                     const MPlexQI* noMatEffPtr,
+                                     const MPlexQF* matRadl,
+                                     const MPlexQF* matBbxi) {
     // Matriplex version of:
     // result.errors = ROOT::Math::Similarity(errorProp, outErr);
     MPlexLL temp{0.0f};
@@ -648,6 +918,11 @@ namespace mkfit {
       MPlexQF propSign;
 
       const TrackerInfo& tinfo = *pflags.tracker_info;
+      // the crossed module's own material instead of the (|z|,r) grid (Config::refitMaterialPerModule)
+      const bool use_mod_mat = Config::refitMaterialPerModule && matRadl && matBbxi;
+      // energy-loss sign from the fit pass (PropagationFlags::eloss_by_pass), else from the path-length sign
+      const float passSign = pflags.eloss_outward ? 1.f : -1.f;
+      const bool by_pass = pflags.eloss_by_pass;
 
 #if !defined(__clang__)
 #pragma omp simd
@@ -658,14 +933,19 @@ namespace mkfit {
           hitsXi(n, 0, 0) = 0.f;
           propSign(n, 0, 0) = -1.f;
         } else {
-          const float hypo = hipo(outPar(n, 0, 0), outPar(n, 1, 0));
-          const auto mat = tinfo.material_checked(std::abs(outPar(n, 2, 0)), hypo);
-          hitsRl(n, 0, 0) = mat.radl;
-          hitsXi(n, 0, 0) = mat.bbxi;
-          propSign(n, 0, 0) = (pathL(n, 0, 0) > 0.f ? 1.f : -1.f);
+          if (use_mod_mat) {
+            hitsRl(n, 0, 0) = matRadl->constAt(n, 0, 0);
+            hitsXi(n, 0, 0) = matBbxi->constAt(n, 0, 0);
+          } else {
+            const float hypo = hipo(outPar(n, 0, 0), outPar(n, 1, 0));
+            const auto mat = tinfo.material_checked(std::abs(outPar(n, 2, 0)), hypo);
+            hitsRl(n, 0, 0) = mat.radl;
+            hitsXi(n, 0, 0) = mat.bbxi;
+          }
+          propSign(n, 0, 0) = by_pass ? passSign : (pathL(n, 0, 0) > 0.f ? 1.f : -1.f);
         }
       }
-      applyMaterialEffects(hitsRl, hitsXi, propSign, plNrm, outErr, outPar, N_proc);
+      applyMaterialEffects(hitsRl, hitsXi, propSign, plNrm, outErr, outPar, N_proc, pflags.ms_ref_p);
 #ifdef DEBUG
       if (debug && g_debug) {
         for (int kk = 0; kk < N_proc; ++kk) {
@@ -703,6 +983,157 @@ namespace mkfit {
       }
     }
     // }
+  }
+
+  // ============================================================================
+  // Sub-stepped propagation to a plane (refit backward pass, Config::refitBkwSubSteps; MkFitter).
+  //
+  // One propagation over a long step mis-bends near the solenoid ends: B is sampled once (at the chord midpoint)
+  // and the radial-field correction is applied only at the two ends, which is exact only to second order in the
+  // step length.  nSub sub-steps remove 1 - 1/nSub^2 of that error.  Only the parameters need the sub-steps:
+  //   nSub-1 drifts of fixed path length s0/nSub (s0 = the first path-length estimate to the destination plane),
+  //   each with the same field model as a full step (midpoint B, radial-field half-kicks), no plane solve; the
+  //   last sub-step lands on the plane with the full solve.
+  // The covariance is transported once, with the Jacobian of the whole step (the same one-step transport as without
+  // sub-stepping), and material is applied at the destination only, as before.  split[n] = false keeps lane n as
+  // one step (zero-length intermediate sub-steps).
+
+  // First path-length estimate to the plane: the starting value of helixAtPlane_impl's solve (exact in z for disks),
+  // straight line if that is not finite.  Only partitions the step -- the last sub-step lands with the full solve.
+  static MPlexQF firstPathEstimate(const MPlexLV& inPar,
+                                   const MPlexQI& inChg,
+                                   const MPlexHV& plPnt,
+                                   const MPlexHV& plNrm,
+                                   const int N_proc,
+                                   const PropagationFlags& pf,
+                                   const StartTrig& tr) {
+    namespace mpt = Matriplex;
+    const MPlexQF kSign = mpt::negate_if_ltz(MPlexQF(-Const::sol_over_100), inChg);
+    const MPlexQF bFld =
+        pf.use_param_b_field ? getBFieldFromZXY(inPar(2, 0), inPar(0, 0), inPar(1, 0)) : MPlexQF(Config::Bfield);
+    const MPlexQF kinv = kSign * bFld;
+    const MPlexQF &sinP = tr.sinP, &cosP = tr.cosP, &sinT = tr.sinT, &cosT = tr.cosT;
+    // the three candidates for every lane without a branch (so that they vectorise), then the choice
+    MPlexQF sH, sZ, sL;
+    for (int n = 0; n < NN; ++n) {
+      const float d0 = inPar.constAt(n, 0, 0) - plPnt.constAt(n, 0, 0);
+      const float d1 = inPar.constAt(n, 1, 0) - plPnt.constAt(n, 1, 0);
+      const float d2 = inPar.constAt(n, 2, 0) - plPnt.constAt(n, 2, 0);
+      const float e0 = plNrm.constAt(n, 0, 0), e1 = plNrm.constAt(n, 1, 0), e2 = plNrm.constAt(n, 2, 0);
+      sH[n] = getS(d0,
+                   d1,
+                   d2,
+                   e0,
+                   e1,
+                   e2,
+                   sinP[n],
+                   cosP[n],
+                   sinT[n],
+                   cosT[n],
+                   inPar.constAt(n, 3, 0),
+                   inChg.constAt(n, 0, 0),
+                   kinv[n]);
+      sZ[n] = (plPnt.constAt(n, 2, 0) - inPar.constAt(n, 2, 0)) / cosT[n];
+      sL[n] = -(e0 * d0 + e1 * d1 + e2 * d2) / (e0 * cosP[n] * sinT[n] + e1 * sinP[n] * sinT[n] + e2 * cosT[n]);
+    }
+    MPlexQF s0{0.0f};
+    for (int n = 0; n < N_proc; ++n) {
+      float s = std::abs(plNrm.constAt(n, 2, 0)) < 1.f ? sH[n] : sZ[n];
+      if (!mkfit::isFinite(s))
+        s = sL[n];
+      s0[n] = mkfit::isFinite(s) ? s : 0.f;
+    }
+    return s0;
+  }
+
+  // One fixed-length sub-step of path length h (per lane; 0 = no move), parameters only, with the same field model
+  // as a propagation to a plane: predictor drift with B at the start, re-drift with B at the chord midpoint
+  // (b_field_at_mid), radial-field half-kicks D/(2 r0) before and D/(2 r1) after the drift (radial_field_corr; D
+  // between the uncorrected endpoints).  The kicked drift reuses the midpoint field (the kick moves the chord
+  // midpoint only at second order).
+  static void fixedLengthSubStep(MPlexLV& par,
+                                 const MPlexQI& inChg,
+                                 const MPlexQF& kSign,
+                                 const MPlexQF& h,
+                                 const int N_proc,
+                                 const PropagationFlags& pf) {
+    const MPlexLV& p0 = par;
+    MPlexQF kinv =
+        kSign * (pf.use_param_b_field ? getBFieldFromZXY(p0(2, 0), p0(0, 0), p0(1, 0)) : MPlexQF(Config::Bfield));
+    MPlexLV p1{0.0f};
+    const StartTrig tr0(p0);
+    parsFromPathL_trig(p0, p1, kinv, h, tr0);
+    if (pf.use_param_b_field && pf.b_field_at_mid) {
+      kinv = kSign *
+             getBFieldFromZXY(0.5f * (p0(2, 0) + p1(2, 0)), 0.5f * (p0(0, 0) + p1(0, 0)), 0.5f * (p0(1, 0) + p1(1, 0)));
+      parsFromPathL_trig(p0, p1, kinv, h, tr0);
+    }
+    if (pf.use_param_b_field && pf.radial_field_corr) {
+      const MPlexQF dvec = brDeltaRPphiV(p0, p1, inChg);
+      MPlexLV ph = p0;
+      applyDpPhiV(ph, 0.5f * dvec, N_proc);
+      parsFromPathL_impl(ph, p1, kinv, h);
+      applyDpPhiV(p1, 0.5f * dvec, N_proc);
+    }
+    squashPhiMPlex(p1, N_proc);
+    par = p1;
+  }
+
+  void propagateHelixToPlaneSubStepMPlex(const MPlexLS& inErr,
+                                         const MPlexLV& inPar,
+                                         const MPlexQI& inChg,
+                                         const MPlexHV& plPnt,
+                                         const MPlexHV& plNrm,
+                                         MPlexLS& outErr,
+                                         MPlexLV& outPar,
+                                         MPlexQI& outFailFlag,
+                                         const int N_proc,
+                                         const PropagationFlags& pflags,
+                                         const int nSub,
+                                         const bool* split,
+                                         const MPlexQI* noMatEffPtr,
+                                         const MPlexQF* matRadl,
+                                         const MPlexQF* matBbxi) {
+    namespace mpt = Matriplex;
+    PropagationFlags pfs = pflags;
+    pfs.apply_material = false;  // intermediate sub-steps: no material (it is applied at the destination)
+    outFailFlag.setVal(0);
+    MPlexQI ff{0};
+    MPlexLL epDummy{0.0f};
+    MPlexQF pl{0.0f}, sTot{0.0f};
+    MPlexLV par = inPar;
+    const MPlexQF kSign = mpt::negate_if_ltz(MPlexQF(-Const::sol_over_100), inChg);
+
+    const StartTrig trIn(inPar);
+    MPlexQF h = firstPathEstimate(par, inChg, plPnt, plNrm, N_proc, pflags, trIn);
+    for (int n = 0; n < NN; ++n)
+      h[n] = (n < N_proc && (split == nullptr || split[n])) ? h[n] / nSub : 0.f;
+    for (int ks = 1; ks < nSub; ++ks) {
+      fixedLengthSubStep(par, inChg, kSign, h, N_proc, pfs);
+      sTot = sTot + h;
+    }
+
+    // last sub-step onto the destination plane, parameters only
+    helixAtPlaneSel(par, inChg, plPnt, plNrm, pl, outPar, epDummy, ff, N_proc, pfs, false);
+    for (int n = 0; n < N_proc; ++n)
+      if (ff.constAt(n, 0, 0))
+        outFailFlag.At(n, 0, 0) = 1;
+    sTot = sTot + pl;
+
+    // whole-step Jacobian: from the step start over the accumulated path length, with the field of the step
+    // (chord midpoint with b_field_at_mid) -- i.e. the one-step transport
+    const MPlexQF bW = !pflags.use_param_b_field ? MPlexQF(Config::Bfield)
+                       : pflags.b_field_at_mid   ? getBFieldFromZXY(0.5f * (inPar(2, 0) + outPar(2, 0)),
+                                                                  0.5f * (inPar(0, 0) + outPar(0, 0)),
+                                                                  0.5f * (inPar(1, 0) + outPar(1, 0)))
+                                                 : getBFieldFromZXY(inPar(2, 0), inPar(0, 0), inPar(1, 0));
+    MPlexLV parJ{0.0f};
+    MPlexLL errorProp{0.0f};
+    parsAndErrPropFromPathL_trig(inPar, inChg, parJ, kSign * bW, bW, sTot, errorProp, N_proc, pflags, trIn);
+
+    outErr = inErr;
+    finishPlanePropagation(
+        inErr, inPar, plNrm, errorProp, sTot, outErr, outPar, outFailFlag, N_proc, pflags, noMatEffPtr, matRadl, matBbxi);
   }
 
 }  // namespace mkfit

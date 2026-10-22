@@ -139,7 +139,7 @@ namespace mkfit {
       GeomFileHeader() = default;
 
       constexpr static int s_magic = 0xB00F;
-      constexpr static int s_version = 3;
+      constexpr static int s_version = 4;  // 4: ModuleInfo carries the module material (radl, bbxi)
     };
 
     template <typename T>

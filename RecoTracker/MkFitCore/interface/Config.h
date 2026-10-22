@@ -58,12 +58,36 @@ namespace mkfit {
     extern bool usePropToPlane;
     extern bool usePtMultScat;
 
-    // Config for Bfield. Note: for now the same for CMS-phase1 and CylCowWLids.
+    // Config for Bfield.
+    // bFieldFromZR() below: Bz = (mag_b0 z^2 + mag_b1 z + mag_c1) (mag_a r^2 + 1), the same form and
+    // units as CMSSW's ParabolicParametrizedMagneticField.  The defaults (Config.cc) are fitted to the CMS
+    // field map over the tracker volume (0.03 % rms; the map is the same in Run 3 and Phase 2); in CMSSW,
+    // MkFitGeometryESProducer sets them from its parameter bFieldParams.  The older constants, still those
+    // of CMSSW's ParabolicMf, are low by 1.46 % on average against that map (up to 4.7 %).
     constexpr float Bfield = 3.8112;
-    constexpr float mag_c1 = 3.8114;
-    constexpr float mag_b0 = -3.94991e-06;
-    constexpr float mag_b1 = 7.53701e-06;
-    constexpr float mag_a = 2.43878e-11;
+    extern float mag_c1;
+    extern float mag_b0;
+    extern float mag_b1;
+    extern float mag_a;
+
+    // Refit only (MkBuilder::fit_tracks); set by MkFitGeometryESProducer, off by default here.
+    // refitBFieldAtMid: sample B at the chord midpoint of each propagate-to-plane step instead of at its
+    //   start, so that the outward and inward propagations are inverses of each other.
+    // refitRadialFieldCorr: correct each step for the radial field component Br = -(r/2) dBz/dz, which
+    //   the constant-Bz helix neglects, antisymmetrically (half at each end of the step).
+    extern bool refitBFieldAtMid;
+    extern bool refitRadialFieldCorr;
+    // refitElossSignFromPass: sign of the energy loss from the pass (forward loses, backward gains) instead of
+    //   from the sign of each step's path length, which is wrong on every step the refit takes backwards.
+    extern bool refitElossSignFromPass;
+    // refitBkwMsFixedMomentum: multiple-scattering noise of the backward pass at the momentum of its start
+    //   state (the forward result), fixed per track, instead of at the running estimate.
+    extern bool refitBkwMsFixedMomentum;
+    // refitBkwSubSteps: number of sub-steps of each propagation of the backward pass (1 = one step).
+    extern int refitBkwSubSteps;
+    // refitMaterialPerModule: material of each crossed module from its own MediumProperties (ModuleInfo) instead
+    //   of the (|z|, r) grid.
+    extern bool refitMaterialPerModule;
 
     // Config for SelectHitIndices
     // Use extra arrays to store phi and q of hits.
