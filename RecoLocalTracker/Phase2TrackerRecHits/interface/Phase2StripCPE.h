@@ -35,6 +35,10 @@ public:
   LocalValues localParameters(const Phase2TrackerCluster1D& cluster, const GeomDetUnit& det) const override;
   LocalVector driftDirection(const Phase2TrackerGeomDetUnit& det) const;
 
+  // the parameters of the OT modules, indexed by GeomDetUnit::index() from firstModuleIndex() on
+  unsigned int firstModuleIndex() const { return m_off; }
+  Param const& moduleParam(unsigned int detIndex) const { return m_Params[detIndex - m_off]; }
+
 private:
   void fillParam();
   std::vector<Param> m_Params;
