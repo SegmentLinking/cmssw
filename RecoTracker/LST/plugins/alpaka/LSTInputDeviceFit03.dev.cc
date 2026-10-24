@@ -3,13 +3,16 @@
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
 
   // the inner-tracker-only fits (3 hits), in a compilation unit of their own
-  template void fitTracks<3>(Queue& queue,
+  static_assert(::lstInputDevice::kITFitHits == 3);
+  void fitInnerTrackerTracks(Queue& queue,
                              uint32_t nTracks,
                              FitInput const* inputs,
                              float bField,
                              uint32_t const* lists,
                              Counters* counters,
-                             FittedState* states,
-                             FittedState* itStates);
+                             FittedState* itStates) {
+    launchFits<::lstInputDevice::kITFitHits, true>(
+        queue, nTracks, inputs, bField, ::lstInputDevice::kITFitList, lists, counters, itStates);
+  }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice

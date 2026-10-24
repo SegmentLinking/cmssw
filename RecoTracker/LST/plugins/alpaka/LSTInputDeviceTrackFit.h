@@ -63,10 +63,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
     return nHits >= kMinFitHits && nHits <= kMaxTrackHits;
   }
 
-  // the number of hits of the full fit of a track of nHits hits
+  // the number of hits of the full fit of a track of nHits hits: the largest fit size not above nHits, 0 below the
+  // smallest one. The fit sizes are the even numbers from kMinFitHits to kMaxFitHits.
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr uint32_t nFitHits(uint32_t nHits) {
-    return nHits < kMaxFitHits ? nHits : kMaxFitHits;
+    return nHits >= kMaxFitHits ? kMaxFitHits : (nHits < kMinFitHits ? 0 : nHits - nHits % 2);
   }
+
+  static_assert(kMinFitHits % 2 == 0 && kMaxFitHits % 2 == 0 && kMinFitHits <= kMaxFitHits,
+                "the fit sizes are the even numbers from kMinFitHits to kMaxFitHits");
+  static_assert(::lstInputDevice::kNumFitSizes == (kMaxFitHits - kMinFitHits) / 2 + 1,
+                "kNumFitSizes counts the even numbers from kMinFitHits to kMaxFitHits");
+  static_assert(nFitHits(kMaxFitHits) == kMaxFitHits && nFitHits(kMinFitHits) == kMinFitHits &&
+                    nFitHits(kMinFitHits - 1) == 0,
+                "nFitHits at the ends of the set of fit sizes");
+
+  // whether nFitHits maps each fit size, and the hit count one above it, to that fit size
+  constexpr bool fitSizesAreFixedPoints() {
+    for (uint32_t n = kMinFitHits; n <= kMaxFitHits; n += 2)
+      if (nFitHits(n) != n || (n + 1 <= kMaxFitHits && nFitHits(n + 1) != n))
+        return false;
+    return true;
+  }
+  static_assert(fitSizesAreFixedPoints(), "nFitHits maps each fit size, and the hit count above it, to the fit size");
 
   // The positions in a track of nHits hits of its nFit fitted hits, inside out, as the pixel-track fit takes them
   // (RecoTracker/PixelSeeding/plugins/alpaka/BrokenLineFit.h): a uniform stride of max(1, nHits / nFit) rounded to the
@@ -82,7 +100,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
   }
 
   // The fits of a pixel track of nHits hits:
-  // - the hits of the full fit (fitHitPositions) put into input.hits;
+  // - the hits of the full fit (nFitHits of them, at fitHitPositions) put into input.hits;
   // - for an inner-tracker-only candidate with kITFitHits inner-tracker hits, hits are put into input.itHits;
   // A track is an inner-tracker-only candidate when, as LSTOutputConverter decides the rebuild of a pLS seed
   // without its OT hits, its last hit is in the outer tracker and it has at most maxITHitsToDropOTHits

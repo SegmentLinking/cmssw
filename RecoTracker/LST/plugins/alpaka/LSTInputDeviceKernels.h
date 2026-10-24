@@ -22,9 +22,12 @@ namespace lstInputDevice {
   using ::lst::FitHit;
   using ::lst::FittedState;
 
-  // The Broken Line Fit of a pixel track (the full fit) uses all its hits up to kMaxFitHits; above it, kMaxFitHits
-  // hits taken with a uniform stride, the first and the last hit kept. Tracks with fewer than kMinFitHits hits are
-  // not fitted.
+  // The Broken Line Fit of a pixel track (the full fit) uses 4, 6, 8, 10, 12 or 14 hits, one fit kernel per size: a
+  // track is fitted with the largest size not above its hit count, its hits taken with a uniform stride that keeps
+  // the first and the last hit. Tracks with fewer than kMinFitHits hits, the fewest a pixel track has, are not
+  // fitted. Even sizes only, because each fit kernel costs GPU time whatever the number of tracks it fits, while a
+  // track whose hit count lies between two sizes loses only one hit to the stride.
+  constexpr uint32_t kNumFitSizes = 6;
   constexpr uint32_t kMinFitHits = 4;
   constexpr uint32_t kMaxFitHits = 14;
   // the inner-tracker-only fit, for the seeds that the output converter may rebuild without their OT hits
@@ -32,11 +35,28 @@ namespace lstInputDevice {
   // the largest pixel-track hit count: the hit counts are 8-bit columns
   constexpr uint32_t kMaxTrackHits = 255;
 
-  // One list of tracks per fit: list N - kITFitHits holds the full fits of N hits, and list 0 (N = kITFitHits) the
-  // inner-tracker-only fits, no full fit having fewer than kMinFitHits hits.
-  static_assert(kMinFitHits > kITFitHits);
-  constexpr uint32_t kNumFitLists = kMaxFitHits - kITFitHits + 1;
-  ALPAKA_FN_HOST_ACC constexpr uint32_t fitList(uint32_t nFit) { return nFit - kITFitHits; }
+  // One list of tracks per fit: list 0 (kITFitList) holds the inner-tracker-only fits, then one list per fit size,
+  // the smallest first: fitList(nFit) holds the full fits of nFit hits.
+  constexpr uint32_t kITFitList = 0;
+  constexpr uint32_t kNumFitLists = kNumFitSizes + 1;
+  // Precondition: nFit is a fit size, an even number from kMinFitHits to kMaxFitHits; nothing is checked at run time.
+  // The static_asserts below check every fit size.
+  ALPAKA_FN_HOST_ACC constexpr uint32_t fitList(uint32_t nFit) { return 1 + (nFit - kMinFitHits) / 2; }
+  static_assert(kMinFitHits > kITFitHits && kMaxFitHits == kMinFitHits + 2 * (kNumFitSizes - 1),
+                "the fit sizes are kNumFitSizes even numbers from kMinFitHits, all above kITFitHits");
+  static_assert(fitList(kMinFitHits) == 1 && fitList(kMaxFitHits) == kNumFitSizes,
+                "the lists of the full fits are 1 to kNumFitSizes");
+
+  // whether fitList maps the fit sizes, in order, to 1, 2, ..., kNumFitSizes
+  constexpr bool fitListsHaveNoGaps() {
+    uint32_t list = kITFitList;
+    for (uint32_t n = kMinFitHits; n <= kMaxFitHits; n += 2) {
+      if (fitList(n) != ++list)
+        return false;
+    }
+    return list == kNumFitSizes;
+  }
+  static_assert(fitListsHaveNoGaps(), "fitList maps the fit sizes to 1 to kNumFitSizes without gaps");
 
   // The hits of the fits of one pixel track.
   struct FitInput {
@@ -60,7 +80,7 @@ namespace lstInputDevice {
     uint32_t slotDetId[::lst::kMaxPLSHitsInHitsSoA];
     uint16_t slotClusterSize[::lst::kMaxPLSHitsInHitsSoA];
     uint32_t slotHitIndex[::lst::kMaxPLSHitsInHitsSoA];
-    // computed as for the fit (identical values); above kMaxFitHits hits a slot hit may not be a fitted hit
+    // computed as for the fit (identical values); a slot hit may not be a fitted hit when the fit drops hits
     FitHit slotHits[::lst::kMaxPLSHitsInHitsSoA];
   };
 
@@ -118,8 +138,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                      uint32_t* lists,
                      Counters* counters);
 
-  // The Broken Line Fit of the tracks in list N - kITFitHits: the full fits of N hits into states, or for
-  // N = kITFitHits the inner-tracker-only fits into itStates. One instantiation per compilation unit.
+  // The Broken Line Fit of the tracks in list fitList(N): the full fits of N hits into states. One instantiation per
+  // fit size, each in its own compilation unit.
   template <uint32_t N>
   void fitTracks(Queue& queue,
                  uint32_t nTracks,
@@ -127,8 +147,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                  float bField,
                  uint32_t const* lists,
                  Counters* counters,
-                 FittedState* states,
-                 FittedState* itStates);
+                 FittedState* states);
+
+  // The Broken Line Fit of the tracks in list kITFitList: the inner-tracker-only fits into itStates, in a
+  // compilation unit of their own.
+  void fitInnerTrackerTracks(Queue& queue,
+                             uint32_t nTracks,
+                             FitInput const* inputs,
+                             float bField,
+                             uint32_t const* lists,
+                             Counters* counters,
+                             FittedState* itStates);
+
+  // Every fit of the producer: the inner-tracker-only fits, then the full fits of each fit size, the smallest first.
+  void fitAllTracks(Queue& queue,
+                    uint32_t nTracks,
+                    FitInput const* inputs,
+                    float bField,
+                    uint32_t const* lists,
+                    Counters* counters,
+                    FittedState* states,
+                    FittedState* itStates);
 
   // Per track with a full state of status kOk: the closest approach to the beam line and the pLS.
   void makePixelSegments(Queue& queue,

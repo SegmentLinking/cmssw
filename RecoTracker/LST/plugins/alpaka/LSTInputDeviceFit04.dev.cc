@@ -9,7 +9,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                              float bField,
                              uint32_t const* lists,
                              Counters* counters,
-                             FittedState* states,
-                             FittedState* itStates);
+                             FittedState* states);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice

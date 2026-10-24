@@ -128,7 +128,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
           if (preparation.itCandidate)
             alpaka::atomicAdd(acc, &counters->nITCandidates, 1u, alpaka::hierarchy::Blocks{});
           if (preparation.itFit) {
-            const uint32_t itList = fitList(::lstInputDevice::kITFitHits);
+            const uint32_t itList = ::lstInputDevice::kITFitList;
             lists[itList * nTracks +
                   alpaka::atomicAdd(acc, &counters->listSize[itList], 1u, alpaka::hierarchy::Blocks{})] = track;
           } else if (preparation.itCandidate) {
@@ -415,6 +415,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                         itStates,
                         lists,
                         counters);
+  }
+
+  void fitAllTracks(Queue& queue,
+                    uint32_t nTracks,
+                    FitInput const* inputs,
+                    float bField,
+                    uint32_t const* lists,
+                    Counters* counters,
+                    FittedState* states,
+                    FittedState* itStates) {
+    fitInnerTrackerTracks(queue, nTracks, inputs, bField, lists, counters, itStates);
+    fitTracks<4>(queue, nTracks, inputs, bField, lists, counters, states);
+    fitTracks<6>(queue, nTracks, inputs, bField, lists, counters, states);
+    fitTracks<8>(queue, nTracks, inputs, bField, lists, counters, states);
+    fitTracks<10>(queue, nTracks, inputs, bField, lists, counters, states);
+    fitTracks<12>(queue, nTracks, inputs, bField, lists, counters, states);
+    fitTracks<14>(queue, nTracks, inputs, bField, lists, counters, states);
+    static_assert(::lstInputDevice::kNumFitSizes == 6 && ::lstInputDevice::kMinFitHits == 4 &&
+                      ::lstInputDevice::kMaxFitHits == 14,
+                  "one fitTracks call and one compilation unit per fit size");
   }
 
   void makePixelSegments(Queue& queue,

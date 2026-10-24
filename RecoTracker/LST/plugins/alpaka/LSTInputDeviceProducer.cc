@@ -152,7 +152,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       alpaka::memcpy(
           queue, caRecHitStartDevice, cms::alpakatools::make_host_view(caRecHitStart.data(), caRecHitStart.size()));
 
-      // the hits of each fit, the per-N track lists and the counters
+      // the hits of each fit, one track list per fit size and the counters
       auto inputs = cms::alpakatools::make_device_buffer<::lstInputDevice::FitInput[]>(queue, nTracks_);
       auto lists = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, ::lstInputDevice::kNumFitLists * nTracks_);
       counters_.emplace(cms::alpakatools::make_device_buffer<::lstInputDevice::Counters>(queue));
@@ -177,7 +177,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     itStates_->data(),
                                     lists.data(),
                                     counters_->data());
-      fitAllTracks(queue, inputs.data(), lists.data());
+      lstInputDevice::fitAllTracks(
+          queue, nTracks_, inputs.data(), bField_, lists.data(), counters_->data(), states_->data(), itStates_->data());
       lstInputDevice::makePixelSegments(
           queue, nTracks_, settings, states_->data(), candidates_->data(), counters_->data());
 
@@ -321,27 +322,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     using FittedState = ::lstInputDevice::FittedState;
     using PixelSegmentCandidate = ::lstInputDevice::PixelSegmentCandidate;
-
-    // the fit of every list: the inner-tracker-only fits and the full fits of each number of hits
-    void fitAllTracks(Queue& queue, ::lstInputDevice::FitInput const* inputs, uint32_t const* lists) {
-      auto* counters = counters_->data();
-      auto* states = states_->data();
-      auto* itStates = itStates_->data();
-      lstInputDevice::fitTracks<3>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<4>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<5>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<6>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<7>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<8>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<9>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<10>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<11>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<12>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<13>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      lstInputDevice::fitTracks<14>(queue, nTracks_, inputs, bField_, lists, counters, states, itStates);
-      static_assert(::lstInputDevice::kITFitHits == 3 && ::lstInputDevice::kMaxFitHits == 14,
-                    "one fitTracks call and one compilation unit per number of fitted hits");
-    }
 
     const float ptCut_;
     const int maxITHitsToDropOTHitsPurePLS_;

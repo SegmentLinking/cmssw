@@ -15,23 +15,24 @@
 #include "LSTInputDeviceTrackFit.h"
 
 // The fit kernel of the device LST input for one number of fitted hits; each compilation unit that includes this
-// header instantiates fitTracks for one N, so that the fits of different sizes are compiled separately.
+// header instantiates fitTracks for one fit size, or the inner-tracker-only fits, so that the fits of different sizes
+// are compiled separately.
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
 
-  // one thread per track of the list: the full fit of N hits, or for N = kITFitHits the inner-tracker-only fit, and
-  // the count of its rejections by reason
-  template <uint32_t N>
+  // one thread per track of list `list` (its entries at `tracks`): the full fit of N hits, or with kITOnly the
+  // inner-tracker-only fit, and the count of its rejections by reason
+  template <uint32_t N, bool kITOnly>
   struct FitTracksKernel {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   FitInput const* inputs,
                                   float bField,
-                                  uint32_t const* list,
+                                  uint32_t list,
+                                  uint32_t const* tracks,
                                   Counters* counters,
                                   FittedState* states) const {
-      constexpr bool kITOnly = N == ::lstInputDevice::kITFitHits;
-      const uint32_t size = counters->listSize[::lstInputDevice::fitList(N)];
+      const uint32_t size = counters->listSize[list];
       for (uint32_t i : cms::alpakatools::uniform_elements(acc, size)) {
-        const uint32_t track = list[i];
+        const uint32_t track = tracks[i];
         FittedState& state = states[track];
         ::lstInputDevice::FitHit const* hits = kITOnly ? &inputs[track].itHits[0] : &inputs[track].hits[0];
         fitState<N>(acc, hits, bField, state);
@@ -55,6 +56,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
     }
   };
 
+  // the fits of list `list` into states
+  template <uint32_t N, bool kITOnly>
+  void launchFits(Queue& queue,
+                  uint32_t nTracks,
+                  FitInput const* inputs,
+                  float bField,
+                  uint32_t list,
+                  uint32_t const* lists,
+                  Counters* counters,
+                  FittedState* states) {
+    if (nTracks == 0)
+      return;
+    // The list sizes are known on the device only: the grid covers every track, and the threads beyond the size of
+    // the list return at once. One track per thread: the fit keeps its matrices in registers and local memory.
+    constexpr uint32_t kThreads = 64;
+    alpaka::exec<Acc1D>(
+        queue,
+        cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nTracks, kThreads), kThreads),
+        FitTracksKernel<N, kITOnly>{},
+        inputs,
+        bField,
+        list,
+        lists + list * nTracks,
+        counters,
+        states);
+  }
+
   template <uint32_t N>
   void fitTracks(Queue& queue,
                  uint32_t nTracks,
@@ -62,23 +90,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                  float bField,
                  uint32_t const* lists,
                  Counters* counters,
-                 FittedState* states,
-                 FittedState* itStates) {
-    if (nTracks == 0)
-      return;
-    // The list sizes are known on the device only: the grid covers every track, and the threads beyond the size of
-    // the list return at once. One track per thread: the fit keeps its matrices in registers and local memory.
-    constexpr uint32_t kThreads = 64;
-    constexpr bool kITOnly = N == ::lstInputDevice::kITFitHits;
-    alpaka::exec<Acc1D>(
-        queue,
-        cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nTracks, kThreads), kThreads),
-        FitTracksKernel<N>{},
-        inputs,
-        bField,
-        lists + ::lstInputDevice::fitList(N) * nTracks,
-        counters,
-        kITOnly ? itStates : states);
+                 FittedState* states) {
+    static_assert(nFitHits(N) == N, "a fit size");
+    launchFits<N, false>(queue, nTracks, inputs, bField, ::lstInputDevice::fitList(N), lists, counters, states);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice
