@@ -668,6 +668,132 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     bool refFallback;  //!< true if no node passed the baseline rule and mRef = 0 is the fallback
   };
 
+  // Writes the matrix that matrixC_u() returns into the lower triangle and diagonal of the leading n-by-n block of
+  // c_uMat (the upper triangle is not written), with the same operations in the same order: the band is built
+  // transposed, and the final c_uMat + c_uMat.transpose() is kept element by element (each halved diagonal element
+  // doubled, + 0. on the band, which turns -0.0 into +0.0 as the sum does). For the outer fits, which then invert
+  // c_uMat in place: see choleskyInvertLowerInPlace().
+  template <alpaka::concepts::Acc TAcc, int n, typename M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void fillMatrixC_uLower(const TAcc& acc,
+                                                         const riemannFit::VectorNd<n>& weights,
+                                                         const riemannFit::VectorNd<n>& sTotal,
+                                                         const riemannFit::VectorNd<n>& varBeta,
+                                                         M& c_uMat) {
+    static_assert(M::RowsAtCompileTime >= n && M::ColsAtCompileTime >= n, "c_uMat must be at least n x n");
+    for (u_int j = 0; j < n; j++)
+      for (u_int i = j + 1; i < n; i++)
+        c_uMat(i, j) = 0;
+    for (u_int i = 0; i < n; i++) {
+      c_uMat(i, i) = weights(i);
+      if (i > 1)
+        c_uMat(i, i) += 1. / (varBeta(i - 1) * riemannFit::sqr(sTotal(i) - sTotal(i - 1)));
+      if (i > 0 && i < n - 1)
+        c_uMat(i, i) +=
+            (1. / varBeta(i)) * riemannFit::sqr((sTotal(i + 1) - sTotal(i - 1)) /
+                                                ((sTotal(i + 1) - sTotal(i)) * (sTotal(i) - sTotal(i - 1))));
+      if (i < n - 2)
+        c_uMat(i, i) += 1. / (varBeta(i + 1) * riemannFit::sqr(sTotal(i + 1) - sTotal(i)));
+
+      if (i > 0 && i < n - 1)
+        c_uMat(i + 1, i) =
+            1. / (varBeta(i) * (sTotal(i + 1) - sTotal(i))) *
+            (-(sTotal(i + 1) - sTotal(i - 1)) / ((sTotal(i + 1) - sTotal(i)) * (sTotal(i) - sTotal(i - 1))));
+      if (i < n - 2)
+        c_uMat(i + 1, i) +=
+            1. / (varBeta(i + 1) * (sTotal(i + 1) - sTotal(i))) *
+            (-(sTotal(i + 2) - sTotal(i)) / ((sTotal(i + 2) - sTotal(i + 1)) * (sTotal(i + 1) - sTotal(i))));
+
+      if (i < n - 2)
+        c_uMat(i + 2, i) = 1. / (varBeta(i + 1) * (sTotal(i + 2) - sTotal(i + 1)) * (sTotal(i + 1) - sTotal(i)));
+
+      c_uMat(i, i) *= 0.5;
+    }
+    // the symmetric sum; the elements outside the band stay 0 + 0 = +0.0
+    for (u_int i = 0; i < n; i++) {
+      c_uMat(i, i) = c_uMat(i, i) + c_uMat(i, i);
+      if (i < n - 1)
+        c_uMat(i + 1, i) = c_uMat(i + 1, i) + 0.;
+      if (i < n - 2)
+        c_uMat(i + 2, i) = c_uMat(i + 2, i) + 0.;
+    }
+  }
+
+  // Inverts in place the symmetric positive-definite matrix whose lower triangle and diagonal a holds (the upper
+  // triangle is ignored), with the operations of math::cholesky::invert() in the same order. From size 7 on, invert()
+  // runs math::cholesky::invertNN() (DataFormats/Math/interface/choleskyInversion.h), which copies its input into a
+  // local work array and writes the inverse into a second matrix. Here the work array is a itself and the inverse stays
+  // in it; only the storage differs. In the last stage, the pass that starts at index j stores the inverse's (j, j) at
+  // (j, j), then its lower row j + 1, the elements (j + 1, k) for k <= j, at (j + 1, k). Each of these work elements
+  // is last read before it is written: (j, j) by the sum of the same pass, (j + 1, k) by the diagonal sum of pass k
+  // (k <= j, before the row is written) and by the column sums of earlier passes. Finally the lower triangle is copied
+  // to the upper one, as invertNN() writes both. Below size 7, invert() uses closed-form inverters, called as they are.
+  // Together with fillMatrixC_uLower(), which spares the n-by-n result of matrixC_u() (and, in the circle fit, its
+  // copy into the matrix to invert), this keeps one matrix instead of four in the circle fit and three in the line fit
+  // on the per-thread stack of the GPU fit kernels, where the matrices of the larger fits do not fit in registers.
+  template <typename M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void choleskyInvertLowerInPlace(M& a) {
+    static_assert(M::RowsAtCompileTime == M::ColsAtCompileTime, "a square matrix is required");
+    constexpr int n = M::ColsAtCompileTime;
+    using T = typename M::Scalar;
+
+    if constexpr (n < 7) {
+      // the full symmetric matrix, so that the copy is equal in every element to the one inverted before
+      for (int row = 1; row < n; ++row)
+        for (int col = 0; col < row; ++col)
+          a(col, row) = a(row, col);
+      const M src = a;
+      math::cholesky::invert(src, a);
+    } else {
+      for (int j = 0; j < n; ++j) {
+        a(j, j) = T(1.) / a(j, j);
+        int jp1 = j + 1;
+        for (int l = jp1; l < n; ++l) {
+          a(j, l) = a(j, j) * a(l, j);
+          T s1 = -a(l, jp1);
+          for (int i = 0; i < jp1; ++i)
+            s1 += a(l, i) * a(i, jp1);
+          a(l, jp1) = -s1;
+        }
+      }
+
+      a(0, 1) = -a(0, 1);
+      a(1, 0) = a(0, 1) * a(1, 1);
+      for (int j = 2; j < n; ++j) {
+        int jm1 = j - 1;
+        for (int k = 0; k < jm1; ++k) {
+          T s31 = a(k, j);
+          for (int i = k; i < jm1; ++i)
+            s31 += a(k, i + 1) * a(i + 1, j);
+          a(k, j) = -s31;
+          a(j, k) = -s31 * a(j, j);
+        }
+        a(jm1, j) = -a(jm1, j);
+        a(j, jm1) = a(jm1, j) * a(j, j);
+      }
+
+      int j = 0;
+      while (j < n - 1) {
+        T s33 = a(j, j);
+        for (int i = j + 1; i < n; ++i)
+          s33 += a(j, i) * a(i, j);
+        a(j, j) = s33;
+
+        ++j;
+        for (int k = 0; k < j; ++k) {
+          T s32 = 0;
+          for (int i = j; i < n; ++i)
+            s32 += a(k, i) * a(i, j);
+          a(j, k) = s32;
+        }
+      }
+      // the last diagonal element of the inverse is a(n - 1, n - 1) already
+
+      for (int row = 1; row < n; ++row)
+        for (int col = 0; col < row; ++col)
+          a(col, row) = a(row, col);
+    }
+  }
+
   // Chooses the inner node m of the outer reference chord (m, n-1), shared by the circle and the line:
   // the outermost earlier node whose transverse distance from the last hit exceeds 2 cm.
   template <alpaka::concepts::Acc TAcc, typename M3xN>
@@ -781,32 +907,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
       r_uVec(i) = weightsVec(i) * zInSZplane(i);
     }
 
-    riemannFit::MatrixNplusONEd<n> c_uMat;
-    c_uMat.block(0, 0, n, n) = matrixC_u(acc, weightsVec, sTransverse, varBeta);
-    c_uMat(n, n) = 0;
-    //add the border to the c_uMat matrix
+    // the lower triangle of the c_uMat matrix of circleFit(), inverted in place: iMat is its inverse
+    riemannFit::MatrixNplusONEd<n> iMat;
+    fillMatrixC_uLower(acc, weightsVec, sTransverse, varBeta, iMat);
+    iMat(n, n) = 0;
+    //add the border (its row n) to the matrix
     for (u_int i = 0; i < n; i++) {
-      c_uMat(i, n) = 0;
+      iMat(n, i) = 0;
       if (i > 0 && i < n - 1) {
-        c_uMat(i, n) +=
-            -(sTransverse(i + 1) - sTransverse(i - 1)) * (sTransverse(i + 1) - sTransverse(i - 1)) /
-            (2. * varBeta(i) * (sTransverse(i + 1) - sTransverse(i)) * (sTransverse(i) - sTransverse(i - 1)));
+        iMat(n, i) += -(sTransverse(i + 1) - sTransverse(i - 1)) * (sTransverse(i + 1) - sTransverse(i - 1)) /
+                      (2. * varBeta(i) * (sTransverse(i + 1) - sTransverse(i)) * (sTransverse(i) - sTransverse(i - 1)));
       }
       if (i > 1) {
-        c_uMat(i, n) +=
+        iMat(n, i) +=
             (sTransverse(i) - sTransverse(i - 2)) / (2. * varBeta(i - 1) * (sTransverse(i) - sTransverse(i - 1)));
       }
       if (i < n - 2) {
-        c_uMat(i, n) +=
+        iMat(n, i) +=
             (sTransverse(i + 2) - sTransverse(i)) / (2. * varBeta(i + 1) * (sTransverse(i + 1) - sTransverse(i)));
       }
-      c_uMat(n, i) = c_uMat(i, n);
       if (i > 0 && i < n - 1)
-        c_uMat(n, n) += riemannFit::sqr(sTransverse(i + 1) - sTransverse(i - 1)) / (4. * varBeta(i));
+        iMat(n, n) += riemannFit::sqr(sTransverse(i + 1) - sTransverse(i - 1)) / (4. * varBeta(i));
     }
 
-    riemannFit::MatrixNplusONEd<n> iMat;
-    math::cholesky::invert(c_uMat, iMat);
+    choleskyInvertLowerInPlace(iMat);
     riemannFit::VectorNplusONEd<n> uVec = iMat * r_uVec;  // obtain the fitted parameters by solving the linear system
 
     // compute (phi_e, x_T, kappa) at the corrected outermost node, from the chord (m, n-1)...
@@ -944,8 +1068,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     for (u_int i = 0; i < n; i++) {
       r_u(i) = weights(i) * zInSZplane(i);
     }
+    // the lower triangle of matrixC_u(), inverted in place: iMat is its inverse
     riemannFit::MatrixNd<n> iMat;
-    math::cholesky::invert(matrixC_u(acc, weights, sTotal, varBeta), iMat);
+    fillMatrixC_uLower(acc, weights, sTotal, varBeta, iMat);
+    choleskyInvertLowerInPlace(iMat);
 
     riemannFit::VectorNd<n> uVec = iMat * r_u;  // obtain the fitted parameters by solving the linear system
 
