@@ -124,6 +124,16 @@ void LSTEvent::trackTransientMB(double mb) {
   memoryPeakLiveMB_ = std::max(memoryPeakLiveMB_, memoryLiveMB_);
 }
 
+template <typename... TBufs>
+double LSTEvent::trackScratchMB(std::string_view stage, TBufs const&... bufs) {
+  if (!objectsStatistics_)
+    return 0;
+  const double mb = (0. + ... + double(alpaka::getExtentProduct(bufs) * sizeof(alpaka::Elem<TBufs>))) / 1e6;
+  trackTransientMB(mb);
+  lstWarning(std::format("[MEM] (transient) {} scratch ({:.1f} MB)", stage, mb));
+  return mb;
+}
+
 template <typename TDC, typename THC>
 void LSTEvent::releaseDeviceCollection(std::optional<TDC>& dc, std::optional<THC>& hc) {
   if (!dc)
@@ -249,6 +259,7 @@ void LSTEvent::createMiniDoublets() {
   auto mdPassMask_buf = cms::alpakatools::make_device_buffer<uint64_t[]>(queue_, nHits);
   // Cut terms of the hits that set the MD cut, once per hit (indexed by hit); transient.
   auto mdHitTerms_buf = cms::alpakatools::make_device_buffer<MDHitTerms[]>(queue_, nHits);
+  const double scratchMB = trackScratchMB("MiniDoublets", mdPassMask_buf, mdHitTerms_buf);
   {
     constexpr int threadsPerBlockY = 16;
     alpaka::exec<Acc2D>(queue_,
@@ -416,6 +427,7 @@ void LSTEvent::createMiniDoublets() {
 
   // Last reader of the Hits collection.
   releaseDeviceCollection(hitsDC_, hitsHC_);
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::createSegmentsWithModuleMap() {
@@ -427,6 +439,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
 
   // Outer-MD terms of the segment selection (asin of the anchor rt), once per OT MD; transient.
   auto outerMDTerms_buf = cms::alpakatools::make_device_buffer<SegOuterMDTerms[]>(queue_, nTotalMDsOT_);
+  const double scratchMB = trackScratchMB("Segments", segPassMask_buf, outerMDTerms_buf);
   alpaka::exec<Acc1D>(queue_,
                       cms::alpakatools::make_workdiv<Acc1D>(std::max((nTotalMDsOT_ + 255) / 256, 1u), 256),
                       FillSegOuterMDTerms{},
@@ -531,6 +544,7 @@ void LSTEvent::createSegmentsWithModuleMap() {
 
   // Last reader of the build-only MD columns (FillCompactSegments in compactSegments reads them).
   releaseDeviceCollection(miniDoubletsBuildDC_, miniDoubletsBuildHC_);
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::compactSegments(SegmentCandidatesDeviceCollection const& candidatesDC) {
@@ -1104,6 +1118,8 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   auto pixelCellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pixelGrid.nCells() + 1);
   auto pixelCellItems_buf =
       cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, n_max_pixel_quintuplets + n_max_pixel_triplets);
+  double scratchMB =
+      trackScratchMB("TrackCandidates T5 x pixel", pixelCellCount_buf, pixelCellStart_buf, pixelCellItems_buf);
   alpaka::memset(queue_, pixelCellCount_buf, 0u);
   auto const pixelGridFill_workDiv = cms::alpakatools::make_workdiv<Acc1D>(
       cms::alpakatools::divide_up_by(n_max_pixel_quintuplets + n_max_pixel_triplets, 256u), 256u);
@@ -1401,6 +1417,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
   alpaka::memset(queue_, cellCount_buf, 0u);
   auto cellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, grid.nCells() + 1);
   auto cellTCs_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotal);
+  scratchMB += trackScratchMB("TrackCandidates pLS", hitKeyBits_buf, cellCount_buf, cellStart_buf, cellTCs_buf);
 
   auto const crossCleanGrid_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 256);
   alpaka::exec<Acc1D>(queue_,
@@ -1473,6 +1490,7 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       pixelSegmentsDC_->const_view(),
                       tc_pls_triplets,
                       nTotal);
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::copyPixelSeedTypesToHost() {
@@ -1717,6 +1735,8 @@ void LSTEvent::createQuintuplets() {
   auto nTotalQuintuplets1_view_d = cms::alpakatools::make_device_view(queue_, rangesOccupancy.nTotalQuintsByMD1());
   // Second dBeta cut decisions per last outer segment (see passQuintupletDBeta2Memo); valid for both counting runs.
   auto dBeta2Memo_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nTotalSegmentsOT_);
+  double scratchMB = trackScratchMB(
+      "Quintuplets", nKeysByMD_buf, keyOffsetByMD_buf, keys_buf, dBetaPassMask_buf, moduleT5Count_buf, dBeta2Memo_buf);
   alpaka::memset(queue_, dBeta2Memo_buf, 0xFF);
   // The selection synchronizes the threads of a row, so on the GPU a block is one row.
   auto select_workDiv = countConn_workDiv;
@@ -1796,6 +1816,8 @@ void LSTEvent::createQuintuplets() {
     lstWarning(std::format("Counting-kernel overflow, objects dropped: {} quintuplet pairs",
                            *nSelected_buf.data() - selectedCapacity));
   auto& [selectedT3s_buf, selectedBridgeRadius_buf, selectedDnnScore_buf] = selected;
+  scratchMB +=
+      trackScratchMB("Quintuplets selected-pair", selectedT3s_buf, selectedBridgeRadius_buf, selectedDnnScore_buf);
   const unsigned int nSelected = std::min(*nSelected_buf.data(), selectedCapacity);
 
   auto nEligibleT5Modules = *nEligibleT5Modules_buf.data();
@@ -1934,6 +1956,7 @@ void LSTEvent::createQuintuplets() {
     memoryLiveMB_ -= looseMB;
     addQuintupletsToEventExplicit();
   }
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::pixelLineSegmentCleaning(bool no_pls_dupclean) {
@@ -1999,6 +2022,7 @@ void LSTEvent::createPixelQuintuplets() {
   auto cellCount_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pT5Grid.nCells());
   auto cellStart_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, pT5Grid.nCells() + 1);
   auto cellItems_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, n_max_pixel_quintuplets);
+  const double scratchMB = trackScratchMB("PixelQuintuplets", cellCount_buf, cellStart_buf, cellItems_buf);
   alpaka::memset(queue_, cellCount_buf, 0u);
   auto const pT5GridFill_workDiv =
       cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(n_max_pixel_quintuplets, 256u), 256u);
@@ -2049,6 +2073,7 @@ void LSTEvent::createPixelQuintuplets() {
 #endif
 
   compactPixelQuintuplets(queue_);
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::createQuadruplets() {
@@ -2061,6 +2086,7 @@ void LSTEvent::createQuadruplets() {
   alpaka::memset(queue_, moduleT4Max_buf, 0u);
   // Dense-pair decisions of the counting kernel (count -> create), live only in this stage.
   auto t4PassMask_buf = cms::alpakatools::make_device_buffer<uint32_t[]>(queue_, nTripletSlots);
+  const double scratchMB = trackScratchMB("Quadruplets", moduleT4Max_buf, t4PassMask_buf);
   alpaka::memset(queue_, t4PassMask_buf, 0u);
 
   // 32 inner triplets per block (not one module per block): dense jet modules spread over the whole device. A row of
@@ -2186,6 +2212,7 @@ void LSTEvent::createQuadruplets() {
   if (objectsStatistics_) {
     addQuadrupletsToEventExplicit();
   }
+  memoryLiveMB_ -= scratchMB;  // scratch released at the end of the stage
 }
 
 void LSTEvent::addMiniDoubletsToEventExplicit() {

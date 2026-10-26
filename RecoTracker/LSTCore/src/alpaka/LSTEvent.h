@@ -123,6 +123,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     void trackAllocatedMB(double mb);
     void trackTransientMB(double mb);  // live (peak) accounting only, not added to the allocated total
+    // Verbose census of a stage's scratch buffers: adds them to the live memory and returns their size (0 when not
+    // verbose), which the stage subtracts when they are released.
+    template <typename... TBufs>
+    double trackScratchMB(std::string_view stage, TBufs const&... bufs);
     // Releases a device collection after its last use; with keepHostCopies_ its host copy is made first.
     template <typename TDC, typename THC>
     void releaseDeviceCollection(std::optional<TDC>& dc, std::optional<THC>& hc);
