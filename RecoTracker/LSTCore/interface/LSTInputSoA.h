@@ -15,7 +15,6 @@ namespace lst {
                       SOA_COLUMN(float, zs),
                       SOA_COLUMN(unsigned int, detid),
                       SOA_COLUMN(uint16_t, clustsize),
-                      SOA_COLUMN(lst::ArrayFx6, cov),
                       SOA_SCALAR(unsigned int, nHitsOT),
                       SOA_SCALAR(float, B))
 

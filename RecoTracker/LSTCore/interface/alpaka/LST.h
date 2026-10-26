@@ -13,6 +13,10 @@
 #include <numeric>
 #include <alpaka/alpaka.hpp>
 
+namespace lst {
+  struct OTHitCovarianceInputs;
+}  // namespace lst
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   class LSTEvent;
 
@@ -20,9 +24,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   public:
     LST() = default;
 
-    // produceTCSeedStates: also compute the Broken Line Fit seed state of every track candidate (ignored in the
-    // standalone build, which does not compute them). It requires an LST input filled on the device: the fit reads
-    // hits.cov, the field scalar B and the hitsIT positions and covariances, which lst::prepareInput leaves unfilled.
+    // tcSeedStateOTHits: if not null, also compute the Broken Line Fit seed state of every track candidate, with the
+    // covariances of the OT hits computed from these OT rechits and module frames (ignored in the standalone build,
+    // which does not compute the seed states). The OT rechits must be those the LST input was built from: OT row r of
+    // the input is rechit r. It requires an LST input filled on the device: the fit reads the field
+    // scalar B and the hitsIT positions and covariances, which lst::prepareInput leaves unfilled.
     void run(Queue& queue,
              bool verbose,
              const float ptCut,
@@ -31,7 +37,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
              LSTInputDeviceCollection const* lstInputDC,
              bool no_pls_dupclean,
              bool tc_pls_triplets,
-             bool produceTCSeedStates = false);
+             ::lst::OTHitCovarianceInputs const* tcSeedStateOTHits = nullptr);
     std::unique_ptr<TrackCandidatesBaseDeviceCollection> getTrackCandidates() {
       return std::move(trackCandidatesBaseDC_);
     }

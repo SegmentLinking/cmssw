@@ -26,13 +26,16 @@
 <!-- alpaka-based portable plugins -->
 <library file="alpaka/LSTInputProducer.cc alpaka/LSTModulesDevESProducer.cc alpaka/LSTProducer.cc" name="RecoTrackerLSTPluginsPortable">
   <use name="alpaka"/>
+  <use name="DataFormats/GeometrySurface"/>
   <use name="DataFormats/TrajectorySeed"/>
   <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
   <use name="TrackingTools/PatternTools"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="FWCore/Framework"/>
   <use name="FWCore/ParameterSet"/>
   <use name="FWCore/Utilities"/>
+  <use name="Geometry/Records"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="RecoTracker/LST"/>

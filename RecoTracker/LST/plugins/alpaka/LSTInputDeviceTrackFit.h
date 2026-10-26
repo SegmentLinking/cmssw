@@ -9,10 +9,10 @@
 
 #include <alpaka/alpaka.hpp>
 
-#include "DataFormats/GeometrySurface/interface/SOARotation.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/LST/interface/PixelSegmentClosestApproach.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
+#include "RecoTracker/LSTCore/interface/OTHitCovariance.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
 #include "RecoTracker/LSTCore/interface/alpaka/SeedStateFit.h"
@@ -32,6 +32,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
   using ::ALPAKA_ACCELERATOR_NAMESPACE::lst::checkState;
   using ::ALPAKA_ACCELERATOR_NAMESPACE::lst::fitState;
   using ::ALPAKA_ACCELERATOR_NAMESPACE::lst::setUnfit;
+  // the global covariance of a hit from its module frame, shared with the fit of the track candidates
+  using ::lst::hitCovariance;
 
   // A hit of a pixel track as prepareTrack reads it: what the fit uses, and what the LST input records.
   struct TrackHit {
@@ -48,15 +50,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
     bool itCandidate;  // the output converter may rebuild the seed without its OT hits
     bool itFit;        // an inner-tracker-only candidate with the kITFitHits inner-tracker hits of that fit
   };
-
-  // the global covariance (xx, xy, yy, xz, yz, zz) of a hit with local variances varX and varY, uncorrelated, on a
-  // module of frame `frame`
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void hitCovariance(SOAFrame<float> const& frame,
-                                                         float varX,
-                                                         float varY,
-                                                         float cov[6]) {
-    frame.toGlobal(varX, 0.f, varY, cov);
-  }
 
   // whether a pixel track of nHits hits is fitted
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE constexpr bool isFitted(uint32_t nHits) {

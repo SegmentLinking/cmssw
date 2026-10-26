@@ -18,7 +18,7 @@ void LST::run(Queue& queue,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
               bool tc_pls_triplets,
-              bool produceTCSeedStates) {
+              ::lst::OTHitCovarianceInputs const* tcSeedStateOTHits) {
   auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData);
 
   event.addInputToEvent(lstInputDC);
@@ -138,8 +138,8 @@ void LST::run(Queue& queue,
 
 #ifndef LST_STANDALONE
   // only when asked for: otherwise nothing is allocated or launched
-  if (produceTCSeedStates)
-    event.fitTCSeedStates();
+  if (tcSeedStateOTHits != nullptr)
+    event.fitTCSeedStates(*tcSeedStateOTHits);
 #endif
 
   // after the last allocation of the event, so that the summary includes the seed-state fit
@@ -151,6 +151,6 @@ void LST::run(Queue& queue,
   trackCandidatesBaseDC_ = event.releaseTrackCandidatesBaseDeviceCollection();
 #ifndef LST_STANDALONE
   // set on every call, so that an LST run again without the seed states does not hand out those of an earlier event
-  tcSeedStatesDC_ = produceTCSeedStates ? event.releaseTCSeedStatesDeviceCollection() : nullptr;
+  tcSeedStatesDC_ = tcSeedStateOTHits != nullptr ? event.releaseTCSeedStatesDeviceCollection() : nullptr;
 #endif
 }

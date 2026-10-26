@@ -7,6 +7,7 @@ hltLST = cms.EDProducer('LSTProducer@alpaka',
     nopLSDupClean = cms.bool(True),
     tcpLSTriplets = cms.bool(True),
     produceTCSeedStates = cms.bool(True),
+    otRecHitsSoA = cms.InputTag('hltSiPhase2RecHitsSoA'),
     mightGet = cms.optional.untracked.vstring,
     alpaka = cms.untracked.PSet(
         backend = cms.untracked.string('')

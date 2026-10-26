@@ -33,6 +33,7 @@ hltInputLSTSerialSync = makeSerialClone(hltInputLST,
     pixelTracksSoA = "hltPhase2PixelTrackTorchHighPuritySelectorSerialSync",
     pixelTracks = "hltPhase2PixelTracksSerialSync"
 )
+# hltLSTSerialSync keeps otRecHitsSoA of hltLST: as for hltInputLSTSerialSync, the OT rechits have no serial clone
 hltLSTSerialSync = makeSerialClone(hltLST,
     lstInput = "hltInputLSTSerialSync"
 )

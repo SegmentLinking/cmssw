@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <limits>
 
 #include <alpaka/alpaka.hpp>
 
@@ -217,14 +216,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
       }
     };
 
-    // the OT rows of the LST input: positions, detId and cluster size as the OT rechits,
-    // and the global covariance from the module frames, computed as for the OT hits of the fits.
+    // the OT rows of the LST input: positions, detId and cluster size as the OT rechits, row r from OT rechit r, so
+    // that a consumer can find in the OT rechits what these rows do not carry (the local errors and the module)
     struct FillOTHitsKernel {
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                     ::lst::LSTInputView input,
                                     ::reco::Phase2OTRecHitsConstView otRecHits,
                                     uint32_t nOTHits,
-                                    ::lst::LSTSeedFitModulesConstView modules,
                                     float bField) const {
         auto hits = input.hits();
         if (once_per_grid(acc)) {
@@ -237,18 +235,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
           hits[row].zs() = otRecHits[row].zGlobal();
           hits[row].detid() = otRecHits[row].detId();
           hits[row].clustsize() = otRecHits[row].clusterSize();
-          float cov[6];
-          hitCovariance(modules[otRecHits[row].detectorIndex()].frame(),
-                        otRecHits[row].xerrLocal(),
-                        otRecHits[row].yerrLocal(),
-                        cov);
-          for (int k = 0; k < 6; ++k)
-            hits.cov()[row][k] = cov[k];
         }
       }
     };
 
-    // the pLS and their hits; the pLS-hit rows of the hits block carry packed kinematics, so their covariance is NaN,
+    // the pLS and their hits; the pLS-hit rows of the hits block carry packed kinematics,
     // and the hitsIT rows the slot hits with the values computed as for the fit.
     struct FillPixelSegmentsKernel {
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
@@ -259,7 +250,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                                     uint32_t const* seedIndex,
                                     uint32_t const* segmentIndex,
                                     uint32_t const* hitOffset) const {
-        constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
         auto hits = input.hits();
         auto hitsIT = input.hitsIT();
         auto segments = input.pixelSeeds();
@@ -283,10 +273,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
             hitsIT[itRow].xs() = fitHit.x;
             hitsIT[itRow].ys() = fitHit.y;
             hitsIT[itRow].zs() = fitHit.z;
-            for (int k = 0; k < 6; ++k) {
-              hits.cov()[firstHit + slot][k] = kNaN;
+            for (int k = 0; k < 6; ++k)
               hitsIT.cov()[itRow][k] = fitHit.cov[k];
-            }
           }
           auto segment = segments[segmentIndex[track]];
           segment.firstHit() = firstHit;
@@ -482,7 +470,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                     ::lst::LSTInputView input,
                     ::reco::Phase2OTRecHitsConstView otRecHits,
                     uint32_t nOTHits,
-                    ::lst::LSTSeedFitModulesConstView modules,
                     float bField,
                     PixelSegmentCandidate const* candidates,
                     uint32_t nTracks,
@@ -496,7 +483,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                         input,
                         otRecHits,
                         nOTHits,
-                        modules,
                         bField);
     if (nTracks > 0)
       alpaka::exec<Acc1D>(queue,

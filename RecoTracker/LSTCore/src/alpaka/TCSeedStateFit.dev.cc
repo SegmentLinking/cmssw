@@ -24,13 +24,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
     struct PrepareFitsKernel {
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                     ::lst::LSTInputConstView input,
+                                    ::lst::OTHitCovarianceInputs otHits,
                                     ::lst::TrackCandidatesBaseConst candidates,
                                     uint32_t nTCs,
                                     FitInput* inputs,
                                     ::lst::FittedState* states,
                                     uint32_t* lists,
                                     Counters* counters) const {
-        const InputHits inputHits{input.hits(), input.hitsIT(), input.pixelSeeds(), input.hits().nHitsOT()};
+        const InputHits inputHits{input.hits(), input.hitsIT(), input.pixelSeeds(), input.hits().nHitsOT(), otHits};
         for (uint32_t candidate : cms::alpakatools::uniform_elements(acc, nTCs)) {
           Collected collected;
           Selection selection;
@@ -105,6 +106,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
 
   void prepareFits(Queue& queue,
                    ::lst::LSTInputConstView input,
+                   ::lst::OTHitCovarianceInputs const& otHits,
                    ::lst::TrackCandidatesBaseConst candidates,
                    uint32_t nTCs,
                    Scratch const& scratch) {
@@ -116,6 +118,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
                         cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(nTCs, kThreads), kThreads),
                         PrepareFitsKernel{},
                         input,
+                        otHits,
                         candidates,
                         nTCs,
                         scratch.inputs,
@@ -146,13 +149,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
 
   void fitSeedStates(Queue& queue,
                      ::lst::LSTInputConstView input,
+                     ::lst::OTHitCovarianceInputs const& otHits,
                      ::lst::TrackCandidatesBaseConst candidates,
                      uint32_t nTCs,
                      ::lst::TCSeedStatesView seedStates,
                      Scratch const& scratch) {
     auto counters = cms::alpakatools::make_device_view(queue, *scratch.counters);
     alpaka::memset(queue, counters, 0);
-    prepareFits(queue, input, candidates, nTCs, scratch);
+    prepareFits(queue, input, otHits, candidates, nTCs, scratch);
     fitCandidates<14>(queue, input.hits(), nTCs, scratch);
     fitCandidates<12>(queue, input.hits(), nTCs, scratch);
     fitCandidates<10>(queue, input.hits(), nTCs, scratch);

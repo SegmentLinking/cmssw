@@ -169,9 +169,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void createPixelQuintuplets();
     void createQuadruplets();
 #ifndef LST_STANDALONE
-    // The Broken Line Fit seed state of every track candidate, after createTrackCandidates. Not in the standalone
-    // build, which does not use Eigen.
-    void fitTCSeedStates();
+    // The Broken Line Fit seed state of every track candidate, after createTrackCandidates, with the covariances of
+    // the OT hits computed from otHits. Not in the standalone build, which does not use Eigen.
+    void fitTCSeedStates(::lst::OTHitCovarianceInputs const& otHits);
 #endif
 
     // functions that map the objects to the appropriate modules

@@ -187,12 +187,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstInputDevice {
                           uint32_t* hitOffset,
                           Totals* totals);
 
-  // the LST input: every OT rechit, then the pLS and their hits
+  // the LST input: every OT rechit (OT row r from OT rechit r), then the pLS and their hits
   void fillLSTInput(Queue& queue,
                     ::lst::LSTInputView input,
                     ::reco::Phase2OTRecHitsConstView otRecHits,
                     uint32_t nOTHits,
-                    ::lst::LSTSeedFitModulesConstView modules,
                     float bField,
                     PixelSegmentCandidate const* candidates,
                     uint32_t nTracks,

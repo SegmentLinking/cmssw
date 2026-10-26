@@ -10,6 +10,7 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/LSTCore/interface/LSTInputSoA.h"
+#include "RecoTracker/LSTCore/interface/OTHitCovariance.h"
 #include "RecoTracker/LSTCore/interface/SeedStateFitTypes.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
 #include "RecoTracker/LSTCore/interface/TrackCandidatesSoA.h"
@@ -75,9 +76,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
   };
 
   // The seed states of the first nTCs track candidates of `candidates` into `seedStates` (nTCs rows),
-  // with the hits of `input`.
+  // with the hits of `input` and the covariances of its OT hits computed from `otHits`.
   void fitSeedStates(Queue& queue,
                      ::lst::LSTInputConstView input,
+                     ::lst::OTHitCovarianceInputs const& otHits,
                      ::lst::TrackCandidatesBaseConst candidates,
                      uint32_t nTCs,
                      ::lst::TCSeedStatesView seedStates,
@@ -88,6 +90,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
   // candidate that is not fitted an unfit state and its counter. The counters must be zero.
   void prepareFits(Queue& queue,
                    ::lst::LSTInputConstView input,
+                   ::lst::OTHitCovarianceInputs const& otHits,
                    ::lst::TrackCandidatesBaseConst candidates,
                    uint32_t nTCs,
                    Scratch const& scratch);

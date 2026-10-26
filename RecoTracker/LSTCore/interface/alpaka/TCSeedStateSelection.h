@@ -15,6 +15,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/LSTCore/interface/LSTInputSoA.h"
+#include "RecoTracker/LSTCore/interface/OTHitCovariance.h"
 #include "RecoTracker/LSTCore/interface/PixelSegmentParameters.h"
 #include "RecoTracker/LSTCore/interface/SeedStateFitTypes.h"
 #include "RecoTracker/LSTCore/interface/SeedStateSoA.h"
@@ -51,9 +52,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
   }
 
   // The hits of the LST input as the fit reads them.
-  // - A hit index h < nHitsOT is an OT row of `hits`, with its position and global covariance there.
-  // - A hit index h >= nHitsOT is a pLS hit slot: its row of `hits` holds pLS kinematics and
-  //   no covariance (see RecoTracker/LST/plugins/alpaka/LSTInputDeviceKernels.dev.cc, FillPixelSegmentsKernel),
+  // - A hit index h < nHitsOT is an OT row of `hits`, with its position there. Its global covariance is computed from
+  //   row h of the OT rechits and its module frame (otHits), as the device LST input computes it for the fits of the
+  //   pixel tracks: the LST input does not store it, since the fit needs it for few of the OT rows.
+  // - A hit index h >= nHitsOT is a pLS hit slot: its row of `hits` holds pLS kinematics
+  //   (see RecoTracker/LST/plugins/alpaka/LSTInputDeviceKernels.dev.cc, FillPixelSegmentsKernel),
   //   so its position and covariance are read from hitsIT[h - nHitsOT], the values that entered
   //   the fit of the pixel track; its detid tells a pixel hit from an OT hit of the pixel track.
   struct InputHits {
@@ -61,6 +64,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
     ::lst::HitsITConst hitsIT;
     ::lst::PixelSeedsConst pixelSeeds;
     uint32_t nHitsOT;
+    ::lst::OTHitCovarianceInputs otHits;
 
     ALPAKA_FN_ACC bool isPixel(uint32_t h) const { return h >= nHitsOT && hits.detid()[h] == ::lst::kPixelModuleId; }
 
@@ -88,9 +92,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst::tcSeedState {
     ALPAKA_FN_ACC ::lst::FitHit fitHit(uint32_t h) const {
       ::lst::FitHit hit;
       position(h, hit.x, hit.y, hit.z);
-      auto const& cov = h < nHitsOT ? hits.cov()[h] : hitsIT.cov()[h - nHitsOT];
-      for (int k = 0; k < 6; ++k)
-        hit.cov[k] = cov[k];
+      if (h < nHitsOT) {
+        otHits.covariance(h, hit.cov);
+      } else {
+        auto const& cov = hitsIT.cov()[h - nHitsOT];
+        for (int k = 0; k < 6; ++k)
+          hit.cov[k] = cov[k];
+      }
       return hit;
     }
 

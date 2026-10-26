@@ -4,8 +4,10 @@
 <use name="root"/>
 <use name="FWCore/MessageLogger"/>
 <use name="DataFormats/Common"/>
+<use name="DataFormats/GeometrySurface" source_only="1"/>
 <use name="DataFormats/SoATemplate"/>
 <use name="DataFormats/TrackerRecHit2D"/>
+<use name="DataFormats/TrackingRecHitSoA" source_only="1"/>
 <use name="DataFormats/TrajectorySeed"/>
 <use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="HeterogeneousCore/AlpakaMath"/>

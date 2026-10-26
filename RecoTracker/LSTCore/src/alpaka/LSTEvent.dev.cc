@@ -2375,7 +2375,7 @@ std::unique_ptr<TrackCandidatesBaseDeviceCollection> LSTEvent::releaseTrackCandi
 }
 
 #ifndef LST_STANDALONE
-void LSTEvent::fitTCSeedStates() {
+void LSTEvent::fitTCSeedStates(::lst::OTHitCovarianceInputs const& otHits) {
   // one row per track candidate, in track-candidate order
   const unsigned int nTCs = std::min<unsigned int>(getNumberOfTrackCandidates(), trackCandidatesBaseDC_->size());
   tcSeedStatesDC_.emplace(queue_, nTCs, nTCs);
@@ -2397,6 +2397,7 @@ void LSTEvent::fitTCSeedStates() {
   }
   tcSeedState::fitSeedStates(queue_,
                              lstInputDC_->const_view(),
+                             otHits,
                              trackCandidatesBaseDC_->const_view(),
                              nTCs,
                              tcSeedStatesDC_->view(),
