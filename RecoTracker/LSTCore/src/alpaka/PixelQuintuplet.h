@@ -480,6 +480,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     PixelSeedData pixelData =
         loadPixelSeedData(pixelSeeds, pixelSegments, mds, segments, pixelSegmentIndex, pixelSegmentArrayIndex);
 
+    PixelSegmentTestMemo segMemo;  // fresh per pair (a memo across the pT5 pairs measured slower)
     if (not runPixelTripletDefaultAlgo<dnn::pt3dnn::pT5WP>(acc,
                                                            modules,
                                                            mds,
@@ -487,6 +488,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                                            pixelData,
                                                            triplets,
                                                            t5InnerT3Index,
+                                                           segMemo,
                                                            pixelRadiusTemp,
                                                            tripletRadius,
                                                            centerXTemp,

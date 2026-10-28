@@ -1,6 +1,7 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_ObjectCompaction_h
 #define RecoTracker_LSTCore_src_alpaka_ObjectCompaction_h
 
+#include "HeterogeneousCore/AlpakaInterface/interface/prefixScan.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
@@ -21,6 +22,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       ALPAKA_ASSERT_ACC((alpaka::getWorkDiv<alpaka::Grid, alpaka::Blocks>(acc)[0] == 1));
       constexpr unsigned int kMaxThreads = 1024;
       auto& partial = alpaka::declareSharedVar<unsigned int[kMaxThreads], __COUNTER__>(acc);
+      auto& warpSums = alpaka::declareSharedVar<unsigned int[kMaxThreads / 16], __COUNTER__>(acc);
       const unsigned int nThreads = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
       const unsigned int tid = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
       ALPAKA_ASSERT_ACC(nThreads <= kMaxThreads);
@@ -35,17 +37,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
       }
       partial[tid] = sum;
       alpaka::syncBlockThreads(acc);
-      if (cms::alpakatools::once_per_block(acc)) {
-        unsigned int running = 0;
-        for (unsigned int t = 0; t < nThreads; ++t) {
-          const unsigned int threadSum = partial[t];
-          partial[t] = running;
-          running += threadSum;
-        }
-        compactIndices[nLowerModules] = static_cast<int>(running);
-      }
-      alpaka::syncBlockThreads(acc);
-      unsigned int offset = partial[tid];
+      cms::alpakatools::blockPrefixScan(acc, partial, static_cast<int32_t>(nThreads), warpSums);  // inclusive
+      if (tid == nThreads - 1)
+        compactIndices[nLowerModules] = static_cast<int>(partial[tid]);
+      unsigned int offset = partial[tid] - sum;
       for (unsigned int m = begin; m < end; ++m) {
         if (looseIndices[m] == -1) {
           compactIndices[m] = -1;
