@@ -38,15 +38,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   // the checks of a stored state, shared with the host (RecoTracker/LSTCore/interface/SeedStateFitTypes.h)
   using ::lst::checkState;
 
+  // Doubles in the work array of the fit of n hits: one (n+1)x(n+1) matrix, used by lineFitOuter (its leading n*n
+  // doubles) and then by circleFitOuter.
+  constexpr uint32_t fitWorkSize(uint32_t n) { return (n + 1) * (n + 1); }
+
+  // Static shared memory per block: 48 KiB on the GPUs (every CUDA architecture CMSSW builds for; HIP allows 64 KiB),
+  // and alpaka's block-shared capacity on the CPU backends (47 KiB by default). alpaka checks the CPU capacity only
+  // with an assertion that a release build may compile out, so the fit kernels check their arrays against both
+  // limits at compile time.
+  constexpr uint32_t kFitSharedBytesGPU = 48u << 10;
+  constexpr uint32_t kFitSharedBytesCPU = alpaka::BlockSharedDynMemberAllocKiB << 10;
+
+  // Threads per block of the fit kernels of n hits on the GPUs, where each thread has its work array in block-shared
+  // memory: the largest multiple of 8, at most 64, whose work arrays fit in kFitSharedBytesGPU. The kernels and their
+  // launches use the same number.
+  constexpr uint32_t fitThreadsPerBlock(uint32_t n) {
+    uint32_t threads = 64;
+    while (threads > 8 && threads * fitWorkSize(n) * sizeof(double) > kFitSharedBytesGPU)
+      threads -= 8;
+    return threads;
+  }
+
   // The Broken Line Fit of N hits, inside out, in the global frame, double precision with float hit errors,
   // the state at the last hit: fastFit, prepareBrokenLineData, lineFitOuter, circleFitOuter, in this order
   // (the outer functions must run before the upstream circleFit, which modifies their input;
-  // neither circleFit nor lineFit is run).
+  // neither circleFit nor lineFit is run). work: fitWorkSize(N) doubles for the matrix of the two outer fits, which
+  // run one after the other (see brokenline::circleFitOuter); its content on entry is not used.
   template <int N, typename TAcc>
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void fitState(TAcc const& acc,
-                                               ::lst::FitHit const* fitHits,
-                                               float bField,
-                                               ::lst::FittedState& state) {
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void fitState(
+      TAcc const& acc, ::lst::FitHit const* fitHits, float bField, ::lst::FittedState& state, double* work) {
     ::riemannFit::Matrix3xNd<N> hits;
     Eigen::Matrix<float, 6, N> hitsCov;
     for (int i = 0; i < N; ++i) {
@@ -62,9 +82,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     brokenline::PreparedBrokenLineData<N> data;
     brokenline::prepareBrokenLineData(acc, hits, fastFit, field, data);
     brokenline::OuterLineState line;
-    brokenline::lineFitOuter(acc, hits, hitsCov, fastFit, field, data, line);
+    brokenline::lineFitOuter(acc, hits, hitsCov, fastFit, field, data, line, work);
     brokenline::OuterCircleState circle;
-    brokenline::circleFitOuter(acc, hits, hitsCov, fastFit, field, data, circle);
+    brokenline::circleFitOuter(acc, hits, hitsCov, fastFit, field, data, circle, work);
 
     auto& row = state.row;
     row.x = circle.point(0);

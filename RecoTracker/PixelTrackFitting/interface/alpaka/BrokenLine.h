@@ -741,7 +741,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
       for (int row = 1; row < n; ++row)
         for (int col = 0; col < row; ++col)
           a(col, row) = a(row, col);
-      const M src = a;
+      // a real copy also when M is a map over the work array, so that the inverter never reads the storage it writes
+      const typename M::PlainObject src = a;
       math::cholesky::invert(src, a);
     } else {
       for (int j = 0; j < n; ++j) {
@@ -867,6 +868,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   // bField: magnetic field in Gev/cm/c.
   // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
   // circle_results: struct to be filled (see OuterCircleState).
+  // work: (n+1)*(n+1) doubles for the one matrix of the fit (C_u with its border, then its inverse), stored as
+  // riemannFit::MatrixNplusONEd<n> stores it (contiguous, column-major); its content on entry is not used. The GPU fit
+  // kernels pass a slice of block-shared memory: it keeps the per-thread stack small, as the CUDA driver reserves the
+  // largest stack frame of the launched kernels for every resident thread.
   // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
   template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void circleFitOuter(const TAcc& acc,
@@ -875,7 +880,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
                                                      const V4& fast_fit,
                                                      const double bField,
                                                      const PreparedBrokenLineData<n>& data,
-                                                     OuterCircleState& circle_results) {
+                                                     OuterCircleState& circle_results,
+                                                     double* work) {
     circle_results.qCharge = data.qCharge;
     const auto& radii = data.radii;
     const auto& sTransverse = data.sTransverse;
@@ -907,8 +913,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
       r_uVec(i) = weightsVec(i) * zInSZplane(i);
     }
 
-    // the lower triangle of the c_uMat matrix of circleFit(), inverted in place: iMat is its inverse
-    riemannFit::MatrixNplusONEd<n> iMat;
+    // the lower triangle of the c_uMat matrix of circleFit(), inverted in place: iMat is its inverse. It is a map of
+    // the same fixed-size type over work, so that every expression on it keeps its fixed-size evaluation. Below size 7,
+    // choleskyInvertLowerInPlace() hands math::cholesky::invert() a real copy of the map as its source, so the
+    // inverter never reads the storage it writes.
+    Eigen::Map<riemannFit::MatrixNplusONEd<n>> iMat(work);
     fillMatrixC_uLower(acc, weightsVec, sTransverse, varBeta, iMat);
     iMat(n, n) = 0;
     //add the border (its row n) to the matrix
@@ -962,6 +971,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
 
     circle_results.cov(0, 0) +=
         (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope);
+  }
+
+  // circleFitOuter() with its work array on the stack of the calling thread
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void circleFitOuter(const TAcc& acc,
+                                                     const M3xN& hits,
+                                                     const M6xN& hits_ge,
+                                                     const V4& fast_fit,
+                                                     const double bField,
+                                                     const PreparedBrokenLineData<n>& data,
+                                                     OuterCircleState& circle_results) {
+    riemannFit::MatrixNplusONEd<n> iMat;
+    circleFitOuter(acc, hits, hits_ge, fast_fit, bField, data, circle_results, iMat.data());
   }
 
   // Changes the line parameters fitted at the nodes (a, b) in the rotated SZ system into the state at
@@ -1028,6 +1050,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
   // bField: magnetic field in Gev/cm/c.
   // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
   // line_results: struct to be filled (see OuterLineState).
+  // work: at least n*n doubles for the one matrix of the fit (C_u, then its inverse), stored as riemannFit::MatrixNd<n>
+  // stores it (contiguous, column-major); its content on entry is not used. It can be the work array of
+  // circleFitOuter(), whose leading n*n doubles it uses (see there for the reason of the block-shared memory on GPUs).
   // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
   template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE void lineFitOuter(const TAcc& acc,
@@ -1036,7 +1061,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
                                                    const V4& fast_fit,
                                                    const double bField,
                                                    const PreparedBrokenLineData<n>& data,
-                                                   OuterLineState& line_results) {
+                                                   OuterLineState& line_results,
+                                                   double* work) {
     const auto& radii = data.radii;
     const auto& sTotal = data.sTotal;
     const auto& zInSZplane = data.zInSZplane;
@@ -1068,8 +1094,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     for (u_int i = 0; i < n; i++) {
       r_u(i) = weights(i) * zInSZplane(i);
     }
-    // the lower triangle of matrixC_u(), inverted in place: iMat is its inverse
-    riemannFit::MatrixNd<n> iMat;
+    // the lower triangle of matrixC_u(), inverted in place: iMat is its inverse, a map of the same fixed-size type
+    // over work (see circleFitOuter())
+    Eigen::Map<riemannFit::MatrixNd<n>> iMat(work);
     fillMatrixC_uLower(acc, weights, sTotal, varBeta, iMat);
     choleskyInvertLowerInPlace(iMat);
 
@@ -1091,6 +1118,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
                         rotMat,
                         multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope),
                         line_results);
+  }
+
+  // lineFitOuter() with its work array on the stack of the calling thread
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void lineFitOuter(const TAcc& acc,
+                                                   const M3xN& hits,
+                                                   const M6xN& hits_ge,
+                                                   const V4& fast_fit,
+                                                   const double bField,
+                                                   const PreparedBrokenLineData<n>& data,
+                                                   OuterLineState& line_results) {
+    riemannFit::MatrixNd<n> iMat;
+    lineFitOuter(acc, hits, hits_ge, fast_fit, bField, data, line_results, iMat.data());
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline
