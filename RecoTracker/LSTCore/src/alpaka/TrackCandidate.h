@@ -674,9 +674,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           alpaka::atomicSub(acc, &candsBase.nTrackCandidates(), 1u, alpaka::hierarchy::Threads{});
           break;
 
-        } else if (__H2F(pixelQuintuplets.score()[pixelQuintupletIndex]) > kpT5DemoteScore) {
+        } else if (__H2F(pixelQuintuplets.pixelRadius()[pixelQuintupletIndex]) >= 5.0f * kR1GeVf &&
+                   __H2F(pixelQuintuplets.score()[pixelQuintupletIndex]) > kpT5DemoteScore) {
           // Above 5 GeV no chi2 cut checks the pixel-T5 pairing, so in dense environments a genuine T5 is often
           // paired with a foreign pLS. Such a pT5 is written as a T5 TC and its pLS is kept dead.
+          // Below 5 GeV the pairing is already checked by the rPhi chi2 cuts when the pT5 is built.
           alpaka::atomicAdd(acc, &candsExtended.nTrackCandidatesT5(), 1u, alpaka::hierarchy::Threads{});
           unsigned int quintupletIndex = pixelQuintuplets.quintupletIndices()[pixelQuintupletIndex];
           // bit 3: dead because its pT5 was demoted (so CrossCleanpLS / AddpLSasTrackCandidate skip it)

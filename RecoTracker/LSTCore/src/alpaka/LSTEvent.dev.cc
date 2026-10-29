@@ -1606,13 +1606,14 @@ void LSTEvent::createPixelQuintuplets() {
   for (bool set : {false, true}) {
     alpaka::exec<Acc1D>(queue_,
                         resetPartOfPT5_workDiv,
-                        ResetPartOfPT5{set},
+                        ResetPartOfPT5{},
                         nLowerModules_,
                         pixelQuintupletsDC_->const_view(),
                         quintupletsDC_->view().quintuplets(),
                         tripletsDC_->view().triplets(),
                         pixelSegmentsDC_->view(),
-                        rangesDC_->const_view());
+                        rangesDC_->const_view(),
+                        set);
   }
 
 #ifdef WARNINGS
