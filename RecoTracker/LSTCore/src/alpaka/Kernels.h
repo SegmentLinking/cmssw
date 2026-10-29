@@ -760,6 +760,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // partOfPT5 is set on a pT5's T5, T3s and pLS when the pT5 is built and was never cleared when pT5 dedup kills it.
+  // Launched twice after RemoveDupPixelQuintupletsFromMap: set = false clears the flags of dead pT5s, then
+  // set = true sets them again for surviving pT5s (objects shared with a surviving pT5 stay flagged).
+  struct ResetPartOfPT5 {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  uint16_t nLowerModules,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  Quintuplets quintuplets,
+                                  Triplets triplets,
+                                  PixelSegments pixelSegments,
+                                  ObjectRangesConst ranges,
+                                  bool set) const {
+      unsigned int pLS_offset = ranges.segmentModuleIndices()[nLowerModules];
+      unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nPixelQuintuplets)) {
+        if (pixelQuintuplets.isDup()[i] == set)
+          continue;
+        unsigned int t5 = pixelQuintuplets.quintupletIndices()[i];
+        quintuplets.partOfPT5()[t5] = set;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][0]] = set;
+        triplets.partOfPT5()[quintuplets.tripletIndices()[t5][1]] = set;
+        pixelSegments.partOfPT5()[pixelQuintuplets.pixelSegmentIndices()[i] - pLS_offset] = set;
+      }
+    }
+  };
+
   struct CheckHitspLS {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
