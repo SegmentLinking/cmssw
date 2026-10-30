@@ -18,6 +18,7 @@
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/QuadrupletsSoA.h"
 
+#include "EtaPhiGrid.h"
 #include "PixelQuintupletAccessors.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -65,38 +66,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         continue;
       bool matched = false;
       for (int j = 0; j < Params_T5::kHits; j++) {
-        if (hits2[j] == lst::kTCEmptyHitIdx)
-          continue;
-        if (hits1[i] == hits2[j]) {
-          matched = true;
-          break;
-        }
-      }
-      if (matched) {
-        nMatched++;
-      }
-    }
-    return nMatched;
-  }
-
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE int checkHitspT5(unsigned int ix,
-                                                  unsigned int jx,
-                                                  MiniDoubletsConst mds,
-                                                  SegmentsConst segments,
-                                                  QuintupletsConst quintuplets,
-                                                  PixelQuintupletsConst pixelQuintuplets) {
-    unsigned int hits1[Params_pT5::kHits];
-    unsigned int hits2[Params_pT5::kHits];
-    getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, ix, hits1);
-    getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, jx, hits2);
-
-    int nMatched = 0;
-    for (int i = 0; i < Params_pT5::kHits; i++) {
-      // Skip sentinel values from extended slots
-      if (hits1[i] == lst::kTCEmptyHitIdx)
-        continue;
-      bool matched = false;
-      for (int j = 0; j < Params_pT5::kHits; j++) {
         if (hits2[j] == lst::kTCEmptyHitIdx)
           continue;
         if (hits1[i] == hits2[j]) {
@@ -723,35 +692,106 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  // Grid fill for the pT5 duplicate removal: counts per cell (cellPT5s == nullptr), else fills through the cursor.
+  struct FillPixelQuintupletGrid {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int* __restrict__ cellCount,
+                                  unsigned int* __restrict__ cellPT5s) const {
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, pixelQuintuplets.nPixelQuintuplets())) {
+        const int cell = grid.cell(acc, __H2F(pixelQuintuplets.eta()[i]), __H2F(pixelQuintuplets.phi()[i]));
+        const unsigned int slot = alpaka::atomicAdd(acc, &cellCount[cell], 1u, alpaka::hierarchy::Blocks{});
+        if (cellPT5s != nullptr)
+          cellPT5s[slot] = i;
+      }
+    }
+  };
+
+  // True iff at least minShared of the nValid1 non-empty hits1 appear in hits2; returns as soon as that is known.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool pT5SharesAtLeast(unsigned int const (&hits1)[Params_pT5::kHits],
+                                                       int nValid1,
+                                                       unsigned int const (&hits2)[Params_pT5::kHits],
+                                                       int minShared) {
+    int nMatched = 0;
+    int missesLeft = nValid1 - minShared;
+    if (missesLeft < 0)
+      return false;
+    for (int i = 0; i < Params_pT5::kHits; i++) {
+      if (hits1[i] == lst::kTCEmptyHitIdx)
+        continue;
+      bool matched = false;
+      for (int j = 0; j < Params_pT5::kHits; j++) {
+        if (hits1[i] == hits2[j]) {
+          matched = true;
+          break;
+        }
+      }
+      if (matched) {
+        if (++nMatched >= minShared)
+          return true;
+      } else if (--missesLeft < 0) {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // |d eta|, |d phi| window of the pT5 duplicate search (and of its grid).
+  constexpr float kPT5DupWindow = 0.2f;
+
+  // One pT5 per y element vs the pT5s of the 3x3 grid cells around it over x, which hold all those inside
+  // kPT5DupWindow: it is removed by a duplicate with a lower score.
   struct RemoveDupPixelQuintupletsFromMap {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   MiniDoubletsConst mds,
                                   SegmentsConst segments,
                                   QuintupletsConst quintuplets,
-                                  PixelQuintuplets pixelQuintuplets) const {
+                                  PixelQuintuplets pixelQuintuplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int const* __restrict__ cellStart,
+                                  unsigned int const* __restrict__ cellPT5s) const {
       unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
-      for (unsigned int ix : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
-        float eta1 = __H2F(pixelQuintuplets.eta()[ix]);
-        float phi1 = __H2F(pixelQuintuplets.phi()[ix]);
-        float score1 = __H2F(pixelQuintuplets.score()[ix]);
-        for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, nPixelQuintuplets)) {
-          if (ix == jx)
-            continue;
+      for (unsigned int iy : cms::alpakatools::uniform_elements_y(acc, nPixelQuintuplets)) {
+        float eta1 = __H2F(pixelQuintuplets.eta()[iy]);
+        float phi1 = __H2F(pixelQuintuplets.phi()[iy]);
+        float score1 = __H2F(pixelQuintuplets.score()[iy]);
+        unsigned int hits1[Params_pT5::kHits];
+        getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, iy, hits1);
+        int nValid1 = 0;
+        for (int i = 0; i < Params_pT5::kHits; i++)
+          nValid1 += (hits1[i] != lst::kTCEmptyHitIdx);
 
-          float eta2 = __H2F(pixelQuintuplets.eta()[jx]);
-          if (alpaka::math::abs(acc, eta1 - eta2) > 0.2f)
+        const int etaBin = grid.etaBin(acc, eta1);
+        const int phiBin = grid.phiBin(acc, phi1);
+        bool removed = false;
+        for (int iNeighbour = 0; iNeighbour < EtaPhiGrid::kNeighbourCells && !removed; ++iNeighbour) {
+          const int cell = grid.neighbourCell(etaBin, phiBin, iNeighbour);
+          if (cell < 0)
             continue;
+          for (unsigned int slot : cms::alpakatools::uniform_elements_x(acc, cellStart[cell], cellStart[cell + 1])) {
+            const unsigned int ix = cellPT5s[slot];
+            if (iy == ix)
+              continue;
 
-          float phi2 = __H2F(pixelQuintuplets.phi()[jx]);
-          if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > 0.2f)
-            continue;
+            float eta2 = __H2F(pixelQuintuplets.eta()[ix]);
+            if (alpaka::math::abs(acc, eta1 - eta2) > kPT5DupWindow)
+              continue;
 
-          int nMatched = checkHitspT5(ix, jx, mds, segments, quintuplets, pixelQuintuplets);
-          float score2 = __H2F(pixelQuintuplets.score()[jx]);
-          const int minNHitsForDup_pT5 = 7;
-          if (nMatched >= minNHitsForDup_pT5) {
-            if (score1 > score2 or ((score1 == score2) and (ix > jx))) {
-              rmPixelQuintupletFromMemory(pixelQuintuplets, ix);
+            float phi2 = __H2F(pixelQuintuplets.phi()[ix]);
+            if (alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) > kPT5DupWindow)
+              continue;
+
+            float score2 = __H2F(pixelQuintuplets.score()[ix]);
+            if (!(score1 > score2 or ((score1 == score2) and (iy > ix))))
+              continue;
+
+            unsigned int hits2[Params_pT5::kHits];
+            getPixelQuintupletHitIndices(mds, segments, quintuplets, pixelQuintuplets, ix, hits2);
+            const int minNHitsForDup_pT5 = 7;
+            if (pT5SharesAtLeast(hits1, nValid1, hits2, minNHitsForDup_pT5)) {
+              rmPixelQuintupletFromMemory(pixelQuintuplets, iy);
+              removed = true;
               break;
             }
           }
