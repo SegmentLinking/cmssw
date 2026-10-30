@@ -2,6 +2,13 @@ import FWCore.ParameterSet.Config as cms
 
 import collections
 
+# RecoTracker/MkFitAlpaka producers -> SoA layout of their device product; its last readers order the release of the
+# block (GPU backends)
+_mkFitAlpakaProducts = {
+    "MkFitAlpakaOTRecHitsProducer@alpaka": "OTRecHitSoA",
+    "MkFitAlpakaBuildProducer@alpaka": "Track",
+}
+
 def customiseEarlyDeleteForMkFit(process, products):
     
     references = collections.defaultdict(list)
@@ -32,5 +39,16 @@ def customiseEarlyDeleteForMkFit(process, products):
             products[name].append(_branchName("MkFitSeedWrapper", name))
         elif cppType == "MkFitProducer":
             products[name].append(_branchName("MkFitOutputWrapper", name))
+        elif cppType == "MkFitAlpakaEventOfHitsProducer@alpaka":
+            # GPU backends: the two-allocation collection; CPU backends: returns its block to the pool
+            for dev in ("Cuda", "Hip"):
+                products[name].append(_branchName("alpakaDev%sRtmkfitdevEventOfHitsSplitDeviceCollection"
+                                                  "edmDeviceProduct" % dev, name))
+            products[name].append(_branchName("mkfitdevEventOfHitsPooledHostCollection", name))
+        elif cppType in _mkFitAlpakaProducts:
+            for dev in ("Cuda", "Hip"):
+                products[name].append(_branchName("alpakaDev%sRt128falsemkfitdev%sLayoutvoid"
+                                                  "PortableDeviceCollectionedmDeviceProduct"
+                                                  % (dev, _mkFitAlpakaProducts[cppType]), name))
 
     return (products,references)
