@@ -1,3 +1,38 @@
+<!-- host plugins: the OT hit index map, the output conversion, the status check -->
+<library file="*.cc" name="RecoTrackerMkFitAlpakaPlugins">
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/Phase2TrackerCluster"/>
+  <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/TrackerRecHit2D"/>
+  <use name="DataFormats/TrackingRecHit"/>
+  <use name="DataFormats/TrajectorySeed"/>
+  <use name="DataFormats/TrajectoryState"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="Geometry/CommonTopologies"/>
+  <use name="Geometry/Records"/>
+  <use name="Geometry/TrackerGeometryBuilder"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/Records"/>
+  <use name="RecoLocalTracker/Phase2TrackerRecHits"/>
+  <use name="RecoLocalTracker/Records"/>
+  <use name="RecoTracker/MeasurementDet"/>
+  <use name="RecoTracker/MkFit"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/Record"/>
+  <use name="TrackingTools/DetLayers"/>
+  <use name="TrackingTools/GeomPropagators"/>
+  <use name="TrackingTools/KalmanUpdators"/>
+  <use name="TrackingTools/MeasurementDet"/>
+  <use name="TrackingTools/PatternTools"/>
+  <use name="TrackingTools/Records"/>
+  <use name="TrackingTools/TrajectoryState"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
 <!-- portable plugins: producers, ES producers and their kernels -->
 <library file="alpaka/*.cc" name="RecoTrackerMkFitAlpakaPluginsPortable">
   <use name="alpaka"/>
@@ -27,18 +62,15 @@
   <use name="Geometry/CommonTopologies"/>
   <use name="Geometry/Records"/>
   <use name="Geometry/TrackerGeometryBuilder"/>
-  <use name="Geometry/TrackerNumberingBuilder"/>
   <use name="HeterogeneousCore/AlpakaCore"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
   <use name="MagneticField/Engine"/>
   <use name="MagneticField/Records"/>
-  <use name="RecoLocalTracker/ClusterParameterEstimator"/>
   <use name="RecoLocalTracker/Phase2TrackerRecHits"/>
   <use name="RecoLocalTracker/Records"/>
   <use name="RecoLocalTracker/SiPixelRecHits"/>
   <use name="RecoTracker/MkFit"/>
   <use name="RecoTracker/MkFitAlpaka"/>
-  <use name="RecoTracker/MkFitCMS"/>
   <use name="RecoTracker/MkFitCore"/>
   <use name="RecoTracker/Record"/>
   <use name="TrackingTools/DetLayers"/>
