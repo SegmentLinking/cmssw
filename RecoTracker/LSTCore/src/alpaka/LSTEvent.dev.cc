@@ -22,6 +22,7 @@
 using Device = ALPAKA_ACCELERATOR_NAMESPACE::Device;
 using Queue = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
 using Acc1D = ALPAKA_ACCELERATOR_NAMESPACE::Acc1D;
+using Acc2D = ALPAKA_ACCELERATOR_NAMESPACE::Acc2D;
 using Acc3D = ALPAKA_ACCELERATOR_NAMESPACE::Acc3D;
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE::lst;
@@ -59,6 +60,14 @@ namespace {
     constexpr unsigned int kThreadsPerBlock = 256;
     return cms::alpakatools::make_workdiv<Acc1D>(
         std::max(cms::alpakatools::divide_up_by(nObjects, kThreadsPerBlock), 1u), kThreadsPerBlock);
+  }
+
+  // Work division flat over n elements in y (threadsY elements per block, threadsX threads for the inner loop of each).
+  // The grid is capped at the largest y extent of the CUDA backend; the kernels' grid-stride loops cover the rest.
+  auto makeFlatWorkDivY(unsigned int n, unsigned int threadsY, unsigned int threadsX) {
+    constexpr unsigned int kMaxGridBlocksY = 65535;
+    return cms::alpakatools::make_workdiv<Acc2D>(
+        {std::clamp(cms::alpakatools::divide_up_by(n, threadsY), 1u, kMaxGridBlocksY), 1u}, {threadsY, threadsX});
   }
 }  // namespace
 
@@ -916,18 +925,46 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       rangesDC_->const_view());
 
   constexpr int threadsPerBlock = 32;
-  auto const crossCleanT5_workDiv = cms::alpakatools::make_workdiv<Acc3D>(
-      {(nLowerModules_ / threadsPerBlock) + 1, 1, max_blocks}, {threadsPerBlock, 1, threadsPerBlock});
+  {
+    // T5 x promoted pixel object cross-cleaning on an eta-phi grid of the pT5s and pT3s.
+    auto const grid = EtaPhiGrid::make(kCrossCleanT5PixelWindow);
+    constexpr unsigned int nMaxPixelObjects = n_max_pixel_quintuplets + n_max_pixel_triplets;
+    auto cells = makeCellOffsets(queue_, grid.nCells());
+    auto cellPixelObjects_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, nMaxPixelObjects);
+    auto const gridFill_workDiv = makeCellFillWorkDiv(nMaxPixelObjects);
+    alpaka::exec<Acc1D>(queue_,
+                        gridFill_workDiv,
+                        FillPixelObjectGrid{},
+                        pixelQuintupletsDC_->const_view(),
+                        pixelTripletsDC_->const_view(),
+                        grid,
+                        cells.count.data(),
+                        static_cast<unsigned int*>(nullptr));
+    scanCellCounts(queue_, cells);
+    alpaka::exec<Acc1D>(queue_,
+                        gridFill_workDiv,
+                        FillPixelObjectGrid{},
+                        pixelQuintupletsDC_->const_view(),
+                        pixelTripletsDC_->const_view(),
+                        grid,
+                        cells.count.data(),
+                        cellPixelObjects_buf.data());
 
-  alpaka::exec<Acc3D>(queue_,
-                      crossCleanT5_workDiv,
-                      CrossCleanT5{},
-                      modules_.const_view().modules(),
-                      quintupletsDC_->view().quintuplets(),
-                      quintupletsDC_->const_view().quintupletsOccupancy(),
-                      pixelQuintupletsDC_->const_view(),
-                      pixelTripletsDC_->const_view(),
-                      rangesDC_->const_view());
+    auto const crossCleanT5_workDiv = cms::alpakatools::make_workdiv<Acc3D>({nLowerModules_, 1, 1}, {1, 8, 32});
+
+    alpaka::exec<Acc3D>(queue_,
+                        crossCleanT5_workDiv,
+                        CrossCleanT5{},
+                        modules_.const_view().modules(),
+                        quintupletsDC_->view().quintuplets(),
+                        quintupletsDC_->const_view().quintupletsOccupancy(),
+                        pixelQuintupletsDC_->const_view(),
+                        pixelTripletsDC_->const_view(),
+                        rangesDC_->const_view(),
+                        grid,
+                        cells.start.data(),
+                        cellPixelObjects_buf.data());
+  }
 
   auto const removeDupQuadrupletsBeforeTC_workDiv = cms::alpakatools::make_workdiv<Acc2D>(
       {std::max(nEligibleModulesT4 / threadsPerBlockY, 1), std::max(nEligibleModulesT4 / threadsPerBlockX, 1)},
@@ -1686,16 +1723,42 @@ void LSTEvent::createPixelQuintuplets() {
                       rangesDC_->const_view(),
                       ptCut_);
 
-  auto const removeDupPixelQuintupletsFromMap_workDiv =
-      cms::alpakatools::make_workdiv<Acc2D>({max_blocks, 1}, {16, 16});
+  {
+    // pT5 duplicate removal on an eta-phi grid: count -> scan -> fill, then 3x3 cells per pT5.
+    auto const grid = EtaPhiGrid::make(kPT5DupWindow);
+    auto cells = makeCellOffsets(queue_, grid.nCells());
+    auto cellPT5s_buf = cms::alpakatools::make_device_buffer<unsigned int[]>(queue_, n_max_pixel_quintuplets);
+    auto const gridFill_workDiv = makeCellFillWorkDiv(n_max_pixel_quintuplets);
+    alpaka::exec<Acc1D>(queue_,
+                        gridFill_workDiv,
+                        FillPixelQuintupletGrid{},
+                        pixelQuintupletsDC_->const_view(),
+                        grid,
+                        cells.count.data(),
+                        static_cast<unsigned int*>(nullptr));
+    scanCellCounts(queue_, cells);
+    alpaka::exec<Acc1D>(queue_,
+                        gridFill_workDiv,
+                        FillPixelQuintupletGrid{},
+                        pixelQuintupletsDC_->const_view(),
+                        grid,
+                        cells.count.data(),
+                        cellPT5s_buf.data());
 
-  alpaka::exec<Acc2D>(queue_,
-                      removeDupPixelQuintupletsFromMap_workDiv,
-                      RemoveDupPixelQuintupletsFromMap{},
-                      miniDoubletsDC_->const_view().miniDoublets(),
-                      segmentsDC_->const_view().segments(),
-                      quintupletsDC_->const_view().quintuplets(),
-                      pixelQuintupletsDC_->view());
+    // pT5s on y, the pT5s of their neighbouring cells on x.
+    constexpr unsigned int kPT5sPerBlock = 16;
+    constexpr unsigned int kNeighbourPT5Threads = 16;
+    alpaka::exec<Acc2D>(queue_,
+                        makeFlatWorkDivY(n_max_pixel_quintuplets, kPT5sPerBlock, kNeighbourPT5Threads),
+                        RemoveDupPixelQuintupletsFromMap{},
+                        miniDoubletsDC_->const_view().miniDoublets(),
+                        segmentsDC_->const_view().segments(),
+                        quintupletsDC_->const_view().quintuplets(),
+                        pixelQuintupletsDC_->view(),
+                        grid,
+                        cells.start.data(),
+                        cellPT5s_buf.data());
+  }
 
 #ifdef WARNINGS
   auto nPixelQuintuplets_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
