@@ -1,0 +1,12 @@
+<!-- Device-side dictionaries of the MkFitAlpaka event products. A library WITHOUT device code (LST vs LSTCore
+     pattern): CUDA/ROCm dictionaries in the device-code library RecoTrackerMkFitAlpaka<Backend> made every kernel of
+     the portable plugin library fail to launch (cudaErrorInvalidResourceHandle). -->
+<use name="alpaka"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/Portable"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="RecoTracker/MkFitAlpaka"/>
+<flags ALPAKA_BACKENDS="1"/>
+<export>
+  <lib name="1"/>
+</export>
