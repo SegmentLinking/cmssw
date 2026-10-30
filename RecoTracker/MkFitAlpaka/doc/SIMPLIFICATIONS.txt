@@ -1,0 +1,27 @@
+MkFitAlpaka: what is not ported from MkFitCore / RecoTracker/MkFit. Configurations that would need any of it are
+refused at job start (interface/SupportedConfig.h and the checks of python/customizeHLTforMkFitAlpaka.py).
+
+Building
+- Hit masks (clustersToSkip) and the strip charge cut (passStripChargePCMfromTrack): the LST step has no mask and
+  Phase-2 OT layers have no charge information.
+- Building routines other than cloneEngine, seed cleaning other than the LST step's, backwardFitInCMSSW.
+- Seed hit sorting, backward_drop_seed_hits, recheckOverlap and the removal of seed hits.
+- Filters, partitioners, scorers and duplicate cleaners other than the ones of the LST step's iteration config.
+- Debug instrumentation (dprintf, RNT dumps) and the values only it reads (the phi_c = PI - phi_c wrap and dphi of
+  selectHitIndicesV2).
+- Exact score ties among more than 16 options of one seed: the clone engine keeps equal scores in input order, which
+  is MkFitCore's std::sort order only up to 16 options (insertion sort); above that, introsort's order is not
+  reproduced.
+
+Final fit
+- Per-hit states (storeHitStates, trajectoryInEvent): needed only with mtd_at_hlt.
+- Pixel CPE other than PixelCPEGeneric with the Phase-2 HLT settings; the GenError side outputs used only with
+  irradiation corrections or useLAWidthFromGenError.
+
+Hit input
+- The strip quality DB of MkFitEventOfHitsProducer (off in the LST step); the pixel quality DB is ported.
+- Only Phase-2 geometries.
+
+Fixed capacities (overflows are counted in the per-event status product, never silent)
+- Seed hits, hit-on-track pool per seed, hits per track, EventOfHits bin index and bin count; an event beyond the
+  EventOfHits limits is skipped and counted.
