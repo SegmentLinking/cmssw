@@ -1,0 +1,51 @@
+<!-- propagation, Kalman update and final-fit step of MkFitAlpaka compared with MkFitCore on synthetic tracks, on every
+     backend -->
+<bin file="testPropMkFitCoreRef.cpp" name="testMkFitAlpakaPropMkFitCoreRef">
+  <use name="RecoTracker/MkFitCore"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<bin file="alpaka/testProp.dev.cc" name="testMkFitAlpakaProp">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the prop kernels are instantiated here, so the CPU backends get the library's flags -->
+  <flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+  <flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+  <flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+</bin>
+<test name="testMkFitAlpakaPropChain" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testPropChain.sh"/>
+<!-- the ES data fill on a synthetic geometry and configuration, including its error paths -->
+<bin file="testESFill.cpp" name="testMkFitAlpakaESFill">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="DataFormats/Portable"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+</bin>
+<!-- a plugin-library kernel writes known values into the event products, checked on the host copy -->
+<test name="testMkFitAlpakaCudaCanary" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/integ_cuda_canary.sh"/>
+<library file="plugins/MkFitAlpakaProductsCheck.cc" name="testRecoTrackerMkFitAlpakaProductsCheck">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+<library file="plugins/alpaka/MkFitAlpakaProductsTest.cc,plugins/alpaka/MkFitProductsTestKernels.dev.cc" name="testRecoTrackerMkFitAlpakaProductsTest">
+  <use name="alpaka"/>
+  <use name="DataFormats/Portable"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
