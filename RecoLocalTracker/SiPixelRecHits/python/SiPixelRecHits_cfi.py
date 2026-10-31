@@ -44,10 +44,18 @@ from Configuration.ProcessModifiers.phase2CAExtension_cff import phase2CAExtensi
 
 from RecoLocalTracker.Phase2TrackerRecHits.Phase2TrackerRecHits_cfi import siPhase2RecHits
 
-from RecoLocalTracker.Phase2TrackerRecHits.phase2OTRecHitsSoAConverter_cfi import phase2OTRecHitsSoAConverter as _phase2OTRecHitsSoAConverter
-phase2OTRecHitsSoAConverter = _phase2OTRecHitsSoAConverter.clone(
+# OT rechits with Alpaka, and the CA's OT hits selected from them
+from RecoLocalTracker.Phase2TrackerRecHits.phase2StripCPEParamsESProducerAlpaka_cfi import phase2StripCPEParamsESProducerAlpaka as _phase2StripCPEParamsESProducerAlpaka
+phase2StripCPEParamsAlpaka = _phase2StripCPEParamsESProducerAlpaka.clone()
+
+from RecoLocalTracker.Phase2TrackerRecHits.phase2TrackerRecHitsAlpaka_cfi import phase2TrackerRecHitsAlpaka as _phase2TrackerRecHitsAlpaka
+siPhase2RecHitsSoA = _phase2TrackerRecHitsAlpaka.clone()
+
+from RecoLocalTracker.Phase2TrackerRecHits.phase2OTCAHitsAlpaka_cfi import phase2OTCAHitsAlpaka as _phase2OTCAHitsAlpaka
+phase2OTRecHitsSoA = _phase2OTCAHitsAlpaka.clone(
     beamSpot = "offlineBeamSpot",
-    otRecHitSource = "siPhase2RecHits",
+    otClusters = "siPhase2Clusters",
+    otRecHitsSoA = "siPhase2RecHitsSoA",
     pixelRecHitSoASource = "siPixelRecHitsPreSplittingAlpaka"
 )
 
@@ -79,6 +87,8 @@ phase2CAExtension.toReplaceWith(siPixelRecHitsPreSplittingTask, cms.Task(
     siPhase2RecHits,
     siPixelRecHitsPreSplittingAlpaka,
     siPixelRecHitsPreSplittingAlpakaSerial,    
-    phase2OTRecHitsSoAConverter,
+    phase2StripCPEParamsAlpaka,
+    siPhase2RecHitsSoA,
+    phase2OTRecHitsSoA,
     siPixelRecHitsPreSplitting
 ))

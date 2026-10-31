@@ -1,7 +1,9 @@
-#ifndef RecoTracker_MkFitCore_src_Matriplex_MatriplexCommon_h
-#define RecoTracker_MkFitCore_src_Matriplex_MatriplexCommon_h
+#ifndef RecoTracker_MkFitCore_interface_portable_Matriplex_MatriplexCommon_h
+#define RecoTracker_MkFitCore_interface_portable_Matriplex_MatriplexCommon_h
 
 #include <cstring>
+
+#include "RecoTracker/MkFitCore/interface/portable/Macros.h"
 
 // Use intrinsics version of code when available, done via CPP flags.
 // #define  MPLEX_USE_INTRINSICS
@@ -10,7 +12,7 @@
 // Intrinsics -- preamble
 //==============================================================================
 
-#if defined(__x86_64__)
+#if defined(__x86_64__) && !defined(__CUDACC__) && !defined(__HIPCC__)
 #include "immintrin.h"
 #else
 #include <cstdlib>
@@ -91,17 +93,25 @@ inline __m256 FMA(const __m256 &a, const __m256 &b, const __m256 &v) {
 #ifdef __INTEL_COMPILER
 #define ASSUME_ALIGNED(a, b) __assume_aligned(a, b)
 #else
-#define ASSUME_ALIGNED(a, b) a = static_cast<decltype(a)>(__builtin_assume_aligned(a, b))
+// Uses the lane count N of the enclosing Matriplex code: one-lane Matriplexes (GPU code) are only aligned as
+// their elements, so they get no alignment hint.
+#define ASSUME_ALIGNED(a, b) a = static_cast<decltype(a)>(__builtin_assume_aligned(a, N == 1 ? 1 : b))
 #endif
 
 namespace Matriplex {
   typedef int idx_t;
 
+  // Alignment of a Matriplex: MPLEX_ALIGN for the CPU widths, natural alignment for one lane (GPU code).
+  template <typename T, idx_t N>
+  constexpr int mplexAlign() {
+    return N == 1 ? alignof(T) : MPLEX_ALIGN;
+  }
+
   void align_check(const char *pref, void *adr);
 
   namespace internal {
     template <typename T>
-    void sincos4(const T x, T &sin, T &cos) {
+    MKFIT_HOST_DEVICE void sincos4(const T x, T &sin, T &cos) {
       // Had this writen with explicit division by factorial.
       // The *whole* fitting test ran like 2.5% slower on MIC, sigh.
 

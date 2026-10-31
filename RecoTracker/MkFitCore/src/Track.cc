@@ -1,5 +1,6 @@
 #include "RecoTracker/MkFitCore/interface/cms_common_macros.h"
 #include "RecoTracker/MkFitCore/interface/Track.h"
+#include "RecoTracker/MkFitCore/interface/portable/TrackStateJacobians.h"
 #include "Matrix.h"
 
 //#define DEBUG
@@ -110,16 +111,7 @@ namespace mkfit {
   SMatrix66 TrackState::jacobianCCSToCurvilinear(
       float invpt, float cosP, float sinP, float cosT, float sinT, short charge) const {
     SMatrix66 jac;
-    jac(3, 0) = -sinP;
-    jac(4, 0) = -cosP * cosT;
-    jac(3, 1) = cosP;
-    jac(4, 1) = -sinP * cosT;
-    jac(4, 2) = sinT;
-    jac(0, 3) = charge * sinT;
-    jac(0, 5) = charge * cosT * invpt;
-    jac(1, 5) = -1.f;
-    jac(2, 4) = 1.f;
-
+    portable::jacobianCCSToCurvilinear(invpt, cosP, sinP, cosT, sinT, charge, jac);
     return jac;
   }
 

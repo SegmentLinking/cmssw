@@ -8,8 +8,12 @@
 <use name="DataFormats/TrackerRecHit2D"/>
 <use name="DataFormats/TrackingRecHitSoA"/>
 <use name="DataFormats/BeamSpot"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SiPixelCluster"/>
+<use name="DataFormats/SoATemplate"/>
 <use name="FWCore/ParameterSet"/>
 <use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
 <use name="RecoLocalTracker/ClusterParameterEstimator"/>
 <flags ALPAKA_BACKENDS="1"/>
 <export>
