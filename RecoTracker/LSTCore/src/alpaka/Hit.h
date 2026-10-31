@@ -16,11 +16,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return cms::alpakatools::deltaPhi(acc, x1, y1, x2 - x1, y2 - y1);
   }
 
+  // Set in a packed hit index for an outer-tracker hit.
+  constexpr unsigned int kPackedHitOTBit = 1u << 31;
+
   ALPAKA_FN_ACC ALPAKA_FN_INLINE unsigned int packedHitIdx(unsigned int ih,
                                                            HitsBaseConst hitsBase,
                                                            HitsITConst hitsIT) {
-    constexpr int kOTBit = 1 << 31;
-    return hitOrigIdx(hitsBase, hitsIT, ih) | (hitsBase.detid()[ih] == kPixelModuleId ? 0 : kOTBit);
+    return hitOrigIdx(hitsBase, hitsIT, ih) | (hitsBase.detid()[ih] == kPixelModuleId ? 0u : kPackedHitOTBit);
   }
 
   struct ModuleRangesKernel {
