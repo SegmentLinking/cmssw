@@ -711,6 +711,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return mod;
   }
 
+  // CountMiniDoublets writes, per lower hit, the decisions of its pairs with upper hit j < kMDPassMaskBits as a bit
+  // mask; CreateMiniDoublets evaluates only the accepted pairs and every pair with a larger j.
+  constexpr int kMDPassMaskBits = 64;  // bits of the uint64_t mask
+
   struct CreateMiniDoublets {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
@@ -721,6 +725,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   MiniDoubletsBuild mdsBuild,
                                   MiniDoubletsOccupancy mdsOccupancy,
                                   ObjectRangesConst ranges,
+                                  const uint64_t* mdPassMask,
                                   const float ptCut,
                                   const uint16_t clustSizeCut) const {
       for (uint16_t lowerModuleIndex : cms::alpakatools::uniform_elements_y(acc, modules.nLowerModules())) {
@@ -730,54 +735,62 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           continue;
         unsigned int upHitArrayIndex = hitsRanges.hitRangesUpper()[lowerModuleIndex];
         unsigned int loHitArrayIndex = hitsRanges.hitRangesLower()[lowerModuleIndex];
-        int limit = nUpperHits * nLowerHits;
 
         ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut);
 
-        for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
-          int lowerHitIndex = hitIndex / nUpperHits;
-          int upperHitIndex = hitIndex % nUpperHits;
-          if (upperHitIndex >= nUpperHits)
-            continue;
-          if (lowerHitIndex >= nLowerHits)
-            continue;
+        for (int lowerHitIndex : cms::alpakatools::uniform_elements_x(acc, nLowerHits)) {
           unsigned int lowerHitArrayIndex = loHitArrayIndex + lowerHitIndex;
           float xLower = hitsBase.xs()[lowerHitArrayIndex];
           float yLower = hitsBase.ys()[lowerHitArrayIndex];
           float zLower = hitsBase.zs()[lowerHitArrayIndex];
           float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
-          unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
-          float xUpper = hitsBase.xs()[upperHitArrayIndex];
-          float yUpper = hitsBase.ys()[upperHitArrayIndex];
-          float zUpper = hitsBase.zs()[upperHitArrayIndex];
-          float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
           uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
-          uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
 
-          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
-          bool success = runMiniDoubletDefaultAlgo(acc,
-                                                   mod,
-                                                   dz,
-                                                   dphi,
-                                                   dphichange,
-                                                   shiftedX,
-                                                   shiftedY,
-                                                   shiftedZ,
-                                                   noShiftedDphi,
-                                                   noShiftedDphiChange,
-                                                   xLower,
-                                                   yLower,
-                                                   zLower,
-                                                   rtLower,
-                                                   xUpper,
-                                                   yUpper,
-                                                   zUpper,
-                                                   rtUpper,
-                                                   ptCut,
-                                                   clustSizeLower,
-                                                   clustSizeUpper,
-                                                   clustSizeCut);
-          if (success) {
+          // Ascending upper hit index, as in the full pair loop: the pairs recorded by CountMiniDoublets, then the
+          // pairs past the mask.
+          uint64_t passBits = mdPassMask[lowerHitArrayIndex];
+          int unrecordedUpperHitIndex = kMDPassMaskBits;
+          while (passBits != 0 || unrecordedUpperHitIndex < nUpperHits) {
+            int upperHitIndex;
+            if (passBits != 0) {
+              upperHitIndex = alpaka::ffs(acc, static_cast<std::int64_t>(passBits)) - 1;
+              passBits &= passBits - 1;
+            } else {
+              upperHitIndex = unrecordedUpperHitIndex++;
+            }
+
+            unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
+            float xUpper = hitsBase.xs()[upperHitArrayIndex];
+            float yUpper = hitsBase.ys()[upperHitArrayIndex];
+            float zUpper = hitsBase.zs()[upperHitArrayIndex];
+            float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
+            uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
+
+            float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
+            bool success = runMiniDoubletDefaultAlgo(acc,
+                                                     mod,
+                                                     dz,
+                                                     dphi,
+                                                     dphichange,
+                                                     shiftedX,
+                                                     shiftedY,
+                                                     shiftedZ,
+                                                     noShiftedDphi,
+                                                     noShiftedDphiChange,
+                                                     xLower,
+                                                     yLower,
+                                                     zLower,
+                                                     rtLower,
+                                                     xUpper,
+                                                     yUpper,
+                                                     zUpper,
+                                                     rtUpper,
+                                                     ptCut,
+                                                     clustSizeLower,
+                                                     clustSizeUpper,
+                                                     clustSizeCut);
+            if (!success)
+              continue;
             int totOccupancyMDs = alpaka::atomicAdd(
                 acc, &mdsOccupancy.totOccupancyMDs()[lowerModuleIndex], 1u, alpaka::hierarchy::Threads{});
             if (totOccupancyMDs >= (ranges.miniDoubletModuleOccupancy()[lowerModuleIndex])) {
@@ -821,6 +834,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   HitsExtendedConst hitsExtended,
                                   HitsRangesConst hitsRanges,
                                   ObjectRanges ranges,
+                                  uint64_t* mdPassMask,
                                   const float ptCut,
                                   const uint16_t clustSizeCut) const {
       for (uint16_t lowerModuleIndex : cms::alpakatools::uniform_elements_y(acc, modules.nLowerModules())) {
@@ -830,57 +844,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           continue;
         unsigned int upHitArrayIndex = hitsRanges.hitRangesUpper()[lowerModuleIndex];
         unsigned int loHitArrayIndex = hitsRanges.hitRangesLower()[lowerModuleIndex];
-        int limit = nUpperHits * nLowerHits;
 
         ModuleMDData mod = loadModuleMDData(acc, modules, lowerModuleIndex, ptCut);
 
-        for (int hitIndex : cms::alpakatools::uniform_elements_x(acc, limit)) {
-          int lowerHitIndex = hitIndex / nUpperHits;
-          int upperHitIndex = hitIndex % nUpperHits;
-          if (upperHitIndex >= nUpperHits)
-            continue;
-          if (lowerHitIndex >= nLowerHits)
-            continue;
+        for (int lowerHitIndex : cms::alpakatools::uniform_elements_x(acc, nLowerHits)) {
           unsigned int lowerHitArrayIndex = loHitArrayIndex + lowerHitIndex;
           float xLower = hitsBase.xs()[lowerHitArrayIndex];
           float yLower = hitsBase.ys()[lowerHitArrayIndex];
           float zLower = hitsBase.zs()[lowerHitArrayIndex];
           float rtLower = hitsExtended.rts()[lowerHitArrayIndex];
-          unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
-          float xUpper = hitsBase.xs()[upperHitArrayIndex];
-          float yUpper = hitsBase.ys()[upperHitArrayIndex];
-          float zUpper = hitsBase.zs()[upperHitArrayIndex];
-          float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
           uint16_t clustSizeLower = hitsBase.clustsize()[lowerHitArrayIndex];
-          uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
 
-          float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
-          bool success = runMiniDoubletDefaultAlgo(acc,
-                                                   mod,
-                                                   dz,
-                                                   dphi,
-                                                   dphichange,
-                                                   shiftedX,
-                                                   shiftedY,
-                                                   shiftedZ,
-                                                   noShiftedDphi,
-                                                   noShiftedDphiChange,
-                                                   xLower,
-                                                   yLower,
-                                                   zLower,
-                                                   rtLower,
-                                                   xUpper,
-                                                   yUpper,
-                                                   zUpper,
-                                                   rtUpper,
-                                                   ptCut,
-                                                   clustSizeLower,
-                                                   clustSizeUpper,
-                                                   clustSizeCut);
-          if (success) {
-            alpaka::atomicAdd(
-                acc, &ranges.miniDoubletModuleOccupancy()[lowerModuleIndex], 1, alpaka::hierarchy::Threads{});
+          uint64_t passBits = 0;
+          int nPass = 0;
+          for (int upperHitIndex = 0; upperHitIndex < nUpperHits; ++upperHitIndex) {
+            unsigned int upperHitArrayIndex = upHitArrayIndex + upperHitIndex;
+            float xUpper = hitsBase.xs()[upperHitArrayIndex];
+            float yUpper = hitsBase.ys()[upperHitArrayIndex];
+            float zUpper = hitsBase.zs()[upperHitArrayIndex];
+            float rtUpper = hitsExtended.rts()[upperHitArrayIndex];
+            uint16_t clustSizeUpper = hitsBase.clustsize()[upperHitArrayIndex];
+
+            float dz, dphi, dphichange, shiftedX, shiftedY, shiftedZ, noShiftedDphi, noShiftedDphiChange;
+            bool success = runMiniDoubletDefaultAlgo(acc,
+                                                     mod,
+                                                     dz,
+                                                     dphi,
+                                                     dphichange,
+                                                     shiftedX,
+                                                     shiftedY,
+                                                     shiftedZ,
+                                                     noShiftedDphi,
+                                                     noShiftedDphiChange,
+                                                     xLower,
+                                                     yLower,
+                                                     zLower,
+                                                     rtLower,
+                                                     xUpper,
+                                                     yUpper,
+                                                     zUpper,
+                                                     rtUpper,
+                                                     ptCut,
+                                                     clustSizeLower,
+                                                     clustSizeUpper,
+                                                     clustSizeCut);
+            if (success) {
+              ++nPass;
+              if (upperHitIndex < kMDPassMaskBits)
+                passBits |= uint64_t(1) << upperHitIndex;
+            }
           }
+          mdPassMask[lowerHitArrayIndex] = passBits;
+          if (nPass > 0)
+            alpaka::atomicAdd(
+                acc, &ranges.miniDoubletModuleOccupancy()[lowerModuleIndex], nPass, alpaka::hierarchy::Threads{});
         }
       }
     }
