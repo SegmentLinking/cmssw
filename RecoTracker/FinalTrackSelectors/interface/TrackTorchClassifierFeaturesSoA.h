@@ -18,7 +18,8 @@ GENERATE_SOA_LAYOUT(TrackTorchClassifierFeaturesSoALayout,
                     SOA_COLUMN(float, lostOuterHits),
                     SOA_COLUMN(float, layersWithoutMeas),
                     SOA_COLUMN(float, validPixelHits),
-                    SOA_COLUMN(float, validStripHits))
+                    SOA_COLUMN(float, validStripHits),
+                    SOA_COLUMN(float, originalAlgo))
 
 using TrackTorchClassifierFeaturesSoA = TrackTorchClassifierFeaturesSoALayout<>;
 

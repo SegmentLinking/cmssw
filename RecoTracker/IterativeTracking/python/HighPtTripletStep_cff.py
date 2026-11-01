@@ -447,6 +447,30 @@ highPtTripletStepSeedsPixelsOnly = RecoTracker.TkSeedGenerator.GlobalCombinedSee
 )
 
 _HighPtTripletStepTask_LST_mkFit.add(highPtTripletStepSeedsPixelsWithLST,highPtTripletStepTrackCandidatesMkFitSeeds, highPtTripletStepTrackCandidatesMkFit, highPtTripletStepTrackCandidatesMkFitConfig,highPtTripletStepSeedsPixelsOnly)
+import RecoTracker.FinalTrackSelectors.trackFeatureExtractor_cfi
+import RecoTracker.FinalTrackSelectors.trackTorchClassifierAlpaka_cfi
+import RecoTracker.FinalTrackSelectors.trackTorchClassifierFromSoA_cfi
+from RecoTracker.IterativeTracking.trackTorchMVAClassifierQualityCuts import qualityCutDictionaryPrompt,qualityCutDictionaryDisplaced
+highPtTripletStepTrackTorchMVAFeatureExtractor = RecoTracker.FinalTrackSelectors.trackFeatureExtractor_cfi.trackFeatureExtractor.clone(
+    src = "highPtTripletStepTracks",
+    beamSpot = "offlineBeamSpot"
+)
+highPtTripletStepTrackTorchMVAClassifier = RecoTracker.FinalTrackSelectors.trackTorchClassifierAlpaka_cfi.trackTorchClassifierAlpaka.clone(
+    modelPath = "RecoTracker/FinalTrackSelectors/data/TrackTorchMVAClassifier/model.pt",
+    features = "highPtTripletStepTrackTorchMVAFeatureExtractor",
+    useOriginalAlgo = True
+)
+highPtTripletStepTrackTorchMVAClassifierOutput = RecoTracker.FinalTrackSelectors.trackTorchClassifierFromSoA_cfi.trackTorchClassifierFromSoA.clone(
+    src = "highPtTripletStepTracks",
+    features = "highPtTripletStepTrackTorchMVAFeatureExtractor",
+    scores = "highPtTripletStepTrackTorchMVAClassifier",
+    qualityCutsPrompt = qualityCutDictionaryPrompt.HighPtTripletStep.value(),
+    qualityCutsDisplaced = qualityCutDictionaryDisplaced.HighPtTripletStep.value(),
+    name = "highPtTripletStep"
+)
+
+_phase2LSTmkFit.toReplaceWith(highPtTripletStepSelector, highPtTripletStepTrackTorchMVAClassifierOutput)
+_HighPtTripletStepTask_LST_mkFit.add(highPtTripletStepTrackTorchMVAFeatureExtractor, highPtTripletStepTrackTorchMVAClassifier)
 _phase2LSTmkFit.toReplaceWith(HighPtTripletStepTask,_HighPtTripletStepTask_LST_mkFit)
 
 from Configuration.ProcessModifiers.alpakaValidationLST_cff import alpakaValidationLST

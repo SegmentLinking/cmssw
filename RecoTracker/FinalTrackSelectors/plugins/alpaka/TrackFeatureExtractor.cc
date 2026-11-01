@@ -68,6 +68,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         features_view[i].layersWithoutMeas() = hitPattern.trackerLayersWithoutMeasurement(reco::HitPattern::TRACK_HITS);
         features_view[i].validPixelHits() = hitPattern.numberOfValidPixelHits();
         features_view[i].validStripHits() = hitPattern.numberOfValidStripHits();
+
+        features_view[i].originalAlgo() = track.originalAlgo();
       }
 
       iEvent.emplace(featuresPut_token_, std::move(features_host));
