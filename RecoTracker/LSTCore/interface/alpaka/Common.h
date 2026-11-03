@@ -12,6 +12,21 @@
 #endif
 #include "RecoTracker/LSTCore/interface/Common.h"
 
+// Proof mode of the fast decisions (trig-free bounds and the MD upper-hit window): built with -DLST_CHECK_FAST_BOUNDS
+// (never set in a BuildFile), every fast decision is also compared with the exact one, and a disagreement is printed as
+// "LST fast-bound mismatch: <what>". Off by default, when the exact expression is not compiled at all.
+#ifdef LST_CHECK_FAST_BOUNDS
+#define LST_CHECK_FAST_DECISION(what, fast, exact)   \
+  do {                                               \
+    if ((fast) != (exact))                           \
+      printf("LST fast-bound mismatch: %s\n", what); \
+  } while (false)
+#else
+#define LST_CHECK_FAST_DECISION(what, fast, exact) \
+  do {                                             \
+  } while (false)
+#endif
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
   using namespace ::lst;
