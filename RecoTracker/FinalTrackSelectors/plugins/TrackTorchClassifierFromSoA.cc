@@ -4,6 +4,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/Utilities/interface/Exception.h"
 
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
@@ -29,10 +30,13 @@ private:
   const edm::EDGetTokenT<reco::TrackCollection> tracks_token_;
   const edm::EDGetTokenT<PortableHostCollection<TrackTorchClassifierScoresSoA>> scores_token_;
   const edm::EDGetTokenT<PortableHostCollection<TrackTorchClassifierFeaturesSoA>> features_token_;
-  // qualitycuts (loose, tight, hp) for prompt/displaced
+  // qualitycuts (loose, tight, hp) for prompt/displaced, for pT < ptThreshold and pT >= ptThreshold
   const std::vector<double> quality_cuts_prompt_;
   const float dxy_threshold_;
   const std::vector<double> quality_cuts_displaced_;
+  const float pt_threshold_;
+  const std::vector<double> quality_cuts_prompt_high_pt_;
+  const std::vector<double> quality_cuts_displaced_high_pt_;
   const std::string name_;
 
   const edm::EDPutTokenT<MVACollection> scores_output_token_;
@@ -48,13 +52,23 @@ TrackTorchClassifierFromSoA::TrackTorchClassifierFromSoA(const edm::ParameterSet
       quality_cuts_prompt_(iConfig.getParameter<std::vector<double>>("qualityCutsPrompt")),
       dxy_threshold_(iConfig.getParameter<double>("dxyThreshold")),
       quality_cuts_displaced_(iConfig.getParameter<std::vector<double>>("qualityCutsDisplaced")),
+      pt_threshold_(iConfig.getParameter<double>("ptThreshold")),
+      // An empty high-pT vector means: same cuts as for low pT
+      quality_cuts_prompt_high_pt_(iConfig.getParameter<std::vector<double>>("qualityCutsPromptHighPt").empty()
+                                       ? quality_cuts_prompt_
+                                       : iConfig.getParameter<std::vector<double>>("qualityCutsPromptHighPt")),
+      quality_cuts_displaced_high_pt_(iConfig.getParameter<std::vector<double>>("qualityCutsDisplacedHighPt").empty()
+                                          ? quality_cuts_displaced_
+                                          : iConfig.getParameter<std::vector<double>>("qualityCutsDisplacedHighPt")),
       name_(iConfig.getParameter<std::string>("name")),
       scores_output_token_(produces<MVACollection>("MVAValues")),
       mva_vals_token_(produces<edm::ValueMap<float>>("MVAVals")),
       track_quals_token_(produces<edm::ValueMap<int>>(name_)),
       quality_mask_output_token_(produces<QualityMaskCollection>(name_)) {
-  assert(quality_cuts_prompt_.size() == 3);
-  assert(quality_cuts_displaced_.size() == 3);
+  if (quality_cuts_prompt_.size() != 3 || quality_cuts_displaced_.size() != 3 ||
+      quality_cuts_prompt_high_pt_.size() != 3 || quality_cuts_displaced_high_pt_.size() != 3)
+    throw cms::Exception("Configuration") << "TrackTorchClassifierFromSoA: quality cuts need 3 values (loose, tight, "
+                                             "highPurity); the high-pT ones may also be empty";
 }
 
 void TrackTorchClassifierFromSoA::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -63,10 +77,16 @@ void TrackTorchClassifierFromSoA::fillDescriptions(edm::ConfigurationDescription
   desc.add<edm::InputTag>("scores", edm::InputTag("hltInitialStepTrackTorchClassifier"));
   desc.add<edm::InputTag>("features", edm::InputTag("hltInitialStepTrackTorchClassifier"));
   desc.add<std::vector<double>>("qualityCutsPrompt", {0.5, 0.5, 0.5})
-      ->setComment("MVA score quality cuts for prompt tracks");
+      ->setComment("MVA score quality cuts for prompt tracks (pT < ptThreshold)");
   desc.add<double>("dxyThreshold", 0.5)->setComment("Tracks with |dxy| > this value use the displaced quality cuts");
   desc.add<std::vector<double>>("qualityCutsDisplaced", {0.5, 0.5, 0.5})
-      ->setComment("MVA score quality cuts for displaced tracks");
+      ->setComment("MVA score quality cuts for displaced tracks (pT < ptThreshold)");
+  desc.add<double>("ptThreshold", 5.0)->setComment("Tracks with pT >= this value (GeV) use the high-pT quality cuts");
+  desc.add<std::vector<double>>("qualityCutsPromptHighPt", {})
+      ->setComment("MVA score quality cuts for prompt tracks with pT >= ptThreshold; empty: same as qualityCutsPrompt");
+  desc.add<std::vector<double>>("qualityCutsDisplacedHighPt", {})
+      ->setComment(
+          "MVA score quality cuts for displaced tracks with pT >= ptThreshold; empty: same as qualityCutsDisplaced");
   desc.add<std::string>("name", "QualityMasks")->setComment("Instance label of the track quality products");
   descriptions.addWithDefaultLabel(desc);
 }
@@ -96,12 +116,13 @@ void TrackTorchClassifierFromSoA::produce(edm::Event& iEvent, const edm::EventSe
     int quality = tracks[i].qualityMask();
 
     (*mvas)[i] = score;
-    const bool pass_loose =
-        score >= quality_cuts_prompt_[0] || ((std::abs(dxy) > dxy_threshold_) && (score >= quality_cuts_displaced_[0]));
-    const bool pass_tight =
-        score >= quality_cuts_prompt_[1] || ((std::abs(dxy) > dxy_threshold_) && (score >= quality_cuts_displaced_[1]));
-    const bool pass_hp =
-        score >= quality_cuts_prompt_[2] || ((std::abs(dxy) > dxy_threshold_) && (score >= quality_cuts_displaced_[2]));
+    const bool high_pt = tracks[i].pt() >= pt_threshold_;
+    const auto& cuts_prompt = high_pt ? quality_cuts_prompt_high_pt_ : quality_cuts_prompt_;
+    const auto& cuts_displaced = high_pt ? quality_cuts_displaced_high_pt_ : quality_cuts_displaced_;
+    const bool displaced = std::abs(dxy) > dxy_threshold_;
+    const bool pass_loose = score >= cuts_prompt[0] || (displaced && score >= cuts_displaced[0]);
+    const bool pass_tight = score >= cuts_prompt[1] || (displaced && score >= cuts_displaced[1]);
+    const bool pass_hp = score >= cuts_prompt[2] || (displaced && score >= cuts_displaced[2]);
 
     if (pass_loose)
       quality |= (1 << reco::TrackBase::loose);

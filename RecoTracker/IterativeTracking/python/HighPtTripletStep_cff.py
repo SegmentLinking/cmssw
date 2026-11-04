@@ -450,7 +450,7 @@ _HighPtTripletStepTask_LST_mkFit.add(highPtTripletStepSeedsPixelsWithLST,highPtT
 import RecoTracker.FinalTrackSelectors.trackFeatureExtractor_cfi
 import RecoTracker.FinalTrackSelectors.trackTorchClassifierAlpaka_cfi
 import RecoTracker.FinalTrackSelectors.trackTorchClassifierFromSoA_cfi
-from RecoTracker.IterativeTracking.trackTorchMVAClassifierQualityCuts import qualityCutDictionaryPrompt,qualityCutDictionaryDisplaced
+from RecoTracker.IterativeTracking.trackTorchMVAClassifierQualityCuts import qualityCutDictionaryPrompt,qualityCutDictionaryDisplaced,qualityCutDictionaryPromptHighPt,qualityCutDictionaryDisplacedHighPt
 highPtTripletStepTrackTorchMVAFeatureExtractor = RecoTracker.FinalTrackSelectors.trackFeatureExtractor_cfi.trackFeatureExtractor.clone(
     src = "highPtTripletStepTracks",
     beamSpot = "offlineBeamSpot"
@@ -466,6 +466,9 @@ highPtTripletStepTrackTorchMVAClassifierOutput = RecoTracker.FinalTrackSelectors
     scores = "highPtTripletStepTrackTorchMVAClassifier",
     qualityCutsPrompt = qualityCutDictionaryPrompt.HighPtTripletStep.value(),
     qualityCutsDisplaced = qualityCutDictionaryDisplaced.HighPtTripletStep.value(),
+    ptThreshold = 5.0,
+    qualityCutsPromptHighPt = qualityCutDictionaryPromptHighPt.HighPtTripletStep.value(),
+    qualityCutsDisplacedHighPt = qualityCutDictionaryDisplacedHighPt.HighPtTripletStep.value(),
     name = "highPtTripletStep"
 )
 
