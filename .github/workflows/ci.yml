@@ -15,20 +15,19 @@ jobs:
       github.event.issue.pull_request &&
       contains(github.event.comment.body, 'run-ci:') &&
       ( github.event.comment.user.login == 'ariostas' ||
-        github.event.comment.user.login == 'GNiendorf' ||
-        github.event.comment.user.login == 'YonsiG' ||
-        github.event.comment.user.login == 'VourMa' ||
         github.event.comment.user.login == 'aashayarora' ||
+        github.event.comment.user.login == 'alexandertuna' ||
+        github.event.comment.user.login == 'bdanzi' ||
         github.event.comment.user.login == 'bucket420' ||
+        github.event.comment.user.login == 'GNiendorf' ||
         github.event.comment.user.login == 'jchismar' ||
         github.event.comment.user.login == 'kk428' ||
-        github.event.comment.user.login == 'Hoobidoobidoo' ||
         github.event.comment.user.login == 'mmasciov' ||
         github.event.comment.user.login == 'pwittich' ||
         github.event.comment.user.login == 'sgnoohc' ||
-        github.event.comment.user.login == 'alexandertuna' ||
+        github.event.comment.user.login == 'slava77' ||
         github.event.comment.user.login == 'slava77devel' ||
-        github.event.comment.user.login == 'slava77'
+        github.event.comment.user.login == 'VourMa'
       )
     runs-on: ubuntu-slim
     steps:
@@ -64,9 +63,16 @@ jobs:
           fi
           echo "Release: $RELEASE"
           echo "release=$RELEASE" >> $GITHUB_ENV
+          SAMPLE=$(echo "$COMMENT_BODY" | yq -M ".sample")
+          # Set to ttbar if null
+          if [[ -z "$SAMPLE" || "$SAMPLE" == "null" ]]; then
+            SAMPLE="ttbar"
+          fi
+          echo "Sample: $SAMPLE"
+          echo "sample=$SAMPLE" >> $GITHUB_ENV
           # First try to get procmodifiers specific to pr and target branches
-          PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.pr | @csv")
-          PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers.target | @csv")
+          PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | select(tag == \"!!map\") | .pr | @csv")
+          PROCMODIFIERS_TARGET=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | select(tag == \"!!map\") | .target | @csv")
           # If empty or null, try to get general procmodifiers
           if [[ -z "$PROCMODIFIERS_PR" || "$PROCMODIFIERS_PR" == "null" ]]; then
             PROCMODIFIERS_PR=$(echo "$COMMENT_BODY" | yq -M ".procmodifiers | @csv" 2>/dev/null || echo "")
@@ -98,12 +104,14 @@ jobs:
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw,hlt"
-          KNOWN_MODIFIERS="lowpt,gpu,ci_devel"
-          KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,packages,procmodifiers"
+          KNOWN_MODIFIERS="lowpt,cpu,gpu,ci_devel"
+          KNOWN_SAMPLES="ttbar,qcd"
+          KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,sample,packages,procmodifiers"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
           python -c "km = '${KNOWN_MODIFIERS}'.split(','); assert all(m in km for m in '${{ env.modifiers }}'.split(',')) or '${{ env.modifiers }}' == ''"
+          python -c "ks = '${KNOWN_SAMPLES}'.split(','); assert '${{ env.sample }}' in ks"
           python -c "kt = '${KNOWN_TOPKEYS}'.split(','); assert all(t in kt for t in '${{ env.topkeys }}'.split(','))"
-          python -c "assert all(pr.isdecimal() for pr in '${{ env.required_prs }}'.split(',')) or '${{ env.required_prs }}' == ''"
+          python -c "assert all(pr.isdecimal() for pr in '${{ env.required-prs }}'.split(',')) or '${{ env.required-prs }}' == ''"
       - name: Start checks
         if: contains(env.workflows, 'checks') || contains(env.workflows, 'all')
         uses: actions/github-script@v7
@@ -121,8 +129,8 @@ jobs:
                 'packages': '${{ env.packages }}'
               }
             });
-      - name: Start standalone tests
-        if: contains(env.workflows, 'standalone') || contains(env.workflows, 'all')
+      - name: Start standalone tests (CPU)
+        if: (contains(env.workflows, 'standalone') || contains(env.workflows, 'all')) && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -135,14 +143,36 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}'
               }
             });
-      - name: Start CMSSW tests
-        if: contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')
+      - name: Start standalone tests (GPU)
+        if: (contains(env.workflows, 'standalone') || contains(env.workflows, 'all')) && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'standalone.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}'
+              }
+            });
+      - name: Start CMSSW tests (CPU)
+        if: (contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')) && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -155,14 +185,40 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
-                'packages': '${{ env.packages }}'
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
               }
             });
-      - name: Start HLT tests
-        if: contains(env.workflows, 'hlt')
+      - name: Start CMSSW tests (GPU)
+        if: (contains(env.workflows, 'cmssw') || contains(env.workflows, 'all')) && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'cmssw.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
+              }
+            });
+      - name: Start HLT tests (CPU)
+        if: contains(env.workflows, 'hlt') && (!contains(env.modifiers, 'gpu') || contains(env.modifiers, 'cpu'))
         uses: actions/github-script@v7
         with:
           script: |
@@ -175,8 +231,32 @@ jobs:
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
-                'runs-on': '${{ contains(env.modifiers, 'gpu') && 'self-hosted' || 'ubuntu-latest' }}',
+                'runs-on': 'ubuntu-latest',
                 'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
+                'release': '${{ env.release }}',
+                'packages': '${{ env.packages }}',
+                'procmodifiers-pr': '${{ env.procmodifiers-pr }}',
+                'procmodifiers-target': '${{ env.procmodifiers-target }}'
+              }
+            });
+      - name: Start HLT tests (GPU)
+        if: contains(env.workflows, 'hlt') && contains(env.modifiers, 'gpu')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            await github.rest.actions.createWorkflowDispatch({
+              owner,
+              repo,
+              workflow_id: 'hlt.yml',
+              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              inputs: {
+                'pr-number': '${{ github.event.issue.number }}',
+                'required-prs': '${{ env.required-prs }}',
+                'runs-on': 'self-hosted',
+                'low-pt': '${{ contains(env.modifiers, 'lowpt') && 'true' || 'false' }}',
+                'sample': '${{ env.sample }}',
                 'release': '${{ env.release }}',
                 'packages': '${{ env.packages }}',
                 'procmodifiers-pr': '${{ env.procmodifiers-pr }}',

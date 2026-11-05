@@ -11,22 +11,27 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
 - `run-ci`: (string or list) This is what indicates which workflows you want to run. The available options are:
   - `all`: Run all available workflows (excluding hlt).
   - `standalone`: Run the standalone tests.
-  - `cmssw`: Run the CMSSW 29834.1 workflow.
+  - `cmssw`: Run the CMSSW 34634.712 workflow.
   - `checks`: Run the SCRAM checks.
   - `hlt`: Run the HLT tests.
 
 - `required-prs`: (int or list) PR number or list of PR numbers indicating required PRs that must be merged before checks and tests are run.
 
 - `modifiers`: (string or list) Modifier or list of modifiers that can change some parameters of how the tests run. The available options are:
-  - `gpu`: Run the tests on the self-hosted GPU CI.
+  - `cpu`: Run the tests on CPU. This is the default behavior when neither `cpu` nor `gpu` is specified. If both `cpu` and `gpu` are specified, tests will run on both.
+  - `gpu`: Run the tests on the self-hosted GPU CI. By default (without `cpu`), only the GPU run is performed. If both `cpu` and `gpu` are specified, tests will run on both.
   - `lowpt`: Use the low pT setup.
   - `ci_devel`: Use the development branch of the CI. This is useful for testing things without affecting the main CI setup.
 
 - `release`: (string) Specify the CMSSW release version to use for the tests. If not specified, the latest Integration Build (IB) will be used. If specified, it will be used as reference instead of the master branch.
 
+- `sample`: (string) Sample to use for the standalone, CMSSW, and HLT tests. It has no effect on the SCRAM checks. The available options are:
+  - `ttbar`: Use the ttbar sample (175 events for standalone, 100 events for CMSSW and HLT). This is the default.
+  - `qcd`: Use the QCD sample (50 events).
+
 - `packages`: (string or list) Package or list of extra packages to be added. By default, `RecoTracker/LSTCore` and `RecoTracker/LST` are added, along with packages that were changed in the PR. However, in cases where the master branch contains changes not reflected in the latest IB, it may be necessary to manually specify additional packages to ensure the tests run correctly.
 
-- `procmodifiers`: (string, list, or dict) Process modifiers to use for the HLT tests. Empty by default. If a string or list, the procmodifiers will be used for both the PR and target branches. If different procmodifiers are needed for PR and target branches, it should be specified as a dictionary with `pr` and `target` keys, each of which can be a string or a list.
+- `procmodifiers`: (string, list, or dict) Process modifiers to use for the CMSSW and HLT tests. They replace the default ones, so all the wanted procmodifiers must be listed. The default is `trackingIters01,trackingLST` for the CMSSW tests and none for the HLT tests. If a string or list, the procmodifiers will be used for both the PR and target branches. If different procmodifiers are needed for PR and target branches, it should be specified as a dictionary with `pr` and `target` keys, each of which can be a string or a list.
 
 ### Examples
 
@@ -41,12 +46,13 @@ The following exemplifies all the available options.
 ```yaml
 run-ci: [standalone, cmssw, checks]
 required-prs: [223, 224]
-modifiers: [gpu, lowpt]
+modifiers: [cpu, gpu, lowpt]
 release: CMSSW_16_1_0_pre1
+sample: qcd
 packages: [HeterogeneousCore/AlpakaInterface, DataFormats/Portable]
 procmodifiers:
-  pr: [phase2CAExtension, singleIterPatatrack]
-  target: [phase2CAExtension]
+  pr: [trackingIters01, trackingLST, seedingLST]
+  target: [trackingIters01, trackingLST]
 ```
 
 Note that lists can also be specified using multiple lines as follows.

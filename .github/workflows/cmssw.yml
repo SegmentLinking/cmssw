@@ -22,6 +22,14 @@ on:
         description: Run the low pT setup
         required: false
         type: boolean
+      sample:
+        description: Sample to run on
+        required: false
+        type: choice
+        options:
+          - ttbar
+          - qcd
+        default: ttbar
       release:
         description: CMSSW release to use for testing
         required: false
@@ -30,9 +38,17 @@ on:
         description: Comma-separated list of extra packages to add
         required: false
         type: string
+      procmodifiers-pr:
+        description: Comma-separated list of process modifiers to apply to the PR branch (defaults to trackingIters01,trackingLST)
+        required: false
+        type: string
+      procmodifiers-target:
+        description: Comma-separated list of process modifiers to apply to the target branch (defaults to trackingIters01,trackingLST)
+        required: false
+        type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}
+  group: ${{ github.workflow }}-${{ inputs.pr-number }}-${{ inputs.required-prs }}-${{ inputs.runs-on }}-${{ inputs.low-pt }}-${{ inputs.sample }}-${{ inputs.procmodifiers-pr }}-${{ inputs.procmodifiers-target }}
   cancel-in-progress: true
 
 permissions:
@@ -42,14 +58,17 @@ permissions:
 jobs:
   test:
     name: CMSSW Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@main
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@devel
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}
       runs-on: ${{ inputs.runs-on }}
       low-pt: ${{ inputs.low-pt }}
+      sample: ${{ inputs.sample }}
       release: ${{ inputs.release }}
       packages: ${{ inputs.packages }}
+      procmodifiers-pr: ${{ inputs.procmodifiers-pr }}
+      procmodifiers-target: ${{ inputs.procmodifiers-target }}
     secrets:
       app-id: ${{ secrets.APP_ID }}
       app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
