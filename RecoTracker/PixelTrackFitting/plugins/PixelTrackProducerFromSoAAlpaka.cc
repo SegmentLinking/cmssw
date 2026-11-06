@@ -40,6 +40,12 @@
 #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
 
 #include "storeTracks.h"
+// OT hits of the tracks made on demand from the clusters
+#include <deque>
+#include <optional>
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2TrackerRecHitOnDemand.h"
+#include "RecoLocalTracker/Records/interface/TkPhase2OTCPERecord.h"
 
 /**
  * This class creates "legacy" reco::Track
@@ -56,6 +62,16 @@ struct DetIdMaps {
   std::map<uint32_t, uint32_t> detIdToOTModuleId_;
   // map from detId to bool if used as OT extension
   std::map<uint32_t, bool> detIdIsUsedOTModule_;
+  // the entries of detIdToOTModuleId_ as a flat vector sorted by
+  // detId, for the per-event detset loops (a binary search in a small contiguous array instead of two std::map finds
+  // per detset; same answer for every detUnit)
+  std::vector<std::pair<uint32_t, uint32_t>> usedOTModules_;
+  // otModuleId of a used OT module, -1 otherwise (= detIdIsUsedOTModule_ ? detIdToOTModuleId_ : -1)
+  int64_t otModuleId(uint32_t detId) const {
+    auto it = std::lower_bound(
+        usedOTModules_.begin(), usedOTModules_.end(), detId, [](auto const &p, uint32_t d) { return p.first < d; });
+    return (it != usedOTModules_.end() && it->first == detId) ? int64_t(it->second) : int64_t(-1);
+  }
 };
 
 class PixelTrackProducerFromSoAAlpaka : public edm::global::EDProducer<edm::RunCache<DetIdMaps>> {
@@ -82,6 +98,11 @@ private:
   edm::EDGetTokenT<Phase2TrackerRecHit1DCollectionNew> otRecHitsToken_;
   const edm::EDGetTokenT<HMSstorage> pixelHMSToken_;
   edm::EDGetTokenT<HMSstorage> otHMSToken_;
+  // otClustersOnDemand set = no legacy OT rechits read
+  edm::EDGetTokenT<Phase2TrackerCluster1DCollectionNew> otClustersToken_;
+  edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> otGeomToken_;
+  edm::ESGetToken<ClusterParameterEstimator<Phase2TrackerCluster1D>, TkPhase2OTCPERecord> otCpeToken_;
+  bool otOnDemand_ = false;
   // Event Setup tokens
   const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> idealMagneticFieldToken_;
   const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> trackerTopologyToken_;
@@ -124,8 +145,14 @@ PixelTrackProducerFromSoAAlpaka::PixelTrackProducerFromSoAAlpaka(const edm::Para
 
   // if useOTExtension consume the OT RecHits
   if (useOTExtension_) {
-    otRecHitsToken_ =
-        consumes<Phase2TrackerRecHit1DCollectionNew>(iConfig.getParameter<edm::InputTag>("outerTrackerRecHitSrc"));
+    otOnDemand_ = !iConfig.getParameter<edm::InputTag>("otClustersOnDemand").label().empty();
+    if (otOnDemand_) {
+      otClustersToken_ = consumes(iConfig.getParameter<edm::InputTag>("otClustersOnDemand"));
+      otGeomToken_ = esConsumes();
+      otCpeToken_ = esConsumes(iConfig.getParameter<edm::ESInputTag>("Phase2StripCPE"));
+    } else
+      otRecHitsToken_ =
+          consumes<Phase2TrackerRecHit1DCollectionNew>(iConfig.getParameter<edm::InputTag>("outerTrackerRecHitSrc"));
     otHMSToken_ = consumes<HMSstorage>(iConfig.getParameter<edm::InputTag>("outerTrackerRecHitSoAConverterSrc"));
   }
 }
@@ -160,6 +187,7 @@ std::shared_ptr<DetIdMaps> PixelTrackProducerFromSoAAlpaka::globalBeginRun(const
         otModuleId++;
       }
     }
+    detIdMaps->usedOTModules_.assign(detIdMaps->detIdToOTModuleId_.begin(), detIdMaps->detIdToOTModuleId_.end());
   }
 
   return detIdMaps;
@@ -175,6 +203,11 @@ void PixelTrackProducerFromSoAAlpaka::fillDescriptions(edm::ConfigurationDescrip
   desc.add<int>("minNumberOfHits", 0);
   desc.add<std::string>("minQuality", "loose");
   desc.add<bool>("useOTExtension", false);
+  desc.add<edm::InputTag>("otClustersOnDemand", edm::InputTag(""))
+      ->setComment(
+          "OT hits of the tracks made on demand from these clusters with "
+          "Phase2StripCPE (= the legacy rechits); empty = outerTrackerRecHitSrc");
+  desc.add<edm::ESInputTag>("Phase2StripCPE", edm::ESInputTag("phase2StripCPEESProducer", "Phase2StripCPE"));
 
   // this option for removing tracks with exactly 4 hits is a temporary solution to reduce the fake rate in Phase-2
   // and is to be replaced by a smarter inclusive track selection in the CA directly
@@ -213,8 +246,7 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   auto const &trackerTopology = iSetup.getData(trackerTopologyToken_);
 
   // get the maps for the detId of the OT modules
-  auto const &detIdIsUsedOTModule = runCache(iEvent.getRun().index())->detIdIsUsedOTModule_;
-  auto const &detIdToOTModuleId = runCache(iEvent.getRun().index())->detIdToOTModuleId_;
+  auto const &detIdMaps = *runCache(iEvent.getRun().index());
 
   // get beamspot
   const auto &bsh = iEvent.get(beamSpotToken_);
@@ -231,7 +263,13 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   // get OT RecHits if needed
   size_t nOTHits = 0;
   const Phase2TrackerRecHit1DCollectionNew *otRecHitsDSV = nullptr;
-  if (useOTExtension_) {
+  edm::Handle<Phase2TrackerCluster1DCollectionNew> otClustersH;
+  std::optional<Phase2TrackerRecHitOnDemand> otOnDemand;
+  if (useOTExtension_ && otOnDemand_) {
+    otClustersH = iEvent.getHandle(otClustersToken_);
+    otOnDemand.emplace(otClustersH, iSetup.getData(otGeomToken_), iSetup.getData(otCpeToken_));
+    nOTHits = otClustersH->dataSize();  // one legacy rechit per cluster
+  } else if (useOTExtension_) {
     otRecHitsDSV = &iEvent.get(otRecHitsToken_);
     nOTHits = otRecHitsDSV->dataSize();
   }
@@ -242,6 +280,9 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
   // (unique hit identifier is equivalent to the position of the hit in the RecHit SoA)
   std::vector<TrackingRecHit const *> hitmap;
   hitmap.resize(nTotalHits, nullptr);
+  // on-demand OT hits (cluster key per hit identifier, storage with stable addresses)
+  std::vector<int32_t> otKeyOfIdx;
+  std::deque<Phase2TrackerRecHit1D> otHitStore;
 
   // loop over pixel RecHits to fill the hitmap
   for (auto const &pixelHit : pixelRecHits) {
@@ -269,22 +310,34 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
 
     // perform the exact same loop of how the SoA is initially filled with OT hits
     // and get the index by counting the hits (starting from the correpondign HitStartModule)
-    for (auto const &detSet : *otRecHitsDSV) {
-      auto detId = detSet.detId();
-
-      // check if module is used in extension
-      if (detIdIsUsedOTModule.find(detId)->second) {
-        // get the corresponding otModuleId
-        auto otModuleId = detIdToOTModuleId.find(detId)->second;
-
-        // loop over the RecHits of the module and fill the hitmap
-        for (int idx = otHitsModuleStart[otModuleId]; auto const &recHit : detSet) {
-          assert(nullptr == hitmap[idx]);
-          hitmap[idx] = &recHit;
-          idx++;
+    if (otOnDemand) {
+      // the same loop over the cluster detsets (same detIds, sizes and order as the legacy rechits): idx -> key
+      otKeyOfIdx.assign(nTotalHits, -1);
+      auto const *d0 = otClustersH->data().data();
+      for (auto const &detSet : *otClustersH) {
+        if (auto const m = detIdMaps.otModuleId(detSet.detId()); m >= 0) {
+          auto otModuleId = uint32_t(m);
+          for (int idx = otHitsModuleStart[otModuleId]; auto const &cluster : detSet) {
+            otKeyOfIdx[idx] = int32_t(&cluster - d0);
+            idx++;
+          }
         }
       }
     }
+    if (!otOnDemand)
+      for (auto const &detSet : *otRecHitsDSV) {
+        // check if module is used in extension and get the corresponding otModuleId
+        if (auto const m = detIdMaps.otModuleId(detSet.detId()); m >= 0) {
+          auto otModuleId = uint32_t(m);
+
+          // loop over the RecHits of the module and fill the hitmap
+          for (int idx = otHitsModuleStart[otModuleId]; auto const &recHit : detSet) {
+            assert(nullptr == hitmap[idx]);
+            hitmap[idx] = &recHit;
+            idx++;
+          }
+        }
+      }
   }
 
   // function that returns the number of skipped layers for a given pair of RecHits
@@ -407,8 +460,13 @@ void PixelTrackProducerFromSoAAlpaka::produce(edm::StreamID streamID,
     for (auto iHit = start; iHit < end; ++iHit) {
       // if hit in hitmap: true for pixel hits, true for OT hits if useOTExtension_
       auto hitIdx = hitIdxs[iHit];
-      if (hitIdx < nTotalHits)
+      if (hitIdx < nTotalHits) {
+        if (hitmap[hitIdx] == nullptr && !otKeyOfIdx.empty() && otKeyOfIdx[hitIdx] >= 0) {
+          otHitStore.push_back(otOnDemand->make(otKeyOfIdx[hitIdx]));
+          hitmap[hitIdx] = &otHitStore.back();
+        }
         hits[iHit - start] = hitmap[hitIdx];
+      }
       // else remove the OT hit from the track
       else
         nRemovedHits++;
