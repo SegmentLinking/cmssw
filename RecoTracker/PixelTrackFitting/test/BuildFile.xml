@@ -55,3 +55,13 @@
   <use name="TrackingTools/TrajectoryParametrization"/>
   <flags CXXFLAGS="-g"/>
 </bin>
+
+<bin file="alpaka/testBrokenLineOuter.dev.cc" name="testBrokenLineOuter">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="eigen"/>
+  <use name="DataFormats/Math"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="serial"/>
+</bin>

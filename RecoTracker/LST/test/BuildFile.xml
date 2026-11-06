@@ -1,0 +1,135 @@
+<bin file="testBLFCurvilinearJacobian.cc" name="testBLFCurvilinearJacobian">
+  <use name="catch2"/>
+  <use name="alpaka"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="DataFormats/Math"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/UniformEngine"/>
+  <use name="RecoTracker/LST"/>
+  <use name="TrackingTools/GeomPropagators"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
+</bin>
+
+<bin file="testBLFSeedFromState.cc" name="testBLFSeedFromState">
+  <use name="catch2"/>
+  <use name="alpaka"/>
+  <use name="DataFormats/DetId"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Math"/>
+  <use name="DataFormats/TrackingRecHit"/>
+  <use name="DataFormats/TrajectorySeed"/>
+  <use name="FWCore/Utilities"/>
+  <use name="Geometry/CommonTopologies"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/UniformEngine"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
+  <use name="TrackingTools/GeomPropagators"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
+</bin>
+
+<!-- the seed hit lists of LSTOutputConverter's seeds from the stored states, on synthetic hits -->
+<bin file="testLSTSeedHitList.cc" name="testLSTSeedHitList">
+  <use name="catch2"/>
+  <use name="alpaka"/>
+  <use name="Geometry/CommonTopologies"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/LSTCore"/>
+</bin>
+
+<bin file="testPixelSegmentClosestApproach.cc" name="testPixelSegmentClosestApproach">
+  <use name="catch2"/>
+  <use name="alpaka"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/UniformEngine"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
+  <use name="TrackingTools/AnalyticalJacobians"/>
+  <use name="TrackingTools/PatternTools"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
+</bin>
+
+<bin file="alpaka/testPixelSegmentClosestApproach.dev.cc" name="testPixelSegmentClosestApproachDevice">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin file="alpaka/testLSTInputDeviceTrackFit.dev.cc" name="testLSTInputDeviceTrackFit">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Math"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="HeterogeneousCore/AlpakaMath"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
+  <use name="RecoTracker/PixelTrackFitting" source_only="1"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<!-- the kernels of the device LST input run end to end; their sources are compiled into the test -->
+<bin file="alpaka/testLSTInputDeviceKernels.dev.cc" name="testLSTInputDeviceKernels">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Math"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="HeterogeneousCore/AlpakaMath"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore" source_only="1"/>
+  <use name="RecoTracker/PixelTrackFitting" source_only="1"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<!-- the hit selection of the seed-state fit of the track candidates, from its public LSTCore header -->
+<bin file="alpaka/testTCSeedStateSelection.dev.cc" name="testTCSeedStateSelection">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="HeterogeneousCore/AlpakaMath"/>
+  <use name="RecoTracker/LSTCore"/>
+  <use name="RecoTracker/PixelTrackFitting" source_only="1"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<!-- the seed-state fit of the track candidates end to end, its launcher linked from the LSTCore library -->
+<bin file="alpaka/testTCSeedStateFit.dev.cc" name="testTCSeedStateFit">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/Math"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="HeterogeneousCore/AlpakaMath"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore"/>
+  <use name="RecoTracker/PixelTrackFitting" source_only="1"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>

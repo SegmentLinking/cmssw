@@ -14,8 +14,7 @@ from ..sequences.HLTMkFitInputSequence_cfi import *
 from .HLTInitialStepHPSelectionSequence_cfi import *
 
 HLTInitialStepSequence = cms.Sequence(
-     hltInitialStepSeeds
-    +hltInputLST
+     hltInputLST
     +hltLST
     +hltInitialStepTrajectorySeedsLST
     +HLTMkFitInputSequence
@@ -30,16 +29,20 @@ HLTInitialStepSequence = cms.Sequence(
 # Empty sequence as a placeholder to be filled when alpakaValidationHLT is active
 HLTInitialStepSequenceSerialSync = cms.Sequence()
 
-hltInitialStepSeedsSerialSync = hltInitialStepSeeds.clone(
-    InputCollection = "hltPhase2PixelTracksSerialSync"
+hltInputLSTSerialSync = makeSerialClone(hltInputLST,
+    pixelTracksSoA = "hltPhase2PixelTrackTorchHighPuritySelectorSerialSync",
+    pixelTracks = "hltPhase2PixelTracksSerialSync"
 )
-hltInputLSTSerialSync = makeSerialClone(hltInputLST)
+# hltLSTSerialSync keeps otRecHitsSoA of hltLST: as for hltInputLSTSerialSync, the OT rechits have no serial clone
 hltLSTSerialSync = makeSerialClone(hltLST,
     lstInput = "hltInputLSTSerialSync"
 )
 hltInitialStepTrajectorySeedsLSTSerialSync = hltInitialStepTrajectorySeedsLST.clone(
     lstOutput = "hltLSTSerialSync",
-    lstInput = "hltInputLSTSerialSync"
+    lstInput = "hltInputLSTSerialSync",
+    pixelSeedStates = "hltInputLSTSerialSync",
+    tcSeedStates = "hltLSTSerialSync",
+    pixelTrackHits = "hltInputLSTSerialSync"
 )
 hltInitialStepTrajectorySeedsLSTTracksSerialSync = hltInitialStepTrajectorySeedsLSTTracks.clone(
     src = "hltInitialStepTrajectorySeedsLSTSerialSync"
@@ -49,8 +52,7 @@ hltInitialStepTrajectorySeedsLSTTracksSerialSync = hltInitialStepTrajectorySeeds
 # and adding a module needed for CPU vs. GPU comparisons
 from Configuration.ProcessModifiers.alpakaValidationHLT_cff import alpakaValidationHLT
 alpakaValidationHLT.toReplaceWith(HLTInitialStepSequenceSerialSync, cms.Sequence(
-     hltInitialStepSeedsSerialSync
-    +hltInputLSTSerialSync
+     hltInputLSTSerialSync
     +hltLSTSerialSync
     +hltInitialStepTrajectorySeedsLSTSerialSync
     +hltInitialStepTrajectorySeedsLSTTracksSerialSync
@@ -63,21 +65,16 @@ alpakaValidationHLT.toReplaceWith(HLTInitialStepSequence, _HLTHeterogeneousIniti
 
 
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
-hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence,
-    HLTInitialStepSequence.copyAndExclude([
-        hltInputLST,
-        hltLST,
-        hltInitialStepTrajectorySeedsLST,
-        HLTMkFitInputSequence,
-        hltInitialStepMkFitSeeds,
-        hltInitialStepTrackCandidatesMkFit
-    ])
-)
+hltPhase2LegacyTracking.toReplaceWith(HLTInitialStepSequence, cms.Sequence(
+    hltInitialStepSeeds
+    +hltInitialStepTrackCandidates
+    +hltInitialStepTracks
+    +HLTInitialStepHPSelectionSequence
+))
 
 
 _HLTInitialStepSequenceLST = cms.Sequence(
-    hltInitialStepSeeds
-    +hltInputLST
+    hltInputLST
     +hltLST
     +hltInitialStepTrackCandidates
     +hltInitialStepTracks
@@ -90,8 +87,7 @@ trackingLST.toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceLST)
 
 from ..modules.hltInitialStepTracksT4T5TCLST_cfi import *
 _HLTInitialStepSequenceNGTScouting = cms.Sequence(
-    hltInitialStepSeeds
-    +hltInputLST
+    hltInputLST
     +hltLST
     +hltInitialStepTrackCandidates
     +hltInitialStepTracksT4T5TCLST
@@ -103,8 +99,7 @@ ngtScouting.toReplaceWith(HLTInitialStepSequence,_HLTInitialStepSequenceNGTScout
 
 from ..modules.hltInitialStepTrackCandidatesMkFitFit_cfi import *
 _HLTInitialStepSequenceMkFitFit = cms.Sequence(
-    hltInitialStepSeeds
-    +hltInputLST
+    hltInputLST
     +hltLST
     +hltInitialStepTrajectorySeedsLST
     +HLTMkFitInputSequence

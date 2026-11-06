@@ -650,6 +650,489 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline {
     }
   };
 
+  // Circle state at the outermost fitted node
+  struct OuterCircleState {
+    riemannFit::Vector2d point;  //!< (x_e, y_e): the corrected outermost node eB
+    riemannFit::Vector3d par;    //!< (phi_e, x_T, kappa), with the signed kappa = q * (1/R + u_n)
+    riemannFit::Matrix3d cov;
+    int32_t qCharge;   //!< particle charge
+    int32_t mRef;      //!< inner node m of the reference chord (m, n-1)
+    bool refFallback;  //!< true if no node passed the baseline rule and mRef = 0 is the fallback
+  };
+
+  // Line state at the outermost fitted node
+  struct OuterLineState {
+    riemannFit::Vector2d par;  //!< (cotan(theta), z_e), with z_e the fitted z at sTransverse(n-1)
+    riemannFit::Matrix2d cov;
+    int32_t mRef;      //!< inner node m of the reference chord (m, n-1)
+    bool refFallback;  //!< true if no node passed the baseline rule and mRef = 0 is the fallback
+  };
+
+  // Writes the matrix that matrixC_u() returns into the lower triangle and diagonal of the leading n-by-n block of
+  // c_uMat (the upper triangle is not written), with the same operations in the same order: the band is built
+  // transposed, and the final c_uMat + c_uMat.transpose() is kept element by element (each halved diagonal element
+  // doubled, + 0. on the band, which turns -0.0 into +0.0 as the sum does). For the outer fits, which then invert
+  // c_uMat in place: see choleskyInvertLowerInPlace().
+  template <alpaka::concepts::Acc TAcc, int n, typename M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void fillMatrixC_uLower(const TAcc& acc,
+                                                         const riemannFit::VectorNd<n>& weights,
+                                                         const riemannFit::VectorNd<n>& sTotal,
+                                                         const riemannFit::VectorNd<n>& varBeta,
+                                                         M& c_uMat) {
+    static_assert(M::RowsAtCompileTime >= n && M::ColsAtCompileTime >= n, "c_uMat must be at least n x n");
+    for (u_int j = 0; j < n; j++)
+      for (u_int i = j + 1; i < n; i++)
+        c_uMat(i, j) = 0;
+    for (u_int i = 0; i < n; i++) {
+      c_uMat(i, i) = weights(i);
+      if (i > 1)
+        c_uMat(i, i) += 1. / (varBeta(i - 1) * riemannFit::sqr(sTotal(i) - sTotal(i - 1)));
+      if (i > 0 && i < n - 1)
+        c_uMat(i, i) +=
+            (1. / varBeta(i)) * riemannFit::sqr((sTotal(i + 1) - sTotal(i - 1)) /
+                                                ((sTotal(i + 1) - sTotal(i)) * (sTotal(i) - sTotal(i - 1))));
+      if (i < n - 2)
+        c_uMat(i, i) += 1. / (varBeta(i + 1) * riemannFit::sqr(sTotal(i + 1) - sTotal(i)));
+
+      if (i > 0 && i < n - 1)
+        c_uMat(i + 1, i) =
+            1. / (varBeta(i) * (sTotal(i + 1) - sTotal(i))) *
+            (-(sTotal(i + 1) - sTotal(i - 1)) / ((sTotal(i + 1) - sTotal(i)) * (sTotal(i) - sTotal(i - 1))));
+      if (i < n - 2)
+        c_uMat(i + 1, i) +=
+            1. / (varBeta(i + 1) * (sTotal(i + 1) - sTotal(i))) *
+            (-(sTotal(i + 2) - sTotal(i)) / ((sTotal(i + 2) - sTotal(i + 1)) * (sTotal(i + 1) - sTotal(i))));
+
+      if (i < n - 2)
+        c_uMat(i + 2, i) = 1. / (varBeta(i + 1) * (sTotal(i + 2) - sTotal(i + 1)) * (sTotal(i + 1) - sTotal(i)));
+
+      c_uMat(i, i) *= 0.5;
+    }
+    // the symmetric sum; the elements outside the band stay 0 + 0 = +0.0
+    for (u_int i = 0; i < n; i++) {
+      c_uMat(i, i) = c_uMat(i, i) + c_uMat(i, i);
+      if (i < n - 1)
+        c_uMat(i + 1, i) = c_uMat(i + 1, i) + 0.;
+      if (i < n - 2)
+        c_uMat(i + 2, i) = c_uMat(i + 2, i) + 0.;
+    }
+  }
+
+  // Inverts in place the symmetric positive-definite matrix whose lower triangle and diagonal a holds (the upper
+  // triangle is ignored), with the operations of math::cholesky::invert() in the same order. From size 7 on, invert()
+  // runs math::cholesky::invertNN() (DataFormats/Math/interface/choleskyInversion.h), which copies its input into a
+  // local work array and writes the inverse into a second matrix. Here the work array is a itself and the inverse stays
+  // in it; only the storage differs. In the last stage, the pass that starts at index j stores the inverse's (j, j) at
+  // (j, j), then its lower row j + 1, the elements (j + 1, k) for k <= j, at (j + 1, k). Each of these work elements
+  // is last read before it is written: (j, j) by the sum of the same pass, (j + 1, k) by the diagonal sum of pass k
+  // (k <= j, before the row is written) and by the column sums of earlier passes. Finally the lower triangle is copied
+  // to the upper one, as invertNN() writes both. Below size 7, invert() uses closed-form inverters, called as they are.
+  // Together with fillMatrixC_uLower(), which spares the n-by-n result of matrixC_u() (and, in the circle fit, its
+  // copy into the matrix to invert), this keeps one matrix instead of four in the circle fit and three in the line fit
+  // on the per-thread stack of the GPU fit kernels, where the matrices of the larger fits do not fit in registers.
+  template <typename M>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void choleskyInvertLowerInPlace(M& a) {
+    static_assert(M::RowsAtCompileTime == M::ColsAtCompileTime, "a square matrix is required");
+    constexpr int n = M::ColsAtCompileTime;
+    using T = typename M::Scalar;
+
+    if constexpr (n < 7) {
+      // the full symmetric matrix, so that the copy is equal in every element to the one inverted before
+      for (int row = 1; row < n; ++row)
+        for (int col = 0; col < row; ++col)
+          a(col, row) = a(row, col);
+      // a real copy also when M is a map over the work array, so that the inverter never reads the storage it writes
+      const typename M::PlainObject src = a;
+      math::cholesky::invert(src, a);
+    } else {
+      for (int j = 0; j < n; ++j) {
+        a(j, j) = T(1.) / a(j, j);
+        int jp1 = j + 1;
+        for (int l = jp1; l < n; ++l) {
+          a(j, l) = a(j, j) * a(l, j);
+          T s1 = -a(l, jp1);
+          for (int i = 0; i < jp1; ++i)
+            s1 += a(l, i) * a(i, jp1);
+          a(l, jp1) = -s1;
+        }
+      }
+
+      a(0, 1) = -a(0, 1);
+      a(1, 0) = a(0, 1) * a(1, 1);
+      for (int j = 2; j < n; ++j) {
+        int jm1 = j - 1;
+        for (int k = 0; k < jm1; ++k) {
+          T s31 = a(k, j);
+          for (int i = k; i < jm1; ++i)
+            s31 += a(k, i + 1) * a(i + 1, j);
+          a(k, j) = -s31;
+          a(j, k) = -s31 * a(j, j);
+        }
+        a(jm1, j) = -a(jm1, j);
+        a(j, jm1) = a(jm1, j) * a(j, j);
+      }
+
+      int j = 0;
+      while (j < n - 1) {
+        T s33 = a(j, j);
+        for (int i = j + 1; i < n; ++i)
+          s33 += a(j, i) * a(i, j);
+        a(j, j) = s33;
+
+        ++j;
+        for (int k = 0; k < j; ++k) {
+          T s32 = 0;
+          for (int i = j; i < n; ++i)
+            s32 += a(k, i) * a(i, j);
+          a(j, k) = s32;
+        }
+      }
+      // the last diagonal element of the inverse is a(n - 1, n - 1) already
+
+      for (int row = 1; row < n; ++row)
+        for (int col = 0; col < row; ++col)
+          a(col, row) = a(row, col);
+    }
+  }
+
+  // Chooses the inner node m of the outer reference chord (m, n-1), shared by the circle and the line:
+  // the outermost earlier node whose transverse distance from the last hit exceeds 2 cm.
+  template <alpaka::concepts::Acc TAcc, typename M3xN>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int outerReferenceNode(const TAcc& acc, const M3xN& hits, bool& fallback) {
+    constexpr int n = M3xN::ColsAtCompileTime;
+    constexpr double kBaseMin2 = 2.0 * 2.0;  // minimum squared transverse baseline, cm^2
+    for (int j = n - 2; j >= 0; --j) {
+      if (riemannFit::sqr(hits(0, n - 1) - hits(0, j)) + riemannFit::sqr(hits(1, n - 1) - hits(1, j)) > kBaseMin2) {
+        fallback = false;
+        return j;
+      }
+    }
+    fallback = true;
+    return 0;
+  }
+
+  // Computes the circle state at the corrected node b and its Jacobian w.r.t. (u_a, u_b, u_n)
+  // hitA: xy coordinates of the hit at node a.
+  // hitB: xy coordinates of the hit at node b.
+  // rhatA: unit vector from the pre-fitted center to hit a.
+  // rhatB: unit vector from the pre-fitted center to hit b.
+  // uA: fitted interception at node a.
+  // zA: distance of hit a from the pre-fitted circle (zInSZplane of circleFit).
+  // uB: fitted interception at node b.
+  // zB: distance of hit b from the pre-fitted circle (zInSZplane of circleFit).
+  // uN: fitted curvature correction.
+  // radius: pre-fitted radius.
+  // circle_results: point, par and qCharge are filled; qCharge must be set by the caller.
+  // jacobian: d(phi_e, x_T, kappa)/d(u_a, u_b, u_n).
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void outerCircleExtraction(const TAcc& acc,
+                                                            const riemannFit::Vector2d& hitA,
+                                                            const riemannFit::Vector2d& hitB,
+                                                            const riemannFit::Vector2d& rhatA,
+                                                            const riemannFit::Vector2d& rhatB,
+                                                            const double uA,
+                                                            const double zA,
+                                                            const double uB,
+                                                            const double zB,
+                                                            const double uN,
+                                                            const double radius,
+                                                            OuterCircleState& circle_results,
+                                                            riemannFit::Matrix3d& jacobian) {
+    const riemannFit::Vector2d dVec = hitA + (-zA + uA) * rhatA;
+    const riemannFit::Vector2d eVec = hitB + (-zB + uB) * rhatB;
+    const riemannFit::Vector2d eMinusd = eVec - dVec;
+    const double eMinusd2 = eMinusd.squaredNorm();
+    const double chordLength = alpaka::math::sqrt(acc, eMinusd2);
+    const double kappa = circle_results.qCharge * (1. / radius + uN);
+    const double halfSine = 0.5 * kappa * chordLength;  // sine of the signed half turning angle over the chord
+    const double phiE = alpaka::math::atan2(acc, eMinusd(1), eMinusd(0)) - alpaka::math::asin(acc, halfSine);
+
+    circle_results.point = eVec;
+    circle_results.par << phiE, 0., kappa;
+
+    const double tmp1 = 1. / eMinusd2;
+    const double tmp2 = 0.5 * kappa / (chordLength * alpaka::math::sqrt(acc, 1. - riemannFit::sqr(halfSine)));
+    const double tmp3 = 0.5 * chordLength / alpaka::math::sqrt(acc, 1. - riemannFit::sqr(halfSine));
+    // U = (-sin(phi_e), cos(phi_e)): x_T moves only with u_b, by rhat_b . U
+    const double dxTdub = -rhatB(0) * alpaka::math::sin(acc, phiE) + rhatB(1) * alpaka::math::cos(acc, phiE);
+    jacobian << (eMinusd(1) * rhatA(0) - eMinusd(0) * rhatA(1)) * tmp1 + tmp2 * eMinusd.dot(rhatA),
+        (eMinusd(0) * rhatB(1) - eMinusd(1) * rhatB(0)) * tmp1 - tmp2 * eMinusd.dot(rhatB),
+        -circle_results.qCharge * tmp3, 0, dxTdub, 0, 0, 0, circle_results.qCharge;
+  }
+
+  // Performs the Broken Line circle fit as circleFit() does, but extracts the state at the outermost
+  // fitted node instead of at the closest approach
+  // hits: hits coordinates.
+  // hits_ge: hits covariance matrix.
+  // fast_fit: pre-fit result in the form (X0,Y0,R,tan(theta)).
+  // bField: magnetic field in Gev/cm/c.
+  // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
+  // circle_results: struct to be filled (see OuterCircleState).
+  // work: (n+1)*(n+1) doubles for the one matrix of the fit (C_u with its border, then its inverse), stored as
+  // riemannFit::MatrixNplusONEd<n> stores it (contiguous, column-major); its content on entry is not used. The GPU fit
+  // kernels pass a slice of block-shared memory: it keeps the per-thread stack small, as the CUDA driver reserves the
+  // largest stack frame of the launched kernels for every resident thread.
+  // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void circleFitOuter(const TAcc& acc,
+                                                     const M3xN& hits,
+                                                     const M6xN& hits_ge,
+                                                     const V4& fast_fit,
+                                                     const double bField,
+                                                     const PreparedBrokenLineData<n>& data,
+                                                     OuterCircleState& circle_results,
+                                                     double* work) {
+    circle_results.qCharge = data.qCharge;
+    const auto& radii = data.radii;
+    const auto& sTransverse = data.sTransverse;
+    const auto& sTotal = data.sTotal;
+    const double slope = -circle_results.qCharge / fast_fit(3);
+    riemannFit::VectorNd<n> varBeta = data.varBeta;
+    varBeta *= 1. + riemannFit::sqr(slope);  // the kink angles are projected!
+
+    riemannFit::VectorNd<n> zInSZplane;
+    for (u_int i = 0; i < n; i++) {
+      zInSZplane(i) = radii.block(0, i, 2, 1).norm() - fast_fit(2);
+    }
+
+    riemannFit::Matrix2d vMat;           // covariance matrix
+    riemannFit::VectorNd<n> weightsVec;  // weights
+    riemannFit::Matrix2d rotMat;         // rotation matrix point by point
+    for (u_int i = 0; i < n; i++) {
+      vMat(0, 0) = hits_ge.col(i)[0];               // x errors
+      vMat(0, 1) = vMat(1, 0) = hits_ge.col(i)[1];  // cov_xy
+      vMat(1, 1) = hits_ge.col(i)[2];               // y errors
+      rotMat = rotationMatrix(acc, -radii(0, i) / radii(1, i));
+      weightsVec(i) =
+          1. / ((rotMat * vMat * rotMat.transpose())(1, 1));  // compute the orthogonal weight point by point
+    }
+
+    riemannFit::VectorNplusONEd<n> r_uVec;
+    r_uVec(n) = 0;
+    for (u_int i = 0; i < n; i++) {
+      r_uVec(i) = weightsVec(i) * zInSZplane(i);
+    }
+
+    // the lower triangle of the c_uMat matrix of circleFit(), inverted in place: iMat is its inverse. It is a map of
+    // the same fixed-size type over work, so that every expression on it keeps its fixed-size evaluation. Below size 7,
+    // choleskyInvertLowerInPlace() hands math::cholesky::invert() a real copy of the map as its source, so the
+    // inverter never reads the storage it writes.
+    Eigen::Map<riemannFit::MatrixNplusONEd<n>> iMat(work);
+    fillMatrixC_uLower(acc, weightsVec, sTransverse, varBeta, iMat);
+    iMat(n, n) = 0;
+    //add the border (its row n) to the matrix
+    for (u_int i = 0; i < n; i++) {
+      iMat(n, i) = 0;
+      if (i > 0 && i < n - 1) {
+        iMat(n, i) += -(sTransverse(i + 1) - sTransverse(i - 1)) * (sTransverse(i + 1) - sTransverse(i - 1)) /
+                      (2. * varBeta(i) * (sTransverse(i + 1) - sTransverse(i)) * (sTransverse(i) - sTransverse(i - 1)));
+      }
+      if (i > 1) {
+        iMat(n, i) +=
+            (sTransverse(i) - sTransverse(i - 2)) / (2. * varBeta(i - 1) * (sTransverse(i) - sTransverse(i - 1)));
+      }
+      if (i < n - 2) {
+        iMat(n, i) +=
+            (sTransverse(i + 2) - sTransverse(i)) / (2. * varBeta(i + 1) * (sTransverse(i + 1) - sTransverse(i)));
+      }
+      if (i > 0 && i < n - 1)
+        iMat(n, n) += riemannFit::sqr(sTransverse(i + 1) - sTransverse(i - 1)) / (4. * varBeta(i));
+    }
+
+    choleskyInvertLowerInPlace(iMat);
+    riemannFit::VectorNplusONEd<n> uVec = iMat * r_uVec;  // obtain the fitted parameters by solving the linear system
+
+    // compute (phi_e, x_T, kappa) at the corrected outermost node, from the chord (m, n-1)...
+
+    const int m = outerReferenceNode(acc, hits, circle_results.refFallback);
+    circle_results.mRef = m;
+
+    riemannFit::Matrix3d jacobian;
+    outerCircleExtraction(acc,
+                          hits.block(0, m, 2, 1),
+                          hits.block(0, n - 1, 2, 1),
+                          radii.block(0, m, 2, 1) / radii.block(0, m, 2, 1).norm(),
+                          radii.block(0, n - 1, 2, 1) / radii.block(0, n - 1, 2, 1).norm(),
+                          uVec(m),
+                          zInSZplane(m),
+                          uVec(n - 1),
+                          zInSZplane(n - 1),
+                          uVec(n),
+                          fast_fit(2),
+                          circle_results,
+                          jacobian);
+
+    circle_results.cov << iMat(m, m), iMat(m, n - 1), iMat(m, n), iMat(n - 1, m), iMat(n - 1, n - 1), iMat(n - 1, n),
+        iMat(n, m), iMat(n, n - 1), iMat(n, n);
+
+    circle_results.cov = jacobian * circle_results.cov * jacobian.transpose();
+
+    //...adding the m.s. correction along the whole chord, as circleFit() does for the first two hits
+
+    circle_results.cov(0, 0) +=
+        (1 + riemannFit::sqr(slope)) * multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope);
+  }
+
+  // circleFitOuter() with its work array on the stack of the calling thread
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void circleFitOuter(const TAcc& acc,
+                                                     const M3xN& hits,
+                                                     const M6xN& hits_ge,
+                                                     const V4& fast_fit,
+                                                     const double bField,
+                                                     const PreparedBrokenLineData<n>& data,
+                                                     OuterCircleState& circle_results) {
+    riemannFit::MatrixNplusONEd<n> iMat;
+    circleFitOuter(acc, hits, hits_ge, fast_fit, bField, data, circle_results, iMat.data());
+  }
+
+  // Changes the line parameters fitted at the nodes (a, b) in the rotated SZ system into the state at
+  // node b in the original sz system
+  // uA: fitted interception at node a.
+  // uB: fitted interception at node b.
+  // uCov: covariance matrix of (u_a, u_b).
+  // sTotalA: sTotal of node a.
+  // sTotalB: sTotal of node b.
+  // sTransverseB: sTransverse of node b.
+  // rotMat: rotation matrix of the SZ system, as in lineFit().
+  // varSlopeMS: multiple scattering variance added to the slope in the rotated system.
+  // line_results: par and cov are filled.
+  template <alpaka::concepts::Acc TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void outerLineExtraction(const TAcc& acc,
+                                                          const double uA,
+                                                          const double uB,
+                                                          const riemannFit::Matrix2d& uCov,
+                                                          const double sTotalA,
+                                                          const double sTotalB,
+                                                          const double sTransverseB,
+                                                          const riemannFit::Matrix2d& rotMat,
+                                                          const double varSlopeMS,
+                                                          OuterLineState& line_results) {
+    // line parameters in the system in which node b is the origin and with axis along SZ
+    const double idiff = 1. / (sTotalB - sTotalA);
+    line_results.par << (uB - uA) * idiff, uB;
+    line_results.cov << (uCov(0, 0) - 2 * uCov(0, 1) + uCov(1, 1)) * riemannFit::sqr(idiff) + varSlopeMS,
+        (uCov(1, 1) - uCov(0, 1)) * idiff, (uCov(1, 1) - uCov(0, 1)) * idiff, uCov(1, 1);
+
+    // translate to the original SZ system
+    riemannFit::Matrix2d jacobian;
+    jacobian(0, 0) = 1.;
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = -sTotalB;
+    jacobian(1, 1) = 1.;
+    line_results.par(1) += -line_results.par(0) * sTotalB;
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+
+    // rotate to the original sz system
+    auto tmp = rotMat(0, 0) - line_results.par(0) * rotMat(0, 1);
+    jacobian(1, 1) = 1. / tmp;
+    jacobian(0, 0) = jacobian(1, 1) * jacobian(1, 1);
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = line_results.par(1) * rotMat(0, 1) * jacobian(0, 0);
+    line_results.par(1) = line_results.par(1) * jacobian(1, 1);
+    line_results.par(0) = (rotMat(0, 1) + line_results.par(0) * rotMat(0, 0)) * jacobian(1, 1);
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+
+    // move from Zip to z_e = Zip + cotan(theta) * sTransverse(b)
+    jacobian(0, 0) = 1.;
+    jacobian(0, 1) = 0;
+    jacobian(1, 0) = sTransverseB;
+    jacobian(1, 1) = 1.;
+    line_results.par(1) += line_results.par(0) * sTransverseB;
+    line_results.cov = jacobian * line_results.cov * jacobian.transpose();
+  }
+
+  // Performs the Broken Line line fit as lineFit() does, but extracts the state at the outermost fitted
+  // node instead of at the closest approach
+  // hits: hits coordinates (used only to choose the reference node, as in circleFitOuter()).
+  // hits_ge: hits covariance matrix.
+  // fast_fit: pre-fit result in the form (X0,Y0,R,tan(theta)).
+  // bField: magnetic field in Gev/cm/c.
+  // data: PreparedBrokenLineData, as filled by prepareBrokenLineData(). It is not modified.
+  // line_results: struct to be filled (see OuterLineState).
+  // work: at least n*n doubles for the one matrix of the fit (C_u, then its inverse), stored as riemannFit::MatrixNd<n>
+  // stores it (contiguous, column-major); its content on entry is not used. It can be the work array of
+  // circleFitOuter(), whose leading n*n doubles it uses (see there for the reason of the block-shared memory on GPUs).
+  // Must be called before circleFit(), which modifies data, or on an unmodified copy of data.
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void lineFitOuter(const TAcc& acc,
+                                                   const M3xN& hits,
+                                                   const M6xN& hits_ge,
+                                                   const V4& fast_fit,
+                                                   const double bField,
+                                                   const PreparedBrokenLineData<n>& data,
+                                                   OuterLineState& line_results,
+                                                   double* work) {
+    const auto& radii = data.radii;
+    const auto& sTotal = data.sTotal;
+    const auto& zInSZplane = data.zInSZplane;
+    const auto& varBeta = data.varBeta;
+
+    const double slope = -data.qCharge / fast_fit(3);
+    riemannFit::Matrix2d rotMat = rotationMatrix(acc, slope);
+
+    riemannFit::Matrix3d vMat = riemannFit::Matrix3d::Zero();  // covariance matrix XYZ
+    riemannFit::Matrix2x3d jacobXYZtosZ =
+        riemannFit::Matrix2x3d::Zero();  // jacobian for computation of the error on s (xyz -> sz)
+    riemannFit::VectorNd<n> weights = riemannFit::VectorNd<n>::Zero();
+    for (u_int i = 0; i < n; i++) {
+      vMat(0, 0) = hits_ge.col(i)[0];               // x errors
+      vMat(0, 1) = vMat(1, 0) = hits_ge.col(i)[1];  // cov_xy
+      vMat(0, 2) = vMat(2, 0) = hits_ge.col(i)[3];  // cov_xz
+      vMat(1, 1) = hits_ge.col(i)[2];               // y errors
+      vMat(2, 1) = vMat(1, 2) = hits_ge.col(i)[4];  // cov_yz
+      vMat(2, 2) = hits_ge.col(i)[5];               // z errors
+      auto tmp = 1. / radii.block(0, i, 2, 1).norm();
+      jacobXYZtosZ(0, 0) = data.qCharge * radii(1, i) * tmp;
+      jacobXYZtosZ(0, 1) = -data.qCharge * radii(0, i) * tmp;
+      jacobXYZtosZ(1, 2) = 1.;
+      weights(i) = 1. / ((rotMat * jacobXYZtosZ * vMat * jacobXYZtosZ.transpose() * rotMat.transpose())(
+                            1, 1));  // compute the orthogonal weight point by point
+    }
+
+    riemannFit::VectorNd<n> r_u;
+    for (u_int i = 0; i < n; i++) {
+      r_u(i) = weights(i) * zInSZplane(i);
+    }
+    // the lower triangle of matrixC_u(), inverted in place: iMat is its inverse, a map of the same fixed-size type
+    // over work (see circleFitOuter())
+    Eigen::Map<riemannFit::MatrixNd<n>> iMat(work);
+    fillMatrixC_uLower(acc, weights, sTotal, varBeta, iMat);
+    choleskyInvertLowerInPlace(iMat);
+
+    riemannFit::VectorNd<n> uVec = iMat * r_u;  // obtain the fitted parameters by solving the linear system
+
+    const int m = outerReferenceNode(acc, hits, line_results.refFallback);
+    line_results.mRef = m;
+
+    riemannFit::Matrix2d uCov;
+    uCov << iMat(m, m), iMat(m, n - 1), iMat(n - 1, m), iMat(n - 1, n - 1);
+
+    outerLineExtraction(acc,
+                        uVec(m),
+                        uVec(n - 1),
+                        uCov,
+                        sTotal(m),
+                        sTotal(n - 1),
+                        data.sTransverse(n - 1),
+                        rotMat,
+                        multScatt(acc, sTotal(n - 1) - sTotal(m), bField, fast_fit(2), n, slope),
+                        line_results);
+  }
+
+  // lineFitOuter() with its work array on the stack of the calling thread
+  template <alpaka::concepts::Acc TAcc, typename M3xN, typename M6xN, typename V4, int n>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void lineFitOuter(const TAcc& acc,
+                                                   const M3xN& hits,
+                                                   const M6xN& hits_ge,
+                                                   const V4& fast_fit,
+                                                   const double bField,
+                                                   const PreparedBrokenLineData<n>& data,
+                                                   OuterLineState& line_results) {
+    riemannFit::MatrixNd<n> iMat;
+    lineFitOuter(acc, hits, hits_ge, fast_fit, bField, data, line_results, iMat.data());
+  }
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::brokenline
 
 #endif  // RecoTracker_PixelTrackFitting_interface_alpaka_BrokenLine_h
