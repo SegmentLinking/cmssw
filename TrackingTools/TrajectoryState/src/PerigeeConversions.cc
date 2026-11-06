@@ -1,5 +1,6 @@
 #include "TrackingTools/TrajectoryState/interface/PerigeeConversions.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateClosestToPoint.h"
+#include "TrackingTools/TrajectoryState/interface/curvilinear2PerigeeJacobian.h"
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include <cmath>
 #include <vdt/vdtMath.h>
@@ -142,65 +143,14 @@ AlgebraicMatrix66 PerigeeConversions::jacobianParameters2Cartesian(const Algebra
 }
 
 AlgebraicMatrix55 PerigeeConversions::jacobianCurvilinear2Perigee(const FreeTrajectoryState& fts) {
-  GlobalVector p = fts.momentum();
-
-  GlobalVector Z = GlobalVector(0., 0., 1.);
-  GlobalVector T = p.unit();
-  GlobalVector U = Z.cross(T).unit();
-  ;
-  GlobalVector V = T.cross(U);
-
-  GlobalVector I = GlobalVector(-p.x(), -p.y(), 0.);  //opposite to track dir.
-  I = I.unit();
-  GlobalVector J(-I.y(), I.x(), 0.);  //counterclockwise rotation
-  const GlobalVector& K(Z);
-  GlobalVector B = fts.parameters().magneticFieldInInverseGeV();
-  GlobalVector H = B.unit();
-  GlobalVector HxT = H.cross(T);
-  GlobalVector N = HxT.unit();
-  double alpha = HxT.mag();
-  double qbp = fts.signedInverseMomentum();
-  double Q = -B.mag() * qbp;
-  double alphaQ = alpha * Q;
-
-  double lambda = 0.5 * M_PI - p.theta();
-  double sinlambda, coslambda;
-  vdt::fast_sincos(lambda, sinlambda, coslambda);
-  double seclambda = 1. / coslambda;
-
-  double ITI = 1. / T.dot(I);
-  double NU = N.dot(U);
-  double NV = N.dot(V);
-  double UI = U.dot(I);
-  double VI = V.dot(I);
-  double UJ = U.dot(J);
-  double VJ = V.dot(J);
-  double UK = U.dot(K);
-  double VK = V.dot(K);
-
   AlgebraicMatrix55 jac;
-
-  if (fabs(fts.transverseCurvature()) < 1.e-10) {
-    jac(0, 0) = seclambda;
-    jac(0, 1) = sinlambda * seclambda * seclambda * std::abs(qbp);
-  } else {
-    double Bz = B.z();
-    jac(0, 0) = -Bz * seclambda;
-    jac(0, 1) = -Bz * sinlambda * seclambda * seclambda * qbp;
-    jac(1, 3) = alphaQ * NV * UI * ITI;
-    jac(1, 4) = alphaQ * NV * VI * ITI;
-    jac(0, 3) = -jac(0, 1) * jac(1, 3);
-    jac(0, 4) = -jac(0, 1) * jac(1, 4);
-    jac(2, 3) = -alphaQ * seclambda * NU * UI * ITI;
-    jac(2, 4) = -alphaQ * seclambda * NU * VI * ITI;
-  }
-  jac(1, 1) = -1.;
-  jac(2, 2) = 1.;
-  jac(3, 3) = VK * ITI;
-  jac(3, 4) = -UK * ITI;
-  jac(4, 3) = -VJ * ITI;
-  jac(4, 4) = UJ * ITI;
-
+  curvilinear2PerigeeJacobian::compute(
+      fts.momentum(),
+      fts.parameters().magneticFieldInInverseGeV(),
+      fts.signedInverseMomentum(),
+      fts.transverseCurvature(),
+      [](double angle, double& sinAngle, double& cosAngle) { vdt::fast_sincos(angle, sinAngle, cosAngle); },
+      jac);
   return jac;
 }
 
