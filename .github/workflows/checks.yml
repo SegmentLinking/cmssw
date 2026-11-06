@@ -27,7 +27,7 @@ permissions:
 jobs:
   checks:
     name: SCRAM Checks
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/checks.yml@main
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/checks.yml@devel
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}

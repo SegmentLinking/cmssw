@@ -50,7 +50,7 @@ permissions:
 jobs:
   test:
     name: Standalone Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/standalone.yml@main
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/standalone.yml@devel
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}

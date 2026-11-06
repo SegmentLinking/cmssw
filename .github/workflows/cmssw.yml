@@ -58,7 +58,7 @@ permissions:
 jobs:
   test:
     name: CMSSW Testing
-    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@main
+    uses: SegmentLinking/TrackLooper-actions/.github/workflows/cmssw.yml@devel
     with:
       pr-number: ${{ inputs.pr-number }}
       required-prs: ${{ inputs.required-prs }}

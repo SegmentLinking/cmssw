@@ -21,7 +21,7 @@ The CI is triggered by the presence of the string `run-ci:` in PR comments. The 
   - `cpu`: Run the tests on CPU. This is the default behavior when neither `cpu` nor `gpu` is specified. If both `cpu` and `gpu` are specified, tests will run on both.
   - `gpu`: Run the tests on the self-hosted GPU CI. By default (without `cpu`), only the GPU run is performed. If both `cpu` and `gpu` are specified, tests will run on both.
   - `lowpt`: Use the low pT setup.
-  - `ci_devel`: Use the development branch of the CI. This is useful for testing things without affecting the main CI setup.
+  - `ci-devel`: Use the development branch of the CI. This is useful for testing things without affecting the main CI setup.
 
 - `release`: (string) Specify the CMSSW release version to use for the tests. If not specified, the latest Integration Build (IB) will be used. If specified, it will be used as reference instead of the master branch.
 

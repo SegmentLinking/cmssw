@@ -104,7 +104,7 @@ jobs:
       - name: Check validity
         run: |
           KNOWN_WORKFLOWS="all,checks,standalone,cmssw,hlt"
-          KNOWN_MODIFIERS="lowpt,cpu,gpu,ci_devel"
+          KNOWN_MODIFIERS="lowpt,cpu,gpu,ci-devel"
           KNOWN_SAMPLES="ttbar,qcd"
           KNOWN_TOPKEYS="run-ci,required-prs,modifiers,release,sample,packages,procmodifiers"
           python -c "kw = '${KNOWN_WORKFLOWS}'.split(','); assert all(w in kw for w in '${{ env.workflows }}'.split(','))"
@@ -122,7 +122,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'checks.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -139,7 +139,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'standalone.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -160,7 +160,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'standalone.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -181,7 +181,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'cmssw.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -204,7 +204,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'cmssw.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -227,7 +227,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'hlt.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
@@ -250,7 +250,7 @@ jobs:
               owner,
               repo,
               workflow_id: 'hlt.yml',
-              ref: '${{ contains(env.modifiers, 'ci_devel') && 'CI_branch_devel' || 'CI_branch' }}',
+              ref: '${{ contains(env.modifiers, 'ci-devel') && 'CI_branch_devel' || 'CI_branch' }}',
               inputs: {
                 'pr-number': '${{ github.event.issue.number }}',
                 'required-prs': '${{ env.required-prs }}',
