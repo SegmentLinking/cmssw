@@ -7,7 +7,6 @@ from ..modules.hltHgcalSoALayerClustersProducer_cfi import hltHgcalSoALayerClust
 from ..modules.hltHgcalSoARecHitsLayerClustersProducer_cfi import hltHgcalSoARecHitsLayerClustersProducer
 from ..modules.hltHgcalSoARecHitsProducer_cfi import hltHgcalSoARecHitsProducer
 from ..modules.hltInputLST_cfi import hltInputLST
-from ..modules.hltInitialStepSeeds_cfi import hltInitialStepSeeds
 from ..modules.hltInitialStepTrajectorySeedsLST_cfi import hltInitialStepTrajectorySeedsLST
 from ..modules.hltL1GTAcceptFilter_cfi import hltL1GTAcceptFilter
 from ..modules.hltLST_cfi import hltLST
@@ -23,6 +22,7 @@ from ..modules.hltSiPixelClusters_cfi import hltSiPixelClusters
 from ..modules.hltSiPixelRecHits_cfi import hltSiPixelRecHits
 from ..modules.hltSiPhase2Clusters_cfi import hltSiPhase2Clusters
 from ..modules.hltSiPhase2RecHits_cfi import hltSiPhase2RecHits
+from ..modules.hltSiPhase2RecHitsSoA_cfi import hltSiPhase2RecHitsSoA
 from ..sequences.HLTBeginSequence_cfi import *
 from ..sequences.HLTEndSequence_cfi import *
 
@@ -33,6 +33,7 @@ HLTLocalTrackerSequence = cms.Sequence(
     + hltPhase2SiPixelRecHitsSoA
     + hltSiPhase2Clusters
     + hltSiPhase2RecHits
+    + hltSiPhase2RecHitsSoA
     + hltPhase2OtRecHitsSoA
     + hltSiPixelClusters
     + hltSiPixelRecHits
@@ -46,8 +47,7 @@ HLTPixelTrackingSequence = cms.Sequence(
 )
 
 HLTLSTSequence = cms.Sequence(
-    hltInitialStepSeeds
-    + hltInputLST
+    hltInputLST
     + hltLST
 )
 

@@ -3,6 +3,7 @@
 
 #include "RecoTracker/MkFitCore/interface/Config.h"
 #include "RecoTracker/MkFitCore/interface/MatrixSTypes.h"
+#include "RecoTracker/MkFitCore/interface/portable/MathUtils.h"
 
 #include <cmath>
 #include <vdt/atan2.h>
@@ -36,10 +37,6 @@ namespace mkfit {
   inline float getRad2(float x, float y) { return x * x + y * y; }
 
   inline float getInvRad2(float x, float y) { return 1.0f / (x * x + y * y); }
-
-  inline float getPhi(float x, float y) { return vdt::fast_atan2f(y, x); }
-
-  inline float getTheta(float r, float z) { return vdt::fast_atan2f(r, z); }
 
   inline float getEta(float r, float z) { return -1.0f * vdt::fast_logf(vdt::fast_tanf(getTheta(r, z) / 2.0f)); }
 
