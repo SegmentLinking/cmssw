@@ -7,6 +7,7 @@
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/trackFromSeedFitFailed.h"
+#include "DataFormats/TrajectorySeed/interface/TrajectorySeed.h"
 #include "DataFormats/GsfTrackReco/interface/GsfTrack.h"
 #include "DataFormats/GsfTrackReco/interface/GsfTrackFwd.h"
 #include "SimDataFormats/Track/interface/SimTrackContainer.h"
@@ -28,6 +29,9 @@
 #include "DataFormats/Common/interface/Ref.h"
 #include "CommonTools/Utils/interface/associationMapFilterValues.h"
 #include "FWCore/Utilities/interface/IndexSet.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <type_traits>
 
 #include "TMath.h"
@@ -61,9 +65,15 @@ MultiTrackValidator::MultiTrackValidator(const edm::ParameterSet& pset)
       dodEdxPlots_(pset.getUntrackedParameter<bool>("dodEdxPlots")),
       doPVAssociationPlots_(pset.getUntrackedParameter<bool>("doPVAssociationPlots")),
       doSeedPlots_(pset.getUntrackedParameter<bool>("doSeedPlots")),
+      doSeedStatePlots_(pset.getUntrackedParameter<bool>("doSeedStatePlots")),
+      seedStateSimHitMinMomentumFraction_(pset.getParameter<double>("seedStateSimHitMinMomentumFraction")),
       doMVAPlots_(pset.getUntrackedParameter<bool>("doMVAPlots")),
       applyTPSelToSimMatch_(pset.getParameter<bool>("applyTPSelToSimMatch")),
       simPVMaxZ_(pset.getUntrackedParameter<double>("simPVMaxZ")) {
+  if (doSeedStatePlots_ && !(doSeedPlots_ && doRecoTrackPlots_)) {
+    // the state is that of the seed of each track (TrackFromSeedProducer), filled in the loop over the reco tracks
+    throw cms::Exception("Configuration") << "doSeedStatePlots needs doSeedPlots and doRecoTrackPlots";
+  }
   if (not(pset.getParameter<edm::InputTag>("cores").label().empty())) {
     cores_ = consumes<edm::View<reco::Candidate>>(pset.getParameter<edm::InputTag>("cores"));
   }
@@ -207,8 +217,11 @@ MultiTrackValidator::MultiTrackValidator(const edm::ParameterSet& pset)
 
   useGsf = pset.getParameter<bool>("useGsf");
 
-  _simHitTpMapTag = mayConsume<SimHitTPAssociationProducer::SimHitTPAssociationList>(
-      pset.getParameter<edm::InputTag>("simHitTpMapTag"));
+  // read in every event for the seed state plots, else only by the cosmic parameters definer
+  const auto simHitTpMapTag = pset.getParameter<edm::InputTag>("simHitTpMapTag");
+  _simHitTpMapTag = doSeedStatePlots_
+                        ? consumes<SimHitTPAssociationProducer::SimHitTPAssociationList>(simHitTpMapTag)
+                        : mayConsume<SimHitTPAssociationProducer::SimHitTPAssociationList>(simHitTpMapTag);
 
   if (calculateDrSingleCollection_) {
     labelTokenForDrCalculation =
@@ -345,6 +358,8 @@ void MultiTrackValidator::bookHistograms(DQMStore::IBooker& ibook,
 
       if (doSeedPlots_) {
         histoProducerAlgo_->bookSeedHistos(ibook, histograms.histoProducerAlgo);
+        if (doSeedStatePlots_)
+          histoProducerAlgo_->bookSeedStateHistos(ibook, histograms.histoProducerAlgo);
       }
     }  //end loop www
   }  // end loop ww
@@ -585,6 +600,63 @@ void MultiTrackValidator::trackDR(const edm::View<reco::Track>& trackCollection,
   }
 }
 
+void MultiTrackValidator::fillSeedStateHistos(
+    const Histograms& histograms,
+    int count,
+    const reco::Track& track,
+    const TrackingParticleRef& tpr,
+    const SimHitTPAssociationProducer::SimHitTPAssociationList& simHitsTPAssoc) const {
+  // every sim-matched seed with its best match, as for the resolution plots (the caller applies the TrackingParticle
+  // selection to the match only with applyTPSelToSimMatch): each seed is handed to the track building, so the seeds
+  // are not reduced to one per TrackingParticle
+  using Algo = MTVHistoProducerAlgoForTracker;
+  if (track.extra().isNull() || !track.extra().isAvailable()) {
+    histoProducerAlgo_->fill_seedStateTruth_histo(histograms.histoProducerAlgo, count, Algo::kSeedNotAvailable);
+    return;
+  }
+  const auto& seedRef = track.seedRef();
+  if (seedRef.isNull() || !seedRef.isAvailable()) {
+    histoProducerAlgo_->fill_seedStateTruth_histo(histograms.histoProducerAlgo, count, Algo::kSeedNotAvailable);
+    return;
+  }
+  const PTrajectoryStateOnDet& state = seedRef->startingState();
+
+  // the simhit: among the simhits of the particle on the module of the state, those of the particle's own type; of
+  // those, the nearest to the state in local x. A particle without such a simhit is counted as pileup or signal.
+  const auto range = std::equal_range(simHitsTPAssoc.begin(),
+                                      simHitsTPAssoc.end(),
+                                      std::make_pair(tpr, TrackPSimHitRef()),
+                                      SimHitTPAssociationProducer::simHitTPAssociationListGreater);
+  const PSimHit* simHit = nullptr;
+  float distance = std::numeric_limits<float>::max();
+  const float stateX = state.parameters().position().x();
+  for (auto it = range.first; it != range.second; ++it) {
+    const PSimHit& hit = *(it->second);
+    if (hit.detUnitId() != state.detId() || hit.particleType() != tpr->pdgId())
+      continue;
+    const float dx = std::abs(hit.localPosition().x() - stateX);
+    if (dx < distance) {
+      distance = dx;
+      simHit = &hit;
+    }
+  }
+  if (simHit == nullptr) {
+    const bool signal = tpr->eventId().bunchCrossing() == 0 && tpr->eventId().event() == 0;
+    histoProducerAlgo_->fill_seedStateTruth_histo(
+        histograms.histoProducerAlgo, count, signal ? Algo::kSignalNoSimHit : Algo::kPileupNoSimHit);
+    return;
+  }
+  // a simhit with little of the particle's momentum (e.g. after a hard bremsstrahlung or an interaction upstream of
+  // the module) is not the truth for the state; specific to the seed state: the track pulls compare with the
+  // particle at production, propagated to the beam line, so they use no simhit
+  if (!(simHit->pabs() >= seedStateSimHitMinMomentumFraction_ * tpr->p())) {
+    histoProducerAlgo_->fill_seedStateTruth_histo(
+        histograms.histoProducerAlgo, count, Algo::kSimHitBelowMomentumFraction);
+    return;
+  }
+  histoProducerAlgo_->fill_seedState_histos(histograms.histoProducerAlgo, count, state, *tpr, *simHit);
+}
+
 void MultiTrackValidator::dqmAnalyze(const edm::Event& event,
                                      const edm::EventSetup& setup,
                                      const Histograms& histograms) const {
@@ -654,6 +726,17 @@ void MultiTrackValidator::dqmAnalyze(const edm::Event& event,
     event.getByToken(_simHitTpMapTag, simHitsTPAssoc);
     parametersDefinerTP_->initEvent(simHitsTPAssoc);
     cosmictpSelector.initEvent(simHitsTPAssoc);
+  }
+
+  // the simhits of the TrackingParticles, for the state of each seed at its last hit; they are looked up by the key
+  // of the TrackingParticle, so the list must be made from the TrackingParticles of the track association
+  const SimHitTPAssociationProducer::SimHitTPAssociationList* seedStateSimHits =
+      doSeedStatePlots_ ? &event.get(_simHitTpMapTag) : nullptr;
+  if (seedStateSimHits != nullptr && !seedStateSimHits->empty() && !tPCfake.empty() &&
+      seedStateSimHits->front().first.id() != tPCfake.id()) {
+    throw cms::Exception("Configuration")
+        << "the simhit association (simHitTpMapTag) is not made from the TrackingParticles of the track "
+           "association (label_tp_fake)";
   }
 
   // Find the sim PV and tak its position
@@ -1156,6 +1239,9 @@ void MultiTrackValidator::dqmAnalyze(const edm::Event& event,
           continue;
 
         histoProducerAlgo_->fill_simAssociated_recoTrack_histos(histograms.histoProducerAlgo, w, *track);
+
+        if (doSeedStatePlots_)
+          fillSeedStateHistos(histograms, w, *track, tpFound->val.begin()->first, *seedStateSimHits);
 
         /* TO BE FIXED LATER
 	if (associators[ww]=="trackAssociatorByChi2"){

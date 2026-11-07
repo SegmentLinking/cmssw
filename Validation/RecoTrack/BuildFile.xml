@@ -1,6 +1,8 @@
 <use name="DQMServices/Core"/>
 <use name="SimDataFormats/TrackingAnalysis"/>
 <use name="DataFormats/TrackReco"/>
+<use name="DataFormats/TrajectoryState"/>
+<use name="SimDataFormats/TrackingHit"/>
 <use name="root"/>
 <lib name="MathMore"/>
 <use name="SimTracker/TrackAssociation"/>
