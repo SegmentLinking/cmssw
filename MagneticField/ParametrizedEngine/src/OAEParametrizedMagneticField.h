@@ -13,7 +13,7 @@
  */
 
 #include "MagneticField/Engine/interface/MagneticField.h"
-#include "TkBfield.h"
+#include "MagneticField/ParametrizedEngine/interface/TkBfield.h"
 
 namespace edm {
   class ParameterSet;

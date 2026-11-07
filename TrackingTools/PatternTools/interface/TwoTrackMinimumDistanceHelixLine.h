@@ -3,6 +3,7 @@
 
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/GeometryVector/interface/GlobalVector.h"
+#include "TrackingTools/PatternTools/interface/helixLineClosestApproach.h"
 #include <utility>
 /** \class TwoTrackMinimumDistanceHelixLine
  *  This is a helper class for TwoTrackMinimumDistance, for the
@@ -44,11 +45,9 @@ private:
   const GlobalTrajectoryParameters *theH, *theL, *firstGTP, *secondGTP;
   GlobalVector posDiff;
   GlobalVector theLp;
-  double X, Y, Z, px, py, pz, px2, py2, pz2, baseFct, baseDer;
-  double theh, thePhiH0, thesinPhiH0, thecosPhiH0, thetanlambdaH;
+  helixLineClosestApproach::Coefficients theCoeffs;
   double thePhiH;
   double Hn, Ln;
-  double aa, bb, cc, dd, ee, ff;
 
   int themaxiter;
   bool updateCoeffs();

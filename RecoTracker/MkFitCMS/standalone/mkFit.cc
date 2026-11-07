@@ -1,4 +1,4 @@
-#include "RecoTracker/MkFitCore/src/Matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitCore/interface/portable/Matriplex/MatriplexCommon.h"
 
 // CCCC #include "fittestMPlex.h"
 #include "RecoTracker/MkFitCMS/standalone/buildtestMPlex.h"

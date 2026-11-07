@@ -1,4 +1,4 @@
-#include "TkBfield.h"
+#include "MagneticField/ParametrizedEngine/interface/TkBfield.h"
 
 #include "FWCore/Utilities/interface/Exception.h"
 
@@ -59,11 +59,5 @@ void TkBfield::getBrfz(float const* __restrict__ x, float* __restrict__ Brfz) co
 }
 
 void TkBfield::getBxyz(float const* __restrict__ x, float* __restrict__ Bxyz) const {
-  float br;
-  float bz;
-  float r2 = x[0] * x[0] + x[1] * x[1];
-  bcyl(r2, x[2], br, bz);
-  Bxyz[0] = br * x[0];
-  Bxyz[1] = br * x[1];
-  Bxyz[2] = bz;
+  magfieldparam::getBxyz(bcyl, x, Bxyz);
 }

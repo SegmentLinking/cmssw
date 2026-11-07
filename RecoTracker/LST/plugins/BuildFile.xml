@@ -24,7 +24,7 @@
 </library>
 
 <!-- alpaka-based portable plugins -->
-<library file="alpaka/*.cc" name="RecoTrackerLSTPluginsPortable">
+<library file="alpaka/LSTInputProducer.cc alpaka/LSTModulesDevESProducer.cc alpaka/LSTProducer.cc" name="RecoTrackerLSTPluginsPortable">
   <use name="alpaka"/>
   <use name="DataFormats/TrajectorySeed"/>
   <use name="DataFormats/TrackReco"/>
@@ -38,6 +38,39 @@
   <use name="RecoTracker/LST"/>
   <use name="RecoTracker/LSTCore"/>
   <use name="RecoTracker/Record"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<!-- the device LST input; LSTCore's headers only, so that LSTCore's kernels are not device-linked into this library -->
+<library file="alpaka/LSTInputDeviceKernels.dev.cc alpaka/LSTInputDeviceProducer.cc alpaka/LSTSeedFitModulesESProducer.cc" name="RecoTrackerLSTInputDevicePluginsPortable">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/GeometrySurface"/>
+  <use name="DataFormats/TrackerRecHit2D"/>
+  <use name="DataFormats/TrackSoA"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
+  <use name="DataFormats/TrajectorySeed"/>
+  <use name="DataFormats/TrackReco"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="Geometry/Records"/>
+  <use name="Geometry/TrackerGeometryBuilder"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/ParametrizedEngine"/>
+  <use name="MagneticField/Records"/>
+  <use name="RecoTracker/LST"/>
+  <use name="RecoTracker/LSTCore" source_only="1"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/TkSeedGenerator"/>
+  <use name="TrackingTools/AnalyticalJacobians"/>
+  <use name="TrackingTools/PatternTools"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags EDM_PLUGIN="1"/>
 </library>
