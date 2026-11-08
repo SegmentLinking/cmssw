@@ -9,3 +9,15 @@
 
 <bin file="bqueue_t.cpp">
 </bin>
+
+<bin file="alpaka/testBeamLineClosestApproach.dev.cc beamLineClosestApproachReference.cc" name="testBeamLineClosestApproach">
+  <use name="alpaka"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/GeometryVector"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="TrackingTools/AnalyticalJacobians"/>
+  <use name="TrackingTools/TrajectoryParametrization"/>
+  <use name="TrackingTools/TrajectoryState"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>

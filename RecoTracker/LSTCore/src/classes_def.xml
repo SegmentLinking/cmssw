@@ -7,6 +7,22 @@
   <class name="lst::PixelSeedsSoALayout<128,false>"/>
   <class name="lst::HitsITSoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::LSTInputHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::PixelSeedStatesHostCollection"/>
+  <!-- lst::PixelSeedStatesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::PixelSeedStatesHostCollection::Layout"/>
+  <class name="lst::PixelSeedStatesSoALayout<128,false>"/>
+  <class name="lst::SeedStateSoALayout<128,false>"/>
+  <class name="lst::PixelSeedStateExtraSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::PixelSeedStatesHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="lst::TCSeedStatesHostCollection"/>
+  <!-- lst::TCSeedStatesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::TCSeedStatesHostCollection::Layout"/>
+  <class name="lst::TCSeedStatesSoALayout<128,false>"/>
+  <class name="lst::TCSeedStateExtraSoALayout<128,false>"/>
+  <class name="edm::Wrapper<lst::TCSeedStatesHostCollection>" splitLevel="0" persistent="false"/>
+
   <class name="lst::LSTOTHits" persistent="false">
     <field name="hits" transient="true"/>
   </class>
@@ -15,6 +31,11 @@
     <field name="seeds" transient="true"/>
   </class>
   <class name="edm::Wrapper<lst::LSTPixelSeedRefs>" persistent="false"/>
+
+  <class name="lst::LSTPixelTrackHits" persistent="false">
+    <field name="hits" transient="true"/>
+  </class>
+  <class name="edm::Wrapper<lst::LSTPixelTrackHits>" persistent="false"/>
 
   <class name="lst::TrackCandidatesBaseHostCollection"/>
   <!-- lst::TrackCandidatesBaseHostCollection::Layout must be listed before the aliased-to type -->

@@ -10,6 +10,12 @@
   <class name="reco::TrackingRecHitHost"  rntupleStreamerMode="true"/>
   <class name="edm::Wrapper<reco::TrackingRecHitHost>" splitLevel="0"/>
 
+  <!-- reco::Phase2OTRecHitsHost::Layout must be listed before the aliased-to type -->
+  <class name="reco::Phase2OTRecHitsHost::Layout"/>
+  <class name="reco::Phase2OTRecHitsLayout<128, false>"/>
+  <class name="reco::Phase2OTRecHitsHost" rntupleStreamerMode="true"/>
+  <class name="edm::Wrapper<reco::Phase2OTRecHitsHost>" splitLevel="0"/>
+
   <class name="SiPixelHitStatus"/>
   <class name="SiPixelHitStatusAndCharge"/>
 </lcgdict>
