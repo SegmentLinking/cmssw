@@ -12,11 +12,25 @@
 #include "TMath.h"
 #include <TF1.h>
 #include <cassert>
+#include <cmath>
+#include <limits>
+#include <string>
 
 using namespace std;
 
 namespace {
   typedef dqm::reco::DQMStore DQMStore;
+
+  // the local parameters of the seed state at its last hit, in the order of its local error matrix
+  constexpr std::array<const char*, MTVHistoProducerAlgoForTrackerHistograms::kNSeedStateParameters>
+      kSeedStateParameterNames = {{"Qoverp", "Dxdz", "Dydz", "X", "Y"}};
+  constexpr std::array<const char*, MTVHistoProducerAlgoForTrackerHistograms::kNSeedStateParameters>
+      kSeedStateParameterTitles = {{"q/p", "dx/dz", "dy/dz", "x", "y"}};
+  constexpr std::array<const char*, MTVHistoProducerAlgoForTrackerHistograms::kNSeedStateParameters>
+      kSeedStateParameterUnits = {{" [1/GeV]", "", "", " [cm]", " [cm]"}};
+  // the variances of those parameters among the 15 stored entries of the local error (lower triangle, row by row)
+  constexpr std::array<int, MTVHistoProducerAlgoForTrackerHistograms::kNSeedStateParameters> kSeedStateVarianceIndex = {
+      {0, 2, 5, 9, 14}};
 
   void BinLogX(TH1* h) {
     TAxis* axis = h->GetXaxis();
@@ -258,6 +272,19 @@ MTVHistoProducerAlgoForTracker::MTVHistoProducerAlgoForTracker(const edm::Parame
   dzRes_rangeMin = pset.getParameter<double>("dzRes_rangeMin");
   dzRes_rangeMax = pset.getParameter<double>("dzRes_rangeMax");
   dzRes_nbin = pset.getParameter<int>("dzRes_nbin");
+
+  //parameters for the seed state at its last hit
+  for (unsigned int i = 0; i < Histograms::kNSeedStateParameters; ++i) {
+    const std::string name = std::string("lastHitRes") + kSeedStateParameterNames[i];
+    lastHitResRangeMin_[i] = pset.getParameter<double>(name + "_rangeMin");
+    lastHitResRangeMax_[i] = pset.getParameter<double>(name + "_rangeMax");
+  }
+  lastHitResNbin_ = pset.getParameter<int>("lastHitRes_nbin");
+  lastHitRes2DNbin_ = pset.getParameter<int>("lastHitRes2D_nbin");
+  lastHitPullRangeMin_ = pset.getParameter<double>("lastHitPull_rangeMin");
+  lastHitPullRangeMax_ = pset.getParameter<double>("lastHitPull_rangeMax");
+  lastHitPullNbin_ = pset.getParameter<int>("lastHitPull_nbin");
+  lastHitPull2DNbin_ = pset.getParameter<int>("lastHitPull2D_nbin");
 
   maxDzpvCum = pset.getParameter<double>("maxDzpvCumulative");
   nintDzpvCum = pset.getParameter<int>("nintDzpvCumulative");
@@ -1523,6 +1550,78 @@ void MTVHistoProducerAlgoForTracker::bookSeedHistos(DQMStore::IBooker& ibook, Hi
       ibook.book1D("seeds_fitFailedFraction", "Fraction of seeds for which the fit failed", 100, 0, 1));
 }
 
+void MTVHistoProducerAlgoForTracker::bookSeedStateHistos(DQMStore::IBooker& ibook, Histograms& histograms) {
+  constexpr int nBins = kNSeedStateTruth;
+  Histograms::METype truthFound = ibook.book1D("lastHitTruthFound",
+                                               "truth for the seed state at the last hit (matched seeds, TP selected)",
+                                               nBins,
+                                               -0.5,
+                                               nBins - 0.5);
+  setBinLabels(truthFound,
+               {"seed not available",
+                "pileup TP, no simhit",
+                "signal TP, no simhit",
+                "simhit below momentum fraction",
+                "truth found"});
+  histograms.h_lastHitTruthFound.push_back(truthFound);
+
+  Histograms::SeedStateMEs res, pull, resVsEta, pullVsEta, resVsPt, pullVsPt;
+  for (unsigned int i = 0; i < Histograms::kNSeedStateParameters; ++i) {
+    const std::string name = kSeedStateParameterNames[i];
+    const std::string title = kSeedStateParameterTitles[i];
+    const std::string resTitle = "local " + title + " residual (seed state - simhit) at the last hit";
+    const std::string resAxis = title + " residual" + kSeedStateParameterUnits[i];
+    const std::string pullTitle = "local " + title + " pull of the seed state at the last hit";
+    const std::string pullAxis = title + " pull";
+    res[i] = ibook.book1D(
+        "lastHitRes" + name, resTitle + ";" + resAxis, lastHitResNbin_, lastHitResRangeMin_[i], lastHitResRangeMax_[i]);
+    pull[i] = ibook.book1D(
+        "lastHitPull" + name, pullTitle + ";" + pullAxis, lastHitPullNbin_, lastHitPullRangeMin_, lastHitPullRangeMax_);
+    resVsEta[i] = ibook.book2D("lastHitRes" + name + "_vs_eta",
+                               resTitle + " vs #eta;#eta of the TP;" + resAxis,
+                               nintEta,
+                               minEta,
+                               maxEta,
+                               lastHitRes2DNbin_,
+                               lastHitResRangeMin_[i],
+                               lastHitResRangeMax_[i]);
+    pullVsEta[i] = ibook.book2D("lastHitPull" + name + "_vs_eta",
+                                pullTitle + " vs #eta;#eta of the TP;" + pullAxis,
+                                nintEta,
+                                minEta,
+                                maxEta,
+                                lastHitPull2DNbin_,
+                                lastHitPullRangeMin_,
+                                lastHitPullRangeMax_);
+    resVsPt[i] = make2DIfLogX(ibook,
+                              useLogPt,
+                              ("lastHitRes" + name + "_vs_pt").c_str(),
+                              (resTitle + " vs p_{T};p_{T} of the TP [GeV];" + resAxis).c_str(),
+                              nintPt,
+                              minPt,
+                              maxPt,
+                              lastHitRes2DNbin_,
+                              lastHitResRangeMin_[i],
+                              lastHitResRangeMax_[i]);
+    pullVsPt[i] = make2DIfLogX(ibook,
+                               useLogPt,
+                               ("lastHitPull" + name + "_vs_pt").c_str(),
+                               (pullTitle + " vs p_{T};p_{T} of the TP [GeV];" + pullAxis).c_str(),
+                               nintPt,
+                               minPt,
+                               maxPt,
+                               lastHitPull2DNbin_,
+                               lastHitPullRangeMin_,
+                               lastHitPullRangeMax_);
+  }
+  histograms.h_lastHitRes.push_back(res);
+  histograms.h_lastHitPull.push_back(pull);
+  histograms.lastHitRes_vs_eta.push_back(resVsEta);
+  histograms.lastHitPull_vs_eta.push_back(pullVsEta);
+  histograms.lastHitRes_vs_pt.push_back(resVsPt);
+  histograms.lastHitPull_vs_pt.push_back(pullVsPt);
+}
+
 void MTVHistoProducerAlgoForTracker::bookMVAHistos(DQMStore::IBooker& ibook, Histograms& histograms, size_t nMVAs) {
   histograms.h_reco_mva.emplace_back();
   histograms.h_assoc2_mva.emplace_back();
@@ -2639,4 +2738,54 @@ void MTVHistoProducerAlgoForTracker::fill_seed_histos(const Histograms& histogra
                                                       int seedsTotal) const {
   histograms.h_seedsFitFailed[count]->Fill(seedsFitFailed);
   histograms.h_seedsFitFailedFraction[count]->Fill(static_cast<double>(seedsFitFailed) / seedsTotal);
+}
+
+void MTVHistoProducerAlgoForTracker::fill_seedStateTruth_histo(const Histograms& histograms,
+                                                               int count,
+                                                               SeedStateTruth truth) const {
+  histograms.h_lastHitTruthFound[count]->Fill(truth);
+}
+
+void MTVHistoProducerAlgoForTracker::fill_seedState_histos(const Histograms& histograms,
+                                                           int count,
+                                                           const PTrajectoryStateOnDet& state,
+                                                           const TrackingParticle& tp,
+                                                           const PSimHit& simHit) const {
+  // counted before the finiteness checks: a state without errors has residuals but no pulls, so this bin can exceed
+  // the entries of the residual and pull histograms
+  fill_seedStateTruth_histo(histograms, count, kTruthFound);
+
+  // in float, the precision of the stored state; truth: charge / |p| of the simhit, its local direction and position
+  constexpr float nan = std::numeric_limits<float>::quiet_NaN();
+  const LocalTrajectoryParameters& parameters = state.parameters();
+  const LocalPoint position = simHit.localPosition();
+  const LocalVector direction = simHit.localDirection();
+  const std::array<float, Histograms::kNSeedStateParameters> stateValues = {
+      {parameters.qbp(), parameters.dxdz(), parameters.dydz(), parameters.position().x(), parameters.position().y()}};
+  const std::array<float, Histograms::kNSeedStateParameters> simValues = {
+      {simHit.pabs() > 0.f ? static_cast<float>(tp.charge()) / simHit.pabs() : nan,
+       direction.z() != 0.f ? direction.x() / direction.z() : nan,
+       direction.z() != 0.f ? direction.y() / direction.z() : nan,
+       position.x(),
+       position.y()}};
+
+  const auto etaSim = getEta(tp.eta());
+  const auto ptSim = getPt(tp.pt());
+  for (unsigned int i = 0; i < Histograms::kNSeedStateParameters; ++i) {
+    const float residual = stateValues[i] - simValues[i];
+    if (!std::isfinite(residual))
+      continue;
+    histograms.h_lastHitRes[count][i]->Fill(residual);
+    histograms.lastHitRes_vs_eta[count][i]->Fill(etaSim, residual);
+    histograms.lastHitRes_vs_pt[count][i]->Fill(ptSim, residual);
+    const float variance = state.hasError() ? state.error(kSeedStateVarianceIndex[i]) : 0.f;
+    if (!(variance > 0.f))
+      continue;
+    const float pull = residual / std::sqrt(variance);
+    if (!std::isfinite(pull))
+      continue;
+    histograms.h_lastHitPull[count][i]->Fill(pull);
+    histograms.lastHitPull_vs_eta[count][i]->Fill(etaSim, pull);
+    histograms.lastHitPull_vs_pt[count][i]->Fill(ptSim, pull);
+  }
 }

@@ -54,6 +54,11 @@ multiTrackValidator = DQMEDAnalyzer(
     parametersDefiner = cms.string('LhcParametersDefinerForTP'),          # collision like tracks
     # parametersDefiner = cms.string('CosmicParametersDefinerForTP'),     # cosmics tracks
     simHitTpMapTag = cms.InputTag("simHitTPAssocProducer"),               # needed by CosmicParametersDefinerForTP
+    # simHitTpMapTag is also read with doSeedStatePlots
+    # doSeedStatePlots: the simhit compared with the seed state keeps at least this fraction of the TP momentum, to
+    # remove simhits with little of it (e.g. after a hard bremsstrahlung or an interaction upstream of the module).
+    # Seed state only: the track pulls compare with the TP at production, propagated to the beam line (no simhit).
+    seedStateSimHitMinMomentumFraction = cms.double(0.5),
 
     label_tp_nlayers = cms.InputTag("trackingParticleNumberOfLayersProducer", "trackerLayers"),
     label_tp_npixellayers = cms.InputTag("trackingParticleNumberOfLayersProducer", "pixelLayers"),
@@ -93,6 +98,8 @@ multiTrackValidator = DQMEDAnalyzer(
     dodEdxPlots = cms.untracked.bool(False),
     doPVAssociationPlots = cms.untracked.bool(False), # do plots that require true PV, if True, label_vertex and vertexAssociator are read
     doSeedPlots = cms.untracked.bool(False), # input comes from TrackFromSeedProducer    
+    # with doSeedPlots: the seed state at its last hit vs the simhit there; reads the seeds and simHitTpMapTag
+    doSeedStatePlots = cms.untracked.bool(False),
     doMVAPlots = cms.untracked.bool(False), # needs input from track MVA selectors
 
     ### do resolution plots only for these labels (or all if empty)

@@ -231,6 +231,16 @@ postProcessorTrack = DQMEDHarvester("DQMGenericClient",
     outputFileName = cms.untracked.string("")
 )
 
+# the seed state at its last hit (doSeedStatePlots of the MultiTrackValidator): widths and means of the residuals and
+# pulls of its local parameters vs the eta and pT of the TrackingParticle
+for _par, _parTitle in [("Qoverp", "q/p"), ("Dxdz", "dx/dz"), ("Dydz", "dy/dz"), ("X", "x"), ("Y", "y")]:
+    for _var, _varTitle in [("eta", "#eta"), ("pt", "p_{T}")]:
+        postProcessorTrack.resolution.extend([
+            "lastHitRes%s_vs_%s '#sigma(local %s) of the seed state at the last hit vs %s' lastHitRes%s_vs_%s"
+            % (_par, _var, _parTitle, _varTitle, _par, _var),
+            "lastHitPull%s_vs_%s 'local %s pull of the seed state at the last hit vs %s' lastHitPull%s_vs_%s"
+            % (_par, _var, _parTitle, _varTitle, _par, _var)])
+
 _addNoFlow(postProcessorTrack)
 
 postProcessorTrack2D = DQMEDHarvester("DQMGenericClient",

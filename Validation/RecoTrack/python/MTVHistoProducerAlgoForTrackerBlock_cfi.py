@@ -131,6 +131,25 @@ MTVHistoProducerAlgoForTrackerBlock = cms.PSet(
     dzRes_rangeMax = cms.double(+0.05),
     dzRes_nbin = cms.int32(150),
 
+    # parameters for the seed state at its last hit (doSeedStatePlots of the MultiTrackValidator): residual ranges of
+    # the local q/p [1/GeV], dx/dz, dy/dz, x [cm] and y [cm], about 15-20 times the core width of the Phase-2 HLT
+    # initial-step seeds in PU200 ttbar, so that the core is resolved and the tails show in the overflow
+    lastHitResQoverp_rangeMin = cms.double(-0.08),
+    lastHitResQoverp_rangeMax = cms.double(0.08),
+    lastHitResDxdz_rangeMin = cms.double(-0.02),
+    lastHitResDxdz_rangeMax = cms.double(0.02),
+    lastHitResDydz_rangeMin = cms.double(-0.03),
+    lastHitResDydz_rangeMax = cms.double(0.03),
+    lastHitResX_rangeMin = cms.double(-0.08),
+    lastHitResX_rangeMax = cms.double(0.08),
+    lastHitResY_rangeMin = cms.double(-1.5),
+    lastHitResY_rangeMax = cms.double(1.5),
+    lastHitRes_nbin = cms.int32(1000),
+    lastHitRes2D_nbin = cms.int32(200),
+    lastHitPull_rangeMin = cms.double(-10),
+    lastHitPull_rangeMax = cms.double(10),
+    lastHitPull_nbin = cms.int32(200),
+    lastHitPull2D_nbin = cms.int32(100),
 
     maxDzpvCumulative = cms.double(0.6),
     nintDzpvCumulative = cms.int32(240),

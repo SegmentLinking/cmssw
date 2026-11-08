@@ -392,6 +392,34 @@ _resolutionsPhi = PlotGroup("resolutionsPhi", [
     Plot("phires_vs_phi_Sigma", ytitle="#sigma(#delta #phi) (rad)", **_common),
     Plot("ptres_vs_phi_Sigma", ytitle="#sigma(#delta p_{T}/p_{T})", **_common),
 ])
+## Seed state at its last hit vs the simhit of the matched TrackingParticle there (doSeedStatePlots of the
+## MultiTrackValidator): residuals (state - simhit) and pulls of the local parameters
+_seedStateParameters = [("Qoverp", "q/p", " (1/GeV)"), ("Dxdz", "dx/dz", ""), ("Dydz", "dy/dz", ""), ("X", "x", " (cm)"), ("Y", "y", " (cm)")]
+_common = {"stat": True, "normalizeToUnitArea": True, "drawStyle": "hist", "drawCommand": "", "ylog": True, "ymin": 5e-5, "ymax": [0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 1.025], "ratioUncertainty": False}
+_seedStateDistributions = PlotGroup("seedStateDistributions",
+    sum([[Plot("lastHitRes"+_p, xtitle="seed state "+_t+" residual at the last hit"+_u, **_common),
+          Plot("lastHitPull"+_p, xtitle="seed state "+_t+" pull at the last hit", fit=True, xmin=-10, xmax=10, **_common)]
+         for _p, _t, _u in _seedStateParameters], []) +
+    [Plot("lastHitTruthFound", title="", xtitle="", ytitle="Matched seeds", drawStyle="hist", xbinlabelsize=10, xbinlabeloption="d", adjustMarginRight=0.1)],
+    legendDx=0.1, legendDw=-0.1, legendDh=-0.015
+)
+_common = {"title": ""}
+_seedStateResolutions = PlotGroup("seedStateResolutions",
+    sum([[Plot("lastHitRes"+_p+"_vs_eta_Sigma", xtitle="TP #eta", ytitle="#sigma(seed state "+_t+" residual)"+_u, ylog=True, ymin=_minMaxResol, ymax=_minMaxResol, **_common),
+          Plot("lastHitRes"+_p+"_vs_pt_Sigma", xtitle="TP p_{T}", xlog=True, xmin=0.1, xmax=1000, ytitle="#sigma(seed state "+_t+" residual)"+_u, ylog=True, ymin=_minMaxResol, ymax=_minMaxResol, **_common),
+          Plot("lastHitPull"+_p+"_vs_eta_Sigma", xtitle="TP #eta", ytitle="#sigma(seed state "+_t+" pull)", ymin=0, ymax=[2, 3, 5, 10], **_common),
+          Plot("lastHitPull"+_p+"_vs_pt_Sigma", xtitle="TP p_{T}", xlog=True, xmin=0.1, xmax=1000, ytitle="#sigma(seed state "+_t+" pull)", ymin=0, ymax=[2, 3, 5, 10], **_common)]
+         for _p, _t, _u in _seedStateParameters], []),
+    ncols=4, legendDy=_legendDy_4rows
+)
+_seedStateMeans = PlotGroup("seedStateMeans",
+    sum([[Plot("lastHitRes"+_p+"_vs_eta_Mean", xtitle="TP #eta", ytitle="< seed state "+_t+" residual >"+_u, **_common),
+          Plot("lastHitRes"+_p+"_vs_pt_Mean", xtitle="TP p_{T}", xlog=True, xmin=0.1, xmax=1000, ytitle="< seed state "+_t+" residual >"+_u, **_common),
+          Plot("lastHitPull"+_p+"_vs_eta_Mean", xtitle="TP #eta", ytitle="< seed state "+_t+" pull >", ymin=-2, ymax=2, **_common),
+          Plot("lastHitPull"+_p+"_vs_pt_Mean", xtitle="TP p_{T}", xlog=True, xmin=0.1, xmax=1000, ytitle="< seed state "+_t+" pull >", ymin=-2, ymax=2, **_common)]
+         for _p, _t, _u in _seedStateParameters], []),
+    ncols=4, legendDy=_legendDy_4rows
+)
 
 ## Extended set of plots
 _extDistPtEtaPhi = PlotGroup("distPtEtaPhi",
@@ -1229,6 +1257,9 @@ _recoBasedPlots = [
     _resolutionsPhi,
     _resolutionsPt,
     _tuning,
+    _seedStateDistributions,
+    _seedStateResolutions,
+    _seedStateMeans,
 ]
 _seedingBuildingPlots = _simBasedPlots + [
     _dupandfakePtEtaPhi,
@@ -1240,6 +1271,9 @@ _seedingBuildingPlots = _simBasedPlots + [
     _dupandfakeChi2Seeding,
     _dupandfakeSeedingTable,
     _hitsAndPt,
+    _seedStateDistributions,
+    _seedStateResolutions,
+    _seedStateMeans,
 ] + _makeMVAPlots(1) \
   + _makeMVAPlots(2) \
   + _makeMVAPlots(2, hp=True) \

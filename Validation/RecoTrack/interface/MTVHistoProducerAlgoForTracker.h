@@ -7,6 +7,8 @@
  * To be used within the MTV to fill histograms for Tracker tracks.
  */
 
+#include <array>
+
 #include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
@@ -17,6 +19,8 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/TrackReco/interface/DeDxData.h"
 #include "DataFormats/Common/interface/ValueMap.h"
+#include "DataFormats/TrajectoryState/interface/PTrajectoryStateOnDet.h"
+#include "SimDataFormats/TrackingHit/interface/PSimHit.h"
 
 #include "RecoTracker/TkSeedingLayers/interface/SeedingLayerSetsBuilder.h"
 
@@ -136,6 +140,13 @@ struct MTVHistoProducerAlgoForTrackerHistograms {
   std::vector<METype> dxypull_vs_eta, ptpull_vs_eta, dzpull_vs_eta, phipull_vs_eta, thetapull_vs_eta;
   std::vector<METype> dxypull_vs_pt, ptpull_vs_pt, dzpull_vs_pt, phipull_vs_pt, thetapull_vs_pt;
   std::vector<METype> ptpull_vs_phi, phipull_vs_phi, thetapull_vs_phi;
+
+  //state of a seed at its last hit vs the simhit there: local q/p, dx/dz, dy/dz, x, y (doSeedStatePlots)
+  static constexpr unsigned int kNSeedStateParameters = 5;
+  using SeedStateMEs = std::array<METype, kNSeedStateParameters>;
+  std::vector<METype> h_lastHitTruthFound;
+  std::vector<SeedStateMEs> h_lastHitRes, h_lastHitPull;
+  std::vector<SeedStateMEs> lastHitRes_vs_eta, lastHitPull_vs_eta, lastHitRes_vs_pt, lastHitPull_vs_pt;
 };
 
 class MTVHistoProducerAlgoForTracker {
@@ -156,6 +167,7 @@ public:
   void bookRecoPVAssociationHistos(DQMStore::IBooker& ibook, Histograms& histograms);
   void bookRecodEdxHistos(DQMStore::IBooker& ibook, Histograms& histograms);
   void bookSeedHistos(DQMStore::IBooker& ibook, Histograms& histograms);
+  void bookSeedStateHistos(DQMStore::IBooker& ibook, Histograms& histograms);
   void bookMVAHistos(DQMStore::IBooker& ibook, Histograms& histograms, size_t nMVAs);
 
   void fill_generic_simTrack_histos(const Histograms& histograms,
@@ -247,6 +259,24 @@ public:
                                          const math::XYZPoint& bsPosition) const;
 
   void fill_seed_histos(const Histograms& histograms, int count, int seedsFitFailed, int seedsTotal) const;
+
+  // the truth found for the state of a matched seed at its last hit (bins of lastHitTruthFound)
+  enum SeedStateTruth {
+    kSeedNotAvailable = 0,
+    kPileupNoSimHit,  // the TrackingParticle is not from the signal event
+    kSignalNoSimHit,
+    kSimHitBelowMomentumFraction,
+    kTruthFound,
+    kNSeedStateTruth
+  };
+  void fill_seedStateTruth_histo(const Histograms& histograms, int count, SeedStateTruth truth) const;
+  // residuals (state - simhit) and pulls (residual / the state's own sigma) of the local parameters of the state,
+  // vs the eta and pT of the TrackingParticle at production; fills the kTruthFound bin
+  void fill_seedState_histos(const Histograms& histograms,
+                             int count,
+                             const PTrajectoryStateOnDet& state,
+                             const TrackingParticle& tp,
+                             const PSimHit& simHit) const;
 
 private:
   /// retrieval of reconstructed momentum components from reco::Track (== mean values for GSF)
@@ -352,6 +382,12 @@ private:
   int dxyRes_nbin;
   double dzRes_rangeMin, dzRes_rangeMax;
   int dzRes_nbin;
+
+  using SeedStateRange = std::array<double, Histograms::kNSeedStateParameters>;
+  SeedStateRange lastHitResRangeMin_, lastHitResRangeMax_;
+  int lastHitResNbin_, lastHitRes2DNbin_;
+  double lastHitPullRangeMin_, lastHitPullRangeMax_;
+  int lastHitPullNbin_, lastHitPull2DNbin_;
 
   double maxDzpvCum;
   int nintDzpvCum;

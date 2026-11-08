@@ -86,6 +86,8 @@ protected:
   const bool dodEdxPlots_;
   const bool doPVAssociationPlots_;
   const bool doSeedPlots_;
+  const bool doSeedStatePlots_;
+  const double seedStateSimHitMinMomentumFraction_;
   const bool doMVAPlots_;
   const bool applyTPSelToSimMatch_;
 
@@ -115,6 +117,11 @@ private:
                DynArray<float>& dR_trk,
                DynArray<float>& dR_trk_jet,
                const edm::View<reco::Candidate>* cores) const;
+  void fillSeedStateHistos(const Histograms& histograms,
+                           int count,
+                           const reco::Track& track,
+                           const TrackingParticleRef& tpr,
+                           const SimHitTPAssociationProducer::SimHitTPAssociationList& simHitsTPAssoc) const;
 
   std::vector<edm::EDGetTokenT<reco::TrackToTrackingParticleAssociator>> associatorTokens;
   std::vector<edm::EDGetTokenT<reco::SimToRecoCollection>> associatormapStRs;
