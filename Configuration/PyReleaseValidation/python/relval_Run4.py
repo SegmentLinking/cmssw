@@ -66,6 +66,7 @@ numWFIB.extend([prefixDet+234.0])     #standard PU
 numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
 numWFIB.extend([prefixDet+34.7502]) # HLTTrackingNtuple75e33
 numWFIB.extend([prefixDet+34.7503]) # HLTHeterogeneousValid
+numWFIB.extend([prefixDet+34.7504]) # HLTTrackingOnly75e33, phase2ITonlyCA
 numWFIB.extend([prefixDet+34.751])  # HLTTiming75e33, alpaka
 numWFIB.extend([prefixDet+34.7512]) # HLTTiming75e33, phase2CAVectorHits
 numWFIB.extend([prefixDet+34.7521]) # HLTTiming75e33, ticlv5TrackLinkingGNN

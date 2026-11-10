@@ -27,3 +27,7 @@ from Configuration.ProcessModifiers.phase2CAVectorHits_cff import phase2CAVector
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
 from .hltPhase2PixelTracksWithVectorHits_cfi import hltPhase2PixelTracksWithVectorHits as _hltPhase2PixelTracksWithVectorHits
 (phase2CAVectorHits | ngtScouting).toReplaceWith(hltPhase2PixelTracks, _hltPhase2PixelTracksWithVectorHits)
+
+# Inner-tracker-only CA: the tracks carry pixel hits only
+from Configuration.ProcessModifiers.phase2ITonlyCA_cff import phase2ITonlyCA
+phase2ITonlyCA.toModify(hltPhase2PixelTracks, useOTExtension = False)

@@ -234,4 +234,84 @@ hltPhase2PixelTracksSoA = cms.EDProducer('CAHitNtupletAlpakaPhase2OT@alpaka',
 from Configuration.ProcessModifiers.phase2CAVectorHits_cff import phase2CAVectorHits
 from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
 from .hltPhase2PixelTracksSoAWithVectorHits_cfi import hltPhase2PixelTracksSoAWithVectorHits as _hltPhase2PixelTracksSoAWithVectorHits
+# the parameters before any modifier replaces the module (the inner-tracker-only CA below starts from them)
+_hltPhase2PixelTracksSoABase = hltPhase2PixelTracksSoA.clone()
 (phase2CAVectorHits | ngtScouting).toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoAWithVectorHits)
+
+# Inner-tracker-only CA (phase2ITonlyCA): the cuts above on the pixel layers alone, with the outer-tracker barrel
+# layers 28-30 and every pair reaching them dropped from the graph
+_nITLayers = 28
+_layersIT = [l for l in layers if l[0] < _nITLayers]
+_layerPairsIT = [lp for lp in layerPairs if lp[0] < _nITLayers and lp[1] < _nITLayers]
+
+_hltPhase2PixelTracksSoAITonly = cms.EDProducer('CAHitNtupletAlpakaPhase2@alpaka',
+    **{k: v for k, v in _hltPhase2PixelTracksSoABase.parameters_().items() if k not in ('trackerRecHitsSoA', 'geometry')}
+)
+_hltPhase2PixelTracksSoAITonly.geometry = cms.PSet(
+    # caDCACuts are 1.5 times and the doublet pT cuts 0.8 times those of the default CA (pixel-only tracks have a
+    # shorter lever arm), caThetaCuts 0.0025 on BPix1-3; looser maxDR / maxOuter for BPix1/2 -> TFPX1 and a lower
+    # pT cut for BPix2 -> BPix3, from a study of the cuts failed by real tracks on true hits
+    caDCACuts      = cms.vdouble([1.5 * l[2] for l in _layersIT]),
+    caThetaCuts    = cms.vdouble([0.0025 if l[0] < 3 else l[3] for l in _layersIT]),
+    startingPairs  = cms.vuint32([i for i, lp in enumerate(_layerPairsIT) if lp[2]]),
+    startMaxInnerR = cms.vdouble([l[4] for l in _layersIT]),
+    maxDCurv       = cms.vdouble([l[5] for l in _layersIT]),
+    floorDCurv     = cms.vdouble([l[6] for l in _layersIT]),
+    fishboneCuts   = cms.vdouble([l[7] for l in _layersIT]),
+    pairGraph   = cms.vuint32(sum([[lp[0], lp[1]] for lp in _layerPairsIT], [])),
+    skipsLayers = cms.vuint32( [int(lp[ 3]) for lp in _layerPairsIT]),
+    phiCuts     = cms.vint32(  [lp[ 4] for lp in _layerPairsIT]),
+    minInner    = cms.vdouble([lp[ 5] for lp in _layerPairsIT]),
+    maxInner    = cms.vdouble([lp[ 6] for lp in _layerPairsIT]),
+    minOuter    = cms.vdouble([lp[ 7] for lp in _layerPairsIT]),
+    maxOuter    = cms.vdouble([12.6 if (lp[0], lp[1]) in ((0, 4), (0, 16)) else lp[8] for lp in _layerPairsIT]),
+    maxDR       = cms.vdouble([10.0 if (lp[0], lp[1]) in ((0, 4), (0, 16), (1, 4), (1, 16)) else lp[9]
+                               for lp in _layerPairsIT]),
+    minDZ       = cms.vdouble([lp[10] for lp in _layerPairsIT]),
+    maxDZ       = cms.vdouble([lp[11] for lp in _layerPairsIT]),
+    ptCuts      = cms.vdouble([0.8 * (0.75 if (lp[0], lp[1]) == (1, 2) else lp[12]) for lp in _layerPairsIT]),
+)
+_hltPhase2PixelTracksSoAITonly.cellZ0Cut = 16.0
+# Without the outer-tracker layers a track crossing the barrel-endcap transition (and a barrel track through a gap
+# between ladders) leaves only three pixel layers: triplets are accepted up to |eta| = 2.0
+_hltPhase2PixelTracksSoAITonly.minHitsPerNtuplet = 3
+_hltPhase2PixelTracksSoAITonly.maxEtaForTriplets = cms.double(2.0)
+# tracks per PU200 event: mean 41k, max 84k in 4000 ttbar / QCD events (the overflow sentinel reports a truncation)
+_hltPhase2PixelTracksSoAITonly.maxNumberOfTuples = str(128*1024)
+# pixel-only quadruplets have no outer-tracker hit to lower their chi2: the same cut for every length
+_hltPhase2PixelTracksSoAITonly.trackQualityCuts.maxChi2TripletsOrQuadruplets = 5.0
+_hltPhase2PixelTracksSoAITonly.trackQualityCuts.maxChi2Quintuplets = 5.0
+_hltPhase2PixelTracksSoAITonly.doEarlyDuplicateRemover = False
+# a triplet is demoted only if it shares a hit with a longer tight track (not by the lowest-|tip| track, often a fake)
+_hltPhase2PixelTracksSoAITonly.tripletCleanerMode = cms.uint32(2)
+# pixel-only triplet DNN gate (CATripletDNNWeights_pixelOnly.h)
+_hltPhase2PixelTracksSoAITonly.useTripletDNN = cms.bool(True)
+_hltPhase2PixelTracksSoAITonly.tripletDNNThreshold = cms.double(0.05)
+# hit-expectation tests of the 3- and 4-hit tracks (CATripletHoleCheck.h), with a |tip| cut on the triplets with a
+# BPix1 hit
+_hltPhase2PixelTracksSoAITonly.tripletHoleCheck = cms.PSet(
+    enabled = cms.bool(True),
+    clusterYLo = cms.double(-1.5),
+    clusterYHi = cms.double(2.2),
+    maxTip = cms.vdouble(0.1, 0.1, -1., 0.1, 0.1, -1.)
+)
+# z vertices from the >= 4-hit tracks, restricting the less pure 3- and 4-hit track categories to them, and a rescue
+# of the prompt 3-hit tracks near a vertex that fail the hit-expectation tests (CAZVertexHisto.h)
+_hltPhase2PixelTracksSoAITonly.zVertexFilter = cms.PSet(
+    enabled = cms.bool(True),
+    ptPower = cms.double(2.),
+    ptCap = cms.double(10.),
+    nMax = cms.int32(3),
+    dxyKnee = cms.double(0.05),
+    # 3-hit tracks: 3 hit-pattern classes x 2 |tip| classes x 3 |eta| regions; then 4-hit tracks: 2 x 3
+    dzTable = cms.vdouble([-1., -1., -1., 0.3, 0.3, 0.3] * 3 + [-1., -1., -1., 0.4, 0.4, -1.]),
+    tipTable = cms.vdouble([0.3] * 18 + [-1.] * 6),
+    rescueDz = cms.double(0.05),
+    rescueMaxTip = cms.double(0.03)
+)
+# containers sized from the counts of each event, and the output track collection sized to the event
+_hltPhase2PixelTracksSoAITonly.useExactAllocations = cms.bool(True)
+_hltPhase2PixelTracksSoAITonly.compactOutput = cms.bool(True)
+
+from Configuration.ProcessModifiers.phase2ITonlyCA_cff import phase2ITonlyCA
+phase2ITonlyCA.toReplaceWith(hltPhase2PixelTracksSoA, _hltPhase2PixelTracksSoAITonly)

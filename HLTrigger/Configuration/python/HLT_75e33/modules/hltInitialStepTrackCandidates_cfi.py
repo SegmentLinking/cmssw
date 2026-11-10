@@ -55,6 +55,15 @@ _hltInitialStepTrackCandidatesLegacy = cms.EDProducer("CkfTrackCandidateMaker",
 )
 
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
+# inner-tracker-only pixel CA (phase2ITonlyCA): keep the mkFit candidates down to pT 0.8 GeV (0.7 above |eta| 1.2),
+# recovering the displaced and low-pT tracks the inner-tracker-only pixel seeds find
+from Configuration.ProcessModifiers.phase2ITonlyCA_cff import phase2ITonlyCA
+(phase2ITonlyCA & ~hltPhase2LegacyTracking).toModify(hltInitialStepTrackCandidates,
+    candMinPtCut = 0.8,
+    candMinPtRelaxedCut = 0.7,
+    candMinAbsEtaForRelaxedCut = 1.2
+)
+
 hltPhase2LegacyTracking.toReplaceWith(hltInitialStepTrackCandidates, _hltInitialStepTrackCandidatesLegacy)
 
 

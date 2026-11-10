@@ -2047,6 +2047,13 @@ upgradeWFs['HLTTrackingOnly75e33'].step2['-s'] = upgradeWFs['HLTTrackingOnly75e3
     'VALIDATION:@hltValidation', 'VALIDATION::hltMultiTrackValidation+hltMultiPVValidation'
 )
 
+# Tracking-only menu with the pixel CA on the inner-tracker layers only (phase2ITonlyCA)
+upgradeWFs['HLTTrackingOnly75e33ITonlyCA'] = deepcopy(upgradeWFs['HLTTrackingOnly75e33'])
+upgradeWFs['HLTTrackingOnly75e33ITonlyCA'].suffix = '_HLT75e33TrackingOnlyITonlyCA'
+upgradeWFs['HLTTrackingOnly75e33ITonlyCA'].offset = 0.7504
+upgradeWFs['HLTTrackingOnly75e33ITonlyCA'].step2['--procModifiers'] = 'phase2ITonlyCA'
+upgradeWFs['HLTTrackingOnly75e33ITonlyCA'].step3['--procModifiers'] = 'phase2ITonlyCA'
+
 class UpgradeWorkflow_HLT75e33TrackingNtuple(UpgradeWorkflow):
     def setup_(self, step, stepName, stepDict, k, properties):
         # skip RECO, ALCA and HLT
