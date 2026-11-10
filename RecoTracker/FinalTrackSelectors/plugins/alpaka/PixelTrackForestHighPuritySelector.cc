@@ -345,6 +345,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                       scoreThreshold_,
                       scoreThresholdLowDxy_,
                       dxyRampKnee_,
+                      0,    // no separate threshold for short tracks
+                      0.,   // (unused)
+                      -1.,  // no pass-through
                       trackFeatures.const_view().fit(),
                       trackScoresOnDevice.view(),
                       alpaka::getPtrNative(d_preselectedTrackIndices),
