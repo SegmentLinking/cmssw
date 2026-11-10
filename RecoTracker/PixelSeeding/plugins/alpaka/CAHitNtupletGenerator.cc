@@ -4,8 +4,10 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <cstdint>
 #include <functional>
+#include <iterator>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -346,6 +348,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("fillStatistics", false);
       desc.add<unsigned int>("minHitsPerNtuplet", 4)
           ->setComment("Minimum number of layers an N-tuplet must span to be kept.");
+      desc.add<double>("maxEtaForTriplets", -1.)
+          ->setComment(
+              "With minHitsPerNtuplet = 3: keep a 3-layer N-tuplet only if the |eta| of the line through its first "
+              "and last hit is below this value, i.e. where a track crosses so few layers that a missing one leaves "
+              "three hits; elsewhere four layers are required. Negative: triplets everywhere.");
       desc.add<unsigned int>("minHitsForSharingCut", kPhase2OT ? 1 : 10)
           ->setComment("Maximum number of hits in a tuple to clean also if the shared hit is on bpx1");
 
@@ -354,6 +361,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("doSharedHitCut", true)->setComment("Sharing hit nTuples cleaning");
       desc.add<bool>("dupPassThrough", false)->setComment("Do not reject duplicate");
       desc.add<bool>("useSimpleTripletCleaner", true)->setComment("use alternate implementation");
+      desc.add<unsigned int>("tripletCleanerMode", 0)
+          ->setComment(
+              "Simple triplet cleaner: 0 = on a shared hit the track with the lowest |tip| wins and every other "
+              "triplet is demoted; 1 = a triplet is demoted only if it shares a hit with a longer (>= 4 layers) "
+              "track; 2 = as 1, with only tight (or better) longer tracks.");
       desc.add<bool>("doTripletCleaner", true)
           ->setComment(
               "Disable the triplet cleaner entirely.");  // FIXME this should be implemented as an automatic check (simple if) that disables if minHitsPerNtuplet > 3
@@ -366,8 +378,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "Enable the inline per-triplet DNN gate (CATripletDNN.h, weights compiled into the plugin) "
               "on triplets accepted by the cut ladder in Kernel_connect. It suppresses combinatorial "
               "triplets before they are grown into tracks, at the cost of one small MLP evaluation per "
-              "accepted triplet; false leaves the cut ladder as the only selection. Phase2OTVectorHits only "
-              "(true there by default, false on every other topology).");
+              "accepted triplet; false leaves the cut ladder as the only selection. Phase2OTVectorHits (true there "
+              "by default) and Phase2, which uses its own pixel-only bank (CATripletDNNWeights_pixelOnly.h).");
       desc.add<double>("tripletDNNThreshold", -1.0)
           ->setComment(
               "DNN gate threshold: a triplet is kept iff its score >= threshold. Negative selects the "
@@ -375,6 +387,58 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "that bank was trained for; the bank follows iterationName). Raise it to reject more "
               "combinatorial triplets at the cost of "
               "real-triplet recall; lower it to keep more.");
+      // Hit-expectation tests and z-vertex filter of the inner-tracker-only CA
+      edm::ParameterSetDescription holeCheck;
+      holeCheck.add<bool>("enabled", false);
+      holeCheck.add<double>("dx", 0.05)->setComment("rechit window around a crossing, local x [cm]");
+      holeCheck.add<double>("dy", 0.1)->setComment("rechit window around a crossing, local y [cm]");
+      holeCheck.add<double>("margin", 0.05)
+          ->setComment("crossings closer than this to a module edge are not tested [cm]");
+      holeCheck.add<double>("clusterYLo", -1.5)
+          ->setComment(
+              "allowed range of the cluster length along local y [pixels] minus the length of a straight crossing "
+              "along the track direction");
+      holeCheck.add<double>("clusterYHi", 2.2)->setComment("see clusterYLo");
+      holeCheck.add<std::vector<double>>("maxTip", std::vector<double>(6, -1.))
+          ->setComment(
+              "max |tip| [cm] of 3-hit tracks, for |eta| < 0.9 then above, each for the hit patterns BPix1-BPix2-next "
+              "layer, from BPix1 with a skipped layer, without BPix1; negative = no cut");
+      desc.add<edm::ParameterSetDescription>("tripletHoleCheck", holeCheck)
+          ->setComment(
+              "Phase2 (inner-tracker-only) topology: hit-expectation tests of the 3- and 4-hit tracks after the fit "
+              "(CATripletHoleCheck.h): a track whose helix crosses a pixel module without a compatible rechit (on "
+              "a layer without a hit of the track, or a second module on a layer with one), whose cluster lengths "
+              "do not match its direction, or (3-hit tracks) whose |tip| is above maxTip, is demoted to dup.");
+
+      edm::ParameterSetDescription zVertex;
+      zVertex.add<bool>("enabled", false);
+      zVertex.add<double>("trackWeight", 3.)->setComment("weight of a track: trackWeight * min(pT, ptCap)^ptPower");
+      zVertex.add<double>("ptPower", 2.);
+      zVertex.add<double>("ptCap", 10.)->setComment("[GeV]");
+      zVertex.add<double>("threshold", 15.)->setComment("minimum summed weight of a vertex peak");
+      zVertex.add<int>("peakHalfWidth", 3)->setComment("half width of the peak window [100 um bins]");
+      zVertex.add<int>("nMax", 3)->setComment("maximum number of vertices (<= 8)");
+      zVertex.add<double>("minSeparation", 0.2)->setComment("minimum distance of two vertices [cm]");
+      zVertex.add<double>("dxyKnee", 0.05)->setComment("|tip| [cm] splitting the track categories");
+      zVertex.add<std::vector<double>>("dzTable", std::vector<double>(24, -1.))
+          ->setComment(
+              "vertex window [cm] per category: 3-hit tracks at 3 * (2 * class + dxyClass) + region (class 0 = "
+              "BPix1-BPix2-next layer, 1 = from BPix1 with a skipped layer, 2 = without BPix1; dxyClass = |tip| >= "
+              "dxyKnee; region = |eta| < 0.9, 0.9-1.6, >= 1.6), 4-hit tracks at 18 + 3 * dxyClass + region; "
+              "negative = not restricted");
+      zVertex.add<std::vector<double>>("tipTable", std::vector<double>(24, -1.))
+          ->setComment("max |tip| [cm] per category; negative = no cut");
+      zVertex.add<double>("rescueDz", -1.)
+          ->setComment(
+              "a 3-hit track failing the hit-expectation tests is kept if its zip is within rescueDz [cm] of a "
+              "vertex and its |tip| is below rescueMaxTip; negative = off");
+      zVertex.add<double>("rescueMaxTip", 0.05)->setComment("[cm]");
+      desc.add<edm::ParameterSetDescription>("zVertexFilter", zVertex)
+          ->setComment(
+              "Phase2 (inner-tracker-only) topology: z vertices from a histogram of the >= 4-hit high-purity tracks, "
+              "and the 3- and 4-hit tracks of the restricted categories demoted to dup unless they point to one "
+              "(CAZVertexHisto.h).");
+
       // Classify-embedded track classifier (Phase2OTVectorHits only)
       desc.add<bool>("useTrackDNN", kVectorHits)
           ->setComment(
@@ -404,6 +468,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "the calibrated caps. false allocates everything up-front from the configured caps with "
               "zero synchronizations. On the CPU backend the count pass is skipped and the caps size the "
               "doublet store (identical results, no serial-time cost).");
+      desc.add<bool>("compactOutput", false)
+          ->setComment(
+              "With useExactAllocations: copy the output track SoA, allocated at the maxNumberOfTuples cap for the "
+              "CA build, into a collection sized to the event's tracks and hits in tracks (identical content and "
+              "track indices) before it is put in the event, so that the long-lived product is not cap-sized. "
+              "Without useExactAllocations it has no effect.");
 
       desc.add<double>("fastDupNSigma2", kVectorHits ? 2.5 : (kPhase1 ? 25.0 : 5.0))
           ->setComment(
@@ -417,6 +487,44 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "(which read their own nSigma2Phase1 constant and ignore this parameter, so the value is "
               "only informative there). Phase2OTVectorHits uses 2.5, matching the tighter covariance its "
               "fit emits.");
+    }
+
+    TripletHoleCheckParams makeTripletHoleCheckParams(edm::ParameterSet const& pset) {
+      TripletHoleCheckParams p;
+      p.enabled = pset.getParameter<bool>("enabled");
+      p.dx = pset.getParameter<double>("dx");
+      p.dy = pset.getParameter<double>("dy");
+      p.margin = pset.getParameter<double>("margin");
+      p.clusterYLo = pset.getParameter<double>("clusterYLo");
+      p.clusterYHi = pset.getParameter<double>("clusterYHi");
+      auto const maxTip = pset.getParameter<std::vector<double>>("maxTip");
+      if (maxTip.size() != std::size(p.maxTip))
+        throw cms::Exception("Configuration") << "tripletHoleCheck.maxTip needs " << std::size(p.maxTip) << " values";
+      std::copy(maxTip.begin(), maxTip.end(), p.maxTip);
+      return p;
+    }
+
+    ZVertexParams makeZVertexParams(edm::ParameterSet const& pset) {
+      ZVertexParams p;
+      p.enabled = pset.getParameter<bool>("enabled");
+      p.trackWeight = pset.getParameter<double>("trackWeight");
+      p.ptPower = pset.getParameter<double>("ptPower");
+      p.ptCap = pset.getParameter<double>("ptCap");
+      p.threshold = pset.getParameter<double>("threshold");
+      p.peakHalfWidth = pset.getParameter<int>("peakHalfWidth");
+      p.nMax = std::clamp(pset.getParameter<int>("nMax"), 1, 8);
+      p.minSeparation = pset.getParameter<double>("minSeparation");
+      p.dxyKnee = pset.getParameter<double>("dxyKnee");
+      auto const dz = pset.getParameter<std::vector<double>>("dzTable");
+      auto const tip = pset.getParameter<std::vector<double>>("tipTable");
+      if (dz.size() != std::size(p.dzTable) || tip.size() != std::size(p.tipTable))
+        throw cms::Exception("Configuration")
+            << "zVertexFilter.dzTable and tipTable need " << std::size(p.dzTable) << " values each";
+      std::copy(dz.begin(), dz.end(), p.dzTable);
+      std::copy(tip.begin(), tip.end(), p.tipTable);
+      p.rescueDz = pset.getParameter<double>("rescueDz");
+      p.rescueMaxTip = pset.getParameter<double>("rescueMaxTip");
+      return p;
     }
 
     AlgoParams makeCommonParams(edm::ParameterSet const& cfg) {
@@ -433,6 +541,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           // Algo params
           .minHitsPerNtuplet_ = (uint16_t)cfg.getParameter<unsigned int>("minHitsPerNtuplet"),
           .minHitsForSharingCut_ = (uint16_t)cfg.getParameter<unsigned int>("minHitsForSharingCut"),
+          .maxTripletCotTheta_ = cfg.getParameter<double>("maxEtaForTriplets") < 0.
+                                     ? -1.f
+                                     : float(std::sinh(cfg.getParameter<double>("maxEtaForTriplets"))),
 
           // Flags
           .useRiemannFit_ = cfg.getParameter<bool>("useRiemannFit"),
@@ -445,6 +556,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           .dupPassThrough_ = cfg.getParameter<bool>("dupPassThrough"),
           .useSimpleTripletCleaner_ = cfg.getParameter<bool>("useSimpleTripletCleaner"),
           .doTripletCleaner_ = cfg.getParameter<bool>("doTripletCleaner"),
+          .tripletCleanerMode_ = (uint16_t)cfg.getParameter<unsigned int>("tripletCleanerMode"),
+          .tripletHoleCheck_ = makeTripletHoleCheckParams(cfg.getParameterSet("tripletHoleCheck")),
+          .zVertex_ = makeZVertexParams(cfg.getParameterSet("zVertexFilter")),
           .doFastDuplicateRemover_ = cfg.getParameter<bool>("doFastDuplicateRemover"),
           .doEarlyDuplicateRemover_ = cfg.getParameter<bool>("doEarlyDuplicateRemover"),
 
@@ -467,6 +581,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           .delayAllocations_ = cfg.getParameter<bool>("useExactAllocations"),
           .countDoubletsFirst_ =
               cfg.getParameter<bool>("useExactAllocations") && !std::is_same_v<Device, alpaka::DevCpu>,
+          .compactOutput_ = cfg.getParameter<bool>("compactOutput"),
 
           // CA fast-duplicate / shared-hit covariance gate width, in units of the fitted covariance
           .fastDupNSigma2_ = (float)cfg.getParameter<double>("fastDupNSigma2"),
@@ -524,6 +639,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   CAHitNtupletGenerator<TrackerTraits>::CAHitNtupletGenerator(const edm::ParameterSet& cfg)
       : m_params(makeCommonParams(cfg),
                  TopologyCuts<TrackerTraits>::makeQualityCuts(cfg.getParameterSet("trackQualityCuts"))) {
+    if (m_params.algoParams_.tripletCleanerMode_ > 2)
+      throw cms::Exception("Configuration") << "tripletCleanerMode must be 0, 1 or 2";
 #ifdef DUMP_GPU_TK_TUPLES
     printf("TK: %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s\n",
            "tid",
@@ -820,13 +937,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     } else {
       fitter.launchBrokenLineKernels(trackingHits, modules, nHits, nTracks, queue);
     }
-    kernels.classifyTuples(trackingHits, tracks, queue);
+    kernels.classifyTuples(trackingHits, tracks, queue, hitsInput.modules, modules, geometry_d.view().layers());
 
     // Refresh the pinned overflow mirror with the running totals. Ordered after classifyTuples,
     // which is where the always-on overflow sentinel is enqueued on this same queue, so the
     // snapshot includes this event. Async, no wait; consumed at endStream via reportOverflows
     // once every event queue has drained.
     alpaka::memcpy(queue, *ovfHost_, *ovfAccum_);
+
+    // compactOutput: the long-lived product sized to the event's tracks and hits in tracks (the counts of the tuple
+    // AtomicPairCounter, read back across the acquire/produce seam with delayAllocations), not to the cap
+    if (m_params.algoParams_.compactOutput_ && pending.countsHost) {
+      const uint64_t apcRaw = static_cast<uint64_t>(pending.countsHost->data()[0]);
+      const uint32_t apcLo = static_cast<uint32_t>(apcRaw & 0xFFFFFFFFull);
+      const uint32_t apcHi = static_cast<uint32_t>(apcRaw >> 32);
+      // one spare row, as the cap-sized collection keeps nTracks below its size
+      const uint32_t nCompactTracks = std::min({apcLo, apcHi, nTracks}) + 1u;
+      const uint32_t nCompactHits = std::max(std::max(apcLo, apcHi), 1u);
+      reco::TracksSoACollection compact(queue, nCompactTracks, nCompactHits);
+      kernels.compactTracks(pending.tracks->const_view(), compact.view(), nCompactTracks, nCompactHits, queue);
+      return compact;
+    }
 #ifdef CA_SIZING_DUMP
     // Per-event per-container demand dump, for re-fitting the cap curves. One line per event with
     // the actual per-container demand and the caps they were sized against. The readback is a

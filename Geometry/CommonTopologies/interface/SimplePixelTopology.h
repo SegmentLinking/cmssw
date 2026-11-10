@@ -1191,7 +1191,15 @@ namespace pixelTopology {
     static constexpr uint32_t maxLayersPerTrack = 13;
     static constexpr uint32_t maxFishboneHitsPerTrack = 8;
     static constexpr uint32_t maxHitsOnTrack = maxLayersPerTrack + maxFishboneHitsPerTrack;
-    static constexpr uint32_t maxHitsOnTrackForFullFit = 6;
+    // inner-tracker-only tracks cross up to 12 forward disks: the broken line fit uses up to 10 of their hits
+    static constexpr uint32_t maxHitsOnTrackForFullFit = 10;
+    // duplicate cleaning of the CA:
+    //  - dupHitCountTieBreak: Kernel_rejectDuplicate ranks the tracks tying on nLayers by their total hit count
+    //    before the quality and the chi2;
+    //  - dupNLayersFirst: Kernel_fastDuplicateRemover ranks the tracks of a cell by quality, then nLayers, then
+    //    chi2, so that the nearly exact chi2 of a triplet does not demote the longer track it shares a cell with.
+    static constexpr bool dupHitCountTieBreak = true;
+    static constexpr bool dupNLayersFirst = true;
     static constexpr uint32_t avgHitsPerTrack = 7;
     static constexpr uint32_t maxCellsPerHit = 256;
     static constexpr uint32_t avgTracksPerHit = 10;
@@ -1352,6 +1360,11 @@ namespace pixelTopology {
     static constexpr float const *maxDCurv = phase2PixelTopology::maxDCurvPhase2OT;
     static constexpr float const *floorDCurv = phase2PixelTopology::floorDCurvPhase2OT;
     static constexpr float const *fishboneCuts = phase2PixelTopology::fishboneCutsPhase2OT;
+
+    // the fit and the duplicate cleaning the Phase-2 HLT menu is tuned with (see Phase2)
+    static constexpr uint32_t maxHitsOnTrackForFullFit = 6;
+    static constexpr bool dupHitCountTieBreak = false;
+    static constexpr bool dupNLayersFirst = false;
   };
 
   struct Phase2OTVectorHits : public Phase2OT {
@@ -1408,6 +1421,9 @@ namespace pixelTopology {
     static constexpr float const *floorDCurv = phase2PixelTopology::floorDCurvPhase2OTVectorHits;
     static constexpr float const *fishboneCuts = phase2PixelTopology::fishboneCutsPhase2OTVectorHits;
 
+    // duplicate cleaning (see Phase2): the hit-count tie-break of Kernel_rejectDuplicate
+    static constexpr bool dupHitCountTieBreak = true;
+
     // Ntuplets stop at 15 layers (CACell::find_ntuplets); ttbar PU200 ones have at most 13.
     static constexpr uint32_t maxLayersPerTrack = 15;
     static constexpr uint32_t maxHitsOnTrack = maxLayersPerTrack + maxFishboneHitsPerTrack;
@@ -1440,6 +1456,9 @@ namespace pixelTopology {
     static constexpr uint32_t maxFishboneHitsPerTrack = 2;
     static constexpr uint32_t maxHitsOnTrack = maxLayersPerTrack + maxFishboneHitsPerTrack;
     static constexpr uint32_t maxHitsOnTrackForFullFit = 6;
+    // duplicate cleaning of the CA (see Phase2)
+    static constexpr bool dupHitCountTieBreak = false;
+    static constexpr bool dupNLayersFirst = false;
     static constexpr uint32_t avgHitsPerTrack = 5;
     static constexpr uint32_t maxCellsPerHit = 256;
     static constexpr uint32_t avgTracksPerHit = 6;

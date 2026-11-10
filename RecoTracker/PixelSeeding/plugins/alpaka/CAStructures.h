@@ -21,6 +21,34 @@ namespace caStructures {
 
   using Quality = ::pixelTrack::Quality;
 
+  // Hit-expectation tests of the short tracks of the inner-tracker-only CA (Phase2, CATripletHoleCheck.h)
+  struct TripletHoleCheckParams {
+    bool enabled;
+    float dx, dy;      // rechit window around a crossing, local x and y [cm]
+    float margin;      // crossings closer than this to a module edge are not tested [cm]
+    float clusterYLo;  // allowed range of the measured minus expected cluster length along local y [pixels]
+    float clusterYHi;
+    float maxTip[6];  // max |tip| [cm] of 3-hit tracks, index 3 * region + class; negative = no cut
+  };
+
+  // z-vertex finding and the vertex restriction of the short tracks of the inner-tracker-only CA (Phase2,
+  // CAZVertexHisto.h)
+  struct ZVertexParams {
+    bool enabled;
+    float trackWeight;  // weight of a track: trackWeight * min(pT, ptCap)^ptPower
+    float ptPower;
+    float ptCap;          // [GeV]
+    float threshold;      // minimum summed weight of a peak
+    int peakHalfWidth;    // half width of the peak window [bins]
+    int nMax;             // maximum number of vertices (<= 8)
+    float minSeparation;  // minimum distance of two vertices [cm]
+    float dxyKnee;        // |tip| [cm] splitting the track categories
+    float dzTable[24];    // per-category vertex window [cm]; negative = not restricted
+    float tipTable[24];   // per-category max |tip| [cm]; negative = none
+    float rescueDz;       // a 3-hit track failing the hit-expectation tests is kept within rescueDz [cm] of a vertex,
+    float rescueMaxTip;   // if its |tip| is below rescueMaxTip [cm]; rescueDz < 0 = off
+  };
+
   //Configuration params common to all topologies, for the algorithms
   struct AlgoParams {
     // Container sizes
@@ -35,6 +63,9 @@ namespace caStructures {
     // parameter set by the menus.
     uint16_t minHitsPerNtuplet_;
     uint16_t minHitsForSharingCut_;
+    // with minHitsPerNtuplet_ = 3: a 3-layer ntuplet is kept only if |cot(theta)| of the line through its first and
+    // last hit is below this value (sinh of maxEtaForTriplets); negative = triplets everywhere
+    float maxTripletCotTheta_;
 
     // Flags
     bool useRiemannFit_;
@@ -47,13 +78,19 @@ namespace caStructures {
     bool dupPassThrough_;
     bool useSimpleTripletCleaner_;
     bool doTripletCleaner_;
+    // simple triplet cleaner (Kernel_simpleTripletCleaner): 0 = the lowest-|tip| track on a shared hit wins,
+    // 1 = a triplet is demoted only if it shares a hit with a longer track, 2 = ... with a longer tight track
+    uint16_t tripletCleanerMode_;
+    TripletHoleCheckParams tripletHoleCheck_;
+    ZVertexParams zVertex_;
     bool doFastDuplicateRemover_;
     bool doEarlyDuplicateRemover_;
 
-    // Inline per-triplet DNN gate (Phase2OTVectorHits only): when enabled, an MLP with compile-time
+    // Inline per-triplet DNN gate (Phase2OTVectorHits and Phase2): when enabled, an MLP with compile-time
     // weights (CATripletDNN.h) scores EVERY accepted triplet in Kernel_connect -- pixel-only
-    // (nVectorHits==0, sentinel vector hit features) and vector-hit-containing alike -- and rejects those below
-    // tripletDNNThreshold_ (negative => the threshold compiled into the weight header).
+    // (nVectorHits==0, sentinel vector hit features) and vector-hit-containing alike, or with the pixel-only bank
+    // for the inner-tracker-only Phase2 topology -- and rejects those below tripletDNNThreshold_ (negative => the
+    // threshold compiled into the weight header).
     bool useTripletDNN_;
     float tripletDNNThreshold_;
 
@@ -67,6 +104,7 @@ namespace caStructures {
     // Device-memory allocation strategy (see CAHitNtupletGeneratorKernels)
     bool delayAllocations_;    // Defer cell-derived + hit->track buffers until their real size is known
     bool countDoubletsFirst_;  // Run a count-only doublet pass to size simpleCells/hitToCellStorage exactly
+    bool compactOutput_;  // Copy the output track SoA into one sized to the event's tracks (needs delayAllocations_)
 
     // CA fast-duplicate / shared-hit parameter-cov gate width. Two tracks are declared duplicates when
     // every fitted param p satisfies dp^2 <= fastDupNSigma2_*(cov_i+cov_j) (Kernel_fastDuplicateRemover
