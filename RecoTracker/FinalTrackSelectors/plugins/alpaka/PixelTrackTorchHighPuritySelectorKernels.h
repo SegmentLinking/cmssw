@@ -49,6 +49,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          const double scoreThreshold,
                          const double scoreThresholdLowDxy,
                          const double dxyRampKnee,
+                         // tracks with at most shortTrackMaxLayers layers are cut at scoreThresholdShortTracks instead
+                         // (shortTrackMaxLayers = 0: no separate threshold)
+                         const int shortTrackMaxLayers,
+                         const double scoreThresholdShortTracks,
+                         // tracks with |eta| below passThroughMaxAbsEta skip the score cut (negative: none)
+                         const double passThroughMaxAbsEta,
                          const PixelTrackFitFeaturesConstView fitFeatures,
                          const PixelTrackScoresSoA::View trackScores,
                          const int* preselectedTrackIndices,
