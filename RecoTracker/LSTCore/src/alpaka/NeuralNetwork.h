@@ -11,7 +11,6 @@
 #include "T3NeuralNetworkWeights.h"
 #include "pT3NeuralNetworkWeights.h"
 #include "T5EmbedNetworkWeights.h"
-#include "pLSEmbedNetworkWeights.h"
 #include "T4NeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -400,48 +399,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
   }  // namespace t5embdnn
-
-  namespace plsembdnn {
-    template <alpaka::concepts::Acc TAcc>
-    ALPAKA_FN_ACC ALPAKA_FN_INLINE void runEmbed(TAcc const& acc,
-                                                 const float eta,
-                                                 const float etaErr,
-                                                 const float phi,
-                                                 const float circleCenterX,
-                                                 const float circleCenterY,
-                                                 const float circleRadius,
-                                                 const float ptIn,
-                                                 const float ptErr,
-                                                 const bool isQuad,
-                                                 float (&embedding)[Params_pLS::kEmbed]) {
-      constexpr unsigned int kInputFeatures = 10;
-      constexpr unsigned int kHiddenFeatures = 32;
-
-      float x[kInputFeatures] = {eta / dnn::plsembdnn::kEta_norm,
-                                 etaErr / dnn::plsembdnn::kEtaErr_norm,
-                                 alpaka::math::cos(acc, phi),
-                                 alpaka::math::sin(acc, phi),
-                                 1.0f / ptIn,
-                                 alpaka::math::log10(acc, ptErr),
-                                 isQuad ? 1.0f : 0.0f,
-                                 alpaka::math::log10(acc, alpaka::math::abs(acc, circleCenterX)),
-                                 alpaka::math::log10(acc, alpaka::math::abs(acc, circleCenterY)),
-                                 alpaka::math::log10(acc, circleRadius)};
-
-      float h1[kHiddenFeatures];
-      float h2[kHiddenFeatures];
-
-      linear_layer<kInputFeatures, kHiddenFeatures>(x, h1, dnn::plsembdnn::wgtT_fc1, dnn::plsembdnn::bias_fc1);
-      relu_activation<kHiddenFeatures>(h1);
-
-      linear_layer<kHiddenFeatures, kHiddenFeatures>(h1, h2, dnn::plsembdnn::wgtT_fc2, dnn::plsembdnn::bias_fc2);
-      relu_activation<kHiddenFeatures>(h2);
-
-      linear_layer<kHiddenFeatures, Params_pLS::kEmbed>(
-          h2, embedding, dnn::plsembdnn::wgtT_fc3, dnn::plsembdnn::bias_fc3);
-    }
-
-  }  // namespace plsembdnn
 
   namespace t4dnn {
     template <alpaka::concepts::Acc TAcc>
