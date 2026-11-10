@@ -43,6 +43,8 @@
 #include "CAHitNtupletGenerator.h"
 
 #include "HeterogeneousCore/AlpakaCore/interface/MoveToDeviceCache.h"
+#include "Geometry/CommonTopologies/interface/PixelGeomDetUnit.h"
+#include "Geometry/CommonTopologies/interface/PixelTopology.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
 #include "Geometry/Records/interface/TrackerTopologyRcd.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
@@ -622,6 +624,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         auto rr = Rotation(det->surface().rotation());
         modulesSoA[i].detFrame() = Frame(vv.x(), vv.y(), vv.z(), rr);
         modulesSoA[i].innerSensorFrame() = pickInnerFrame(i);
+        modulesSoA[i].halfWidth() = 0.5f * det->surface().bounds().width();
+        modulesSoA[i].halfLength() = 0.5f * det->surface().bounds().length();
+        auto const* pixelDet = dynamic_cast<PixelGeomDetUnit const*>(det);
+        modulesSoA[i].thickness() = pixelDet ? pixelDet->surface().bounds().thickness() : 0.f;
+        modulesSoA[i].pitchY() = pixelDet ? pixelDet->specificTopology().pitch().second : 0.f;
 #ifdef GPU_DEBUG
         auto const& detUnits = det->components();
         for (auto& detUnit : detUnits) {
