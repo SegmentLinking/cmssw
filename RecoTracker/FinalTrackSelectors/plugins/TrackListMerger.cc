@@ -11,6 +11,7 @@
 
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/ValueMap.h"
+#include "DataFormats/Math/interface/deltaPhi.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackBase.h"
 #include "DataFormats/TrackReco/interface/TrackExtra.h"
@@ -25,6 +26,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/Utilities/interface/ESGetToken.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+#include "FWCore/Utilities/interface/isFinite.h"
 #include "FWCore/Utilities/interface/thread_safety_macros.h"
 #include "RecoTracker/FinalTrackSelectors/interface/TrackAlgoPriorityOrder.h"
 #include "RecoTracker/Record/interface/CkfComponentsRecord.h"
@@ -102,6 +104,7 @@ private:
   std::string priorityName_;
 
   double maxNormalizedChisq_;
+  double maxSameParticleChisq_;
   double minPT_;
   unsigned int minFound_;
   float epsilon_;
@@ -216,6 +219,7 @@ TrackListMerger::TrackListMerger(edm::ParameterSet const& conf) {
   std::vector<edm::InputTag> trackProducerTags(conf.getParameter<std::vector<edm::InputTag>>("TrackProducers"));
   //which of these do I need to turn into vectors?
   maxNormalizedChisq_ = conf.getParameter<double>("MaxNormalizedChisq");
+  maxSameParticleChisq_ = conf.getParameter<double>("MaxSameParticleChisq");
   minPT_ = conf.getParameter<double>("MinPT");
   minFound_ = (unsigned int)conf.getParameter<int>("MinFound");
   epsilon_ = conf.getParameter<double>("Epsilon");
@@ -317,6 +321,11 @@ void TrackListMerger::fillDescriptions(edm::ConfigurationDescriptions& descripti
   desc.add<std::string>("trackAlgoPriorityOrder");
   desc.add<std::vector<edm::InputTag>>("TrackProducers", {edm::InputTag(""), edm::InputTag("")});
   desc.add<double>("MaxNormalizedChisq", 1000.0)->setComment("maximum chisq/dof");
+  desc.add<double>("MaxSameParticleChisq", 0.)
+      ->setComment(
+          "tracks with at least two valid pixel hits are compared with tracks with fewer; a pair on no common module "
+          "with a helix-parameter chisq below this value is one particle, and its track with fewer valid hits is "
+          "dropped (0: off)");
   desc.add<double>("MinPT", 0.05)->setComment("in GeV/c");
   desc.add<int>("MinFound", 3)->setComment("minimum number of RecHits used in fit");
   desc.add<double>("Epsilon", -0.001)
@@ -691,6 +700,67 @@ void TrackListMerger::produce(edm::Event& e, const edm::EventSetup& es) {
         }  //end track2 loop
       }  //end track loop
     }  //end loop over track list sets
+
+  // A particle reconstructed twice, once with pixel hits and once without, shares no hit between its two tracks:
+  // compare the helix parameters at the beam line. One parameter's chisq term never exceeds the full chisq,
+  // so phi and lambda reject most pairs before the matrix inversion.
+  if (maxSameParticleChisq_ > 0 && ngood > 1) {
+    // Tracks with a single pixel hit are compared as tracks without pixel hits
+    constexpr int minPixelHitsOfPixelTrack = 2;
+    struct SelectedTrack {
+      unsigned int index;
+      const reco::Track* track;
+      double phi, lambda, phiVariance, lambdaVariance;
+    };
+    std::vector<SelectedTrack> pixelTracks, pixelLessTracks;
+    for (unsigned int j = 0; j < rSize; j++) {
+      if (selected[j] == 0)
+        continue;
+      const reco::Track& track = trackColls[trackCollNum[j]]->at(j - trackCollFirsts[trackCollNum[j]]);
+      (track.hitPattern().numberOfValidPixelHits() >= minPixelHitsOfPixelTrack ? pixelTracks : pixelLessTracks)
+          .push_back({j,
+                      &track,
+                      track.phi(),
+                      track.lambda(),
+                      track.covariance(reco::TrackBase::i_phi, reco::TrackBase::i_phi),
+                      track.covariance(reco::TrackBase::i_lambda, reco::TrackBase::i_lambda)});
+    }
+    auto commonModule = [&](unsigned int k1, unsigned int k2) {
+      auto ih = rh1[k1].begin(), jh = rh1[k2].begin();
+      while (ih != rh1[k1].end() && jh != rh1[k2].end()) {
+        if (ih->first == jh->first)
+          return true;
+        ih->first < jh->first ? ++ih : ++jh;
+      }
+      return false;
+    };
+    for (auto const& pixelTrack : pixelTracks) {
+      for (auto const& pixelLessTrack : pixelLessTracks) {
+        if (selected[pixelLessTrack.index] == 0)
+          continue;
+        const double dPhi = reco::deltaPhi(pixelTrack.phi, pixelLessTrack.phi);
+        const double dLambda = pixelTrack.lambda - pixelLessTrack.lambda;
+        if (dPhi * dPhi > maxSameParticleChisq_ * (pixelTrack.phiVariance + pixelLessTrack.phiVariance) ||
+            dLambda * dLambda > maxSameParticleChisq_ * (pixelTrack.lambdaVariance + pixelLessTrack.lambdaVariance) ||
+            commonModule(indexG[pixelTrack.index], indexG[pixelLessTrack.index]))
+          continue;
+        reco::TrackBase::CovarianceMatrix cov = pixelTrack.track->covariance() + pixelLessTrack.track->covariance();
+        reco::TrackBase::ParameterVector diff = pixelTrack.track->parameters() - pixelLessTrack.track->parameters();
+        diff[reco::TrackBase::i_phi] = dPhi;
+        if (!cov.Invert())
+          continue;
+        // Non-finite parameters or covariance pass every cut above, so they must not match here
+        const double chisq = ROOT::Math::Similarity(diff, cov);
+        if (edm::isNotFinite(chisq) || chisq >= maxSameParticleChisq_)
+          continue;
+        if (pixelLessTrack.track->numberOfValidHits() > pixelTrack.track->numberOfValidHits()) {
+          selected[pixelTrack.index] = 0;
+          break;
+        }
+        selected[pixelLessTrack.index] = 0;
+      }
+    }
+  }
 
   auto vmMVA = std::make_unique<edm::ValueMap<float>>();
   edm::ValueMap<float>::Filler fillerMVA(*vmMVA);
