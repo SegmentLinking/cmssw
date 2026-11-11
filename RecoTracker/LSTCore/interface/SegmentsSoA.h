@@ -13,6 +13,7 @@ namespace lst {
                       SOA_COLUMN(FPX, dPhiChanges),
                       SOA_COLUMN(FPX, dPhiChangeMins),
                       SOA_COLUMN(FPX, dPhiChangeMaxs),
+                      SOA_COLUMN(float, dPhiChangeOuts),  // direction phi minus the outer anchor phi (T5 BBBB, pT3)
 #ifdef CUT_VALUE_DEBUG
                       SOA_COLUMN(FPX, dPhis),
                       SOA_COLUMN(FPX, dPhiMins),

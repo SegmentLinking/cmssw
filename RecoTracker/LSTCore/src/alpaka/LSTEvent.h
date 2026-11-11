@@ -111,9 +111,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     double memoryAllocatedMB_ = 0;
     double memoryLiveMB_ = 0;
     double memoryPeakLiveMB_ = 0;
+    unsigned int nT4Compact_ = 0;  // T4 count after compactQuadruplets()
+
+    // pLS superbins and pixel types, read back at the MD-stage sync, and the pixel-map ranges built from them (pT5, pT3).
+    std::optional<cms::alpakatools::host_buffer<int[]>> superbinsHost_;
+    std::optional<cms::alpakatools::host_buffer<PixelType[]>> pixelTypesHost_;
+    std::optional<cms::alpakatools::device_buffer<Device, unsigned int[]>> connectedPixelSize_;
+    std::optional<cms::alpakatools::device_buffer<Device, unsigned int[]>> connectedPixelIndex_;
+    void copyPixelSeedTypesToHost();
+    void fillConnectedPixels();
 
     void trackAllocatedMB(double mb);
     void trackTransientMB(double mb);  // live (peak) accounting only, not added to the allocated total
+    // Verbose census of a stage's scratch buffers: adds them to the live memory and returns their size (0 when not
+    // verbose), which the stage subtracts when they are released.
+    template <typename... TBufs>
+    double trackScratchMB(std::string_view stage, TBufs const&... bufs);
     // Releases a device collection after its last use; with keepHostCopies_ its host copy is made first.
     template <typename TDC, typename THC>
     void releaseDeviceCollection(std::optional<TDC>& dc, std::optional<THC>& hc);
