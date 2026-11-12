@@ -4,6 +4,7 @@
 <use name="TrackingTools/TrajectoryParametrization"/>
 <use name="DataFormats/GeometrySurface"/>
 <use name="DataFormats/Math"/>
+<use name="eigen"/>
 <use name="DataFormats/GeometryVector"/>
 <use name="DataFormats/TrajectoryState"/>
 <use name="FWCore/Utilities"/>
