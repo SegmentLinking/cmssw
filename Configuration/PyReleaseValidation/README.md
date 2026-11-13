@@ -61,6 +61,7 @@ The offsets currently in use are:
 * 0.7501: HLT phase-2 tracking-only menu
 * 0.7502: HLT phase-2 menu, with tracking ntuple
 * 0.7503: HLT phase-2 menu, CPU vs. GPU validation
+* 0.7504: HLT phase-2 tracking-only menu, pixel CA on the inner tracker only (`phase2ITonlyCA`)
 * 0.751: HLT phase-2 timing menu Alpaka variant
 * 0.7512: HLT phase-2 timing menu, vector-hit-based pixel CA (`phase2CAVectorHits`)
 * 0.7521: HLT phase-2 timing menu ticlv5TrackLinkingGNN variant

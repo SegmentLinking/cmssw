@@ -11,10 +11,15 @@
  * Input: TracksSoA (pixel tracks + hit associations), TrackingRecHitsSoA + OTRecHitsSoA
  * (the latter only when useHitFeatures = true).
  *
- * Torch inference: track tensor [maxPreselectedTracks, N_track_features], padding slots 0-filled.
+ * Torch inference: track tensor [maxPreselectedTracks (or, with dynamicBatches, the batches that can hold the
+ * preselected tracks), N_track_features], padding slots 0-filled.
  */
 
+#include <algorithm>
+#include <type_traits>
+
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDGetToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
@@ -143,6 +148,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // scoreThreshold at |dxyBS|>=dxyRampKnee. scoreThresholdLowDxy < 0 disables it (flat threshold).
     const double scoreThresholdLowDxy_;
     const double dxyRampKnee_;
+    // tracks with at most shortTrackMaxLayers_ layers are cut at scoreThresholdShortTracks_ (0: no separate cut)
+    const int shortTrackMaxLayers_;
+    const double scoreThresholdShortTracks_;
+    // tracks with |eta| below passThroughMaxAbsEta_ skip the score cut (negative: none)
+    const double passThroughMaxAbsEta_;
+    // run the model only on the batches that can hold preselected tracks, instead of on maxPreselectedTracks rows
+    const bool dynamicBatches_;
     // When true, the 14 CA hit/vector hit features are appended to the 17 fit/cov features, for the enriched
     // 31-feature model; the merged-hits product is consumed only then.
     const bool useHitFeatures_;
@@ -171,6 +183,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         scoreThreshold_(iConfig.getParameter<double>("scoreThreshold")),
         scoreThresholdLowDxy_(iConfig.getParameter<double>("scoreThresholdLowDxy")),
         dxyRampKnee_(iConfig.getParameter<double>("dxyRampKnee")),
+        shortTrackMaxLayers_(iConfig.getParameter<int>("shortTrackMaxLayers")),
+        scoreThresholdShortTracks_(iConfig.getParameter<double>("scoreThresholdShortTracks")),
+        passThroughMaxAbsEta_(iConfig.getParameter<double>("passThroughMaxAbsEta")),
+        dynamicBatches_(iConfig.getParameter<bool>("dynamicBatches")),
         useHitFeatures_(iConfig.getParameter<bool>("useHitFeatures")),
         inferenceHalf_(iConfig.getParameter<bool>("inferenceHalf")),
         model_(iConfig.getParameter<edm::FileInPath>("model").fullPath()),
@@ -255,10 +271,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::memset(queue, d_selectedTrackIndices, 0xFF);
     alpaka::memset(queue, d_preselectionOffsets, 0);
 
-    //  - Features and scores containers; the hit block is sized 0 when the model does not read it
-    PixelTrackFeaturesOnDevice trackFeatures(queue, maxPreselectedTracks_, useHitFeatures_ ? maxPreselectedTracks_ : 0);
-    PixelTrackScoresOnDevice trackScoresOnDevice(queue, maxPreselectedTracks_);
-
     // 1. CA-based preselection of tracks
     //  Launch first kernel to look which tracks need to be filtered out
     //  based on quality criteria from the CA
@@ -271,6 +283,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          alpaka::getPtrNative(d_preselectedTrackIndices),
                          alpaka::getPtrNative(d_preselectionOffsets),
                          alpaka::getPtrNative(d_nPreselectedTracks));
+
+    //  - Features and scores containers, of maxPreselectedTracks_ rows, or with dynamicBatches of the whole batches
+    //    that can hold the preselected tracks (the rows beyond are padding whose scores are never read): on the host
+    //    the preselected count is at hand (the queue is synchronous); on a device, to avoid a synchronisation, the
+    //    rows of the input track collection bound it (the event's tracks when the CA compacts its output)
+    int nFeatureRows = maxPreselectedTracks_;
+    if (dynamicBatches_) {
+      int nBound;
+      if constexpr (std::is_same_v<Device, alpaka::DevCpu>) {
+        auto h_nPreselectedTracks = cms::alpakatools::make_host_buffer<int>(queue);
+        alpaka::memcpy(queue, h_nPreselectedTracks, d_nPreselectedTracks);
+        alpaka::wait(queue);
+        nBound = *h_nPreselectedTracks.data();
+      } else {
+        nBound = tracks.tracks().metadata().size();
+      }
+      nBound = std::clamp(nBound, 1, maxPreselectedTracks_);
+      nFeatureRows = int(cms::alpakatools::round_up_by(uint32_t(nBound), uint32_t(batchSize_)));
+    }
+    //  - the hit block is sized 0 when the model does not read it
+    PixelTrackFeaturesOnDevice trackFeatures(queue, nFeatureRows, useHitFeatures_ ? nFeatureRows : 0);
+    PixelTrackScoresOnDevice trackScoresOnDevice(queue, nFeatureRows);
 
     // 2. Feature extraction. The merged TrackingRecHitsSoA is needed only for the hit/vector hit features;
     // otherwise pass a null view and nHitsTot = 0.
@@ -296,7 +330,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     launchFeaturesExtractor(queue,
-                            maxPreselectedTracks_,
+                            nFeatureRows,
                             tracks.tracks(),
                             tracks.trackHits(),
                             hitsView,
@@ -334,6 +368,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                       scoreThreshold_,
                       scoreThresholdLowDxy_,
                       dxyRampKnee_,
+                      shortTrackMaxLayers_,
+                      scoreThresholdShortTracks_,
+                      passThroughMaxAbsEta_,
                       trackFeatures.const_view().fit(),
                       trackScoresOnDevice.view(),
                       alpaka::getPtrNative(d_preselectedTrackIndices),
@@ -369,6 +406,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // scoreThreshold at |dxyBS| >= dxyRampKnee [cm]. scoreThresholdLowDxy < 0 disables it.
     desc.add<double>("scoreThresholdLowDxy", -1.0);
     desc.add<double>("dxyRampKnee", 2.0);
+    desc.add<int>("shortTrackMaxLayers", 0)
+        ->setComment(
+            "Tracks with at most this many layers are cut at scoreThresholdShortTracks instead of scoreThreshold "
+            "(0: no separate threshold).");
+    desc.add<double>("scoreThresholdShortTracks", 0.);
+    desc.add<double>("passThroughMaxAbsEta", -1.)
+        ->setComment("Tracks with |eta| below this value skip the score cut (negative: none).");
+    desc.add<bool>("dynamicBatches", false)
+        ->setComment(
+            "Run the model only on the batches that can hold preselected tracks (identical scores): on the host "
+            "the preselected count is read back, on a device the input track rows bound it (useful with an "
+            "event-sized input, see compactOutput of the CA).");
     // Hit/vector hit features (enriched model); the hit features read the pixel rechits + vector hits the CA indexed,
     // consumed only when useHitFeatures is true.
     desc.add<bool>("useHitFeatures", false);

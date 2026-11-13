@@ -16,7 +16,10 @@
 #include <cmath>
 #include <type_traits>
 
+#include "FWCore/Utilities/interface/CMSUnrollLoop.h"
+
 #include "CATripletDNNWeights.h"
+#include "CATripletDNNWeights_pixelOnly.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -116,6 +119,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         o += h2[k] * kW3[k];  // kW3 [kNH2][1]
       }
       return 1.f / (1.f + std::exp(-o));  // sigmoid
+    }
+
+    // The same forward pass with the pixel-only bank of the inner-tracker-only CA (CATripletDNNWeights_pixelOnly.h):
+    // in[] has its 27 inputs in the trained order. The loops are unrolled so that every array index is a
+    // compile-time constant and the activations can stay in registers on the GPU.
+    template <typename TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE float scorePixelOnly(TAcc const& acc,
+                                                        const float (&in)[caTripletDNN_pixelOnly::kNFeat]) {
+      using namespace caTripletDNN_pixelOnly;
+      float xn[kNFeat];
+      CMS_UNROLL_LOOP
+      for (int i = 0; i < kNFeat; ++i) {
+        xn[i] = (in[i] - kMean[i]) / kScale[i];
+      }
+      float h1[kNH1];
+      CMS_UNROLL_LOOP
+      for (int j = 0; j < kNH1; ++j) {
+        float s = kB1[j];
+        CMS_UNROLL_LOOP
+        for (int i = 0; i < kNFeat; ++i) {
+          s += xn[i] * kW1[i * kNH1 + j];  // kW1 row-major [kNFeat][kNH1]
+        }
+        h1[j] = s > 0.f ? s : 0.f;  // relu
+      }
+      float h2[kNH2];
+      CMS_UNROLL_LOOP
+      for (int k = 0; k < kNH2; ++k) {
+        float s = kB2[k];
+        CMS_UNROLL_LOOP
+        for (int j = 0; j < kNH1; ++j) {
+          s += h1[j] * kW2[j * kNH2 + k];  // kW2 row-major [kNH1][kNH2]
+        }
+        h2[k] = s > 0.f ? s : 0.f;  // relu
+      }
+      float o = kB3[0];
+      CMS_UNROLL_LOOP
+      for (int k = 0; k < kNH2; ++k) {
+        o += h2[k] * kW3[k];  // kW3 [kNH2][1]
+      }
+      return 1.f / (1.f + alpaka::math::exp(acc, -o));  // sigmoid
     }
 
   }  // namespace caTripletDNN_eval

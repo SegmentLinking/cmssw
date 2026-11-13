@@ -206,6 +206,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       TmpTuple& tmpNtuplet,
                                                       hindex_type* __restrict__ hits,
                                                       const unsigned int minHitsPerNtuplet,
+                                                      const float maxTripletCotTheta,
                                                       const float preCurvature = kUninitializeCurvature) const {
       // the building process for a track ends if:
       // it has no right neighbor
@@ -293,6 +294,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                tmpNtuplet,
                                                                hits,
                                                                minHitsPerNtuplet,
+                                                               maxTripletCotTheta,
                                                                thisCurvature);
           }
         }
@@ -300,8 +302,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // if no more doublets were found, save N-tuplet if long enough
         if (!foundNeighbor) {
           const uint8_t nl = tmpNtuplet.size() + 1;  // numLayers in tuplet
+          // a 3-layer ntuplet only where a straight line crosses few layers: |cot(theta)| of its first-to-last hit
+          // below maxTripletCotTheta (negative = everywhere)
+          bool tripletAllowed = true;
+          if (nl == 3 && maxTripletCotTheta >= 0.f) {
+            auto const& first = cells[tmpNtuplet[0]];
+            const float dr = alpaka::math::abs(acc, outer_r(hh) - first.inner_r(hh));
+            const float dz = alpaka::math::abs(acc, outer_z(hh) - first.inner_z(hh));
+            tripletAllowed = dz < maxTripletCotTheta * dr;
+          }
           // if long enough save...
-          if (nl >= minHitsPerNtuplet) {
+          if (nl >= minHitsPerNtuplet && tripletAllowed) {
             {
               // `hits` is owned by the caller, one buffer per thread sized maxHitsOnTrack to cover fishbone
               // hits: declaring it here would put a copy at every inlined recursion depth on the stack, and a

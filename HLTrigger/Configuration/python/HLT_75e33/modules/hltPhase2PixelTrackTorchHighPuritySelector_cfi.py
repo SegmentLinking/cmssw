@@ -40,3 +40,19 @@ from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
         hltPhase2PixelTrackTorchHighPuritySelector,
         _hltPhase2PixelTrackForestHighPuritySelector
 )
+
+# Inner-tracker-only CA (phase2ITonlyCA): a model trained on inner-tracker-only CA tracks; short (3-layer) tracks get
+# a looser threshold, and the barrel tracks (|eta| < 1) skip the score cut (the later iterations recover more of them
+# than the model rejects). With its triplets the CA has more tight tracks per event than the default buffers hold;
+# the model runs only on the batches that hold tracks.
+from Configuration.ProcessModifiers.phase2ITonlyCA_cff import phase2ITonlyCA
+phase2ITonlyCA.toModify(hltPhase2PixelTrackTorchHighPuritySelector,
+    maxNumberOfTracks = 256*1024,
+    maxPreselectedTracks = 49920,
+    model = 'RecoTracker/FinalTrackSelectors/data/PixelTrackTorchHighPuritySelector/pixel_track_classifier_ITonly_v1_FP16.pt',
+    scoreThreshold = 0.2,
+    shortTrackMaxLayers = cms.int32(3),
+    scoreThresholdShortTracks = cms.double(0.05),
+    passThroughMaxAbsEta = cms.double(1.0),
+    dynamicBatches = cms.bool(True)
+)
