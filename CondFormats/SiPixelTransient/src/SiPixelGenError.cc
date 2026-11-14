@@ -30,6 +30,7 @@
 
 #ifndef SI_PIXEL_TEMPLATE_STANDALONE
 #include "CondFormats/SiPixelTransient/interface/SiPixelGenError.h"
+#include "CondFormats/SiPixelTransient/interface/SiPixelUtils.h"
 #include "FWCore/Utilities/interface/FileInPath.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #define LOGERROR(x) LogError(x)
@@ -40,25 +41,15 @@
 using namespace edm;
 #else
 #include "SiPixelGenError.h"
+#include "SiPixelUtils.h"
 #define LOGERROR(x) std::cout << x << ": "
 #define LOGINFO(x) std::cout << x << ": "
 #define LOGWARNING(x) std::cout << x << ": "
 #define ENDL std::endl
 #endif
 
-namespace {
-
-  //! Linear interpolation (1-r)*a + r*b, with the FMA contraction pinned
-  //! Prevents 1ulp shifts due to compiler optimization
-  //! https://github.com/cms-sw/cmssw/issues/48499
-  inline float interpolate1d(float r, float a, float b) { return std::fma(1.f - r, a, r * b); }
-
-  //! Bilinear interpolation, with the same contraction guarantee as interpolate1d()
-  inline float interpolate2d(float ry, float rx, float a00, float a01, float a10, float a11) {
-    return interpolate1d(ry, interpolate1d(rx, a00, a01), interpolate1d(rx, a10, a11));
-  }
-
-}  // namespace
+using siPixelUtils::interpolate1d;
+using siPixelUtils::interpolate2d;
 
 //****************************************************************
 //! This routine initializes the global GenError structures from

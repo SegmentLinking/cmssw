@@ -1,0 +1,9 @@
+#ifndef RecoLocalTracker_SiPixelRecHits_interface_PixelGenErrorTablesHost_h
+#define RecoLocalTracker_SiPixelRecHits_interface_PixelGenErrorTablesHost_h
+
+#include "DataFormats/Portable/interface/PortableHostCollection.h"
+#include "RecoLocalTracker/SiPixelRecHits/interface/PixelGenErrorTablesSoA.h"
+
+using PixelGenErrorTablesHost = PortableHostCollection<PixelGenErrorTablesSoA>;
+
+#endif  // RecoLocalTracker_SiPixelRecHits_interface_PixelGenErrorTablesHost_h
