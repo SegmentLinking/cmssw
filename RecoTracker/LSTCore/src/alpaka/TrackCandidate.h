@@ -1,7 +1,9 @@
 #ifndef RecoTracker_LSTCore_src_alpaka_TrackCandidate_h
 #define RecoTracker_LSTCore_src_alpaka_TrackCandidate_h
 
+#include <algorithm>
 #include <bit>
+#include <limits>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/CMSUnrollLoop.h"
@@ -21,8 +23,10 @@
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/QuadrupletsSoA.h"
 
+#include "EtaPhiGrid.h"
+#include "Hit.h"
+#include "HitBuckets.h"
 #include "NeuralNetwork.h"
-#include "TripletAccessors.h"
 #include "PixelQuintupletAccessors.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
@@ -153,23 +157,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 #endif
   }
 
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool pixelHitsOverlapAny(unsigned int ix,
-                                                          unsigned int jx,
-                                                          PixelSegmentsConst pixelSegments) {
-    if (ix == jx)
-      return true;
+  // dR2 window of CrossCleanpT3 between the pLS of a pT3 and the pLS of a pT5.
+  constexpr float kCrossCleanpT3DR2 = 1e-5f;
 
-    auto const& phits1 = pixelSegments.pLSHitsIdxs()[ix];
-    auto const& phits2 = pixelSegments.pLSHitsIdxs()[jx];
-    for (int i = 0; i < Params_pLS::kHits; i++) {
-      for (int j = 0; j < Params_pLS::kHits; j++) {
-        if (phits1[i] == phits2[j]) {
-          return true;
-        }
+  // Grid fill of the pT5s by the (eta, phi) of their pLS: counts per cell (cellPT5s == nullptr), else fills through
+  // the cursor.
+  struct FillPixelQuintupletSeedGrid {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ModulesConst modules,
+                                  ObjectRangesConst ranges,
+                                  PixelSeedsConst pixelSeeds,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int* __restrict__ cellCount,
+                                  unsigned int* __restrict__ cellPT5s) const {
+      const unsigned int prefix = ranges.segmentModuleIndices()[modules.nLowerModules()];
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, pixelQuintuplets.nPixelQuintuplets())) {
+        const unsigned int pLS = pixelQuintuplets.pixelSegmentIndices()[i] - prefix;
+        const int cell = grid.cell(acc, pixelSeeds.eta()[pLS], pixelSeeds.phi()[pLS]);
+        const unsigned int slot = alpaka::atomicAdd(acc, &cellCount[cell], 1u, alpaka::hierarchy::Blocks{});
+        if (cellPT5s != nullptr)
+          cellPT5s[slot] = i;
       }
     }
-    return false;
-  }
+  };
 
   struct CrossCleanpT3 {
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
@@ -177,35 +188,70 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   ObjectRangesConst ranges,
                                   PixelTriplets pixelTriplets,
                                   PixelSeedsConst pixelSeeds,
-                                  PixelQuintupletsConst pixelQuintuplets) const {
-      unsigned int nPixelTriplets = pixelTriplets.nPixelTriplets();
-      for (unsigned int pixelTripletIndex : cms::alpakatools::uniform_elements_y(acc, nPixelTriplets)) {
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int const* __restrict__ cellStart,
+                                  unsigned int const* __restrict__ cellPT5s) const {
+      const unsigned int prefix = ranges.segmentModuleIndices()[modules.nLowerModules()];
+      for (unsigned int pixelTripletIndex : cms::alpakatools::uniform_elements_y(acc, pixelTriplets.nPixelTriplets())) {
         if (pixelTriplets.isDup()[pixelTripletIndex])
           continue;
 
-        // Cross cleaning step
+        // Cross cleaning step: pT5s whose pLS points the same way, from the 3x3 cells around the pT3's pLS.
         float eta1 = __H2F(pixelTriplets.eta_pix()[pixelTripletIndex]);
         float phi1 = __H2F(pixelTriplets.phi_pix()[pixelTripletIndex]);
+        const int etaBin = grid.etaBin(acc, eta1);
+        const int phiBin = grid.phiBin(acc, phi1);
+        for (int iNeighbour = 0; iNeighbour < EtaPhiGrid::kNeighbourCells; ++iNeighbour) {
+          const int cell = grid.neighbourCell(etaBin, phiBin, iNeighbour);
+          if (cell < 0)
+            continue;
+          for (unsigned int slot : cms::alpakatools::uniform_elements_x(acc, cellStart[cell], cellStart[cell + 1])) {
+            unsigned int pLS_jx = pixelQuintuplets.pixelSegmentIndices()[cellPT5s[slot]];
+            float eta2 = pixelSeeds.eta()[pLS_jx - prefix];
+            float phi2 = pixelSeeds.phi()[pLS_jx - prefix];
+            float dEta = alpaka::math::abs(acc, (eta1 - eta2));
+            float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
 
-        int pixelModuleIndex = modules.nLowerModules();
-        unsigned int prefix = ranges.segmentModuleIndices()[pixelModuleIndex];
-
-        unsigned int nPixelQuintuplets = pixelQuintuplets.nPixelQuintuplets();
-        for (unsigned int pixelQuintupletIndex : cms::alpakatools::uniform_elements_x(acc, nPixelQuintuplets)) {
-          unsigned int pLS_jx = pixelQuintuplets.pixelSegmentIndices()[pixelQuintupletIndex];
-          float eta2 = pixelSeeds.eta()[pLS_jx - prefix];
-          float phi2 = pixelSeeds.phi()[pLS_jx - prefix];
-          float dEta = alpaka::math::abs(acc, (eta1 - eta2));
-          float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
-          float dR2 = dEta * dEta + dPhi * dPhi;
-          if (dR2 < 1e-5f)
-            pixelTriplets.isDup()[pixelTripletIndex] = true;
+            float dR2 = dEta * dEta + dPhi * dPhi;
+            if (dR2 < kCrossCleanpT3DR2)
+              pixelTriplets.isDup()[pixelTripletIndex] = true;
+          }
         }
       }
     }
   };
 
+  // Grid fill for CrossCleanT5 over the promoted (!isDup) pixel objects: pT5 j as j, pT3 j as nPT5 + j. Counts per
+  // cell (cellPixelObjects == nullptr), else fills through the cursor.
+  struct FillPixelObjectGrid {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  PixelQuintupletsConst pixelQuintuplets,
+                                  PixelTripletsConst pixelTriplets,
+                                  EtaPhiGrid grid,
+                                  unsigned int* __restrict__ cellCount,
+                                  unsigned int* __restrict__ cellPixelObjects) const {
+      const unsigned int nPT5 = pixelQuintuplets.nPixelQuintuplets();
+      for (unsigned int jx : cms::alpakatools::uniform_elements(acc, nPT5 + pixelTriplets.nPixelTriplets())) {
+        const bool isPT5 = (jx < nPT5);
+        const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
+        if (isPT5 ? pixelQuintuplets.isDup()[ptidx] : pixelTriplets.isDup()[ptidx])
+          continue;
+        const float eta = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
+        const float phi = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
+        const int cell = grid.cell(acc, eta, phi);
+        const unsigned int slot = alpaka::atomicAdd(acc, &cellCount[cell], 1u, alpaka::hierarchy::Blocks{});
+        if (cellPixelObjects != nullptr)
+          cellPixelObjects[slot] = jx;
+      }
+    }
+  };
+
+  // |d eta|, |d phi| window of the T5 x pixel-object cross-cleaning (and of its grid).
+  constexpr float kCrossCleanT5PixelWindow = 0.15f;
+
+  // One T5 per y element vs the promoted pT5s and pT3s of the 3x3 grid cells around it over x, which hold all those
+  // inside kCrossCleanT5PixelWindow.
   struct CrossCleanT5 {
     ALPAKA_FN_ACC void operator()(Acc3D const& acc,
                                   ModulesConst modules,
@@ -213,7 +259,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   QuintupletsOccupancyConst quintupletsOccupancy,
                                   PixelQuintupletsConst pixelQuintuplets,
                                   PixelTripletsConst pixelTriplets,
-                                  ObjectRangesConst ranges) const {
+                                  ObjectRangesConst ranges,
+                                  EtaPhiGrid grid,
+                                  unsigned int const* __restrict__ cellStart,
+                                  unsigned int const* __restrict__ cellPixelObjects) const {
       for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
         if (ranges.quintupletModuleIndices()[lowmod] == -1)
           continue;
@@ -227,7 +276,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             continue;
 
           const unsigned int nPT5 = pixelQuintuplets.nPixelQuintuplets();
-          const unsigned int loop_bound = nPT5 + pixelTriplets.nPixelTriplets();
 
           float eta1 = __H2F(quintuplets.eta()[iT5]);
           float phi1 = __H2F(quintuplets.phi()[iT5]);
@@ -238,39 +286,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
           // A pixel object deletes a quintuplet only on shared outer-tracker hits.
           constexpr int otThresh = 4;
 
-          // Cross-clean against both pT5s and pT3s
-          for (unsigned int jx : cms::alpakatools::uniform_elements_x(acc, loop_bound)) {
-            const bool isPT5 = (jx < nPT5);
-            const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
-            const float eta2 = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
-            const float phi2 = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
-            if (alpaka::math::abs(acc, eta1 - eta2) >= 0.15f ||
-                alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) >= 0.15f)
+          // Cross-clean against both pT5s and pT3s (only promoted ones are in the grid)
+          const int etaBin = grid.etaBin(acc, eta1);
+          const int phiBin = grid.phiBin(acc, phi1);
+          bool removed = false;
+          for (int iNeighbour = 0; iNeighbour < EtaPhiGrid::kNeighbourCells && !removed; ++iNeighbour) {
+            const int cell = grid.neighbourCell(etaBin, phiBin, iNeighbour);
+            if (cell < 0)
               continue;
-            // Only a promoted (!isDup) pixel object may delete.
-            if (isPT5 ? pixelQuintuplets.isDup()[ptidx] : pixelTriplets.isDup()[ptidx])
-              continue;
-
-            // Shared outer-tracker hits: the pixel object's hits after its pLS slots (for a pT5, its T5's hits).
-            unsigned int const* ptOTHits =
-                isPT5 ? quintuplets.hitIndices()[pixelQuintuplets.quintupletIndices()[ptidx]].data()
-                      : pixelTriplets.hitIndices()[ptidx].data() + Params_pLS::kHits;
-            const int nPtOTHits = isPT5 ? Params_T5::kHits : Params_pT3::kHits - Params_pLS::kHits;
-            int nOTMatched = 0;
-            for (int i = 0; i < Params_T5::kHits; ++i) {
-              const unsigned int hitI = iT5Hits[i];
-              if (hitI == lst::kTCEmptyHitIdx)
+            for (unsigned int slot : cms::alpakatools::uniform_elements_x(acc, cellStart[cell], cellStart[cell + 1])) {
+              const unsigned int jx = cellPixelObjects[slot];
+              const bool isPT5 = (jx < nPT5);
+              const unsigned int ptidx = isPT5 ? jx : (jx - nPT5);
+              const float eta2 = __H2F(isPT5 ? pixelQuintuplets.eta()[ptidx] : pixelTriplets.eta()[ptidx]);
+              const float phi2 = __H2F(isPT5 ? pixelQuintuplets.phi()[ptidx] : pixelTriplets.phi()[ptidx]);
+              if (alpaka::math::abs(acc, eta1 - eta2) >= kCrossCleanT5PixelWindow ||
+                  alpaka::math::abs(acc, cms::alpakatools::deltaPhi(acc, phi1, phi2)) >= kCrossCleanT5PixelWindow)
                 continue;
-              for (int j = 0; j < nPtOTHits; ++j) {
-                if (ptOTHits[j] == hitI) {
-                  nOTMatched++;
-                  break;
+
+              // Shared outer-tracker hits: the pixel object's hits after its pLS slots (for a pT5, its T5's hits).
+              unsigned int const* ptOTHits =
+                  isPT5 ? quintuplets.hitIndices()[pixelQuintuplets.quintupletIndices()[ptidx]].data()
+                        : pixelTriplets.hitIndices()[ptidx].data() + Params_pLS::kHits;
+              const int nPtOTHits = isPT5 ? Params_T5::kHits : Params_pT3::kHits - Params_pLS::kHits;
+              int nOTMatched = 0;
+              for (int i = 0; i < Params_T5::kHits; ++i) {
+                const unsigned int hitI = iT5Hits[i];
+                if (hitI == lst::kTCEmptyHitIdx)
+                  continue;
+                for (int j = 0; j < nPtOTHits; ++j) {
+                  if (ptOTHits[j] == hitI) {
+                    nOTMatched++;
+                    break;
+                  }
                 }
               }
-            }
-            if (nOTMatched >= otThresh) {
-              quintuplets.isDup()[iT5] |= 4;
-              break;
+              if (nOTMatched >= otThresh) {
+                quintuplets.isDup()[iT5] |= 4;
+                removed = true;
+                break;
+              }
             }
           }
         }
@@ -278,30 +333,152 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
-  struct CrossCleanpLS {
-    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+  // CrossCleanpLS dR2 windows: around a T5 TC, and around the pLS of a pT3 or pT5 TC.
+  constexpr float kCrossCleanpLST5DR2 = 0.02f;
+  constexpr float kCrossCleanpLSPixelDR2 = 1e-6f;
+
+  // Dense keys of the packed pLS hit indices for the hit-key bit set of CrossCleanpLS, IT hits first, then OT hits.
+  // maxIT and maxOT are the largest IT and OT hit indices over the hits of all pLSs (PixelHitIndexMaxKernel).
+  struct PixelHitKeys {
+    unsigned int maxIT;
+    unsigned int maxOT;
+
+    ALPAKA_FN_HOST_ACC unsigned int nKeys() const { return maxIT + 1 + maxOT + 1; }
+    ALPAKA_FN_HOST_ACC unsigned int key(unsigned int packedHit) const {
+      return (packedHit & kPackedHitOTBit) ? maxIT + 1 + (packedHit & ~kPackedHitOTBit) : packedHit;
+    }
+  };
+
+  // Bits per uint32_t word of the hit-key bit set.
+  constexpr unsigned int kHitKeyWordBits = std::numeric_limits<uint32_t>::digits;
+
+  struct PixelHitIndexMaxKernel {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  uint16_t nLowerModules,
+                                  SegmentsOccupancyConst segmentsOccupancy,
+                                  PixelSegmentsConst pixelSegments,
+                                  PixelHitKeys* hitKeys) const {
+      unsigned int maxIT = 0, maxOT = 0;
+      unsigned int nPixels = segmentsOccupancy.nSegments()[nLowerModules];
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nPixels)) {
+        for (int k = 0; k < Params_pLS::kHits; ++k) {
+          const unsigned int packedHit = pixelSegments.pLSHitsIdxs()[i][k];
+          const unsigned int hitIndex = packedHit & ~kPackedHitOTBit;
+          if (packedHit & kPackedHitOTBit)
+            maxOT = alpaka::math::max(acc, maxOT, hitIndex);
+          else
+            maxIT = alpaka::math::max(acc, maxIT, hitIndex);
+        }
+      }
+      alpaka::atomicMax(acc, &hitKeys->maxIT, maxIT, alpaka::hierarchy::Blocks{});
+      alpaka::atomicMax(acc, &hitKeys->maxOT, maxOT, alpaka::hierarchy::Blocks{});
+    }
+  };
+
+  // The (eta, phi) a pLS is compared with for a TC of this type; false for T4s, which CrossCleanpLS skips.
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE bool crossCleanEtaPhi(LSTObjType type,
+                                                       unsigned int innerTrackletIdx,
+                                                       unsigned int prefix,
+                                                       PixelTripletsConst pixelTriplets,
+                                                       PixelSeedsConst pixelSeeds,
+                                                       QuintupletsConst quintuplets,
+                                                       float& eta,
+                                                       float& phi) {
+    if (type == LSTObjType::T5) {
+      eta = __H2F(quintuplets.eta()[innerTrackletIdx]);
+      phi = __H2F(quintuplets.phi()[innerTrackletIdx]);
+    } else if (type == LSTObjType::pT3) {
+      eta = __H2F(pixelTriplets.eta_pix()[innerTrackletIdx]);
+      phi = __H2F(pixelTriplets.phi_pix()[innerTrackletIdx]);
+    } else if (type == LSTObjType::pT5) {
+      eta = pixelSeeds.eta()[innerTrackletIdx - prefix];
+      phi = pixelSeeds.phi()[innerTrackletIdx - prefix];
+    } else {
+      return false;
+    }
+    return true;
+  }
+
+  // Grid of the T5, pT3 and pT5 TCs for CrossCleanpLS. Count pass (cellTCs == nullptr): counts per cell and sets the
+  // hit-key bits of the pLS of each pT3 and pT5; fill pass: fills through the cursor.
+  struct FillCrossCleanGrid {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   ModulesConst modules,
                                   ObjectRangesConst ranges,
                                   PixelTripletsConst pixelTriplets,
-                                  TrackCandidatesBase candsBase,
-                                  TrackCandidatesExtended candsExtended,
-                                  SegmentsConst segments,
+                                  TrackCandidatesBaseConst candsBase,
+                                  TrackCandidatesExtendedConst candsExtended,
+                                  PixelSeedsConst pixelSeeds,
+                                  PixelSegmentsConst pixelSegments,
+                                  QuintupletsConst quintuplets,
+                                  EtaPhiGrid grid,
+                                  PixelHitKeys hitKeys,
+                                  uint32_t* __restrict__ hitKeyBits,
+                                  unsigned int* __restrict__ cellCount,
+                                  unsigned int* __restrict__ cellTCs) const {
+      unsigned int prefix = ranges.segmentModuleIndices()[modules.nLowerModules()];
+      for (unsigned int tc : cms::alpakatools::uniform_elements(acc, candsBase.nTrackCandidates())) {
+        LSTObjType type = candsBase.trackCandidateType()[tc];
+        unsigned int innerTrackletIdx = candsExtended.objectIndices()[tc][0];
+        float eta, phi;
+        if (!crossCleanEtaPhi(type, innerTrackletIdx, prefix, pixelTriplets, pixelSeeds, quintuplets, eta, phi))
+          continue;
+        const unsigned int slot =
+            alpaka::atomicAdd(acc, &cellCount[grid.cell(acc, eta, phi)], 1u, alpaka::hierarchy::Blocks{});
+        if (cellTCs != nullptr) {
+          cellTCs[slot] = tc;
+        } else if (type != LSTObjType::T5) {
+          unsigned int pLSIndex =
+              type == LSTObjType::pT3 ? pixelTriplets.pixelSegmentIndices()[innerTrackletIdx] : innerTrackletIdx;
+          for (int k = 0; k < Params_pLS::kHits; ++k) {
+            const unsigned int key = hitKeys.key(pixelSegments.pLSHitsIdxs()[pLSIndex - prefix][k]);
+            alpaka::atomicOr(
+                acc, &hitKeyBits[key / kHitKeyWordBits], 1u << (key % kHitKeyWordBits), alpaka::hierarchy::Blocks{});
+          }
+        }
+      }
+    }
+  };
+
+  // A pLS is a duplicate if it shares a hit with the pLS of a pT3/pT5 TC (hit-key bits) or lies inside the window of a
+  // T5, pT3 or pT5 TC (searched in the 3x3 grid cells around it).
+  struct CrossCleanpLS {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ModulesConst modules,
+                                  ObjectRangesConst ranges,
+                                  PixelTripletsConst pixelTriplets,
+                                  TrackCandidatesBaseConst candsBase,
+                                  TrackCandidatesExtendedConst candsExtended,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   PixelSeedsConst pixelSeeds,
                                   PixelSegments pixelSegments,
-                                  MiniDoubletsConst mds,
-                                  HitsBaseConst hitsBase,
                                   QuintupletsConst quintuplets,
-                                  QuadrupletsConst quadruplets) const {
+                                  EtaPhiGrid grid,
+                                  PixelHitKeys hitKeys,
+                                  uint32_t const* __restrict__ hitKeyBits,
+                                  unsigned int const* __restrict__ cellStart,
+                                  unsigned int const* __restrict__ cellTCs) const {
       int pixelModuleIndex = modules.nLowerModules();
       unsigned int nPixels = segmentsOccupancy.nSegments()[pixelModuleIndex];
-      for (unsigned int pixelArrayIndex : cms::alpakatools::uniform_elements_y(acc, nPixels)) {
+      unsigned int prefix = ranges.segmentModuleIndices()[pixelModuleIndex];
+      for (unsigned int pixelArrayIndex : cms::alpakatools::uniform_elements(acc, nPixels)) {
         if (!pixelSeeds.isQuad()[pixelArrayIndex] || pixelSegments.isDup()[pixelArrayIndex])
           continue;
 
+        // Shares a pixel hit with the pLS of a pT3/pT5 TC (or is one).
+        bool isDup = false;
+        for (int k = 0; k < Params_pLS::kHits; ++k) {
+          const unsigned int key = hitKeys.key(pixelSegments.pLSHitsIdxs()[pixelArrayIndex][k]);
+          if ((hitKeyBits[key / kHitKeyWordBits] >> (key % kHitKeyWordBits)) & 1u)
+            isDup = true;
+        }
+        if (isDup) {
+          pixelSegments.isDup()[pixelArrayIndex] = true;
+          continue;
+        }
+
         float eta1 = pixelSeeds.eta()[pixelArrayIndex];
         float phi1 = pixelSeeds.phi()[pixelArrayIndex];
-        unsigned int prefix = ranges.segmentModuleIndices()[pixelModuleIndex];
 
         // Store the pLS embedding outside the TC comparison loop.
         float plsEmbed[Params_pLS::kEmbed];
@@ -314,62 +491,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
         const float threshold = dnn::plsembdnn::kWP[bin_idx];
 
-        unsigned int nTrackCandidates = candsBase.nTrackCandidates();
-        for (unsigned int trackCandidateIndex : cms::alpakatools::uniform_elements_x(acc, nTrackCandidates)) {
-          LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
-          unsigned int innerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][0];
-          if (type == LSTObjType::T5) {
-            unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
-            float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
-            float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
+        const int etaBin = grid.etaBin(acc, eta1);
+        const int phiBin = grid.phiBin(acc, phi1);
+        for (int iNeighbour = 0; iNeighbour < EtaPhiGrid::kNeighbourCells && !isDup; ++iNeighbour) {
+          const int cell = grid.neighbourCell(etaBin, phiBin, iNeighbour);
+          if (cell < 0)
+            continue;
+          for (unsigned int slot = cellStart[cell]; slot < cellStart[cell + 1] && !isDup; ++slot) {
+            unsigned int trackCandidateIndex = cellTCs[slot];
+            LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
+            unsigned int innerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][0];
+            float eta2, phi2;
+            if (!crossCleanEtaPhi(type, innerTrackletIdx, prefix, pixelTriplets, pixelSeeds, quintuplets, eta2, phi2))
+              continue;
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
             float dR2 = dEta * dEta + dPhi * dPhi;
-            // Cut on pLS-T5 embed distance.
-            if (dR2 < 0.02f) {
-              float d2 = 0.f;
-              CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
-                const float diff = plsEmbed[k] - quintuplets.t5Embed()[quintupletIndex][k];
-                d2 += diff * diff;
+            if (type == LSTObjType::T5) {
+              // Cut on pLS-T5 embed distance.
+              if (dR2 < kCrossCleanpLST5DR2) {
+                float d2 = 0.f;
+                CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
+                  const float diff = plsEmbed[k] - quintuplets.t5Embed()[innerTrackletIdx][k];
+                  d2 += diff * diff;
+                }
+                // Compare squared embedding distance to the cut value for the eta bin.
+                isDup = d2 < threshold * threshold;
               }
-              // Compare squared embedding distance to the cut value for the eta bin.
-              if (d2 < threshold * threshold) {
-                pixelSegments.isDup()[pixelArrayIndex] = true;
-              }
-            }
-          } else if (type == LSTObjType::pT3) {
-            int pT3Index = innerTrackletIdx;
-            int pLSIndex = pixelTriplets.pixelSegmentIndices()[pT3Index];
-            if (pixelHitsOverlapAny(pixelArrayIndex, pLSIndex - prefix, pixelSegments)) {
-              pixelSegments.isDup()[pixelArrayIndex] = true;
-            }
-
-            float eta2 = __H2F(pixelTriplets.eta_pix()[pT3Index]);
-            float phi2 = __H2F(pixelTriplets.phi_pix()[pT3Index]);
-            float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
-            float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 0.000001f) {
-              pixelSegments.isDup()[pixelArrayIndex] = true;
-            }
-          } else if (type == LSTObjType::pT5) {
-            unsigned int pLSIndex = innerTrackletIdx;
-            if (pixelHitsOverlapAny(pixelArrayIndex, pLSIndex - prefix, pixelSegments)) {
-              pixelSegments.isDup()[pixelArrayIndex] = true;
-            }
-
-            float eta2 = pixelSeeds.eta()[pLSIndex - prefix];
-            float phi2 = pixelSeeds.phi()[pLSIndex - prefix];
-            float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-
-            float dR2 = dEta * dEta + dPhi * dPhi;
-            if (dR2 < 0.000001f) {
-              pixelSegments.isDup()[pixelArrayIndex] = true;
+            } else {
+              isDup = dR2 < kCrossCleanpLSPixelDR2;
             }
           }
         }
+        if (isDup)
+          pixelSegments.isDup()[pixelArrayIndex] = true;
       }
     }
   };
@@ -391,56 +546,109 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     return nShared;
   }
 
-  struct CrossCleanT4 {
-    ALPAKA_FN_ACC void operator()(Acc3D const& acc,
-                                  ModulesConst modules,
-                                  Quadruplets quadruplets,
-                                  QuadrupletsOccupancyConst quadrupletsOccupancy,
+  // The hits CrossCleanT4 compares a T4 with, at most kMaxCrossCleanT4Hits: the T5 hits of a T5/pT5 TC, the T3 hits of
+  // a pT3 TC, none otherwise.
+  constexpr int kMaxCrossCleanT4Hits = std::max(Params_T5::kHits, Params_T3::kHits);
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int crossCleanT4Hits(LSTObjType type,
+                                                      unsigned int outerTrackletIdx,
+                                                      PixelTripletsConst pixelTriplets,
+                                                      QuintupletsConst quintuplets,
+                                                      unsigned int const*& hits) {
+    if (type == LSTObjType::T5 || type == LSTObjType::pT5) {
+      hits = quintuplets.hitIndices()[outerTrackletIdx].data();
+      return Params_T5::kHits;
+    }
+    if (type == LSTObjType::pT3) {
+      hits = pixelTripletT3Hits(pixelTriplets, outerTrackletIdx);
+      return Params_T3::kHits;
+    }
+    hits = nullptr;
+    return 0;
+  }
+
+  // TCs by the buckets of the hits CrossCleanT4 compares: counts per bucket (bucketTCs == nullptr), else fills
+  // (candidate, hit) through the cursor. Lists at most nMaxTCs TCs, which bounds the entries by nMaxTCs *
+  // kMaxCrossCleanT4Hits, the size of the bucket buffers.
+  struct FillTCHitBuckets {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   PixelTripletsConst pixelTriplets,
                                   QuintupletsConst quintuplets,
-                                  TrackCandidatesBase candsBase,
-                                  TrackCandidatesExtended candsExtended,
-                                  MiniDoubletsConst mds,
-                                  SegmentsConst segments,
-                                  TripletsConst triplets,
-                                  ObjectRangesConst ranges) const {
-      for (int lowmod : cms::alpakatools::uniform_elements_z(acc, modules.nLowerModules())) {
-        if (ranges.quadrupletModuleIndices()[lowmod] == -1)
-          continue;
-
-        unsigned int nQuads = quadrupletsOccupancy.nQuadruplets()[lowmod];
-        for (unsigned int iOff : cms::alpakatools::uniform_elements_y(acc, nQuads)) {
-          unsigned int iT4 = ranges.quadrupletModuleIndices()[lowmod] + iOff;
-
-          // skip already-dup
-          if (quadruplets.isDup()[iT4])
+                                  TrackCandidatesBaseConst candsBase,
+                                  TrackCandidatesExtendedConst candsExtended,
+                                  unsigned int nMaxTCs,
+                                  unsigned int* __restrict__ bucketCount,
+                                  unsigned int* __restrict__ bucketTCs,
+                                  unsigned int* __restrict__ bucketHits) const {
+      // The pT5, pT3 and T5 counts of CountSurvivingTCs (nMaxTCs) cover every TC added so far.
+      ALPAKA_ASSERT_ACC(candsBase.nTrackCandidates() <= nMaxTCs);
+      const unsigned int nTCs = alpaka::math::min(acc, candsBase.nTrackCandidates(), nMaxTCs);
+      for (unsigned int tc : cms::alpakatools::uniform_elements(acc, nTCs)) {
+        unsigned int const* hits;
+        const int nHits = crossCleanT4Hits(
+            candsBase.trackCandidateType()[tc], candsExtended.objectIndices()[tc][1], pixelTriplets, quintuplets, hits);
+        for (int iHit = 0; iHit < nHits; ++iHit) {
+          const unsigned int hit = hits[iHit];
+          if (hit == lst::kTCEmptyHitIdx)
             continue;
-
-          unsigned int const* t4Hits = quadruplets.hitIndices()[iT4].data();
-
-          unsigned int nTrackCandidates = candsBase.nTrackCandidates();
-          for (unsigned int trackCandidateIndex : cms::alpakatools::uniform_elements_x(acc, nTrackCandidates)) {
-            short type = candsBase.trackCandidateType()[trackCandidateIndex];
-            unsigned int outerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][1];
-            // Deleted when a promoted candidate owns three of its hits, or two for a pixel quintuplet or triplet.
-            const int minShared = (type == LSTObjType::pT5 || type == LSTObjType::pT3) ? 2 : 3;
-            if (type == LSTObjType::T5 || type == LSTObjType::pT5) {
-              unsigned int const* t5Hits = quintuplets.hitIndices()[outerTrackletIdx].data();
-              if (nSharedHitsT4(t4Hits, t5Hits, Params_T5::kHits) >= minShared)
-                quadruplets.isDup()[iT4] = true;
-            } else if (type == LSTObjType::pT3) {
-              int innerTripletIndex = pixelTriplets.tripletIndices()[outerTrackletIdx];
-              unsigned int t3Hits[Params_T3::kHits];
-              getTripletHitIndices(mds, segments, triplets, innerTripletIndex, t3Hits);
-              if (nSharedHitsT4(t4Hits, t3Hits, Params_T3::kHits) >= minShared)
-                quadruplets.isDup()[iT4] = true;
-            }
+          const unsigned int slot =
+              alpaka::atomicAdd(acc, &bucketCount[hitBuckets::bucket(hit)], 1u, alpaka::hierarchy::Blocks{});
+          if (bucketTCs != nullptr) {
+            bucketTCs[slot] = tc;
+            bucketHits[slot] = hit;
           }
         }
       }
     }
   };
 
+  // One T4 per y element and its hits over x: the TCs listed under each hit, which include every TC that can remove the
+  // T4 (it shares at least two hits).
+  struct CrossCleanT4 {
+    ALPAKA_FN_ACC void operator()(Acc2D const& acc,
+                                  Quadruplets quadruplets,
+                                  PixelTripletsConst pixelTriplets,
+                                  QuintupletsConst quintuplets,
+                                  TrackCandidatesBaseConst candsBase,
+                                  TrackCandidatesExtendedConst candsExtended,
+                                  unsigned int nQuadruplets,
+                                  unsigned int const* __restrict__ bucketStart,
+                                  unsigned int const* __restrict__ bucketTCs,
+                                  unsigned int const* __restrict__ bucketHits) const {
+      for (unsigned int iT4 : cms::alpakatools::uniform_elements_y(acc, nQuadruplets)) {
+        // skip already-dup
+        if (quadruplets.isDup()[iT4])
+          continue;
+
+        unsigned int const* t4Hits = quadruplets.hitIndices()[iT4].data();
+        bool removed = false;
+        for (unsigned int iHit : cms::alpakatools::uniform_elements_x(acc, Params_T4::kHits)) {
+          const unsigned int hit = t4Hits[iHit];
+          const unsigned int bucket = hitBuckets::bucket(hit);
+          for (unsigned int slot = bucketStart[bucket]; slot < bucketStart[bucket + 1]; ++slot) {
+            if (bucketHits[slot] != hit)
+              continue;
+            const unsigned int trackCandidateIndex = bucketTCs[slot];
+            const LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
+            unsigned int const* otherHits;
+            const int nOtherHits = crossCleanT4Hits(
+                type, candsExtended.objectIndices()[trackCandidateIndex][1], pixelTriplets, quintuplets, otherHits);
+            // Deleted when a promoted candidate owns three of its hits, or two for a pixel quintuplet or triplet.
+            const int minShared = (type == LSTObjType::pT5 || type == LSTObjType::pT3) ? 2 : 3;
+            if (nSharedHitsT4(t4Hits, otherHits, nOtherHits) >= minShared) {
+              quadruplets.isDup()[iT4] = true;
+              removed = true;
+              break;
+            }
+          }
+          if (removed)
+            break;
+        }
+      }
+    }
+  };
+
+  // TC counts by type, with the conditions of the Add*TrackCandidate kernels: exact for the pT5s, pT3s and T5s (they
+  // also size the CrossCleanT4 buckets), upper bounds for the T4s and pLSs.
   struct CountSurvivingTCs {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   uint16_t nLowerModules,
