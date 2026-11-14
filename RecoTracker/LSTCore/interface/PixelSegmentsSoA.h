@@ -10,7 +10,6 @@ namespace lst {
 
   GENERATE_SOA_LAYOUT(PixelSegmentsSoALayout,
                       SOA_COLUMN(Params_pLS::ArrayUxHits, pLSHitsIdxs),  // packed OT/IT<<32 + index
-                      SOA_COLUMN(Params_pLS::ArrayFxEmbed, plsEmbed),
                       SOA_COLUMN(char, isDup),
                       SOA_COLUMN(bool, partOfPT5),
                       SOA_COLUMN(float, score),
