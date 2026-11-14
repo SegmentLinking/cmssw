@@ -749,7 +749,6 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
 
   // Looping over the simulated tracks in the tracking ntuple
   for (unsigned int isimtrk = 0; isimtrk < trk_sim_pt.size(); ++isimtrk) {
-
     // Skip out-of-time pileup
     if (trk_sim_bunchCrossing[isimtrk] != 0)
       continue;
