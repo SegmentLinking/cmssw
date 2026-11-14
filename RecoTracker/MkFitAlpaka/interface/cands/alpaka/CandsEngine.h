@@ -39,6 +39,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // on the same queue can share their step scratch.
   struct EngineBuffers {
     EngineBuffers(Queue& queue, int maxSeeds, int hotsPerSeed, std::shared_ptr<EngineStepScratch> sharedStep = nullptr);
+    // Candidate books only, without the clone engine's per-step scratch (step == nullptr): the v2p2 search.
+    struct NoStepScratch {};
+    EngineBuffers(Queue& queue, int maxSeeds, int hotsPerSeed, NoStepScratch);
     int maxSeeds;
     SeedCandsDeviceCollection seeds;
     CandSlotsDeviceCollection slots;
@@ -141,6 +144,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // Backward-fit hook. Identity when empty.
   using EngineBackwardFitFn = std::function<void(Queue&, EngineBuffers&, int nSeeds)>;
 
+  // A whole search of run_OneIteration (the builder's FindTracks for one direction, its final sorting included), on
+  // the seed rows [0, *bufs.nRowsDev) of bufs: engineSearch with a K2 select for the clone engine, v2p2Search
+  // (interface/v2p2/alpaka/V2p2Search.h) for MkFinderV2p2.
+  using EngineSearchFn = std::function<void(Queue&, EngineBuffers&, bool fwdSearch, int capacity)>;
+
   // Sync-free chain: no host synchronization at all. bufs.nRowsDev = device count of the imported seed rows
   // (e.g. &SeedSoA nKept), capacity = rows of bufs and work. The result is in the returned buffers (bufs), with
   // *bufs.nRowsDev (= work.nSurvivors) rows. minHitsQFPre / Post = params / backward_params minHitsQF (MkFitCore
@@ -158,6 +166,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                      const EnginePropConfig& pc,
                                      const ::mkfitdev::EngineIterParams& ipFwd,
                                      const ::mkfitdev::EngineIterParams& ipBkw,
+                                     int minHitsQFPre,
+                                     int minHitsQFPost,
+                                     int capacity,
+                                     const ::mkfitdev::BkwSearchGate& gate = ::mkfitdev::BkwSearchGate{});
+
+  // The same chain with the searches supplied (searchFwd / searchBkw run the forward and the backward search, final
+  // sorting included); the clone-engine overload above is this one with engineSearch and its K2 selects.
+  EngineBuffers& engineRunChainAsync(Queue& queue,
+                                     EngineBuffers& bufs,
+                                     EngineBuffers& work,
+                                     const EngineSearchFn& searchFwd,
+                                     const EngineSearchFn& searchBkw,
+                                     const EngineBackwardFitFn& backwardFit,
                                      int minHitsQFPre,
                                      int minHitsQFPost,
                                      int capacity,

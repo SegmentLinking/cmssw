@@ -19,6 +19,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/vdtMath.h"
 #include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitAlpaka/interface/matriplex/Matrix.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
 
@@ -192,6 +193,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
     float px[N], py[N], pz[N];
     float dalpha[N];
     int fail_flag[N];
+
+    // StatePlex::copyIn(dst_slot, const StatePlex& src, src_slot)
+    template <int M>
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const StatePlex<M>& src, int src_slot);
   };
 
   // The explicit fma forms below are the contractions of MkFitCore's -Ofast x86-64-v3 build of these Matriplex
@@ -201,6 +206,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
   struct InitialStatePlex : public StatePlex<N> {
     float inv_pt[N], inv_k[N];
     float theta[N];
+
+    // Trivial, so that MkBins can live in block shared memory; filled by copyIn_partial_track_state and
+    // init_momentum_vec_and_k as in MkFinderV2p2::prop_to_layer_edges.
+    InitialStatePlex() = default;
+
+    // using StatePlex::operator= (MkBins::prop_to_limits_in_order: m_isp = m_sp1 keeps inv_pt, inv_k, theta)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE InitialStatePlex& operator=(const StatePlex<N>& sp);
+
+    // InitialStatePlex::copyIn(dst_slot, const InitialStatePlex& src, src_slot)
+    template <int M>
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const InitialStatePlex<M>& src, int src_slot);
+
+    // copyIn_partial_track_state: x, y, z, inv_pt and theta of par = {x, y, z, 1/pT, phi, theta}; to be followed by
+    // init_momentum_vec_and_k
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn_partial_track_state(int dst_slot, const float* par);
+
+    // init_momentum_vec_and_k(phi, chg, float bf) (MiniPropagators.cc)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void init_momentum_vec_and_k(const float* phi, const int* chg, float bf);
+
+    // init_momentum_vec_and_k(phi, chg, const MPF& bf): the uniform version with bf = 1, then inv_k *= bf[i]
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void init_momentum_vec_and_k(const float* phi, const int* chg, const float* bf);
 
     // StatePlex::StatePlex(const MPlexLV& par): fast_sincos(phi, py, px); px *= pt; py *= pt; pz = pt / fast_tan(theta).
     // par: Matriplex layout (element k of slot n at [k * N + n]).
@@ -331,6 +357,60 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
         c.fail_flag[n] = 0;
       }
     }
+  };
+
+  //-----------------------------------------------------------
+  // Hermite interpolation (MiniPropagators.h / .cc): the cubic model of the helix in t, linear in the turning angle.
+  // Coefficient k of the cubic in x is m_Hx[k][slot], as MPlex4V aij(k, 0).
+  //-----------------------------------------------------------
+
+  template <int N>
+  struct Hermite3D {
+    float m_Hx[4][N], m_Hy[4][N], m_Hz[4][N];
+    float m_Hderfac[N];  // 1 / (k * dalpha)
+
+    // Hermite3D::copyIn(dst_slot, src, src_slot)
+    template <int M>
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const Hermite3D<M>& src, int src_slot);
+
+    // Hermite3D::hermite_1d for slot n
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void hermite_1d(
+        float x1, float p1, float x2, float p2, float derfac, float (&h)[4][N], int n);
+
+    // two-point mode: t = 0 at sp1, t = 1 at sp2 (calculate_coeffs(sp1, sp2, inv_k))
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void calculate_coeffs(const StatePlex<N>& sp1,
+                                                              const StatePlex<N>& sp2,
+                                                              const float* inv_k);
+
+    // evaluate(t, x, y, z)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void evaluate(const float* t, float* x, float* y, float* z) const;
+
+    // evaluate(t, x, y, z, dx, dy, dz): position and momentum
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void evaluate(
+        const float* t, float* x, float* y, float* z, float* dx, float* dy, float* dz) const;
+
+    // evaluate(t, StatePlex& sp): x, y, z, px, py, pz of sp (dalpha and fail_flag untouched)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void evaluate(const float* t, StatePlex<N>& sp) const;
+  };
+
+  template <int N>
+  struct Hermite3DOnPlane {
+    float m_D[4][N];  // cubic of the distance to the plane
+    float m_T[N];     // t at the solution
+
+    // init_coeffs(h, pos, zdir): the distance cubic and the linear first guess T = d0 / (d0 - d1)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void init_coeffs(const Hermite3D<N>& h,
+                                                         const ::mkfitdev::MPlexHV<N>& pos,
+                                                         const ::mkfitdev::MPlexHV<N>& zdir);
+
+    // evaluate(t, d)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void evaluate(const float* t, float* d) const;
+
+    // evaluate(t, d, dddt)
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void evaluate(const float* t, float* d, float* dddt) const;
+
+    // solve(): two Newton steps from m_T
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void solve();
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators

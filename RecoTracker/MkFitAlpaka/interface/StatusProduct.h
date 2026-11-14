@@ -31,6 +31,8 @@ namespace mkfitdev {
     kRepackErrors,         // backward-search repack applied a number of times other than once
     kCpeClusterOverflow,   // device fit CPE clusters: digis whose SoA cluster index is out of range
     kCpeClusterRefErrors,  // device fit CPE clusters: mkFit pixel rows whose (module, originalId) names no SoA cluster
+    kV2p2NodeOverflow,     // v2p2: in-layer nodes lost because the node pool was full (V2p2Counters nNodeOverflow)
+    kV2p2NanScore,         // v2p2: end-of-layer selections that ranked a NaN score (V2p2Counters nNanScore)
     kNumStatusCounters
   };
 
@@ -63,6 +65,10 @@ namespace mkfitdev {
         return "cpeClusterOverflow";
       case kCpeClusterRefErrors:
         return "cpeClusterRefErrors";
+      case kV2p2NodeOverflow:
+        return "v2p2NodeOverflow";
+      case kV2p2NanScore:
+        return "v2p2NanScore";
       default:
         return "unused";
     }
