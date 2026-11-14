@@ -1,7 +1,8 @@
 #ifndef RecoTracker_MkFitAlpaka_interface_cands_CandSeedOps_h
 #define RecoTracker_MkFitAlpaka_interface_cands_CandSeedOps_h
 
-// Per-seed bookkeeping operations of the clone engine, transliterated from MkFitCore (one thread per seed):
+// Per-seed bookkeeping operations of the clone engine and of MkFinderV2p2, transliterated from MkFitCore (one thread
+// per seed):
 //   activateSeedCands          MkBuilder::find_tracks_unroll_candidates, per seed
 //   mergeCandsAndBestShortOne  CombCandidate::mergeCandsAndBestShortOne
 //   compactifyHitStorageForBestCand, beginBkwSearch, addPreBkwSearchHoles, repackCandPostBkwSearch (CombCandidate)
@@ -114,10 +115,16 @@ namespace mkfitdev {
     }
   }
 
-  // CombCandidate::mergeCandsAndBestShortOne. pt[i] = pT() of candidate i, ptBest = pT() of the best short one.
+  // CombCandidate::mergeCandsAndBestShortOne(params, score_func, update_score, sort_cands) with the scorer chosen by
+  // name. pt[i] = pT() of candidate i, ptBest = pT() of the best short one.
   // The std::sort of <= maxCandsPerSeed candidates is libstdc++'s __insertion_sort (n <= 16), transliterated.
-  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(
-      SeedCandsRef& seed, int maxCandsPerSeed, bool updateScore, bool sortCands, const float* pt, float ptBest) {
+  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(SeedCandsRef& seed,
+                                                           int maxCandsPerSeed,
+                                                           TrackScorer scorer,
+                                                           bool updateScore,
+                                                           bool sortCands,
+                                                           const float* pt,
+                                                           float ptBest) {
     const bool hasBest = *seed.bestShortValid != 0;
     int nCands = *seed.nCands;
     float ptl[kMaxCandsPerSeed];
@@ -127,9 +134,9 @@ namespace mkfitdev {
     if (nCands > 0) {
       if (updateScore) {
         for (int i = 0; i < nCands; ++i)
-          seed.cands[i].score = getScoreCand(seed.cands[i], ptl[i], seed.states[i].nSeedHits);
+          seed.cands[i].score = getScoreCand(scorer, seed.cands[i], ptl[i], seed.states[i].nSeedHits);
         if (hasBest)
-          seed.bestShort->score = getScoreCand(*seed.bestShort, ptBest, seed.bestShortState->nSeedHits);
+          seed.bestShort->score = getScoreCand(scorer, *seed.bestShort, ptBest, seed.bestShortState->nSeedHits);
       }
       if (sortCands) {
         // std::__insertion_sort with comp = sortByScoreTrackCand (a.score > b.score)
@@ -183,15 +190,11 @@ namespace mkfitdev {
     *seed.nCands = nCands;
   }
 
-  // CombCandidate::mergeCandsAndBestShortOne(params, score_func, update_score, sort_cands) with the scorer chosen by
-  // name (the overload above is scorer = TrackScorer::Default)
-  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(SeedCandsRef& seed,
-                                                           int maxCandsPerSeed,
-                                                           TrackScorer scorer,
-                                                           bool updateScore,
-                                                           bool sortCands,
-                                                           const float* pt,
-                                                           float ptBest);
+  // ... with the scorer 'default' (the clone engine's final sorting)
+  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(
+      SeedCandsRef& seed, int maxCandsPerSeed, bool updateScore, bool sortCands, const float* pt, float ptBest) {
+    mergeCandsAndBestShortOne(seed, maxCandsPerSeed, TrackScorer::Default, updateScore, sortCands, pt, ptBest);
+  }
 
   // CombCandidate::compactifyHitStorageForBestCand with remove_seed_hits = false (in place in the seed's pool).
   ALPAKA_FN_HOST_ACC inline void compactifyHitStorageForBestCand(SeedCandsRef& seed) {

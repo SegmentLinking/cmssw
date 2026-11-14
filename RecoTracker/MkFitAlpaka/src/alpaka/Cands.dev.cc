@@ -1,7 +1,8 @@
-// Component "cands": the only translation unit that instantiates the candidate kernels. Exported entry points: the
-// clone engine (interface/cands/alpaka/CandsEngine.h with the kernels of src/alpaka/engine/*.h).
-// One translation unit for all candidate kernels: two sharing the inline device functions of interface/cands fail
-// the CUDA device link (nvlink "unexpected reloc").
+// Component "cands": the translation unit of the clone-engine kernels and of the chain both finders share. Exported
+// entry points: interface/cands/alpaka/CandsEngine.h, with the kernels of src/alpaka/engine/*.h.
+// The v2p2 kernels have their own TU (V2p2.dev.cc). Each kernel class is launched from one TU only: two TUs
+// instantiating the same kernel fail the CUDA device link (nvlink "unexpected reloc"); device functions, such as the
+// per-seed helpers of src/alpaka/cands/CandSeedOpsKernels.h, may be shared.
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/cands/CandSeedOpsKernels.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
@@ -51,7 +52,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
           if (!fwdSearch)
             addPreBkwSearchHoles(ref);
-          // final-pick scorer (forward) or search scorer (backward): both 'default' here (SupportedConfig)
+          // final-pick scorer (forward) or search scorer (backward) of the region
           float pt[kMaxCandsPerSeed];
           for (int ic = 0; ic < *ref.nCands; ++ic) {
             const float invPt = 1.f / ref.states[ic].par[3];  // TrackState::pT()
@@ -62,7 +63,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
             const float invPtBest = 1.f / ref.bestShortState->par[3];
             ptBest = invPtBest < 0.f ? -invPtBest : invPtBest;
           }
-          mergeCandsAndBestShortOne(ref, maxCandsPerSeed, true, true, pt, ptBest);
+          mergeCandsAndBestShortOne(ref, maxCandsPerSeed, plans.finalScorer[seeds.region(s)], true, true, pt, ptBest);
         }
       }
     };
@@ -142,11 +143,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                int maxSeeds_,
                                int hotsPerSeed,
                                std::shared_ptr<EngineStepScratch> sharedStep)
+      : EngineBuffers(queue, maxSeeds_, hotsPerSeed, NoStepScratch{}) {
+    step = sharedStep ? std::move(sharedStep) : std::make_shared<EngineStepScratch>(queue, maxSeeds_);
+  }
+
+  EngineBuffers::EngineBuffers(Queue& queue, int maxSeeds_, int hotsPerSeed, NoStepScratch)
       : maxSeeds(maxSeeds_),
         seeds(queue, maxSeeds_),
         slots(queue, maxSeeds_ * kSlotsPerSeed),
         hots(queue, maxSeeds_ * hotsPerSeed),
-        step(sharedStep ? std::move(sharedStep) : std::make_shared<EngineStepScratch>(queue, maxSeeds_)),
         passed(cms::alpakatools::make_device_buffer<int8_t[]>(queue, maxSeeds_ > 0 ? maxSeeds_ : 1)),
         newIdx(cms::alpakatools::make_device_buffer<int32_t[]>(queue, maxSeeds_ > 0 ? maxSeeds_ : 1)),
         nSurvivors(cms::alpakatools::make_device_buffer<int32_t>(queue)) {
@@ -402,8 +407,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                      int minHitsQFPost,
                                      int capacity,
                                      const ::mkfitdev::BkwSearchGate& gate) {
+    // backward search: MkFitCore's CandCloner and merge take the forward params here too (m_job->params()); only
+    // MkFinder and the pT stop take backward_params
+    ::mkfitdev::EngineIterParams ipBkwSearch = ipBkw;
+    ipBkwSearch.maxCandsPerSeed = ipFwd.maxCandsPerSeed;
+    ipBkwSearch.pTCutOverlap = ipFwd.pTCutOverlap;
+    const EngineSearchFn searchFwd = [&](Queue& q, EngineBuffers& b, bool fwdSearch, int cap) {
+      engineSearch(q, b, fwdTables, fwdSearch, selectFwd, inFwd, pc, ipFwd, cap);
+    };
+    const EngineSearchFn searchBkw = [&](Queue& q, EngineBuffers& b, bool fwdSearch, int cap) {
+      engineSearch(q, b, bkwTables, fwdSearch, selectBkw, inBkw, pc, ipBkwSearch, cap);
+    };
+    return engineRunChainAsync(
+        queue, bufs, work, searchFwd, searchBkw, backwardFit, minHitsQFPre, minHitsQFPost, capacity, gate);
+  }
+
+  EngineBuffers& engineRunChainAsync(Queue& queue,
+                                     EngineBuffers& bufs,
+                                     EngineBuffers& work,
+                                     const EngineSearchFn& searchFwd,
+                                     const EngineSearchFn& searchBkw,
+                                     const EngineBackwardFitFn& backwardFit,
+                                     int minHitsQFPre,
+                                     int minHitsQFPost,
+                                     int capacity,
+                                     const ::mkfitdev::BkwSearchGate& gate) {
     // forward search (bufs: rows [0, *bufs.nRowsDev))
-    engineSearch(queue, bufs, fwdTables, true, selectFwd, inFwd, pc, ipFwd, capacity);
+    searchFwd(queue, bufs, true, capacity);
     // pre-filter (params_cur() = forward params: qfilter_n_hits_pixseed && nan_n_silly), compaction bufs -> work
     engineFilterCompactAsync(queue, bufs, work, false, minHitsQFPre, capacity);
     // compactify (backward_drop_seed_hits = false: SupportedConfig), backward fit (identity when empty), beginBkwSearch
@@ -411,12 +441,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     if (backwardFit)
       backwardFit(queue, work, capacity);  // rows past *work.nRowsDev have nCands = 0 (gather) and are skipped
     engineCompactifyBeginBkw(queue, work, false, true, capacity, gate);
-    // backward search: MkFitCore's CandCloner and merge take the forward params here too (m_job->params()); only
-    // MkFinder and the pT stop take backward_params
-    ::mkfitdev::EngineIterParams ipBkwSearch = ipBkw;
-    ipBkwSearch.maxCandsPerSeed = ipFwd.maxCandsPerSeed;
-    ipBkwSearch.pTCutOverlap = ipFwd.pTCutOverlap;
-    engineSearch(queue, work, bkwTables, false, selectBkw, inBkw, pc, ipBkwSearch, capacity);
+    // backward search
+    searchBkw(queue, work, false, capacity);
     // post-filter (backward params) with the ONE repack and the backward-search gate, compaction work -> bufs;
     // bufs.nRowsDev = &work.nSurvivors
     engineFilterCompactAsync(queue, work, bufs, true, minHitsQFPost, capacity, gate);

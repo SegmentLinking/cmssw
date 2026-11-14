@@ -8,7 +8,8 @@
 //   engineActivate (K1) -> K2 (select callback) -> engineStep (K3a, K3b, K4, K5); after the last step engineMerge (K6).
 // engineSearch runs the whole plan loop with K2 supplied as a callback; engineRunChainAsync runs forward search ->
 // pre-filter -> compaction -> compactify -> [backward fit callback] -> beginBkwSearch -> backward search ->
-// post-filter with repack and the backward-search gate -> compaction (endBkwSearch is a host flag only).
+// post-filter with repack and the backward-search gate -> compaction (endBkwSearch is a host flag only), with the
+// clone engine's searches or with the two searches supplied (EngineSearchFn: MkFinderV2p2, interface/v2p2/alpaka).
 
 #include <functional>
 #include <memory>
