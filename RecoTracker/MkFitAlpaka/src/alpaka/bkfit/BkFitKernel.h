@@ -4,6 +4,7 @@
 // Backward fit of the best candidate of every seed: port of MkBuilder::fit_cands (usePropToPlane branch,
 // backward_fit_to_pca = false as in the Phase-2 LST step) = MkFinder::bkFitInputTracks(EventOfCombCandidates&)
 // + MkFinder::bkFitFitTracksProp2Plane (MkFinder.cc).
+// The fit of MkFinderV2p2 candidates, bkFitFitTracksV2p2, is in BkFitV2p2.h and runs on the same IO and kernel.
 // Instantiated only in src/alpaka/BkFit.dev.cc; callers use BkFitLaunch.h.
 //
 // MkFitCore behaviour reproduced on purpose:
@@ -25,6 +26,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/Packers.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/bkfit/BkFitTypes.h"
+#include "RecoTracker/MkFitAlpaka/src/alpaka/bkfit/BkFitV2p2.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PropagationMPlex.h"
 
@@ -218,6 +220,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ALPAKA_FN_HOST_ACC int nodeIndex(int s, int k) const { return node(s, k).index; }
     ALPAKA_FN_HOST_ACC int nodeLayer(int s, int k) const { return node(s, k).layer; }
     ALPAKA_FN_HOST_ACC int nodePrev(int s, int k) const { return node(s, k).prev; }
+    // bkFitFitTracksV2p2: TrackerInfo::get_double_layers() and the module plane of a node's hit
+    ALPAKA_FN_HOST_ACC int doubleLayerPartner(int layer) const { return in.layers[layer].doubleLayerPartner; }
+    ALPAKA_FN_HOST_ACC const ::mkfitdev::EngineModule& nodeModule(int s, int k) const {
+      const ::mkfitdev::HoTNode& hn = node(s, k);
+      const int r = ::mkfitdev::pack::hitRow(in, hn.layer, hn.index);
+      return in.modules[in.layers[hn.layer].moduleBegin + int(::mkfitdev::hitpack::detIDinLayer(in.packed[r]))];
+    }
 
     template <idx_t N>
     ALPAKA_FN_HOST_ACC void loadHit(int s,
@@ -248,8 +257,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     }
   };
 
-  // ---- kernel: one thread per group of kNN candidates ----
-  template <typename TIO>
+  // ---- kernel: one thread per group of kNN candidates; v2p2 = bkFitFitTracksV2p2 (candidates of MkFinderV2p2) ----
+  template <typename TIO, bool v2p2 = false>
   struct BkFitKernel {
     template <typename TAcc>
     ALPAKA_FN_ACC void operator()(
@@ -268,7 +277,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           continue;
         for (int n = N_proc; n < N; ++n)
           cand[n] = cand[0];
-        bkFitFitTracksProp2Plane<N>(io, cand, N_proc, pflags, outl);
+        if constexpr (v2p2)
+          bkFitFitTracksV2p2<N>(io, cand, N_proc, pflags, outl);
+        else
+          bkFitFitTracksProp2Plane<N>(io, cand, N_proc, pflags, outl);
       }
     }
   };
@@ -276,7 +288,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // block size <= 128 for heavy kernels
   constexpr int kBkFitBlockSize = 64;
 
-  template <typename TIO>
+  template <typename TIO, bool v2p2 = false>
   inline void launchBkFit(Queue& queue,
                           TIO const& io,
                           int nCands,
@@ -288,7 +300,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     const int threads = cms::alpakatools::requires_single_thread_per_block_v<Acc1D> ? 1 : kBkFitBlockSize;
     const int blocks = cms::alpakatools::divide_up_by(ngroups, threads);
     auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threads);
-    alpaka::exec<Acc1D>(queue, workDiv, BkFitKernel<TIO>{}, io, nCands, pflags, outl);
+    alpaka::exec<Acc1D>(queue, workDiv, BkFitKernel<TIO, v2p2>{}, io, nCands, pflags, outl);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev
