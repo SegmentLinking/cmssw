@@ -46,6 +46,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     };
   }
 
+  // MkBuilder::fit_cands for candidates of findTracksStandardv2p2 (m_cands_from_v2p2): bkFitInputTracks +
+  // MkFinder::bkFitFitTracksV2p2 (MkFinderV2p2-BkFit.cc), every hit of a physical layer in path order. Same
+  // in-place contract as backwardFit.
+  void backwardFitV2p2(Queue& queue,
+                       ::mkfitdev::SeedCandsSoA::ConstView seeds,
+                       ::mkfitdev::CandSlotsSoA::View slots,
+                       ::mkfitdev::CandHotsSoA::View hots,
+                       ::mkfitdev::EngineHitInputs const& hits,
+                       ::mkfitdev::prop::PropagationFlags const& pflags,
+                       int nSeeds,
+                       ::mkfitdev::bkfit::OutlierParams const& outliers);
+
+  // The v2p2 chain's backward-fit hook calling backwardFitV2p2 on its buffers.
+  inline EngineBackwardFitFn makeV2p2BackwardFit(::mkfitdev::EngineHitInputs const& hits,
+                                                 ::mkfitdev::prop::PropagationFlags const& pflags,
+                                                 ::mkfitdev::bkfit::OutlierParams const& outliers = {}) {
+    return [hits, pflags, outliers](Queue& queue, EngineBuffers& b, int nSeeds) {
+      backwardFitV2p2(queue, b.seeds.const_view(), b.slots.view(), b.hots.view(), hits, pflags, nSeeds, outliers);
+    };
+  }
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev
 
 #endif

@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Params.h"
+
 namespace mkfitdev {
 
   namespace es {
@@ -145,6 +147,8 @@ namespace mkfitdev {
 
     IterParams params;
     IterParams backward_params;
+    // IterationConfig::m_v2p2, the MkFinderV2p2 tunings (MkFitIterationConfigESProducer PSet "v2p2")
+    V2p2Params v2p2;
 
     int n_regions;
     SteeringRegion steering_params[es::kMaxRegions];

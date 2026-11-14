@@ -13,6 +13,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/HitConstants.h"
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Config.h"
 
 namespace mkfitdev {
 
@@ -308,6 +309,22 @@ namespace mkfitdev {
     in.in_find_candidates = inFindCandidates;
     return trackScoreDefault(in);
   }
+
+  // ---- scorer 'v2p2:llh' (MkBuilder.cc trackScoreV2p2Llh): the summed layer-step score of the search minus the
+  // hole penalties of Config::V2p2::Policy
+  ALPAKA_FN_HOST_ACC inline float trackScoreV2p2Llh(const TrackScoreInput& in);
+
+  // The track scorer of a task by its ES name (es/ESConfig.h TrackScorer): Default = trackScoreDefault,
+  // V2p2Llh = trackScoreV2p2Llh (interface/v2p2/V2p2Score.h), Keep = in.score_in (MkStdSeqs.cc trackScoreKeep).
+  ALPAKA_FN_HOST_ACC inline float trackScore(TrackScorer scorer, const TrackScoreInput& in);
+
+  // getScoreCand(score_func, cand, ...) with the scorer chosen by name
+  ALPAKA_FN_HOST_ACC inline float getScoreCand(TrackScorer scorer,
+                                               const CandBook& cand1,
+                                               float pt,
+                                               int nSeedHits,
+                                               bool penalizeTailMissHits = false,
+                                               bool inFindCandidates = false);
 
   // getScoreWorstPossible()
   ALPAKA_FN_HOST_ACC inline constexpr float scoreWorstPossible() { return -3.402823466e+38f; }

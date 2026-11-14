@@ -183,6 +183,16 @@ namespace mkfitdev {
     *seed.nCands = nCands;
   }
 
+  // CombCandidate::mergeCandsAndBestShortOne(params, score_func, update_score, sort_cands) with the scorer chosen by
+  // name (the overload above is scorer = TrackScorer::Default)
+  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(SeedCandsRef& seed,
+                                                           int maxCandsPerSeed,
+                                                           TrackScorer scorer,
+                                                           bool updateScore,
+                                                           bool sortCands,
+                                                           const float* pt,
+                                                           float ptBest);
+
   // CombCandidate::compactifyHitStorageForBestCand with remove_seed_hits = false (in place in the seed's pool).
   ALPAKA_FN_HOST_ACC inline void compactifyHitStorageForBestCand(SeedCandsRef& seed) {
     *seed.nCands = 1;
