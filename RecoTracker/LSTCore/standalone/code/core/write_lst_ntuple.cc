@@ -231,6 +231,8 @@ void createSimTrackContainerBranches() {
   ana.tx->createBranch<std::vector<float>>("sim_pca_dz");   // dz of point of clossest approach
   ana.tx->createBranch<std::vector<int>>("sim_q");          // charge +1, -1, 0
   ana.tx->createBranch<std::vector<int>>("sim_pdgId");      // pdgId
+  ana.tx->createBranch<std::vector<int>>("sim_event");          // 0 = hard scatter, >0 = pileup
+  ana.tx->createBranch<std::vector<int>>("sim_bunchCrossing");  // 0 = in-time
   // production vertex x position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
   ana.tx->createBranch<std::vector<float>>("sim_vx");
   // production vertex y position (values are derived from simvtx_* and sim_parentVtxIdx branches in the tracking ntuple)
@@ -743,13 +745,16 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
 
   // Looping over the simulated tracks in the tracking ntuple
   for (unsigned int isimtrk = 0; isimtrk < trk_sim_pt.size(); ++isimtrk) {
-    // Skip out-of-time pileup
-    if (trk_sim_bunchCrossing[isimtrk] != 0)
-      continue;
 
-    // Skip non-hard-scatter
-    if (trk_sim_event[isimtrk] != 0)
-      continue;
+    if (not ana.all_sim_tracks) {
+      // Skip out-of-time pileup
+      if (trk_sim_bunchCrossing[isimtrk] != 0)
+        continue;
+
+      // Skip non-hard-scatter
+      if (trk_sim_event[isimtrk] != 0)
+        continue;
+    }
 
     // Now we have a list of "accepted" tracks (no condition on vtx_z/perp, nor pt, eta etc are applied yet)
 
@@ -774,6 +779,8 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
     ana.tx->pushbackToBranch<float>("sim_pca_dz", trk_sim_pca_dz[isimtrk]);
     ana.tx->pushbackToBranch<int>("sim_q", trk_sim_q[isimtrk]);
     ana.tx->pushbackToBranch<int>("sim_pdgId", trk_sim_pdgId[isimtrk]);
+    ana.tx->pushbackToBranch<int>("sim_event", trk_sim_event[isimtrk]);
+    ana.tx->pushbackToBranch<int>("sim_bunchCrossing", trk_sim_bunchCrossing[isimtrk]);
 
     // For vertex we need to look it up from simvtx info for the given simtrack
     // for each simulated track, there is an index that points to the production vertex
