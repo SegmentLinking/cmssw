@@ -395,6 +395,12 @@ void createMiniDoubletBranches() {
   ana.tx->createBranch<std::vector<std::vector<int>>>("md_simIdxAll");
   // list of idx of all matched (> 0%) simulated track
   ana.tx->createBranch<std::vector<std::vector<float>>>("md_simIdxAllFrac");
+  // LST hit index of the anchor/other hit, same index space as t5_hitIndices (equal to the ph2_* index for OT hits)
+  ana.tx->createBranch<std::vector<int>>("md_anchor_hitIdx");
+  ana.tx->createBranch<std::vector<int>>("md_other_hitIdx");
+  // all sim track indices of the anchor/other hit's sim hits, with no match-fraction cut (empty if none)
+  ana.tx->createBranch<std::vector<std::vector<int>>>("md_anchor_simIdxs");
+  ana.tx->createBranch<std::vector<std::vector<int>>>("md_other_simIdxs");
 }
 
 //________________________________________________________________________________________________________________________________
@@ -743,6 +749,7 @@ unsigned int setSimTrackContainerBranches(LSTEvent* event) {
 
   // Looping over the simulated tracks in the tracking ntuple
   for (unsigned int isimtrk = 0; isimtrk < trk_sim_pt.size(); ++isimtrk) {
+
     // Skip out-of-time pileup
     if (trk_sim_bunchCrossing[isimtrk] != 0)
       continue;
@@ -1002,6 +1009,19 @@ std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
       auto [simidx, simidxfrac] =
           matchedSimTrkIdxsAndFracs(hit_idx, hit_type, trk_simhit_simTrkIdx, trk_ph2_simHitIdx, trk_pix_simHitIdx);
 
+      // Sim track indices of each hit {anchor, other}
+      std::vector<std::vector<int>> hit_simIdxs;
+      for (size_t ihit = 0; ihit < hit_idx.size(); ++ihit) {
+        auto const& simHitIdxs = hit_type[ihit] == HitType::Phase2OT ? trk_ph2_simHitIdx : trk_pix_simHitIdx;
+        std::vector<int> sims;
+        for (int simhit_idx : simHitIdxs.at(hit_idx[ihit])) {
+          int sim_idx = trk_simhit_simTrkIdx[simhit_idx];
+          if (std::find(sims.begin(), sims.end(), sim_idx) == sims.end())
+            sims.push_back(sim_idx);
+        }
+        hit_simIdxs.push_back(sims);
+      }
+
       // Obtain the lower and upper hit information to compute some basic property of the mini-doublets
       unsigned int lowerHitIndex = miniDoublets.anchorHitIndices()[mdIdx];
       unsigned int upperHitIndex = miniDoublets.outerHitIndices()[mdIdx];
@@ -1058,6 +1078,10 @@ std::map<unsigned int, unsigned int> setMiniDoubletBranches(LSTEvent* event,
       ana.tx->pushbackToBranch<int>("md_type", isPS);
       ana.tx->pushbackToBranch<int>("md_layer", layer);
       ana.tx->pushbackToBranch<int>("md_detId", detId);
+      ana.tx->pushbackToBranch<int>("md_anchor_hitIdx", lowerHitIndex);
+      ana.tx->pushbackToBranch<int>("md_other_hitIdx", upperHitIndex);
+      ana.tx->pushbackToBranch<std::vector<int>>("md_anchor_simIdxs", hit_simIdxs[0]);
+      ana.tx->pushbackToBranch<std::vector<int>>("md_other_simIdxs", hit_simIdxs[1]);
 
       // Compute whether this is a fake
       bool isfake = true;
