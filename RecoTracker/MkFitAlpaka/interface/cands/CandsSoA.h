@@ -2,7 +2,8 @@
 #define RecoTracker_MkFitAlpaka_interface_cands_CandsSoA_h
 
 // Per-seed candidate storage of the clone engine (EventOfCombCandidates / CombCandidate), as fixed-capacity
-// SoA collections. Row conventions (s = seed index in the event, ic = candidate, k = slot):
+// SoA collections; MkFinderV2p2 uses the seeds, slots and HoT pool too (interface/v2p2/V2p2SoA.h).
+// Row conventions (s = seed index in the event, ic = candidate, k = slot):
 //   SeedCandsSoA      row s                                   per-seed scalars, best-short bookkeeping
 //   CandSlotsSoA      row (s * kSlotsPerSeed + k)             candidate slots: two buffers of kMaxCandsPerSeed
 //                                                             (k = buf * kMaxCandsPerSeed + ic) + 1 best-short slot

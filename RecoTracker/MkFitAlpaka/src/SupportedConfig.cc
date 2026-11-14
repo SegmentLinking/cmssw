@@ -64,7 +64,7 @@ namespace mkfitdev {
       violations.require(cfg.backward_search_min_pixel_layers >= 0, "backwardSearchMinPixelLayers must be >= 0");
       violations.require(cfg.seed_partitioner == SeedPartitioner::Phase2_1, "seed_partitioner must be phase2:1");
       // track scorers: the search and the post-backward-fit scores are trackScoreDefault; the final pick also takes
-      // trackScoreV2p2Llh, which the build module allows only with the v2p2 search
+      // trackScoreV2p2Llh, in the final sort of either finder as in MkBuilder
       violations.require(cfg.default_track_scorer == TrackScorer::Default, "default_track_scorer must be 'default'");
       for (int region = 0; region < cfg.n_regions && region < es::kMaxRegions; ++region) {
         SteeringRegion const& steering = cfg.steering_params[region];
@@ -149,11 +149,6 @@ namespace mkfitdev {
     const bool v2p2 = moduleCfg.buildingRoutine == "v2p2";
     violations.require(moduleCfg.buildingRoutine == "cloneEngine" || v2p2,
                        "buildingRoutine must be cloneEngine or v2p2 (bestHit and standard are not ported)");
-    // the clone engine's final pick scores with trackScoreDefault only
-    for (int region = 0; region < cfg.n_regions && region < es::kMaxRegions; ++region)
-      if (!v2p2 && cfg.steering_params[region].final_pick_track_scorer == TrackScorer::V2p2Llh)
-        violations.add("final_pick_track_scorer of region " + std::to_string(region) +
-                       " is 'v2p2:llh': supported with buildingRoutine v2p2 only");
     violations.require(!moduleCfg.backwardFitInCMSSW,
                        "backwardFitInCMSSW must be false (the device runs mkFit's backward fit)");
     // MkFitCore runs the seed cleaner only if seedCleaning && itconf.m_seed_cleaner; none is ported

@@ -42,34 +42,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 
   constexpr uint32_t kEngineBlock = 128;  // block size of every engine kernel (heavy kernels: <= 128)
 
-  // Sync-free driver: grids are sized from the buffer capacity (nSeeds = capacity), the current number of
-  // seed rows is read on the device from nDev.
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int engineRows(int cap, const int32_t* nDev) {
-    if (nDev == nullptr)
-      return cap;
-    const int nRows = *nDev;
-    return nRows < cap ? nRows : cap;
-  }
-
   // ---------------------------------------------------------------------------------------------------------
   // helpers
-
-  // A seed whose HoT pool overflowed is failed: Finished, no candidates (excluded from export by the filters).
-  ALPAKA_FN_ACC ALPAKA_FN_INLINE void failSeedOnHotOverflow(Acc1D const& acc,
-                                                            SeedCandsSoA::View seeds,
-                                                            int s,
-                                                            uint32_t ovf0) {
-    if (seeds.overflowBits(s) & kOverflowHotsBit) {
-      seeds.state(s) = kFinished;
-      seeds.nCands(s) = 0;
-      seeds.nActive(s) = 0;
-      seeds.activeMask(s) = 0;
-      seeds.nUpdates(s) = 0;
-      seeds.bestShortValid(s) = 0;
-      if (!(ovf0 & kOverflowHotsBit))
-        alpaka::atomicAdd(acc, &seeds.nOverflowHots(), 1u, alpaka::hierarchy::Blocks{});
-    }
-  }
 
   // Loaders: the shared set in src/alpaka/Packers.h; these names only bind N = 1, slot 0.
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int engineHitRow(const EngineHitInputs& in, int layer, int hitIdx) {

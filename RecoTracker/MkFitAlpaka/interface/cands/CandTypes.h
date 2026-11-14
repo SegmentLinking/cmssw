@@ -1,7 +1,7 @@
 #ifndef RecoTracker_MkFitAlpaka_interface_cands_CandTypes_h
 #define RecoTracker_MkFitAlpaka_interface_cands_CandTypes_h
 
-// Candidate bookkeeping of the clone engine: device-usable PODs that mirror MkFitCore
+// Candidate bookkeeping of the clone engine and of MkFinderV2p2: device-usable PODs that mirror MkFitCore
 // (TrackStructures.h: TrackCand, HoTNode, HitMatch(Pair); IdxChi2List.h; MkFinder.h: UpdateIndices).
 // All functions are ALPAKA_FN_HOST_ACC and transliterate the MkFitCore code (same operations, same order).
 
@@ -255,7 +255,6 @@ namespace mkfitdev {
   };
 
   // ---- scorer 'default' / 'phase1:default' (MkStdSeqs.cc trackScoreDefault, Config.h) ----
-  // The only scorer of the copy: every task scorer (search, final pick, post backward fit) is this one (SupportedConfig).
   ALPAKA_FN_HOST_ACC inline float trackScoreDefault(const TrackScoreInput& in) {
     const int ntailholes = in.penalize_tail_holes ? in.n_tail_holes : 0;
     float maxBonus = 8.0;
@@ -288,9 +287,40 @@ namespace mkfitdev {
     return trackScoreDefault(in);
   }
 
-  // getScoreCand for TrackCand (TrackStructures.h); pt = |1/par[3]| and nSeedHits = getNSeedHits() of the
-  // candidate's state
-  ALPAKA_FN_HOST_ACC inline float getScoreCand(const CandBook& cand1,
+  // ---- scorer 'v2p2:llh' (MkBuilder.cc trackScoreV2p2Llh) ----
+  // For the final pick of the forward search, where score_in is the summed
+  // layer-step score of the search (V2p2Score.h). It compares candidates of one
+  // seed only, since that sum starts at 0 at pickup
+  // (MkFinderV2p2::awaken_candidates()).
+  ALPAKA_FN_HOST_ACC inline float trackScoreV2p2Llh(const TrackScoreInput& in) {
+    namespace po = Config::V2p2::Policy;
+    return in.score_in - po::final_pick_hole_penalty * in.n_inside_holes -
+           po::final_pick_tail_penalty * in.n_tail_holes;
+  }
+
+  // ---- scorer 'keep' (MkStdSeqs.cc trackScoreKeep) ----
+  // Keeps the score the track carries. For a task scorer (final pick, after the
+  // backward fit, before the duplicate cleaner) that should not re-score.
+  ALPAKA_FN_HOST_ACC inline float trackScoreKeep(const TrackScoreInput& in) { return in.score_in; }
+
+  // The track scorer of a task by its ES name (es/ESConfig.h TrackScorer): Default = trackScoreDefault,
+  // V2p2Llh = trackScoreV2p2Llh, Keep = trackScoreKeep. None never reaches a task (esFill resolves it to the
+  // iteration's scorer) and scores as Default.
+  ALPAKA_FN_HOST_ACC inline float trackScore(TrackScorer scorer, const TrackScoreInput& in) {
+    switch (scorer) {
+      case TrackScorer::V2p2Llh:
+        return trackScoreV2p2Llh(in);
+      case TrackScorer::Keep:
+        return trackScoreKeep(in);
+      default:
+        return trackScoreDefault(in);
+    }
+  }
+
+  // getScoreCand(score_func, cand, ...) for TrackCand (TrackStructures.h) with the scorer chosen by name; pt =
+  // |1/par[3]| and nSeedHits = getNSeedHits() of the candidate's state
+  ALPAKA_FN_HOST_ACC inline float getScoreCand(TrackScorer scorer,
+                                               const CandBook& cand1,
                                                float pt,
                                                int nSeedHits,
                                                bool penalizeTailMissHits = false,
@@ -307,24 +337,17 @@ namespace mkfitdev {
     in.score_in = cand1.score;
     in.penalize_tail_holes = penalizeTailMissHits;
     in.in_find_candidates = inFindCandidates;
-    return trackScoreDefault(in);
+    return trackScore(scorer, in);
   }
 
-  // ---- scorer 'v2p2:llh' (MkBuilder.cc trackScoreV2p2Llh): the summed layer-step score of the search minus the
-  // hole penalties of Config::V2p2::Policy
-  ALPAKA_FN_HOST_ACC inline float trackScoreV2p2Llh(const TrackScoreInput& in);
-
-  // The track scorer of a task by its ES name (es/ESConfig.h TrackScorer): Default = trackScoreDefault,
-  // V2p2Llh = trackScoreV2p2Llh (interface/v2p2/V2p2Score.h), Keep = in.score_in (MkStdSeqs.cc trackScoreKeep).
-  ALPAKA_FN_HOST_ACC inline float trackScore(TrackScorer scorer, const TrackScoreInput& in);
-
-  // getScoreCand(score_func, cand, ...) with the scorer chosen by name
-  ALPAKA_FN_HOST_ACC inline float getScoreCand(TrackScorer scorer,
-                                               const CandBook& cand1,
+  // ... with the scorer 'default' (the clone engine's search and merge)
+  ALPAKA_FN_HOST_ACC inline float getScoreCand(const CandBook& cand1,
                                                float pt,
                                                int nSeedHits,
                                                bool penalizeTailMissHits = false,
-                                               bool inFindCandidates = false);
+                                               bool inFindCandidates = false) {
+    return getScoreCand(TrackScorer::Default, cand1, pt, nSeedHits, penalizeTailMissHits, inFindCandidates);
+  }
 
   // getScoreWorstPossible()
   ALPAKA_FN_HOST_ACC inline constexpr float scoreWorstPossible() { return -3.402823466e+38f; }

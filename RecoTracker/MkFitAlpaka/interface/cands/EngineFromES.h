@@ -19,11 +19,15 @@ namespace mkfitdev {
     plan.layers.resize(cfg.n_regions);
     plan.fwdPickup.resize(cfg.n_regions);
     plan.bkwPickup.resize(cfg.n_regions);
+    plan.finalPickScorer.resize(cfg.n_regions);
+    plan.searchScorer.resize(cfg.n_regions);
     for (int region = 0; region < cfg.n_regions; ++region) {
       const SteeringRegion& sr = cfg.steering_params[region];  // indexed by region id (m_steering_params[region])
       plan.layers[region].assign(sr.layer, sr.layer + sr.n_plan);
       plan.fwdPickup[region] = sr.fwd_search_pickup;
       plan.bkwPickup[region] = sr.bkw_search_pickup;
+      plan.finalPickScorer[region] = sr.final_pick_track_scorer;
+      plan.searchScorer[region] = sr.track_scorer;
     }
     return plan;
   }

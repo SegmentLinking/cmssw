@@ -112,9 +112,11 @@ namespace mkfitdev {
     float bsY = 0.f;
   };
 
-  // Per region: whether the search runs on it (SteeringParams::has_bksearch_plan() for the backward search).
+  // Per region: whether the search runs on it (SteeringParams::has_bksearch_plan() for the backward search), and the
+  // scorer of its final sort (forward: m_final_pick_track_scorer, backward: m_track_scorer).
   struct EngineRegionPlans {
     int8_t hasPlan[es::kMaxRegions] = {};
+    TrackScorer finalScorer[es::kMaxRegions] = {};
   };
 
 }  // namespace mkfitdev
@@ -126,13 +128,17 @@ namespace mkfitdev {
   struct EnginePlan {
     std::vector<std::vector<int>> layers;  // [region][plan index]
     std::vector<int> fwdPickup, bkwPickup;
+    std::vector<TrackScorer> finalPickScorer, searchScorer;  // SteeringRegion final_pick_track_scorer, track_scorer
   };
 
   // The regions a search runs on: all forward, those with a plan backward (SteeringParams::has_bksearch_plan()).
   inline EngineRegionPlans makeEngineRegionPlans(const EnginePlan& plan, bool fwd) {
     EngineRegionPlans plans;
-    for (int region = 0; region < int(plan.layers.size()) && region < es::kMaxRegions; ++region)
+    for (int region = 0; region < int(plan.layers.size()) && region < es::kMaxRegions; ++region) {
       plans.hasPlan[region] = fwd || plan.bkwPickup[region] != -1;
+      const std::vector<TrackScorer>& scorers = fwd ? plan.finalPickScorer : plan.searchScorer;
+      plans.finalScorer[region] = region < int(scorers.size()) ? scorers[region] : TrackScorer::Default;
+    }
     return plans;
   }
 
