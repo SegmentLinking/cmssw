@@ -41,17 +41,25 @@ namespace mkfitdev {
     ALPAKA_FN_HOST_ACC inline HoTNode& hot(int n) const { return hots[n - hotOffset]; }
   };
 
+  // CombCandidate::addHit + TrackCand::addHitIdx into the HoT node chosen by the caller; false if it is past the pool
+  ALPAKA_FN_HOST_ACC inline bool seedSetHitIdx(
+      SeedCandsRef& seed, CandBook& cand, int node, int hitIdx, int layer, float chi2) {
+    const bool fits = node < seed.hotCap;
+    if (fits) {
+      seed.hot(node) = HoTNode{hitIdx, layer, chi2, cand.lastHitIdx};
+      cand.lastHitIdx = node;
+    }
+    cand.addHitCounters(hitIdx, chi2);
+    return fits;
+  }
+
   // CombCandidate::addHit + TrackCand::addHitIdx
   ALPAKA_FN_HOST_ACC inline void seedAddHitIdx(SeedCandsRef& seed, CandBook& cand, int hitIdx, int layer, float chi2) {
     const int node = *seed.nHots;
-    if (node < seed.hotCap) {
-      seed.hot(node) = HoTNode{hitIdx, layer, chi2, cand.lastHitIdx};
+    if (seedSetHitIdx(seed, cand, node, hitIdx, layer, chi2))
       *seed.nHots = node + 1;
-      cand.lastHitIdx = node;
-    } else {
+    else
       *seed.overflowBits |= kOverflowHotsBit;
-    }
-    cand.addHitCounters(hitIdx, chi2);
   }
 
   // Kinematics MkFitCore reads from the candidate state in the unroll step (TrackCand::pT(), posRsq(), posPhi() =

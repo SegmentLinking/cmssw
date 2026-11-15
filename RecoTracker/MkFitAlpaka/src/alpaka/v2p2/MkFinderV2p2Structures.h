@@ -184,15 +184,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void reset() { N_filled = 0; }
 
+    // the slot of the item being filled: fixed for a one-wide batch, so its arrays need no local memory on GPU backends
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int fill_slot() const { return N == 1 ? 0 : N_filled; }
+
     // item_begin(cand, hot, par_idx, hpos)
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void item_begin(
         int seed, int ic, int hit_index, int hit_layer, int par_idx, int hpos) {
-      cand_seed[N_filled] = seed;
-      cand_ic[N_filled] = ic;
-      hot_index[N_filled] = hit_index;
-      hot_layer[N_filled] = hit_layer;
-      parent_idx[N_filled] = par_idx;
-      hit_pos[N_filled] = hpos;
+      cand_seed[fill_slot()] = seed;
+      cand_ic[fill_slot()] = ic;
+      hot_index[fill_slot()] = hit_index;
+      hot_layer[fill_slot()] = hit_layer;
+      parent_idx[fill_slot()] = par_idx;
+      hit_pos[fill_slot()] = hpos;
     }
 
     // item_finished(): ++N_filled == N
@@ -203,28 +206,28 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     // skipped -- propPar is a pure output there, where on the sPerp path it is
     // an input carrying the already-known intersection.
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void load_state_err_chg(const V2p2TrackState& st) {
-      tsPar.copyIn(N_filled, st.par);
-      tsErr.copyIn(N_filled, st.err);
-      tsChg[N_filled] = st.charge;
+      tsPar.copyIn(fill_slot(), st.par);
+      tsErr.copyIn(fill_slot(), st.err);
+      tsChg[fill_slot()] = st.charge;
     }
 
     // load_state_err_chg(params_on_hit, prev_state): the depth-0 path, the search's crossing and the TrackCand state
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void load_state_err_chg(const V2p2InitialState& params_on_hit,
                                                                 const CandState& prev_state) {
-      tsXyz.x[N_filled] = params_on_hit.x;
-      tsXyz.y[N_filled] = params_on_hit.y;
-      tsXyz.z[N_filled] = params_on_hit.z;
-      tsXyz.px[N_filled] = params_on_hit.px;
-      tsXyz.py[N_filled] = params_on_hit.py;
-      tsXyz.pz[N_filled] = params_on_hit.pz;
-      tsXyz.dalpha[N_filled] = params_on_hit.dalpha;
-      tsXyz.fail_flag[N_filled] = params_on_hit.fail_flag;
-      tsXyz.inv_pt[N_filled] = params_on_hit.inv_pt;
-      tsXyz.inv_k[N_filled] = params_on_hit.inv_k;
-      tsXyz.theta[N_filled] = params_on_hit.theta;
-      tsPar.copyIn(N_filled, prev_state.par);  // the propagation steps need the initial parameters, too
-      tsErr.copyIn(N_filled, prev_state.err);
-      tsChg[N_filled] = prev_state.charge;
+      tsXyz.x[fill_slot()] = params_on_hit.x;
+      tsXyz.y[fill_slot()] = params_on_hit.y;
+      tsXyz.z[fill_slot()] = params_on_hit.z;
+      tsXyz.px[fill_slot()] = params_on_hit.px;
+      tsXyz.py[fill_slot()] = params_on_hit.py;
+      tsXyz.pz[fill_slot()] = params_on_hit.pz;
+      tsXyz.dalpha[fill_slot()] = params_on_hit.dalpha;
+      tsXyz.fail_flag[fill_slot()] = params_on_hit.fail_flag;
+      tsXyz.inv_pt[fill_slot()] = params_on_hit.inv_pt;
+      tsXyz.inv_k[fill_slot()] = params_on_hit.inv_k;
+      tsXyz.theta[fill_slot()] = params_on_hit.theta;
+      tsPar.copyIn(fill_slot(), prev_state.par);  // the propagation steps need the initial parameters, too
+      tsErr.copyIn(fill_slot(), prev_state.err);
+      tsChg[fill_slot()] = prev_state.charge;
     }
 
     // load_hit_module(hit, module_info): hit position / errors and the module plane of hit (layer, hit_orig_index);
@@ -233,8 +236,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                                             int layer,
                                                             uint32_t hit_orig_index) {
       const int row = ::mkfitdev::pack::hitRow(hits, layer, int(hit_orig_index));
-      ::mkfitdev::pack::loadHit<N>(hits, row, N_filled, msErr, msPar);
-      ::mkfitdev::pack::loadModulePlane<N>(hits, layer, row, N_filled, plNrm, plDir, plPnt);
+      ::mkfitdev::pack::loadHit<N>(hits, row, fill_slot(), msErr, msPar);
+      ::mkfitdev::pack::loadModulePlane<N>(hits, layer, row, fill_slot(), plNrm, plDir, plPnt);
       return int(::mkfitdev::hitpack::detIDinLayer(hits.packed[row]));
     }
 
