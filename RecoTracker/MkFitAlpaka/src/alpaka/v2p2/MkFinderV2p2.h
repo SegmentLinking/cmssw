@@ -5,19 +5,21 @@
 // order of MkFinderV2p2.cc. MkFitCore runs one finder per block of seeds with NN-wide batches and queues; the device
 // runs every seed of the event through one plan entry at a time (src/alpaka/v2p2/V2p2Kernels.h):
 //   V0 thread per seed       awaken_candidates, begin_layer, begin_next_Ccrep_in_layer
-//   V2 block per CandIncoming prop_to_layer_edges, determine_search_windows, select_hits / preselect_hit_batch,
+//   V2 block per LayerBatch  prop_to_layer_edges, determine_search_windows, select_hits / preselect_hit_batch,
 //                            order_hits_along_path
-//   V3 thread per item        expand_in_layer by depth: KalmanOpArgs::do_kalman_stuff, harvest_nodes
-//   V4 thread per seed       select_and_materialise, end_layer
-// The batching and completion machinery of MkFitCore (LayerBatch / HitBatch refills, rk_ batches, the node free list,
-// early selection) only fills SIMD lanes and changes no result; it has no device counterpart. Results differ from
+//   V3 the entry's search    expand_in_layer, rk_expand_node: KalmanOpArgs::do_kalman_stuff, harvest_nodes
+//   V4 lanes per seed        select_and_materialise, end_layer
+// The completion machinery of MkFitCore (LayerBatch / HitBatch refills across seeds, rk_ batch queues, the node free
+// list, early selection) only fills SIMD lanes and changes no result; it has no device counterpart. Results differ from
 // MkFitCore only where MkFitCore's own order is unspecified (equal scores in the end-of-layer selection, see
 // v2p2SelBefore in interface/v2p2/V2p2SoA.h). Not ported, constexpr-off in CMSSW: InLayer::sister_hole_drop,
 // paired plan entries (m_layer_sec), MKFIT_TRACE / standalone diagnostics, TrackCand::m_stop_reason (trace only).
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <iterator>
 
 #include <alpaka/alpaka.hpp>
 
@@ -48,7 +50,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // What MkFinderV2p2 reads from mp_job and mp_steeringparams_iter for one plan entry. The kernels fill everything
   // but rz, which begin_layer() sets per seed (the layer of the seed's region).
   struct V2p2LayerCtx {
-    int layer;                                // (*mp_steeringparams_iter)->m_layer
     bool is_outward;                          // mp_steeringparams_iter->is_outward()
     MkRZLimits rz;                            // m_rz_limits
     ::mkfitdev::EngineIterParams ip;          // mp_job->params_cur()
@@ -58,21 +59,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ::mkfitdev::Config::BFieldParams bfield;  // the constants of Config::bFieldFromZR (MaterialView::bField)
   };
 
-  // The LayerBatch of process_layer_batch() for ONE candidate, plus the per-candidate locals of select_hits().
-  // No member initializers: it lives in block shared memory.
+  // The LayerBatch of process_layer_batch(), N candidates wide and indexed by i, plus the per-candidate locals of
+  // select_hits(). No member initializers: it lives in block shared memory.
+  template <idx_t N>
   struct V2p2CandWindow {
-    MkBins<1> B;
-    MkBinTrackCovExtract<1> TCE;
-    MkBinLimits<1> BL_p;
-    mini_propagators::Hermite3D<1> H;
-    ::mkfitdev::WSRResult wsr;  // CandIncoming::m_wsr
+    int N_proc;
+    MkBins<N> B;
+    MkBinTrackCovExtract<N> TCE;
+    MkBinLimits<N> BL_p;
+    mini_propagators::Hermite3D<N> H;
+    ::mkfitdev::WSRResult wsr[N];  // CandIncoming::m_wsr
 
     // select_hits(): line pre-cut
-    bool pc_on;
-    float pc_qb1, pc_q1, pc_gq, pc_phi1, pc_gphi, pc_tol_q, pc_tol_phi;
+    bool pc_on[N];
+    float pc_qb1[N], pc_q1[N], pc_gq[N], pc_phi1[N], pc_gphi[N], pc_tol_q[N], pc_tol_phi[N];
     // select_hits(): the density region (LayerBatch::rho_dphi / rho_dq and its centre and half widths)
-    float rho_dphi, rho_dq;
-    float rho_phi_c, rho_phi_half, rho_q_lo, rho_q_hi;
+    float rho_dphi[N], rho_dq[N];
+    float rho_phi_c[N], rho_phi_half[N], rho_q_lo[N], rho_q_hi[N];
   };
 
   // A contiguous range [begin, end) of LayerOfHits internal indices: the hits of consecutive phi bins of one q row.
@@ -87,7 +90,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE V2p2StopReason stop_cuts_at_pickup(const TrackCandView& tc,
                                                                          const V2p2LayerCtx& ctx);
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool long_step_to_layer(const TrackCandView& tc, const V2p2LayerCtx& ctx);
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_wsr(V2p2CandWindow& w, const V2p2LayerCtx& ctx);
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_wsr(V2p2CandWindow<N>& w, const V2p2LayerCtx& ctx);
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void offer_best_short(SeedCandsRef& seed,
                                                             const CandBook& book,
                                                             const CandState& state);
@@ -265,26 +269,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   }
 
   //----------------------------------------------------------------------------
-  // Phase 1 to 4 for one CandIncoming (process_layer_batch, LayerBatch one candidate wide)
+  // Phase 1 to 4 for one batch of up to N CandIncomings of one layer (process_layer_batch, LayerBatch N wide)
 
   // Phase 1 -- which candidates, and where do they meet the layer.
-  // prop_to_layer_edges(): m_isp from the TrackCand state, the two layer crossings
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void prop_to_layer_edges(V2p2CandWindow& w,
-                                                               const TrackCandView& tc,
+  // prop_to_layer_edges(): m_isp from the TrackCand states tc[0, n_proc), the two layer crossings
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void prop_to_layer_edges(V2p2CandWindow<N>& w,
+                                                               const TrackCandView* tc,
+                                                               int n_proc,
                                                                const V2p2LayerCtx& ctx) {
-    MkBins<1>& B = w.B;
-    B.m_n_proc = 1;
+    MkBins<N>& B = w.B;
+    const int N_proc = w.N_proc = n_proc;
+    B.m_n_proc = N_proc;
 
-    float phi[1] = {0.0f};
-    int chg[1] = {0};
-    float bf[1] = {Config::Bfield};
+    float phi[N];
+    int chg[N];
+    float bf[N];
 
-    // Copy in x, y,z, invpT, theta.
-    B.m_isp.copyIn_partial_track_state(0, tc.state->par);
-    phi[0] = tc.momPhi();
-    chg[0] = tc.charge();
-    if (ctx.param_b)
-      bf[0] = Config::bFieldFromZR(ctx.bfield, tc.z(), std::hypot(tc.x(), tc.y()));
+    // Slots from N_proc up repeat candidate 0: valid inputs, never read.
+    for (int i = 0; i < N; ++i) {
+      const TrackCandView& c = tc[i < N_proc ? i : 0];
+      // Copy in x, y,z, invpT, theta.
+      B.m_isp.copyIn_partial_track_state(i, c.state->par);
+      phi[i] = c.momPhi();
+      chg[i] = c.charge();
+      bf[i] = Config::Bfield;
+      if (ctx.param_b)
+        bf[i] = Config::bFieldFromZR(ctx.bfield, c.z(), std::hypot(c.x(), c.y()));
+    }
     B.m_isp.init_momentum_vec_and_k(phi, chg, bf);
 
     // m_sp1 at the layer's near bounding surface, m_sp2 at the far one.
@@ -296,17 +308,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // dphi_track and dq_track, and from those the WSR verdict and the binnor
   // ranges. The function also builds the Hermite cubic through the two layer
   // crossings. See doc/MkFinderV2p2-DesignNotes.md, "Search window".
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_search_windows(V2p2CandWindow& w,
-                                                                    const TrackCandView& tc,
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_search_windows(V2p2CandWindow<N>& w,
+                                                                    const TrackCandView* tc,
                                                                     const ::mkfitdev::LayerOfHitsAccess& L,
                                                                     const V2p2LayerCtx& ctx) {
-    MkBins<1>& B = w.B;
+    const int N_proc = w.N_proc;
+    MkBins<N>& B = w.B;
 
     // Covariance position block at m_sp2, transported from the previous hit.
-    MPlexLV<1> par0;
-    MPlexLS<1> err0;
-    par0.copyIn(0, tc.state->par);
-    err0.copyIn(0, tc.state->err);
+    MPlexLV<N> par0;
+    MPlexLS<N> err0;
+    // Slots from N_proc up repeat candidate 0: valid inputs, never read.
+    for (int i = 0; i < N; ++i) {
+      par0.copyIn(i, tc[i < N_proc ? i : 0].state->par);
+      err0.copyIn(i, tc[i < N_proc ? i : 0].state->err);
+    }
     B.transport_position_cov(par0, err0, w.TCE);
 
     B.determine_bin_windows(w.TCE);
@@ -327,7 +344,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // of the two crossings answer the radial half; the segment's q extent,
   // widened by Policy::wsr_n_sigma, answers the rest. See
   // doc/MkFinderV2p2-DesignNotes.md, "Within-sensitive-region verdict".
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_wsr(V2p2CandWindow& w, const V2p2LayerCtx& ctx) {
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_wsr(V2p2CandWindow<N>& w, const V2p2LayerCtx& ctx) {
     namespace Policy = ::mkfitdev::Config::V2p2::Policy;
     using ::mkfitdev::WSR_Edge;
     using ::mkfitdev::WSR_Inside;
@@ -335,62 +353,65 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     // m_dq_track is 3 sigma.
     const float dq_to_n_sigma = Policy::wsr_n_sigma / 3.0f;
 
-    const MkBins<1>& B = w.B;
-    const int i = 0;
+    const int N_proc = w.N_proc;
+    const MkBins<N>& B = w.B;
 
     const MkRZLimits& LI = ctx.rz;
     const bool is_barrel = LI.m_is_barrel;
     const float q_lo = is_barrel ? LI.m_zmin : LI.m_rin;
     const float q_hi = is_barrel ? LI.m_zmax : LI.m_rout;
 
-    const bool f_entry = B.m_sp1.fail_flag[i] != 0;
-    const bool f_exit = B.m_sp2.fail_flag[i] != 0;
+    for (int i = 0; i < N_proc; ++i) {
+      const bool f_entry = B.m_sp1.fail_flag[i] != 0;
+      const bool f_exit = B.m_sp2.fail_flag[i] != 0;
 
-    ::mkfitdev::WSRResult wr;
+      ::mkfitdev::WSRResult wr;
 
-    if (f_entry && f_exit) {
-      // Clear miss: the track does not reach the layer at all.
-      wr = ::mkfitdev::WSRResult{WSR_Outside, false};
-    } else {
-      const float dq = dq_to_n_sigma * B.m_dq_track[i];
-      const float qa = B.m_q_min[i], qb = B.m_q_max[i];
-
-      if (qb < q_lo - dq || qa > q_hi + dq)
+      if (f_entry && f_exit) {
+        // Clear miss: the track does not reach the layer at all.
         wr = ::mkfitdev::WSRResult{WSR_Outside, false};
-      else if (qa > q_lo + dq && qb < q_hi - dq)
-        wr = ::mkfitdev::WSRResult{WSR_Inside, false};
-      else
-        wr = ::mkfitdev::WSRResult{WSR_Edge, false};
+      } else {
+        const float dq = dq_to_n_sigma * B.m_dq_track[i];
+        const float qa = B.m_q_min[i], qb = B.m_q_max[i];
 
-      // Near miss -- in the layer, but turning round inside it.
-      if ((f_entry || f_exit) && wr.wsr == WSR_Inside)
-        wr.wsr = WSR_Edge;
+        if (qb < q_lo - dq || qa > q_hi + dq)
+          wr = ::mkfitdev::WSRResult{WSR_Outside, false};
+        else if (qa > q_lo + dq && qb < q_hi - dq)
+          wr = ::mkfitdev::WSRResult{WSR_Inside, false};
+        else
+          wr = ::mkfitdev::WSRResult{WSR_Edge, false};
 
-      // Endcap discs have a hole at small r. Sitting wholly inside it is a
-      // miss with a reason; touching it is an edge, and either way m_in_gap
-      // records that the absence of a hit is explained.
-      if (!is_barrel && LI.m_layer_has_r_range_hole && wr.wsr != WSR_Outside) {
-        const float h_lo = LI.m_layer_hole_r_min, h_hi = LI.m_layer_hole_r_max;
-        if (qa > h_lo + dq && qb < h_hi - dq) {
-          wr = ::mkfitdev::WSRResult{WSR_Outside, true};
-        } else if (qb > h_lo - dq && qa < h_hi + dq) {
+        // Near miss -- in the layer, but turning round inside it.
+        if ((f_entry || f_exit) && wr.wsr == WSR_Inside)
           wr.wsr = WSR_Edge;
-          wr.in_gap = true;
+
+        // Endcap discs have a hole at small r. Sitting wholly inside it is a
+        // miss with a reason; touching it is an edge, and either way m_in_gap
+        // records that the absence of a hit is explained.
+        if (!is_barrel && LI.m_layer_has_r_range_hole && wr.wsr != WSR_Outside) {
+          const float h_lo = LI.m_layer_hole_r_min, h_hi = LI.m_layer_hole_r_max;
+          if (qa > h_lo + dq && qb < h_hi - dq) {
+            wr = ::mkfitdev::WSRResult{WSR_Outside, true};
+          } else if (qb > h_lo - dq && qa < h_hi + dq) {
+            wr.wsr = WSR_Edge;
+            wr.in_gap = true;
+          }
         }
       }
-    }
 
-    w.wsr = wr;
+      w.wsr[i] = wr;
+    }
   }
 
   // Phase 3 -- walk the bin ranges and pre-select hits.
-  // select_hits(), the per-candidate part before the bin walk: line pre-cut and density region of the layer
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void select_hits_setup(V2p2CandWindow& w,
+  // select_hits(), the part of candidate i before its bin walk: line pre-cut and density region of the layer
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void select_hits_setup(V2p2CandWindow<N>& w,
+                                                             int i,
                                                              const ::mkfitdev::LayerOfHitsAccess& L) {
     namespace Window = ::mkfitdev::Config::V2p2::Window;
     namespace PreCut = ::mkfitdev::Config::V2p2::PreCut;
-    const MkBins<1>& B = w.B;
-    const int i = 0;
+    const MkBins<N>& B = w.B;
 
     // Line pre-cut, per candidate: the straight line m_sp1 -> m_sp2 in
     // (qbar, q) and (qbar, phi), and the hit-independent tolerance terms.
@@ -415,14 +436,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         pc_tol_phi = PreCut::dphi_slack * Window::dphi_trk_fac * B.m_dphi_track[i];
       }
     }
-    w.pc_on = pc_on;
-    w.pc_qb1 = pc_qb1;
-    w.pc_q1 = pc_q1;
-    w.pc_gq = pc_gq;
-    w.pc_phi1 = pc_phi1;
-    w.pc_gphi = pc_gphi;
-    w.pc_tol_q = pc_tol_q;
-    w.pc_tol_phi = pc_tol_phi;
+    w.pc_on[i] = pc_on;
+    w.pc_qb1[i] = pc_qb1;
+    w.pc_q1[i] = pc_q1;
+    w.pc_gq[i] = pc_gq;
+    w.pc_phi1[i] = pc_phi1;
+    w.pc_gphi[i] = pc_gphi;
+    w.pc_tol_q[i] = pc_tol_q;
+    w.pc_tol_phi[i] = pc_tol_phi;
 
     // The region rho counts over and divides by, see the end of this function: the
     // window with the cut's padding of this sub-layer, as the fetch.
@@ -432,73 +453,76 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                     float(kMaxHalfPhiWindow));  // by value: no ODR-use in device code
     const float rho_dq = Window::dq_trk_fac * B.m_dq_track[i] + Window::dq_hit_fac * L.max_hit_q_half_length();
     // LayerBatch::rho_dphi / rho_dq start at zero
-    w.rho_dphi = std::max(0.0f, rho_dphi);
-    w.rho_dq = std::max(0.0f, rho_dq);
-    w.rho_phi_c = 0.5f * (B.m_phi_min[i] + B.m_phi_max[i]);
-    w.rho_phi_half = 0.5f * (B.m_phi_max[i] - B.m_phi_min[i]) + rho_dphi;
-    w.rho_q_lo = B.m_q_min[i] - rho_dq;
-    w.rho_q_hi = B.m_q_max[i] + rho_dq;
+    w.rho_dphi[i] = std::max(0.0f, rho_dphi);
+    w.rho_dq[i] = std::max(0.0f, rho_dq);
+    w.rho_phi_c[i] = 0.5f * (B.m_phi_min[i] + B.m_phi_max[i]);
+    w.rho_phi_half[i] = 0.5f * (B.m_phi_max[i] - B.m_phi_min[i]) + rho_dphi;
+    w.rho_q_lo[i] = B.m_q_min[i] - rho_dq;
+    w.rho_q_hi[i] = B.m_q_max[i] + rho_dq;
   }
 
-  // select_hits(), the bin walk of q row qi (q outer loop, BL_p.q1 <= qi < BL_p.q2): its phi bins p1 .. p2 (masked)
-  // as at most two contiguous internal-index segments in walk order; returns their number (0 when p1 == p2)
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int select_hits_row_segments(const V2p2CandWindow& w,
+  // select_hits(), the bin walk of candidate i in q row qi (q outer loop, BL_p.q1 <= qi < BL_p.q2): its phi bins
+  // p1 .. p2 (masked) as at most two contiguous internal-index segments in walk order; returns their number (0 when
+  // p1 == p2)
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int select_hits_row_segments(const V2p2CandWindow<N>& w,
+                                                                   int i,
                                                                    const ::mkfitdev::LayerOfHitsAccess& L,
                                                                    uint16_t qi,
                                                                    V2p2HitSegment (&seg)[2]) {
     // The hits of one q row are in phi-bin order (binnor sort key: q bin, then phi), so the walk over consecutive
     // phi bins visits consecutive internal indices; an empty bin stores first = 0 and is skipped.
-    const uint16_t p1 = w.BL_p.p1[0], p2 = w.BL_p.p2[0];
+    const uint16_t p1 = w.BL_p.p1[i], p2 = w.BL_p.p2[i];
     if (p1 == p2)
       return 0;
     // [p1, p2), or across the phi wrap [p1, end of ring) then [0, p2)
     const int nRange = (p1 < p2 || p2 == 0) ? 1 : 2;
     const int lo[2] = {p1, 0};
     const int hi[2] = {p1 < p2 ? int(p2) : int(::mkfitdev::kNPhiBins), int(p2)};
-    int n = 0;
-    for (int r = 0; r < nRange; ++r) {
-      int a = lo[r];
-      while (a < hi[r] && ::mkfitdev::binCount(L.binContent(a, qi)) == 0)
-        ++a;
-      if (a == hi[r])
+    int nSeg = 0;
+    for (int range = 0; range < nRange; ++range) {
+      int first = lo[range];
+      while (first < hi[range] && ::mkfitdev::binCount(L.binContent(first, qi)) == 0)
+        ++first;
+      if (first == hi[range])
         continue;
-      int b = hi[r] - 1;
-      while (::mkfitdev::binCount(L.binContent(b, qi)) == 0)
-        --b;
-      const uint32_t ca = L.binContent(a, qi), cb = L.binContent(b, qi);
-      seg[n].begin = ::mkfitdev::binFirst(ca);
-      seg[n].end = ::mkfitdev::binFirst(cb) + ::mkfitdev::binCount(cb);
-      ++n;
+      int last = hi[range] - 1;
+      while (::mkfitdev::binCount(L.binContent(last, qi)) == 0)
+        --last;
+      const uint32_t contentFirst = L.binContent(first, qi), contentLast = L.binContent(last, qi);
+      seg[nSeg].begin = ::mkfitdev::binFirst(contentFirst);
+      seg[nSeg].end = ::mkfitdev::binFirst(contentLast) + ::mkfitdev::binCount(contentLast);
+      ++nSeg;
     }
-    return n;
+    return nSeg;
   }
 
-  // select_hits(), per walked hit (internal index hi): the density count (++n_scanned in the region) and the line
-  // pre-cut; true = the hit goes to preselect_hit_batch(). No hit mask on the device (clustersToSkip is empty).
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool select_hits_scan_hit(const V2p2CandWindow& w,
-                                                                const ::mkfitdev::LayerOfHitsAccess& L,
-                                                                uint32_t hi,
-                                                                int& n_scanned) {
+  // select_hits(), per walked hit of candidate i (internal index hi): the density count (++n_scanned in the region)
+  // and the line pre-cut; true = the hit goes to preselect_hit_batch(). No hit mask on the device (clustersToSkip is
+  // empty).
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool select_hits_scan_hit(
+      const V2p2CandWindow<N>& w, int i, const ::mkfitdev::LayerOfHitsAccess& L, uint32_t hi, int& n_scanned) {
     namespace Window = ::mkfitdev::Config::V2p2::Window;
     namespace PreCut = ::mkfitdev::Config::V2p2::PreCut;
-    if (std::abs(squashPhiGeneral(L.hit_phi(hi) - w.rho_phi_c)) < w.rho_phi_half && L.hit_q(hi) > w.rho_q_lo &&
-        L.hit_q(hi) < w.rho_q_hi)
+    if (std::abs(squashPhiGeneral(L.hit_phi(hi) - w.rho_phi_c[i])) < w.rho_phi_half[i] && L.hit_q(hi) > w.rho_q_lo[i] &&
+        L.hit_q(hi) < w.rho_q_hi[i])
       ++n_scanned;
 
-    if (w.pc_on) {
+    if (w.pc_on[i]) {
       const bool barrel = w.B.m_is_barrel;
-      const float dqb_h = L.hit_qbar(hi) - w.pc_qb1;
+      const float dqb_h = L.hit_qbar(hi) - w.pc_qb1[i];
       const float qbar_term = barrel ? PreCut::qbar_fac * L.hit_qbar_half_extent(hi) : 0.0f;
       bool reject = false;
       if (PreCut::q) {
-        const float dev = std::abs(L.hit_q(hi) - (w.pc_q1 + dqb_h * w.pc_gq));
-        reject = dev > w.pc_tol_q + Window::dq_hit_fac * L.hit_q_half_length(hi) + std::abs(w.pc_gq) * qbar_term;
+        const float dev = std::abs(L.hit_q(hi) - (w.pc_q1[i] + dqb_h * w.pc_gq[i]));
+        reject = dev > w.pc_tol_q[i] + Window::dq_hit_fac * L.hit_q_half_length(hi) + std::abs(w.pc_gq[i]) * qbar_term;
       }
       if (!reject && PreCut::phi) {
-        const float dev = std::abs(squashPhiGeneral(L.hit_phi(hi) - (w.pc_phi1 + dqb_h * w.pc_gphi)));
+        const float dev = std::abs(squashPhiGeneral(L.hit_phi(hi) - (w.pc_phi1[i] + dqb_h * w.pc_gphi[i])));
         const float hit_term =
             Window::phi_per_hit ? Window::dphi_hit_fac * L.hit_phi_half_extent(hi) : Window::dphi_flat_rad;
-        reject = dev > w.pc_tol_phi + hit_term + std::abs(w.pc_gphi) * qbar_term;
+        reject = dev > w.pc_tol_phi[i] + hit_term + std::abs(w.pc_gphi[i]) * qbar_term;
       }
       if (reject) {
         return false;
@@ -514,12 +538,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // over the pre-selected ones, so the estimate does not depend on the cut it is
   // about to feed. The phi extent becomes a length at the crossing radius. The count
   // can be 0 with a hit about to be scored, so the scored hit is counted too.
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float select_hits_log_rho(const V2p2CandWindow& w, int n_scanned) {
-    const MkBins<1>& B = w.B;
-    const int i = 0;
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float select_hits_log_rho(const V2p2CandWindow<N>& w, int i, int n_scanned) {
+    const MkBins<N>& B = w.B;
     const float r = std::max(0.1f, std::hypot(B.m_sp2.x[i], B.m_sp2.y[i]));
-    const float w_phi = (B.m_phi_max[i] - B.m_phi_min[i]) + 2.0f * w.rho_dphi;
-    const float w_q = (B.m_q_max[i] - B.m_q_min[i]) + 2.0f * w.rho_dq;
+    const float w_phi = (B.m_phi_max[i] - B.m_phi_min[i]) + 2.0f * w.rho_dphi[i];
+    const float w_q = (B.m_q_max[i] - B.m_q_min[i]) + 2.0f * w.rho_dq[i];
     const float area = std::max(1e-4f, w_phi * r * w_q);
     return std::log(std::max(1e-6f, (n_scanned + 1.0f) / area));
   }
@@ -530,8 +554,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   // with n^ the module normal. Returns 3 sigma_q, the convention of
   // MkBins::m_dq_track, which is also the fallback. See
   // doc/MkFinderV2p2-DesignNotes.md, "Search window".
+  template <idx_t N>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float surface_referenced_dq(float dq_track_fallback,
-                                                                  const MkBinTrackCovExtract<1>& TCE,
+                                                                  const MkBinTrackCovExtract<N>& TCE,
                                                                   int pi,
                                                                   float h3_x,
                                                                   float h3_y,
@@ -573,39 +598,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     return 3.0f * std::sqrt(var);
   }
 
-  // Phase 3b -- pre-select one batch of (candidate, hit) pairs.
+  // Phase 3b -- pre-select one N-wide batch of (candidate, hit) pairs: hit hit_idcs[h] (original index
+  // hit_orig_idcs[h]) of candidate cand_idcs[h] (HitBatch).
   //
   // Solves the Hermite cubic onto each hit's own module plane, applies the
   // dq / dphi pre-selection cut; the caller pushes survivors into the
   // candidate's bounded priority queue (pq_offer()).
   template <idx_t N>
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void preselect_hit_batch(const V2p2CandWindow& w,
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void preselect_hit_batch(const V2p2CandWindow<N>& w,
                                                                const ::mkfitdev::LayerOfHitsAccess& L,
                                                                const EngineHitInputs& hits,
+                                                               const int (&cand_idcs)[N],
                                                                const uint32_t (&hit_idcs)[N],
+                                                               const uint32_t (&hit_orig_idcs)[N],
                                                                int n,
                                                                bool (&pass)[N],
                                                                V2p2PassedHitMatch (&phm)[N]) {
     namespace Window = ::mkfitdev::Config::V2p2::Window;
     namespace mp = mini_propagators;
-    const MkBins<1>& B = w.B;
-    const MkBinTrackCovExtract<1>& TCE = w.TCE;
+    const MkBins<N>& B = w.B;
+    const MkBinTrackCovExtract<N>& TCE = w.TCE;
 
     // Zeroed: the lanes from n up are not filled, and init_coeffs() reads
     // all of them.
     MPlexHV<N> module_pos(0.0f);
     MPlexHV<N> module_norm(0.0f);
-    mp::Hermite3D<N> h3d;
-    for (int h = 0; h < N; ++h) {
-      for (int k = 0; k < 4; ++k)
-        h3d.m_Hx[k][h] = h3d.m_Hy[k][h] = h3d.m_Hz[k][h] = 0.0f;
-      h3d.m_Hderfac[h] = 0.0f;
-    }
+    mp::Hermite3D<N> h3d(0.0f);
 
     // Extract hit / target module data
-    uint32_t hit_orig_idcs[N];
     for (int h = 0; h < n; ++h) {
-      hit_orig_idcs[h] = L.getOriginalHitIndex(hit_idcs[h]);
       const int row = ::mkfitdev::pack::hitRow(hits, L.layer, int(hit_orig_idcs[h]));
       const uint32_t mid = ::mkfitdev::hitpack::detIDinLayer(hits.packed[row]);
       const ::mkfitdev::EngineModule& mi = hits.modules[hits.layers[L.layer].moduleBegin + int(mid)];
@@ -614,7 +635,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         module_norm.At(h, k, 0) = mi.nrm[k];
       }
 
-      h3d.copyIn(h, w.H, 0);
+      h3d.copyIn(h, w.H, cand_idcs[h]);
     }
 
     mp::Hermite3DOnPlane<N> h3dop;
@@ -635,6 +656,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       pass[h] = false;
       if (h >= n)
         continue;
+      const int i = cand_idcs[h];
       float q;
       if (B.m_is_barrel) {
         q = h3_state.z[h];
@@ -646,9 +668,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       const float ddphi = cdist(std::abs(phi - L.hit_phi(hit_idcs[h])));
 
       // q error referenced to this module's plane, see surface_referenced_dq().
-      const float dq_trk = Window::surface_q ? surface_referenced_dq(B.m_dq_track[0],
+      const float dq_trk = Window::surface_q ? surface_referenced_dq(B.m_dq_track[i],
                                                                      TCE,
-                                                                     0,
+                                                                     i,
                                                                      h3_state.x[h],
                                                                      h3_state.y[h],
                                                                      h3_state.px[h],
@@ -658,19 +680,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                                                      module_norm.At(h, 1, 0),
                                                                      module_norm.At(h, 2, 0),
                                                                      B.m_is_barrel)
-                                             : B.m_dq_track[0];
+                                             : B.m_dq_track[i];
 
       // The pre-selection cut. See doc/MkFinderV2p2-DesignNotes.md, "Search window".
       const float dq_cut = Window::dq_trk_fac * dq_trk + Window::dq_hit_fac * L.hit_q_half_length(hit_idcs[h]);
       const float dphi_cut =
-          Window::dphi_trk_fac * B.m_dphi_track[0] +
+          Window::dphi_trk_fac * B.m_dphi_track[i] +
           (Window::phi_per_hit ? Window::dphi_hit_fac * L.hit_phi_half_extent(hit_idcs[h]) : Window::dphi_flat_rad);
       pass[h] = ddq < dq_cut && ddphi < dphi_cut;
 
       // For every hit, not only those that pass.
-      h3_state.dalpha[h] = B.m_sp1.dalpha[0] + h3dop.m_T[h] * (B.m_sp2.dalpha[0] - B.m_sp1.dalpha[0]);
+      h3_state.dalpha[h] = B.m_sp1.dalpha[i] + h3dop.m_T[h] * (B.m_sp2.dalpha[i] - B.m_sp1.dalpha[i]);
 
-      // InitialState(h3_state, h, is_plex, h): the crossing, with inv_pt, inv_k and theta of m_isp
+      // InitialState(h3_state, h, is_plex, h): the crossing, with inv_pt, inv_k and theta of the candidate's m_isp
       phm[h].ddphi = ddphi;
       phm[h].hit_orig_index = hit_orig_idcs[h];
       phm[h].hit_index = hit_idcs[h];
@@ -683,9 +705,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                             h3_state.pz[h],
                                             h3_state.dalpha[h],
                                             h3_state.fail_flag[h],
-                                            B.m_isp.inv_pt[0],
-                                            B.m_isp.inv_k[0],
-                                            B.m_isp.theta[0]};
+                                            B.m_isp.inv_pt[i],
+                                            B.m_isp.inv_k[i],
+                                            B.m_isp.theta[i]};
     }
   }
 
@@ -705,19 +727,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   }
 
   // Phase 4 -- move the pqueue survivors into the per-candidate hit list.
-  // order_hits_along_path(): the pqueue survivors pq[0, n) into layer_hits[0, n) in path order, by bounded insertion
-  // with the comparator of MkFitCore's std::sort (a total order: identical result)
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void order_hits_along_path(const V2p2CandWindow& w,
-                                                                 const V2p2PassedHitMatch* pq,
-                                                                 int n,
-                                                                 V2p2PassedHitMatch* layer_hits) {
+  // order_hits_along_path(): the pqueue survivors pq[0, n) of candidate i into layer_hits[0, n) in path order, by
+  // bounded insertion with the comparator of MkFitCore's std::sort (a total order: identical result)
+  template <idx_t N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void order_hits_along_path(
+      const V2p2CandWindow<N>& w, int i, const V2p2PassedHitMatch* pq, int n, V2p2PassedHitMatch* layer_hits) {
     // Path order for the in-layer search: dalpha is monotone in path length
     // for one candidate, but it is a signed turning angle, so its sign goes
     // with the charge. m_sp1 is the near bounding surface and m_sp2 the far
     // one in the search direction, so dalpha times the sign of its change
     // from m_sp1 to m_sp2 grows along the path, in either search direction.
     // See doc/MkFinderV2p2-DesignNotes.md, "Reduction and hit ordering".
-    const float dir = w.B.m_sp2.dalpha[0] >= w.B.m_sp1.dalpha[0] ? 1.0f : -1.0f;
+    const float dir = w.B.m_sp2.dalpha[i] >= w.B.m_sp1.dalpha[i] ? 1.0f : -1.0f;
     auto before = [dir](const V2p2PassedHitMatch& a, const V2p2PassedHitMatch& b) {
       const float ka = dir * a.mixed_state.dalpha, kb = dir * b.mixed_state.dalpha;
       if (ka != kb)
@@ -816,46 +837,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     return ::mkfitdev::v2p2SelBefore(a.score, a.ord, b.score, b.ord);
   }
 
-  // select_and_materialise() for one seed. seed = the current buffer (its TrackCands stay readable), outBooks /
-  // outStates = the other buffer (kMaxCandsPerSeed slots); HoT nodes are appended to the seed's pool. cands = the
-  // seed's CandIncoming rows (v2p2CandRow(s, ic)), nodes + head = its in-layer paths (V2p2SeedSoA::nodeHead and
-  // V2p2NodeSoA::nextInSeed). The top max_cands competitors by v2p2SelBefore, in that order. Returns the number of
-  // TrackCands written (ccand.size() afterwards); nan_score = true if a NaN score entered the ranking.
-  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int select_and_materialise(SeedCandsRef& seed,
-                                                                 CandBook* outBooks,
-                                                                 CandState* outStates,
-                                                                 ::mkfitdev::V2p2CandSoA::ConstView cands,
-                                                                 int s,
-                                                                 ::mkfitdev::V2p2NodeSoA::ConstView nodes,
-                                                                 int head,
-                                                                 int max_cands,
-                                                                 const V2p2LayerCtx& ctx,
-                                                                 bool& nan_score) {
-    namespace InLayer = ::mkfitdev::Config::V2p2::InLayer;
-    namespace Policy = ::mkfitdev::Config::V2p2::Policy;
-    using ::mkfitdev::kMaxCandsPerSeed;
-    using ::mkfitdev::v2p2CandRow;
-    using ::mkfitdev::v2p2SelOrdinal;
-    // max_cands = ccrep.m_max_cands > 0 ? ccrep.m_max_cands : ccand.capacity(); the device has kMaxCandsPerSeed slots
-    const int n_max = std::min(max_cands > 0 ? max_cands : ctx.capacity, int(kMaxCandsPerSeed));
-    nan_score = false;
-
-    // m_sel reduced to its top n_max on the fly: a strict total order, so the kept set and its order do not
-    // depend on the order the competitors arrive in (std::partial_sort's order differs only among equal scores)
-    V2p2SelEntry sel[kMaxCandsPerSeed];
-    int n_sel = 0;
-    int n_keep = 0;
+  // m_sel reduced to its top n_max on the fly: a strict total order, so the kept set and its order do not depend on
+  // the order the competitors arrive in, nor on how they are split and merged (std::partial_sort's order differs
+  // only among equal scores)
+  struct V2p2SelTop {
+    V2p2SelEntry sel[::mkfitdev::kMaxCandsPerSeed];  // the best n_keep, best first
+    int n_keep;
+    int n_sel;       // competitors offered
+    bool nan_score;  // a NaN score was offered
     // InLayer::reserve_hole_slot: the best competitor that declined the layer
-    V2p2SelEntry best_decliner{-1, -1, 0, false, 0.0f, 0};
-    bool has_decliner = false;
-    auto offer = [&](const V2p2SelEntry& e) {
-      ++n_sel;
-      if (!(e.score == e.score))
-        nan_score = true;
-      if (InLayer::reserve_hole_slot && e.node_idx < 0 && (!has_decliner || v2p2SelEntryBefore(e, best_decliner))) {
+    bool has_decliner;
+    V2p2SelEntry best_decliner;
+    bool hot_overflow;  // a survivor built by this lane did not fit in the HoT pool
+
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void offer_decliner(const V2p2SelEntry& e) {
+      if (!has_decliner || v2p2SelEntryBefore(e, best_decliner)) {
         best_decliner = e;
         has_decliner = true;
       }
+    }
+
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void offer(const V2p2SelEntry& e, int n_max) {
+      ++n_sel;
+      if (std::isnan(e.score))
+        nan_score = true;
+      if (::mkfitdev::Config::V2p2::InLayer::reserve_hole_slot && e.node_idx < 0)
+        offer_decliner(e);
       if (n_max <= 0)
         return;
       int j;
@@ -871,17 +878,46 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         --j;
       }
       sel[j] = e;
-    };
+    }
 
-    // Which TrackCands got a CandIncoming this layer. The rest are entered
-    // unchanged below.
-    const int n_tc = *seed.nCands;
+    // the top n_max of the competitors offered here and to o
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void merge(const V2p2SelTop& o, int n_max) {
+      for (int k = 0; k < o.n_keep; ++k)
+        offer(o.sel[k], n_max);
+      n_sel += o.n_sel - o.n_keep;
+      nan_score = nan_score || o.nan_score;
+      if (o.has_decliner)
+        offer_decliner(o.best_decliner);
+    }
+  };
 
-    for (int ic = 0; ic < n_tc; ++ic) {
-      const int row = v2p2CandRow(s, ic);
-      if (!cands.active(row))
-        continue;
+  // The lanes that run select_and_materialise() for one seed: lane of n_lanes (a power of two), tops = their shared
+  // V2p2SelTop[n_lanes]. Every thread of the block calls it together (block barriers inside).
+  struct V2p2SelGroup {
+    int lane;
+    int n_lanes;
+    V2p2SelTop* tops;
+  };
 
+  // n_max of select_and_materialise(): ccrep.m_max_cands > 0 ? ccrep.m_max_cands : ccand.capacity(); the device has
+  // kMaxCandsPerSeed slots
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int sel_n_max(int max_cands, const V2p2LayerCtx& ctx) {
+    return std::min(max_cands > 0 ? max_cands : ctx.capacity, int(::mkfitdev::kMaxCandsPerSeed));
+  }
+
+  // The m_sel entry of TrackCand ic: with a CandIncoming the hole it would record (unchanged if WSR_Outside), else
+  // the TrackCand unchanged; with best-short a stopped one leaves the beam instead (offered to best-short, false).
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool sel_entry_of_tcand(SeedCandsRef& seed,
+                                                              ::mkfitdev::V2p2CandSoA::ConstView cands,
+                                                              int s,
+                                                              int ic,
+                                                              const V2p2LayerCtx& ctx,
+                                                              V2p2SelEntry& e) {
+    namespace InLayer = ::mkfitdev::Config::V2p2::InLayer;
+    namespace Policy = ::mkfitdev::Config::V2p2::Policy;
+    using ::mkfitdev::v2p2SelOrdinal;
+    const int row = ::mkfitdev::v2p2CandRow(s, ic);
+    if (cands.active(row)) {
       const TrackCandView tc{&seed.cands[ic], &seed.states[ic], &seed};
 
       // Every CandIncoming also competes as the hole it would record, including
@@ -890,107 +926,210 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       // WSR_Outside is not a hole: the candidate competes unchanged.
       const uint64_t ord = v2p2SelOrdinal(::mkfitdev::kV2p2SelHole, ic, 0, 0);
       if (Policy::use_wsr && cands.wsr(row) == ::mkfitdev::WSR_Outside) {
-        offer(V2p2SelEntry{ic, -1, 0, false, tc.score(), ord});
+        e = V2p2SelEntry{ic, -1, 0, false, tc.score(), ord};
       } else {
         const int fake = fake_hit_index(tc, ::mkfitdev::WSRResult{cands.wsr(row), cands.inGap(row) != 0}, ctx);
         LayerStepFeatures f{};
         fill_step_geometry(f, 0.0f, ctx);
         f.hole_kind = ::mkfitdev::v2p2_hole_kind(fake);
-        offer(V2p2SelEntry{ic, -1, fake, true, tc.score() + ::mkfitdev::v2p2_layer_step_score(f, ctx.vp), ord});
+        e = V2p2SelEntry{ic, -1, fake, true, tc.score() + ::mkfitdev::v2p2_layer_step_score(f, ctx.vp), ord};
       }
-    }
-
-    // nodes: the seed's list is bounded by the pool, every row appears once
-    for (int ni = head; ni >= 0; ni = nodes.nextInSeed(ni)) {
-      const int ic = nodes.ic(ni);
-      // m_feat of the node: the root's step geometry and the sums accumulated parent -> child
-      LayerStepFeatures f{};
-      fill_step_geometry(f, cands.logRho(v2p2CandRow(s, ic)), ctx);
-      f.n_hits = nodes.nHits(ni);
-      f.n_overlap = f.n_hits - 1;
-      f.hole_kind = ::mkfitdev::V2P2_NoHole;
-      f.chi2_sum = nodes.chi2Sum(ni);
-      f.log_det_v_sum = nodes.logDetVSum(ni);
-      offer(V2p2SelEntry{ic,
-                         ni,
-                         0,
-                         false,
-                         seed.cands[ic].score + ::mkfitdev::v2p2_layer_step_score(f, ctx.vp),
-                         v2p2SelOrdinal(::mkfitdev::kV2p2SelNode, ic, f.n_hits, nodes.pathKey(ni))});
+      return true;
     }
 
     // Stopped or pull-in-skipped TrackCands, unchanged, at their own score. With
     // best-short on (outward only), stopped ones leave the beam instead and the
     // best is kept on the CombCandidate.
     const bool best_short = InLayer::best_short && ctx.rz.is_outward();
-    for (int ic = 0; ic < n_tc; ++ic) {
-      if (cands.active(v2p2CandRow(s, ic)))
-        continue;
-      if (best_short && seed.hot(seed.cands[ic].lastHitIdx).index == ::mkfitdev::kHitStopIdx) {
-        offer_best_short(seed, seed.cands[ic], seed.states[ic]);
-        continue;
+    if (best_short && seed.hot(seed.cands[ic].lastHitIdx).index == ::mkfitdev::kHitStopIdx) {
+      offer_best_short(seed, seed.cands[ic], seed.states[ic]);
+      return false;
+    }
+    e = V2p2SelEntry{ic, -1, 0, false, seed.cands[ic].score, v2p2SelOrdinal(::mkfitdev::kV2p2SelUntouched, ic, 0, 0)};
+    return true;
+  }
+
+  // The m_sel entry of the in-layer path ending at pool row ni of seed s (cands = its CandIncoming rows)
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE V2p2SelEntry sel_entry_of_node(const SeedCandsRef& seed,
+                                                                     ::mkfitdev::V2p2CandSoA::ConstView cands,
+                                                                     int s,
+                                                                     ::mkfitdev::V2p2NodeSoA::ConstView nodes,
+                                                                     int ni,
+                                                                     const V2p2LayerCtx& ctx) {
+    const int ic = nodes.ic(ni);
+    // m_feat of the node: the root's step geometry and the sums accumulated parent -> child
+    LayerStepFeatures f{};
+    fill_step_geometry(f, cands.logRho(::mkfitdev::v2p2CandRow(s, ic)), ctx);
+    f.n_hits = nodes.nHits(ni);
+    f.n_overlap = f.n_hits - 1;
+    f.hole_kind = ::mkfitdev::V2P2_NoHole;
+    f.chi2_sum = nodes.chi2Sum(ni);
+    f.log_det_v_sum = nodes.logDetVSum(ni);
+    return V2p2SelEntry{ic,
+                        ni,
+                        0,
+                        false,
+                        seed.cands[ic].score + ::mkfitdev::v2p2_layer_step_score(f, ctx.vp),
+                        ::mkfitdev::v2p2SelOrdinal(::mkfitdev::kV2p2SelNode, ic, f.n_hits, nodes.pathKey(ni))};
+  }
+
+  // HoT nodes a survivor appends: its path, or its fake hit
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int sel_entry_hots(const V2p2SelEntry& e,
+                                                         ::mkfitdev::V2p2NodeSoA::ConstView nodes) {
+    return e.node_idx >= 0 ? int(nodes.nHits(e.node_idx)) : (e.add_fake ? 1 : 0);
+  }
+
+  // One survivor as a copy of its TrackCand plus its path (or fake hit), with its HoTs at pool nodes hot_node,
+  // hot_node + 1, ... (the nodes seedAddHitIdx() gives when the survivors are built in rank order). Returns false if
+  // a HoT is past the pool.
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE bool materialise_survivor(SeedCandsRef& seed,
+                                                                const V2p2SelEntry& e,
+                                                                ::mkfitdev::V2p2NodeSoA::ConstView nodes,
+                                                                const V2p2LayerCtx& ctx,
+                                                                int hot_node,
+                                                                CandBook& nc,
+                                                                CandState& ns) {
+    bool fits = true;
+    nc = seed.cands[e.tcand_idx];
+    ns = seed.states[e.tcand_idx];
+
+    if (e.node_idx >= 0) {
+      int chain[::mkfitdev::kV2p2MaxHitsPerLayer];
+      int n_chain = 0;
+      for (int ci = e.node_idx; ci >= 0 && n_chain < ::mkfitdev::kV2p2MaxHitsPerLayer; ci = nodes.parentNode(ci))
+        chain[n_chain++] = ci;
+      for (int c = n_chain - 1; c >= 0; --c) {
+        const int n = chain[c];
+        fits = seedSetHitIdx(seed, nc, hot_node++, nodes.hitIndex(n), nodes.hitLayer(n), nodes.chi2(n)) && fits;
+        if (c != n_chain - 1) {
+          ++nc.nOverlap;  // a second hit in one layer: an overlap, or the sister sensor of a paired entry
+        }
       }
-      offer(V2p2SelEntry{
-          ic, -1, 0, false, seed.cands[ic].score, v2p2SelOrdinal(::mkfitdev::kV2p2SelUntouched, ic, 0, 0)});
+      // setState(): parameters, errors and charge of the path's last node
+      const V2p2TrackState st = nodes.state(e.node_idx);
+      for (std::size_t i = 0; i < std::size(st.par); ++i)
+        ns.par[i] = st.par[i];
+      for (std::size_t i = 0; i < std::size(st.err); ++i)
+        ns.err[i] = st.err[i];
+      ns.charge = st.charge;
+    } else if (e.add_fake) {
+      fits = seedSetHitIdx(seed, nc, hot_node, e.fake_hit, ctx.rz.m_layer_id, 0.0f);
     }
 
-    if (n_sel == 0) {
-      return 0;  // every TrackCand was offered to best-short and left the beam
+    // score_ holds the summed layer-step score during finding; the final-pick
+    // scorer overwrites it in mergeCandsAndBestShortOne() at the end of the search.
+    nc.score = e.score;
+    return fits;
+  }
+
+  // select_and_materialise() for one seed by the lanes of g (all threads of the block call it; in_layer false: the
+  // barriers only): the top max_cands by v2p2SelBefore into outBooks / outStates; returns their number (lane 0)
+  template <typename TAcc>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE int select_and_materialise(TAcc const& acc,
+                                                            const V2p2SelGroup& g,
+                                                            bool in_layer,
+                                                            SeedCandsRef& seed,
+                                                            CandBook* outBooks,
+                                                            CandState* outStates,
+                                                            ::mkfitdev::V2p2CandSoA::ConstView cands,
+                                                            int s,
+                                                            ::mkfitdev::V2p2NodeSoA::ConstView nodes,
+                                                            const int32_t* node_list,
+                                                            int n_list,
+                                                            int node_chain,
+                                                            int max_cands,
+                                                            const V2p2LayerCtx& ctx,
+                                                            bool& nan_score) {
+    namespace InLayer = ::mkfitdev::Config::V2p2::InLayer;
+    const int n_max = in_layer ? sel_n_max(max_cands, ctx) : 0;
+    const int n_tc = in_layer ? *seed.nCands : 0;
+    // best-short writes the CombCandidate: one lane in TrackCand order then
+    const int ic_first = InLayer::best_short ? (g.lane == 0 ? 0 : n_tc) : g.lane;
+    const int ic_step = InLayer::best_short ? 1 : g.n_lanes;
+
+    if (in_layer) {
+      V2p2SelTop top{};
+      // Every TrackCand (as a hole or unchanged), split over the lanes.
+      for (int ic = ic_first; ic < n_tc; ic += ic_step) {
+        V2p2SelEntry e;
+        if (sel_entry_of_tcand(seed, cands, s, ic, ctx, e))
+          top.offer(e, n_max);
+      }
+      // Every in-layer path: the list split over the lanes, then the chain.
+      for (int k = g.lane; k < n_list; k += g.n_lanes)
+        top.offer(sel_entry_of_node(seed, cands, s, nodes, node_list[k], ctx), n_max);
+      if (g.lane == 0) {
+        for (int ni = node_chain; ni >= 0; ni = nodes.nextInSeed(ni))
+          top.offer(sel_entry_of_node(seed, cands, s, nodes, ni, ctx), n_max);
+      }
+      g.tops[g.lane] = top;
+    }
+    alpaka::syncBlockThreads(acc);
+    for (int half = g.n_lanes / 2; half > 0; half /= 2) {
+      if (in_layer && g.lane < half)
+        g.tops[g.lane].merge(g.tops[g.lane + half], n_max);
+      alpaka::syncBlockThreads(acc);
     }
 
-    // Reserve a hole slot: keep the best candidate that declined the layer, even
-    // if outranked, so one branch stays open to an earlier hit being wrong.
-    if (InLayer::reserve_hole_slot && n_keep > 1) {
-      bool kept_a_decliner = false;
-      for (int k = 0; k < n_keep && !kept_a_decliner; ++k)
-        kept_a_decliner = (sel[k].node_idx < 0);
-      if (!kept_a_decliner && has_decliner) {
-        sel[n_keep - 1] = best_decliner;
+    V2p2SelTop& top = g.tops[0];
+    if (in_layer && g.lane == 0 && top.n_sel > 0) {
+      // Reserve a hole slot: keep the best candidate that declined the layer, even
+      // if outranked, so one branch stays open to an earlier hit being wrong.
+      if (InLayer::reserve_hole_slot && top.n_keep > 1) {
+        bool kept_a_decliner = false;
+        for (int k = 0; k < top.n_keep && !kept_a_decliner; ++k)
+          kept_a_decliner = (top.sel[k].node_idx < 0);
+        if (!kept_a_decliner && top.has_decliner) {
+          top.sel[top.n_keep - 1] = top.best_decliner;
+        }
       }
     }
+    alpaka::syncBlockThreads(acc);
 
     // Build the survivors as copies in the other buffer: several winners can descend from the same TrackCand --
-    // that is what branching is -- so the sources have to stay readable while the copies are made.
+    // that is what branching is -- so the sources have to stay readable while the copies are made. One survivor
+    // per lane, its HoTs after those of the better survivors.
+    const int n_keep = (in_layer && top.n_sel > 0) ? top.n_keep : 0;
+    const int hot0 = in_layer ? *seed.nHots : 0;
+    bool hot_overflow = false;
+    for (int k = g.lane; k < n_keep; k += g.n_lanes) {
+      int hot_node = hot0;
+      for (int j = 0; j < k; ++j)
+        hot_node += sel_entry_hots(top.sel[j], nodes);
+      CandBook nc;
+      CandState ns;
+      hot_overflow = !materialise_survivor(seed, top.sel[k], nodes, ctx, hot_node, nc, ns) || hot_overflow;
+      outBooks[k] = nc;
+      outStates[k] = ns;
+    }
+    if (in_layer)
+      g.tops[g.lane].hot_overflow = hot_overflow;
+    alpaka::syncBlockThreads(acc);
+    if (!in_layer || g.lane != 0)
+      return 0;
+    nan_score = top.nan_score;
+    if (top.n_sel == 0)
+      return 0;  // every TrackCand was offered to best-short and left the beam
+    int hots = 0;
+    for (int k = 0; k < n_keep; ++k) {
+      hots += sel_entry_hots(top.sel[k], nodes);
+      if (g.tops[k % g.n_lanes].hot_overflow)
+        *seed.overflowBits |= ::mkfitdev::kOverflowHotsBit;
+    }
+    *seed.nHots = std::min(hot0 + hots, seed.hotCap);
+
     // Candidates that stopped IN this layer leave the beam the same way.
+    const bool best_short = InLayer::best_short && ctx.rz.is_outward();
     int n_out = 0;
     for (int k = 0; k < n_keep; ++k) {
-      const V2p2SelEntry& e = sel[k];
-      CandBook nc = seed.cands[e.tcand_idx];
-      CandState ns = seed.states[e.tcand_idx];
-
-      if (e.node_idx >= 0) {
-        int chain[::mkfitdev::kV2p2MaxHitsPerLayer];
-        int n_chain = 0;
-        for (int ci = e.node_idx; ci >= 0 && n_chain < ::mkfitdev::kV2p2MaxHitsPerLayer; ci = nodes.parentNode(ci))
-          chain[n_chain++] = ci;
-        for (int c = n_chain - 1; c >= 0; --c) {
-          const int n = chain[c];
-          seedAddHitIdx(seed, nc, nodes.hitIndex(n), nodes.hitLayer(n), nodes.chi2(n));
-          if (c != n_chain - 1) {
-            ++nc.nOverlap;  // a second hit in one layer: an overlap, or the sister sensor of a paired entry
-          }
-        }
-        // setState(): parameters, errors and charge of the path's last node
-        const V2p2TrackState st = nodes.state(e.node_idx);
-        for (int i = 0; i < 6; ++i)
-          ns.par[i] = st.par[i];
-        for (int i = 0; i < 21; ++i)
-          ns.err[i] = st.err[i];
-        ns.charge = st.charge;
-      } else if (e.add_fake) {
-        seedAddHitIdx(seed, nc, e.fake_hit, ctx.rz.m_layer_id, 0.0f);
-      }
-
-      // score_ holds the summed layer-step score during finding; the final-pick
-      // scorer overwrites it in mergeCandsAndBestShortOne() at the end of the search.
-      nc.score = e.score;
-
-      if (best_short && seed.hot(nc.lastHitIdx).index == ::mkfitdev::kHitStopIdx) {
-        offer_best_short(seed, nc, ns);
+      if (best_short && seed.hot(outBooks[k].lastHitIdx).index == ::mkfitdev::kHitStopIdx) {
+        offer_best_short(seed, outBooks[k], outStates[k]);
         continue;
       }
-      outBooks[n_out] = nc;
-      outStates[n_out] = ns;
+      if (n_out != k) {
+        outBooks[n_out] = outBooks[k];
+        outStates[n_out] = outStates[k];
+      }
       ++n_out;
     }
     return n_out;

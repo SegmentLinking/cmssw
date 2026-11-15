@@ -24,7 +24,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   //   nodesPerSeed = node pool rows per seed (MkFitAlpakaBuildProducer parameter v2p2NodesPerSeed)
   struct V2p2Buffers {
     V2p2Buffers(Queue& queue, int maxSeeds, int preselStride, int nodesPerSeed);
-    int maxSeeds;
     int preselStride;
     int nodeCapacity;  // maxSeeds * nodesPerSeed
     V2p2SeedDeviceCollection seeds;
