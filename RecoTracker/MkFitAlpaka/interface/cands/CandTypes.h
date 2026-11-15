@@ -10,6 +10,7 @@
 
 #include <alpaka/alpaka.hpp>
 
+#include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/HitConstants.h"
 
@@ -137,6 +138,63 @@ namespace mkfitdev {
       }
     }
   };
+
+  // TrackCand::recountHolesAndOverlaps (TrackStructures.cc): the hole and overlap counts from the HoT chain, after the
+  // backward fit's outlier rejection. hot(idx) = node idx of the chain; nSeedHits = TrackBase::getNSeedHits().
+  template <typename THot>
+  ALPAKA_FN_HOST_ACC inline void recountHolesAndOverlaps(CandBook& tc, int nSeedHits, THot const& hot) {
+    // Nodes are numbered from the first of the chain; the first nSeedHits are the seed's.
+    int n_nodes = 0;
+    for (int idx = tc.lastHitIdx; idx >= 0; idx = hot(idx).prev)
+      ++n_nodes;
+    const int n_seed = nSeedHits;
+    auto found = [](const HoTNode& h) { return h.index >= 0 || h.index == kHitCCCFilterIdx; };
+
+    int n_inside = 0, n_tail = 0, n_overlap = 0;
+    bool seen_found = false;  // a found hit later in the chain
+    int later_found_layer = -1;
+    // After the seed's hits, a run of consecutive nodes on one layer is one crossing of the layer:
+    // one hole if it has a miss and no found hit. Rejecting one hit of an overlap pair leaves no
+    // hole, rejecting both leaves one.
+    int run_layer = -1;
+    bool run_found = false, run_miss = false, run_seen_found = false;
+    auto close_run = [&]() {
+      if (run_miss && !run_found)
+        ++(run_seen_found ? n_inside : n_tail);
+      run_layer = -1;
+      run_found = run_miss = false;
+    };
+    int pos = n_nodes;
+    for (int idx = tc.lastHitIdx; idx >= 0; idx = hot(idx).prev) {
+      --pos;
+      const HoTNode& h = hot(idx);
+      const bool after_seed = pos >= n_seed;
+      if (!after_seed || h.layer != run_layer) {
+        close_run();
+        if (after_seed) {
+          run_layer = h.layer;
+          run_seen_found = seen_found;
+        }
+      }
+      if (found(h)) {
+        if (h.layer == later_found_layer && after_seed)
+          ++n_overlap;
+        later_found_layer = h.layer;
+        seen_found = true;
+        if (after_seed)
+          run_found = true;
+      } else if (h.index == kHitMissIdx) {
+        if (after_seed)
+          run_miss = true;
+        else
+          ++(seen_found ? n_inside : n_tail);
+      }
+    }
+    close_run();
+    tc.nInsideMinusOne = n_inside;
+    tc.nTailMinusOne = n_tail;
+    tc.nOverlap = n_overlap;
+  }
 
   // Track state of a candidate (TrackBase: TrackState parameters/errors/charge, label_, status_).
   // err holds the 21 lower-triangle elements of the symmetric 6x6 in SMatrixSym66 / MatriplexSym order.
