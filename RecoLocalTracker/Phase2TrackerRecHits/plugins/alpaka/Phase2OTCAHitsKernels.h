@@ -7,15 +7,12 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2OTCAModuleParamsHost.h"
 
+#include "Phase2OTClusters.h"
+
 namespace ALPAKA_ACCELERATOR_NAMESPACE::phase2OTCAHits {
 
-  // the Phase2TrackerCluster1D quantities that the CPE reads, and the CA module of the cluster
-  struct Cluster {
-    uint16_t firstStrip;
-    uint16_t column;
-    uint16_t size;
-    uint16_t module;
-  };
+  // the cluster's module is its CA module
+  using phase2OTHits::Cluster;
 
   struct BeamSpotPosition {
     double x;

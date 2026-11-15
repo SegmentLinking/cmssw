@@ -1,0 +1,67 @@
+#include <cstdint>
+#include <optional>
+
+#include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
+#include "FWCore/Utilities/interface/ESGetToken.h"
+#include "FWCore/Utilities/interface/Exception.h"
+#include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
+#include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/ESProducer.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/ModuleFactory.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/host.h"
+#include "RecoLocalTracker/ClusterParameterEstimator/interface/ClusterParameterEstimator.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2OTModuleParamsHost.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPE.h"
+#include "RecoLocalTracker/Phase2TrackerRecHits/interface/alpaka/Phase2OTModuleParamsCollection.h"
+#include "RecoLocalTracker/Records/interface/TkPhase2OTCPERecord.h"
+
+#include "Phase2OTModuleParamsFill.h"
+
+namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  // The Phase2StripCPE parameters, copied from the CPE itself, the surfaces and the DetIds of all the OT modules
+  class Phase2OTModuleParamsESProducerAlpaka : public ESProducer {
+  public:
+    explicit Phase2OTModuleParamsESProducerAlpaka(edm::ParameterSet const& iConfig) : ESProducer(iConfig) {
+      auto cc = setWhatProduced(this);
+      cpeToken_ = cc.consumes(iConfig.getParameter<edm::ESInputTag>("Phase2StripCPE"));
+      geometryToken_ = cc.consumes();
+    }
+
+    static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
+      edm::ParameterSetDescription desc;
+      desc.add<edm::ESInputTag>("Phase2StripCPE", edm::ESInputTag("phase2StripCPEESProducer", "Phase2StripCPE"))
+          ->setComment("the Phase2StripCPE whose parameters are copied");
+      descriptions.addWithDefaultLabel(desc);
+    }
+
+    std::optional<Phase2OTModuleParamsHost> produce(TkPhase2OTCPERecord const& iRecord) {
+      auto const* cpe = dynamic_cast<Phase2StripCPE const*>(&iRecord.get(cpeToken_));
+      if (cpe == nullptr)
+        throw cms::Exception("Configuration")
+            << "Phase2OTModuleParamsESProducerAlpaka: the CPE is not a Phase2StripCPE";
+      auto const& detUnits = iRecord.get(geometryToken_).detUnits();
+      const uint32_t firstModuleIndex = cpe->firstModuleIndex();
+
+      Phase2OTModuleParamsHost product(cms::alpakatools::host(), detUnits.size() - firstModuleIndex);
+      auto view = product.view();
+      view.firstModuleIndex() = firstModuleIndex;
+      for (uint32_t index = firstModuleIndex; index < detUnits.size(); ++index) {
+        auto module = view[index - firstModuleIndex];
+        phase2OTHits::fillModuleParams(module, *detUnits[index], *cpe);
+        module.detId() = detUnits[index]->geographicalId().rawId();
+      }
+      return product;
+    }
+
+  private:
+    edm::ESGetToken<ClusterParameterEstimator<Phase2TrackerCluster1D>, TkPhase2OTCPERecord> cpeToken_;
+    edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geometryToken_;
+  };
+
+}  // namespace ALPAKA_ACCELERATOR_NAMESPACE
+
+DEFINE_FWK_EVENTSETUP_ALPAKA_MODULE(Phase2OTModuleParamsESProducerAlpaka);

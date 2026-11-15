@@ -1,15 +1,12 @@
 #include <cstdint>
 #include <optional>
 
-#include "DataFormats/GeometrySurface/interface/SOARotation.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/ParameterSetDescription.h"
 #include "FWCore/Utilities/interface/ESGetToken.h"
 #include "FWCore/Utilities/interface/Exception.h"
-#include "Geometry/CommonTopologies/interface/PixelGeomDetUnit.h"
 #include "Geometry/Records/interface/TrackerDigiGeometryRecord.h"
-#include "Geometry/TrackerGeometryBuilder/interface/RectangularPixelPhase2Topology.h"
 #include "Geometry/TrackerGeometryBuilder/interface/TrackerGeometry.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/ESProducer.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/ModuleFactory.h"
@@ -18,11 +15,11 @@
 #include "RecoLocalTracker/ClusterParameterEstimator/interface/ClusterParameterEstimator.h"
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2OTCAModuleParamsHost.h"
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPE.h"
-#include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPEModuleParams.h"
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/alpaka/Phase2OTCAModuleParamsCollection.h"
 #include "RecoLocalTracker/Records/interface/TkPhase2OTCPERecord.h"
 
 #include "Phase2OTCAModules.h"
+#include "Phase2OTModuleParamsFill.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -51,26 +48,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
       Phase2OTCAModuleParamsHost product(cms::alpakatools::host(), modules.size());
       auto view = product.view();
-      for (uint32_t index = 0; index < modules.size(); ++index) {
-        auto const& det = static_cast<PixelGeomDetUnit const&>(*modules[index]);
-        // the module's own topology, not the proxy that Phase2StripCPE::Param::topology points to
-        auto const* topology =
-            dynamic_cast<RectangularPixelPhase2Topology const*>(&det.specificType().specificTopology());
-        if (topology == nullptr)
-          throw cms::Exception("BadGeometry")
-              << "Phase2OTCAModuleParamsESProducerAlpaka: module " << det.geographicalId().rawId()
-              << " does not have a RectangularPixelPhase2Topology";
-        auto const& param = cpe->moduleParam(det.index());
-        auto const& surface = det.surface();
-        auto module = view[index];
-        module.cpe() = phase2StripCPE::moduleParams(*topology, param.coveredStrips);
-        module.xerrLocal() = param.localErr.xx();
-        module.yerrLocal() = param.localErr.yy();
-        module.frame() = SOAFrame<float>(surface.position().x(),
-                                         surface.position().y(),
-                                         surface.position().z(),
-                                         SOARotation<float>(surface.rotation()));
-      }
+      for (uint32_t index = 0; index < modules.size(); ++index)
+        phase2OTHits::fillModuleParams(view[index], *modules[index], *cpe);
       return product;
     }
 

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#include "DataFormats/GeometrySurface/interface/SOARotation.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2StripCPEPosition.h"
 
@@ -14,12 +15,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::testPhase2StripCPEPosition {
     uint16_t size;
   };
 
-  // phase2StripCPE::localPosition of each cluster, computed on the device
-  void localPositions(Queue& queue,
-                      phase2StripCPE::ModuleParams const& params,
-                      ClusterInput const* clusters,
-                      phase2StripCPE::LocalPosition* positions,
-                      uint32_t size);
+  struct GlobalPosition {
+    float x;
+    float y;
+    float z;
+  };
+
+  // phase2StripCPE::localPosition of each cluster on the module surface frame, computed on the device
+  void globalPositions(Queue& queue,
+                       phase2StripCPE::ModuleParams const& params,
+                       SOAFrame<float> const& frame,
+                       ClusterInput const* clusters,
+                       GlobalPosition* positions,
+                       uint32_t size);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::testPhase2StripCPEPosition
 

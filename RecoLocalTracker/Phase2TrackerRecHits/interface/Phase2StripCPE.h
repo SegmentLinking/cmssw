@@ -37,6 +37,8 @@ public:
 
   // the parameters of an OT module, by GeomDetUnit::index()
   Param const& moduleParam(unsigned int detIndex) const { return m_Params[detIndex - m_off]; }
+  // the GeomDetUnit::index() of the first OT module; the OT modules follow it up to the end of the detUnits
+  unsigned int firstModuleIndex() const { return m_off; }
 
 private:
   void fillParam();

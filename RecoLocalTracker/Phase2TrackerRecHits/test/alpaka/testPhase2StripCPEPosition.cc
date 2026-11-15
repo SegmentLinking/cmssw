@@ -1,6 +1,7 @@
-// The Phase2StripCPE cluster position computed on the device (phase2StripCPE::localPosition) against
-// RectangularPixelPhase2Topology::localX / localY on the host, as Phase2StripCPE uses them: bitwise on the CPU
-// backends, within kGpuTolerance on the GPU backends (the device compiler may contract a*b + c*d differently).
+// The Phase2StripCPE cluster position computed on the device (phase2StripCPE::localPosition, then the module SOAFrame)
+// against RectangularPixelPhase2Topology::localX / localY on the host, as Phase2StripCPE uses them, then the module
+// surface, as Phase2TrackerRecHit1D::globalPosition: bitwise on the CPU backends, within kGpuTolerance on the GPU
+// backends (the device compiler may contract a*b + c*d differently). The identity surface checks the local position.
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -13,6 +14,10 @@
 
 #include <alpaka/alpaka.hpp>
 
+#include "DataFormats/GeometrySurface/interface/GloballyPositioned.h"
+#include "DataFormats/GeometrySurface/interface/SOARotation.h"
+#include "DataFormats/GeometryVector/interface/GlobalPoint.h"
+#include "DataFormats/GeometryVector/interface/LocalPoint.h"
 #include "DataFormats/Phase2TrackerCluster/interface/Phase2TrackerCluster1D.h"
 #include "FWCore/Utilities/interface/stringize.h"
 #include "Geometry/TrackerGeometryBuilder/interface/RectangularPixelPhase2Topology.h"
@@ -26,6 +31,7 @@
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
 using testPhase2StripCPEPosition::ClusterInput;
+using testPhase2StripCPEPosition::GlobalPosition;
 
 namespace {
 
@@ -38,6 +44,15 @@ namespace {
     float bigPitchX, bigPitchY;
     int rocsX, rocsY;
   };
+
+  // a module at radius r, azimuth phi and height z, its local x along phi, turned by tilt around it
+  GloballyPositioned<float> moduleSurface(float r, float phi, float z, float tilt) {
+    const double cosPhi = std::cos(phi), sinPhi = std::sin(phi), cosTilt = std::cos(tilt), sinTilt = std::sin(tilt);
+    // rows: the local axes in global coordinates
+    const TkRotation<float> rotation(
+        -sinPhi, cosPhi, 0., -cosPhi * sinTilt, -sinPhi * sinTilt, cosTilt, cosPhi * cosTilt, sinPhi * cosTilt, sinTilt);
+    return GloballyPositioned<float>(GloballyPositioned<float>::PositionType(r * cosPhi, r * sinPhi, z), rotation);
+  }
 
 }  // namespace
 
@@ -59,6 +74,17 @@ int main() {
                                                   {960, 32, 0.01f, 0.1467f, 120, 16, 1, 1, 0.0213f, 0.25f, 8, 2}};
   const std::vector<float> coveredStrips = {-0.37f, 0.f, 0.21f, 1.3f};
   const std::vector<uint16_t> sizes = {1, 2, 3, 4, 7};
+  // the identity, barrel modules flat and tilted, and a module facing the beam
+  const std::vector<GloballyPositioned<float>> surfaces = {
+      GloballyPositioned<float>(GloballyPositioned<float>::PositionType(0, 0, 0), TkRotation<float>()),
+      moduleSurface(23.f, 0.3f, 11.7f, 0.f),
+      moduleSurface(68.4f, -2.1f, -54.2f, 0.f),
+      moduleSurface(35.9f, 1.7f, 31.3f, 0.82f),
+      moduleSurface(80.f, -0.9f, 110.f, 1.5707964f)};
+  std::vector<std::pair<float, GloballyPositioned<float>>> cases;
+  for (float covered : coveredStrips)
+    for (auto const& surface : surfaces)
+      cases.emplace_back(covered, surface);
 
   int failures = 0;
   for (auto const& device : devices) {
@@ -87,13 +113,17 @@ int main() {
       auto clustersHost = cms::alpakatools::make_host_buffer<ClusterInput[]>(queue, nInputs);
       std::memcpy(clustersHost.data(), inputs.data(), nInputs * sizeof(ClusterInput));
       auto clustersDevice = cms::alpakatools::make_device_buffer<ClusterInput[]>(queue, nInputs);
-      auto positionsDevice = cms::alpakatools::make_device_buffer<phase2StripCPE::LocalPosition[]>(queue, nInputs);
-      auto positionsHost = cms::alpakatools::make_host_buffer<phase2StripCPE::LocalPosition[]>(queue, nInputs);
+      auto positionsDevice = cms::alpakatools::make_device_buffer<GlobalPosition[]>(queue, nInputs);
+      auto positionsHost = cms::alpakatools::make_host_buffer<GlobalPosition[]>(queue, nInputs);
       alpaka::memcpy(queue, clustersDevice, clustersHost);
-      for (float covered : coveredStrips) {
+      for (auto const& [covered, surface] : cases) {
         const phase2StripCPE::ModuleParams params = phase2StripCPE::moduleParams(topology, covered);
-        testPhase2StripCPEPosition::localPositions(
-            queue, params, clustersDevice.data(), positionsDevice.data(), nInputs);
+        const SOAFrame<float> frame(surface.position().x(),
+                                    surface.position().y(),
+                                    surface.position().z(),
+                                    SOARotation<float>(surface.rotation()));
+        testPhase2StripCPEPosition::globalPositions(
+            queue, params, frame, clustersDevice.data(), positionsDevice.data(), nInputs);
         alpaka::memcpy(queue, positionsHost, positionsDevice);
         alpaka::wait(queue);
         for (uint32_t index = 0; index < nInputs; ++index) {
@@ -102,8 +132,10 @@ int main() {
           // Phase2StripCPE::localParameters
           const float referenceX = topology.localX(cluster.center() - 0.5f * covered);
           const float referenceY = topology.localY(float(cluster.column()) + 0.5f);
-          for (auto [reference, value] :
-               {std::pair{referenceX, positionsHost[index].x}, std::pair{referenceY, positionsHost[index].y}}) {
+          const GlobalPoint global = surface.toGlobal(LocalPoint(referenceX, referenceY, 0.f));
+          for (auto [reference, value] : {std::pair{global.x(), positionsHost[index].x},
+                                          std::pair{global.y(), positionsHost[index].y},
+                                          std::pair{global.z(), positionsHost[index].z}}) {
             ++compared;
             if (std::memcmp(&reference, &value, sizeof(float)) != 0) {
               ++different;
