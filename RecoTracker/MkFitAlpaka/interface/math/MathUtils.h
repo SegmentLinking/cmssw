@@ -3,7 +3,7 @@
 
 // Portable copies of the small inline helpers of MkFitCore:
 //   RecoTracker/MkFitCore/interface/MathInlineCore.h       hipo
-//   RecoTracker/MkFitCore/interface/MathInlineFunctions.h  squashPhiMinimal, getPhi, getTheta, getEta
+//   RecoTracker/MkFitCore/interface/MathInlineFunctions.h  squashPhiGeneral, squashPhiMinimal, getPhi, getTheta, getEta
 // Same formulas (vdt calls go to the portable mkfitdev::vdt).
 
 #include <cmath>
@@ -28,6 +28,10 @@ namespace mkfitdev {
   }
 
   // ---- MathInlineFunctions.h
+  ALPAKA_FN_HOST_ACC inline float squashPhiGeneral(float phi) {
+    return phi - std::floor(0.5 * Const::InvPI * (phi + Const::PI)) * Const::TwoPI;
+  }
+
   ALPAKA_FN_HOST_ACC inline float squashPhiMinimal(float phi) {
     return phi >= Const::PI ? phi - Const::TwoPI : (phi < -Const::PI ? phi + Const::TwoPI : phi);
   }

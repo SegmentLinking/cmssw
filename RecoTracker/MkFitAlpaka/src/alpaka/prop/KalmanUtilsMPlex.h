@@ -231,14 +231,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 #include "OutErrCCSTransp.ah"
     }
 
-    // Matriplex::invertCramerSym for 2x2 (MatriplexSym.h CramerInverterSym<T, 2, N>): determinant in double.
+    // Matriplex::invertCramerSym for 2x2 (MatriplexSym.h CramerInverterSym<T, 2, N>): determinant in double, also
+    // returned in determ when given.
     template <idx_t N>
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void invertCramerSym(MPlex2S<N>& A) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void invertCramerSym(MPlex2S<N>& A, double* determ = nullptr) {
       typedef float TT;
       float* a = A.fArray;
       for (idx_t n = 0; n < N; ++n) {
         // Force determinant calculation in double precision.
         const double det = (double)a[0 * N + n] * a[2 * N + n] - (double)a[1 * N + n] * a[1 * N + n];
+        if (determ)
+          determ[n] = det;
+
         const TT s = TT(1) / det;
         const TT tmp = s * a[2 * N + n];
         a[1 * N + n] *= -s;

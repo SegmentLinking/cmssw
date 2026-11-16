@@ -8,10 +8,16 @@
 
 // MPLEX_SIMD: MkFitCore writes "#pragma omp simd" (built with -fopenmp-simd) in front of the lane loops.
 // Here: the same pragma for the host compiler (the CPU backends build with -fopenmp-simd), nothing for device compilers.
+// MPLEX_UNROLL: complete unrolling of a short fixed loop inside a lane loop (up to the trip count in the pragma; a
+// longer loop is unrolled only partly), so that the host compiler vectorizes the lane loop as one body; nothing for
+// device compilers, which unroll such loops by themselves.
+#define MPLEX_PRAGMA(x) _Pragma(#x)
 #if defined(__CUDACC__) || defined(__HIPCC__) || defined(__clang__) || !defined(__GNUC__)
 #define MPLEX_SIMD
+#define MPLEX_UNROLL
 #else
 #define MPLEX_SIMD _Pragma("omp simd")
+#define MPLEX_UNROLL MPLEX_PRAGMA(GCC unroll 16)
 #endif
 
 // MPLEX_ALIGN for x86-64-v3 (AVX2) is 32 bytes.

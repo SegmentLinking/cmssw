@@ -51,6 +51,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   using ::mkfitdev::getPhi;
   using ::mkfitdev::getTheta;
   using ::mkfitdev::hipo;
+  using ::mkfitdev::squashPhiGeneral;
   using ::mkfitdev::squashPhiMinimal;
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev
