@@ -9,8 +9,9 @@
 //   capacity, no page faults from fresh buffers); GPU backends allocate per event from the caching allocator. Rows
 //   past the event's seed count are never read.
 // - The engine tables are built once per IOV and device. The event path has no host synchronization: the seed count
-//   and the survivor counts of both filters stay on the device, and grids are sized from the seed capacity.
+//   stays on the device, the filters work in place, and grids are sized from the seed capacity.
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <limits>
 #include <map>
@@ -151,51 +152,67 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       int nodesPerSeed;
     };
 
+    // HoT pool of the build (module parameters hotsPerSeed, hotsHomePerSeed, hotExtensionsPerSeed) for a number of seed
+    // rows: their home rows, then hotExtensionsPerSeed extension slots per seed row, rounded up
+    struct HotPoolConfig {
+      int perSeed;
+      int home;
+      double extensionsPerSeed;
+      ::mkfitdev::HotPoolLayout layout(int seedRows) const {
+        return {perSeed, home, home < perSeed ? int(std::ceil(seedRows * extensionsPerSeed)) : 0};
+      }
+    };
+
     // Candidate scratch set (clone engine: candidate books, step scratch and the K2 lists; v2p2: candidate books
     // and the v2p2 search scratch). Reused only on CPU backends, whose blocking queues have finished the work when
     // produce() returns.
     struct BuildScratch {
       static constexpr uint32_t kCapacityGranularity = 1024;  // reused capacity: a multiple of this many seeds
 
-      int cap = 0, hps = 0;
+      int cap = 0;
+      ::mkfitdev::HotPoolLayout hotPool{0, 0, 0};
       bool v2p2 = false;
       V2p2ScratchSize v2size{0, 0};
-      std::optional<mkfitdev::EngineBuffers> buffers, work;
+      std::optional<mkfitdev::EngineBuffers> buffers;
       std::optional<PortableCollection<::mkfitdev::SelListSoA>> list;
       std::optional<PortableCollection<::mkfitdev::PropStateSoA>> props;
       std::optional<PortableCollection<::mkfitdev::SelHitsSoA>> sels;
       std::optional<mkfitdev::V2p2Buffers> v2;
 
       // Capacity for nSeeds seeds: exact without reuse (the per-event path), else grow-only with 25% headroom.
-      void prepare(Queue& queue, int nSeeds, int hotsPerSeed, bool reuse, const V2p2ScratchSize* v2p2Size) {
+      void prepare(Queue& queue, int nSeeds, HotPoolConfig const& hotCfg, bool reuse, const V2p2ScratchSize* v2p2Size) {
         const bool useV2p2 = v2p2Size != nullptr;
         const bool v2p2Changed = useV2p2 != v2p2 || (useV2p2 && (v2p2Size->preselStride != v2size.preselStride ||
                                                                  v2p2Size->nodesPerSeed != v2size.nodesPerSeed));
-        if (!reuse || nSeeds > cap || hotsPerSeed != hps || v2p2Changed || !buffers) {
+        const ::mkfitdev::HotPoolLayout reusedPool = hotCfg.layout(cap);
+        const bool hotChanged = reusedPool.perSeed != hotPool.perSeed || reusedPool.home != hotPool.home ||
+                                reusedPool.extSlots != hotPool.extSlots;
+        if (!reuse || nSeeds > cap || hotChanged || v2p2Changed || !buffers) {
           cap = reuse ? int(cms::alpakatools::divide_up_by(uint32_t(nSeeds + nSeeds / 4), kCapacityGranularity) *
                             kCapacityGranularity)
                       : nSeeds;
-          hps = hotsPerSeed;
+          hotPool = hotCfg.layout(cap);
+          if (int64_t(cap) * hotPool.home + int64_t(hotPool.extSlots) * (hotPool.perSeed - hotPool.home) >
+              std::numeric_limits<int32_t>::max())
+            throw cms::Exception("Configuration") << "hotsPerSeed = " << hotPool.perSeed << " with " << cap
+                                                  << " seed rows exceeds the HoT pool's row range";
           v2p2 = useV2p2;
           v2size = useV2p2 ? *v2p2Size : V2p2ScratchSize{0, 0};
           buffers.reset();  // free before allocating the larger set
-          work.reset();
           list.reset();
           props.reset();
           sels.reset();
           v2.reset();
           if (useV2p2) {
             // the constructor zeroes the seed rows; no clone-engine step scratch, no K2 lists
-            buffers.emplace(queue, cap, hps, mkfitdev::EngineBuffers::NoStepScratch{});
-            work.emplace(queue, cap, hps, mkfitdev::EngineBuffers::NoStepScratch{});
+            buffers.emplace(queue, cap, hotPool, mkfitdev::EngineBuffers::NoStepScratch{});
             if (int64_t(cap) * v2size.nodesPerSeed > std::numeric_limits<int32_t>::max())
               throw cms::Exception("Configuration") << "v2p2NodesPerSeed = " << v2size.nodesPerSeed << " with " << cap
                                                     << " seed rows exceeds the node pool's row range";
             v2.emplace(queue, cap, v2size.preselStride, v2size.nodesPerSeed);  // one set for both searches
             return;
           }
-          buffers.emplace(queue, cap, hps);              // the constructor zeroes the seed rows
-          work.emplace(queue, cap, hps, buffers->step);  // the searches of both sets run one after the other
+          buffers.emplace(queue, cap, hotPool);  // the constructor zeroes the seed rows
           const int nList = cap * ::mkfitdev::kMaxCandsPerSeed;
           list.emplace(queue, nList);
           props.emplace(queue, nList);
@@ -203,11 +220,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           return;
         }
         // reuse: the state of freshly constructed EngineBuffers (seed rows zeroed, no device row count)
-        for (mkfitdev::EngineBuffers* set : {&*buffers, &*work}) {
-          auto seedsBuf = set->seeds.buffer();
-          alpaka::memset(queue, seedsBuf, 0);
-          set->nRowsDev = nullptr;
-        }
+        auto seedsBuf = buffers->seeds.buffer();
+        alpaka::memset(queue, seedsBuf, 0);
+        buffers->nRowsDev = nullptr;
       }
     };
   }  // namespace
@@ -224,7 +239,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           esToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("esData"))},
           esHostToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("esData"))},
           tracksToken_{produces()},
-          hotsPerSeed_{iConfig.getParameter<int>("hotsPerSeed")},
+          hotPool_{iConfig.getParameter<int>("hotsPerSeed"),
+                   iConfig.getParameter<int>("hotsHomePerSeed"),
+                   iConfig.getParameter<double>("hotExtensionsPerSeed")},
           removeDuplicates_{iConfig.getParameter<bool>("removeDuplicates")},
           groupScan_{iConfig.getParameter<bool>("k2GroupScan")},
           useV2p2_{iConfig.getParameter<std::string>("buildingRoutine") == "v2p2"},
@@ -238,9 +255,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       moduleCfg_.removeDuplicates = removeDuplicates_;
       moduleCfg_.backwardFitInCMSSW = iConfig.getParameter<bool>("backwardFitInCMSSW");
       // the int16_t bookkeeping columns of SeedCandsSoA (lastHitIdxBeforeBkw, ...) index the pool
-      if (hotsPerSeed_ < 1 || hotsPerSeed_ > std::numeric_limits<int16_t>::max())
+      if (hotPool_.perSeed < 1 || hotPool_.perSeed > std::numeric_limits<int16_t>::max())
         throw cms::Exception("Configuration")
-            << "hotsPerSeed = " << hotsPerSeed_ << " is outside [1, " << std::numeric_limits<int16_t>::max() << "]";
+            << "hotsPerSeed = " << hotPool_.perSeed << " is outside [1, " << std::numeric_limits<int16_t>::max() << "]";
+      if (hotPool_.home < 1 || hotPool_.home > hotPool_.perSeed)
+        throw cms::Exception("Configuration")
+            << "hotsHomePerSeed = " << hotPool_.home << " is outside [1, hotsPerSeed = " << hotPool_.perSeed << "]";
+      if (!(hotPool_.extensionsPerSeed >= 0. && hotPool_.extensionsPerSeed <= 1.))
+        throw cms::Exception("Configuration")
+            << "hotExtensionsPerSeed = " << hotPool_.extensionsPerSeed << " is outside [0, 1]";
       if (v2p2NodesPerSeed_ < 1)
         throw cms::Exception("Configuration") << "v2p2NodesPerSeed = " << v2p2NodesPerSeed_ << " must be at least 1";
     }
@@ -256,7 +279,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "beam spot of the MkFitEventOfHitsProducer (backward-search gate, pT-adaptive duplicate cleaner)");
       desc.add("esData", edm::ESInputTag{"", ""})->setComment("MkFitAlpakaESProducer ComponentName");
       desc.add("hotsPerSeed", ::mkfitdev::kDefaultHotsPerSeed)
-          ->setComment("HoT pool rows per seed (overflow: seed failed and counted)");
+          ->setComment(
+              "HoT nodes a seed can hold: its home rows and an extension slot (overflow: seed failed and counted)");
+      desc.add("hotsHomePerSeed", ::mkfitdev::kDefaultHotsHomePerSeed)
+          ->setComment("HoT pool home rows per seed; a seed that needs more takes an extension slot");
+      desc.add("hotExtensionsPerSeed", ::mkfitdev::kDefaultHotExtensionsPerSeed)
+          ->setComment(
+              "HoT pool extension slots (hotsPerSeed - hotsHomePerSeed rows each) per seed, rounded up; with none "
+              "left a seed stays at its home rows (overflow: seed failed and counted)");
       desc.add("removeDuplicates", true);
       // MkFitProducer parameters, accepted only inside the validated envelope (interface/SupportedConfig.h)
       desc.add("clustersToSkip", edm::InputTag())->setComment("must be empty: no hit mask on the device");
@@ -281,7 +311,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const auto& esD = iSetup.getData(esToken_);
       const ::mkfitdev::ESView esView = esD.view();
       const int nSeeds = int(seedsIn.size());
-      const int hps = hotsPerSeed_;
       ::mkfitdev::checkSupportedBuildConfig(iSetup.getData(esHostToken_).hostConfigValue(),
                                             moduleCfg_);  // no allocation when it passes
       // per-event status product, zeroed here, counters collected after the tail
@@ -322,9 +351,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       const auto pooled = reuse ? scratch_.makeOrGet([] { return new BuildScratch(); }) : nullptr;
       BuildScratch& scratch = reuse ? *pooled : eventScratch;
       const V2p2ScratchSize v2size{engineTables.v2cfg.vp.max_presel_hits, v2p2NodesPerSeed_};
-      scratch.prepare(queue, nSeeds, hps, reuse, useV2p2_ ? &v2size : nullptr);
+      scratch.prepare(queue, nSeeds, hotPool_, reuse, useV2p2_ ? &v2size : nullptr);
       mkfitdev::EngineBuffers& buffers = *scratch.buffers;
-      mkfitdev::EngineBuffers& work = *scratch.work;
+      // the extension slots this event may use follow its seed count only, the same on every backend (no more than the
+      // slots allocated for the capacity)
+      ::mkfitdev::HotPoolLayout eventHotPool = buffers.hotPool;
+      eventHotPool.extSlots = hotPool_.layout(nSeeds).extSlots;
       mkfitdev::seeds::importSeeds(queue,
                                    seedsD.view(),
                                    nSeeds,
@@ -332,7 +364,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                    buffers.seeds.view(),
                                    buffers.slots.view(),
                                    buffers.hots.view(),
-                                   hps,
+                                   eventHotPool,
                                    hitPos);
       buffers.nRowsDev = &seedsD.view().nKept();
 
@@ -364,7 +396,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         dupClean.bsY = gate.bsY;
       }
 
-      mkfitdev::EngineBuffers* resPtr = nullptr;
       if (!useV2p2_) {
         // 3. K2 (select) through the engine bridge; list capacity nSeeds * kMaxCandsPerSeed, count on the device
         auto& list = *scratch.list;
@@ -384,23 +415,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             mkfitdev::makeEngineBackwardFit(in, engineTables.bkfitPF, engineTables.bkfitOutliers);
 
         // 4. clone engine, sync-free
-        resPtr = &mkfitdev::engineRunChainAsync(queue,
-                                                buffers,
-                                                work,
-                                                engineTables.fwd,
-                                                engineTables.bkw,
-                                                k2,
-                                                k2,
-                                                bkfit,
-                                                in,
-                                                in,
-                                                engineTables.pc,
-                                                engineTables.ipFwd,
-                                                engineTables.ipBkw,
-                                                engineTables.minHitsQFPre,
-                                                engineTables.minHitsQFPost,
-                                                nSeeds,
-                                                gate);
+        mkfitdev::engineRunChainAsync(queue,
+                                      buffers,
+                                      engineTables.fwd,
+                                      engineTables.bkw,
+                                      k2,
+                                      k2,
+                                      bkfit,
+                                      in,
+                                      in,
+                                      engineTables.pc,
+                                      engineTables.ipFwd,
+                                      engineTables.ipBkw,
+                                      engineTables.minHitsQFPre,
+                                      engineTables.minHitsQFPost,
+                                      nSeeds,
+                                      gate);
       } else {
         // 3-4. v2p2 search (findTracksStandardv2p2 both ways) and its backward fit in the same chain, sync-free
         const mkfitdev::V2p2EventInputs v2in{in, ev.layers(), ev.binnedHits(), ev.bins(), esView.layers};
@@ -410,30 +440,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             mkfitdev::makeV2p2SearchFn(v2, *engineTables.v2Fwd, *engineTables.v2Bkw, v2in, engineTables.v2cfg);
         const mkfitdev::EngineBackwardFitFn bkfit =
             mkfitdev::makeV2p2BackwardFit(in, engineTables.bkfitPF, engineTables.bkfitOutliers);
-        resPtr = &mkfitdev::engineRunChainAsync(queue,
-                                                buffers,
-                                                work,
-                                                search,
-                                                search,
-                                                bkfit,
-                                                engineTables.minHitsQFPre,
-                                                engineTables.minHitsQFPost,
-                                                nSeeds,
-                                                gate);
+        mkfitdev::engineRunChainAsync(
+            queue, buffers, search, search, bkfit, engineTables.minHitsQFPre, engineTables.minHitsQFPost, nSeeds, gate);
       }
-      mkfitdev::EngineBuffers& res = *resPtr;
 
-      // 5. tail: export + duplicate cleaner, NO filter; rows = the post-filter survivors
+      // 5. tail: export + duplicate cleaner, NO filter; rows with candidates = the post-filter survivors
       auto brokenChains = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
       alpaka::memset(queue, brokenChains, 0);
       mkfitdev::TrackSoADeviceCollection exportedD(queue, nSeeds);
       mkfitdev::TrackSoADeviceCollection finalD(queue, nSeeds);
       mkfitdev::seeds::exportAndClean(queue,
-                                      res.seeds.const_view(),
-                                      res.slots.const_view(),
-                                      res.hots.const_view(),
-                                      hps,
-                                      res.nRowsDev,
+                                      buffers.seeds.const_view(),
+                                      buffers.slots.const_view(),
+                                      buffers.hots.const_view(),
+                                      buffers.nRowsDev,
                                       nSeeds,
                                       removeDuplicates_,
                                       dupClean,
@@ -445,10 +465,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         src.add(seedsD.view().metadata().addressOf_nOverflowHits(), ::mkfitdev::kSeedHitsTruncated);
         src.add(ev.layers().metadata().addressOf_nOverflowFirst(), ::mkfitdev::kEohOverflowFirst);
         src.add(ev.layers().metadata().addressOf_nOverflowCount(), ::mkfitdev::kEohOverflowCount);
-        // the engine's compactions carry the seed-pool counters forward: the result buffer holds the totals
-        src.add(res.seeds.view().metadata().addressOf_nOverflowHots(), ::mkfitdev::kHotOverflowSeeds);
+        src.add(buffers.seeds.view().metadata().addressOf_nOverflowHots(), ::mkfitdev::kHotOverflowSeeds);
         // repack applied more than once (engine bit) or a broken HoT chain at export (exportAndClean)
-        src.add(res.seeds.view().metadata().addressOf_nRepackRepeat(), ::mkfitdev::kRepackErrors);
+        src.add(buffers.seeds.view().metadata().addressOf_nRepackRepeat(), ::mkfitdev::kRepackErrors);
         src.add(brokenChains.data(), ::mkfitdev::kRepackErrors);
         // the cleaner copies the export counters into the final TrackSoA
         src.add(finalD.view().metadata().addressOf_nOverflowTracks(), ::mkfitdev::kTrackOverflow);
@@ -494,7 +513,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::ESGetToken<::mkfitdev::ESData<Device>, TrackerRecoGeometryRecord> esToken_;
     const edm::ESGetToken<::mkfitdev::ESDataHost, TrackerRecoGeometryRecord> esHostToken_;
     const device::EDPutToken<mkfitdev::TrackSoADeviceCollection> tracksToken_;
-    const int hotsPerSeed_;
+    const HotPoolConfig hotPool_;
     const bool removeDuplicates_;
     const bool groupScan_;
     const bool useV2p2_;

@@ -22,6 +22,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandsSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
+#include "RecoTracker/MkFitAlpaka/src/alpaka/cands/CandSeedOpsKernels.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/seeds/SeedFunctions.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
@@ -120,7 +121,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                                   int32_t const* __restrict__ binCount,
                                   int32_t* __restrict__ binStart,
                                   SeedCandsSoA::View sc,
-                                  int32_t hotsPerSeed) const {
+                                  HotPoolLayout hotPool) const {
       auto& partial = alpaka::declareSharedVar<int32_t[kScanBlock + 1], __COUNTER__>(acc);
       const int32_t n = seeds.nSeeds();
       blockExclusiveScan(
@@ -139,7 +140,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
         binStart[kSeedNBins] = total;
         seeds.nKept() = total;
         // cands SoA scalars (before S5 counts into them)
-        sc.hotsPerSeed() = hotsPerSeed;
+        sc.hotsPerSeed() = hotPool.perSeed;
+        sc.hotsHome() = hotPool.home;
+        sc.hotExtSlots() = hotPool.extSlots;
+        sc.nHotExt() = 0;
         sc.nOverflowHots() = 0;
         for (int r = 0; r < kNSeedRegions; ++r) {
           seeds.regionEnd().v[r] = binStart[(r + 1) * kSeedBinsPerRegion];
@@ -205,10 +209,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                                   SeedSoAConstView seeds,
                                   SeedCandsSoA::View sc,
                                   CandSlotsSoA::View slots,
-                                  CandHotsSoA::View hots,
-                                  int32_t hotsPerSeed) const {
+                                  CandHotsSoA::View hots) const {
       const int32_t n = seeds.nKept();
       const int32_t cap = sc.metadata().size();
+      const HotPool pool = hotPoolOf(sc, hots);
       for (int32_t p : cms::alpakatools::uniform_elements(acc, cap)) {
         if (p >= n) {  // unused rows: no candidates (per-seed kernels may loop over the capacity)
           sc[p].nCands() = 0;
@@ -216,6 +220,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
           sc[p].state() = kFinished;
           sc[p].overflowBits() = 0;
           sc[p].bestShortValid() = 0;
+          sc[p].hotExt() = -1;
           continue;
         }
         const int32_t i = seeds[p].order();
@@ -231,6 +236,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
         sc[p].nActive() = 0;
         sc[p].seedOriginIdx() = seeds[i].cleanIdx();
         sc[p].nHots() = 0;
+        sc[p].hotExt() = -1;
         sc[p].nExtras() = 0;
         sc[p].nUpdates() = 0;
         CandBook bs{};
@@ -267,10 +273,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
         candBook.originIndex = -1;
         candBook.overlaps.reset();
 
+        reserveHots(acc, pool, p, nh);
         SeedCandsRef candsRef;
-        candsRef.hots = &hots[hotRow(p, 0, hotsPerSeed)].node();
-        candsRef.hotOffset = 0;
-        candsRef.hotCap = hotsPerSeed;
+        attachHots(pool, p, candsRef);
         candsRef.nHots = &sc[p].nHots();
         candsRef.overflowBits = &sc[p].overflowBits();
         for (int h = 0; h < nh; ++h)
@@ -321,7 +326,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                                   SeedCandsSoA::ConstView sc,
                                   CandSlotsSoA::ConstView slots,
                                   CandHotsSoA::ConstView hots,
-                                  int32_t hotsPerSeed,
                                   int32_t const* __restrict__ nSeedsPtr,
                                   int32_t const* __restrict__ dest,
                                   TrackSoAView out,
@@ -362,7 +366,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
         int ch = candBook.lastHitIdx;
         int good = nFound;
         while (--nh >= 0 && ch >= 0) {
-          const HoTNode& node = hots.metadata().addressOf_node()[hotRow(s, ch, hotsPerSeed)];
+          const HoTNode& node = hots.metadata().addressOf_node()[hotNodeRow(sc, s, ch)];
           if (node.index >= 0) {
             --good;
             if (good < nKeep) {

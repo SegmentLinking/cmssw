@@ -32,6 +32,11 @@ namespace mkfitdev {
 
   static_assert(kMaxOptsPerSeed <= 64, "SeedSelIO::liveOpts has one bit per option slot");
 
+  // HoT nodes selectSeedCandidates can append for one seed: a hit and an overlap hit per pushed candidate (at most
+  // maxCands of them), and the stop of an accepted best-short candidate
+  ALPAKA_FN_HOST_ACC inline constexpr int selMaxHots(int maxCands) { return 2 * maxCands + 1; }
+  constexpr int kMaxSelHots = selMaxHots(kMaxCandsPerSeed);
+
   // Per-seed I/O, plain pointers into the seed's rows (see CandsSoA.h for the row conventions).
   struct SeedSelIO {
     // inputs
@@ -48,8 +53,9 @@ namespace mkfitdev {
     CandBook* bestShort;
     int8_t* bestShortValid;
     int32_t* bestShortSrc;  // set to the parent index when the best-short candidate is replaced
-    HoTNode* hots;          // node n lives at hots[n - hotOffset]
-    int hotOffset;
+    HoTNode* hots;          // node n < hotHome lives at hots[n]
+    HoTNode* extHots;       // node n >= hotHome at extHots[n - hotHome] (nullptr: no extension)
+    int hotHome;
     int hotCap;  // node indices must stay below hotCap
     int32_t* nHots;
     // outputs
@@ -59,13 +65,15 @@ namespace mkfitdev {
     CandUpdate* upd;  // [maxCandsPerSeed] kalman update list of this seed
     int32_t* nUpd;
     uint32_t* overflowBits;
+
+    ALPAKA_FN_HOST_ACC inline HoTNode& hot(int n) const { return hotNodeAt(hots, extHots, hotHome, n); }
   };
 
   // CombCandidate::addHit + TrackCand::addHitIdx
   ALPAKA_FN_HOST_ACC inline void selAddHitIdx(SeedSelIO& io, CandBook& cand, int hitIdx, int layer, float chi2) {
     const int node = *io.nHots;
     if (node < io.hotCap) {
-      io.hots[node - io.hotOffset] = HoTNode{hitIdx, layer, chi2, cand.lastHitIdx};
+      io.hot(node) = HoTNode{hitIdx, layer, chi2, cand.lastHitIdx};
       *io.nHots = node + 1;
       cand.lastHitIdx = node;
     } else {

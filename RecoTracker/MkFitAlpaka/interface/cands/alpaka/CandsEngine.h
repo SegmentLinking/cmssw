@@ -7,12 +7,13 @@
 // Per plan step (regions in lock step, per-region layer tables from makeEngineStepTables):
 //   engineActivate (K1) -> K2 (select callback) -> engineStep (K3a, K3b, K4, K5); after the last step engineMerge (K6).
 // engineSearch runs the whole plan loop with K2 supplied as a callback; engineRunChainAsync runs forward search ->
-// pre-filter -> compaction -> compactify -> [backward fit callback] -> beginBkwSearch -> backward search ->
-// post-filter with repack and the backward-search gate -> compaction (endBkwSearch is a host flag only), with the
-// clone engine's searches or with the two searches supplied (EngineSearchFn: MkFinderV2p2, interface/v2p2/alpaka).
+// pre-filter -> compactify -> [backward fit callback] -> beginBkwSearch -> backward search -> post-filter with repack
+// and the backward-search gate (endBkwSearch is a host flag only), on one set of seed rows, with the clone engine's
+// searches or with the two searches supplied (EngineSearchFn: MkFinderV2p2, interface/v2p2/alpaka).
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
@@ -36,25 +37,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     CandHitChi2DeviceCollection c2;
   };
 
-  // Device storage of the clone engine for up to maxSeeds seeds. Buffer sets whose searches run one after the other
-  // on the same queue can share their step scratch.
+  // Device storage of the clone engine for up to maxSeeds seeds, with the HoT pool of hotPool (CandsSoA.h).
   struct EngineBuffers {
-    EngineBuffers(Queue& queue, int maxSeeds, int hotsPerSeed, std::shared_ptr<EngineStepScratch> sharedStep = nullptr);
+    EngineBuffers(Queue& queue, int maxSeeds, ::mkfitdev::HotPoolLayout const& hotPool);
     // Candidate books only, without the clone engine's per-step scratch (step == nullptr): the v2p2 search.
     struct NoStepScratch {};
-    EngineBuffers(Queue& queue, int maxSeeds, int hotsPerSeed, NoStepScratch);
+    EngineBuffers(Queue& queue, int maxSeeds, ::mkfitdev::HotPoolLayout const& hotPool, NoStepScratch);
     int maxSeeds;
+    ::mkfitdev::HotPoolLayout hotPool;
     SeedCandsDeviceCollection seeds;
     CandSlotsDeviceCollection slots;
     CandHotsDeviceCollection hots;
-    std::shared_ptr<EngineStepScratch> step;
-    cms::alpakatools::device_buffer<Device, int8_t[]> passed;
-    cms::alpakatools::device_buffer<Device, int32_t[]> newIdx;
-    cms::alpakatools::device_buffer<Device, int32_t> nSurvivors;
+    std::unique_ptr<EngineStepScratch> step;
     // Device count of the seed rows in use: kernels launched with a capacity-sized grid
     // process rows [0, *nRowsDev). nullptr: the host count passed to each call.
-    // engineFilterCompactAsync(bufs, out) sets out.nRowsDev = bufs.nSurvivors.data().
     const int32_t* nRowsDev = nullptr;
+    // CPU backends: the rows the pre-filter kept, then -1 (rowList; nullptr before it), read by the kernels that batch
+    // several seeds (K3a, K5, the backward fit), so that a batch holds the seeds MkFitCore batches.
+    std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> keptRows;
+    const int32_t* rowList = nullptr;
   };
 
   struct EngineStepTablesDevice {
@@ -107,7 +108,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       Queue& queue, EngineBuffers& bufs, const ::mkfitdev::EngineRegionPlans& plans, int nRegions, int nSeeds);
 
   // K2 callback: fills bufs.step->sel for the cands listed by K1 at the given step.
-  // nSeeds = seed rows of bufs in this search (the backward search runs on fewer rows than the forward one).
+  // nSeeds = seed rows of bufs in this search.
   using EngineSelectFn = std::function<void(Queue&, EngineBuffers&, int step, int nSeeds)>;
 
   // The plan loop (find_tracks_in_layers for all regions in lock step) + K6.
@@ -121,17 +122,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                     const ::mkfitdev::EngineIterParams& ip,
                     int nSeeds);
 
-  // filter_comb_cands (attempt_all_cands = true) + stable survivor compaction from bufs into out (seeds, slots, hots),
-  // without host synchronization: the survivor count stays on the device (bufs.nSurvivors) and becomes out.nRowsDev;
-  // rows [survivors, nSeeds) of out get nCands = 0. With bkwRep, the repack and the backward-search gate (on when
-  // gate.minPixelLayers > 0) run at most once per seed.
-  void engineFilterCompactAsync(Queue& queue,
-                                EngineBuffers& bufs,
-                                EngineBuffers& out,
-                                bool bkwRep,
-                                int minHitsQF,
-                                int nSeeds,
-                                ::mkfitdev::BkwSearchGate const& gate = ::mkfitdev::BkwSearchGate{});
+  // filter_comb_cands (attempt_all_cands = true) in place, without host synchronization: a failing seed's row is
+  // left without candidates (Finished), which the later kernels and the export skip, so the survivors keep their
+  // order. With bkwRep, the repack and the backward-search gate (on when gate.minPixelLayers > 0) run at most once
+  // per seed.
+  void engineFilterAsync(Queue& queue,
+                         EngineBuffers& bufs,
+                         bool bkwRep,
+                         int minHitsQF,
+                         int nSeeds,
+                         ::mkfitdev::BkwSearchGate const& gate = ::mkfitdev::BkwSearchGate{});
 
   // compactifyHitStorageForBestCand + beginBkwSearch per seed (with the gate on: its threshold and the pre-search
   // candidate, taken before CombCandidate::beginBkwSearch).
@@ -151,39 +151,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   using EngineSearchFn = std::function<void(Queue&, EngineBuffers&, bool fwdSearch, int capacity)>;
 
   // Sync-free chain: no host synchronization at all. bufs.nRowsDev = device count of the imported seed rows
-  // (e.g. &SeedSoA nKept), capacity = rows of bufs and work. The result is in the returned buffers (bufs), with
-  // *bufs.nRowsDev (= work.nSurvivors) rows. minHitsQFPre / Post = params / backward_params minHitsQF (MkFitCore
+  // (e.g. &SeedSoA nKept), capacity = rows of bufs. The result is in bufs, in place: rows [0, *bufs.nRowsDev), the
+  // seeds that failed a filter without candidates. minHitsQFPre / Post = params / backward_params minHitsQF (MkFitCore
   // params_cur of the pre and post filter). The post-filter is the ONLY repack: export without a filter.
-  EngineBuffers& engineRunChainAsync(Queue& queue,
-                                     EngineBuffers& bufs,
-                                     EngineBuffers& work,
-                                     const EngineStepTablesDevice& fwdTables,
-                                     const EngineStepTablesDevice& bkwTables,
-                                     const EngineSelectFn& selectFwd,
-                                     const EngineSelectFn& selectBkw,
-                                     const EngineBackwardFitFn& backwardFit,
-                                     const ::mkfitdev::EngineHitInputs& inFwd,
-                                     const ::mkfitdev::EngineHitInputs& inBkw,
-                                     const EnginePropConfig& pc,
-                                     const ::mkfitdev::EngineIterParams& ipFwd,
-                                     const ::mkfitdev::EngineIterParams& ipBkw,
-                                     int minHitsQFPre,
-                                     int minHitsQFPost,
-                                     int capacity,
-                                     const ::mkfitdev::BkwSearchGate& gate = ::mkfitdev::BkwSearchGate{});
+  void engineRunChainAsync(Queue& queue,
+                           EngineBuffers& bufs,
+                           const EngineStepTablesDevice& fwdTables,
+                           const EngineStepTablesDevice& bkwTables,
+                           const EngineSelectFn& selectFwd,
+                           const EngineSelectFn& selectBkw,
+                           const EngineBackwardFitFn& backwardFit,
+                           const ::mkfitdev::EngineHitInputs& inFwd,
+                           const ::mkfitdev::EngineHitInputs& inBkw,
+                           const EnginePropConfig& pc,
+                           const ::mkfitdev::EngineIterParams& ipFwd,
+                           const ::mkfitdev::EngineIterParams& ipBkw,
+                           int minHitsQFPre,
+                           int minHitsQFPost,
+                           int capacity,
+                           const ::mkfitdev::BkwSearchGate& gate = ::mkfitdev::BkwSearchGate{});
 
   // The same chain with the searches supplied (searchFwd / searchBkw run the forward and the backward search, final
   // sorting included); the clone-engine overload above is this one with engineSearch and its K2 selects.
-  EngineBuffers& engineRunChainAsync(Queue& queue,
-                                     EngineBuffers& bufs,
-                                     EngineBuffers& work,
-                                     const EngineSearchFn& searchFwd,
-                                     const EngineSearchFn& searchBkw,
-                                     const EngineBackwardFitFn& backwardFit,
-                                     int minHitsQFPre,
-                                     int minHitsQFPost,
-                                     int capacity,
-                                     const ::mkfitdev::BkwSearchGate& gate = ::mkfitdev::BkwSearchGate{});
+  void engineRunChainAsync(Queue& queue,
+                           EngineBuffers& bufs,
+                           const EngineSearchFn& searchFwd,
+                           const EngineSearchFn& searchBkw,
+                           const EngineBackwardFitFn& backwardFit,
+                           int minHitsQFPre,
+                           int minHitsQFPost,
+                           int capacity,
+                           const ::mkfitdev::BkwSearchGate& gate = ::mkfitdev::BkwSearchGate{});
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev
 

@@ -1,10 +1,8 @@
 #ifndef RecoTracker_MkFitAlpaka_src_alpaka_cands_CandSeedOpsKernels_h
 #define RecoTracker_MkFitAlpaka_src_alpaka_cands_CandSeedOpsKernels_h
 
-// Per-seed helpers of the candidate kernels, shared by the clone engine (src/alpaka/engine) and the v2p2 kernels
-// (src/alpaka/v2p2): the per-seed view of the candidate books (makeSeedRef), the device row count (engineRows) and the
-// failing of a seed whose HoT pool overflowed. Templates and host-device inline functions only, as two kernel TUs
-// include them (Cands.dev.cc, V2p2.dev.cc).
+// Per-seed helpers of the clone-engine and v2p2 kernels (makeSeedRef, engineRows, the HoT pool: reserveHots,
+// attachHots, failSeedOnHotOverflow); inline only, as two kernel TUs include them.
 
 #include <cstdint>
 
@@ -27,8 +25,43 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     return nRows < cap ? nRows : cap;
   }
 
-  ALPAKA_FN_HOST_ACC inline SeedCandsRef makeSeedRef(
-      SeedCandsSoA::View seeds, CandSlotsSoA::View slots, CandHotsSoA::View hots, int s, int hps) {
+  // The HoT pool of the seed rows as plain pointers and sizes (CandsSoA.h hotRow), taken once per kernel thread.
+  struct HotPool {
+    HoTNode* nodes;
+    int32_t* ext;    // SeedCandsSoA::hotExt
+    int32_t* nHots;  // SeedCandsSoA::nHots
+    uint32_t* nExt;  // SeedCandsSoA::nHotExt
+    int seedRows;
+    int home;
+    int perSeed;
+    int extSlots;
+  };
+
+  ALPAKA_FN_HOST_ACC inline HotPool hotPoolOf(SeedCandsSoA::View seeds, CandHotsSoA::View hots) {
+    return HotPool{hots.metadata().addressOf_node(),
+                   seeds.metadata().addressOf_hotExt(),
+                   seeds.metadata().addressOf_nHots(),
+                   &seeds.nHotExt(),
+                   seeds.metadata().size(),
+                   seeds.hotsHome(),
+                   seeds.hotsPerSeed(),
+                   seeds.hotExtSlots()};
+  }
+
+  // The HoT nodes of seed s in the pool: home rows, and the extension rows if it holds a slot.
+  template <typename TRef>
+  ALPAKA_FN_HOST_ACC inline void attachHots(HotPool const& pool, int s, TRef& ref) {
+    const int ext = pool.ext[s];
+    ref.hots = pool.nodes + hotRow(s, 0, ext, pool.seedRows, pool.home, pool.perSeed);
+    ref.extHots = ext >= 0 ? pool.nodes + hotRow(s, pool.home, ext, pool.seedRows, pool.home, pool.perSeed) : nullptr;
+    ref.hotHome = pool.home;
+    ref.hotCap = ext >= 0 ? pool.perSeed : pool.home;
+  }
+
+  ALPAKA_FN_HOST_ACC inline SeedCandsRef makeSeedRef(SeedCandsSoA::View seeds,
+                                                     CandSlotsSoA::View slots,
+                                                     CandHotsSoA::View hots,
+                                                     int s) {
     SeedCandsRef ref;
     const int cur = seeds.curBuf(s);
     ref.state = &seeds.state(s);
@@ -39,9 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ref.bestShort = &seeds.bestShort(s);
     ref.bestShortState = &slots.state(bestShortRow(s));
     ref.bestShortValid = &seeds.bestShortValid(s);
-    ref.hots = &hots.node(hotRow(s, 0, hps));
-    ref.hotOffset = 0;
-    ref.hotCap = hps;
+    attachHots(hotPoolOf(seeds, hots), s, ref);
     ref.nHots = &seeds.nHots(s);
     ref.lastHitIdxBeforeBkw = &seeds.lastHitIdxBeforeBkw(s);
     ref.nInsideMinusOneBeforeBkw = &seeds.nInsideMinusOneBeforeBkw(s);
@@ -49,6 +80,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ref.overflowBits = &seeds.overflowBits(s);
     return ref;
   }
+
+  // Before appending up to `need` HoT nodes: a seed that could pass its home rows takes an extension slot (once, to the
+  // end of the event); with none left it stays at home, and a node past it fails the seed (counted).
+  template <typename TAcc>
+  ALPAKA_FN_ACC inline void reserveHots(TAcc const& acc, HotPool const& pool, int s, int need) {
+    if (pool.ext[s] >= 0 || pool.nHots[s] + need <= pool.home)
+      return;
+    const uint32_t slot = alpaka::atomicAdd(acc, pool.nExt, 1u, alpaka::hierarchy::Blocks{});
+    if (slot < uint32_t(pool.extSlots))
+      pool.ext[s] = int32_t(slot);
+  }
+
+  // The HoT pool of one seed for code that appends nodes from several lanes (MkFinderV2p2 select_and_materialise):
+  // one lane reserves, then every lane attaches its own SeedCandsRef.
+  struct SeedHotPool {
+    HotPool const* pool;
+    int s;
+    template <typename TAcc>
+    ALPAKA_FN_ACC void reserve(TAcc const& acc, int need) const {
+      reserveHots(acc, *pool, s, need);
+    }
+    ALPAKA_FN_HOST_ACC void attach(SeedCandsRef& ref) const { attachHots(*pool, s, ref); }
+  };
 
   // A seed whose HoT pool overflowed is failed: Finished, no candidates (excluded from export by the filters).
   template <typename TAcc>

@@ -190,7 +190,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ALPAKA_FN_HOST_ACC bool active(int s) const { return seeds[s].nCands() > 0 && seeds[s].overflowBits() == 0; }
     ALPAKA_FN_HOST_ACC int row(int s) const { return ::mkfitdev::candSlotRow(s, seeds[s].curBuf(), 0); }
     ALPAKA_FN_HOST_ACC const ::mkfitdev::HoTNode& node(int s, int k) const {
-      return hots[::mkfitdev::hotRow(s, k, seeds.hotsPerSeed())].node();
+      return hots[::mkfitdev::hotNodeRow(seeds, s, k)].node();
     }
 
     template <idx_t N>
@@ -205,7 +205,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     ALPAKA_FN_HOST_ACC float candPt(int s) const { return std::abs(1.f / slots[row(s)].state().par[3]); }
     ALPAKA_FN_HOST_ACC void markOutlier(int s, int k) const {
       ::mkfitdev::CandHotsSoA::View hv = hots;
-      hv[::mkfitdev::hotRow(s, k, seeds.hotsPerSeed())].node().index = ::mkfitdev::kHitMissIdx;
+      hv[::mkfitdev::hotNodeRow(seeds, s, k)].node().index = ::mkfitdev::kHitMissIdx;
       ::mkfitdev::CandSlotsSoA::View sv = slots;
       ::mkfitdev::CandBook& b = sv[row(s)].book();
       b.nFound -= 1;
@@ -258,19 +258,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   };
 
   // ---- kernel: one thread per group of kNN candidates; v2p2 = bkFitFitTracksV2p2 (candidates of MkFinderV2p2) ----
+  // rows: CPU backends, the candidates in batch order (nullptr: row order; EngineBuffers::rowList: the pre-filter
+  // survivors in consecutive batches, as MkFitCore); unused on GPU backends (one candidate per thread)
   template <typename TIO, bool v2p2 = false>
   struct BkFitKernel {
     template <typename TAcc>
-    ALPAKA_FN_ACC void operator()(
-        TAcc const& acc, TIO io, int nCands, PropagationFlags pflags, ::mkfitdev::bkfit::OutlierParams outl) const {
+    ALPAKA_FN_ACC void operator()(TAcc const& acc,
+                                  TIO io,
+                                  int nCands,
+                                  const int32_t* rows,
+                                  PropagationFlags pflags,
+                                  ::mkfitdev::bkfit::OutlierParams outl) const {
       constexpr int N = kNN;
       const int ngroups = (nCands + N - 1) / N;
       for (int g : cms::alpakatools::uniform_elements(acc, ngroups)) {
         int cand[N];
         int N_proc = 0;
         for (int n = 0; n < N; ++n) {
-          const int c = g * N + n;
-          if (c < nCands && io.active(c))
+          const int k = g * N + n;
+          const int c = (N > 1 && rows != nullptr && k < nCands) ? rows[k] : k;
+          if (c >= 0 && c < nCands && io.active(c))
             cand[N_proc++] = c;
         }
         if (N_proc == 0)
@@ -292,6 +299,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   inline void launchBkFit(Queue& queue,
                           TIO const& io,
                           int nCands,
+                          const int32_t* rows,
                           PropagationFlags const& pflags,
                           ::mkfitdev::bkfit::OutlierParams const& outl = {}) {
     if (nCands <= 0)
@@ -300,7 +308,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     const int threads = cms::alpakatools::requires_single_thread_per_block_v<Acc1D> ? 1 : kBkFitBlockSize;
     const int blocks = cms::alpakatools::divide_up_by(ngroups, threads);
     auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(blocks, threads);
-    alpaka::exec<Acc1D>(queue, workDiv, BkFitKernel<TIO, v2p2>{}, io, nCands, pflags, outl);
+    alpaka::exec<Acc1D>(queue, workDiv, BkFitKernel<TIO, v2p2>{}, io, nCands, rows, pflags, outl);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev

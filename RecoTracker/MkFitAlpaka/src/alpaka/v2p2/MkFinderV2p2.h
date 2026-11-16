@@ -1023,12 +1023,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
   }
 
   // select_and_materialise() for one seed by the lanes of g (all threads of the block call it; in_layer false: the
-  // barriers only): the top max_cands by v2p2SelBefore into outBooks / outStates; returns their number (lane 0)
-  template <typename TAcc>
+  // barriers only): the top max_cands by v2p2SelBefore into outBooks / outStates; returns their number (lane 0).
+  // hot_pool: reserve(acc, need) before the survivors' HoT nodes are appended (lane 0), attach(seed) after (every
+  // lane): the seed's HoT pool can grow (cands/CandSeedOpsKernels.h SeedHotPool).
+  template <typename TAcc, typename THotPool>
   ALPAKA_FN_ACC ALPAKA_FN_INLINE int select_and_materialise(TAcc const& acc,
                                                             const V2p2SelGroup& g,
                                                             bool in_layer,
                                                             SeedCandsRef& seed,
+                                                            const THotPool& hot_pool,
                                                             CandBook* outBooks,
                                                             CandState* outStates,
                                                             ::mkfitdev::V2p2CandSoA::ConstView cands,
@@ -1083,8 +1086,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           top.sel[top.n_keep - 1] = top.best_decliner;
         }
       }
+      int hots = 0;
+      for (int k = 0; k < top.n_keep; ++k)
+        hots += sel_entry_hots(top.sel[k], nodes);
+      hot_pool.reserve(acc, hots);
     }
     alpaka::syncBlockThreads(acc);
+    if (in_layer)
+      hot_pool.attach(seed);
 
     // Build the survivors as copies in the other buffer: several winners can descend from the same TrackCand --
     // that is what branching is -- so the sources have to stay readable while the copies are made. One survivor

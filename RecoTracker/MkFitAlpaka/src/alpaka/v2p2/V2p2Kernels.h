@@ -120,7 +120,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                      const V2p2LayerCtx& ctxBase,
                                      int step,
                                      int s,
-                                     int hps) {
+                                     HotPool const& pool) {
       v2seeds.inLayer(s) = 0;
       v2seeds.nNodes(s) = 0;
       v2seeds.nodeHead(s) = -1;
@@ -133,11 +133,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       const int reg = seeds.region(s);
       const int layer = stepLayer[reg];
       const int prevLayer = stepPrevLayer[reg];
-      SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+      SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
       if (prevLayer >= 0)
         awaken_candidates(ref, prevLayer);
       if (layer < 0 || *ref.state != kFinding)
         return;
+      reserveHots(acc, pool, s, *ref.nCands);  // a stop node per TrackCand at most
+      attachHots(pool, s, ref);
       seeds.layer(s) = layer;
       V2p2LayerCtx ctx = ctxBase;
       begin_layer(ctx, geo, layer);
@@ -177,10 +179,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
       resetEntryCounters(acc, v2seeds, step);
+      const HotPool pool = hotPoolOf(seeds, hots);
       for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds))
-        pullIn(acc, seeds, slots, hots, v2seeds, v2cands, stepLayer, stepPrevLayer, geo, ctxBase, step, s, hps);
+        pullIn(acc, seeds, slots, hots, v2seeds, v2cands, stepLayer, stepPrevLayer, geo, ctxBase, step, s, pool);
     }
   };
 
@@ -730,7 +732,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                      ::mkfitdev::LayerInfoSoA::ConstView geo,
                                      const V2p2LayerCtx& ctxBase,
                                      int s,
-                                     int hps,
+                                     HotPool const& pool,
                                      const V2p2SelGroup& group) {
       uint32_t ovf0 = 0;
       V2p2LayerCtx ctx;  // read by select_and_materialise only for a seed in the layer
@@ -744,7 +746,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         const int layer = stepLayer[seeds.region(s)];
         ctx = ctxBase;
         begin_layer(ctx, geo, layer);
-        ref = makeSeedRef(seeds, slots, hots, s, hps);
+        ref = makeSeedRef(seeds, slots, hots, s);
         nextBuf = seeds.curBuf(s) ^ 1;
         outBooks = &slots.book(candSlotRow(s, nextBuf, 0));
         outStates = &slots.state(candSlotRow(s, nextBuf, 0));
@@ -755,8 +757,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         maxCands = v2seeds.maxCands(s);
       }
       bool nanScore = false;
-      const int n = select_and_materialise(
-          acc, group, inLayer, ref, outBooks, outStates, v2cands, s, nodes, list, nList, chain, maxCands, ctx, nanScore);
+      const SeedHotPool hotPool{&pool, s};
+      const int n = select_and_materialise(acc,
+                                           group,
+                                           inLayer,
+                                           ref,
+                                           hotPool,
+                                           outBooks,
+                                           outStates,
+                                           v2cands,
+                                           s,
+                                           nodes,
+                                           list,
+                                           nList,
+                                           chain,
+                                           maxCands,
+                                           ctx,
+                                           nanScore);
       if (!inLayer || group.lane != 0)
         return;
       seeds.nCands(s) = n;
@@ -764,7 +781,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       if (nanScore)
         alpaka::atomicAdd(acc, &v2seeds.counters().nNanScore, 1u, alpaka::hierarchy::Blocks{});
       // A CombCandidate is finished once every TrackCand under it has stopped.
-      const SeedCandsRef selected = makeSeedRef(seeds, slots, hots, s, hps);
+      const SeedCandsRef selected = makeSeedRef(seeds, slots, hots, s);
       if (end_layer_finished(selected))
         seeds.state(s) = kFinished;
       failSeedOnHotOverflow(acc, seeds, s, ovf0);
@@ -787,9 +804,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
       if (nextLayer != nullptr)
         KernelV2p2PullIn::resetEntryCounters(acc, v2seeds, step + 1);
+      const HotPool pool = hotPoolOf(seeds, hots);
       auto& tops =
           alpaka::declareSharedVar<V2p2SelTop[kV2p2SelectSeedsPerBlock][kV2p2SelectSeedLanes], __COUNTER__>(acc);
       const uint32_t tid = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
@@ -814,13 +831,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                  geo,
                  ctxBase,
                  s,
-                 hps,
+                 pool,
                  V2p2SelGroup{int(lane), int(kV2p2SelectSeedLanes), tops[group]});
           // every lane has read the seed's rows before lane 0 rewrites them; tops are reused by the next seed
           alpaka::syncBlockThreads(acc);
           if (valid && nextLayer != nullptr && lane == 0)
             KernelV2p2PullIn::pullIn(
-                acc, seeds, slots, hots, v2seeds, v2cands, nextLayer, nextPrevLayer, geo, ctxBase, step + 1, s, hps);
+                acc, seeds, slots, hots, v2seeds, v2cands, nextLayer, nextPrevLayer, geo, ctxBase, step + 1, s, pool);
         }
       }
     }
@@ -842,11 +859,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
       for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
         if (!scorers.hasPlan[seeds.region(s)])
           continue;
-        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
         if (!fwdSearch)
           addPreBkwSearchHoles(ref);
         float pt[kMaxCandsPerSeed];

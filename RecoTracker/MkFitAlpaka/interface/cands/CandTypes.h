@@ -28,9 +28,13 @@ namespace mkfitdev {
   constexpr int kMaxOptsPerSeed = (kMaxHitsPerCand + 1) * kMaxCandsPerSeed;  // 35
   // Held-back ("extra") candidates per seed: at most one per live candidate.
   constexpr int kMaxExtrasPerSeed = kMaxCandsPerSeed;
-  // Default HoT node pool per seed (runtime value: SeedCandsSoA::hotsPerSeed). MkFitCore reserves 128 and grows.
+  // Default HoT nodes a seed can hold (runtime value: SeedCandsSoA::hotsPerSeed). MkFitCore reserves 128 and grows.
   // Overflow is flagged and counted, never silent.
   constexpr int kDefaultHotsPerSeed = 256;
+  // Default HoT pool home rows per seed row (SeedCandsSoA::hotsHome): most seeds never need more; a seed that does
+  // takes an extension slot of the remaining rows, the pool has kDefaultHotExtensionsPerSeed of them per seed row.
+  constexpr int kDefaultHotsHomePerSeed = 80;
+  constexpr double kDefaultHotExtensionsPerSeed = 0.1;
 
   // Hit index codes (Hit.h): interface/math/HitConstants.h
   // Empty option slot (not a MkFitCore code).
@@ -49,6 +53,11 @@ namespace mkfitdev {
     float chi2;
     int32_t prev;
   };
+
+  // Node n of a seed's HoT chain through its pointers: home rows below home, else its extension (CandsSoA.h hotRow)
+  ALPAKA_FN_HOST_ACC inline HoTNode& hotNodeAt(HoTNode* hots, HoTNode* extHots, int home, int n) {
+    return n < home ? hots[n] : extHots[n - home];
+  }
 
   // MkFitCore: struct HitMatch / HitMatchPair (TrackStructures.h)
   struct HitMatch {  // MkFitCore defaults: hit -1, module -1, chi2 1e9 (set by HitMatchPair::reset)

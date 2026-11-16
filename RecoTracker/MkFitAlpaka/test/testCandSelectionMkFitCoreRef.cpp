@@ -229,7 +229,8 @@ int main() {
       io.bestShortValid = &bestShortValid;
       io.bestShortSrc = &bestShortSrc;
       io.hots = in.hots.data();
-      io.hotOffset = 0;
+      io.extHots = nullptr;
+      io.hotHome = kHotCap;
       io.hotCap = kHotCap;
       io.nHots = &nHots;
       io.candsOut = candsOut;
