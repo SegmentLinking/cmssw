@@ -18,7 +18,9 @@ trackingLST.toModify(hltLST, nopLSDupClean = False,
                              tcpLSTriplets = False)
 
 # Pixel segments (pLS) with an outer-tracker hit are cleaned against a T5 only if the T5 contains that hit: the dR and
-# embedding tests alone match neighbouring but different tracks, for example in jets. Used in the all-Alpaka LST + mkFit
-# initial step (trackingMkFitAlpaka); the default menu keeps the plain test.
+# embedding tests alone match neighbouring but different tracks, for example in jets. Used with the mkFit seeder's pixel
+# seeds (phase2MkSeeder) and in the all-Alpaka LST + mkFit initial step (trackingMkFitAlpaka); the default menu keeps
+# the plain test.
+from Configuration.ProcessModifiers.phase2MkSeeder_cff import phase2MkSeeder
 from Configuration.ProcessModifiers.trackingMkFitAlpaka_cff import trackingMkFitAlpaka
-trackingMkFitAlpaka.toModify(hltLST, plsT5SharedHit = cms.bool(True))
+(phase2MkSeeder | trackingMkFitAlpaka).toModify(hltLST, plsT5SharedHit = cms.bool(True))

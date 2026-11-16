@@ -2118,11 +2118,26 @@ upgradeWFs['HLTTrackingNtuple75e33'].step2 = {
 
 # Variants of the tracking-only menu 0.7501 (offsets 0.7501xx)
 
+# Tracking-only menu with the mkFit seeder (alpaka) and its classified seeds as the initialStep (LST) pixel seeds and
+# as the pixel tracks (phase2MkSeeder)
+upgradeWFs['HLTTrackingOnly75e33MkSeeder'] = deepcopy(upgradeWFs['HLTTrackingOnly75e33'])
+upgradeWFs['HLTTrackingOnly75e33MkSeeder'].suffix = '_HLT75e33TrackingOnlyMkSeeder'
+upgradeWFs['HLTTrackingOnly75e33MkSeeder'].offset = 0.750101
+upgradeWFs['HLTTrackingOnly75e33MkSeeder'].step2['--procModifiers'] = 'phase2MkSeeder'
+upgradeWFs['HLTTrackingOnly75e33MkSeeder'].step3['--procModifiers'] = 'phase2MkSeeder'
+
 # all-Alpaka LST + mkFit initial step (building, final fit, output on the device; RecoTracker/MkFitAlpaka)
 upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'] = deepcopy(upgradeWFs['HLTTrackingOnly75e33'])
 upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].suffix = '_HLT75e33TrackingOnlyMkFitAlpaka'
 upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].offset = 0.750102
 upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].step2['--procModifiers'] = 'trackingMkFitFit,trackingMkFitAlpaka'
+
+# 0.750101 with the all-Alpaka LST + mkFit initial step (0.750102's modifiers): the seeder's seeds feed the device chain
+upgradeWFs['HLTTrackingOnly75e33MkSeederMkFitAlpaka'] = deepcopy(upgradeWFs['HLTTrackingOnly75e33'])
+upgradeWFs['HLTTrackingOnly75e33MkSeederMkFitAlpaka'].suffix = '_HLT75e33TrackingOnlyMkSeederMkFitAlpaka'
+upgradeWFs['HLTTrackingOnly75e33MkSeederMkFitAlpaka'].offset = 0.750103
+upgradeWFs['HLTTrackingOnly75e33MkSeederMkFitAlpaka'].step2['--procModifiers'] = 'phase2MkSeeder,trackingMkFitFit,trackingMkFitAlpaka'
+upgradeWFs['HLTTrackingOnly75e33MkSeederMkFitAlpaka'].step3['--procModifiers'] = 'phase2MkSeeder,trackingMkFitFit,trackingMkFitAlpaka'
 
 upgradeWFs['HLTHeterogeneousValid'] = deepcopy(upgradeWFs['HLTTiming75e33'])
 upgradeWFs['HLTHeterogeneousValid'].suffix = '_HLTHeterogeneousValid'

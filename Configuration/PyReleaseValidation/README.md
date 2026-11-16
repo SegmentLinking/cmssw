@@ -59,7 +59,9 @@ The offsets currently in use are:
 * 0.715: LST+mkFit tracking (Phase-2 only), all iterations, full reco, on GPU (if available)
 * 0.75: HLT phase-2 timing menu
 * 0.7501: HLT phase-2 tracking-only menu
+* 0.750101: HLT phase-2 tracking-only menu, the mkFit seeder (alpaka) for the pixel seeds of the initialStep and the pixel tracks (`phase2MkSeeder`)
 * 0.750102: HLT phase-2 tracking-only menu, all-Alpaka LST + mkFit initial step (`trackingMkFitFit,trackingMkFitAlpaka`)
+* 0.750103: HLT phase-2 tracking-only menu, the mkFit seeder with the all-Alpaka LST + mkFit initial step (0.750101 + 0.750102: `phase2MkSeeder,trackingMkFitFit,trackingMkFitAlpaka`)
 * 0.7502: HLT phase-2 menu, with tracking ntuple
 * 0.7503: HLT phase-2 menu, CPU vs. GPU validation
 * 0.7504: HLT phase-2 development menu (with the v0p0_2026 L1 menu)

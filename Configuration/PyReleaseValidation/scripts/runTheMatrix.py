@@ -156,7 +156,9 @@ if __name__ == '__main__':
                      # menu flavours
                      prefixDet+34.75,    # HLT phase-2 timing menu
                      prefixDet+34.7501,  # HLT phase-2 tracking-only menu
+                     prefixDet+34.750101, # HLT phase-2 tracking-only menu phase2MkSeeder variant (mkFit seeder on alpaka)
                      prefixDet+34.750102, # HLT phase-2 tracking-only menu, all-Alpaka LST + mkFit initial step
+                     prefixDet+34.750103, # HLT phase-2 tracking-only menu, mkFit seeder + all-Alpaka LST + mkFit initial step
                      prefixDet+34.7502,  # HLT phase-2 tracking menu with tracking ntuple
                      prefixDet+34.7503,  # HLT phase-2 menu, CPU vs. GPU validation
                      prefixDet+34.7504,  # HLT phase-2 development menu
