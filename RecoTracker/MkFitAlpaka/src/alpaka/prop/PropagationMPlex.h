@@ -678,13 +678,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       }
     };
 
-    // Per-slot body of parsFromPathL_impl (plane::drift; Matriplex expressions written out for slot n).
-    template <idx_t N>
+    // Per-slot body of parsFromPathL_impl (plane::drift; Matriplex expressions written out for slot n); tr: a StartTrig
+    template <idx_t N, typename TTrig>
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void parsFromPathL_slot(const MPlexLV<N>& __restrict__ inPar,
                                                                 MPlexLV<N>& __restrict__ outPar,
                                                                 const float kinv,
                                                                 const float s,
-                                                                const StartTrig<N>& tr,
+                                                                const TTrig& tr,
                                                                 const int n) {
       const float alpha = s * tr.sinT[n] * inPar(n, 3, 0) * kinv;
 
@@ -719,7 +719,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     }
 
     // drift + jacobian (plane::drift, plane::jacobian = errPropFromPathL_impl): bFld is the field of the step as used
-    // for the parameters (kinv)
+    // for the parameters (kinv). DEVIATION: the Jacobian is written out here too, see errPropFromPathL_impl.
     template <idx_t N>
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void parsAndErrPropFromPathL_trig(const MPlexLV<N>& __restrict__ inPar,
                                                                           const MPlexQI<N>& __restrict__ inChg,
@@ -759,6 +759,165 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         const float cosl1 = 1.f / sinT;
         // The field of the step, as used for the parameters (kinv): at the step start, or the chord midpoint
         // with b_field_at_mid
+        const float bF = Const::sol_over_100 * bFld[n];
+        const float q = -bF * qbp;
+        const float theta = q * s[n];
+        // from the half angle: 1 - cos and theta - sin without cancellation at small turning angle
+        float sinth, costh;
+        vdt::fast_sincosf(0.5f * theta, sinth, costh);
+        const float sint = 2.f * sinth * costh;
+        const float omcost = 2.f * sinth * sinth;
+        const float cost = 1.f - omcost;
+        // theta - sin(theta): below theta = 1 from its series to theta^9, above it the difference
+        const float t2 = theta * theta;
+        const float tmsint = std::abs(theta) < 1.f
+                                 ? theta * t2 / 6.f * (1.f - t2 / 20.f * (1.f - t2 / 42.f * (1.f - t2 / 72.f)))
+                                 : theta - sint;
+        const float dx1 = inPar(n, 0, 0) - outPar(n, 0, 0);
+        const float dx2 = inPar(n, 1, 0) - outPar(n, 1, 0);
+        const float dx3 = inPar(n, 2, 0) - outPar(n, 2, 0);
+        const float u11 = -sinPin;
+        const float u12 = cosPin;
+        const float v11 = -cosT * u12;
+        const float v12 = cosT * u11;
+        const float v13 = sinT;
+        const float u21 = -sinPout;
+        const float u22 = cosPout;
+        const float v21 = -cosT * u22;
+        const float v22 = cosT * u21;
+        const float v23 = sinT;
+        // now prepare the transport matrix
+
+        //   1/p - doesn't change since |p1| = |p2|
+        errorPropCurv(n, 0, 0) = 1.f;
+        for (int i = 1; i < 5; ++i)
+          errorPropCurv(n, 0, i) = 0.f;
+        //   lambda
+        errorPropCurv(n, 1, 0) = 0.f;
+        errorPropCurv(n, 1, 1) =
+            cost * (v11 * v21 + v12 * v22 + v13 * v23) + sint * (-v12 * v21 + v11 * v22) + omcost * v13 * v23;
+        errorPropCurv(n, 1, 2) = (cost * (u11 * v21 + u12 * v22) + sint * (-u12 * v21 + u11 * v22)) * sinT;
+        errorPropCurv(n, 1, 3) = 0.f;
+        errorPropCurv(n, 1, 4) = 0.f;
+        //   phi
+        errorPropCurv(n, 2, 0) = bF * v23 * (t21 * dx1 + t22 * dx2 + cosT * dx3) * cosl1;
+        errorPropCurv(n, 2, 1) = (cost * (v11 * u21 + v12 * u22) + sint * (-v12 * u21 + v11 * u22) +
+                                  v23 * (-sint * (v11 * t21 + v12 * t22 + v13 * cosT) +
+                                         omcost * (-v11 * t22 + v12 * t21) - tmsint * cosT * v13)) *
+                                 cosl1;
+        errorPropCurv(n, 2, 2) = (cost * (u11 * u21 + u12 * u22) + sint * (-u12 * u21 + u11 * u22) +
+                                  v23 * (-sint * (u11 * t21 + u12 * t22) + omcost * (-u11 * t22 + u12 * t21))) *
+                                 cosl1 * sinT;
+        errorPropCurv(n, 2, 3) = -q * v23 * (u11 * t21 + u12 * t22) * cosl1;
+        errorPropCurv(n, 2, 4) = -q * v23 * (v11 * t21 + v12 * t22 + v13 * cosT) * cosl1;
+
+        //   yt
+        if (n < N_proc) {
+          const float cutCriterion = std::abs(s[n] * sinT * inPar(n, 3, 0));
+          const float limit = 5.f;  // valid for propagations with effectively float precision
+          if (cutCriterion > limit) {
+            const float pp = 1.f / qbp;
+            errorPropCurv(n, 3, 0) = pp * (u21 * dx1 + u22 * dx2);
+            errorPropCurv(n, 4, 0) = pp * (v21 * dx1 + v22 * dx2 + v23 * dx3);
+          } else {
+            const float temp1 = -t12 * u21 + t11 * u22;
+            const float s2 = s[n] * s[n];
+            const float secondOrder41 = -0.5f * bF * temp1 * s2;
+            const float temp2 = -t11 * u21 - t12 * u22;
+            const float s3 = s2 * s[n];
+            const float s4 = s3 * s[n];
+            const float h2 = bF * bF;
+            const float h3 = h2 * bF;
+            const float qbp2 = qbp * qbp;
+            const float thirdOrder41 = 1.f / 3 * h2 * s3 * qbp * temp2;
+            const float fourthOrder41 = 1.f / 8 * h3 * s4 * qbp2 * temp1;
+            errorPropCurv(n, 3, 0) = secondOrder41 + (thirdOrder41 + fourthOrder41);
+            const float temp3 = -t12 * v21 + t11 * v22;
+            const float secondOrder51 = -0.5f * bF * temp3 * s2;
+            const float temp4 = -t11 * v21 - t12 * v22;
+            const float thirdOrder51 = 1.f / 3 * h2 * s3 * qbp * temp4;
+            const float fourthOrder51 = 1.f / 8 * h3 * s4 * qbp2 * temp3;
+            errorPropCurv(n, 4, 0) = secondOrder51 + (thirdOrder51 + fourthOrder51);
+          }
+        }
+
+        errorPropCurv(n, 3, 1) = (sint * (v11 * u21 + v12 * u22) + omcost * (-v12 * u21 + v11 * u22)) / q;
+        errorPropCurv(n, 3, 2) = (sint * (u11 * u21 + u12 * u22) + omcost * (-u12 * u21 + u11 * u22)) * sinT / q;
+        errorPropCurv(n, 3, 3) = (u11 * u21 + u12 * u22);
+        errorPropCurv(n, 3, 4) = (v11 * u21 + v12 * u22);
+        //   zt
+        errorPropCurv(n, 4, 1) =
+            (sint * (v11 * v21 + v12 * v22 + v13 * v23) + omcost * (-v12 * v21 + v11 * v22) + tmsint * v23 * v13) / q;
+        errorPropCurv(n, 4, 2) = (sint * (u11 * v21 + u12 * v22) + omcost * (-u12 * v21 + u11 * v22)) * sinT / q;
+        errorPropCurv(n, 4, 3) = (u11 * v21 + u12 * v22);
+        errorPropCurv(n, 4, 4) = (v11 * v21 + v12 * v22 + v13 * v23);
+
+        //now we need jacobians to convert to/from curvilinear and CCS
+        // code from TrackState::jacobianCCSToCurvilinear
+        jacCCS2Curv(n, 0, 3) = inChg(n, 0, 0) < 0 ? -sinT : sinT;
+        jacCCS2Curv(n, 0, 5) = inChg(n, 0, 0) < 0 ? -(cosT * inPar(n, 3, 0)) : (cosT * inPar(n, 3, 0));
+        jacCCS2Curv(n, 1, 5) = -1.f;
+        jacCCS2Curv(n, 2, 4) = 1.f;
+        jacCCS2Curv(n, 3, 0) = -sinPin;
+        jacCCS2Curv(n, 3, 1) = cosPin;
+        jacCCS2Curv(n, 4, 0) = -cosPin * cosT;
+        jacCCS2Curv(n, 4, 1) = -sinPin * cosT;
+        jacCCS2Curv(n, 4, 2) = sinT;
+
+        // code from TrackState::jacobianCurvilinearToCCS
+        jacCurv2CCS(n, 0, 3) = -sinPout;
+        jacCurv2CCS(n, 0, 4) = -cosT * cosPout;
+        jacCurv2CCS(n, 1, 3) = cosPout;
+        jacCurv2CCS(n, 1, 4) = -cosT * sinPout;
+        jacCurv2CCS(n, 2, 4) = sinT;
+        jacCurv2CCS(n, 3, 0) = inChg(n, 0, 0) < 0 ? -(1.f / sinT) : (1.f / sinT);
+        jacCurv2CCS(n, 3, 1) = outPar(n, 3, 0) * cosT / sinT;
+        jacCurv2CCS(n, 4, 2) = 1.f;
+        jacCurv2CCS(n, 5, 1) = -1.f;
+      }
+
+      //need to compute errorProp = jacCurv2CCS*errorPropCurv*jacCCS2Curv
+      MPlex65<N> tmp;
+      JacErrPropCurv1(jacCurv2CCS, errorPropCurv, tmp);
+      JacErrPropCurv2(tmp, jacCCS2Curv, errorProp);
+    }
+
+    // errPropFromPathL_impl (plane::jacobian): the Jacobian of parsAndErrPropFromPathL_trig, outPar and trig given
+    // DEVIATION: a second copy of that Jacobian; calling it from there changes the clone engine's CPU rounding
+    template <idx_t N>
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void errPropFromPathL_impl(const MPlexLV<N>& __restrict__ inPar,
+                                                                   const MPlexQI<N>& __restrict__ inChg,
+                                                                   const MPlexQF<N>& __restrict__ sinPinV,
+                                                                   const MPlexQF<N>& __restrict__ cosPinV,
+                                                                   const MPlexQF<N>& __restrict__ sinTV,
+                                                                   const MPlexQF<N>& __restrict__ cosTV,
+                                                                   const MPlexLV<N>& __restrict__ outPar,
+                                                                   const MPlexQF<N>& __restrict__ bFld,
+                                                                   const MPlexQF<N>& __restrict__ s,
+                                                                   MPlexLL<N>& __restrict__ errorProp,
+                                                                   const int N_proc) {
+      MPlex55<N> errorPropCurv(0.0f);
+      MPlex56<N> jacCCS2Curv(0.0f);
+      MPlex65<N> jacCurv2CCS(0.0f);
+
+      MPLEX_SIMD
+      for (int n = 0; n < N; ++n) {
+        const float sinPin = sinPinV[n];
+        const float cosPin = cosPinV[n];
+        float sinPout, cosPout;
+        vdt::fast_sincosf(outPar(n, 4, 0), sinPout, cosPout);
+        const float sinT = sinTV[n];
+        const float cosT = cosTV[n];
+
+        // use code from AnalyticalCurvilinearJacobian::computeFullJacobian for error propagation in curvilinear coordinates, then convert to CCS
+        const float qbp = inChg(n, 0, 0) < 0 ? -(sinT * inPar(n, 3, 0)) : (sinT * inPar(n, 3, 0));
+        // calculate transport matrix
+        // Origin: TRPRFN
+        const float t11 = cosPin * sinT;
+        const float t12 = sinPin * sinT;
+        const float t21 = cosPout * sinT;
+        const float t22 = sinPout * sinT;
+        const float cosl1 = 1.f / sinT;
         const float bF = Const::sol_over_100 * bFld[n];
         const float q = -bF * qbp;
         const float theta = q * s[n];
@@ -969,24 +1128,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       const StartTrig<N> tr(inPar);
 
       // MkFitCore zero-initialises outParTmp in each step; every element read is overwritten first, so hoisted.
+      // The helix solutions in lane loops, the disk refinement with its scalar cos in a loop of its own, as
+      // MkFitCore's pathInit_impl / pathRefine_impl, so that the CPU backends vectorize the lane loops.
       MPlexLV<N> outParTmp(0.0f);
+      float sl[N], sR[N];
       MPLEX_SIMD
       for (int n = 0; n < N; ++n) {
-        float delta0 = inPar(n, 0, 0) - plPnt(n, 0, 0);
-        float delta1 = inPar(n, 1, 0) - plPnt(n, 1, 0);
-        float delta2 = inPar(n, 2, 0) - plPnt(n, 2, 0);
+        const float delta0 = inPar(n, 0, 0) - plPnt(n, 0, 0);
+        const float delta1 = inPar(n, 1, 0) - plPnt(n, 1, 0);
+        const float delta2 = inPar(n, 2, 0) - plPnt(n, 2, 0);
 
-        float sinP = tr.sinP[n], cosP = tr.cosP[n];
+        const float sinP = tr.sinP[n], cosP = tr.cosP[n];
         const float sinT = tr.sinT[n];
         const float cosT = tr.cosT[n];
 
         // determine solution for straight line
-        const float sl = -(plNrm(n, 0, 0) * delta0 + plNrm(n, 1, 0) * delta1 + plNrm(n, 2, 0) * delta2) /
-                         (plNrm(n, 0, 0) * cosP * sinT + plNrm(n, 1, 0) * sinP * sinT + plNrm(n, 2, 0) * cosT);
+        sl[n] = -(plNrm(n, 0, 0) * delta0 + plNrm(n, 1, 0) * delta1 + plNrm(n, 2, 0) * delta2) /
+                (plNrm(n, 0, 0) * cosP * sinT + plNrm(n, 1, 0) * sinP * sinT + plNrm(n, 2, 0) * cosT);
 
         //first iteration outside the loop
         if (n < N_proc) {
-          // pathInit_impl solves the helix for every lane so that its CPU loop vectorises; here per lane
           if (std::abs(plNrm(n, 2, 0)) < 1.f) {
             float amb;
             s[n] = getS(delta0,
@@ -1024,10 +1185,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           // final_fit (helix_step): where the first solve has no root, the refinement starts from the straight line,
           // 0 where that is not finite either
           if (pf.final_fit && !isFinite(s[n]))
-            s[n] = isFinite(sl) ? sl : 0.f;
+            s[n] = isFinite(sl[n]) ? sl[n] : 0.f;
         }
+      }
 
-        for (int i = 0; i < Config::nSStepsInProp2Plane - 1; ++i) {
+      for (int i = 0; i < Config::nSStepsInProp2Plane - 1; ++i) {
+        MPLEX_SIMD
+        for (int n = 0; n < N; ++n) {
           parsFromPathL_slot(inPar, outParTmp, kinv[n], s[n], tr, n);
 
           if (pf.use_param_b_field && pf.b_field_at_mid) {
@@ -1039,36 +1203,48 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
             kinv[n] = kSign[n] * bFld[n];
           }
 
-          delta0 = outParTmp(n, 0, 0) - plPnt(n, 0, 0);
-          delta1 = outParTmp(n, 1, 0) - plPnt(n, 1, 0);
-          delta2 = outParTmp(n, 2, 0) - plPnt(n, 2, 0);
+          const float delta0 = outParTmp(n, 0, 0) - plPnt(n, 0, 0);
+          const float delta1 = outParTmp(n, 1, 0) - plPnt(n, 1, 0);
+          const float delta2 = outParTmp(n, 2, 0) - plPnt(n, 2, 0);
 
+          float sinP, cosP;
           vdt::fast_sincosf(outParTmp(n, 4, 0), sinP, cosP);
           // Note, sinT/cosT not updated
 
-          if (n < N_proc) {
-            s[n] += (std::abs(plNrm(n, 2, 0)) < 1.f ? getS(delta0,
-                                                           delta1,
-                                                           delta2,
-                                                           plNrm(n, 0, 0),
-                                                           plNrm(n, 1, 0),
-                                                           plNrm(n, 2, 0),
-                                                           sinP,
-                                                           cosP,
-                                                           sinT,
-                                                           cosT,
-                                                           inPar(n, 3, 0),
-                                                           inChg(n, 0, 0),
-                                                           kinv[n])
-                                                    : (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) /
-                                                          std::cos(outParTmp.constAt(n, 5, 0)));
-          }
-        }  //end Niter-1
+          float sRn = 0.f;
+          if (n < N_proc && std::abs(plNrm(n, 2, 0)) < 1.f)
+            sRn = getS(delta0,
+                       delta1,
+                       delta2,
+                       plNrm(n, 0, 0),
+                       plNrm(n, 1, 0),
+                       plNrm(n, 2, 0),
+                       sinP,
+                       cosP,
+                       tr.sinT[n],
+                       tr.cosT[n],
+                       inPar(n, 3, 0),
+                       inChg(n, 0, 0),
+                       kinv[n]);
+          sR[n] = sRn;
+        }
+        for (int n = 0; n < N; ++n) {
+          if (n < N_proc && !(std::abs(plNrm(n, 2, 0)) < 1.f))
+            sR[n] = (plPnt.constAt(n, 2, 0) - outParTmp.constAt(n, 2, 0)) / std::cos(outParTmp.constAt(n, 5, 0));
+        }
+        MPLEX_SIMD
+        for (int n = 0; n < N; ++n) {
+          if (n < N_proc)
+            s[n] += sR[n];
+        }
+      }  //end Niter-1
 
-        // use linear approximation if s did not converge (for very high pT tracks)
+      // use linear approximation if s did not converge (for very high pT tracks)
+      MPLEX_SIMD
+      for (int n = 0; n < N; ++n) {
         if (n < N_proc) {
-          if (isFinite(s[n]) == false && isFinite(sl))  // replace with sl even if not fully correct
-            s[n] = sl;
+          if (isFinite(s[n]) == false && isFinite(sl[n]))  // replace with sl even if not fully correct
+            s[n] = sl[n];
         }
       }
 

@@ -13,6 +13,7 @@ namespace mkfitdev {
     constexpr float PI = 3.14159265358979323846;
     constexpr float TwoPI = 6.28318530717958647692;
     constexpr float PIOver2 = Const::PI / 2.0f;
+    constexpr float InvPI = 1.0f / Const::PI;
     constexpr float sol = 0.299792458;  // speed of light in m/ns
     constexpr float sol_over_100 = 0.299792458e-2;
   }  // namespace Const

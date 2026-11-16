@@ -2,15 +2,17 @@
 #define RecoTracker_MkFitAlpaka_src_alpaka_select_MiniPropagators_h
 
 // Portable transliteration of MkFitCore mini propagators (RecoTracker/MkFitCore/src/MiniPropagators.{h,cc}), as used by
-// MkFinder::selectHitIndicesV2 of the LST step.
+// MkFinder::selectHitIndicesV2 of the clone engine and by MkFinderV2p2.
 //   - State / InitialState: the scalar flavour (per-hit propagation). State(par) uses std::cos/sin/tan as MkFitCore.
-//   - StatePlex / InitialStatePlex: the MkFitCore "Plex" flavour (used for the bin limits) over N slots. MkFitCore
+//   - StatePlex / InitialStatePlex: the MkFitCore "Plex" flavour (bin limits, layer crossings) over N slots. MkFitCore
 //     evaluates it element-wise on MPlexQF with vdt fast_sincos / fast_tan; every operation is per element, so any
 //     N (CPU batches: kNN, one candidate: 1) is the same arithmetic per slot.
-// Only the algorithms the LST step reaches are ported: propagate_to_r(PA_Exact), propagate_to_z(PA_Exact),
-// propagate_to_plane(PA_Line). PA_Line/PA_Quadratic of to_r/to_z fall through to PA_Exact; the plane
-// PA_Quadratic/PA_Exact throw in MkFitCore and are never called. Not ported: Hermite3D / Hermite3DOnPlane and the
-// copyIn / projection helpers, which only MkFinderV2p2 uses.
+//   - Hermite3D / Hermite3DOnPlane: the cubic through two layer crossings and its solve onto a module plane.
+// Only the algorithms the two finders reach are ported: propagate_to_r(PA_Exact), propagate_to_z(PA_Exact),
+// propagate_to_plane(PA_Line); the Plex propagators always update the momentum. PA_Line/PA_Quadratic of to_r/to_z
+// fall through to PA_Exact; the plane PA_Quadratic/PA_Exact throw in MkFitCore and are never called. Not ported: the
+// Plex propagate_to_plane and Hermite3D's one-point mode and path_length (no caller outside diagnostics), and the
+// projecting State / InitialState constructors (the v2p2 state on a hit is the POD V2p2InitialState).
 
 #include <cmath>
 
@@ -196,7 +198,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
 
     // StatePlex::copyIn(dst_slot, const StatePlex& src, src_slot)
     template <int M>
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const StatePlex<M>& src, int src_slot);
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const StatePlex<M>& src, int src_slot) {
+      x[dst_slot] = src.x[src_slot];
+      y[dst_slot] = src.y[src_slot];
+      z[dst_slot] = src.z[src_slot];
+      px[dst_slot] = src.px[src_slot];
+      py[dst_slot] = src.py[src_slot];
+      pz[dst_slot] = src.pz[src_slot];
+      dalpha[dst_slot] = src.dalpha[src_slot];
+      fail_flag[dst_slot] = src.fail_flag[src_slot];
+    }
   };
 
   // The explicit fma forms below are the contractions of MkFitCore's -Ofast x86-64-v3 build of these Matriplex
@@ -212,15 +223,32 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
     InitialStatePlex() = default;
 
     // using StatePlex::operator= (MkBins::prop_to_limits_in_order: m_isp = m_sp1 keeps inv_pt, inv_k, theta)
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE InitialStatePlex& operator=(const StatePlex<N>& sp);
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE InitialStatePlex& operator=(const StatePlex<N>& sp) {
+      StatePlex<N>::operator=(sp);
+      return *this;
+    }
 
     // InitialStatePlex::copyIn(dst_slot, const InitialStatePlex& src, src_slot)
     template <int M>
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const InitialStatePlex<M>& src, int src_slot);
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const InitialStatePlex<M>& src, int src_slot) {
+      StatePlex<N>::copyIn(dst_slot, src, src_slot);
+      inv_pt[dst_slot] = src.inv_pt[src_slot];
+      inv_k[dst_slot] = src.inv_k[src_slot];
+      theta[dst_slot] = src.theta[src_slot];
+    }
 
     // copyIn_partial_track_state: x, y, z, inv_pt and theta of par = {x, y, z, 1/pT, phi, theta}; to be followed by
-    // init_momentum_vec_and_k
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn_partial_track_state(int dst_slot, const float* par);
+    // init_momentum_vec_and_k. Also zeroes dalpha and fail_flag of the slot: MkFitCore's StatePlex member initializers
+    // in its fresh LayerBatch, which this trivial type cannot have.
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn_partial_track_state(int dst_slot, const float* par) {
+      this->x[dst_slot] = par[0];
+      this->y[dst_slot] = par[1];
+      this->z[dst_slot] = par[2];
+      inv_pt[dst_slot] = par[3];
+      theta[dst_slot] = par[5];
+      this->dalpha[dst_slot] = 0.0f;
+      this->fail_flag[dst_slot] = 0;
+    }
 
     // init_momentum_vec_and_k(phi, chg, float bf) (MiniPropagators.cc)
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void init_momentum_vec_and_k(const float* phi, const int* chg, float bf);
@@ -253,10 +281,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
     // cylinder; fail_flag 2 = R not on the trajectory (c clamped to the closest reachable radius), 1 = landed further
     // than kReachTolerance from it. Every slot is computed (MkFitCore: the first N_proc).
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void propagate_to_r(const float* R, StatePlex<N>& c) const {
+      // The fail flags in a loop of their own, as MkFitCore, so that the propagation vectorizes.
+      float R_effs[N];
+      int unreachables[N];
       MPLEX_SIMD
       for (int n = 0; n < N; ++n) {
         float R_eff = R[n];
-        bool unreachable = false;
+        int unreachable = 0;
 
         const float k = 1.0f / inv_k[n];
 
@@ -281,10 +312,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
         }
         if (R[n] < r_lo) {
           R_eff = r_lo;
-          unreachable = true;
+          unreachable = 1;
         } else if (R[n] > r_hi) {
           R_eff = r_hi;
-          unreachable = true;
+          unreachable = 1;
         }
 
         const float a = std::fma(R_eff, R_eff, dc2_m_Rc2) / (2.0f * d_c);
@@ -325,11 +356,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
         c.px[n] = std::fma(-sina, py, px * cosa);
         c.py[n] = std::fma(sina, px, py * cosa);
         c.pz[n] = pz;
-
-        if (unreachable)
+        R_effs[n] = R_eff;
+        unreachables[n] = unreachable;
+      }
+      for (int n = 0; n < N; ++n) {
+        if (unreachables[n])
           c.fail_flag[n] = 2;
         else
-          c.fail_flag[n] = (std::abs(R_eff - hypotV(c.x[n], c.y[n])) > kReachTolerance) ? 1 : 0;
+          c.fail_flag[n] = (std::abs(R_effs[n] - hypotV(c.x[n], c.y[n])) > kReachTolerance) ? 1 : 0;
       }
     }
 
@@ -364,18 +398,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
   // Coefficient k of the cubic in x is m_Hx[k][slot], as MPlex4V aij(k, 0).
   //-----------------------------------------------------------
 
+  constexpr int kHermiteCoeffs = 4;  // coefficients of a cubic (MPlex4V)
+
   template <int N>
   struct Hermite3D {
-    float m_Hx[4][N], m_Hy[4][N], m_Hz[4][N];
+    float m_Hx[kHermiteCoeffs][N], m_Hy[kHermiteCoeffs][N], m_Hz[kHermiteCoeffs][N];
     float m_Hderfac[N];  // 1 / (k * dalpha)
+
+    Hermite3D() = default;
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE explicit Hermite3D(float val) {
+      for (int n = 0; n < N; ++n) {
+        for (int k = 0; k < kHermiteCoeffs; ++k)
+          m_Hx[k][n] = m_Hy[k][n] = m_Hz[k][n] = val;
+        m_Hderfac[n] = val;
+      }
+    }
 
     // Hermite3D::copyIn(dst_slot, src, src_slot)
     template <int M>
-    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const Hermite3D<M>& src, int src_slot);
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void copyIn(int dst_slot, const Hermite3D<M>& src, int src_slot) {
+      for (int k = 0; k < kHermiteCoeffs; ++k) {
+        m_Hx[k][dst_slot] = src.m_Hx[k][src_slot];
+        m_Hy[k][dst_slot] = src.m_Hy[k][src_slot];
+        m_Hz[k][dst_slot] = src.m_Hz[k][src_slot];
+      }
+      m_Hderfac[dst_slot] = src.m_Hderfac[src_slot];
+    }
 
     // Hermite3D::hermite_1d for slot n
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE static void hermite_1d(
-        float x1, float p1, float x2, float p2, float derfac, float (&h)[4][N], int n);
+        float x1, float p1, float x2, float p2, float derfac, float (&h)[kHermiteCoeffs][N], int n);
 
     // two-point mode: t = 0 at sp1, t = 1 at sp2 (calculate_coeffs(sp1, sp2, inv_k))
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void calculate_coeffs(const StatePlex<N>& sp1,
@@ -395,8 +447,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
 
   template <int N>
   struct Hermite3DOnPlane {
-    float m_D[4][N];  // cubic of the distance to the plane
-    float m_T[N];     // t at the solution
+    float m_D[kHermiteCoeffs][N];  // cubic of the distance to the plane
+    float m_T[N];                  // t at the solution
 
     // init_coeffs(h, pos, zdir): the distance cubic and the linear first guess T = d0 / (d0 - d1)
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void init_coeffs(const Hermite3D<N>& h,
@@ -412,6 +464,152 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
     // solve(): ONE Newton step from m_T
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void solve();
   };
+
+  //===========================================================================
+  // MiniPropagators.cc: vectorized version
+  //===========================================================================
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void InitialStatePlex<N>::init_momentum_vec_and_k(const float* phi,
+                                                                                        const int* chg,
+                                                                                        float bf) {
+    MPLEX_SIMD
+    for (int i = 0; i < N; ++i) {
+      const float pt = 1.0f / inv_pt[i];
+      ::mkfitdev::vdt::fast_sincosf(phi[i], this->py[i], this->px[i]);
+      this->px[i] *= pt;
+      this->py[i] *= pt;
+      this->pz[i] = pt / ::mkfitdev::vdt::fast_tanf(theta[i]);
+      inv_k[i] = ((chg[i] < 0) ? 0.01f : -0.01f) * mconst::sol * bf;
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void InitialStatePlex<N>::init_momentum_vec_and_k(const float* phi,
+                                                                                        const int* chg,
+                                                                                        const float* bf) {
+    init_momentum_vec_and_k(phi, chg, 1.0f);
+    for (int i = 0; i < N; ++i)
+      inv_k[i] *= bf[i];
+  }
+
+  //===========================================================================
+  // MiniPropagators.cc: Hermite3D interpolation
+  //===========================================================================
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3D<N>::hermite_1d(
+      float x1, float p1, float x2, float p2, float derfac, float (&h)[kHermiteCoeffs][N], int n) {
+    const float P = x2 - x1;
+    const float Q = p1 * derfac;
+    const float R = p2 * derfac - 2.0f * P + Q;
+    h[0][n] = x1;
+    h[1][n] = Q;
+    h[2][n] = P - Q - R;
+    h[3][n] = R;
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3D<N>::calculate_coeffs(const StatePlex<N>& sp1,
+                                                                          const StatePlex<N>& sp2,
+                                                                          const float* inv_k) {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      m_Hderfac[n] = (sp2.dalpha[n] - sp1.dalpha[n]) / inv_k[n];
+      hermite_1d(sp1.x[n], sp1.px[n], sp2.x[n], sp2.px[n], m_Hderfac[n], m_Hx, n);
+      hermite_1d(sp1.y[n], sp1.py[n], sp2.y[n], sp2.py[n], m_Hderfac[n], m_Hy, n);
+      hermite_1d(sp1.z[n], sp1.pz[n], sp2.z[n], sp2.pz[n], m_Hderfac[n], m_Hz, n);
+      m_Hderfac[n] = 1.0f / m_Hderfac[n];
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3D<N>::evaluate(const float* t, float* x, float* y, float* z) const {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      const float t2 = t[n] * t[n];
+      const float t3 = t2 * t[n];
+      x[n] = m_Hx[0][n] + t[n] * m_Hx[1][n] + t2 * m_Hx[2][n] + t3 * m_Hx[3][n];
+      y[n] = m_Hy[0][n] + t[n] * m_Hy[1][n] + t2 * m_Hy[2][n] + t3 * m_Hy[3][n];
+      z[n] = m_Hz[0][n] + t[n] * m_Hz[1][n] + t2 * m_Hz[2][n] + t3 * m_Hz[3][n];
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3D<N>::evaluate(
+      const float* t, float* x, float* y, float* z, float* dx, float* dy, float* dz) const {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      const float t2 = t[n] * t[n];
+      const float t3 = t2 * t[n];
+      x[n] = m_Hx[0][n] + t[n] * m_Hx[1][n] + t2 * m_Hx[2][n] + t3 * m_Hx[3][n];
+      y[n] = m_Hy[0][n] + t[n] * m_Hy[1][n] + t2 * m_Hy[2][n] + t3 * m_Hy[3][n];
+      z[n] = m_Hz[0][n] + t[n] * m_Hz[1][n] + t2 * m_Hz[2][n] + t3 * m_Hz[3][n];
+      dx[n] = (m_Hx[1][n] + 2.0f * t[n] * m_Hx[2][n] + 3.0f * t2 * m_Hx[3][n]) * m_Hderfac[n];
+      dy[n] = (m_Hy[1][n] + 2.0f * t[n] * m_Hy[2][n] + 3.0f * t2 * m_Hy[3][n]) * m_Hderfac[n];
+      dz[n] = (m_Hz[1][n] + 2.0f * t[n] * m_Hz[2][n] + 3.0f * t2 * m_Hz[3][n]) * m_Hderfac[n];
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3D<N>::evaluate(const float* t, StatePlex<N>& sp) const {
+    evaluate(t, sp.x, sp.y, sp.z, sp.px, sp.py, sp.pz);
+  }
+
+  //===========================================================================
+  // MiniPropagators.cc: Hermite3DOnPlane intersection
+  //===========================================================================
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3DOnPlane<N>::init_coeffs(const Hermite3D<N>& h,
+                                                                            const ::mkfitdev::MPlexHV<N>& pos,
+                                                                            const ::mkfitdev::MPlexHV<N>& zdir) {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      m_D[0][n] = (pos(n, 0, 0) - h.m_Hx[0][n]) * zdir(n, 0, 0) + (pos(n, 1, 0) - h.m_Hy[0][n]) * zdir(n, 1, 0) +
+                  (pos(n, 2, 0) - h.m_Hz[0][n]) * zdir(n, 2, 0);
+      for (int i = 1; i < kHermiteCoeffs; ++i) {
+        m_D[i][n] = -(h.m_Hx[i][n] * zdir(n, 0, 0) + h.m_Hy[i][n] * zdir(n, 1, 0) + h.m_Hz[i][n] * zdir(n, 2, 0));
+      }
+    }
+
+    float t0[N], t1[N], d0[N], d1[N];
+    for (int n = 0; n < N; ++n) {
+      t0[n] = 0.0f;
+      t1[n] = 1.0f;
+    }
+    evaluate(t0, d0);
+    evaluate(t1, d1);
+    for (int n = 0; n < N; ++n)
+      m_T[n] = d0[n] / (d0[n] - d1[n]);
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3DOnPlane<N>::evaluate(const float* t, float* d) const {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      const float t2 = t[n] * t[n];
+      d[n] = m_D[0][n] + m_D[1][n] * t[n] + m_D[2][n] * t2 + m_D[3][n] * t2 * t[n];
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3DOnPlane<N>::evaluate(const float* t, float* d, float* dddt) const {
+    MPLEX_SIMD
+    for (int n = 0; n < N; ++n) {
+      const float t2 = t[n] * t[n];
+      d[n] = m_D[0][n] + m_D[1][n] * t[n] + m_D[2][n] * t2 + m_D[3][n] * t2 * t[n];
+      dddt[n] = m_D[1][n] + 2.0f * m_D[2][n] * t[n] + 3.0f * m_D[3][n] * t2;
+    }
+  }
+
+  template <int N>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void Hermite3DOnPlane<N>::solve() {
+    float f[N], df[N];
+    evaluate(m_T, f, df);
+    for (int n = 0; n < N; ++n)
+      m_T[n] -= f[n] / df[n];
+  }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators
 
