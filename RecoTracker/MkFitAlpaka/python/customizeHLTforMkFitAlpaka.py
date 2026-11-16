@@ -5,7 +5,7 @@
 # menu's (hltInitialStepSeeds -> hltInputLST -> hltLST -> LSTOutputConverter -> MkFitSeedConverter). What runs where:
 #   hltMkFitAlpakaOTRecHits         device OT rechits of the mkFit hit input, from the OT clusters
 #   hltMkFitEventOfHits             device hit input + EventOfHits binning (pixel rechit SoA + device OT rechits)
-#   hltInitialStepTrackCandidatesMkFitDevice     device building (clone engine, backward fit, cleaning)
+#   hltInitialStepTrackCandidatesMkFitDevice     device building (the menu's buildingRoutine, backward fit, cleaning)
 #   hltInitialStepTrackCandidatesMkFitFitDevice  device mkFit final fit (with the pixel CPE)
 #   hltInitialStepTracks            host conversion to reco::Track
 # With procModifier alpakaValidationHLT the chain also runs as SerialSync clones (_serialSyncClones).
@@ -48,6 +48,9 @@ _CPE_LORENTZ_DEFAULTS = {'useLAFromDB': True, 'lAOffset': 0., 'lAWidthBPix': 0.,
 _FIT_HONOURED = {'tracks', 'eventOfHits', 'mkFitPixelHits', 'pixelCPE', 'candCutSel', 'candMinPtCut',
                  'candMinNHitsCut', 'candMinPtRelaxedCut', 'candMinAbsEtaForRelaxedCut', 'mkFitSilent',
                  'limitConcurrency', 'mightGet'}
+# MkFitProducer building routines the device implements (MkFitCore's clone engine and MkFinderV2p2); its tunings come
+# with the iteration config, so the device module needs only the name
+_BUILDING_ROUTINES = ('cloneEngine', 'v2p2')
 # plugins that read the hit labels only as MkFitClusterIndexToHit
 _INDEX_ONLY_READERS = ('MkFitOutputConverter', 'MkFitOutputTrackConverter', 'MkFitAlpakaBuildProducer@alpaka',
                        'MkFitAlpakaFitDeviceProducer@alpaka')
@@ -129,9 +132,11 @@ def _removeFromDirectSequences(process, module, replacement=None):
 
 # ---- checks: the menu modules are inside the configuration the device code reproduces ----
 def _checkMkFitBuildConfig(mkf):
-    want = {'buildingRoutine': 'cloneEngine', 'backwardFitInCMSSW': False, 'seedCleaning': True,
-            'removeDuplicates': True, 'config': ITERATION_CONFIG}
+    want = {'backwardFitInCMSSW': False, 'seedCleaning': True, 'removeDuplicates': True, 'config': ITERATION_CONFIG}
     bad = []
+    routine = mkf.buildingRoutine.value() if hasattr(mkf, 'buildingRoutine') else None
+    if routine not in _BUILDING_ROUTINES:
+        bad.append('buildingRoutine=%s (supported: %s)' % (routine, ' or '.join(_BUILDING_ROUTINES)))
     for name, supported in want.items():
         have = getattr(mkf, name).value() if hasattr(mkf, name) else None
         if have != (supported.value() if hasattr(supported, 'value') else supported):

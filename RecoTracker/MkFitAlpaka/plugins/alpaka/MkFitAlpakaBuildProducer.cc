@@ -1,6 +1,8 @@
 // MkFitAlpakaBuildProducer: device track building of one mkFit iteration, in place of MkFitProducer
 // (hltInitialStepTrackCandidatesMkFit): seed import, forward search, pre-filter, backward fit, backward search,
 // post-filter, export and duplicate cleaning.
+// - buildingRoutine selects the finder as MkFitProducer does: 'cloneEngine' (findTracksCloneEngine) or 'v2p2'
+//   (findTracksStandardv2p2 with the backward fit bkFitFitTracksV2p2); the rest of the chain is shared.
 // - Inputs: host seeds (MkFitSeedWrapper), the device EventOfHits, the MkFitAlpaka ES product, MkFitGeometry.
 // - Outputs: the TrackSoA of the built tracks and the per-event status product (overflow and repack counters).
 // - Candidate scratch is module-internal. CPU backends reuse a pooled set per event in flight (grow-only seed
@@ -8,6 +10,8 @@
 //   past the event's seed count are never read.
 // - The engine tables are built once per IOV and device. The event path has no host synchronization: the seed count
 //   and the survivor counts of both filters stay on the device, and grids are sized from the seed capacity.
+#include <algorithm>
+#include <cstddef>
 #include <limits>
 #include <map>
 #include <memory>
@@ -55,6 +59,8 @@
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedsHostPack.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/SeedsAlgo.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/SeedsDeviceCollection.h"
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Plan.h"
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/alpaka/V2p2Search.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/PropagationFlagsAdapter.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/bkfit/BkFitLaunch.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/engine/EngineSelectBridge.h"
@@ -62,12 +68,17 @@
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   namespace {
+    // node pool rows per seed row, shared by the seeds of an entry: only the seeds of the entry's layers store nodes,
+    // and an entry stores far fewer than one node per seed row; this leaves a wide margin (overflow is counted)
+    constexpr int kDefaultV2p2NodesPerSeed = 8;
+
     // Everything the engine needs from the ES, built once per (device, IOV).
     struct BuildTables {
       BuildTables(Queue& queue,
                   ::mkfitdev::ESDataHost const& esH,
                   ::mkfitdev::ESView const& esView,
-                  ::mkfitdev::SeedPartitionLimits lim)
+                  ::mkfitdev::SeedPartitionLimits lim,
+                  bool v2p2)
           : plan(::mkfitdev::makeEnginePlan(esH.hostConfigValue())),
             fwd(queue, ::mkfitdev::makeEngineStepTables(plan, true)),
             bkw(queue, ::mkfitdev::makeEngineStepTables(plan, false)),
@@ -100,6 +111,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             {cfg.pixel_layer_mask[0], cfg.pixel_layer_mask[1], cfg.pixel_layer_mask[2], cfg.pixel_layer_mask[3]},
             0.f,
             0.f};
+        if (v2p2) {
+          v2Fwd.emplace(queue, ::mkfitdev::makeV2p2StepTables(plan, true));
+          v2Bkw.emplace(queue, ::mkfitdev::makeV2p2StepTables(plan, false));
+          v2cfg.vp = cfg.v2p2;
+          v2cfg.pc = pc;
+          v2cfg.ipFwd = ipFwd;
+          v2cfg.ipBkw = ipBkw;
+          // MkJob::max_max_cands(): the CombCandidate capacity of both searches
+          v2cfg.capacity = std::max(cfg.params.maxCandsPerSeed, cfg.backward_params.maxCandsPerSeed);
+          v2cfg.nRegions = cfg.n_regions;
+          for (int r = 0; r < ::mkfitdev::es::kMaxRegions; ++r) {
+            v2cfg.finalPickScorer[r] = cfg.steering_params[r].final_pick_track_scorer;
+            v2cfg.searchScorer[r] = cfg.steering_params[r].track_scorer;
+          }
+        }
       }
       ::mkfitdev::EnginePlan plan;
       mkfitdev::EngineStepTablesDevice fwd, bkw;
@@ -113,31 +139,61 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       ::mkfitdev::clean::DupCleanParams dupClean{0.f, 0.f, 0.f, 0.f};
       ::mkfitdev::bkfit::OutlierParams bkfitOutliers{};
       ::mkfitdev::BkwSearchGate bkwGate{};
+      // v2p2 only: the lock-step plans of both searches and the search configuration
+      std::optional<mkfitdev::V2p2StepTablesDevice> v2Fwd, v2Bkw;
+      mkfitdev::V2p2SearchConfig v2cfg{};
     };
 
-    // Clone-engine scratch set. Reused only on CPU backends, whose blocking queues have finished the work when
+    // Size of the v2p2 search scratch: preselStride = V2p2Params::max_presel_hits of the IOV, nodesPerSeed = the
+    // module parameter v2p2NodesPerSeed (BuildScratch::prepare takes none for the clone engine).
+    struct V2p2ScratchSize {
+      int preselStride;
+      int nodesPerSeed;
+    };
+
+    // Candidate scratch set (clone engine: candidate books, step scratch and the K2 lists; v2p2: candidate books
+    // and the v2p2 search scratch). Reused only on CPU backends, whose blocking queues have finished the work when
     // produce() returns.
     struct BuildScratch {
       static constexpr uint32_t kCapacityGranularity = 1024;  // reused capacity: a multiple of this many seeds
 
       int cap = 0, hps = 0;
+      bool v2p2 = false;
+      V2p2ScratchSize v2size{0, 0};
       std::optional<mkfitdev::EngineBuffers> buffers, work;
       std::optional<PortableCollection<::mkfitdev::SelListSoA>> list;
       std::optional<PortableCollection<::mkfitdev::PropStateSoA>> props;
       std::optional<PortableCollection<::mkfitdev::SelHitsSoA>> sels;
+      std::optional<mkfitdev::V2p2Buffers> v2;
 
       // Capacity for nSeeds seeds: exact without reuse (the per-event path), else grow-only with 25% headroom.
-      void prepare(Queue& queue, int nSeeds, int hotsPerSeed, bool reuse) {
-        if (!reuse || nSeeds > cap || hotsPerSeed != hps || !buffers) {
+      void prepare(Queue& queue, int nSeeds, int hotsPerSeed, bool reuse, const V2p2ScratchSize* v2p2Size) {
+        const bool useV2p2 = v2p2Size != nullptr;
+        const bool v2p2Changed = useV2p2 != v2p2 || (useV2p2 && (v2p2Size->preselStride != v2size.preselStride ||
+                                                                 v2p2Size->nodesPerSeed != v2size.nodesPerSeed));
+        if (!reuse || nSeeds > cap || hotsPerSeed != hps || v2p2Changed || !buffers) {
           cap = reuse ? int(cms::alpakatools::divide_up_by(uint32_t(nSeeds + nSeeds / 4), kCapacityGranularity) *
                             kCapacityGranularity)
                       : nSeeds;
           hps = hotsPerSeed;
+          v2p2 = useV2p2;
+          v2size = useV2p2 ? *v2p2Size : V2p2ScratchSize{0, 0};
           buffers.reset();  // free before allocating the larger set
           work.reset();
           list.reset();
           props.reset();
           sels.reset();
+          v2.reset();
+          if (useV2p2) {
+            // the constructor zeroes the seed rows; no clone-engine step scratch, no K2 lists
+            buffers.emplace(queue, cap, hps, mkfitdev::EngineBuffers::NoStepScratch{});
+            work.emplace(queue, cap, hps, mkfitdev::EngineBuffers::NoStepScratch{});
+            if (int64_t(cap) * v2size.nodesPerSeed > std::numeric_limits<int32_t>::max())
+              throw cms::Exception("Configuration") << "v2p2NodesPerSeed = " << v2size.nodesPerSeed << " with " << cap
+                                                    << " seed rows exceeds the node pool's row range";
+            v2.emplace(queue, cap, v2size.preselStride, v2size.nodesPerSeed);  // one set for both searches
+            return;
+          }
           buffers.emplace(queue, cap, hps);              // the constructor zeroes the seed rows
           work.emplace(queue, cap, hps, buffers->step);  // the searches of both sets run one after the other
           const int nList = cap * ::mkfitdev::kMaxCandsPerSeed;
@@ -171,6 +227,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           hotsPerSeed_{iConfig.getParameter<int>("hotsPerSeed")},
           removeDuplicates_{iConfig.getParameter<bool>("removeDuplicates")},
           groupScan_{iConfig.getParameter<bool>("k2GroupScan")},
+          useV2p2_{iConfig.getParameter<std::string>("buildingRoutine") == "v2p2"},
+          v2p2NodesPerSeed_{iConfig.getParameter<int>("v2p2NodesPerSeed")},
           statusToken_{produces()},
           queueToken_{produces("queue")} {
       // MkFitProducer parameters the device build depends on
@@ -183,6 +241,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if (hotsPerSeed_ < 1 || hotsPerSeed_ > std::numeric_limits<int16_t>::max())
         throw cms::Exception("Configuration")
             << "hotsPerSeed = " << hotsPerSeed_ << " is outside [1, " << std::numeric_limits<int16_t>::max() << "]";
+      if (v2p2NodesPerSeed_ < 1)
+        throw cms::Exception("Configuration") << "v2p2NodesPerSeed = " << v2p2NodesPerSeed_ << " must be at least 1";
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -205,6 +265,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add("backwardFitInCMSSW", false);
       desc.add("k2GroupScan", true)
           ->setComment("GPU: K2 hit scan with several lanes per candidate; false = thread per candidate");
+      desc.add("v2p2NodesPerSeed", kDefaultV2p2NodesPerSeed)
+          ->setComment("v2p2 node pool rows per seed (overflow: nodes lost and counted)");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -259,7 +321,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // CPU backends: a set of the module's pool, back to it at the end of produce (blocking queue: the work is done)
       const auto pooled = reuse ? scratch_.makeOrGet([] { return new BuildScratch(); }) : nullptr;
       BuildScratch& scratch = reuse ? *pooled : eventScratch;
-      scratch.prepare(queue, nSeeds, hps, reuse);
+      const V2p2ScratchSize v2size{engineTables.v2cfg.vp.max_presel_hits, v2p2NodesPerSeed_};
+      scratch.prepare(queue, nSeeds, hps, reuse, useV2p2_ ? &v2size : nullptr);
       mkfitdev::EngineBuffers& buffers = *scratch.buffers;
       mkfitdev::EngineBuffers& work = *scratch.work;
       mkfitdev::seeds::importSeeds(queue,
@@ -289,22 +352,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                            engineTables.modules.data(),
                                            engineTables.layers.data()};
 
-      // 3. K2 (select) through the engine bridge; list capacity nSeeds * kMaxCandsPerSeed, count on the device
-      auto& list = *scratch.list;
-      auto& props = *scratch.props;
-      auto& sels = *scratch.sels;
-      const mkfitdev::EngineSelectK2 k2{list.view(),
-                                        props.view(),
-                                        sels.view(),
-                                        esView,
-                                        ev.layers(),
-                                        ev.binnedHits(),
-                                        ev.bins(),
-                                        ev.hits(),
-                                        nSeeds,
-                                        groupScan_};
-      const mkfitdev::EngineBackwardFitFn bkfit =
-          mkfitdev::makeEngineBackwardFit(in, engineTables.bkfitPF, engineTables.bkfitOutliers);
       // the EventOfHits beam spot (MkFitEventOfHitsProducer: mkfit::BeamSpot(bs.x0(), bs.y0(), ...), floats), read by
       // the backward-search gate (MkBuilder::beginBkwSearch) and the pT-adaptive duplicate cleaner
       ::mkfitdev::BkwSearchGate gate = engineTables.bkwGate;
@@ -317,24 +364,64 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         dupClean.bsY = gate.bsY;
       }
 
-      // 4. clone engine, sync-free
-      mkfitdev::EngineBuffers& res = mkfitdev::engineRunChainAsync(queue,
-                                                                   buffers,
-                                                                   work,
-                                                                   engineTables.fwd,
-                                                                   engineTables.bkw,
-                                                                   k2,
-                                                                   k2,
-                                                                   bkfit,
-                                                                   in,
-                                                                   in,
-                                                                   engineTables.pc,
-                                                                   engineTables.ipFwd,
-                                                                   engineTables.ipBkw,
-                                                                   engineTables.minHitsQFPre,
-                                                                   engineTables.minHitsQFPost,
-                                                                   nSeeds,
-                                                                   gate);
+      mkfitdev::EngineBuffers* resPtr = nullptr;
+      if (!useV2p2_) {
+        // 3. K2 (select) through the engine bridge; list capacity nSeeds * kMaxCandsPerSeed, count on the device
+        auto& list = *scratch.list;
+        auto& props = *scratch.props;
+        auto& sels = *scratch.sels;
+        const mkfitdev::EngineSelectK2 k2{list.view(),
+                                          props.view(),
+                                          sels.view(),
+                                          esView,
+                                          ev.layers(),
+                                          ev.binnedHits(),
+                                          ev.bins(),
+                                          ev.hits(),
+                                          nSeeds,
+                                          groupScan_};
+        const mkfitdev::EngineBackwardFitFn bkfit =
+            mkfitdev::makeEngineBackwardFit(in, engineTables.bkfitPF, engineTables.bkfitOutliers);
+
+        // 4. clone engine, sync-free
+        resPtr = &mkfitdev::engineRunChainAsync(queue,
+                                                buffers,
+                                                work,
+                                                engineTables.fwd,
+                                                engineTables.bkw,
+                                                k2,
+                                                k2,
+                                                bkfit,
+                                                in,
+                                                in,
+                                                engineTables.pc,
+                                                engineTables.ipFwd,
+                                                engineTables.ipBkw,
+                                                engineTables.minHitsQFPre,
+                                                engineTables.minHitsQFPost,
+                                                nSeeds,
+                                                gate);
+      } else {
+        // 3-4. v2p2 search (findTracksStandardv2p2 both ways) and its backward fit in the same chain, sync-free
+        const mkfitdev::V2p2EventInputs v2in{in, ev.layers(), ev.binnedHits(), ev.bins(), esView.layers};
+        mkfitdev::V2p2Buffers& v2 = *scratch.v2;
+        mkfitdev::v2p2ResetCounters(queue, v2);
+        const mkfitdev::EngineSearchFn search =
+            mkfitdev::makeV2p2SearchFn(v2, *engineTables.v2Fwd, *engineTables.v2Bkw, v2in, engineTables.v2cfg);
+        const mkfitdev::EngineBackwardFitFn bkfit =
+            mkfitdev::makeV2p2BackwardFit(in, engineTables.bkfitPF, engineTables.bkfitOutliers);
+        resPtr = &mkfitdev::engineRunChainAsync(queue,
+                                                buffers,
+                                                work,
+                                                search,
+                                                search,
+                                                bkfit,
+                                                engineTables.minHitsQFPre,
+                                                engineTables.minHitsQFPost,
+                                                nSeeds,
+                                                gate);
+      }
+      mkfitdev::EngineBuffers& res = *resPtr;
 
       // 5. tail: export + duplicate cleaner, NO filter; rows = the post-filter survivors
       auto brokenChains = cms::alpakatools::make_device_buffer<uint32_t[]>(queue, 1);
@@ -366,6 +453,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         // the cleaner copies the export counters into the final TrackSoA
         src.add(finalD.view().metadata().addressOf_nOverflowTracks(), ::mkfitdev::kTrackOverflow);
         src.add(finalD.view().metadata().addressOf_nOverflowHits(), ::mkfitdev::kTrackHitsOverflow);
+        if (useV2p2_) {
+          // the v2p2 event counters: members of a device scalar, addressed by offset
+          const auto* counters = scratch.v2->seeds.const_view().metadata().addressOf_counters();
+          src.addMember<uint32_t>(
+              counters, offsetof(::mkfitdev::V2p2Counters, nNodeOverflow), ::mkfitdev::kV2p2NodeOverflow);
+          src.addMember<uint32_t>(counters, offsetof(::mkfitdev::V2p2Counters, nNanScore), ::mkfitdev::kV2p2NanScore);
+        }
         mkfitdev::collectStatus(queue, statusProduct, src);
       }
       iEvent.emplace(statusToken_, std::move(statusProduct));
@@ -383,7 +477,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const auto& esH = iSetup.getData(esHostToken_);
         const auto& ti = iSetup.getData(mkFitGeomToken_).trackerInfo();
         // tables of earlier IOVs stay alive until the end of the job (events of other streams may still use them)
-        it = cache_.emplace(key, std::make_unique<BuildTables>(queue, esH, esView, ::mkfitdev::seedPartitionLimits(ti)))
+        it = cache_
+                 .emplace(
+                     key,
+                     std::make_unique<BuildTables>(queue, esH, esView, ::mkfitdev::seedPartitionLimits(ti), useV2p2_))
                  .first;
       }
       return *it->second;
@@ -400,6 +497,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const int hotsPerSeed_;
     const bool removeDuplicates_;
     const bool groupScan_;
+    const bool useV2p2_;
+    const int v2p2NodesPerSeed_;
     const device::EDPutToken<mkfitdev::MkFitStatusDeviceObject> statusToken_;
     const edm::EDPutTokenT<unsigned long long> queueToken_;
     mutable edm::ReusableObjectHolder<BuildScratch> scratch_;
