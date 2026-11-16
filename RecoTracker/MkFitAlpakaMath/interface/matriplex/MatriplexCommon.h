@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexCommon_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexCommon_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexCommon_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexCommon_h
 
 // Portable (host + Alpaka device) port of RecoTracker/MkFitCore/src/Matriplex/MatriplexCommon.h
 // (CMSSW_20_1_0_pre2). Intrinsics, aligned allocation and exceptions are dropped; everything is

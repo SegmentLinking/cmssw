@@ -26,7 +26,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/alpaka/EventOfHitsDeviceCollections.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitsMath.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/vdtMath.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/vdtMath.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
 

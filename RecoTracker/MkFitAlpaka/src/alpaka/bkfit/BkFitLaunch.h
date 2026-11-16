@@ -18,7 +18,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/cands/alpaka/CandsEngine.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/bkfit/BkFitTypes.h"
-#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/PropagationFlags.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/alpaka/prop/PropagationFlags.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 

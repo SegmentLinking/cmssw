@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropMath_h
-#define RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropMath_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropMath_h
+#define RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropMath_h
 
 // Small helper the MkFitCore propagation code takes from interface/cms_common_macros.h that the portable Matriplex does
 // not provide. Constants (Const::, Config::), vdt fast math, hipo, sincos4, getPhi and getTheta come from the
@@ -9,7 +9,7 @@
 #include <cstring>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 
 namespace mkfitdev::prop {
 

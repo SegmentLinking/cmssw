@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_TkBfield_h
-#define RecoTracker_MkFitAlpaka_interface_math_TkBfield_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_TkBfield_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_TkBfield_h
 
 // The menu's tracker magnetic field, portable (host + device), float as the release.
 // The Phase-2 HLT menu's MagneticField (grid_160812_3_8t with the parametrised slave OAE_1103l_071212) returns, wherever r < 115 cm and |z| < 280 cm,

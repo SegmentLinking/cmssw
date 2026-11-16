@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_HelixCrossings_h
-#define RecoTracker_MkFitAlpaka_interface_math_HelixCrossings_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_HelixCrossings_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_HelixCrossings_h
 
 // the helix crossings the TkDetLayers searches use to pick the sub-layer / ring /
 // rod, portable (ALPAKA_FN_HOST_ACC), transliterated from TrackingTools/GeomPropagators with the
@@ -15,7 +15,7 @@
 #include <limits>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
 
 namespace mkfitdev::navdev {
 

@@ -8,7 +8,7 @@
 
 #include "RecoTracker/MkFitCore/interface/binnor.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/EventOfHitsHostCollections.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
 
 namespace mkfitdev {
 

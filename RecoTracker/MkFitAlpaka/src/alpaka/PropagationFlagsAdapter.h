@@ -12,8 +12,8 @@
 
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESView.h"
-#include "RecoTracker/MkFitAlpaka/interface/es/MaterialView.h"
-#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/PropagationFlags.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/es/MaterialView.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/alpaka/prop/PropagationFlags.h"
 
 namespace mkfitdev::prop {
 

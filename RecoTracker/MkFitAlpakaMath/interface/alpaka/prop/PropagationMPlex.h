@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationMPlex_h
-#define RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationMPlex_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropagationMPlex_h
+#define RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropagationMPlex_h
 
 // Portable (Alpaka host+device) transliteration of MkFitCore propagation:
 //   src/PropagationMPlex.h, PropagationMPlexCommon.cc, PropagationMPlex.cc (helix to R),

@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_NavSearch_h
-#define RecoTracker_MkFitAlpaka_interface_math_NavSearch_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_NavSearch_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_NavSearch_h
 
 // the compatibleDets search of the OT endcap layers (Phase2EndcapLayer =
 // tkDetUtil::groupedCompatibleDetsV over Phase2EndcapRing, brothers = the upper sensors) on FLAT tables, portable
@@ -12,9 +12,9 @@
 #include <cstdint>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/DetPlaneTest.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/HelixCrossings.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/DetPlaneTest.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/HelixCrossings.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
 
 namespace mkfitdev::navdev {
 

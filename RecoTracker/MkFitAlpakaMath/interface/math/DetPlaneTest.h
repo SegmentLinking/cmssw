@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_DetPlaneTest_h
-#define RecoTracker_MkFitAlpaka_interface_math_DetPlaneTest_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_DetPlaneTest_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_DetPlaneTest_h
 
 // The device per-det test of the missing-hit navigation:
 // what GeomDetCompatibilityChecker + AnalyticalPropagator + Chi2MeasurementEstimator(-3 sigma) do for one
@@ -19,9 +19,9 @@
 #include <limits>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/HelixCrossings.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/HelixCrossings.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h"
 
 namespace mkfitdev::navdev {
 

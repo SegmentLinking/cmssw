@@ -115,16 +115,16 @@ fit (GPU backends): the fit runs as stage kernels (indices, fwd, bkw, then per o
       reader, hltInitialStepTrackCandidates, is unscheduled): MkFitAlpakaStatusCheck on the build status keeps its
       status warnings; no device->host copy of the build TrackSoA.
 [output conversion] Device PCA: the converter takes the
-      state at the beam-line PCA from MkFitAlpakaOutConvStateProducer (interface/math/PcaToBeamLine.h: the CCS ->
+      state at the beam-line PCA from MkFitAlpakaOutConvStateProducer (RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h: the CCS ->
       curvilinear conversion, TSCBLBuilderNoMaterial's helix-line TTMD + EXT curvilinear Jacobian, the field at the
-      first-hit state from interface/math/TkBfield.h, vdt's double fast_sincos ported) instead of calling
+      first-hit state from RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h, vdt's double fast_sincos ported) instead of calling
       TSCBLBuilderNoMaterial per track. Same operations as the host; not bitwise (device sin/cos/atan2, FMA). Rows
       whose state lies outside the closed-form field volume, and rows where the device TTMD does not converge, are
       done by the host TSCBL, so validity stays the host's except where the device converges and the host does not
       (counted in-job against the host TSCBL). Rounding-level.
       Same beam spot product as the host converter.
 [output conversion] The flat tables of the portable search (plugins/MkFitAlpakaNavFlatTablesBuilder.h) lay out each
-      layer as its TkDetLayers builder does. The search on them (interface/math/NavSearch.h) is transliterated from the
+      layer as its TkDetLayers builder does. The search on them (RecoTracker/MkFitAlpakaMath/interface/math/NavSearch.h) is transliterated from the
       TkDetLayers search with the analytic propagator and no material; a host copy of that transliteration gave the same
       missing inner/outer hit entries as DetLayer::compatibleDets with PropagatorWithMaterial in every call measured
       (identical TrigReport / MTV counts in CPU A/B).
@@ -132,7 +132,7 @@ fit (GPU backends): the fit runs as stage kernels (indices, fwd, bkw, then per o
       (pca::curvilinearJacobian, pca::similarity5 in PcaToBeamLine.h) shared with the navigation per-det test
       (DetPlaneTest.h). Same code; rounding-level for the device PCA (serial ttbar 60: every PCACHECK count and maximum
       identical, tracks bitwise equal to the host 2,444 -> 2,514 of 85,113).
-[navigation] The portable compatibleDets searches (interface/math/NavSearch.h) keep a DetGroup as {index,
+[navigation] The portable compatibleDets searches (RecoTracker/MkFitAlpakaMath/interface/math/NavSearch.h) keep a DetGroup as {index,
       indexSize, number of dets, first det}: DetGroupMerger only appends to a group, so its first det never changes and
       the result order and front() (all the converter reads) are exact; 0 differences in 84,216 + 85,901 calls (every
       layer kind) and in the kernel runs.
@@ -173,7 +173,7 @@ fit (GPU backends): the fit runs as stage kernels (indices, fwd, bkw, then per o
 [navigation] The host fills of the device CPE cluster inputs (fillClusterCpe with an optional row mask, fillClusterRefs,
   clusterCpe) moved from MkFitAlpakaFitDeviceProducer / MkFitAlpakaFitCpeTables.h into plugins/alpaka/MkFitAlpakaClusterCpeFill.h,
   shared with MkFitAlpakaLstInputProducer (pixKFCpe). Same loops, same outputs (the tracks-only fill = the row-mask form).
-[navigation] Navigation binning guards in interface/math/NavSearch.h: bin / closest / window decisions within
+[navigation] Navigation binning guards in RecoTracker/MkFitAlpakaMath/interface/math/NavSearch.h: bin / closest / window decisions within
   kNavMarginAbs (2 um; kNavMarginAbs / r as an angle) of their edge go to the host search (kNavMarginal), as boundsMarginal.
   Output-identical by construction (a guarded call is decided by the host search); in-job: GPU QCD 200 555,874 / 555,874 calls
   identical, CPU ttbar 50 101,648 / 101,648; host-search calls +0.08%.

@@ -18,7 +18,7 @@
 
 #include "RecoTracker/MkFitAlpaka/interface/es/ESLayouts.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESView.h"
-#include "RecoTracker/MkFitAlpaka/interface/es/MaterialView.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/es/MaterialView.h"
 
 namespace mkfit {
   class TrackerInfo;

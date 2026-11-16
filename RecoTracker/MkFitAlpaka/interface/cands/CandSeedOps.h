@@ -12,8 +12,8 @@
 #include <cstdint>
 
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandTypes.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 
 namespace mkfitdev {
 

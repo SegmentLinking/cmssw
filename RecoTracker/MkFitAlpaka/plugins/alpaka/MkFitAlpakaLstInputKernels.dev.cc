@@ -11,8 +11,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/DeviceHitInput.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h"
 
 #include "MkFitAlpakaLstInputKernels.h"
 

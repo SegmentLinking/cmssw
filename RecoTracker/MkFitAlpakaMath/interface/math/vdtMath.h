@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_vdtMath_h
-#define RecoTracker_MkFitAlpaka_interface_math_vdtMath_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_vdtMath_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_vdtMath_h
 
 // Portable (host + Alpaka device) transliteration of the single-precision vdt 0.4.3 functions that
 // MkFitCore calls (vdt/sincos.h, sin.h, cos.h, tan.h, atan.h, atan2.h, log.h, sqrt.h as shipped

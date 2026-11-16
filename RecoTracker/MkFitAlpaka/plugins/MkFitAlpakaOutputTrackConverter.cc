@@ -64,7 +64,7 @@
 #include "RecoTracker/MkFit/interface/MkFitSeedWrapper.h"
 #include "RecoTracker/MkFitCore/interface/Track.h"
 #include "RecoTracker/MkFitAlpaka/interface/OutConvProduct.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
 #include "RecoTracker/MkFitAlpaka/interface/StatusProduct.h"
 #include "RecoTracker/MkFitAlpaka/interface/StatusReport.h"
 #include "RecoTracker/MkFitAlpaka/interface/TrackProduct.h"

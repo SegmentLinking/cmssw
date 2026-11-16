@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_MathUtils_h
-#define RecoTracker_MkFitAlpaka_interface_math_MathUtils_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_MathUtils_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_MathUtils_h
 
 // Portable copies of the small inline helpers of MkFitCore (CMSSW_20_1_0_pre2):
 //   RecoTracker/MkFitCore/src/Matrix.h      hipo, hipo_sqr, sincos4
@@ -12,8 +12,8 @@
 
 #include <alpaka/core/Common.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/vdtMath.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/vdtMath.h"
 
 namespace mkfitdev {
 

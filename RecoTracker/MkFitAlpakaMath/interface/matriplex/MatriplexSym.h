@@ -1,12 +1,12 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexSym_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexSym_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexSym_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexSym_h
 
 // Portable (host + Alpaka device) port of RecoTracker/MkFitCore/src/Matriplex/MatriplexSym.h (CMSSW_20_1_0_pre2).
 // Same API, same packed lower-triangle layout fArray[symOffset(i, j) * N + n] (= gSymOffsets[D][i * D + j]),
 // same arithmetic in the same order. See Matriplex.h for the list of differences.
 
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexCommon.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/Matriplex.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/Matriplex.h"
 
 //==============================================================================
 // MatriplexSym
@@ -222,7 +222,7 @@ namespace mkfitdev {
 
         MPLEX_SIMD
         for (idx_t n = 0; n < N; ++n) {
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/std_sym_3x3.ah"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/std_sym_3x3.ah"
         }
       }
     };
@@ -238,7 +238,7 @@ namespace mkfitdev {
 
         MPLEX_SIMD
         for (idx_t n = 0; n < N; ++n) {
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/std_sym_6x6.ah"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/std_sym_6x6.ah"
         }
       }
     };

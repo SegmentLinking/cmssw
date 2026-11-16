@@ -12,8 +12,8 @@
 
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandSeedOps.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/DupCleanParams.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 
 namespace mkfitdev::clean {

@@ -8,7 +8,7 @@
 
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandTypes.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
 
 namespace mkfitdev {
 

@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_HitConstants_h
-#define RecoTracker_MkFitAlpaka_interface_math_HitConstants_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_HitConstants_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_HitConstants_h
 
 // MkFitCore special hit indices (RecoTracker/MkFitCore/interface/Hit.h, HitOnTrack). One copy for the whole package.
 

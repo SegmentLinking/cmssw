@@ -27,12 +27,12 @@
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandSelection.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandsSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/Packers.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/cands/CandSeedOpsKernels.h"
-#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/alpaka/prop/KalmanUtilsMPlex.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 

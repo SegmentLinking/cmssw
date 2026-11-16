@@ -1,14 +1,14 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_Matrix_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_Matrix_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_Matrix_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_Matrix_h
 
 // Portable port of RecoTracker/MkFitCore/src/Matrix.h (CMSSW_20_1_0_pre2): the Matriplex typedefs, templated on
 // N = tracks per Alpaka thread (MkFitCore: fixed NN = MPT_SIZE = 8 on x86-64-v3). hipo/sincos4 live in
 // interface/math/MathUtils.h. Per-backend N: see MatriplexBackend.h (ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::kNN).
 
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexSym.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatrixSTypes.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexSym.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatrixSTypes.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 
 namespace mkfitdev {
 

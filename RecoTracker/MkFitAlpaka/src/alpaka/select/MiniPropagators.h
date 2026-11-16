@@ -14,10 +14,10 @@
 #include <cmath>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/vdtMath.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/vdtMath.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexCommon.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::mini_propagators {
 

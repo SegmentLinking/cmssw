@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationFlags_h
-#define RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationFlags_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropagationFlags_h
+#define RecoTracker_MkFitAlpakaMath_interface_alpaka_prop_PropagationFlags_h
 
 // Device mirror of mkfit::PropagationFlags (interface/PropagationConfig.h). The TrackerInfo back-pointer
 // is replaced by the flat material map view, which also carries the field constants of both field models.
@@ -9,7 +9,7 @@
 //   seed_fit, pca_prop: none;  finding_requires_propagation_to_hit_pos = true;  backward_fit_to_pca = false.
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/es/MaterialView.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/es/MaterialView.h"
 
 namespace mkfitdev::prop {
 

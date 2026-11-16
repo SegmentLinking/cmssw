@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_Matriplex_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_Matriplex_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_Matriplex_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_Matriplex_h
 
 // Portable (host + Alpaka device) port of RecoTracker/MkFitCore/src/Matriplex/Matriplex.h (CMSSW_20_1_0_pre2).
 // Same class, same API, same element layout fArray[(i * D2 + j) * N + n], same arithmetic in the same order.
@@ -12,8 +12,8 @@
 #include <cmath>
 #include <type_traits>
 
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexCommon.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/vdtMath.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/vdtMath.h"
 
 namespace mkfitdev {
   namespace Matriplex {

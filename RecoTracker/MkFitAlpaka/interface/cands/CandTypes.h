@@ -9,7 +9,7 @@
 
 #include <alpaka/alpaka.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/HitConstants.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/HitConstants.h"
 
 namespace mkfitdev {
 

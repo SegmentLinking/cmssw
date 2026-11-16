@@ -56,7 +56,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/tracks/TrackSoADeviceCollection.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h"
 #include "RecoTracker/MkFitAlpaka/interface/othits/alpaka/OTRecHitDeviceCollection.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 

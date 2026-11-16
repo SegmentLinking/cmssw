@@ -1,9 +1,9 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_es_MaterialView_h
-#define RecoTracker_MkFitAlpaka_interface_es_MaterialView_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_es_MaterialView_h
+#define RecoTracker_MkFitAlpakaMath_interface_es_MaterialView_h
 
 #include <alpaka/alpaka.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
 
 namespace mkfitdev {
 

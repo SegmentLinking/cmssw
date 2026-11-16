@@ -20,7 +20,7 @@
 #include "RecoTracker/MkFitCore/interface/TrackerInfo.h"
 
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
 
 #include "dupCleanTestIO.h"
 

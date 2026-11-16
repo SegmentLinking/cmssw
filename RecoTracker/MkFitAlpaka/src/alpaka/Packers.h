@@ -22,7 +22,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandTypes.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESView.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/Matrix.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/Matrix.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 
 namespace mkfitdev::pack {

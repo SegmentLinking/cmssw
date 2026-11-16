@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/NavSearch.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/NavSearch.h"
 #include "RecoTracker/MkFitAlpaka/interface/navdev/NavResultSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 

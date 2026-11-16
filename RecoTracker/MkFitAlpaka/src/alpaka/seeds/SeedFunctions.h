@@ -14,8 +14,8 @@
 
 #include <alpaka/alpaka.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedSoA.h"
 
 namespace mkfitdev::seeds {

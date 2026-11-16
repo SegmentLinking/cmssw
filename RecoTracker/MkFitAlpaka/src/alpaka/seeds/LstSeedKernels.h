@@ -32,11 +32,11 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESView.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/Config.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/fit/FitKernels.h"
-#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/alpaka/prop/KalmanUtilsMPlex.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
 

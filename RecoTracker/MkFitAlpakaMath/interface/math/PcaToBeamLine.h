@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_PcaToBeamLine_h
-#define RecoTracker_MkFitAlpaka_interface_math_PcaToBeamLine_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_PcaToBeamLine_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_PcaToBeamLine_h
 // The device PCA, a portable (ALPAKA_FN_HOST_ACC) transliteration of what the output converter
 // does on the host for every track (MkFitOutputTrackConverter / MkFitAlpakaOutputTrackConverter):
 //   mkfit::TrackState::convertFromCCSToGlbCurvilinear (MkFitCore/src/Track.cc, float)                  ccsToCurvilinear
@@ -18,7 +18,7 @@
 
 #include <alpaka/core/Common.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h"
 
 namespace mkfitdev::vdt {
   // vdt 0.4.3 sincos.h, the DOUBLE fast_sincos (AnalyticalCurvilinearJacobianEXT calls vdt::fast_sincos(double))

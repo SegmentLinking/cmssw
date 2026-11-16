@@ -10,7 +10,7 @@
 #include "DataFormats/SiPixelClusterSoA/interface/ClusteringConstants.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/MathUtils.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/engine/FitHandoff.h"
 

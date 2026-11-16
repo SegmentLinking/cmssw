@@ -1,0 +1,9 @@
+<!-- the field and the vdt functions on every backend vs the host; also checks that a device binary using only
+     this package launches its own kernels (no MkFitAlpaka device code linked in) -->
+<bin file="alpaka/testMkFitAlpakaMath.dev.cc" name="testMkFitAlpakaMath">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpakaMath"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>

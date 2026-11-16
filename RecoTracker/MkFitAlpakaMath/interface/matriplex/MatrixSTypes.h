@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_MatrixSTypes_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_MatrixSTypes_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_MatrixSTypes_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_MatrixSTypes_h
 
 // Portable, layout-compatible stand-ins for the ROOT SMatrix typedefs of RecoTracker/MkFitCore/interface/MatrixSTypes.h
 // (CMSSW_20_1_0_pre2). ROOT SMatrix is not device code; these PODs keep exactly its storage order so that per-track
@@ -11,7 +11,7 @@
 // Only storage and element access are provided (Array(), operator(), At, operator[], kRows/kCols/kSize) plus
 // MkFitCore's diagonalOnly(); SMatrix algebra stays on the host (MkFitCore uses it there only).
 
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexCommon.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexCommon.h"
 
 namespace mkfitdev {
 

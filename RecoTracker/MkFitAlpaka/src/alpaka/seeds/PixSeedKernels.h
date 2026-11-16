@@ -19,8 +19,8 @@
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/TkBfield.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/seeds/LstSeedKernels.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {

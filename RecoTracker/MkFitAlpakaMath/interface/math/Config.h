@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_math_Config_h
-#define RecoTracker_MkFitAlpaka_interface_math_Config_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_math_Config_h
+#define RecoTracker_MkFitAlpakaMath_interface_math_Config_h
 
 // Portable copy of the constants and inline functions of RecoTracker/MkFitCore/interface/Config.h
 // that propagation, Kalman update, hit binning and building use.

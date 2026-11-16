@@ -7,6 +7,7 @@
   <use name="alpaka"/>
   <use name="FWCore/Utilities"/>
   <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpakaMath"/>
   <flags ALPAKA_BACKENDS="1"/>
   <flags NO_TESTRUN="1"/>
   <!-- the prop kernels are instantiated here, so the CPU backends get the library's flags -->

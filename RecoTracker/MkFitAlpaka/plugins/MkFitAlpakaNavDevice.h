@@ -12,7 +12,7 @@
 
 #include <alpaka/core/Common.hpp>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/HelixCrossings.h"  // MKFITDEV_NAV_INLINE
+#include "RecoTracker/MkFitAlpakaMath/interface/math/HelixCrossings.h"  // MKFITDEV_NAV_INLINE
 
 namespace mkfitdev::nav {
   constexpr int kMaxLayers = 64;

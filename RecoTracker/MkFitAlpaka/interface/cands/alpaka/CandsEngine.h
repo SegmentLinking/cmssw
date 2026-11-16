@@ -21,7 +21,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandSelection.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/alpaka/CandsDeviceCollection.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
-#include "RecoTracker/MkFitAlpaka/interface/es/MaterialView.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/es/MaterialView.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {

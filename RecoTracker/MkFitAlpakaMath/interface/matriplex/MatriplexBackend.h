@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexBackend_h
-#define RecoTracker_MkFitAlpaka_interface_matriplex_MatriplexBackend_h
+#ifndef RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexBackend_h
+#define RecoTracker_MkFitAlpakaMath_interface_matriplex_MatriplexBackend_h
 
 // Per-backend lane width and namespace aliases for device code in ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev.
 // Include only from Alpaka-compiled sources (*.dev.cc and the headers they include).
@@ -9,7 +9,7 @@
 //     Matriplex::..., vdt::fast_sincosf(...), Config::..., Const::..., MPlexLS<N>, hipo(...), sincos4(...)
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/Matrix.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/Matrix.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 

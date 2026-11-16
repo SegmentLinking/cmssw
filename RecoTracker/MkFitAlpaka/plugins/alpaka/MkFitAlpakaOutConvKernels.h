@@ -3,7 +3,7 @@
 // Device precomputation for the host output conversion, one thread per fitted track
 // (MkFitAlpakaOutConvStateProducer). See interface/outconv/OutConvSoA.h.
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/PcaToBeamLine.h"
 #include "RecoTracker/MkFitAlpaka/interface/outconv/OutConvSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 

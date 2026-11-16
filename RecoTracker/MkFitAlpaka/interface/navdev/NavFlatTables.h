@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "RecoTracker/MkFitAlpaka/interface/math/NavSearch.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/math/NavSearch.h"
 
 class DetLayer;
 class GeomDet;

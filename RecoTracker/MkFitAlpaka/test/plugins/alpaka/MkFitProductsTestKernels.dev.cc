@@ -1,7 +1,7 @@
 #include <alpaka/alpaka.hpp>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
-#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexBackend.h"
+#include "RecoTracker/MkFitAlpakaMath/interface/matriplex/MatriplexBackend.h"
 #include "RecoTracker/MkFitAlpaka/test/plugins/alpaka/MkFitProductsTestKernels.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/Packers.h"
 
