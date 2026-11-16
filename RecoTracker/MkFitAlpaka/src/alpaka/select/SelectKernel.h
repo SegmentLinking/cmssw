@@ -22,7 +22,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/LayerOfHitsAccess.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/PropagationFlagsAdapter.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PropagationMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/PropagationMPlex.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/select/SelectHitIndicesV2.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandEngineTypes.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/select/SelectSoA.h"

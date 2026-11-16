@@ -29,7 +29,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/PropagationFlagsAdapter.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/fit/FitTracks.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::fit {
 

@@ -36,7 +36,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/fit/FitKernels.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
 

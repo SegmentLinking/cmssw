@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_src_alpaka_prop_PropagationFlags_h
-#define RecoTracker_MkFitAlpaka_src_alpaka_prop_PropagationFlags_h
+#ifndef RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationFlags_h
+#define RecoTracker_MkFitAlpaka_interface_alpaka_prop_PropagationFlags_h
 
 // Device mirror of mkfit::PropagationFlags (interface/PropagationConfig.h). The TrackerInfo back-pointer
 // is replaced by the flat material map view, which also carries the field constants of both field models.

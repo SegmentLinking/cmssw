@@ -1,5 +1,5 @@
-#ifndef RecoTracker_MkFitAlpaka_src_alpaka_prop_KalmanUtilsMPlex_h
-#define RecoTracker_MkFitAlpaka_src_alpaka_prop_KalmanUtilsMPlex_h
+#ifndef RecoTracker_MkFitAlpaka_interface_alpaka_prop_KalmanUtilsMPlex_h
+#define RecoTracker_MkFitAlpaka_interface_alpaka_prop_KalmanUtilsMPlex_h
 
 // Portable (Alpaka host+device) transliteration of MkFitCore Kalman operations (src/KalmanUtilsMPlex.h/.cc, the
 // plane steps of PlaneSteps.h, and the final fit's update of FinalFit.cc), the plane-local flavour used by the

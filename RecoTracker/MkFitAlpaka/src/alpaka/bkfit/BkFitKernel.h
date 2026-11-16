@@ -26,8 +26,8 @@
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/Packers.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/bkfit/BkFitTypes.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PropagationMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/PropagationMPlex.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 

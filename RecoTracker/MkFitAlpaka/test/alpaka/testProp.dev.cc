@@ -23,8 +23,8 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "FWCore/Utilities/interface/stringize.h"
 
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
-#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PropagationMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpaka/interface/alpaka/prop/PropagationMPlex.h"
 #include "RecoTracker/MkFitAlpaka/test/propTestIO.h"
 
 using namespace ALPAKA_ACCELERATOR_NAMESPACE;
