@@ -2,7 +2,8 @@
 #define RecoTracker_MkFitAlpaka_src_alpaka_hits_EventOfHitsKernels_h
 
 // Device EventOfHits: per-layer phi/q binning of all hits reproducing mkfit::LayerOfHits
-// (HitStructures.cc registerHit/endRegistrationOfHits, binnor.h finalize_registration, suckInDeads).
+// (HitStructures.cc registerHit/endRegistrationOfHits, binnor.h finalize_registration, suckInDeads), with the hit
+// extents and their per-layer maxima.
 //
 // MkFitCore order inside a layer: hits registered in increasing original index, then sorted by the masked bin key
 // (q N-bin << 24 | 16-bit fine phi bin) with an LSD radix sort, which is stable => order = (key, original index).
@@ -49,6 +50,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
     float phi, q, q_half_length, qbar;
   };
 
+  // Half-extent of a hit in phi [rad], from its covariance (HitStructures.cc):
+  //     sigma_phi^2 = (y^2 exx - 2 xy exy + x^2 eyy) / r^4
+  // MkFitCore returns early for r2 <= 0; the select gives the same value without a branch.
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float hit_phi_half_extent_of(
+      float x, float y, float exx, float exy, float eyy, float hl_fac) {
+    const float r2 = x * x + y * y;
+    const float var_phi = (y * y * exx - 2.0f * x * y * exy + x * x * eyy) / (r2 * r2);
+    return r2 <= 0.0f ? 0.0f : hl_fac * sqrtf(var_phi > 0.0f ? var_phi : 0.0f);
+  }
+
+  // hl_fac * sigma_r, the hit's radial half-extent; barrel only (HitStructures.cc).
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float hit_r_half_extent_of(
+      float x, float y, float exx, float exy, float eyy, float hl_fac) {
+    const float r2 = x * x + y * y;
+    const float var_r = (x * x * exx + 2.0f * x * y * exy + y * y * eyy) / r2;
+    return r2 <= 0.0f ? 0.0f : hl_fac * sqrtf(var_r > 0.0f ? var_r : 0.0f);
+  }
+
+  // registerHit's hl_fac = is_pixel() ? 3 : sqrt(3)
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float hitHalfLengthFactor(bool pixel) { return pixel ? 3.0f : sqrtf(3.0f); }
+
+  // LayerOfHits::HitInfo phi_half_extent and qbar_half_extent of a hit (registerHit), computed apart from binHit:
+  // shared subexpressions would change the fused multiply-adds the compiler forms there
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void hitExtents(
+      float x, float y, float exx, float exy, float eyy, bool barrel, bool pixel, float& phiHalf, float& qbarHalf) {
+    const float hl_fac = hitHalfLengthFactor(pixel);
+    phiHalf = hit_phi_half_extent_of(x, y, exx, exy, eyy, hl_fac);
+    qbarHalf = barrel ? hit_r_half_extent_of(x, y, exx, exy, eyy, hl_fac) : 0.0f;
+  }
+
   // Per hit (LayerOfHits::registerHit): the hit info and the masked binnor key, i.e. B_pair(phiM, qM).mask_A2_M_bins()
   // = q N-bin << 24 | phi M-bin (16 bits: phi N-bin << 8 | 8 fine bits). One copy of the arithmetic for the GPU per-hit
   // kernel and the CPU per-layer build. Branch-free: on CPU backends a loop over it vectorizes.
@@ -70,7 +101,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
     const float q = barrel ? z : r;        // Hit::z() / Hit::r()
     // hl_fac = is_pixel() ? 3 : sqrt(3); half_length, qbar as registerHit
     // (one sqrt of the selected argument: the same operations as MkFitCore on either branch)
-    const float hlFac = pixel ? 3.0f : sqrtf(3.0f);
+    const float hlFac = hitHalfLengthFactor(pixel);
     info = HitInfoDev{phi, q, hlFac * sqrtf(hlArg), barrel ? r : z};
     // register_entry_safe: axis_pow2_u1::from_R_to_M_bin_safe, axis::from_R_to_M_bin_safe
     const uint32_t phiM = toBin((phi - phiRMin) * phiMFac) & ::mkfitdev::kPhiMaskM;
@@ -272,7 +303,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
 
   // 7. Per bin: deterministic in-bin rank of each member by (key, row) (= the stable LSD radix order of MkFitCore);
   //    writes the MkFitCore-ordered rows (LayerOfHits::endRegistrationOfHits: m_hit_infos[i] = hinfos[ranks[i]],
-  //    ranks -> original index).
+  //    ranks -> original index) with the hit extents.
   struct KernelRankAndStore {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   BinnedHitSoA::View out,
@@ -281,14 +312,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
                                   uint32_t const* __restrict__ binStart,
                                   uint32_t const* __restrict__ stKeyRow,
                                   HitSoA::ConstView hits,
+                                  LayerSoA::ConstView layers,
                                   HitInfoDev const* __restrict__ info) const {
       const uint32_t nPixel = hits.nPixel();
+      const auto hm = hits.metadata();
+      const float* __restrict__ hx = hm.addressOf_x();
+      const float* __restrict__ hy = hm.addressOf_y();
+      const float* __restrict__ he00 = hm.addressOf_e00();
+      const float* __restrict__ he10 = hm.addressOf_e10();
+      const float* __restrict__ he11 = hm.addressOf_e11();
+      const int8_t* __restrict__ hlay = hm.addressOf_layer();
+      const uint8_t* __restrict__ lBarrel = layers.metadata().addressOf_isBarrel();
+      const uint8_t* __restrict__ lPixel = layers.metadata().addressOf_isPixel();
       auto om = out.metadata();
       uint32_t* __restrict__ oRank = om.addressOf_rank();
       float* __restrict__ oPhi = om.addressOf_phi();
       float* __restrict__ oQ = om.addressOf_q();
       float* __restrict__ oHL = om.addressOf_qHalfLength();
       float* __restrict__ oQbar = om.addressOf_qbar();
+      float* __restrict__ oPhiHalf = om.addressOf_phiHalfExtent();
+      float* __restrict__ oQbarHalf = om.addressOf_qbarHalfExtent();
       for (uint32_t b : cms::alpakatools::uniform_elements(acc, nBins)) {
         const uint32_t c = binCnt[b];
         if (c == 0)
@@ -302,6 +345,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
           oQ[s] = hi.q;
           oHL[s] = hi.q_half_length;
           oQbar[s] = hi.qbar;
+          const int32_t l = hlay[row];
+          hitExtents(
+              hx[row], hy[row], he00[row], he10[row], he11[row], lBarrel[l], lPixel[l], oPhiHalf[s], oQbarHalf[s]);
           continue;
         }
         for (uint32_t m = s; m < s + c; ++m) {
@@ -317,12 +363,56 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
           oQ[pos] = hi.q;
           oHL[pos] = hi.q_half_length;
           oQbar[pos] = hi.qbar;
+          const int32_t l = hlay[row];
+          hitExtents(
+              hx[row], hy[row], he00[row], he10[row], he11[row], lBarrel[l], lPixel[l], oPhiHalf[pos], oQbarHalf[pos]);
         }
       }
     }
   };
 
-  // 8. Per dead region: LayerOfHits::suckInDeads.
+  // 8. Per layer, every backend: LayerOfHits::max_hit_q_half_length / max_hit_phi_half_extent of the registered hits,
+  //    folded per thread as std::max (NaN skipped as in registerHit) and combined by a tree: no float atomics.
+  struct KernelLayerMaxima {
+    static_assert((kBlock & (kBlock - 1)) == 0, "the tree halves the block");
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  LayerSoA::View layers,
+                                  BinnedHitSoA::ConstView binned,
+                                  uint32_t nLayers) const {
+      auto& sQ = alpaka::declareSharedVar<float[kBlock], __COUNTER__>(acc);
+      auto& sPhi = alpaka::declareSharedVar<float[kBlock], __COUNTER__>(acc);
+      const uint32_t nThreads = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
+      const uint32_t t = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
+      const float* __restrict__ hl = binned.metadata().addressOf_qHalfLength();
+      const float* __restrict__ phiHalf = binned.metadata().addressOf_phiHalfExtent();
+      for (uint32_t l : cms::alpakatools::independent_groups(acc, nLayers)) {
+        const uint32_t begin = layers[l].hitBegin();
+        float maxQ = 0.0f, maxPhi = 0.0f;
+        for (uint32_t i : cms::alpakatools::independent_group_elements(acc, layers[l].nHits())) {
+          maxQ = maxQ < hl[begin + i] ? hl[begin + i] : maxQ;
+          maxPhi = maxPhi < phiHalf[begin + i] ? phiHalf[begin + i] : maxPhi;
+        }
+        sQ[t] = maxQ;
+        sPhi[t] = maxPhi;
+        alpaka::syncBlockThreads(acc);
+        // block sizes are powers of two (kBlock on GPU backends, one thread on CPU backends)
+        for (uint32_t half = nThreads / 2; half > 0; half /= 2) {
+          if (t < half) {
+            sQ[t] = sQ[t] < sQ[t + half] ? sQ[t + half] : sQ[t];
+            sPhi[t] = sPhi[t] < sPhi[t + half] ? sPhi[t + half] : sPhi[t];
+          }
+          alpaka::syncBlockThreads(acc);
+        }
+        if (t == 0) {
+          layers[l].maxQHalfLength() = sQ[0];
+          layers[l].maxPhiHalfExtent() = sPhi[0];
+        }
+        alpaka::syncBlockThreads(acc);
+      }
+    }
+  };
+
+  // 9. Per dead region: LayerOfHits::suckInDeads.
   struct KernelDeadBins {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   LayerSoA::ConstView layers,
@@ -377,6 +467,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
       const float* __restrict__ hy = hm.addressOf_y();
       const float* __restrict__ hz = hm.addressOf_z();
       const float* __restrict__ he00 = hm.addressOf_e00();
+      const float* __restrict__ he10 = hm.addressOf_e10();
       const float* __restrict__ he11 = hm.addressOf_e11();
       const float* __restrict__ he22 = hm.addressOf_e22();
       const int8_t* __restrict__ hlay = hm.addressOf_layer();
@@ -407,8 +498,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
         lNext[l] = lHitBegin[l];
       }
 
+      auto om = out.metadata();
+      uint32_t* __restrict__ oRank = om.addressOf_rank();
+      float* __restrict__ oPhi = om.addressOf_phi();
+      float* __restrict__ oQ = om.addressOf_q();
+      float* __restrict__ oHL = om.addressOf_qHalfLength();
+      float* __restrict__ oQbar = om.addressOf_qbar();
+      float* __restrict__ oPhiHalf = om.addressOf_phiHalfExtent();
+      float* __restrict__ oQbarHalf = om.addressOf_qbarHalfExtent();
+
       // registerHit, chunked: a branch-free (vectorizable) loop computes, a scalar loop appends to the hit's layer in
-      // increasing original index (= MkFitCore registration order)
+      // increasing original index (= MkFitCore registration order) and adds the hit extents, as registerHit. Until the
+      // layer is finished, the extents are parked in the phi and q output columns (same layer-grouped rows).
       constexpr uint32_t kChunk = 16;
       for (uint32_t first = 0; first < nHits; first += kChunk) {
         const uint32_t m = nHits - first < kChunk ? nHits - first : kChunk;
@@ -437,26 +538,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
           if (l < 0)
             continue;
           const uint32_t p = lNext[l]++;
+          const uint32_t i = first + j;
           gKey[p] = ck[j];
-          gOrig[p] = ::mkfitdev::originalIndex(first + j, nPixel);
+          gOrig[p] = ::mkfitdev::originalIndex(i, nPixel);
           gInfo[p] = ci[j];
+          hitExtents(hx[i], hy[i], he00[i], he10[i], he11[i], lBarrel[l], lPixel[l], oPhi[p], oQ[p]);
         }
       }
 
       // per layer (LayerOfHits::endRegistrationOfHits + binnor::finalize_registration), everything in cache
       uint32_t* __restrict__ bContent = bins.metadata().addressOf_content();
       uint8_t* __restrict__ bDead = bins.metadata().addressOf_dead();
-      auto om = out.metadata();
-      uint32_t* __restrict__ oRank = om.addressOf_rank();
-      float* __restrict__ oPhi = om.addressOf_phi();
-      float* __restrict__ oQ = om.addressOf_q();
-      float* __restrict__ oHL = om.addressOf_qHalfLength();
-      float* __restrict__ oQbar = om.addressOf_qbar();
       uint32_t nOverFirst = 0, nOverCount = 0;
       for (uint32_t l = 0; l < nLayers; ++l) {
         const uint32_t base = lHitBegin[l], n = lNHits[l];
         const uint32_t nb = lNQBins[l] * ::mkfitdev::kNPhiBins;  // <= 2^16: the q axis has 8 N-bits
-        const uint32_t* __restrict__ key = gKey + base;
+        uint32_t* __restrict__ key = gKey + base;
         uint32_t fine[::mkfitdev::kNPhiBins];
         for (uint32_t b = 0; b < nb; ++b)
           cnt[b] = 0;
@@ -489,11 +586,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
         }
         for (uint32_t k = 0; k < n; ++k)
           order[fine[key[k] >> 24]++] = k;
+        // each hit's place (its key is no longer needed), then the hit at each place
         for (uint32_t t = 0; t < n; ++t) {
           const uint32_t k = order[t];
-          const uint32_t o = base + cnt[key[k] & kGBinMask]++;
-          const HitInfoDev hi = gInfo[base + k];
-          oRank[o] = gOrig[base + k];
+          key[k] = cnt[key[k] & kGBinMask]++;
+        }
+        for (uint32_t k = 0; k < n; ++k)
+          order[key[k]] = k;
+        // the outputs in that order, as endRegistrationOfHits: sequential writes; the parked extents first
+        for (uint32_t i = 0; i < n; ++i) {
+          const uint32_t k = base + order[i];
+          oPhiHalf[base + i] = oPhi[k];
+          oQbarHalf[base + i] = oQ[k];
+        }
+        for (uint32_t i = 0; i < n; ++i) {
+          const uint32_t o = base + i, k = base + order[i];
+          const HitInfoDev hi = gInfo[k];
+          oRank[o] = gOrig[k];
           oPhi[o] = hi.phi;
           oQ[o] = hi.q;
           oHL[o] = hi.q_half_length;
@@ -545,7 +654,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
     return nullptr;
   }
 
-  // 8. dead regions (copied per event; empty = nothing enqueued)
+  // 8. per-layer maxima of the hit extents
+  inline void enqueueLayerMaxima(Queue& queue, EventOfHitsViews const& d) {
+    const uint32_t nLayers = d.layers.metadata().size();
+    alpaka::exec<Acc1D>(queue,
+                        cms::alpakatools::make_workdiv<Acc1D>(nLayers == 0 ? 1u : nLayers, kBlock),
+                        KernelLayerMaxima{},
+                        d.layers,
+                        d.binnedHits,
+                        nLayers);
+  }
+
+  // 9. dead regions (copied per event; empty = nothing enqueued)
   inline void enqueueDeadBins(Queue& queue, EventOfHitsViews const& d, std::vector<DeadRegionDev> const& deads) {
     if (deads.empty())
       return;
@@ -615,6 +735,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
                           gInfo,
                           order,
                           cnt);
+      enqueueLayerMaxima(queue, d);
       enqueueDeadBins(queue, d, deads);
       return true;
     }
@@ -690,7 +811,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
                         binStart.data(),
                         stKeyRow.data(),
                         d.hits,
+                        d.layers,
                         info.data());
+    enqueueLayerMaxima(queue, d);
     enqueueDeadBins(queue, d, deads);
     // scratch buffers are released at scope exit; the caching allocator keeps them stream-ordered
     return true;

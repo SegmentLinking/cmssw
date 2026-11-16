@@ -32,6 +32,10 @@ namespace mkfitdev {
                       SOA_COLUMN(uint32_t, hitBase),  // first HitSoA row of the layer's wrapper (0 pixel, nPixel strip)
                       SOA_COLUMN(uint32_t, hitBegin),  // first BinnedHitSoA row of the layer (device output)
                       SOA_COLUMN(uint32_t, nHits),     // registered hits of the layer (device output)
+                      // largest hit extents of the layer (device output): max_hit_q_half_length(),
+                      // max_hit_phi_half_extent()
+                      SOA_COLUMN(float, maxQHalfLength),
+                      SOA_COLUMN(float, maxPhiHalfExtent),
                       // phi axis, identical for all layers (axis_pow2_u1(-PI, PI))
                       SOA_SCALAR(float, phiRMin),
                       SOA_SCALAR(float, phiMFac),
@@ -44,11 +48,13 @@ namespace mkfitdev {
   // One row per registered hit; layers concatenated in layer order, each layer in LayerOfHits internal order.
   // Row hitBegin[l] + i  <->  MkFitCore eoh[l] internal index i.
   GENERATE_SOA_LAYOUT(BinnedHitSoALayout,
-                      SOA_COLUMN(uint32_t, rank),      // LayerOfHits::getOriginalHitIndex(i)
-                      SOA_COLUMN(float, phi),          // LayerOfHits::hit_phi(i)
-                      SOA_COLUMN(float, q),            // hit_q(i)
-                      SOA_COLUMN(float, qHalfLength),  // hit_q_half_length(i)
-                      SOA_COLUMN(float, qbar))         // hit_qbar(i)
+                      SOA_COLUMN(uint32_t, rank),         // LayerOfHits::getOriginalHitIndex(i)
+                      SOA_COLUMN(float, phi),             // LayerOfHits::hit_phi(i)
+                      SOA_COLUMN(float, q),               // hit_q(i)
+                      SOA_COLUMN(float, qHalfLength),     // hit_q_half_length(i)
+                      SOA_COLUMN(float, qbar),            // hit_qbar(i)
+                      SOA_COLUMN(float, phiHalfExtent),   // hit_phi_half_extent(i)
+                      SOA_COLUMN(float, qbarHalfExtent))  // hit_qbar_half_extent(i)
 
   // One row per (layer, q bin, phi bin): row = binBegin[layer] + qBin * 256 + phiBin (m_bins / m_dead_bins order).
   GENERATE_SOA_LAYOUT(BinSoALayout,

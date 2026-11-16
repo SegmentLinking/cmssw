@@ -37,6 +37,12 @@ namespace mkfitdev {
   struct LayerOfHitsAccess {
     using bin_index_t = uint16_t;
 
+    // axis_base::I_pair: a half-open bin range [begin, end)
+    struct BinRange {
+      bin_index_t begin;
+      bin_index_t end;
+    };
+
     LayerSoA::ConstView layers;
     BinnedHitSoA::ConstView binned;
     BinSoA::ConstView bins;
@@ -53,6 +59,23 @@ namespace mkfitdev {
     ALPAKA_FN_HOST_ACC bin_index_t phiMaskApply(bin_index_t in) const { return in & kPhiMaskN; }
     ALPAKA_FN_HOST_ACC uint32_t nQBins() const { return layers[layer].nQBins(); }
 
+    // The axis's own half-open range [begin, end) covering [lo, hi] inclusive, with the mask applied after the "+1"
+    // (axis_pow2_u1::from_R_minmax_to_N_bins).
+    ALPAKA_FN_HOST_ACC BinRange phiRangeBins(float lo, float hi) const {
+      return BinRange{phiBinChecked(lo), bin_index_t((phiBin(hi) + 1) & kPhiMaskN)};
+    }
+
+    // q is a bounded axis: its helper clamps where the phi one wraps (axis_base::from_R_minmax_to_N_bins).
+    ALPAKA_FN_HOST_ACC BinRange qRangeBins(float lo, float hi) const {
+      return BinRange{qBinChecked(lo), bin_index_t(qBinChecked(hi) + 1)};
+    }
+    ALPAKA_FN_HOST_ACC uint32_t qNBins() const { return nQBins(); }
+
+    // Largest hit extents in this layer, computed at fill. The v2p2 fetch uses them, since it runs before any hit is
+    // known.
+    ALPAKA_FN_HOST_ACC float max_hit_q_half_length() const { return layers[layer].maxQHalfLength(); }
+    ALPAKA_FN_HOST_ACC float max_hit_phi_half_extent() const { return layers[layer].maxPhiHalfExtent(); }
+
     // phiQBinContent(pi, qi): {first, count}
     ALPAKA_FN_HOST_ACC uint32_t binContent(bin_index_t pi, bin_index_t qi) const {
       return bins[layers[layer].binBegin() + uint32_t(qi) * kNPhiBins + pi].content();
@@ -66,7 +89,9 @@ namespace mkfitdev {
     ALPAKA_FN_HOST_ACC float hit_phi(uint32_t i) const { return binned[row(i)].phi(); }
     ALPAKA_FN_HOST_ACC float hit_q(uint32_t i) const { return binned[row(i)].q(); }
     ALPAKA_FN_HOST_ACC float hit_q_half_length(uint32_t i) const { return binned[row(i)].qHalfLength(); }
+    ALPAKA_FN_HOST_ACC float hit_phi_half_extent(uint32_t i) const { return binned[row(i)].phiHalfExtent(); }
     ALPAKA_FN_HOST_ACC float hit_qbar(uint32_t i) const { return binned[row(i)].qbar(); }
+    ALPAKA_FN_HOST_ACC float hit_qbar_half_extent(uint32_t i) const { return binned[row(i)].qbarHalfExtent(); }
     ALPAKA_FN_HOST_ACC uint32_t getOriginalHitIndex(uint32_t i) const { return binned[row(i)].rank(); }
     ALPAKA_FN_HOST_ACC uint32_t hitRow(uint32_t orig) const { return layers[layer].hitBase() + orig; }
   };
