@@ -24,7 +24,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       return cms::alpakatools::make_workdiv<Acc1D>(blocks, kEngineBlock);
     }
 
-    // Thread-per-seed kernels (K4 select, activate, merge, filter, gather, compactify, stage export): one serial,
+    // Thread-per-seed kernels (K4 select, activate, merge, filter, compactify, stage export): one serial,
     // latency-bound loop per thread; small blocks spread the few seed threads over more SMs (GPU backends only).
     constexpr uint32_t kEngineSeedBlock = (kNN == 1) ? 32 : kEngineBlock;
     auto workDivForSeeds(int nSeeds) {
@@ -45,11 +45,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                     int nSeeds,
                                     const int32_t* nDev) const {
         nSeeds = engineRows(nSeeds, nDev);
-        const int hps = seeds.hotsPerSeed();
         for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
           if (!plans.hasPlan[seeds.region(s)])
             continue;
-          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
           if (!fwdSearch)
             addPreBkwSearchHoles(ref);
           // final-pick scorer (forward) or search scorer (backward) of the region
@@ -80,11 +79,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                     int nSeeds,
                                     const int32_t* nDev) const {
         nSeeds = engineRows(nSeeds, nDev);
-        const int hps = seeds.hotsPerSeed();
         for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
           if (plans.hasPlan[seeds.region(s)])
             continue;
-          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
           addPreBkwSearchHoles(ref);
         }
       }
@@ -102,7 +100,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                     int nSeeds,
                                     const int32_t* nDev) const {
         nSeeds = engineRows(nSeeds, nDev);
-        const int hps = seeds.hotsPerSeed();
         const bool doGate = doBeginBkw && gate.minPixelLayers > 0;
         if (doBeginBkw && cms::alpakatools::once_per_grid(acc))
           seeds.nRepackRepeat() = 0;
@@ -112,7 +109,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           if (seeds.nCands(s) <= 0)
             continue;
           const uint32_t ovf0 = seeds.overflowBits(s);
-          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+          SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
           if (doCompactify)
             compactifyHitStorageForBestCand(ref);
           // EventOfCombCandidates::beginBkwSearch: gate threshold from |d0| of the front candidate and the
@@ -139,22 +136,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         sel(queue, maxSeeds * kMaxCandsPerSeed),
         c2(queue, maxSeeds * kMaxCandsPerSeed * kMaxHitsPerCand) {}
 
-  EngineBuffers::EngineBuffers(Queue& queue,
-                               int maxSeeds_,
-                               int hotsPerSeed,
-                               std::shared_ptr<EngineStepScratch> sharedStep)
-      : EngineBuffers(queue, maxSeeds_, hotsPerSeed, NoStepScratch{}) {
-    step = sharedStep ? std::move(sharedStep) : std::make_shared<EngineStepScratch>(queue, maxSeeds_);
+  EngineBuffers::EngineBuffers(Queue& queue, int maxSeeds_, ::mkfitdev::HotPoolLayout const& hotPool)
+      : EngineBuffers(queue, maxSeeds_, hotPool, NoStepScratch{}) {
+    step = std::make_unique<EngineStepScratch>(queue, maxSeeds_);
   }
 
-  EngineBuffers::EngineBuffers(Queue& queue, int maxSeeds_, int hotsPerSeed, NoStepScratch)
+  EngineBuffers::EngineBuffers(Queue& queue, int maxSeeds_, ::mkfitdev::HotPoolLayout const& hotPool_, NoStepScratch)
       : maxSeeds(maxSeeds_),
+        hotPool(hotPool_),
         seeds(queue, maxSeeds_),
         slots(queue, maxSeeds_ * kSlotsPerSeed),
-        hots(queue, maxSeeds_ * hotsPerSeed),
-        passed(cms::alpakatools::make_device_buffer<int8_t[]>(queue, maxSeeds_ > 0 ? maxSeeds_ : 1)),
-        newIdx(cms::alpakatools::make_device_buffer<int32_t[]>(queue, maxSeeds_ > 0 ? maxSeeds_ : 1)),
-        nSurvivors(cms::alpakatools::make_device_buffer<int32_t>(queue)) {
+        hots(queue, ::mkfitdev::hotPoolRows(maxSeeds_, hotPool_)) {
     auto seedsBuf = seeds.buffer();  // bkwRepacked = 0, nRepackRepeat = 0 for every producer of the rows
     alpaka::memset(queue, seedsBuf, 0);
   }
@@ -218,7 +210,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                         ::mkfitdev::prop::makePropagationFlags(pc.intraLayer, pc.material),
                         pc.propToHit,
                         nSeeds,
-                        bufs.nRowsDev);
+                        bufs.nRowsDev,
+                        bufs.rowList);
     alpaka::exec<Acc1D>(queue,
                         workDivFor(nSeeds * kMaxCandsPerSeed),
                         KernelEngineOptions{},
@@ -260,7 +253,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                         ::mkfitdev::prop::makePropagationFlags(pc.interLayer, pc.material),
                         pc.propToHit,
                         nSeeds,
-                        bufs.nRowsDev);
+                        bufs.nRowsDev,
+                        bufs.rowList);
   }
 
   void engineMerge(Queue& queue,
@@ -322,13 +316,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     engineMerge(queue, bufs, tables.plans, ip.maxCandsPerSeed, fwdSearch, nSeeds);
   }
 
-  void engineFilterCompactAsync(Queue& queue,
-                                EngineBuffers& bufs,
-                                EngineBuffers& out,
-                                bool bkwRep,
-                                int minHitsQF,
-                                int nSeeds,
-                                ::mkfitdev::BkwSearchGate const& gate) {
+  void engineFilterAsync(Queue& queue,
+                         EngineBuffers& bufs,
+                         bool bkwRep,
+                         int minHitsQF,
+                         int nSeeds,
+                         ::mkfitdev::BkwSearchGate const& gate) {
     if (nSeeds <= 0)
       return;
     alpaka::exec<Acc1D>(queue,
@@ -337,36 +330,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                         bufs.seeds.view(),
                         bufs.slots.view(),
                         bufs.hots.view(),
-                        bufs.passed.data(),
                         bkwRep,
                         minHitsQF,
                         gate,
                         nSeeds,
                         bufs.nRowsDev);
-    // one block: the scan carries across chunks of 1024 inside the block
-    const auto wdScan = cms::alpakatools::make_workdiv<Acc1D>(1, kEngineBlock);
-    alpaka::exec<Acc1D>(queue,
-                        wdScan,
-                        KernelEngineScanPass{},
-                        bufs.passed.data(),
-                        bufs.newIdx.data(),
-                        bufs.nSurvivors.data(),
-                        nSeeds,
-                        bufs.nRowsDev);
-    alpaka::exec<Acc1D>(queue,
-                        workDivForSeeds(nSeeds),
-                        KernelEngineGatherSeeds{},
-                        bufs.seeds.const_view(),
-                        bufs.slots.const_view(),
-                        bufs.hots.const_view(),
-                        out.seeds.view(),
-                        out.slots.view(),
-                        out.hots.view(),
-                        bufs.newIdx.data(),
-                        bufs.nSurvivors.data(),
-                        nSeeds,
-                        bufs.nRowsDev);
-    out.nRowsDev = bufs.nSurvivors.data();
+    // the kept-row list of the pre-filter, read by the backward fit and search; none after the post-filter
+    if constexpr (kNN > 1) {
+      if (bkwRep)
+        return;
+      if (!bufs.keptRows)
+        bufs.keptRows.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, bufs.maxSeeds));
+      alpaka::exec<Acc1D>(queue,
+                          cms::alpakatools::make_workdiv<Acc1D>(1, 1),
+                          KernelEngineKeptRows{},
+                          bufs.seeds.const_view(),
+                          bufs.keptRows->data(),
+                          nSeeds,
+                          bufs.nRowsDev);
+      bufs.rowList = bufs.keptRows->data();
+    }
   }
 
   void engineCompactifyBeginBkw(Queue& queue,
@@ -390,23 +373,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                         bufs.nRowsDev);
   }
 
-  EngineBuffers& engineRunChainAsync(Queue& queue,
-                                     EngineBuffers& bufs,
-                                     EngineBuffers& work,
-                                     const EngineStepTablesDevice& fwdTables,
-                                     const EngineStepTablesDevice& bkwTables,
-                                     const EngineSelectFn& selectFwd,
-                                     const EngineSelectFn& selectBkw,
-                                     const EngineBackwardFitFn& backwardFit,
-                                     const ::mkfitdev::EngineHitInputs& inFwd,
-                                     const ::mkfitdev::EngineHitInputs& inBkw,
-                                     const EnginePropConfig& pc,
-                                     const ::mkfitdev::EngineIterParams& ipFwd,
-                                     const ::mkfitdev::EngineIterParams& ipBkw,
-                                     int minHitsQFPre,
-                                     int minHitsQFPost,
-                                     int capacity,
-                                     const ::mkfitdev::BkwSearchGate& gate) {
+  void engineRunChainAsync(Queue& queue,
+                           EngineBuffers& bufs,
+                           const EngineStepTablesDevice& fwdTables,
+                           const EngineStepTablesDevice& bkwTables,
+                           const EngineSelectFn& selectFwd,
+                           const EngineSelectFn& selectBkw,
+                           const EngineBackwardFitFn& backwardFit,
+                           const ::mkfitdev::EngineHitInputs& inFwd,
+                           const ::mkfitdev::EngineHitInputs& inBkw,
+                           const EnginePropConfig& pc,
+                           const ::mkfitdev::EngineIterParams& ipFwd,
+                           const ::mkfitdev::EngineIterParams& ipBkw,
+                           int minHitsQFPre,
+                           int minHitsQFPost,
+                           int capacity,
+                           const ::mkfitdev::BkwSearchGate& gate) {
     // backward search: MkFitCore's CandCloner and merge take the forward params here too (m_job->params()); only
     // MkFinder and the pT stop take backward_params
     ::mkfitdev::EngineIterParams ipBkwSearch = ipBkw;
@@ -418,36 +400,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     const EngineSearchFn searchBkw = [&](Queue& q, EngineBuffers& b, bool fwdSearch, int cap) {
       engineSearch(q, b, bkwTables, fwdSearch, selectBkw, inBkw, pc, ipBkwSearch, cap);
     };
-    return engineRunChainAsync(
-        queue, bufs, work, searchFwd, searchBkw, backwardFit, minHitsQFPre, minHitsQFPost, capacity, gate);
+    engineRunChainAsync(queue, bufs, searchFwd, searchBkw, backwardFit, minHitsQFPre, minHitsQFPost, capacity, gate);
   }
 
-  EngineBuffers& engineRunChainAsync(Queue& queue,
-                                     EngineBuffers& bufs,
-                                     EngineBuffers& work,
-                                     const EngineSearchFn& searchFwd,
-                                     const EngineSearchFn& searchBkw,
-                                     const EngineBackwardFitFn& backwardFit,
-                                     int minHitsQFPre,
-                                     int minHitsQFPost,
-                                     int capacity,
-                                     const ::mkfitdev::BkwSearchGate& gate) {
-    // forward search (bufs: rows [0, *bufs.nRowsDev))
+  void engineRunChainAsync(Queue& queue,
+                           EngineBuffers& bufs,
+                           const EngineSearchFn& searchFwd,
+                           const EngineSearchFn& searchBkw,
+                           const EngineBackwardFitFn& backwardFit,
+                           int minHitsQFPre,
+                           int minHitsQFPost,
+                           int capacity,
+                           const ::mkfitdev::BkwSearchGate& gate) {
+    // forward search (rows [0, *bufs.nRowsDev))
+    bufs.rowList = nullptr;
     searchFwd(queue, bufs, true, capacity);
-    // pre-filter (params_cur() = forward params: qfilter_n_hits_pixseed && nan_n_silly), compaction bufs -> work
-    engineFilterCompactAsync(queue, bufs, work, false, minHitsQFPre, capacity);
+    // pre-filter (params_cur() = forward params: qfilter_n_hits_pixseed && nan_n_silly), in place
+    engineFilterAsync(queue, bufs, false, minHitsQFPre, capacity);
     // compactify (backward_drop_seed_hits = false: SupportedConfig), backward fit (identity when empty), beginBkwSearch
-    engineCompactifyBeginBkw(queue, work, true, false, capacity, gate);
+    engineCompactifyBeginBkw(queue, bufs, true, false, capacity, gate);
+    // rows without candidates (failed seeds, rows past *bufs.nRowsDev) are skipped
     if (backwardFit)
-      backwardFit(queue, work, capacity);  // rows past *work.nRowsDev have nCands = 0 (gather) and are skipped
-    engineCompactifyBeginBkw(queue, work, false, true, capacity, gate);
+      backwardFit(queue, bufs, capacity);
+    engineCompactifyBeginBkw(queue, bufs, false, true, capacity, gate);
     // backward search
-    searchBkw(queue, work, false, capacity);
-    // post-filter (backward params) with the ONE repack and the backward-search gate, compaction work -> bufs;
-    // bufs.nRowsDev = &work.nSurvivors
-    engineFilterCompactAsync(queue, work, bufs, true, minHitsQFPost, capacity, gate);
+    searchBkw(queue, bufs, false, capacity);
+    // post-filter (backward params) with the ONE repack and the backward-search gate, in place
+    engineFilterAsync(queue, bufs, true, minHitsQFPost, capacity, gate);
     // endBkwSearch: host-side flag only
-    return bufs;
   }
 
   // ---- engine <-> select (K2) bridge (src/alpaka/engine/EngineSelectBridge.h) ----

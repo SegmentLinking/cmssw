@@ -15,7 +15,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
   // seed_post_cleaning + import_seeds (phase2:1, binnor rank, region-major) + insertSeed.
   // 'seeds' rows [0, nSeeds) hold the input (host packer, interface/seeds/SeedsHostPack.h); 'capacity' = its rows.
   // Writes the import results into 'seeds' and the initial CombCandidate rows [0, nKept) of the cands SoAs
-  // (capacity >= capacity of 'seeds'; hotsPerSeed = HoT rows per seed of 'hots').
+  // (capacity >= capacity of 'seeds'; hotPool = the event's HoT pool scalars, CandsSoA.h: the layout of 'hots', with at
+  // most its extension slots).
   // Last-hit positions from the device EventOfHits (HitSoA x/y/z columns and LayerSoA hitBase column, device memory).
   // All nullptr (default): the lastX/lastY/lastZ columns filled by the host packer are used.
   struct DeviceHitPositions {
@@ -32,7 +33,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                    ::mkfitdev::SeedCandsSoA::View seedCands,
                    ::mkfitdev::CandSlotsSoA::View slots,
                    ::mkfitdev::CandHotsSoA::View hots,
-                   int32_t hotsPerSeed,
+                   ::mkfitdev::HotPoolLayout const& hotPool,
                    DeviceHitPositions const& hitPos = DeviceHitPositions{});
 
   // export_best_comb_cands(out, remove_missing_hits = true): front candidate of every seed row
@@ -44,17 +45,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                        ::mkfitdev::SeedCandsSoA::ConstView seedCands,
                        ::mkfitdev::CandSlotsSoA::ConstView slots,
                        ::mkfitdev::CandHotsSoA::ConstView hots,
-                       int32_t hotsPerSeed,
                        int32_t const* nSeedsDev,
                        int32_t capacity,
                        ::mkfitdev::TrackSoAView out,
                        uint32_t* brokenChains = nullptr);
 
-  // Chain tail of the build module: the engine owns the post-backward-search filter, repack and compaction; this
-  // function applies NO filter and NO repack:
+  // Chain tail of the build module: the engine owns the post-backward-search filter and repack; this function
+  // applies NO filter and NO repack:
   //   export_best_comb_cands(remove_missing_hits = true) -> the duplicate cleaner (dupClean) -> export_tracks.
-  // nSeedsDev: device pointer to the survivor count of the engine's last compaction (the rows are in the result
-  //   buffer). Rows s >= *nSeedsDev are never read, so stale rows of a capacity-wide buffer cannot be exported.
+  // nSeedsDev: device pointer to the seed rows of the engine's result buffer; the rows with candidates are the
+  //   survivors, exported in row order. Rows s >= *nSeedsDev are never read, so stale rows of a capacity-wide buffer
+  //   cannot be exported.
   //   capacity = rows of seedCands (>= *nSeedsDev), also the row count of 'exported' and 'out'.
   // 'exported' gets the export before the cleaner, 'out' the final tracks (MkFitProducer output).
   // dupClean: the duplicate-cleaner parameters of the iteration (used when removeDuplicates).
@@ -63,7 +64,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                       ::mkfitdev::SeedCandsSoA::ConstView seedCands,
                       ::mkfitdev::CandSlotsSoA::ConstView slots,
                       ::mkfitdev::CandHotsSoA::ConstView hots,
-                      int32_t hotsPerSeed,
                       int32_t const* nSeedsDev,
                       int32_t capacity,
                       bool removeDuplicates,

@@ -19,7 +19,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                    ::mkfitdev::SeedCandsSoA::View seedCands,
                    ::mkfitdev::CandSlotsSoA::View slots,
                    ::mkfitdev::CandHotsSoA::View hots,
-                   int32_t hotsPerSeed,
+                   ::mkfitdev::HotPoolLayout const& hotPool,
                    DeviceHitPositions const& hitPos) {
     if (capacity <= 0)
       return;
@@ -42,7 +42,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                         hitPos.y,
                         hitPos.z,
                         hitPos.layerHitBase);
-    alpaka::exec<Acc1D>(queue, wd1, KernelSeedScan{}, seeds, binCount.data(), binStart.data(), seedCands, hotsPerSeed);
+    alpaka::exec<Acc1D>(queue, wd1, KernelSeedScan{}, seeds, binCount.data(), binStart.data(), seedCands, hotPool);
     alpaka::exec<Acc1D>(queue,
                         wd,
                         KernelSeedFill{},
@@ -51,15 +51,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                         binFill.data(),
                         members.data());
     alpaka::exec<Acc1D>(queue, wd, KernelSeedRank{}, seeds, binStart.data(), members.data());
-    alpaka::exec<Acc1D>(
-        queue, wd, KernelSeedInitCands{}, ::mkfitdev::SeedSoAConstView(seeds), seedCands, slots, hots, hotsPerSeed);
+    alpaka::exec<Acc1D>(queue, wd, KernelSeedInitCands{}, ::mkfitdev::SeedSoAConstView(seeds), seedCands, slots, hots);
   }
 
   void exportBestCands(Queue& queue,
                        ::mkfitdev::SeedCandsSoA::ConstView seedCands,
                        ::mkfitdev::CandSlotsSoA::ConstView slots,
                        ::mkfitdev::CandHotsSoA::ConstView hots,
-                       int32_t hotsPerSeed,
                        int32_t const* nSeedsDev,
                        int32_t capacity,
                        ::mkfitdev::TrackSoAView out,
@@ -81,7 +79,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                         seedCands,
                         slots,
                         hots,
-                        hotsPerSeed,
                         nSeedsDev,
                         dest.data(),
                         out,
@@ -92,7 +89,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                       ::mkfitdev::SeedCandsSoA::ConstView seedCands,
                       ::mkfitdev::CandSlotsSoA::ConstView slots,
                       ::mkfitdev::CandHotsSoA::ConstView hots,
-                      int32_t hotsPerSeed,
                       int32_t const* nSeedsDev,
                       int32_t capacity,
                       bool removeDuplicates,
@@ -103,7 +99,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
     if (capacity <= 0)
       return;
     // no filter here: every row s < *nSeedsDev with candidates is a survivor of the engine's post-filter
-    exportBestCands(queue, seedCands, slots, hots, hotsPerSeed, nSeedsDev, capacity, exported, brokenChains);
+    exportBestCands(queue, seedCands, slots, hots, nSeedsDev, capacity, exported, brokenChains);
     clean::CleanAlgo algo(queue, capacity);
     if (removeDuplicates) {
       algo.flagDuplicates(queue, exported, dupClean);

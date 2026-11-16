@@ -26,7 +26,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 
   // Production: in place on the clone-engine SoAs, one candidate per seed in [0, nSeeds); hits/modules from the
   // engine's hit inputs (forward or backward table: only x..e22, packed, nPixel, layers[].isPixel/moduleBegin and
-  // modules are read).
+  // modules are read). keptRows: CPU backends, the engine's kept-row list (EngineBuffers::rowList), the order of the
+  // batches; unused on GPU backends.
   void backwardFit(Queue& queue,
                    ::mkfitdev::SeedCandsSoA::ConstView seeds,
                    ::mkfitdev::CandSlotsSoA::View slots,
@@ -34,6 +35,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                    ::mkfitdev::EngineHitInputs const& hits,
                    ::mkfitdev::prop::PropagationFlags const& pflags,
                    int nSeeds,
+                   const int32_t* keptRows,
                    ::mkfitdev::bkfit::OutlierParams const& outliers);
 
   // The clone engine's backward-fit hook (EngineBackwardFitFn, CandsEngine.h) calling backwardFit on its buffers.
@@ -42,7 +44,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                                    ::mkfitdev::prop::PropagationFlags const& pflags,
                                                    ::mkfitdev::bkfit::OutlierParams const& outliers = {}) {
     return [hits, pflags, outliers](Queue& queue, EngineBuffers& b, int nSeeds) {
-      backwardFit(queue, b.seeds.const_view(), b.slots.view(), b.hots.view(), hits, pflags, nSeeds, outliers);
+      backwardFit(
+          queue, b.seeds.const_view(), b.slots.view(), b.hots.view(), hits, pflags, nSeeds, b.rowList, outliers);
     };
   }
 
@@ -56,6 +59,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                        ::mkfitdev::EngineHitInputs const& hits,
                        ::mkfitdev::prop::PropagationFlags const& pflags,
                        int nSeeds,
+                       const int32_t* keptRows,
                        ::mkfitdev::bkfit::OutlierParams const& outliers);
 
   // The v2p2 chain's backward-fit hook calling backwardFitV2p2 on its buffers.
@@ -63,7 +67,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                                  ::mkfitdev::prop::PropagationFlags const& pflags,
                                                  ::mkfitdev::bkfit::OutlierParams const& outliers = {}) {
     return [hits, pflags, outliers](Queue& queue, EngineBuffers& b, int nSeeds) {
-      backwardFitV2p2(queue, b.seeds.const_view(), b.slots.view(), b.hots.view(), hits, pflags, nSeeds, outliers);
+      backwardFitV2p2(
+          queue, b.seeds.const_view(), b.slots.view(), b.hots.view(), hits, pflags, nSeeds, b.rowList, outliers);
     };
   }
 

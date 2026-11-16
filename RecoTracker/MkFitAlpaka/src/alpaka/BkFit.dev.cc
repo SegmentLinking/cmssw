@@ -13,9 +13,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                    ::mkfitdev::EngineHitInputs const& hits,
                    ::mkfitdev::prop::PropagationFlags const& pflags,
                    int nSeeds,
+                   const int32_t* keptRows,
                    ::mkfitdev::bkfit::OutlierParams const& outliers) {
     BkFitCandsIO io{seeds, slots, hots, hits};
-    launchBkFit(queue, io, nSeeds, pflags, outliers);
+    launchBkFit(queue, io, nSeeds, keptRows, pflags, outliers);
   }
 
   void backwardFitV2p2(Queue& queue,
@@ -25,9 +26,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                        ::mkfitdev::EngineHitInputs const& hits,
                        ::mkfitdev::prop::PropagationFlags const& pflags,
                        int nSeeds,
+                       const int32_t* keptRows,
                        ::mkfitdev::bkfit::OutlierParams const& outliers) {
     BkFitCandsIO io{seeds, slots, hots, hits};
-    launchBkFit<BkFitCandsIO, true>(queue, io, nSeeds, pflags, outliers);
+    launchBkFit<BkFitCandsIO, true>(queue, io, nSeeds, keptRows, pflags, outliers);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev

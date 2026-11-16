@@ -8,7 +8,9 @@
 //   CandSlotsSoA      row (s * kSlotsPerSeed + k)             candidate slots: two buffers of kMaxCandsPerSeed
 //                                                             (k = buf * kMaxCandsPerSeed + ic) + 1 best-short slot
 //                                                             (k = kBestShortSlot)
-//   CandHotsSoA       row (s * hotsPerSeed + n)               HoT node pool (CombCandidate::m_hots)
+//   CandHotsSoA       hotRow(...)                             HoT node pool (CombCandidate::m_hots): the home rows
+//                                                             of every seed, then the extension slots a seed takes
+//                                                             when its nodes outgrow the home rows
 //   CandOptionsSoA    row (s * kMaxOptsPerSeed + j)           per-seed option list (CandCloner::m_hits_to_add)
 //   CandExtrasSoA     row (s * kMaxExtrasPerSeed + e)         held-back candidates (extra_cands)
 //   CandUpdatesSoA    row (s * kMaxCandsPerSeed + u)          kalman update / overlap re-check lists (MkFitCore
@@ -39,6 +41,7 @@ namespace mkfitdev {
                       SOA_COLUMN(int8_t, nActive),         // K1: number of listed cands
                       SOA_COLUMN(int32_t, seedOriginIdx),  // index in the passed-in seed vector
                       SOA_COLUMN(int32_t, nHots),          // used HoT nodes
+                      SOA_COLUMN(int32_t, hotExt),         // extension slot of the HoT pool, -1 = none
                       SOA_COLUMN(int32_t, nExtras),
                       SOA_COLUMN(int32_t, nUpdates),
                       SOA_COLUMN(CandBook, bestShort),     // m_best_short_cand bookkeeping; state in kBestShortSlot
@@ -52,7 +55,10 @@ namespace mkfitdev {
                       SOA_COLUMN(CandBook, preBkwBook),
                       SOA_COLUMN(CandState, preBkwState),
                       SOA_COLUMN(int8_t, bkwMinPixLayers),
-                      SOA_SCALAR(int32_t, hotsPerSeed),  // HoT pool capacity per seed (rows per seed)
+                      SOA_SCALAR(int32_t, hotsPerSeed),  // HoT nodes a seed can hold: home + extension rows
+                      SOA_SCALAR(int32_t, hotsHome),     // HoT pool home rows per seed row
+                      SOA_SCALAR(int32_t, hotExtSlots),  // extension slots of the HoT pool
+                      SOA_SCALAR(uint32_t, nHotExt),  // extension slots asked for (more than hotExtSlots: some refused)
                       SOA_SCALAR(uint32_t, nOverflowHots),
                       SOA_SCALAR(uint32_t, nRepackRepeat))  // post-filter called again on repacked rows
 
@@ -80,7 +86,25 @@ namespace mkfitdev {
     return seed * kSlotsPerSeed + buf * kMaxCandsPerSeed + ic;
   }
   ALPAKA_FN_HOST_ACC inline constexpr int bestShortRow(int seed) { return seed * kSlotsPerSeed + kBestShortSlot; }
-  ALPAKA_FN_HOST_ACC inline constexpr int hotRow(int seed, int n, int hotsPerSeed) { return seed * hotsPerSeed + n; }
+  // HoT pool rows: the home rows of the seed rows (home per seed row), then the extension slots (perSeed - home rows
+  // each). Node n of seed s: home row n below home, else row n - home of its extension slot ext.
+  ALPAKA_FN_HOST_ACC inline constexpr int hotRow(int seed, int n, int ext, int seedRows, int home, int perSeed) {
+    return n < home ? seed * home + n : seedRows * home + ext * (perSeed - home) + (n - home);
+  }
+  // ... of node n of seed s (n below the seed's capacity), from the seed rows of the HoT pool (SeedCandsSoA view)
+  template <typename TSeedsView>
+  ALPAKA_FN_HOST_ACC inline int hotNodeRow(TSeedsView seeds, int s, int n) {
+    return hotRow(s, n, seeds.hotExt(s), seeds.metadata().size(), seeds.hotsHome(), seeds.hotsPerSeed());
+  }
+  // HoT pool dimensions (the SeedCandsSoA scalars hotsPerSeed, hotsHome, hotExtSlots)
+  struct HotPoolLayout {
+    int perSeed;   // nodes a seed can hold
+    int home;      // home rows per seed row
+    int extSlots;  // extension slots of perSeed - home rows
+  };
+  ALPAKA_FN_HOST_ACC inline constexpr int hotPoolRows(int seedRows, HotPoolLayout const& pool) {
+    return seedRows * pool.home + pool.extSlots * (pool.perSeed - pool.home);
+  }
   ALPAKA_FN_HOST_ACC inline constexpr int optRow(int seed, int j) { return seed * kMaxOptsPerSeed + j; }
   // Option slot of candidate ic, hit slot ih (0..kMaxHitsPerCand-1) or ih = kMaxHitsPerCand for the invalid option.
   ALPAKA_FN_HOST_ACC inline constexpr int optSlot(int ic, int ih) { return ih * kMaxCandsPerSeed + ic; }

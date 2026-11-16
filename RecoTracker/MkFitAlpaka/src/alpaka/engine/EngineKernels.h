@@ -20,8 +20,6 @@
 #include <alpaka/alpaka.hpp>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
-#include "HeterogeneousCore/AlpakaInterface/interface/prefixScan.h"
-#include "HeterogeneousCore/AlpakaInterface/interface/warpsize.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandEngineTypes.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandOptions.h"
@@ -162,7 +160,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
+      const HotPool pool = hotPoolOf(seeds, hots);
       for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
         const int reg = seeds.region(s);
         const int layer = stepLayer[reg];
@@ -176,11 +174,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         const uint32_t ovf0 = seeds.overflowBits(s);
         if (ovf0 & kOverflowHotsBit)
           continue;  // failed seed (HoT pool overflow), already Finished
-        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
-        CandKin kin[kMaxCandsPerSeed];
         // read by the unroll only for a seed that is Finding or picked up at this step
         const bool finding =
-            *ref.state == kFinding || (*ref.state == kDormant && *ref.pickupLayer == stepPrevLayer[reg]);
+            seeds.state(s) == kFinding || (seeds.state(s) == kDormant && seeds.pickupLayer(s) == stepPrevLayer[reg]);
+        if (finding)
+          reserveHots(acc, pool, s, seeds.nCands(s));  // a stop node per candidate at most
+        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
+        CandKin kin[kMaxCandsPerSeed];
         const int nKin = finding ? *ref.nCands : 0;
         for (int ic = 0; ic < nKin; ++ic) {
           const CandState& cs = ref.states[ic];
@@ -270,14 +270,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   prop::PropagationFlags pf,
                                   bool propToHit,
                                   int nSeeds,
-                                  const int32_t* nDev) const {
+                                  const int32_t* nDev,
+                                  const int32_t* keptRows) const {
       nSeeds = engineRows(nSeeds, nDev);
       if constexpr (kNN > 1) {
-        // CPU: element = seed (the fixed (seed, cand, hit) grid is mostly inactive slots). Blocks past nSeeds have no
-        // elements.
+        // CPU: element = seed (the fixed (seed, cand, hit) grid is mostly inactive slots), from the kept-row list when
+        // there is one (EngineBuffers::rowList). Blocks past nSeeds have no elements.
         int batchItems[kNN];
         int nBatch = 0;
-        for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
+        for (int32_t i : cms::alpakatools::uniform_elements(acc, nSeeds)) {
+          const int s = keptRows ? keptRows[i] : i;
+          if (s < 0)
+            continue;
           const uint32_t mask = seeds.activeMask(s);
           if (mask == 0)
             continue;
@@ -351,7 +355,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
       for (int32_t t : cms::alpakatools::uniform_elements(acc, nSeeds * kMaxCandsPerSeed)) {
         const int ic = t % kMaxCandsPerSeed;
         const int s = t / kMaxCandsPerSeed;
@@ -419,7 +422,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
             bool hitExists = false;
             const int maxHits = parent.nFound;
             for (int i = 0; i < maxHits && i <= 2; ++i) {
-              if (hots.node(hotRow(s, i, hps)).layer == layer) {
+              if (hots.node(hotNodeRow(seeds, s, i)).layer == layer) {
                 hitExists = true;
                 break;
               }
@@ -462,7 +465,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
+      const HotPool pool = hotPoolOf(seeds, hots);
       for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
         const uint32_t mask = seeds.activeMask(s);
         if (mask == 0) {
@@ -477,6 +480,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         const int nIn = seeds.nCands(s);
         const int layer = seeds.layer(s);
 
+        // the extras' stop nodes (at most one per listed candidate), then the selection's nodes
+        reserveHots(acc, pool, s, alpaka::popcount(acc, mask) + selMaxHots(params.maxCandsPerSeed));
+        SeedSelIO io;
+        attachHots(pool, s, io);
         int32_t nHots = seeds.nHots(s);
         uint32_t ovf = seeds.overflowBits(s);
         const uint32_t ovf0 = ovf;
@@ -490,8 +497,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
           if (extra.stateSrc < 0)
             continue;
           if (extra.needsStop) {
-            if (nHots < hps) {
-              hots.node(hotRow(s, nHots, hps)) = HoTNode{kHitStopIdx, layer, 0.f, extra.book.lastHitIdx};
+            if (nHots < io.hotCap) {
+              io.hot(nHots) = HoTNode{kHitStopIdx, layer, 0.f, extra.book.lastHitIdx};
               extra.book.lastHitIdx = nHots;
               ++nHots;
             } else {
@@ -523,7 +530,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         int32_t nOut = 0, nUpd = 0, bsSrc = -1;
         int8_t bsValid = seeds.bestShortValid(s);
 
-        SeedSelIO io;
         io.candsIn = &slots.book(candSlotRow(s, cur, 0));
         io.candsInPt = pt;
         io.nCandsIn = nIn;
@@ -536,9 +542,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         io.bestShort = &seeds.bestShort(s);
         io.bestShortValid = &bsValid;
         io.bestShortSrc = &bsSrc;
-        io.hots = &hots.node(hotRow(s, 0, hps));
-        io.hotOffset = 0;
-        io.hotCap = hps;
         io.nHots = &nHots;
         io.candsOut = &slots.book(candSlotRow(s, nxt, 0));
         io.candsOutSrc = outSrc;
@@ -631,13 +634,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                   prop::PropagationFlags pf,
                                   bool propToHit,
                                   int nSeeds,
-                                  const int32_t* nDev) const {
+                                  const int32_t* nDev,
+                                  const int32_t* keptRows) const {
       nSeeds = engineRows(nSeeds, nDev);
       if constexpr (kNN > 1) {
         // CPU: element = seed, one nUpdates read per seed (see K3a)
         int batchItems[kNN];
         int nBatch = 0;
-        for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
+        for (int32_t i : cms::alpakatools::uniform_elements(acc, nSeeds)) {
+          const int s = keptRows ? keptRows[i] : i;
+          if (s < 0)
+            continue;
           const int nu0 = seeds.nUpdates(s);
           const int nu = nu0 < kMaxCandsPerSeed ? nu0 : kMaxCandsPerSeed;
           for (int u = 0; u < nu; ++u) {
@@ -706,145 +713,27 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     }
   };
 
-  // ---------------------------------------------------------------------------------------------------------
-  // Stable survivor compaction (filter_comb_cands drops failing seeds keeping the order): exclusive prefix scan of
-  // the pass flags in ONE block (chunks of 1024 with a carry), then a gather of the surviving seed rows.
-
-  class KernelEngineScanPass {
-  public:
-    ALPAKA_FN_ACC void operator()(
-        Acc1D const& acc, const int8_t* passed, int32_t* newIdx, int32_t* nOut, int nSeeds, const int32_t* nDev) const {
-      nSeeds = engineRows(nSeeds, nDev);
-      constexpr int kChunk = 1024;
-      auto& buf = alpaka::declareSharedVar<int32_t[kChunk], __COUNTER__>(acc);
-      auto& ws = alpaka::declareSharedVar<int32_t[cms::alpakatools::warpSize], __COUNTER__>(acc);
-      auto& carry = alpaka::declareSharedVar<int32_t, __COUNTER__>(acc);
-      const int tid = alpaka::getIdx<alpaka::Block, alpaka::Threads>(acc)[0u];
-      const int bdim = alpaka::getWorkDiv<alpaka::Block, alpaka::Threads>(acc)[0u];
-      if (tid == 0)
-        carry = 0;
-      alpaka::syncBlockThreads(acc);
-      for (int off = 0; off < nSeeds; off += kChunk) {
-        const int len = (nSeeds - off) < kChunk ? (nSeeds - off) : kChunk;
-        for (int i = tid; i < len; i += bdim)
-          buf[i] = passed[off + i] ? 1 : 0;
-        alpaka::syncBlockThreads(acc);
-        cms::alpakatools::blockPrefixScan(acc, buf, len, ws);  // inclusive
-        alpaka::syncBlockThreads(acc);
-        const int carryIn = carry;
-        for (int i = tid; i < len; i += bdim)
-          newIdx[off + i] = passed[off + i] ? carryIn + buf[i] - 1 : -1;
-        alpaka::syncBlockThreads(acc);
-        if (tid == 0)
-          carry = carryIn + buf[len - 1];
-        alpaka::syncBlockThreads(acc);
-      }
-      if (tid == 0)
-        *nOut = carry;
-    }
-  };
-
-  class KernelEngineGatherSeeds {
-  public:
-    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                  SeedCandsSoA::ConstView seedsIn,
-                                  CandSlotsSoA::ConstView slotsIn,
-                                  CandHotsSoA::ConstView hotsIn,
-                                  SeedCandsSoA::View seedsOut,
-                                  CandSlotsSoA::View slotsOut,
-                                  CandHotsSoA::View hotsOut,
-                                  const int32_t* newIdx,
-                                  const int32_t* nSurvivors,
-                                  int nSeeds,
-                                  const int32_t* nDev) const {
-      const int cap = nSeeds;
-      const int nIn = engineRows(nSeeds, nDev);
-      const int nSurv = *nSurvivors;
-      const int hps = seedsIn.hotsPerSeed();
-      if (cms::alpakatools::once_per_grid(acc)) {
-        seedsOut.hotsPerSeed() = hps;
-        seedsOut.nOverflowHots() = seedsIn.nOverflowHots();
-        seedsOut.nRepackRepeat() = seedsIn.nRepackRepeat();
-      }
-      for (int32_t s : cms::alpakatools::uniform_elements(acc, cap)) {
-        if (s >= nSurv) {
-          // destination rows past the survivors hold no seed (capacity-wide kernels must skip them)
-          seedsOut.nCands(s) = 0;
-          seedsOut.nActive(s) = 0;
-          seedsOut.activeMask(s) = 0;
-          seedsOut.nUpdates(s) = 0;
-          seedsOut.nExtras(s) = 0;
-          seedsOut.state(s) = kFinished;
-          seedsOut.bestShortValid(s) = 0;
-          seedsOut.bkwRepacked(s) = 0;
-          seedsOut.overflowBits(s) = 0;
-        }
-        if (s >= nIn)
-          continue;
-        const int dst = newIdx[s];
-        if (dst < 0)
-          continue;
-        seedsOut.nCands(dst) = seedsIn.nCands(s);
-        seedsOut.curBuf(dst) = seedsIn.curBuf(s);
-        seedsOut.state(dst) = seedsIn.state(s);
-        seedsOut.pickupLayer(dst) = seedsIn.pickupLayer(s);
-        seedsOut.layer(dst) = seedsIn.layer(s);
-        seedsOut.region(dst) = seedsIn.region(s);
-        seedsOut.activeMask(dst) = seedsIn.activeMask(s);
-        seedsOut.nActive(dst) = seedsIn.nActive(s);
-        seedsOut.seedOriginIdx(dst) = seedsIn.seedOriginIdx(s);
-        seedsOut.nHots(dst) = seedsIn.nHots(s);
-        seedsOut.nExtras(dst) = seedsIn.nExtras(s);
-        seedsOut.nUpdates(dst) = seedsIn.nUpdates(s);
-        seedsOut.bestShort(dst) = seedsIn.bestShort(s);
-        seedsOut.bestShortValid(dst) = seedsIn.bestShortValid(s);
-        seedsOut.lastHitIdxBeforeBkw(dst) = seedsIn.lastHitIdxBeforeBkw(s);
-        seedsOut.nInsideMinusOneBeforeBkw(dst) = seedsIn.nInsideMinusOneBeforeBkw(s);
-        seedsOut.nTailMinusOneBeforeBkw(dst) = seedsIn.nTailMinusOneBeforeBkw(s);
-        seedsOut.overflowBits(dst) = seedsIn.overflowBits(s);
-        seedsOut.bkwRepacked(dst) = seedsIn.bkwRepacked(s);
-        // live slots only: the current buffer's candidates and a valid best-short state (the other rows are written
-        // before they are read)
-        const int cur = seedsIn.curBuf(s);
-        const int nc = seedsIn.nCands(s);
-        for (int k = 0; k < nc && k < kMaxCandsPerSeed; ++k) {
-          slotsOut.book(candSlotRow(dst, cur, k)) = slotsIn.book(candSlotRow(s, cur, k));
-          slotsOut.state(candSlotRow(dst, cur, k)) = slotsIn.state(candSlotRow(s, cur, k));
-        }
-        if (seedsIn.bestShortValid(s))
-          slotsOut.state(bestShortRow(dst)) = slotsIn.state(bestShortRow(s));
-        const int nh = seedsIn.nHots(s);
-        for (int k = 0; k < nh; ++k)
-          hotsOut.node(hotRow(dst, k, hps)) = hotsIn.node(hotRow(s, k, hps));
-      }
-    }
-  };
-
-  // filter_comb_cands per seed + pass flag (seeds with nCands == 0, e.g. HoT-overflow-failed ones, fail).
-  // After the backward search, with its gate on, the best candidate must add found hits on enough
-  // pixel layers, else the candidate from before the search replaces it. The other
-  // candidates are not tried against the gate.
+  // filter_comb_cands per seed, in place: a failing seed (also one without candidates) keeps its row, emptied for every
+  // later kernel. With the backward-search gate on, a best candidate below it is replaced by its pre-search state.
   class KernelEngineFilter {
   public:
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   SeedCandsSoA::View seeds,
                                   CandSlotsSoA::View slots,
                                   CandHotsSoA::View hots,
-                                  int8_t* passed,
                                   bool bkwRep,
                                   int minHitsQF,
                                   ::mkfitdev::BkwSearchGate gate,
                                   int nSeeds,
                                   const int32_t* nDev) const {
       nSeeds = engineRows(nSeeds, nDev);
-      const int hps = seeds.hotsPerSeed();
       const bool bkwGate = bkwRep && gate.minPixelLayers > 0;  // cands_in_backward_rep() && hasBkwSearchGate()
       for (int32_t s : cms::alpakatools::uniform_elements(acc, nSeeds)) {
         if (seeds.nCands(s) <= 0 || (seeds.overflowBits(s) & kOverflowHotsBit)) {
-          passed[s] = 0;
+          dropSeed(seeds, s);
           continue;
         }
-        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s, hps);
+        SeedCandsRef ref = makeSeedRef(seeds, slots, hots, s);
         bool repack = bkwRep;
         if (bkwRep) {
           // repackCandPostBkwSearch (and the gate) must run once per seed; a second post-filter
@@ -856,14 +745,49 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
             seeds.bkwRepacked(s) = 1;
           }
         }
+        bool passed;
         if (bkwGate && repack) {
           const SeedBkwSearchGate seedGate{
               &seeds.preBkwBook(s), &seeds.preBkwState(s), seeds.bkwMinPixLayers(s), gate.pixelLayers};
-          passed[s] = filterSeedCands(ref, repack, true, minHitsQF, &seedGate) ? 1 : 0;
+          passed = filterSeedCands(ref, repack, true, minHitsQF, &seedGate);
         } else {
-          passed[s] = filterSeedCands(ref, repack, true, minHitsQF) ? 1 : 0;
+          passed = filterSeedCands(ref, repack, true, minHitsQF);
         }
+        if (!passed)
+          dropSeed(seeds, s);
       }
+    }
+
+  private:
+    // the state of a row that holds no seed; failed and filtered-out seeds look the same from here on
+    ALPAKA_FN_ACC static void dropSeed(SeedCandsSoA::View seeds, int s) {
+      seeds.nCands(s) = 0;
+      seeds.nActive(s) = 0;
+      seeds.activeMask(s) = 0;
+      seeds.nUpdates(s) = 0;
+      seeds.nExtras(s) = 0;
+      seeds.state(s) = kFinished;
+      seeds.bestShortValid(s) = 0;
+      seeds.bkwRepacked(s) = 0;
+      seeds.overflowBits(s) = 0;
+    }
+  };
+
+  // CPU backends: the rows of the seeds the filter kept, in row order, then -1 up to the capacity, so that every entry
+  // a reader below the capacity takes is from this event (EngineBuffers::rowList); one thread.
+  class KernelEngineKeptRows {
+  public:
+    ALPAKA_FN_ACC void operator()(
+        Acc1D const& acc, SeedCandsSoA::ConstView seeds, int32_t* rows, int capacity, const int32_t* nDev) const {
+      if (!cms::alpakatools::once_per_grid(acc))
+        return;
+      const int nSeeds = engineRows(capacity, nDev);
+      int n = 0;
+      for (int s = 0; s < nSeeds; ++s)
+        if (seeds.nCands(s) > 0)
+          rows[n++] = s;
+      for (int k = n; k < capacity; ++k)
+        rows[k] = -1;
     }
   };
 

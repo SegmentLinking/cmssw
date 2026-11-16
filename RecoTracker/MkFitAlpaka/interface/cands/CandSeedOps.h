@@ -29,16 +29,17 @@ namespace mkfitdev {
     CandBook* bestShort;
     CandState* bestShortState;
     int8_t* bestShortValid;
-    HoTNode* hots;  // node n at hots[n - hotOffset]
-    int hotOffset;
-    int hotCap;
+    HoTNode* hots;     // node n < hotHome at hots[n]
+    HoTNode* extHots;  // node n >= hotHome at extHots[n - hotHome] (the seed's extension; nullptr: none)
+    int hotHome;
+    int hotCap;  // node indices must stay below hotCap
     int32_t* nHots;
     int16_t* lastHitIdxBeforeBkw;
     int16_t* nInsideMinusOneBeforeBkw;
     int16_t* nTailMinusOneBeforeBkw;
     uint32_t* overflowBits;
 
-    ALPAKA_FN_HOST_ACC inline HoTNode& hot(int n) const { return hots[n - hotOffset]; }
+    ALPAKA_FN_HOST_ACC inline HoTNode& hot(int n) const { return hotNodeAt(hots, extHots, hotHome, n); }
   };
 
   // CombCandidate::addHit + TrackCand::addHitIdx into the HoT node chosen by the caller; false if it is past the pool
@@ -196,12 +197,6 @@ namespace mkfitdev {
       *seed.bestShortValid = 0;
     }
     *seed.nCands = nCands;
-  }
-
-  // ... with the scorer 'default' (the clone engine's final sorting)
-  ALPAKA_FN_HOST_ACC inline void mergeCandsAndBestShortOne(
-      SeedCandsRef& seed, int maxCandsPerSeed, bool updateScore, bool sortCands, const float* pt, float ptBest) {
-    mergeCandsAndBestShortOne(seed, maxCandsPerSeed, TrackScorer::Default, updateScore, sortCands, pt, ptBest);
   }
 
   // CombCandidate::compactifyHitStorageForBestCand with remove_seed_hits = false (in place in the seed's pool).
