@@ -2116,6 +2116,14 @@ upgradeWFs['HLTTrackingNtuple75e33'].step2 = {
     '--customise' : 'Validation/RecoTrack/customiseTrackingNtuple.customiseTrackingNtupleHLT,Validation/RecoTrack/customiseTrackingNtuple.extendedContent'
 }
 
+# Variants of the tracking-only menu 0.7501 (offsets 0.7501xx)
+
+# all-Alpaka LST + mkFit initial step (building, final fit, output on the device; RecoTracker/MkFitAlpaka)
+upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'] = deepcopy(upgradeWFs['HLTTrackingOnly75e33'])
+upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].suffix = '_HLT75e33TrackingOnlyMkFitAlpaka'
+upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].offset = 0.750102
+upgradeWFs['HLTTrackingOnly75e33MkFitAlpaka'].step2['--procModifiers'] = 'trackingMkFitFit,trackingMkFitAlpaka'
+
 upgradeWFs['HLTHeterogeneousValid'] = deepcopy(upgradeWFs['HLTTiming75e33'])
 upgradeWFs['HLTHeterogeneousValid'].suffix = '_HLTHeterogeneousValid'
 upgradeWFs['HLTHeterogeneousValid'].offset = 0.7503
