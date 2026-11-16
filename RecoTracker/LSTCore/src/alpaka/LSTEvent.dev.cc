@@ -838,7 +838,7 @@ void LSTEvent::compactQuadruplets(Queue& queue, uint16_t nEligibleT4Modules) {
   }
 }
 
-void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets) {
+void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets, bool pls_t5_sharedhit) {
   auto const crossCleanpT3_workDiv = cms::alpakatools::make_workdiv<Acc2D>({20, 4}, {64, 16});
 
   alpaka::exec<Acc2D>(queue_,
@@ -1087,8 +1087,10 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       pixelSegmentsDC_->view(),
                       miniDoubletsDC_->const_view().miniDoublets(),
                       lstInputDC_->const_view().hits(),
+                      lstInputDC_->const_view().hitsIT(),
                       quintupletsDC_->const_view().quintuplets(),
-                      quadrupletsDC_->const_view().quadruplets());
+                      quadrupletsDC_->const_view().quadruplets(),
+                      pls_t5_sharedhit);
 
   auto const addpLSasTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 384);
 

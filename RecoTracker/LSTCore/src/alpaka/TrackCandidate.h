@@ -279,6 +279,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
   };
 
   struct CrossCleanpLS {
+    // a pLS and a T5 closer than this in dR2 are compared by their embeddings
+    static constexpr float kPLST5MaxDeltaR2 = 0.02f;
+
     ALPAKA_FN_ACC void operator()(Acc2D const& acc,
                                   ModulesConst modules,
                                   ObjectRangesConst ranges,
@@ -291,13 +294,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   PixelSegments pixelSegments,
                                   MiniDoubletsConst mds,
                                   HitsBaseConst hitsBase,
+                                  HitsITConst hitsIT,
                                   QuintupletsConst quintuplets,
-                                  QuadrupletsConst quadruplets) const {
+                                  QuadrupletsConst quadruplets,
+                                  bool plsT5SharedHit) const {
       int pixelModuleIndex = modules.nLowerModules();
       unsigned int nPixels = segmentsOccupancy.nSegments()[pixelModuleIndex];
       for (unsigned int pixelArrayIndex : cms::alpakatools::uniform_elements_y(acc, nPixels)) {
         if (!pixelSeeds.isQuad()[pixelArrayIndex] || pixelSegments.isDup()[pixelArrayIndex])
           continue;
+        // plsT5SharedHit: a pLS with outer-tracker hits needs its last hit in the T5. The outer-tracker hits follow
+        // the pixel hits in a seed, so an OT bit in hitDetBits means that the seed's last hit, which is also the
+        // last of the pLS hits (LSTPrepareInput keeps the first hits and the last), is an OT hit
+        const bool otLast = plsT5SharedHit && pixelSeeds.hitDetBits()[pixelArrayIndex] != 0;
+        const unsigned int lastHitIdx = pixelSegments.pLSHitsIdxs()[pixelArrayIndex][Params_pLS::kHits - 1];
 
         float eta1 = pixelSeeds.eta()[pixelArrayIndex];
         float phi1 = pixelSeeds.phi()[pixelArrayIndex];
@@ -325,8 +335,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
             float dEta = alpaka::math::abs(acc, eta1 - eta2);
             float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
             float dR2 = dEta * dEta + dPhi * dPhi;
+            const bool close = dR2 < kPLST5MaxDeltaR2;
+            bool sharedOk = true;
+            if (otLast && close) {
+              // the pLS hits are packed (the original index | the OT bit, packedHitIdx); the T5's are indices into
+              // the hits arrays
+              sharedOk = false;
+              for (int h = 0; h < Params_T5::kHits; ++h) {
+                const unsigned int ih = quintuplets.hitIndices()[quintupletIndex][h];
+                // the slots that a T5 does not fill hold 0xFFFFFFFF
+                if (ih >= static_cast<unsigned int>(hitsBase.metadata().size()))
+                  continue;
+                sharedOk |= packedHitIdx(ih, hitsBase, hitsIT) == lastHitIdx;
+              }
+            }
             // Cut on pLS-T5 embed distance.
-            if (dR2 < 0.02f) {
+            if (close && sharedOk) {
               float d2 = 0.f;
               CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
                 const float diff = plsEmbed[k] - quintuplets.t5Embed()[quintupletIndex][k];

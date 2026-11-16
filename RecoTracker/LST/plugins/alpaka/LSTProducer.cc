@@ -32,6 +32,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           clustSizeCut_(static_cast<uint16_t>(config.getParameter<uint32_t>("clustSizeCut"))),
           nopLSDupClean_(config.getParameter<bool>("nopLSDupClean")),
           tcpLSTriplets_(config.getParameter<bool>("tcpLSTriplets")),
+          plsT5SharedHit_(config.getParameter<bool>("plsT5SharedHit")),
           lstInputToken_{consumes(config.getParameter<edm::InputTag>("lstInput"))},
           lstESToken_{esConsumes(edm::ESInputTag("", ptCutStr_))},
           lstOutputToken_{produces()} {}
@@ -49,7 +50,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               &lstESDeviceData,
               &lstInputDC,
               nopLSDupClean_,
-              tcpLSTriplets_);
+              tcpLSTriplets_,
+              plsT5SharedHit_);
 
       // Output
       auto lstTrackCandidates = lst.getTrackCandidates();
@@ -64,6 +66,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<uint32_t>("clustSizeCut", 16);
       desc.add<bool>("nopLSDupClean", false);
       desc.add<bool>("tcpLSTriplets", false);
+      desc.add<bool>("plsT5SharedHit", false)
+          ->setComment(
+              "A pLS whose seed carries outer-tracker hits is cross-cleaned against a T5 only if its last (OT) "
+              "hit is one of the T5's hits (the dR / embedding test alone matches neighbours in jets)");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -74,6 +80,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const uint16_t clustSizeCut_;
     const bool nopLSDupClean_;
     const bool tcpLSTriplets_;
+    const bool plsT5SharedHit_;
     const device::EDGetToken<lst::LSTInputDeviceCollection> lstInputToken_;
     const device::ESGetToken<lst::LSTESData<Device>, TrackerRecoGeometryRecord> lstESToken_;
     const device::EDPutToken<lst::TrackCandidatesBaseDeviceCollection> lstOutputToken_;

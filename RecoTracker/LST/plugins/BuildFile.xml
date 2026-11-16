@@ -29,6 +29,7 @@
   <use name="DataFormats/TrajectorySeed"/>
   <use name="DataFormats/TrackReco"/>
   <use name="TrackingTools/PatternTools"/>
+  <use name="TrackingTools/GeomPropagators"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="FWCore/Framework"/>
   <use name="FWCore/ParameterSet"/>

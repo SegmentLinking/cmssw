@@ -156,7 +156,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void createSegmentsWithModuleMap();
     void compactSegments(SegmentCandidatesDeviceCollection const& candidatesDC);
     void createTriplets();
-    void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets);
+    // pls_t5_sharedhit: a pLS carrying outer-tracker hits is cross-cleaned against a T5 only if its last (OT) hit is
+    // one of the T5's (CrossCleanpLS)
+    void createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets, bool pls_t5_sharedhit);
     void createPixelTriplets();
     void createQuintuplets();
     void pixelLineSegmentCleaning(bool no_pls_dupclean);

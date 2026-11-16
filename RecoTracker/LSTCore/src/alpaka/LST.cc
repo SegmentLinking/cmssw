@@ -17,7 +17,8 @@ void LST::run(Queue& queue,
               LSTESData<Device> const* deviceESData,
               LSTInputDeviceCollection const* lstInputDC,
               bool no_pls_dupclean,
-              bool tc_pls_triplets) {
+              bool tc_pls_triplets,
+              bool pls_t5_sharedhit) {
   auto event = LSTEvent(verbose, ptCut, clustSizeCut, queue, deviceESData);
 
   event.addInputToEvent(lstInputDC);
@@ -123,7 +124,7 @@ void LST::run(Queue& queue,
     printf("# of Quadruplets produced endcap layer 5: %d\n", event.getNumberOfQuadrupletsByLayerEndcap(4));
   }
 
-  event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
+  event.createTrackCandidates(no_pls_dupclean, tc_pls_triplets, pls_t5_sharedhit);
   if (verbose) {
     alpaka::wait(queue);  // event calls are asynchronous: wait before printing
     printf("# of TrackCandidates produced: %d\n", event.getNumberOfTrackCandidates());
