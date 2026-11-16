@@ -45,6 +45,7 @@
 #include "RecoLocalTracker/Phase2TrackerRecHits/interface/Phase2TrackerRecHitOnDemand.h"
 #include "RecoLocalTracker/Records/interface/TkPhase2OTCPERecord.h"
 #include "RecoTracker/LSTCore/interface/alpaka/TrackCandidatesDeviceCollection.h"
+#include "RecoTracker/MkFit/interface/MkFitClusterIndexToHit.h"
 #include "RecoTracker/MkFit/interface/MkFitGeometry.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/EventOfHitsProduct.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/TrackProduct.h"
@@ -169,7 +170,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                          cfg.getParameter<edm::ParameterSet>("SeedCreatorPSet"),
                                                          consumesCollector())),
           seedsPutToken_(produces()),
-          pixOfSeedPutToken_(produces("pixelTrackOfSeed")) {}
+          pixOfSeedPutToken_(produces("pixelTrackOfSeed")) {
+      if (auto const t = cfg.getParameter<edm::InputTag>("pixelHits"); !t.label().empty())
+        pixelHitsToken_ = consumes(t);
+    }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
       edm::ParameterSetDescription desc;
@@ -179,6 +183,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("eventOfHits", edm::InputTag("hltMkFitEventOfHits"));
       desc.add<edm::InputTag>("pixelTracks", edm::InputTag("hltPhase2PixelTracks"));
       desc.add<edm::InputTag>("otClusters", edm::InputTag("hltSiPhase2Clusters"));
+      desc.add<edm::InputTag>("pixelHits", edm::InputTag(""))
+          ->setComment(
+              "the map of the EventOfHits' pixel rows to the legacy pixel rechits when the rows are not the cluster "
+              "keys (EventOfHits pixelRowsFromSoA): the host requests' pixel hits are matched by the rows' clusters; "
+              "empty: rows = cluster keys");
       desc.add<edm::ESInputTag>("Phase2StripCPE", edm::ESInputTag("phase2StripCPEESProducer", "Phase2StripCPE"));
       desc.add<bool>("includeFourthHit", true);
       desc.add<bool>("dropOTHitsPurePLS", true);
@@ -266,6 +275,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         auto const& mf = iSetup.getData(mfToken_);
         auto const& geom = iSetup.getData(tGeomToken_);
         auto const& pixelTracks = iEvent.get(pixelTracksToken_);
+        pixelRowHits_ = pixelHitsToken_.isUninitialized() ? nullptr : &iEvent.get(pixelHitsToken_).hits();
         std::optional<Phase2TrackerRecHitOnDemand> otOnDemand;
         for (int32_t q = 0; q < nReq; ++q) {
           HostReq const& r = hReq_->data()[q];
@@ -415,7 +425,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (!h->isValid())
             continue;
           auto const& b = static_cast<BaseTrackerRecHit const&>(*h);
-          if (b.isMatched() || b.firstClusterRef().index() != uint32_t(r.hot[k].index))
+          if (b.isMatched() || b.firstClusterRef().index() != clusterKey(b, r.hot[k].index))
             continue;
           const DetId id = h->geographicalId();
           if (mkFitLayer(id) != r.hot[k].layer)
@@ -427,6 +437,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return out;
     }
     int mkFitLayer(DetId id) const { return mkFitGeom_ ? mkFitGeom_->mkFitLayerNumber(id) : -1; }
+    // the cluster key of an mkFit hit index (pixel: the key of the row's legacy rechit with pixelHits)
+    uint32_t clusterKey(BaseTrackerRecHit const& b, int index) const {
+      if (!pixelRowHits_ || !b.firstClusterRef().isPixel())
+        return uint32_t(index);
+      if (index < 0 || size_t(index) >= pixelRowHits_->size() || (*pixelRowHits_)[index] == nullptr)
+        return ~0u;
+      return static_cast<BaseTrackerRecHit const*>((*pixelRowHits_)[index])->firstClusterRef().index();
+    }
 
     // LSTOutputConverter's placeholder state (unit momentum along the module normal at the hit, unit errors)
     static PTrajectoryStateOnDet placeholder(LocalPoint const& lp, uint32_t detId) {
@@ -463,6 +481,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<mkfitdev::EventOfHitsDeviceCollection> eohToken_;
     const edm::EDGetTokenT<reco::TrackCollection> pixelTracksToken_;
     const edm::EDGetTokenT<Phase2TrackerCluster1DCollectionNew> otClustersToken_;
+    edm::EDGetTokenT<MkFitClusterIndexToHit> pixelHitsToken_;
+    std::vector<TrackingRecHit const*> const* pixelRowHits_ = nullptr;  // this event's (produce)
     const edm::ESGetToken<ClusterParameterEstimator<Phase2TrackerCluster1D>, TkPhase2OTCPERecord> otCpeToken_;
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
     const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tGeomToken_;

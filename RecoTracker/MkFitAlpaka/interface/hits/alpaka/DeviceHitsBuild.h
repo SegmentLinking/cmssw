@@ -22,7 +22,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
     const float* yerrLocal;
     const uint16_t* detectorIndex;
     const ::mkfitdev::HitModuleDev* modules;  // indexed by GeomDet::index()
-    // raw rows (DeviceHitRawSoA columns)
+    // pixel rows in pixel rechit SoA order (srcRow == nullptr): row i = SoA row i, the spans from the SoA cluster sizes
+    const int16_t* clusterSizeX = nullptr;
+    const int16_t* clusterSizeY = nullptr;
+    // raw rows (DeviceHitRawSoA columns); srcRow == nullptr: the pixel rows are the SoA rows (spans unused)
     const uint32_t* srcRow;
     const int32_t* module;
     const uint32_t* spans;

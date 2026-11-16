@@ -267,6 +267,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::handoff {
     }
   };
 
+  // thread per mkFit pixel row in pixel rechit SoA order: its SoA module and cluster id in the module
+  class KernelClusRefsFromHits {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  const uint16_t* detectorIndex,
+                                  const uint32_t* moduleStart,
+                                  uint32_t nRows,
+                                  ::mkfitdev::handoff::ClusterRef* refs) const {
+      for (uint32_t j : cms::alpakatools::uniform_elements(acc, nRows)) {
+        const int32_t m = detectorIndex[j];
+        refs[j] = ::mkfitdev::handoff::ClusterRef{m, int32_t(j - moduleStart[m])};
+      }
+    }
+  };
+
   // thread per mkFit pixel row: the legacy cluster key's SoA cluster -> ClusterCpe (host clusterCpe() field by field)
   class KernelClusGather {
   public:

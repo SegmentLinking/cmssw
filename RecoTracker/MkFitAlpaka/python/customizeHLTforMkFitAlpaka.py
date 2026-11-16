@@ -5,7 +5,10 @@
 # unchanged. What runs where:
 #   hltMkFitAlpakaOTRecHits         device OT rechits (also the CA OT hit SoA); the legacy OT rechit producer leaves the
 #                                   menu, its readers make the few OT hits they need on demand
-#   hltMkFitEventOfHits             device hit input + EventOfHits binning (pixel rechit SoA + OT rechit SoA)
+#   hltMkFitEventOfHits             device hit input + EventOfHits binning (pixel rechit SoA + OT rechit SoA; the pixel
+#                                   rows in SoA order, no legacy pixel input)
+#   hltMkFitSiPixelHits             host map of the EventOfHits' pixel rows to the legacy pixel rechits (unscheduled, for
+#                                   the host readers)
 #   hltInputLSTDevice               device LST input; pLS parameters from the device KF of the pixel-track hits
 #   hltInitialStepMkFitSeeds        device hand-off of the LST track candidates to the mkFit seeds
 #   hltInitialStepTrackCandidatesMkFitDevice     device building (seed fit, clone engine, backward fit, cleaning)
@@ -276,7 +279,7 @@ def _swapBuild(process):
     skip = menuBuild.clustersToSkip
     setattr(process, BUILD_DEVICE, cms.EDProducer('MkFitAlpakaBuildProducer@alpaka',
                                                   seeds=cms.InputTag(menuBuild.seeds.value()),
-                                                  pixelHits=cms.InputTag(menuBuild.pixelHits.value()),
+                                                  nPixelHits=cms.InputTag(EOH, 'nPixel'),
                                                   eventOfHits=cms.InputTag(EOH),
                                                   esData=cms.ESInputTag('', ES_LABEL),
                                                   removeDuplicates=cms.bool(menuBuild.removeDuplicates.value()),
@@ -315,7 +318,7 @@ def _deviceFit(process):
             'MkFitAlpakaFitCpeESProducer@alpaka', ComponentName=cms.string(CPE_ES_LABEL),
             cpeFastParams=cms.string(fast.ComponentName.value()))
     dev = cms.EDProducer('MkFitAlpakaFitDeviceProducer@alpaka', tracks=cms.InputTag(BUILD_DEVICE),
-                         eventOfHits=cms.InputTag(EOH), pixelHits=cms.InputTag(menu.mkFitPixelHits.getModuleLabel()),
+                         eventOfHits=cms.InputTag(EOH), nPixelHits=cms.InputTag(EOH, 'nPixel'),
                          esData=cms.ESInputTag('', ES_LABEL), candCutSel=menu.candCutSel,
                          candMinPtCut=menu.candMinPtCut, candMinNHitsCut=menu.candMinNHitsCut,
                          candMinPtRelaxedCut=menu.candMinPtRelaxedCut,
@@ -329,8 +332,9 @@ def _deviceFit(process):
 
 def _deviceHits(process):
     """Device hit input: the EventOfHits builds its hits from the pixel rechit SoA and the OT rechits; the
-    RecoTracker/MkFit OT hit converter is replaced by a size-only map under the same label (the pixel map comes from
-    the EventOfHits, _pixelIndexFromEventOfHits)."""
+    RecoTracker/MkFit OT hit converter is replaced by a size-only map under the same label. Without host readers of
+    the converters' hits, the pixel rows are in pixel rechit SoA order (no legacy pixel input on the device path; the
+    pixel map comes from a host module, _pixelIndexFromEventOfHits)."""
     eoh = getattr(process, EOH)
     pix, ot = getattr(process, PIX_HITS), getattr(process, OT_HITS)
     if pix.type_() != 'MkFitSiPixelHitConverter' or ot.type_() != 'MkFitPhase2HitConverter':
@@ -347,13 +351,21 @@ def _deviceHits(process):
         return
     setattr(process, OT_HITS, cms.EDProducer('MkFitAlpakaPhase2ClusterIndexToHit',
                                              sizeFromClusters=cms.InputTag(ot.clusters.getModuleLabel())))
+    eoh.pixelRowsFromSoA = cms.bool(True)
+    # the readers of the rows' pixel clusters take them from the same SoA: the device fit's CPE, and other device readers
+    # of the EventOfHits with a 'pixelSoA' parameter
+    getattr(process, FIT_DEVICE).pixelSoA = eoh.pixelSoA
+    for label in sorted(set(c.split('.')[0] for c in _consumers(process, EOH, skip=(EOH,)))):
+        if hasattr(getattr(process, label), 'pixelSoA'):
+            getattr(process, label).pixelSoA = eoh.pixelSoA
 
 
 def _eventOfHitsEarlyDelete(process):
     """The device EventOfHits is deleted right after its last reader, the device fit. The fit runs on the EventOfHits'
-    queue or waits for it, so the caching allocator cannot hand the block to another queue while it is read. Other
-    readers: of its host products (the pixel cluster index maps, the queue handle), or synchronizing device readers
-    (_EOH_SYNCHRONIZING_READERS: their device work is done when they end, before the deletion)."""
+    queue or orders that queue after its work (no host wait), so the caching allocator cannot hand the block to another
+    queue while it is read. Other readers: of its host products (the pixel cluster index maps, the queue handle), or
+    synchronizing device readers (_EOH_SYNCHRONIZING_READERS: their device work is done when they end, before the
+    deletion)."""
     def allowed(c):
         label, param = c.split('.', 1)
         if label in (FIT_DEVICE, BUILD_DEVICE) or getattr(process, label).type_() in _EOH_SYNCHRONIZING_READERS:
@@ -681,11 +693,37 @@ def _navigationDevice(process):
 
 
 def _pixelIndexFromEventOfHits(process):
-    """The pixel MkFitClusterIndexToHit comes from the EventOfHits (filled in its pass over the legacy pixel rechits);
-    the menu pixel hit converter leaves the menu."""
+    """The pixel MkFitClusterIndexToHit of the EventOfHits' pixel rows. Rows in SoA order: from
+    MkFitAlpakaPixelClusterIndexToHit under the converter's label, unscheduled (only host readers wait for the legacy
+    rechits), readers of the EventOfHits' map moved to it, the seed hand-off's host requests matched through it.
+    Legacy row order: from the EventOfHits (filled in its pass over the legacy pixel rechits); the menu pixel hit
+    converter leaves the menu."""
     eoh = getattr(process, EOH)
     pix = getattr(process, PIX_HITS)
     if _wrapperReaders(process, PIX_HITS):  # the host converter stays (_deviceHits)
+        return
+    if getattr(eoh, 'pixelRowsFromSoA', cms.bool(False)).value():
+        if eoh.pixelRecHits.getModuleLabel() != pix.hits.getModuleLabel():  # the legacy copy of eoh.pixelSoA
+            raise RuntimeError('customizeHLTforMkFitAlpaka: %s reads %s, %s reads %s'
+                               % (EOH, eoh.pixelRecHits.getModuleLabel(), PIX_HITS, pix.hits.getModuleLabel()))
+        _removeFromDirectSequences(process, pix)
+        for t in process.tasks_().values():
+            t.remove(pix)
+        setattr(process, PIX_HITS, cms.EDProducer('MkFitAlpakaPixelClusterIndexToHit', pixelSoA=eoh.pixelSoA,
+                                                  pixelRecHits=pix.hits))
+        process.hltMkFitAlpakaTask.add(getattr(process, PIX_HITS))
+
+        def visit(pset, n, i, tl, where):
+            t = getattr(pset, n) if i is None else getattr(pset, n)[i]
+            if tl == EOH and isinstance(t, cms.InputTag) and t.getProductInstanceLabel() == 'pixelIndexToHit':
+                if i is None:
+                    setattr(pset, n, cms.InputTag(PIX_HITS))
+                else:
+                    getattr(pset, n)[i] = cms.InputTag(PIX_HITS)
+        for l, m in _modules(process):
+            _visitTags(m, l + '.', visit)
+        if hasattr(process, MKFIT_SEEDS) and getattr(process, MKFIT_SEEDS).type_() == 'MkFitAlpakaSeedHandoffK1@alpaka':
+            getattr(process, MKFIT_SEEDS).pixelHits = cms.InputTag(PIX_HITS)
         return
     if eoh.pixelRecHits.getModuleLabel() != pix.hits.getModuleLabel():
         raise RuntimeError('customizeHLTforMkFitAlpaka: %s reads %s, %s reads %s'

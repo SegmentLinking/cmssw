@@ -12,14 +12,21 @@
 //
 // The HitSoA is made on the device from the pixel rechit SoA (hltPhase2SiPixelRecHitsSoA) and the device OT rechit
 // SoA, with a per-module table (rotation, position, layer, uniqueIdInLayer; an ES product built per IOV), bitwise equal
-// to the RecoTracker/MkFit hit converters, which leave the menu. What stays on the host: one pass over the legacy pixel
-// clusters (row permutation moduleStart + originalId and the legacy sizes; the legacy cluster order is not the SoA
-// order).
+// to the RecoTracker/MkFit hit converters, which leave the menu. The pixel rows:
+// - pixelRowsFromSoA = true: in pixel rechit SoA order (row i = SoA row i), read from the device SoA (the cluster spans
+//   from its clusterSizeX/Y); no host pass and no legacy pixel input, so the EventOfHits does not wait for the legacy
+//   clusters / rechits. The host map of the rows to the legacy rechits is MkFitAlpakaPixelClusterIndexToHit's.
+// - false (the hit order of the RecoTracker/MkFit pixel hit converter, for menus that keep the host converters): in
+//   legacy cluster key order, from one host pass over the legacy pixel rechits (row permutation moduleStart +
+//   originalId and the legacy sizes; the legacy cluster order inside a module is a sort by minPixelRow, not the SoA
+//   order).
 //
-// guard - a pixel row found through originalId is accepted only if the SoA local position is
+// guard (legacy order) - a pixel row found through originalId is accepted only if the SoA local position is
 // bitwise the legacy rechit's; otherwise (and for clusters without originalId) the row is found by position. Both
 // cases are counted (LogWarning on the first, totals at endJob). on
 // CPU backends the raw host rows are per-stream scratch (grow-only capacity, reused every event).
+//
+// instance "nPixel" = the number of pixel rows (the OT row base of the HitSoA), on the host.
 //
 // instance "queue" = a host product with the native handle of the queue the EventOfHits
 // buffer was allocated on (0 on CPU backends). With the product deleted early (canDeleteEarly, after its last
@@ -108,20 +115,30 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           mkFitGeomToken_{esConsumes()},
           productToken_{produces()},
           queueToken_{produces("queue")},
+          nPixelToken_{produces("nPixel")},
           usePixelQualityDB_{iConfig.getParameter<bool>("usePixelQualityDB")},
+          rowsFromSoA_{iConfig.getParameter<bool>("pixelRowsFromSoA")},
           produceSrcRows_{iConfig.getParameter<bool>("producePixelSrcRows")},
           produceIndexToHit_{iConfig.getParameter<bool>("producePixelIndexToHit")} {
+      if (rowsFromSoA_ && produceIndexToHit_)
+        throw cms::Exception("Configuration")
+            << "MkFitAlpakaEventOfHitsProducer: producePixelIndexToHit needs the legacy row order; with "
+               "pixelRowsFromSoA the map comes from MkFitAlpakaPixelClusterIndexToHit";
       if (produceSrcRows_)
         srcRowsToken_ = produces("pixelSrcRows");
       if (produceIndexToHit_)
         indexToHitToken_ = produces("pixelIndexToHit");
-      pixelSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelSoA"));
-      pixelRecHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelRecHits"));
+      if (rowsFromSoA_) {
+        pixelSoADeviceToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelSoA"));
+      } else {
+        pixelSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelSoA"));
+        pixelRecHitsToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelRecHits"));
+        pixelClustersToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClusters"));
+      }
       // OT rows from the device OT rechit SoA (no legacy OT rechits read)
       otSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("otSoA"));
       if (auto const q = iConfig.getParameter<edm::InputTag>("otSoAQueue"); !q.label().empty())
         otSoAQueueToken_ = consumes(q);
-      pixelClustersToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClusters"));
       otClustersToken_ = consumes(iConfig.getParameter<edm::InputTag>("otClusters"));
       moduleTableToken_ = esConsumes(edm::ESInputTag("", iConfig.getParameter<std::string>("moduleTable")));
       esHostToken_ = esConsumes(iConfig.getParameter<edm::ESInputTag>("esData"));
@@ -137,9 +154,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment("Use SiPixelQuality DB information (as MkFitEventOfHitsProducer)");
       desc.add("esData", edm::ESInputTag{"", ""})
           ->setComment("MkFitAlpakaESProducer ComponentName (the static layer table, q axes)");
-      desc.add("pixelSoA", edm::InputTag{"hltPhase2SiPixelRecHitsSoA"})->setComment("pixel rechit SoA (host)");
+      desc.add("pixelRowsFromSoA", false)
+          ->setComment(
+              "the pixel rows in pixel rechit SoA order, from the device SoA alone (no legacy pixel input); false = "
+              "in legacy cluster key order (the RecoTracker/MkFit pixel hit converter's), with a host pass over "
+              "pixelRecHits / pixelClusters");
+      desc.add("pixelSoA", edm::InputTag{"hltPhase2SiPixelRecHitsSoA"})
+          ->setComment("pixel rechit SoA (pixelRowsFromSoA: the device collection; else its host copy)");
       desc.add("pixelRecHits", edm::InputTag{"hltSiPixelRecHits"})
-          ->setComment("legacy pixel rechits (cluster key -> SoA row, legacy cluster sizes)");
+          ->setComment(
+              "legacy pixel rechits (cluster key -> SoA row, legacy cluster sizes); unused with pixelRowsFromSoA");
       desc.add("otSoA", edm::InputTag{"hltMkFitAlpakaOTRecHits"})
           ->setComment("device OT rechit SoA (MkFitAlpakaOTRecHitsProducer): the OT rows of the hits");
       desc.add("otSoAQueue", edm::InputTag{""})
@@ -147,15 +171,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               "early deletion of otSoA: its producer's \"queue\" product; on another queue this module"
               "orders that queue after its read of the SoA (empty = off)");
       desc.add("pixelClusters", edm::InputTag{"hltSiPixelClusters"})
-          ->setComment("legacy pixel clusters of the rechits (indexed by key, as convertHits)");
+          ->setComment(
+              "legacy pixel clusters of the rechits (indexed by key, as convertHits); unused with pixelRowsFromSoA");
       desc.add("otClusters", edm::InputTag{"hltSiPhase2Clusters"})->setComment("OT clusters of the rechits");
       desc.add<std::string>("moduleTable", "MkFitAlpakaHitModuleTable")
           ->setComment("ComponentName of the MkFitAlpakaEventOfHitsModuleTableESProducer product (per-module table)");
       desc.add("producePixelSrcRows", false)
           ->setComment(
-              "also put the pixel cluster key -> pixel rechit SoA row map ('pixelSrcRows', host "
+              "also put the pixel row -> pixel rechit SoA row map ('pixelSrcRows', host "
               "std::vector<uint32_t>, kNoHit for keys without a rechit; EMPTY when a row had to be found by "
-              "position) for hltInputLSTDevice's pixel-key map");
+              "position; the identity with pixelRowsFromSoA) for hltInputLSTDevice's pixel-key map");
       desc.add("producePixelIndexToHit", false)
           ->setComment(
               "also put the pixel MkFitClusterIndexToHit ('pixelIndexToHit'), filled in the "
@@ -174,8 +199,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if (productAllocs_ > 0)
         edm::LogInfo("MkFitAlpakaEventOfHits") << "product block allocations " << productAllocs_ << ", largest product "
                                                << 1e-6 * productMaxBytes_ << " MB";
-      edm::LogInfo("MkFitAlpakaEventOfHits") << "pixel rows found by position: originalId mismatches " << nKeyMismatch_
-                                             << ", clusters without originalId " << nPositionSearch_;
+      if (!rowsFromSoA_)
+        edm::LogInfo("MkFitAlpakaEventOfHits") << "pixel rows found by position: originalId mismatches "
+                                               << nKeyMismatch_ << ", clusters without originalId " << nPositionSearch_;
     }
 
     void produce(edm::StreamID sid, device::Event& iEvent, device::EventSetup const& iSetup) const override {
@@ -201,8 +227,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // raw host rows of the hit input (pixel rows, then strip rows)
       uint32_t nPix = 0, nStr = 0;
       std::optional<::mkfitdev::DeviceHitRawHostCollection> raw;
-      const ::mkfitdev::DeviceHitRawHostCollection* rawRef = nullptr;  // raw or the per-stream scratch
-      {
+      const ::mkfitdev::DeviceHitRawHostCollection* rawRef = nullptr;  // raw or the per-stream scratch (legacy order)
+      if (rowsFromSoA_) {
+        // the pixel rows are the SoA rows: no host rows
+        nPix = iEvent.get(pixelSoADeviceToken_).nHits();
+        nStr = iEvent.get(otClustersToken_).dataSize();
+        if (produceSrcRows_) {
+          std::vector<uint32_t> rows(nPix);
+          for (uint32_t i = 0; i < nPix; ++i)
+            rows[i] = i;
+          iEvent.emplace(srcRowsToken_, std::move(rows));
+        }
+      } else {
         const auto& pixRH = iEvent.get(pixelRecHitsToken_);
         nPix = wrapperRows(pixRH);
         // one rechit per OT cluster in cluster-key order (Phase2TrackerRecHits): converter rows = OT clusters
@@ -248,13 +284,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
       const auto axes = layerAxisInputsES(iSetup.getData(esHostToken_));
       // the EventOfHits event product (one PortableCollection over the four blocks)
+      iEvent.emplace(nPixelToken_, nPix);
       const uint32_t nHits = nPix + nStr, nLayers = axes.size(), nBins = ::mkfitdev::totalBins(axes);
       if (nLayers > ::mkfitdev::kMaxLayers)
         throw cms::Exception("MkFitAlpakaEventOfHits")
             << nLayers << " mkFit layers do not fit the int8_t layer column of HitSoA";
       const std::array<int32_t, 4> sizes{{int32_t(nHits), int32_t(nLayers), int32_t(nHits), int32_t(nBins)}};
       mkfitdev::EventOfHitsDeviceCollection product = makeProduct(sid, iEvent.queue(), sizes);
-      fillFromDeviceInputs(iEvent, iSetup, product, *rawRef, nPix, nStr, axes);
+      if (rowsFromSoA_)
+        fillFromDeviceSoA(iEvent, iSetup, product, nPix, nStr, axes);
+      else
+        fillFromDeviceInputs(iEvent, iSetup, product, *rawRef, nPix, nStr, axes);
       otReleaseGuard(iEvent);
       if (!mkfitdev::hits::runBuildEventOfHits(iEvent.queue(), product, deads)) {
         skipEvent(iEvent, nHits, nLayers);
@@ -439,6 +479,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     }
 
+    // pixelRowsFromSoA: the pixel rows straight from the pixel rechit SoA columns (device memory on every backend)
+    void fillFromDeviceSoA(device::Event& iEvent,
+                           device::EventSetup const& iSetup,
+                           mkfitdev::EventOfHitsDeviceCollection& product,
+                           uint32_t nPix,
+                           uint32_t nStr,
+                           std::vector<::mkfitdev::LayerAxisInput> const& axes) const {
+      auto& queue = iEvent.queue();
+      const auto hitsView = iEvent.get(pixelSoADeviceToken_).const_view().trackingHits();
+      const auto hm = hitsView.metadata();  // refers to hitsView: keep the view alive
+      mkfitdev::hits::DeviceHitInputs in{};
+      in.nPixel = nPix;
+      in.nStrip = nStr;
+      in.xLocal = hm.addressOf_xLocal();
+      in.yLocal = hm.addressOf_yLocal();
+      in.xerrLocal = hm.addressOf_xerrLocal();
+      in.yerrLocal = hm.addressOf_yerrLocal();
+      in.detectorIndex = hm.addressOf_detectorIndex();
+      in.clusterSizeX = hm.addressOf_clusterSizeX();
+      in.clusterSizeY = hm.addressOf_clusterSizeY();
+      in.modules = iSetup.getData(moduleTableToken_).data();
+      in.srcRow = nullptr;  // pixel row i = SoA row i
+      setOT(iEvent, in);
+      if constexpr (std::is_same_v<Device, alpaka::DevCpu>)
+        ::mkfitdev::fillLayers(axes, nPix, product.view().layers());
+      else
+        copyLayers(queue, product, nPix, axes);
+      mkfitdev::hits::runFillHitsFromDeviceInputs(queue, in, product.view().hits());
+    }
+
     // layers block: filled on the host, copied alone (blocks in declaration order: hits, layers, binnedHits, bins)
     static void copyLayers(Queue& queue,
                            mkfitdev::EventOfHitsDeviceCollection& product,
@@ -538,6 +608,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     }
 
     edm::EDGetTokenT<::reco::TrackingRecHitHost> pixelSoAToken_;
+    device::EDGetToken<reco::TrackingRecHitsSoACollection> pixelSoADeviceToken_;
     edm::EDGetTokenT<SiPixelRecHitCollection> pixelRecHitsToken_;
     device::EDGetToken<mkfitdev::OTRecHitDeviceCollection> otSoAToken_;
     edm::EDGetTokenT<unsigned long long> otSoAQueueToken_;  //
@@ -547,6 +618,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> mkFitGeomToken_;
     const device::EDPutToken<mkfitdev::EventOfHitsDeviceCollection> productToken_;
     const edm::EDPutTokenT<unsigned long long> queueToken_;
+    const edm::EDPutTokenT<unsigned int> nPixelToken_;
     edm::ESGetToken<SiPixelQuality, SiPixelQualityRcd> pixelQualityToken_;
     edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
     const bool usePixelQualityDB_;
@@ -554,6 +626,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::EDPutTokenT<MkFitClusterIndexToHit> indexToHitToken_;
     // per-stream scratch (raw rows, product memory) on CPU backends; GPU backends use the caching allocator
     static constexpr bool kScratchReuse = std::is_same_v<Device, alpaka::DevCpu>;
+    const bool rowsFromSoA_;
     const bool produceSrcRows_;
     const bool produceIndexToHit_;
     mutable std::atomic<uint64_t> nKeyMismatch_{0}, nPositionSearch_{0};

@@ -14,6 +14,9 @@
 //                    pixel row (= legacy cluster key), the SoA module index and the SoA cluster id in the module
 //                    (SiPixelCluster::originalId): the legacy cluster order inside a module is a heap sort by
 //                    minPixelRow, which is not reproduced on the device.
+//   buildClusterRefsFromHits  the same per-row references when the mkFit pixel rows are the pixel rechit SoA rows
+//                    (row = moduleStart[module] + cluster id in the module): from the SoA's detectorIndex and moduleStart
+//                    on the device, no host input.
 
 #include <cstdint>
 
@@ -74,6 +77,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::handoff {
                        uint32_t nRows,
                        ::mkfitdev::cpe::ClusterCpe* out,
                        ::mkfitdev::handoff::ClusterCpeCounters* counters);
+
+  // refs [nRows] (device memory) of the mkFit pixel rows in pixel rechit SoA order: row j -> (detectorIndex[j],
+  // j - moduleStart[detectorIndex[j]]); detectorIndex [nRows] and moduleStart [modules + 1] are the pixel rechit SoA
+  // columns (device memory). Asynchronous in `queue`.
+  void buildClusterRefsFromHits(Queue& queue,
+                                const uint16_t* detectorIndex,
+                                const uint32_t* moduleStart,
+                                uint32_t nRows,
+                                ::mkfitdev::handoff::ClusterRef* refs);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::handoff
 

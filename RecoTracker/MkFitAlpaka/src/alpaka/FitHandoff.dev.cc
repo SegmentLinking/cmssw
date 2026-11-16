@@ -74,4 +74,21 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::handoff {
                         counters);
   }
 
+  void buildClusterRefsFromHits(Queue& queue,
+                                const uint16_t* detectorIndex,
+                                const uint32_t* moduleStart,
+                                uint32_t nRows,
+                                ::mkfitdev::handoff::ClusterRef* refs) {
+    if (nRows == 0)
+      return;
+    constexpr uint32_t kThreads = 128;
+    alpaka::exec<Acc1D>(queue,
+                        make_workdiv<Acc1D>(divide_up_by(nRows, kThreads), kThreads),
+                        KernelClusRefsFromHits{},
+                        detectorIndex,
+                        moduleStart,
+                        nRows,
+                        refs);
+  }
+
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::handoff

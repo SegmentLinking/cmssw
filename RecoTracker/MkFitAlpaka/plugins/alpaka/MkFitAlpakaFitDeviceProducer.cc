@@ -14,14 +14,17 @@
 //   module index and SiPixelCluster::originalId (4 + 4 bytes, no pixel loop). Clusters without originalId (persisted
 //   replay clusters) make the event fall back to "host".
 //   "host": the host computation (clusterCpe over every cluster, pinned buffer + copy).
+//   pixelSoA set (the EventOfHits' pixel rows in pixel rechit SoA order, its pixelRowsFromSoA): "device" takes the
+//   per-row references from the SoA on the device (no legacy cluster input); "tracks" / "host" (CPU backends only) map
+//   the legacy clusters to their SoA rows (moduleStart + originalId).
 // - Output: TrackSoA (capacity = the building's), rows [0, nTracks) = fitted tracks in MkFitCore order; status fields,
 //   label, score, charge copied; removed outliers have the index Hit::fitOutlierIdx(index) and nFoundHits
 //   decremented (Track::removeHit), failed fits chi2 = -1; the state at the outermost fitted hit in the outer column.
 // - the building's TrackSoA is read first, so the module takes over the building's queue (=
 //   the EventOfHits queue). eventOfHitsQueue set (the menu deletes the device EventOfHits right after this
-//   module, canDeleteEarly): if this module's queue is not the one the EventOfHits was allocated on, it waits for its
-//   own work before returning, so the caching allocator cannot hand the block to another queue while the fit reads it
-//   (counted; EOH_RELEASE at endJob).
+//   module, canDeleteEarly): if this module's queue is not the one the EventOfHits was allocated on, the EventOfHits
+//   queue is made to wait (on the device, MkFitAlpakaReleaseOrder.h) for this module's work, so the caching allocator
+//   cannot hand the block to another queue while the fit reads it; the host is not blocked (counted at endJob).
 
 #include <algorithm>
 #include <cstring>
@@ -39,6 +42,7 @@
 #include "DataFormats/SiPixelCluster/interface/SiPixelCluster.h"
 #include "DataFormats/SiPixelClusterSoA/interface/alpaka/SiPixelClustersSoACollection.h"
 #include "DataFormats/SiPixelDigiSoA/interface/alpaka/SiPixelDigisSoACollection.h"
+#include "DataFormats/TrackingRecHitSoA/interface/alpaka/TrackingRecHitsSoACollection.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ConfigurationDescriptions.h"
@@ -59,7 +63,6 @@
 #include "RecoLocalTracker/ClusterParameterEstimator/interface/PixelClusterParameterEstimator.h"
 #include "RecoLocalTracker/Records/interface/PixelCPEFastParamsRecord.h"
 #include "RecoLocalTracker/Records/interface/TkPixelCPERecord.h"
-#include "RecoTracker/MkFit/interface/MkFitClusterIndexToHit.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
@@ -72,6 +75,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/hits/alpaka/EventOfHitsDeviceCollections.h"
 #include "RecoTracker/MkFitAlpaka/plugins/alpaka/MkFitAlpakaClusterCpeFill.h"
 #include "RecoTracker/MkFitAlpaka/plugins/alpaka/MkFitAlpakaFitCpeTables.h"
+#include "RecoTracker/MkFitAlpaka/plugins/alpaka/MkFitAlpakaReleaseOrder.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/engine/FitHandoff.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/fit/FitTracks.h"
 
@@ -83,7 +87,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         : EDProducer<>(iConfig),
           tracksToken_{consumes(iConfig.getParameter<edm::InputTag>("tracks"))},
           eohToken_{consumes(iConfig.getParameter<edm::InputTag>("eventOfHits"))},
-          pixelHitsToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelHits"))},
+          nPixelToken_{consumes(iConfig.getParameter<edm::InputTag>("nPixelHits"))},
           esToken_{esConsumes(iConfig.getParameter<edm::ESInputTag>("esData"))},
           putToken_{produces()},
           statusToken_{produces()},
@@ -102,8 +106,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       sel_.minNHits = iConfig.getParameter<int>("candMinNHitsCut");
       sel_.minPtRelaxed = float(iConfig.getParameter<double>("candMinPtRelaxedCut"));
       sel_.minAbsEtaRelaxed = float(iConfig.getParameter<double>("candMinAbsEtaForRelaxedCut"));
+      if (auto const t = iConfig.getParameter<edm::InputTag>("pixelSoA"); useCpe_ && !t.label().empty()) {
+        soaRows_ = true;
+        pixelSoAToken_ = consumes(t);
+      }
       if (useCpe_) {
-        clusterCollToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClusters"));
         const auto src = iConfig.getParameter<std::string>("clusterSource");
         if (src != "auto" && src != "host" && src != "device" && src != "tracks")
           throw cms::Exception("Configuration")
@@ -114,6 +121,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
               << "MkFitAlpakaFitDeviceProducer: clusterSource tracks is for CPU backends";
         clusTracks_ = src == "tracks" || (src == "auto" && kCpuBackend);
         clusDevice_ = src == "device" || (src == "auto" && !kCpuBackend);
+        if (soaRows_ && !clusDevice_ && !kCpuBackend)
+          throw cms::Exception("Configuration")
+              << "MkFitAlpakaFitDeviceProducer: with pixelSoA a GPU backend needs clusterSource device or auto";
+        if (!(soaRows_ && clusDevice_))  // the SoA rows on the device need no legacy clusters
+          clusterCollToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClusters"));
         if (clusDevice_) {
           digisToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClustersSoA"));
           clustersSoAToken_ = consumes(iConfig.getParameter<edm::InputTag>("pixelClustersSoA"));
@@ -136,8 +148,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment("device TrackSoA of the building (MkFitAlpakaBuildProducer)");
       desc.add<edm::InputTag>("eventOfHits", edm::InputTag("hltMkFitEventOfHits"))
           ->setComment("device EventOfHits product (hits block, same rows as the hit wrappers)");
-      desc.add<edm::InputTag>("pixelHits", edm::InputTag("hltMkFitSiPixelHits"))
-          ->setComment("MkFitClusterIndexToHit of the pixel hits: only its size (strip hit row base)");
+      desc.add<edm::InputTag>("nPixelHits", edm::InputTag("hltMkFitEventOfHits", "nPixel"))
+          ->setComment("the EventOfHits' pixel row count (strip hit row base)");
       desc.add<edm::ESInputTag>("esData", edm::ESInputTag("", ""));
       desc.add<bool>("candCutSel", false);
       desc.add<double>("candMinPtCut", 0);
@@ -151,7 +163,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<std::string>("cpeCheck", "throw")
           ->setComment("per-IOV synthetic-cluster cross-check vs pixelCPE: throw | off");
       desc.add<edm::InputTag>("pixelClusters", edm::InputTag("hltSiPixelClusters"))
-          ->setComment("the clusters of the pixel rechits (mkFit pixel hit row = cluster key)");
+          ->setComment("the clusters of the pixel rechits (mkFit pixel hit row = cluster key unless pixelSoA)");
+      desc.add<edm::InputTag>("pixelSoA", edm::InputTag(""))
+          ->setComment(
+              "the pixel rechit SoA when the EventOfHits' pixel rows are in its order (EventOfHits pixelRowsFromSoA); "
+              "empty: the rows are the legacy cluster keys");
       desc.add<std::string>("clusterSource", "auto")
           ->setComment(
               "CPE cluster quantities: auto (device on GPU, tracks on CPU) | device (from the pixel digi/cluster "
@@ -171,7 +187,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("eventOfHitsQueue", edm::InputTag(""))
           ->setComment(
               "the EventOfHits producer's 'queue' product, set when the device EventOfHits is deleted"
-              "early after this module; a different queue here makes the module wait for its work (counted)");
+              "early after this module; a different queue here is ordered after this module's work (counted)");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -193,7 +209,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
       auto const& es = iSetup.getData(esToken_);
       ::mkfitdev::checkSupportedFitConfig(es.hostConfigValue());  //
-      const uint32_t nPix = iEvent.get(pixelHitsToken_).hits().size();
+      const uint32_t nPix = iEvent.get(nPixelToken_);
 
       // 1. candCutSel on the device, order-preserving; out.nTracks() = kept count (device)
       mkfitdev::handoff::selectFitInput(queue, inD.const_view(), capacity, sel_, out.view());
@@ -212,31 +228,50 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         dCpe = cpeES.view();
         if (cpeCheck_)
           checkCpePerIOV(iSetup, tables);
-        auto const& dsv = iEvent.get(clusterCollToken_);
         const uint32_t nAlloc = std::max<uint32_t>(nPix, 1);
         bool onDevice = clusDevice_;
+        // SoA rows: the pixel rechit SoA (device memory; host memory on CPU backends, where the host fills use it)
+        const reco::TrackingRecHitsSoACollection* soa = soaRows_ ? &iEvent.get(pixelSoAToken_) : nullptr;
+        if (soa && soa->nHits() != nPix)
+          throw cms::Exception("MkFitAlpakaFitDeviceProducer")
+              << "pixelSoA has " << soa->nHits() << " rows for " << nPix << " EventOfHits pixel rows";
+        // the SoA's moduleStart (pixel row of a module's first cluster) and detectorIndex columns
+        const uint32_t* soaModuleStart = nullptr;
+        const uint16_t* soaDetIndex = nullptr;
+        if (soa) {
+          const auto soaView = soa->const_view();
+          soaModuleStart = soaView.hitModules().metadata().addressOf_moduleStart();
+          soaDetIndex = soaView.trackingHits().metadata().addressOf_detectorIndex();
+        }
+        const uint32_t* hostModuleStart = kHostMem ? soaModuleStart : nullptr;
+        edmNew::DetSetVector<SiPixelCluster> const* dsv =
+            clusterCollToken_.isUninitialized() ? nullptr : &iEvent.get(clusterCollToken_);
         if (clusTracks_) {  // CPU backends: the selection above has completed (blocking queue); hits on its tracks only
           alpaka::wait(queue);  // no-op for the blocking serial queue, keeps the contract explicit
           hClus.emplace(cms::alpakatools::make_host_buffer<::mkfitdev::cpe::ClusterCpe[]>(queue, nAlloc));
-          fillClusterCpeOnTracks(dsv, tables, es.view(), out.const_view(), nPix, hClus->data());
+          fillClusterCpeOnTracks(*dsv, tables, es.view(), out.const_view(), nPix, hClus->data(), hostModuleStart);
         }
         std::optional<cms::alpakatools::host_buffer<::mkfitdev::handoff::ClusterRef[]>> hRefs;
-        if (onDevice) {
+        if (onDevice && !soa) {
           hRefs.emplace(cms::alpakatools::make_host_buffer<::mkfitdev::handoff::ClusterRef[]>(queue, nAlloc));
-          onDevice = ::mkfitdev::cpe::fillClusterRefs(dsv, tables, nPix, hRefs->data());
+          onDevice = ::mkfitdev::cpe::fillClusterRefs(*dsv, tables, nPix, hRefs->data());
           if (!onDevice)
             ++nHostFallback_;
         }
         if (!onDevice && !clusTracks_) {
           hClus.emplace(cms::alpakatools::make_host_buffer<::mkfitdev::cpe::ClusterCpe[]>(queue, nAlloc));
-          ::mkfitdev::cpe::fillClusterCpe(dsv, tables, nPix, hClus->data());
+          ::mkfitdev::cpe::fillClusterCpe(*dsv, tables, nPix, hClus->data(), {}, hostModuleStart);
         }
         if (onDevice) {
           auto const& digis = iEvent.get(digisToken_);
           auto const& clus = iEvent.get(clustersSoAToken_);
           dClus.emplace(cms::alpakatools::make_device_buffer<::mkfitdev::cpe::ClusterCpe[]>(queue, nAlloc));
           auto dRefs = cms::alpakatools::make_device_buffer<::mkfitdev::handoff::ClusterRef[]>(queue, nAlloc);
-          alpaka::memcpy(queue, dRefs, *hRefs);
+          if (soa) {
+            mkfitdev::handoff::buildClusterRefsFromHits(queue, soaDetIndex, soaModuleStart, nPix, dRefs.data());
+          } else {
+            alpaka::memcpy(queue, dRefs, *hRefs);
+          }
           dCnt.emplace(cms::alpakatools::make_device_buffer<::mkfitdev::handoff::ClusterCpeCounters>(queue));
           alpaka::memset(queue, *dCnt, 0);
           mkfitdev::handoff::buildClusterCpe(queue,
@@ -292,32 +327,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     void endJob() override {
       if (eohQueueCheck_)
         edm::LogInfo("MkFitAlpakaFitDeviceProducer")
-            << "EventOfHits release: same queue " << nSameQueue_ << ", waited " << nQueueWait_;
+            << "EventOfHits release: same queue " << nSameQueue_ << ", ordered " << nOrdered_;
       if (clusDevice_ || nHostFallback_ > 0)
         edm::LogInfo("MkFitAlpakaFitDeviceProducer")
             << "cluster source: device, host fallback events (no originalId) " << nHostFallback_;
     }
 
   private:
-    // the device EventOfHits is deleted right after this module (canDeleteEarly). Its buffer goes back to the
-    // caching allocator with a marker on the queue it was allocated on; on any other queue, wait for this module's work
-    // (which follows the building's) so no other queue can reuse the block while it is read.
+    // The device EventOfHits is deleted right after this module (canDeleteEarly). CachingAllocator::free() records the
+    // block's marker event on the queue the block was allocated on (the EventOfHits queue): the block is reused at once
+    // on that queue (in-order work), and on any other queue only once the marker has completed. If this module runs on
+    // another queue, the EventOfHits queue is made to wait (cudaStreamWaitEvent / hipStreamWaitEvent, no host block)
+    // for an event recorded on this queue after the fit's kernels, before the deletion enqueues the marker; so the
+    // marker, and any later work on the EventOfHits queue, follows every read of the block. The building's reads are
+    // covered too: this queue is the building's queue or waits for the building's product event. A free outside the
+    // cache is a synchronous device free (or stream-ordered on the allocation queue). Same queue: nothing to do.
     void releaseGuard(device::Event& iEvent, Queue& queue) const {
       if (!eohQueueCheck_)
         return;
 #if !(defined(ALPAKA_ACC_CPU_B_SEQ_T_SEQ_ENABLED) || defined(ALPAKA_ACC_CPU_B_TBB_T_SEQ_ENABLED))
-      {
-        const auto eohQueue = iEvent.get(eohQueueToken_);
-        if (eohQueue == reinterpret_cast<unsigned long long>(alpaka::getNativeHandle(queue))) {
-          ++nSameQueue_;
-          return;
-        }
-        alpaka::wait(queue);
-        if (nQueueWait_++ == 0)
-          edm::LogWarning("MkFitAlpakaFitDeviceProducer")
-              << "event " << iEvent.id().event() << ": the fit does not run on the device EventOfHits queue; it waits "
-              << "for its work before the early deletion (totals at endJob)";
-      }
+      if (mkfitdev::orderReleaseAfterReads(queue, iEvent.get(eohQueueToken_), "MkFitAlpakaFitDeviceProducer"))
+        ++nOrdered_;
+      else
+        ++nSameQueue_;
 #else
       (void)iEvent;  // CPU backends: blocking queue, the work is done when produce() returns
       (void)queue;
@@ -330,7 +362,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                        ::mkfitdev::ESView const& es,
                                        ::mkfitdev::TrackSoAConstView trk,
                                        uint32_t nPix,
-                                       ::mkfitdev::cpe::ClusterCpe* out) {
+                                       ::mkfitdev::cpe::ClusterCpe* out,
+                                       const uint32_t* moduleStart) {
       std::vector<uint8_t> need(nPix, 0);
       for (int t = 0; t < trk.nTracks(); ++t) {
         const int nh = std::min<int>(trk[t].nTotalHits(), ::mkfitdev::kMaxTrkHits);
@@ -340,7 +373,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             need[hot.index] = 1;
         }
       }
-      ::mkfitdev::cpe::fillClusterCpe(dsv, tables, nPix, out, need);
+      ::mkfitdev::cpe::fillClusterCpe(dsv, tables, nPix, out, need, moduleStart);
     }
 
     // Once per IOV of the two CPE records, the device CPE tables against the host
@@ -372,7 +405,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
     const device::EDGetToken<mkfitdev::TrackSoADeviceCollection> tracksToken_;
     const device::EDGetToken<mkfitdev::EventOfHitsDeviceCollection> eohToken_;
-    const edm::EDGetTokenT<MkFitClusterIndexToHit> pixelHitsToken_;
+    const edm::EDGetTokenT<unsigned int> nPixelToken_;
     const device::ESGetToken<::mkfitdev::ESData<Device>, TrackerRecoGeometryRecord> esToken_;
     const device::EDPutToken<mkfitdev::TrackSoADeviceCollection> putToken_;
     const device::EDPutToken<mkfitdev::MkFitStatusDeviceObject> statusToken_;
@@ -380,6 +413,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     mkfitdev::fit::FitOptions fitOpt_;
     ::mkfitdev::handoff::CandCutSel sel_;
     edm::EDGetTokenT<edmNew::DetSetVector<SiPixelCluster>> clusterCollToken_;
+    bool soaRows_ = false;  // pixelSoA set: mkFit pixel rows = pixel rechit SoA rows
+    device::EDGetToken<reco::TrackingRecHitsSoACollection> pixelSoAToken_;
     device::ESGetToken<::mkfitdev::cpe::CpeESData<Device>, PixelCPEFastParamsRecord> cpeToken_;
     edm::ESGetToken<PixelClusterParameterEstimator, TkPixelCPERecord> pixelCpeToken_;
     edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> geomToken_;
@@ -392,7 +427,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     mutable std::atomic<unsigned long long> checkedIds_[2] = {0, 0};
     edm::EDGetTokenT<unsigned long long> eohQueueToken_;
     bool eohQueueCheck_ = false;
-    mutable std::atomic<long> nSameQueue_{0}, nQueueWait_{0};
+    mutable std::atomic<long> nSameQueue_{0}, nOrdered_{0};
   };
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE

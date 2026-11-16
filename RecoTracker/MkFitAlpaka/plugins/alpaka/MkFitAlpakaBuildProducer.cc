@@ -40,7 +40,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "RecoTracker/MkFit/interface/MkFitGeometry.h"
-#include "RecoTracker/MkFit/interface/MkFitClusterIndexToHit.h"
 #include "RecoTracker/MkFit/interface/MkFitSeedWrapper.h"
 #include "RecoTracker/MkFitCore/interface/BeamSpot.h"
 #include "RecoTracker/MkFitCore/interface/IterationConfig.h"
@@ -165,7 +164,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   public:
     explicit MkFitAlpakaBuildProducer(edm::ParameterSet const& iConfig)
         : EDProducer<edm::StreamCache<BuildScratch>>(iConfig),
-          pixelHitsToken_{consumes(iConfig.getParameter<edm::InputTag>("pixelHits"))},
+          nPixelToken_{consumes(iConfig.getParameter<edm::InputTag>("nPixelHits"))},
           eohToken_{consumes(iConfig.getParameter<edm::InputTag>("eventOfHits"))},
           beamSpotToken_{consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))},
           mkFitGeomToken_{esConsumes()},
@@ -215,8 +214,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment(
               "K1: the device seed rows of MkFitAlpakaSeedHandoffK1 instead of 'seeds' (the seed count ="
               "the size of pixelTrackOfSeed, which must then come from the same module)");
-      desc.add("pixelHits", edm::InputTag{"hltMkFitSiPixelHits"})
-          ->setComment("MkFitClusterIndexToHit, only for nPixel (strip hit row base)");
+      desc.add("nPixelHits", edm::InputTag{"hltMkFitEventOfHits", "nPixel"})
+          ->setComment("the EventOfHits' pixel row count (strip hit row base)");
       desc.add("eventOfHits", edm::InputTag{"hltMkFitEventOfHitsAlpaka"})->setComment("device EventOfHits product");
       desc.add("beamSpot", edm::InputTag{"hltOnlineBeamSpot"})
           ->setComment(
@@ -285,7 +284,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                   bs.x0(), bs.y0(), bs.z0(), bs.sigmaZ(), bs.BeamWidthX(), bs.BeamWidthY(), bs.dxdz(), bs.dydz()));
       }
       const auto& seedsIn = k1 ? kNoSeeds : (hostClean ? cleanedSeeds : iEvent.get(seedsToken_).seeds());
-      const uint32_t nPixel = iEvent.get(pixelHitsToken_).hits().size();  // = HitVec size (convertHits)
+      const uint32_t nPixel = iEvent.get(nPixelToken_);  // = HitVec size (convertHits) in the legacy row order
       const auto& esD = iSetup.getData(esToken_);
       const ::mkfitdev::ESView esView = esD.view();
       if (k1 && !pixStates_)
@@ -487,7 +486,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::memcpy(&sb, &st, sizeof(sb));
       return sb;
     }();
-    const edm::EDGetTokenT<MkFitClusterIndexToHit> pixelHitsToken_;
+    const edm::EDGetTokenT<unsigned int> nPixelToken_;
     const device::EDGetToken<mkfitdev::EventOfHitsDeviceCollection> eohToken_;
     const edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;  // EOH beam spot: backward-search gate, duplicate cleaner
     const edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> mkFitGeomToken_;

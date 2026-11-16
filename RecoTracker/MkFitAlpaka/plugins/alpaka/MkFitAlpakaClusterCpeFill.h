@@ -3,7 +3,9 @@
 
 // Host fills of the per-pixel-hit inputs of the device PixelCPEGeneric (interface/fit/CpeGeneric.h), shared by the
 // device final fit (MkFitAlpakaFitDeviceProducer) and the device pixel-seed creator (MkFitAlpakaLstInputProducer).
-// The mkFit pixel hit row is the legacy cluster key (convertHits); rows without a cluster get module -1 (no CPE).
+// The mkFit pixel hit row is the legacy cluster key (convertHits), or, with the pixel rechit SoA's moduleStart given, the
+// SoA row of the cluster (moduleStart[module] + originalId; the device EventOfHits' pixelRowsFromSoA); rows without a
+// cluster get module -1 (no CPE).
 // No SiPixelGenError / boost::multi_array include here (MkFitAlpakaFitCpeTables.h has them): it breaks the boost concept
 // checks in a CUDA-backend translation unit that includes Eigen first (MkFitAlpakaLstInputProducer.cc).
 
@@ -42,28 +44,48 @@ namespace mkfitdev::cpe {
     return c;
   }
 
-  // clusterCpe() for the rows with need[row] != 0 (every row when need is empty); other rows untouched
+  // clusterCpe() for the rows with need[row] != 0 (every row when need is empty); other rows untouched.
+  // moduleStart (host memory): the rows are the pixel rechit SoA rows (moduleStart[module] + originalId)
   inline void fillClusterCpe(edmNew::DetSetVector<SiPixelCluster> const& dsv,
                              CpeTablesHost const& tables,
                              uint32_t nPix,
                              ClusterCpe* out,
-                             std::vector<uint8_t> const& need = {}) {
+                             std::vector<uint8_t> const& need = {},
+                             const uint32_t* moduleStart = nullptr) {
     const bool all = need.empty();
     auto const& data = dsv.data();
     const SiPixelCluster* base = data.data();
+    if (moduleStart) {  // SoA rows: a row without a cluster has no CPE
+      for (uint32_t i = 0; i < nPix; ++i)
+        if (all || need[i]) {
+          out[i] = ClusterCpe{};
+          out[i].module = -1;
+        }
+    }
     for (auto const& ds : dsv) {
       int mod = -2;  // looked up on the first filled cluster of the module
       for (auto const& cl : ds) {
-        const uint32_t key = &cl - base;
-        if (key >= nPix || !(all || need[key]))
+        uint32_t row = &cl - base;
+        if (moduleStart) {
+          if (mod == -2) {
+            auto it = tables.rawToModule.find(ds.detId());
+            mod = it == tables.rawToModule.end() ? -1 : it->second;
+          }
+          if (mod < 0 || cl.originalId() == SiPixelCluster::invalidClusterId)
+            continue;
+          row = moduleStart[mod] + cl.originalId();
+        }
+        if (row >= nPix || !(all || need[row]))
           continue;
         if (mod == -2) {
           auto it = tables.rawToModule.find(ds.detId());
           mod = it == tables.rawToModule.end() ? -1 : it->second;
         }
-        out[key] = clusterCpe(cl, mod);
+        out[row] = clusterCpe(cl, mod);
       }
     }
+    if (moduleStart)
+      return;
     for (uint32_t i = data.size(); i < nPix; ++i)
       if (all || need[i]) {
         out[i] = ClusterCpe{};

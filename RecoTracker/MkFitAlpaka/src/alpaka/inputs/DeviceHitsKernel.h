@@ -25,14 +25,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
         const bool pixel = i < in.nPixel;
         float lx = 0.f, ly = 0.f, exx = 0.f, exy = 0.f, eyy = 0.f;
         int32_t mod = -1;
+        uint32_t sp = 0;
         if (pixel) {
-          const uint32_t j = in.srcRow[i];
+          const uint32_t j = in.srcRow ? in.srcRow[i] : i;
+          if (in.srcRow)  // legacy row order: the host spans
+            sp = in.spans[i];
           if (j != ::mkfitdev::kNoHit) {
             mod = in.detectorIndex[j];
             lx = in.xLocal[j];
             ly = in.yLocal[j];
             exx = in.xerrLocal[j];
             eyy = in.yerrLocal[j];
+            if (!in.srcRow)  // SoA row order: the spans from the SoA cluster sizes
+              sp = uint32_t(::mkfitdev::pixelSpanFromSoA(in.clusterSizeX[j])) |
+                   (uint32_t(::mkfitdev::pixelSpanFromSoA(in.clusterSizeY[j])) << 16);
           }
         } else if (in.otModule != nullptr) {  // device OT rechit SoA (exy = 0 in Phase2StripCPE)
           const uint32_t k = i - in.nPixel;
@@ -77,7 +83,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::hits {
         r.e20() = e[3];
         r.e21() = e[4];
         r.e22() = e[5];
-        const uint32_t sp = (!pixel && in.otModule != nullptr) ? uint32_t(in.otSize[i - in.nPixel]) : in.spans[i];
+        if (!pixel)
+          sp = in.otModule != nullptr ? uint32_t(in.otSize[i - in.nPixel]) : in.spans[i];
         r.packed() = pixel ? ::mkfitdev::packPixel(m.detIdInLayer, int(sp & 0xffffu), int(sp >> 16))
                            : ::mkfitdev::packStrip(m.detIdInLayer, int(sp));
         r.layer() = m.layer;

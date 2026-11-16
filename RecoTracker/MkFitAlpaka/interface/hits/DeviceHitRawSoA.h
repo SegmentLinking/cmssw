@@ -2,7 +2,8 @@
 #define RecoTracker_MkFitAlpaka_interface_hits_DeviceHitRawSoA_h
 
 // Device hit input: per HitSoA row, what the host still has to provide (module-internal
-// scratch, not an event product). Rows [0, nPixel): pixel, indexed by the legacy cluster key like the HitVec;
+// scratch, not an event product; the legacy pixel row order only: with pixelRowsFromSoA the pixel rows are the pixel
+// rechit SoA rows and need no host rows). Rows [0, nPixel): pixel, indexed by the legacy cluster key like the HitVec;
 // srcRow = row of the pixel rechit SoA (moduleStart[det] + originalId), kNoHit for a cluster index without a hit;
 // spans = legacy cluster sizes (sizeX | sizeY << 16). Rows [nPixel, nPixel + nStrip): OT, indexed by the OT cluster
 // key; local position / error copied from the rechit, module = GeomDet index (-1: no hit), spans = cluster size.
