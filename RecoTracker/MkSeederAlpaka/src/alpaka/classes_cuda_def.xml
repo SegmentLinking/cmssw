@@ -1,0 +1,21 @@
+<lcgdict>
+  <class name="alpaka_cuda_async::mkseeder::MkSeederSeedsDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedsDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedsDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkseeder::MkSeederSeedFeaturesDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedFeaturesDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedFeaturesDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkseeder::MkSeederSeedScoresDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedScoresDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedScoresDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkseeder::MkSeederSeedPixelStatesDeviceCollection" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedPixelStatesDeviceCollection>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederSeedPixelStatesDeviceCollection>>" persistent="false"/>
+
+  <class name="alpaka_cuda_async::mkseeder::MkSeederDupCountersDeviceObject" persistent="false"/>
+  <class name="edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederDupCountersDeviceObject>" persistent="false"/>
+  <class name="edm::Wrapper<edm::DeviceProduct<alpaka_cuda_async::mkseeder::MkSeederDupCountersDeviceObject>>" persistent="false"/>
+</lcgdict>

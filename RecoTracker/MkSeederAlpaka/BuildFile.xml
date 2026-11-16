@@ -1,0 +1,22 @@
+<use name="alpaka"/>
+<use name="eigen"/>
+<use name="json"/>
+<use name="rootcling"/>
+<use name="vdt_headers"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/DetId"/>
+<use name="DataFormats/TrackerCommon"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SoATemplate"/>
+<use name="FWCore/Utilities"/>
+<use name="HeterogeneousCore/AlpakaCore"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="RecoTracker/MkFitCore"/>
+<flags ALPAKA_BACKENDS="1"/>
+<!-- the table builder with mkFit's flags (RecoTracker/MkFitCore: ofast-flag, -fopenmp-simd), with which its
+     computations were made before: the axes' bins per unit (a reciprocal estimate and a Newton step) and the hits'
+     azimuths (vdt's atan2 polynomial) depend on them in the last bit -->
+<flags CXXFLAGS="-Ofast -fno-reciprocal-math -mrecip=none -fopenmp-simd" file="MkSeederTableBuilder.cc"/>
+<export>
+  <lib name="1"/>
+</export>

@@ -1,0 +1,69 @@
+<!-- host plugins -->
+<library file="*.cc" name="RecoTrackerMkSeederAlpakaPlugins">
+  <use name="DataFormats/Phase2TrackerCluster"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/TrackerCommon"/>
+  <use name="DataFormats/TrackingRecHit"/>
+  <use name="DataFormats/TrajectorySeed"/>
+  <use name="DataFormats/TrajectoryState"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="Geometry/CommonTopologies"/>
+  <use name="Geometry/Records"/>
+  <use name="Geometry/TrackerGeometryBuilder"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/Records"/>
+  <use name="RecoLocalTracker/ClusterParameterEstimator"/>
+  <use name="RecoLocalTracker/Phase2TrackerRecHits"/>
+  <use name="RecoLocalTracker/Records"/>
+  <use name="RecoTracker/MkFit"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <use name="RecoTracker/Record"/>
+  <use name="TrackingTools/GeomPropagators"/>
+  <use name="TrackingTools/Records"/>
+  <use name="TrackingTools/TrajectoryState"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<!-- alpaka-based portable plugins -->
+<library file="alpaka/*.cc" name="RecoTrackerMkSeederAlpakaPortable">
+  <use name="alpaka"/>
+  <use name="eigen"/>
+  <use name="DataFormats/BeamSpot"/>
+  <use name="DataFormats/DetId"/>
+  <use name="DataFormats/TrackerCommon"/>
+  <use name="DataFormats/Portable"/>
+  <use name="Geometry/CommonTopologies"/>
+  <use name="Geometry/Records"/>
+  <use name="Geometry/TrackerGeometryBuilder"/>
+  <use name="MagneticField/Engine"/>
+  <use name="MagneticField/Records"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFit"/>
+  <!-- the portable field, PCA, propagation and Kalman update (header-only) -->
+  <use name="RecoTracker/MkFitAlpakaMath"/>
+  <!-- the device pixel seeds of MkSeederDevicePixelSeedsProducer: MkFitAlpaka's TrackSoA (headers only: a link would
+       also device-link MkFitAlpaka's kernels into this plugin) -->
+  <use name="RecoTracker/MkFitAlpaka" source_only="1"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <use name="RecoTracker/Record"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+  <!-- the seed fits (RecoTracker/MkFitAlpaka's Matriplex propagation and Kalman update over the kLanes seeds of a
+       work item) on the CPU backends: as in MkFitAlpaka's CPU build, -fno-trapping-math (if-conversion and
+       vectorization of the per-slot loops) and -fopenmp-simd (MPLEX_SIMD) -->
+  <flags CXXFLAGS="-fno-trapping-math -fopenmp-simd" file="MkSeederFit.dev.cc"/>
+  <!-- not for ROCm (OpenMP device-runtime calls in the device code; MPLEX_SIMD is empty under clang), as in
+       RecoTracker/MkFitAlpaka; product-level: a file-level REM_ROCM_HOST_CXXFLAGS is not applied -->
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd"/>
+</library>

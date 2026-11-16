@@ -1,0 +1,37 @@
+<lcgdict>
+  <!-- the seeder event products, transient: from MkSeederProducer and MkSeederSeedClassifier to the host modules -->
+  <class name="mkseeder::MkSeederSeedsHostCollection" persistent="false"/>
+  <!-- mkseeder::MkSeederSeedsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="mkseeder::MkSeederSeedsHostCollection::Layout" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedsLayout<128,false>" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedHitsLayout<128,false>" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedStatesLayout<128,false>" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedQualityLayout<128,false>" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedClusterIndicesLayout<128,false>" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedPerigeeLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkseeder::MkSeederSeedsHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkseeder::MkSeederSeedFeaturesHostCollection" persistent="false"/>
+  <!-- mkseeder::MkSeederSeedFeaturesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="mkseeder::MkSeederSeedFeaturesHostCollection::Layout" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedFeaturesLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkseeder::MkSeederSeedFeaturesHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkseeder::MkSeederSeedScoresHostCollection" persistent="false"/>
+  <!-- mkseeder::MkSeederSeedScoresHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="mkseeder::MkSeederSeedScoresHostCollection::Layout" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedScoresLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkseeder::MkSeederSeedScoresHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkseeder::MkSeederSeedPixelStatesHostCollection" persistent="false"/>
+  <!-- mkseeder::MkSeederSeedPixelStatesHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="mkseeder::MkSeederSeedPixelStatesHostCollection::Layout" persistent="false"/>
+  <class name="mkseeder::MkSeederSeedPixelStatesLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkseeder::MkSeederSeedPixelStatesHostCollection>" splitLevel="0" persistent="false"/>
+
+  <class name="mkseeder::MkSeederDupCountersHostObject" persistent="false"/>
+  <!-- mkseeder::MkSeederDupCountersHostObject::Product must be listed before the aliased-to type -->
+  <class name="mkseeder::MkSeederDupCountersHostObject::Product" persistent="false"/>
+  <class name="mkseeder::MkSeederDupCounters" persistent="false"/>
+  <class name="edm::Wrapper<mkseeder::MkSeederDupCountersHostObject>" persistent="false"/>
+</lcgdict>
