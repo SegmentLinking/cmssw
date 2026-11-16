@@ -33,7 +33,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                    ::mkfitdev::CandSlotsSoA::View slots,
                    ::mkfitdev::CandHotsSoA::View hots,
                    int32_t hotsPerSeed,
-                   DeviceHitPositions const& hitPos = DeviceHitPositions{});
+                   DeviceHitPositions const& hitPos = DeviceHitPositions{},
+                   bool inputOrder = false);
+  // inputOrder: the seeds keep their input order within a region (MkBuilder::import_seeds with seeds_sorted = true,
+  // after a seed cleaner) instead of the (phi, eta) binnor order.
 
   // export_best_comb_cands(out, remove_missing_hits = true): front candidate of every seed row
   // s < *nSeedsDev that has candidates (and passed[s] != 0 if 'passed' is given) -> TrackSoA, in seed order.

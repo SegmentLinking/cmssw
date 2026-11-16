@@ -42,6 +42,8 @@
 #include "RecoTracker/MkFit/interface/MkFitGeometry.h"
 #include "RecoTracker/MkFit/interface/MkFitClusterIndexToHit.h"
 #include "RecoTracker/MkFit/interface/MkFitSeedWrapper.h"
+#include "RecoTracker/MkFitCore/interface/BeamSpot.h"
+#include "RecoTracker/MkFitCore/interface/IterationConfig.h"
 #include "RecoTracker/Record/interface/TrackerRecoGeometryRecord.h"
 
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
@@ -196,6 +198,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       moduleCfg_.clustersToSkip = iConfig.getParameter<edm::InputTag>("clustersToSkip").label();
       moduleCfg_.buildingRoutine = iConfig.getParameter<std::string>("buildingRoutine");
       moduleCfg_.seedCleaning = iConfig.getParameter<bool>("seedCleaning");
+      if (auto const t = iConfig.getParameter<edm::ESInputTag>("seedCleanerConfig");
+          !k1Seeds_ && moduleCfg_.seedCleaning && !(t.module().empty() && t.data().empty())) {
+        // host seeds: the IterationConfig's seed cleaner (MkFitCore) runs on them before the upload
+        seedCleanerConfigToken_ = esConsumes(t);
+        moduleCfg_.hostSeedCleaner = true;
+      }
       moduleCfg_.removeDuplicates = removeDuplicates_;
       moduleCfg_.backwardFitInCMSSW = iConfig.getParameter<bool>("backwardFitInCMSSW");
     }
@@ -220,6 +228,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add("clustersToSkip", edm::InputTag())->setComment("must be empty: no hit mask on the device");
       desc.add<std::string>("buildingRoutine", "cloneEngine");
       desc.add("seedCleaning", true);
+      desc.add("seedCleanerConfig", edm::ESInputTag{"", ""})
+          ->setComment(
+              "MkFitIterationConfig (as MkFitProducer's 'config') for MkFitCore's seed cleaner on the host seeds, run "
+              "if seedCleaning and the iteration has a seed cleaner (none on the device); empty: no host cleaner");
       desc.add("backwardFitInCMSSW", false);
       desc.add("k2GroupScan", true)
           ->setComment("GPU: K2 hit scan with several lanes per candidate; false = thread per candidate");
@@ -253,7 +265,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto& queue = iEvent.queue();
       const bool k1 = k1Seeds_;
       static const mkfit::TrackVec kNoSeeds;
-      const auto& seedsIn = k1 ? kNoSeeds : iEvent.get(seedsToken_).seeds();
+      const auto& esCfg = iSetup.getData(esHostToken_).hostConfigValue();
+      // MkFitCore's seed cleaner on the host seeds (run_OneIteration: seedCleaning && itconf.m_seed_cleaner); the
+      // cleaned seeds keep their labels and are imported in their order (MkBuilder::import_seeds, seeds_sorted)
+      const bool hostClean = moduleCfg_.hostSeedCleaner && esCfg.seed_cleaner != ::mkfitdev::SeedCleaner::None;
+      mkfit::TrackVec cleanedSeeds;
+      if (hostClean) {
+        if (pixStates_)
+          throw cms::Exception("Configuration")
+              << "MkFitAlpakaBuildProducer: the host seed cleaner does not keep the pixelTrackOfSeed rows";
+        const auto& itconf = iSetup.getData(seedCleanerConfigToken_);
+        const auto& bs = iEvent.get(beamSpotToken_);
+        cleanedSeeds = iEvent.get(seedsToken_).seeds();
+        if (!cleanedSeeds.empty() && itconf.m_seed_cleaner)
+          itconf.m_seed_cleaner(
+              cleanedSeeds,
+              itconf,
+              mkfit::BeamSpot(
+                  bs.x0(), bs.y0(), bs.z0(), bs.sigmaZ(), bs.BeamWidthX(), bs.BeamWidthY(), bs.dxdz(), bs.dydz()));
+      }
+      const auto& seedsIn = k1 ? kNoSeeds : (hostClean ? cleanedSeeds : iEvent.get(seedsToken_).seeds());
       const uint32_t nPixel = iEvent.get(pixelHitsToken_).hits().size();  // = HitVec size (convertHits)
       const auto& esD = iSetup.getData(esToken_);
       const ::mkfitdev::ESView esView = esD.view();
@@ -262,8 +293,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             << "MkFitAlpakaBuildProducer: deviceSeeds needs pixelTrackOfSeed (the K1 seed count)";
       const int n = k1 ? int(iEvent.get(pixOfSeedToken_).size()) : int(seedsIn.size());
       const int hps = hotsPerSeed_;
-      ::mkfitdev::checkSupportedBuildConfig(iSetup.getData(esHostToken_).hostConfigValue(),
-                                            moduleCfg_);  // (no allocation when it passes)
+      ::mkfitdev::checkSupportedBuildConfig(esCfg, moduleCfg_);  // (no allocation when it passes)
       // per-event status product, zeroed here, counters collected after the tail
       mkfitdev::MkFitStatusDeviceObject statusProduct(queue);
       mkfitdev::zeroStatus(queue, statusProduct);
@@ -323,7 +353,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       mkfitdev::EngineBuffers& b = *S.b;
       mkfitdev::EngineBuffers& work = *S.work;
       mkfitdev::seeds::importSeeds(
-          queue, seedsD.view(), n, T.limits, b.seeds.view(), b.slots.view(), b.hots.view(), hps, hitPos);
+          queue, seedsD.view(), n, T.limits, b.seeds.view(), b.slots.view(), b.hots.view(), hps, hitPos, hostClean);
       b.nRowsDev = &seedsD.view().nKept();
 
       // 2. event inputs of the engine kernels
@@ -463,6 +493,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> mkFitGeomToken_;
     const device::ESGetToken<::mkfitdev::ESData<Device>, TrackerRecoGeometryRecord> esToken_;
     const edm::ESGetToken<::mkfitdev::ESDataHost, TrackerRecoGeometryRecord> esHostToken_;
+    edm::ESGetToken<mkfit::IterationConfig, TrackerRecoGeometryRecord> seedCleanerConfigToken_;
     const device::EDPutToken<mkfitdev::TrackSoADeviceCollection> tracksToken_;
     const int hotsPerSeed_;
     const bool removeDuplicates_;

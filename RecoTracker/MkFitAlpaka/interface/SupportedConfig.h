@@ -24,6 +24,7 @@ namespace mkfitdev {
     std::string clustersToSkip;  // InputTag label; the device has no hit mask (m_iteration_hit_mask)
     std::string buildingRoutine = "cloneEngine";
     bool seedCleaning = true;         // runs the IterationConfig seed cleaner if one is set (none ported)
+    bool hostSeedCleaner = false;     // the MkFitCore seed cleaner runs on the host seeds (MkFitSeedWrapper input)
     bool removeDuplicates = true;     // runs the IterationConfig duplicate cleaner if one is set
     bool backwardFitInCMSSW = false;  // the device runs mkFit's backward fit + backward search
   };

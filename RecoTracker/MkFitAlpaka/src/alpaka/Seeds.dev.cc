@@ -16,7 +16,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                    ::mkfitdev::CandSlotsSoA::View slots,
                    ::mkfitdev::CandHotsSoA::View hots,
                    int32_t hotsPerSeed,
-                   DeviceHitPositions const& hitPos) {
+                   DeviceHitPositions const& hitPos,
+                   bool inputOrder) {
     if (capacity <= 0)
       return;
     constexpr int kThreads = 128;
@@ -38,7 +39,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                         hitPos.x,
                         hitPos.y,
                         hitPos.z,
-                        hitPos.layerHitBase);
+                        hitPos.layerHitBase,
+                        inputOrder);
     alpaka::exec<Acc1D>(queue, wd1, KernelSeedScan{}, seeds, binCount.data(), binStart.data(), seedCands, hotsPerSeed);
     alpaka::exec<Acc1D>(queue,
                         wd,

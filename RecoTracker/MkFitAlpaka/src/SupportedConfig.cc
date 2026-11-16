@@ -113,9 +113,11 @@ namespace mkfitdev {
     v.require(m.clustersToSkip.empty(), "clustersToSkip must be empty: no hit mask on the device");
     v.require(m.buildingRoutine == "cloneEngine", "buildingRoutine must be cloneEngine");
     v.require(!m.backwardFitInCMSSW, "backwardFitInCMSSW must be false (the device runs mkFit's backward fit)");
-    // MkFitCore runs the seed cleaner only if seedCleaning && itconf.m_seed_cleaner; none is ported
-    v.require(!(m.seedCleaning && c.seed_cleaner != SeedCleaner::None),
-              "seedCleaning with a seed cleaner in the IterationConfig: no seed cleaner is ported");
+    // MkFitCore runs the seed cleaner only if seedCleaning && itconf.m_seed_cleaner; none is ported to the device, the
+    // build module runs MkFitCore's on host seeds (hostSeedCleaner)
+    v.require(!(m.seedCleaning && c.seed_cleaner != SeedCleaner::None) || m.hostSeedCleaner,
+              "seedCleaning with a seed cleaner in the IterationConfig: no seed cleaner is ported to the device "
+              "(the host one needs host seeds and seedCleanerConfig)");
     // MkFitCore runs the duplicate cleaner only if removeDuplicates && itconf.m_duplicate_cleaner; the device cleaner
     // runs whenever removeDuplicates is set
     v.require(!m.removeDuplicates || isPortedDuplicateCleaner(c),

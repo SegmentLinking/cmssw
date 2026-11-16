@@ -76,7 +76,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
                                   float const* __restrict__ hitX,
                                   float const* __restrict__ hitY,
                                   float const* __restrict__ hitZ,
-                                  uint32_t const* __restrict__ layerHitBase) const {
+                                  uint32_t const* __restrict__ layerHitBase,
+                                  bool inputOrder) const {
       const int32_t n = seeds.nSeeds();
       for (int32_t i : cms::alpakatools::uniform_elements(acc, n)) {
         const bool silly = seedHasSillyValues(seeds[i].errors().v);
@@ -101,7 +102,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::seeds {
         }
         const float phi = ::mkfitdev::getPhi(hx, hy);      // Hit::phi()
         const float eta = ::mkfitdev::getEta(hx, hy, hz);  // Hit::eta()
-        const uint32_t key = seedBinnorKey(phi, eta);
+        // inputOrder: a key increasing with the input row (16 bits, as the binnor key) keeps the input order
+        const uint32_t key = inputOrder ? uint32_t((uint64_t(i) << 16) / uint64_t(n)) : seedBinnorKey(phi, eta);
         seeds[i].region() = reg;
         seeds[i].key() = key;
         alpaka::atomicAdd(acc, &binCount[seedCountBin(reg, key)], 1, alpaka::hierarchy::Blocks{});
