@@ -7,6 +7,9 @@
 // differs in mechanism (CUDA/HIP intrinsics on device, memcpy on host), not in result.
 // Namespace mkfitdev::vdt mirrors ::vdt, so MkFitCore "vdt::fast_sincosf(...)" transliterates as is
 // (from ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev write ::mkfitdev::vdt or use MatriplexBackend.h).
+// All functions are ALPAKA_FN_INLINE (always_inline / __forceinline__): they are called per Matriplex
+// slot inside the "#pragma omp simd" loops, and an out-of-line call there stops the CPU vectorization; whether GCC
+// inlines them otherwise depends on the caller's size and flags (e.g. a consumer package without -fno-trapping-math).
 
 #include <cstdint>
 #include <cstring>
@@ -28,7 +31,7 @@ namespace mkfitdev {
       constexpr float ONEOPIO4F = 4. / kPiD;
       constexpr float MAXNUMF = 3.4028234663852885981170418348451692544e38f;
 
-      ALPAKA_FN_HOST_ACC inline uint32_t sp2uint32(float x) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE uint32_t sp2uint32(float x) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
         return __float_as_uint(x);
 #else
@@ -38,7 +41,7 @@ namespace mkfitdev {
 #endif
       }
 
-      ALPAKA_FN_HOST_ACC inline float uint322sp(uint32_t x) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float uint322sp(uint32_t x) {
 #if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
         return __uint_as_float(x);
 #else
@@ -48,23 +51,23 @@ namespace mkfitdev {
 #endif
       }
 
-      ALPAKA_FN_HOST_ACC inline float spANDuint32(const float x, const uint32_t i) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float spANDuint32(const float x, const uint32_t i) {
         return uint322sp(sp2uint32(x) & i);
       }
-      ALPAKA_FN_HOST_ACC inline float spORuint32(const float x, const uint32_t i) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float spORuint32(const float x, const uint32_t i) {
         return uint322sp(sp2uint32(x) | i);
       }
-      ALPAKA_FN_HOST_ACC inline float spXORuint32(const float x, const uint32_t i) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float spXORuint32(const float x, const uint32_t i) {
         return uint322sp(sp2uint32(x) ^ i);
       }
 
-      ALPAKA_FN_HOST_ACC inline uint32_t getSignMask(const float x) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE uint32_t getSignMask(const float x) {
         const uint32_t mask = 0x80000000;
         return sp2uint32(x) & mask;
       }
 
       /// Like frexp but vectorising and the exponent is a float.
-      ALPAKA_FN_HOST_ACC inline float getMantExponentf(const float x, float& fe) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float getMantExponentf(const float x, float& fe) {
         uint32_t n = sp2uint32(x);
         int32_t e = (n >> 23) - 127;
         fe = e;
@@ -82,7 +85,7 @@ namespace mkfitdev {
       constexpr float DP2F = 2.4187564849853515625e-4;
       constexpr float DP3F = 3.77489497744594108e-8;
 
-      ALPAKA_FN_HOST_ACC inline float reduce2quadrant(float x, int& quad) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float reduce2quadrant(float x, int& quad) {
         /* make argument positive */
         x = std::fabs(x);
 
@@ -95,7 +98,7 @@ namespace mkfitdev {
         return ((x - y * DP1F) - y * DP2F) - y * DP3F;
       }
 
-      ALPAKA_FN_HOST_ACC inline void fast_sincosf_m45_45(const float x, float& s, float& c) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void fast_sincosf_m45_45(const float x, float& s, float& c) {
         float z = x * x;
 
         s = (((-1.9515295891E-4f * z + 8.3321608736E-3f) * z - 1.6666654611E-1f) * z * x) + x;
@@ -109,7 +112,7 @@ namespace mkfitdev {
       constexpr float DP2Ftan = 2.4187564849853515625e-4;
       constexpr float DP3Ftan = 3.77489497744594108e-8;
 
-      ALPAKA_FN_HOST_ACC inline float reduce2quadranttan(float x, int32_t& quad) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float reduce2quadranttan(float x, int32_t& quad) {
         x = std::fabs(x);
         quad = int(ONEOPIO4F * x);  // always positive, so (int) == std::floor
         quad = (quad + 1) & (~1);
@@ -132,7 +135,7 @@ namespace mkfitdev {
       constexpr float PX8logf = -2.4999993993E-1f;
       constexpr float PX9logf = 3.3333331174E-1f;
 
-      ALPAKA_FN_HOST_ACC inline float get_log_poly(const float x) {
+      ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float get_log_poly(const float x) {
         float y = x * PX1logf;
         y += PX2logf;
         y *= x;
@@ -158,7 +161,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // sincos.h
-    ALPAKA_FN_HOST_ACC inline void fast_sincosf(const float xx, float& s, float& c) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void fast_sincosf(const float xx, float& s, float& c) {
       int j;
       const float x = details::reduce2quadrant(xx, j);
       int signS = (j & 4);
@@ -189,13 +192,13 @@ namespace mkfitdev {
     }
 
     // sin.h, cos.h
-    ALPAKA_FN_HOST_ACC inline float fast_sinf(float x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_sinf(float x) {
       float s, c;
       fast_sincosf(x, s, c);
       return s;
     }
 
-    ALPAKA_FN_HOST_ACC inline float fast_cosf(float x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_cosf(float x) {
       float s, c;
       fast_sincosf(x, s, c);
       return c;
@@ -203,7 +206,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // tan.h
-    ALPAKA_FN_HOST_ACC inline float fast_tanf(float x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_tanf(float x) {
       const uint32_t sign_mask = details::getSignMask(x);
 
       int32_t quad = 0;
@@ -238,7 +241,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // atan.h
-    ALPAKA_FN_HOST_ACC inline float fast_atanf(float xx) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_atanf(float xx) {
       const uint32_t sign_mask = details::getSignMask(xx);
 
       float x = std::fabs(xx);
@@ -264,7 +267,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // atan2.h
-    ALPAKA_FN_HOST_ACC inline float fast_atan2f(float y, float x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_atan2f(float y, float x) {
       // move in first octant
       float xx = std::fabs(x);
       float yy = std::fabs(y);
@@ -311,7 +314,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // log.h
-    ALPAKA_FN_HOST_ACC inline float fast_logf(float x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_logf(float x) {
       const float original_x = x;
 
       float fe;
@@ -342,7 +345,7 @@ namespace mkfitdev {
 
     //------------------------------------------------------------------------------
     // sqrt.h
-    ALPAKA_FN_HOST_ACC inline float fast_isqrtf_general(float x, const uint32_t ISQRT_ITERATIONS) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_isqrtf_general(float x, const uint32_t ISQRT_ITERATIONS) {
       const float threehalfs = 1.5f;
       const float x2 = x * 0.5f;
       float y = x;
@@ -355,9 +358,9 @@ namespace mkfitdev {
       return y;
     }
 
-    ALPAKA_FN_HOST_ACC inline float fast_isqrtf(float x) { return fast_isqrtf_general(x, 2); }
-    ALPAKA_FN_HOST_ACC inline float fast_approx_isqrtf(float x) { return fast_isqrtf_general(x, 1); }
-    ALPAKA_FN_HOST_ACC inline float isqrtf(float x) { return 1.f / std::sqrt(x); }
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_isqrtf(float x) { return fast_isqrtf_general(x, 2); }
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float fast_approx_isqrtf(float x) { return fast_isqrtf_general(x, 1); }
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float isqrtf(float x) { return 1.f / std::sqrt(x); }
 
   }  // namespace vdt
 }  // namespace mkfitdev

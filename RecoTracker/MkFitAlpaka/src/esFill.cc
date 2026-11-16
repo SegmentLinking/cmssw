@@ -1,4 +1,5 @@
-// Host fill of the MkFitAlpaka ES product from MkFitCore host ES objects.
+// Host fill of the MkFitAlpaka ES products (the geometry-only product and the iteration's product built on it) from
+// MkFitCore host ES objects.
 
 #include <bit>
 #include <cmath>
@@ -143,9 +144,7 @@ namespace mkfitdev {
 
   }  // namespace
 
-  std::unique_ptr<ESDataHost> fillESDataHost(mkfit::TrackerInfo const& ti,
-                                             mkfit::IterationConfig const& ic,
-                                             bool buildingFitField) {
+  std::unique_ptr<ESGeometryDataHost> fillESGeometryHost(mkfit::TrackerInfo const& ti) {
     auto const& host = cms::alpakatools::host();
 
     ESSizes sizes;
@@ -164,11 +163,8 @@ namespace mkfitdev {
     // ParabolicMf) and mag_fit_* (the final fit, from bFieldParams)
     sizes.bFieldFit = Config::BFieldParams{
         mkfit::Config::mag_fit_c1, mkfit::Config::mag_fit_b0, mkfit::Config::mag_fit_b1, mkfit::Config::mag_fit_a};
-    // DEVIATION DEV-11: buildingFitField builds with the final fit's constants
-    sizes.bField = buildingFitField
-                       ? sizes.bFieldFit
-                       : Config::BFieldParams{
-                             mkfit::Config::mag_c1, mkfit::Config::mag_b0, mkfit::Config::mag_b1, mkfit::Config::mag_a};
+    sizes.bField =
+        Config::BFieldParams{mkfit::Config::mag_c1, mkfit::Config::mag_b0, mkfit::Config::mag_b1, mkfit::Config::mag_a};
     // detid table: power of two >= 2 x modules
     {
       uint32_t cap = 1;
@@ -184,11 +180,7 @@ namespace mkfitdev {
       sizes.detIdMapCapacity = cap;
     }
 
-    if (static_cast<int>(ic.m_layer_configs.size()) != sizes.nLayers)
-      throw cms::Exception("MkFitAlpakaES") << "IterationConfig has " << ic.m_layer_configs.size()
-                                            << " layer configs, TrackerInfo has " << sizes.nLayers << " layers";
-
-    // ---------------- layers + modules + shapes
+    // ---------------- layers (without the IterationLayerConfig columns) + modules + shapes
     auto layers = std::make_shared<PortableHostCollection<LayerInfoSoA>>(host, sizes.nLayers);
     auto modules = std::make_shared<PortableHostCollection<ModuleInfoSoA>>(host, sizes.nModules);
     auto shapes = std::make_shared<PortableHostCollection<ModuleShapeSoA>>(host, sizes.nShapes);
@@ -225,17 +217,11 @@ namespace mkfitdev {
       row.q_min() = init.m_qmin;
       row.q_max() = init.m_qmax;
       row.n_q() = init.m_nq;
-      // IterationLayerConfig
-      mkfit::IterationLayerConfig const& lc = ic.m_layer_configs[l];
-      if (lc.m_layer != l)
-        throw cms::Exception("MkFitAlpakaES") << "layer config " << l << " has m_layer " << lc.m_layer;
-      if (!lc.m_winpars_fwd.empty() || !lc.m_winpars_bkw.empty())
-        throw cms::Exception("MkFitAlpakaES")
-            << "layer " << l << " has hit-window parameters (m_winpars_*), not supported by MkFitAlpaka ES yet";
-      row.select_min_dphi() = lc.min_dphi();
-      row.select_max_dphi() = lc.max_dphi();
-      row.select_min_dq() = lc.min_dq();
-      row.select_max_dq() = lc.max_dq();
+      // IterationLayerConfig: set by fillESDataHost
+      row.select_min_dphi() = 0.f;
+      row.select_max_dphi() = 0.f;
+      row.select_min_dq() = 0.f;
+      row.select_max_dq() = 0.f;
 
       for (int s = 0; s < li.n_modules(); ++s) {
         mkfit::ModuleInfo const& mi = li.module_info(s);
@@ -316,6 +302,65 @@ namespace mkfitdev {
       matv.range_r() = ti.mat_range_r();
       matv.fac_z() = sizes.matFacZ;
       matv.fac_r() = sizes.matFacR;
+    }
+
+    return std::make_unique<ESGeometryDataHost>(
+        std::move(layers), std::move(modules), std::move(shapes), std::move(detIdMap), std::move(material), sizes);
+  }
+
+  std::unique_ptr<ESDataHost> fillESDataHost(mkfit::TrackerInfo const& ti,
+                                             mkfit::IterationConfig const& ic,
+                                             bool buildingFitField) {
+    return fillESDataHost(*fillESGeometryHost(ti), ti, ic, buildingFitField);
+  }
+
+  std::unique_ptr<ESDataHost> fillESDataHost(ESGeometryDataHost const& geom,
+                                             mkfit::TrackerInfo const& ti,
+                                             mkfit::IterationConfig const& ic,
+                                             bool buildingFitField) {
+    auto const& host = cms::alpakatools::host();
+
+    ESSizes sizes = geom.sizes;
+    {
+      int nModules = 0;
+      for (int l = 0; l < ti.n_layers(); ++l)
+        nModules += ti.layer(l).n_modules();
+      if (sizes.nLayers != ti.n_layers() || sizes.nModules != nModules)
+        throw cms::Exception("MkFitAlpakaES")
+            << "geometry product of " << sizes.nLayers << " layers / " << sizes.nModules << " modules, TrackerInfo has "
+            << ti.n_layers() << " / " << nModules;
+    }
+    // DEVIATION DEV-11: buildingFitField builds with the final fit's constants
+    if (buildingFitField)
+      sizes.bField = sizes.bFieldFit;
+
+    if (static_cast<int>(ic.m_layer_configs.size()) != sizes.nLayers)
+      throw cms::Exception("MkFitAlpakaES") << "IterationConfig has " << ic.m_layer_configs.size()
+                                            << " layer configs, TrackerInfo has " << sizes.nLayers << " layers";
+
+    // ---------------- layers: the geometry rows + the IterationLayerConfig of the iteration
+    auto layers = std::make_shared<PortableHostCollection<LayerInfoSoA>>(host, sizes.nLayers);
+    {
+      auto const src = geom.layers->const_buffer();
+      auto dst = layers->buffer();
+      const auto nBytes = alpaka::getExtentProduct(src);
+      if (alpaka::getExtentProduct(dst) != nBytes)
+        throw cms::Exception("MkFitAlpakaES") << "layer collection sizes differ";
+      std::memcpy(std::data(dst), std::data(src), nBytes);
+    }
+    auto lv = layers->view();
+    for (int l = 0; l < sizes.nLayers; ++l) {
+      auto row = lv[l];
+      mkfit::IterationLayerConfig const& lc = ic.m_layer_configs[l];
+      if (lc.m_layer != l)
+        throw cms::Exception("MkFitAlpakaES") << "layer config " << l << " has m_layer " << lc.m_layer;
+      if (!lc.m_winpars_fwd.empty() || !lc.m_winpars_bkw.empty())
+        throw cms::Exception("MkFitAlpakaES")
+            << "layer " << l << " has hit-window parameters (m_winpars_*), not supported by MkFitAlpaka ES yet";
+      row.select_min_dphi() = lc.min_dphi();
+      row.select_max_dphi() = lc.max_dphi();
+      row.select_min_dq() = lc.min_dq();
+      row.select_max_dq() = lc.max_dq();
     }
 
     // ---------------- scalar configuration
@@ -457,14 +502,9 @@ namespace mkfitdev {
         s.layer[i] = sp.m_layer_plan[i].m_layer;
     }
 
-    return std::make_unique<ESDataHost>(std::move(layers),
-                                        std::move(modules),
-                                        std::move(shapes),
-                                        std::move(detIdMap),
-                                        std::move(material),
-                                        config,
-                                        config,
-                                        sizes);
+    // the module, shape, detId and material collections are the geometry product's
+    return std::make_unique<ESDataHost>(
+        std::move(layers), geom.modules, geom.shapes, geom.detIdMap, geom.material, config, config, sizes);
   }
 
 }  // namespace mkfitdev

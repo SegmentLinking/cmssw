@@ -3,6 +3,7 @@
 // hit-window parameters, unknown function names). Run: testMkFitAlpakaESFill
 
 #include <cstdio>
+#include <cstring>
 #include <stdexcept>
 
 #include "FWCore/Utilities/interface/Exception.h"
@@ -111,6 +112,34 @@ int main() {
       const auto m = ti.material_checked(z, r);
       check(b == m.bbxi && x == m.radl, "material vs MkFitCore");
     }
+  {
+    // the geometry-only product, and the iteration's product built on it: same content as the direct fill, the
+    // module / shape / detId / material collections shared, the layer rows copied with the iteration's columns
+    auto geo = mkfitdev::fillESGeometryHost(ti);
+    auto es2 = mkfitdev::fillESDataHost(*geo, ti, ic);
+    auto bytesEqual = [](auto const& a, auto const& b) {
+      auto const ba = a.const_buffer();
+      auto const bb = b.const_buffer();
+      return alpaka::getExtentProduct(ba) == alpaka::getExtentProduct(bb) &&
+             std::memcmp(std::data(ba), std::data(bb), alpaka::getExtentProduct(ba)) == 0;
+    };
+    check(bytesEqual(*es2->layers, *es->layers) && bytesEqual(*es2->modules, *es->modules) &&
+              bytesEqual(*es2->shapes, *es->shapes) && bytesEqual(*es2->detIdMap, *es->detIdMap) &&
+              bytesEqual(*es2->material, *es->material),
+          "ES product built on the geometry product == direct fill");
+    check(std::memcmp(&es2->hostConfigValue(), &es->hostConfigValue(), sizeof(mkfitdev::ESConfig)) == 0,
+          "configuration built on the geometry product == direct fill");
+    check(es2->modules == geo->modules && es2->material == geo->material && es2->layers != geo->layers,
+          "geometry collections shared, layers copied");
+    auto const GL = geo->layers->const_view();
+    check(GL[1].select_max_dq() == 0.f && es2->layers->const_view()[1].select_max_dq() == 2.f,
+          "iteration columns only in the iteration's product");
+    const mkfitdev::ESGeometryView gv = geo->view();
+    check(gv.findModule(es->modules->const_view()[7].detid()) == 7 && gv.isInRHole(1, 35.f), "geometry view");
+    mkfit::TrackerInfo other;
+    other.create_layers(1, 1, 0);
+    check(throws([&] { mkfitdev::fillESDataHost(*geo, other, ic); }), "geometry product of another TrackerInfo");
+  }
   auto const& C = es->hostConfigValue();
   check(C.prop_config.final_fit_pflags.use_fit_b_field && C.prop_config.final_fit_pflags.use_param_b_field &&
             !C.prop_config.backward_fit_pflags.use_fit_b_field,

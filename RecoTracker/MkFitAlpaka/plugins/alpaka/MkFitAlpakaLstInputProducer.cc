@@ -238,7 +238,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       //      PixelTrackProducerFromSoAAlpaka's hitmap, inverted)
       const uint32_t nOT = otClu.dataSize();
       otSoAView_ = iEvent.get(otSoAToken_).const_view();
-      if (uint32_t(otSoAView_.metadata().size()) != nOT)
+      // MkFitAlpakaOTRecHitsProducer allocates max(clusters, 1) rows: one unused row for an event without OT clusters
+      // (only rows [0, nOT) are read)
+      if (uint32_t(otSoAView_.metadata().size()) != std::max<uint32_t>(nOT, 1))
         throw cms::Exception("MkFitAlpakaLstInput")
             << "OT rechit SoA rows " << otSoAView_.metadata().size() << " != OT clusters " << nOT;
       const uint32_t nPixelSoA = otHMS.empty() ? 0 : otHMS[0];

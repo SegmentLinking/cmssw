@@ -27,6 +27,7 @@
 import FWCore.ParameterSet.Config as cms
 
 ES_LABEL = 'hltMkFitAlpakaES'
+GEOMETRY_ES_LABEL = 'hltMkFitAlpakaGeometry'
 CPE_ES_LABEL = 'hltMkFitAlpakaFitCpe'
 MODULE_TABLE_LABEL = 'MkFitAlpakaHitModuleTable'
 EOH = 'hltMkFitEventOfHits'
@@ -269,11 +270,16 @@ def _swapBuild(process):
         raise RuntimeError('customizeHLTforMkFitAlpaka: expected the mkFit-fit menu modules %s/%s, found %s/%s'
                            % (EOH, BUILD, menuEOH.type_(), menuBuild.type_()))
     _checkMkFitBuildConfig(menuBuild)
+    if not hasattr(process, 'hltMkFitAlpakaGeometryESProducer'):
+        # the geometry-only device ES product (no iteration configuration): the iteration's product is built on it
+        process.hltMkFitAlpakaGeometryESProducer = cms.ESProducer(
+            'MkFitAlpakaGeometryESProducer@alpaka', ComponentName=cms.string(GEOMETRY_ES_LABEL))
     if not hasattr(process, 'hltMkFitAlpakaESProducer'):
         # DEVIATION DEV-11: track building with the field constants fitted to the field map
         process.hltMkFitAlpakaESProducer = cms.ESProducer(
             'MkFitAlpakaESProducer@alpaka', ComponentName=cms.string(ES_LABEL),
             iterationConfig=cms.ESInputTag('', 'hltInitialStepTrackCandidatesMkFitConfig'),
+            geometry=cms.ESInputTag('', GEOMETRY_ES_LABEL),
             buildingFitField=cms.bool(True))
 
     setattr(process, EOH, cms.EDProducer('MkFitAlpakaEventOfHitsProducer@alpaka',
@@ -819,3 +825,27 @@ def customizeHLTforMkFitAlpaka(process):
         _lstInputEarlyDelete(process)
     return process
 
+
+def customizeHLTforMkFitAlpakaSeedValidation(process):
+    """Validation only (not for production menus): with the device seed hand-off, which makes no TrajectorySeeds, a
+    TrajectorySeed collection of the device mkFit seeds (the build module's seeds with the states building starts from)
+    under the label of the LST seeds it replaces (hltInitialStepTrajectorySeedsLST), so that the seed-level validation
+    (TrackFromSeedProducer hltInitialStepTrajectorySeedsLSTTracks, MTV) runs unchanged. The build module exports its
+    seed rows (produceFittedSeeds; one extra device-to-host copy per event). No change without the hand-off (the host
+    seed path keeps its TrajectorySeeds)."""
+    if hasattr(process, LST_SEEDS) or not hasattr(process, MKFIT_SEEDS) \
+            or getattr(process, MKFIT_SEEDS).type_() != 'MkFitAlpakaSeedHandoffK1@alpaka':
+        return process
+    handoff = getattr(process, MKFIT_SEEDS)
+    build = getattr(process, BUILD_DEVICE)
+    build.produceFittedSeeds = cms.bool(True)
+    eoh = getattr(process, EOH)
+    pixelHits = (cms.InputTag(EOH, 'pixelIndexToHit') if getattr(eoh, 'producePixelIndexToHit', cms.bool(False)).value()
+                 else cms.InputTag(PIX_HITS))
+    setattr(process, LST_SEEDS, cms.EDProducer('MkFitAlpakaSeedsToTrajectorySeeds',
+                                               seeds=cms.InputTag(BUILD_DEVICE, 'fittedSeeds'),
+                                               mkFitPixelHits=pixelHits,
+                                               otClusters=handoff.otClusters,
+                                               Phase2StripCPE=handoff.Phase2StripCPE))
+    process.hltMkFitAlpakaTask.add(getattr(process, LST_SEEDS))
+    return process

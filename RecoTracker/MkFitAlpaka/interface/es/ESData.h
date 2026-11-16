@@ -2,8 +2,9 @@
 #define RecoTracker_MkFitAlpaka_interface_es_ESData_h
 
 // ES product of MkFitAlpaka: device-resident mkFit geometry, material and iteration configuration
-// (LSTESData style). The host product ESData<DevHost> is made by MkFitAlpakaESProducer from the MkFitCore
-// MkFitGeometry + IterationConfig; the framework copies it to each device with CopyToDevice below.
+// (LSTESData style). The host product ESData<DevHost> is made by MkFitAlpakaESProducer from the geometry-only
+// product (ESGeometryData.h, MkFitAlpakaGeometryESProducer), the MkFitCore MkFitGeometry and the IterationConfig; the
+// framework copies it to each device with CopyToDevice below.
 
 #include <memory>
 #include <type_traits>
@@ -16,6 +17,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 #include "RecoTracker/MkFitAlpaka/interface/es/ESConfig.h"
+#include "RecoTracker/MkFitAlpaka/interface/es/ESGeometryData.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESLayouts.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESView.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/MaterialView.h"
@@ -26,22 +28,6 @@ namespace mkfit {
 }  // namespace mkfit
 
 namespace mkfitdev {
-
-  // Sizes and material-map scalars, kept on the host for every memory space (kernel launch sizing, MaterialView).
-  struct ESSizes {
-    int nLayers = 0;
-    int nModules = 0;
-    int nShapes = 0;
-    int detIdMapCapacity = 0;
-    int nMaterialBins = 0;
-    int matNBinsZ = 0;
-    int matNBinsR = 0;
-    float matFacZ = 0.f;
-    float matFacR = 0.f;
-    Config::BFieldParams bField;  // mkfit::Config::mag_* at fill time (from the ES): track building
-    // mkfit::Config::mag_fit_* at fill time (from the ES): the final fit
-    Config::BFieldParams bFieldFit{Config::mag_fit_c1, Config::mag_fit_b0, Config::mag_fit_b1, Config::mag_fit_a};
-  };
 
   template <typename TDev>
   struct ESData {
@@ -75,18 +61,18 @@ namespace mkfitdev {
 
     // Views into this memory space; pass by value to kernels.
     ESView view() const {
-      return ESView{layers->const_view(),
-                    modules->const_view(),
-                    shapes->const_view(),
-                    detIdMap->const_view(),
-                    MaterialView{material->const_view().metadata().addressOf_bbxi(),
-                                 material->const_view().metadata().addressOf_radl(),
-                                 sizes.matNBinsZ,
-                                 sizes.matNBinsR,
-                                 sizes.matFacZ,
-                                 sizes.matFacR,
-                                 sizes.bField,
-                                 sizes.bFieldFit},
+      return ESView{{layers->const_view(),
+                     modules->const_view(),
+                     shapes->const_view(),
+                     detIdMap->const_view(),
+                     MaterialView{material->const_view().metadata().addressOf_bbxi(),
+                                  material->const_view().metadata().addressOf_radl(),
+                                  sizes.matNBinsZ,
+                                  sizes.matNBinsR,
+                                  sizes.matFacZ,
+                                  sizes.matFacR,
+                                  sizes.bField,
+                                  sizes.bFieldFit}},
                     config->const_data()};
     }
 
@@ -95,11 +81,18 @@ namespace mkfitdev {
 
   using ESDataHost = ESData<alpaka_common::DevHost>;
 
-  // Fill the host product from the MkFitCore host ES objects (MkFitGeometry::trackerInfo(), the IterationConfig of
-  // the iteration) and the runtime mkfit::Config values. Throws cms::Exception on anything that does not fit the
-  // fixed capacities (es::kMaxRegions, es::kMaxPlanLayers), non-empty hit-window parameters, unknown function names.
+  // Fill the host product from the geometry-only product (fillESGeometryHost of the same TrackerInfo: its module,
+  // shape, detId and material collections are shared, its layer rows copied), the MkFitCore host ES objects
+  // (MkFitGeometry::trackerInfo(), the IterationConfig of the iteration) and the runtime mkfit::Config values. Throws
+  // cms::Exception on anything that does not fit the fixed capacities (es::kMaxRegions, es::kMaxPlanLayers), non-empty
+  // hit-window parameters, unknown function names, a geometry product of another TrackerInfo (layer / module counts).
   // buildingFitField: track building with the final fit's field constants (mkfit::Config::mag_fit_*, fitted to the
   // field map) instead of MkFitCore's (mag_*, CMSSW's ParabolicMf). DEVIATION DEV-11.
+  std::unique_ptr<ESDataHost> fillESDataHost(ESGeometryDataHost const& geometry,
+                                             mkfit::TrackerInfo const& trackerInfo,
+                                             mkfit::IterationConfig const& iterConfig,
+                                             bool buildingFitField = false);
+  // the same with its own geometry fill
   std::unique_ptr<ESDataHost> fillESDataHost(mkfit::TrackerInfo const& trackerInfo,
                                              mkfit::IterationConfig const& iterConfig,
                                              bool buildingFitField = false);

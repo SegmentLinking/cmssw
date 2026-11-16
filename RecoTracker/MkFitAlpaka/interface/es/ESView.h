@@ -1,8 +1,10 @@
 #ifndef RecoTracker_MkFitAlpaka_interface_es_ESView_h
 #define RecoTracker_MkFitAlpaka_interface_es_ESView_h
 
-// Trivially copyable bundle of const views into the ES data of one memory space: pass it by value to kernels.
-// Obtain it with mkfitdev::ESData<TDev>::view().
+// Trivially copyable bundles of const views into the ES data of one memory space: pass them by value to kernels.
+// ESGeometryView: the iteration-independent geometry (mkfitdev::ESGeometryData<TDev>::view(); the layer rows'
+// IterationLayerConfig columns select_* are 0 there). ESView: the geometry of the iteration's ES product plus its
+// configuration (mkfitdev::ESData<TDev>::view()).
 
 #include <cstdint>
 
@@ -32,13 +34,12 @@ namespace mkfitdev {
     bool in_gap;
   };
 
-  struct ESView {
+  struct ESGeometryView {
     LayerInfoSoA::ConstView layers;    // row = layer id
     ModuleInfoSoA::ConstView modules;  // row = layers[l].module_begin() + short id
     ModuleShapeSoA::ConstView shapes;  // row = layers[l].shape_begin() + shapeid
     DetIdMapSoA::ConstView detIdMap;   // use findModule()
     MaterialView material;             // TrackerInfo material map
-    ESConfig const* config;            // iteration/steering/propagation config
 
     // detid -> global module row, or es::kNoModule. Replaces LayerInfo::short_id (m_detid2sid) plus the
     // detid -> layer lookup: modules[row].layer() and modules[row].sid() give both.
@@ -110,6 +111,10 @@ namespace mkfitdev {
       }
       return WSRResult{WSR_Edge, false};
     }
+  };
+
+  struct ESView : ESGeometryView {
+    ESConfig const* config;  // iteration/steering/propagation config
   };
 
 }  // namespace mkfitdev

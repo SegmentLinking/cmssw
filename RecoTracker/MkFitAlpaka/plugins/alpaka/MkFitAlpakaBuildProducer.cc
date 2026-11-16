@@ -53,6 +53,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/tracks/TrackSoADeviceCollection.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/EngineFromES.h"
+#include "MkFitAlpakaSeedExportKernels.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/alpaka/CandsEngine.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/SeedsHostPack.h"
@@ -176,6 +177,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           groupScan_{iConfig.getParameter<bool>("k2GroupScan")},
           statusToken_{produces()},
           lstSeedFit_{iConfig.getParameter<bool>("lstSeedFit")} {
+      produceFittedSeeds_ = iConfig.getParameter<bool>("produceFittedSeeds");
+      if (produceFittedSeeds_)
+        fittedSeedsToken_ = produces("fittedSeeds");
       if (auto const t = iConfig.getParameter<edm::InputTag>("deviceSeeds"); !t.label().empty()) {
         deviceSeedsToken_ = consumes(t);  // K1: the seed rows of MkFitAlpakaSeedHandoffK1 (device)
         k1Seeds_ = true;
@@ -253,6 +257,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment("originPrior 3 + dropFailed: failed pT3/pT5 seeds take their pixel seed (pixelSeedStates)");
       desc.add("lstSeedFitDropFailed", false)
           ->setComment("failed device seed fits removed (true; host seeds with placeholder states) or kept (false)");
+      desc.add("produceFittedSeeds", false)
+          ->setComment(
+              "validation only: the seed rows with the states building starts from (pixel seed states, LST seed fit; "
+              "dropped fits have NaN errors) as TrackSoA, instance 'fittedSeeds'");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -301,6 +309,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if (eohSkipped)
         mkfitdev::addStatus(queue, statusProduct, ::mkfitdev::kEventSkipped, 1);
       if (n == 0 || eohSkipped) {
+        if (produceFittedSeeds_) {
+          mkfitdev::TrackSoADeviceCollection noSeeds(queue, 0);
+          auto buf = noSeeds.buffer();
+          alpaka::memset(queue, buf, 0x00);
+          iEvent.emplace(fittedSeedsToken_, std::move(noSeeds));
+        }
         iEvent.emplace(statusToken_, std::move(statusProduct));
         mkfitdev::TrackSoADeviceCollection empty(queue, 0);
         auto buf = empty.buffer();
@@ -339,6 +353,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::memset(queue, cnt, 0);
         mkfitdev::lstseeds::fitLstSeeds(
             queue, esView, ev.hits(), nPixel, seedsD.view(), n, lstSeedCfg_, pix, cnt.data());
+      }
+      if (produceFittedSeeds_) {  // validation: the seeds as building takes them (before the import)
+        mkfitdev::TrackSoADeviceCollection fitted(queue, n);
+        mkfitdev::exportSeedRows(queue, seedsD.const_view(), n, fitted.view());
+        iEvent.emplace(fittedSeedsToken_, std::move(fitted));
       }
       mkfitdev::seeds::DeviceHitPositions hitPos;
       hitPos.x = ev.hits().metadata().addressOf_x();
@@ -498,6 +517,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool removeDuplicates_;
     const bool groupScan_;
     const device::EDPutToken<mkfitdev::MkFitStatusDeviceObject> statusToken_;
+    device::EDPutToken<mkfitdev::TrackSoADeviceCollection> fittedSeedsToken_;
+    bool produceFittedSeeds_ = false;
     const bool lstSeedFit_;
     static constexpr bool kCpuBackend = std::is_same_v<Device, alpaka::DevCpu>;
     ::mkfitdev::lstseeds::LstSeedFitConfig lstSeedCfg_;

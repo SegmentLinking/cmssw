@@ -23,7 +23,7 @@
 namespace mkfitdev::vdt {
   // vdt 0.4.3 sincos.h, the DOUBLE fast_sincos (AnalyticalCurvilinearJacobianEXT calls vdt::fast_sincos(double))
   namespace dsincos {
-    ALPAKA_FN_HOST_ACC inline double getSinPx(const double x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE double getSinPx(const double x) {
       double px = 1.58962301576546568060E-10;
       px *= x;
       px += -2.50507477628578072866E-8;
@@ -37,7 +37,7 @@ namespace mkfitdev::vdt {
       px += -1.66666666666666307295E-1;
       return px;
     }
-    ALPAKA_FN_HOST_ACC inline double getCosPx(const double x) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE double getCosPx(const double x) {
       double px = -1.13585365213876817300E-11;
       px *= x;
       px += 2.08757008419747316778E-9;
@@ -51,7 +51,7 @@ namespace mkfitdev::vdt {
       px += 4.16666666666665929218E-2;
       return px;
     }
-    ALPAKA_FN_HOST_ACC inline double reduce2quadrant(double x, int32_t& quad) {
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE double reduce2quadrant(double x, int32_t& quad) {
       constexpr double DP1 = 7.853981554508209228515625E-1;
       constexpr double DP2 = 7.94662735614792836714E-9;
       constexpr double DP3 = 3.06161699786838294307E-17;
@@ -63,7 +63,7 @@ namespace mkfitdev::vdt {
       return ((x - y * DP1) - y * DP2) - y * DP3;
     }
   }  // namespace dsincos
-  ALPAKA_FN_HOST_ACC inline void fast_sincos(const double xx, double& s, double& c) {
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void fast_sincos(const double xx, double& s, double& c) {
     int j;
     const double x = dsincos::reduce2quadrant(xx, j);
     const double signS = (j & 4);

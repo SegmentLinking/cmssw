@@ -1,6 +1,7 @@
-// ESProducer of the MkFitAlpaka device-resident ES data (geometry, material, iteration configuration),
-// filled from MkFitCore host ES products (MkFitGeometry, IterationConfig). The framework copies the
-// host product to each device.
+// ESProducer of the MkFitAlpaka device-resident ES data (geometry, material, iteration configuration), built on the
+// geometry-only product (MkFitAlpakaGeometryESProducer: its module, shape, detId and material collections are shared)
+// and the MkFitCore host ES products (MkFitGeometry, IterationConfig). The framework copies the host product to each
+// device.
 
 #include <string>
 
@@ -17,6 +18,7 @@
 
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
+#include "RecoTracker/MkFitAlpaka/interface/es/ESGeometryData.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
@@ -25,6 +27,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     MkFitAlpakaESProducer(edm::ParameterSet const& iConfig) : ESProducer(iConfig) {
       auto cc = setWhatProduced(this, iConfig.getParameter<std::string>("ComponentName"));
       geomToken_ = cc.consumes();
+      geometryToken_ = cc.consumes(iConfig.getParameter<edm::ESInputTag>("geometry"));
       iterConfigToken_ = cc.consumes(iConfig.getParameter<edm::ESInputTag>("iterationConfig"));
       buildingFitField_ = iConfig.getParameter<bool>("buildingFitField");
     }
@@ -34,6 +37,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<std::string>("ComponentName", "")->setComment("Product label");
       desc.add<edm::ESInputTag>("iterationConfig", edm::ESInputTag("", "hltInitialStepTrackCandidatesMkFitConfig"))
           ->setComment("mkfit::IterationConfig (MkFitIterationConfigESProducer ComponentName)");
+      desc.add<edm::ESInputTag>("geometry", edm::ESInputTag("", "hltMkFitAlpakaGeometry"))
+          ->setComment(
+              "the geometry-only product (MkFitAlpakaGeometryESProducer ComponentName) of the same MkFitGeometry");
       desc.add<bool>("buildingFitField", false)
           ->setComment(
               "DEVIATION DEV-11 (switch, MkFitCore = false): track building with the final fit's field constants "
@@ -46,7 +52,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // runs, i.e. before this get returns.
       auto const& geom = iRecord.get(geomToken_);
       auto const& iterConfig = iRecord.get(iterConfigToken_);
-      auto data = mkfitdev::fillESDataHost(geom.trackerInfo(), iterConfig, buildingFitField_);
+      auto data =
+          mkfitdev::fillESDataHost(iRecord.get(geometryToken_), geom.trackerInfo(), iterConfig, buildingFitField_);
       // throw outside the configuration envelope the device chain implements
       mkfitdev::checkSupportedConfig(data->hostConfigValue(), data->layers->const_view(), data->sizes.nLayers);
       return data;
@@ -54,6 +61,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 
   private:
     edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> geomToken_;
+    edm::ESGetToken<mkfitdev::ESGeometryDataHost, TrackerRecoGeometryRecord> geometryToken_;
     edm::ESGetToken<mkfit::IterationConfig, TrackerRecoGeometryRecord> iterConfigToken_;
     bool buildingFitField_;
   };
