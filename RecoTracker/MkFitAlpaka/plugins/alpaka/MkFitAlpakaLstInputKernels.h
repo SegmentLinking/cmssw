@@ -17,6 +17,7 @@
 #include "RecoTracker/LSTCore/interface/LSTInputSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/DeviceHitInput.h"
 #include "RecoTracker/MkFitAlpaka/interface/othits/OTRecHitSoA.h"
+#include "RecoTracker/MkFitAlpaka/interface/es/ESLayouts.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/HitSoA.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitAlpaka/interface/tracks/TrackSoA.h"
@@ -134,6 +135,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                  uint32_t* hOff,
                  uint32_t* counts,
                  ::mkfitdev::lstseeds::PixSeedOut const* kf = nullptr);
+
+  // generic pixel seeds instead of the pixel tracks (pass 1): seed row e of `seeds` (TrackSoA: hits as (mkFit layer, cluster
+  // key) inside-out, the state on the last hit; charge 0 = no seed) -> the creator's output in kf[e] (+ TSCBL,
+  // pcaPixelSeeds), then the pLS (seedIdx = e) with the pixKF rules of launchPLS, and the scan; counts as launchPLS.
+  // plsStates (nPls rows, 0: none): per row the state the pLS starts from instead of the row's own (charge 0: the own)
+  void launchPLSFromSeedRows(Queue& queue,
+                             ::mkfitdev::TrackSoAConstView seeds,
+                             ::mkfitdev::TrackSoAConstView plsStates,
+                             uint32_t nPls,
+                             ::mkfitdev::LayerInfoSoA::ConstView layers,
+                             uint32_t n,
+                             uint32_t const* otDetId,
+                             uint16_t const* otClust,
+                             Params p,
+                             ::mkfitdev::lstseeds::PixSeedBeam const& beam,
+                             ::mkfitdev::lstseeds::PixSeedOut* kf,
+                             PLS* scratch,
+                             uint32_t* pIdx,
+                             uint32_t* hOff,
+                             uint32_t* counts);
 
   // pass 2: the OT hits from the device OT rechit SoA (rows [0, nOT) = SoA rows = cluster keys, with its global
   // position, DetId and cluster size), then the pLS rows and their pseudo-hits

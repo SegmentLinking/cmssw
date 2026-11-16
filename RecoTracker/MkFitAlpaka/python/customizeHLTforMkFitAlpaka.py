@@ -12,6 +12,12 @@
 #   hltInitialStepTrackCandidatesMkFitFitDevice  device mkFit final fit (with the pixel CPE)
 #   hltInitialStepOutConvStates / hltInitialStepNavDevice  beam-line PCA states and missing-hit navigation on device
 #   hltInitialStepTracks            host conversion to reco::Track
+# Pixel seeds of the LST input that are not the seeds of the pixel-track CA (hltInitialStepSeeds), for example the mkFit
+# seeder's (phase2MkSeeder): with a producer of their generic device rows labelled hltInitialStepPixelSeedsDevice
+# (MkFitAlpakaLstInputProducer pixelSeeds; row k = the seed of pixel track k of hltPhase2PixelTracks) they take the
+# device path as the CA's (hltInputLSTDevice, the device seed hand-off); without it they keep the host LST input and
+# seed path (hltInputLST, LSTOutputConverter, MkFitSeedConverter). The host mkFit hit converters and the legacy OT
+# rechits stay when modules other than the chain read them.
 # Physics differences to the reference mkFit are listed in doc/DEVIATIONS.txt.
 import FWCore.ParameterSet.Config as cms
 
@@ -34,6 +40,7 @@ LST_INPUT_DEVICE = 'hltInputLSTDevice'
 LST_SEEDS = 'hltInitialStepTrajectorySeedsLST'
 MKFIT_SEEDS = 'hltInitialStepMkFitSeeds'
 OUTCONV_STATES = 'hltInitialStepOutConvStates'
+DEVICE_PIXEL_SEEDS = 'hltInitialStepPixelSeedsDevice'
 NAV_DEVICE = 'hltInitialStepNavDevice'
 
 # friendly class names of the device products deleted early (per backend; names not in the job are ignored)
@@ -70,7 +77,15 @@ _FIT_HONOURED = {'tracks', 'eventOfHits', 'mkFitPixelHits', 'config', 'pixelCPE'
                  'limitConcurrency', 'mightGet'}
 # plugins that read the hit labels only as MkFitClusterIndexToHit
 _INDEX_ONLY_READERS = ('MkFitOutputConverter', 'MkFitOutputTrackConverter', 'MkFitAlpakaBuildProducer@alpaka',
-                       'MkFitAlpakaFitDeviceProducer@alpaka', 'MkFitAlpakaPhase2ClusterIndexToHit')
+                       'MkFitAlpakaFitDeviceProducer@alpaka', 'MkFitAlpakaPhase2ClusterIndexToHit',
+                       'MkFitAlpakaOutputTrackConverter')
+
+
+# the EventOfHits' host products (not deleted early)
+_EOH_HOST_PRODUCTS = ('pixelIndexToHit', 'pixelSrcRows', 'queue')
+# device readers of the EventOfHits that finish their device work before they end (stream::SynchronizingEDProducer:
+# the framework waits for their queue between acquire and produce), so the early deletion after the fit is safe for them
+_EOH_SYNCHRONIZING_READERS = ('MkSeederProducer@alpaka',)
 
 
 def _modules(process):
@@ -215,6 +230,29 @@ def _checkPixelRecHitsFromSoA(process, eoh):
                            % (eoh.pixelRecHits.getModuleLabel(), soa, rh.type_() if rh is not None else None))
 
 
+def _caPixelSeeds(process):
+    """True if the LST input reads the seeds of the pixel-track CA (hltInitialStepSeeds), which hltInputLSTDevice
+    reproduces on the device; other pixel seeds (e.g. the mkFit seeder's, phase2MkSeeder) keep the host LST input and
+    the host seed path (LSTOutputConverter + MkFitSeedConverter)."""
+    seeds = [t.getModuleLabel() if isinstance(t, cms.InputTag) else str(t).split(':')[0]
+             for t in process.hltInputLST.pixelSeeds]
+    return seeds == ['hltInitialStepSeeds'] and _inSequenceOrTask(process, 'hltInitialStepSeeds')
+
+
+def _devicePixelSeeds(process):
+    """True for non-CA pixel seeds of the LST input whose producer also gives their generic device rows
+    (MkFitAlpakaLstInputProducer pixelSeeds) under the label hltInitialStepPixelSeedsDevice: the LST input and the seed
+    hand-off then run on the device as for the CA seeds."""
+    return not _caPixelSeeds(process) and hasattr(process, DEVICE_PIXEL_SEEDS)
+
+
+def _wrapperReaders(process, label):
+    """Modules that read the host MkFitHitWrapper of 'label' (not only its MkFitClusterIndexToHit)."""
+    return ['%s (%s)' % (c, getattr(process, c.split('.')[0]).type_()) for c in _consumers(process, label, skip=(label,))
+            if getattr(process, c.split('.')[0]).type_() not in _INDEX_ONLY_READERS
+            and _inSequenceOrTask(process, c.split('.')[0])]
+
+
 # ---- the steps, in the order they are applied ----
 def _swapBuild(process):
     """Device EventOfHits and device building; the menu building module leaves the menu and a status check of the
@@ -303,21 +341,29 @@ def _deviceHits(process):
     eoh.pixelClusters = cms.InputTag(pix.clusters.getModuleLabel())
     eoh.otClusters = cms.InputTag(ot.clusters.getModuleLabel())
     _checkPixelRecHitsFromSoA(process, eoh)
+    # modules that need the host MkFitHitWrapper (e.g. the mkFit seeder, phase2MkSeeder) keep the host converters
+    # (same hit order as the device EventOfHits; the index maps then come from them)
+    if _wrapperReaders(process, PIX_HITS) or _wrapperReaders(process, OT_HITS):
+        return
     setattr(process, OT_HITS, cms.EDProducer('MkFitAlpakaPhase2ClusterIndexToHit',
                                              sizeFromClusters=cms.InputTag(ot.clusters.getModuleLabel())))
-    bad = ['%s (%s)' % (c, getattr(process, c.split('.')[0]).type_())
-           for lab in (PIX_HITS, OT_HITS) for c in _consumers(process, lab)
-           if getattr(process, c.split('.')[0]).type_() not in _INDEX_ONLY_READERS]
-    if bad:
-        raise RuntimeError('customizeHLTforMkFitAlpaka: modules that need the host MkFitHitWrapper read %s/%s: %s'
-                           % (PIX_HITS, OT_HITS, bad))
 
 
 def _eventOfHitsEarlyDelete(process):
     """The device EventOfHits is deleted right after its last reader, the device fit. The fit runs on the EventOfHits'
-    queue or waits for it, so the caching allocator cannot hand the block to another queue while it is read."""
-    others = [c for c in _consumers(process, EOH) if _inSequenceOrTask(process, c.split('.')[0])
-              and not (c.startswith(FIT_DEVICE + '.') or c.startswith(BUILD_DEVICE + '.'))]
+    queue or waits for it, so the caching allocator cannot hand the block to another queue while it is read. Other
+    readers: of its host products (the pixel cluster index maps, the queue handle), or synchronizing device readers
+    (_EOH_SYNCHRONIZING_READERS: their device work is done when they end, before the deletion)."""
+    def allowed(c):
+        label, param = c.split('.', 1)
+        if label in (FIT_DEVICE, BUILD_DEVICE) or getattr(process, label).type_() in _EOH_SYNCHRONIZING_READERS:
+            return True
+        tags = []
+        _visitTags(getattr(process, label), label + '.',
+                   lambda pset, n, i, tl, where: tags.append(getattr(pset, n) if i is None else getattr(pset, n)[i])
+                   if where == c and tl == EOH else None)
+        return all(isinstance(t, cms.InputTag) and t.getProductInstanceLabel() in _EOH_HOST_PRODUCTS for t in tags)
+    others = [c for c in _consumers(process, EOH) if _inSequenceOrTask(process, c.split('.')[0]) and not allowed(c)]
     if others:
         raise RuntimeError('customizeHLTforMkFitAlpaka: %s has other readers %s' % (EOH, others))
     getattr(process, FIT_DEVICE).eventOfHitsQueue = cms.InputTag(EOH, 'queue')
@@ -415,7 +461,8 @@ def _otRecHitsDevice(process):
     blank = cms.InputTag('')
     for name, m in process.producers_().items():
         t = m.type_()
-        if t.endswith('LSTInputProducer') or t.startswith('LSTInputProducer'):
+        if (t.endswith('LSTInputProducer') or t.startswith('LSTInputProducer')) and (
+                _caPixelSeeds(process) or _devicePixelSeeds(process)):
             m.phase2OTRecHits = blank  # replaced by hltInputLSTDevice
         elif t == 'MkFitAlpakaOutputTrackConverter':
             m.otClustersOnDemand = cms.InputTag(OT_CLUSTERS)
@@ -430,7 +477,10 @@ def _otRecHitsDevice(process):
     # modules outside the schedule do not run (the vector hit CA's OT rechit SoA without phase2CAVectorHits)
     production = [l for l in readers if l not in validation and _inSequenceOrTask(process, l)]
     if production:
-        raise RuntimeError('customizeHLTforMkFitAlpaka: readers of %s left: %s' % (OT_RECHITS, production))
+        # host readers (the host LST input and mkFit OT hit converter of non-CA pixel seeds): the producer stays
+        if _caPixelSeeds(process):
+            raise RuntimeError('customizeHLTforMkFitAlpaka: readers of %s left: %s' % (OT_RECHITS, production))
+        return
     for s in process.sequences_().values():
         s.remove(legacy)
     for t in process.tasks_().values():
@@ -474,6 +524,14 @@ def _nearEndOutliers(process):
     f.outliersPerRound = cms.int32(1)
 
 
+def _hitModuleTable(process):
+    """The OT module table of the device EventOfHits (shared with the LST input)."""
+    if not hasattr(process, 'mkFitAlpakaHitModuleTable'):
+        process.mkFitAlpakaHitModuleTable = cms.ESProducer('MkFitAlpakaEventOfHitsModuleTableESProducer@alpaka',
+                                                           ComponentName=cms.string(MODULE_TABLE_LABEL))
+    getattr(process, EOH).moduleTable = cms.string(MODULE_TABLE_LABEL)
+
+
 def _lstInputDevice(process):
     """hltInputLSTDevice replaces hltInputLST and the host pixel seeds: the pLS parameters from the device KF of the
     pixel-track hits (the host seed creator's structure, then the beam-line PCA), the OT rows from the device OT
@@ -510,10 +568,7 @@ def _lstInputDevice(process):
     setattr(process, LST_INPUT_DEVICE, dev)
     eoh.producePixelSrcRows = cms.bool(True)
     # one OT module table for the LST input and the EventOfHits
-    if not hasattr(process, 'mkFitAlpakaHitModuleTable'):
-        process.mkFitAlpakaHitModuleTable = cms.ESProducer('MkFitAlpakaEventOfHitsModuleTableESProducer@alpaka',
-                                                           ComponentName=cms.string(MODULE_TABLE_LABEL))
-    eoh.moduleTable = cms.string(MODULE_TABLE_LABEL)
+    _hitModuleTable(process)
     seq = process.HLTInitialStepSequence
     seq.insert(seq.index(process.hltInputLST), dev)
     seq.remove(process.hltInputLST)
@@ -526,6 +581,47 @@ def _lstInputDevice(process):
     if seq.index(inp) > seq.index(dev):
         seq.remove(inp)
         seq.insert(seq.index(dev), inp)
+
+
+def _lstInputDeviceFromSeeds(process):
+    """hltInputLSTDevice from the generic device pixel seeds (hltInitialStepPixelSeedsDevice) in place of hltInputLST and
+    the host pixel seeds: the pLS from the rows' states (with the rows' optional 'plsStates': the state each pLS starts
+    from, hltInputLST's stateAtLastPixelHit), the OT rows from the device OT rechits; the build module takes the pixel
+    seed states from the device."""
+    inp = process.hltInputLST
+    src = getattr(process, DEVICE_PIXEL_SEEDS)
+
+    def opt(m, name, default):
+        return getattr(m, name).value() if hasattr(m, name) else default
+
+    atLastPixel = opt(inp, 'stateAtLastPixelHit', False)
+    if (atLastPixel != opt(src, 'stateAtLastPixelHit', False)
+            or (atLastPixel and opt(inp, 'stateAtLastPixelHitMaxPt', 0.) != opt(src, 'stateAtLastPixelHitMaxPt', 0.))):
+        raise RuntimeError('customizeHLTforMkFitAlpaka: the stateAtLastPixelHit settings of hltInputLST and %s differ'
+                           % DEVICE_PIXEL_SEEDS)
+    if not _inSequenceOrTask(process, DEVICE_PIXEL_SEEDS):
+        raise RuntimeError('customizeHLTforMkFitAlpaka: %s is not scheduled' % DEVICE_PIXEL_SEEDS)
+    dev = cms.EDProducer('MkFitAlpakaLstInputProducer@alpaka',
+                         ptCut=inp.ptCut,
+                         otSoA=cms.InputTag(OT_DEVICE),
+                         otSoAQueue=cms.InputTag(OT_DEVICE, 'queue'),
+                         beamSpot=inp.beamSpot,
+                         esData=cms.ESInputTag('', ES_LABEL),
+                         pixelSeeds=cms.InputTag(DEVICE_PIXEL_SEEDS),
+                         pixelSeedsPLSStates=cms.InputTag(DEVICE_PIXEL_SEEDS, 'plsStates') if atLastPixel
+                         else cms.InputTag(''),
+                         alpaka=cms.untracked.PSet(backend=cms.untracked.string('')))
+    setattr(process, LST_INPUT_DEVICE, dev)
+    _hitModuleTable(process)
+    seq = process.HLTInitialStepSequence
+    seq.insert(seq.index(inp), dev)
+    seq.remove(inp)
+    process.hltLST.lstInput = LST_INPUT_DEVICE
+    b = getattr(process, BUILD_DEVICE)
+    b.pixelSeedStates = cms.InputTag(LST_INPUT_DEVICE, 'pixelSeedStates')
+    # DEVIATION: the device seeds are built without the iteration's seed cleaner (MkFitCore's, e.g. phase1:default of
+    # the mkFit seeder's lstStep configuration, runs only on host seeds; none is ported to the device)
+    b.seedCleaning = cms.bool(False)
 
 
 def _seedHandoff(process):
@@ -542,6 +638,8 @@ def _seedHandoff(process):
     if not (build.lstSeedFit.value() and build.lstSeedFitOriginPrior.value() == 3
             and build.lstSeedFitDropFailed.value()):
         raise RuntimeError('customizeHLTforMkFitAlpaka: the seed hand-off needs the device LST seed fit')
+    # the pixel seeds' hits: the CA seeds' creator option, all the hits of generic device pixel seeds
+    fourthHit = process.hltInitialStepSeeds.includeFourthHit.value() if _caPixelSeeds(process) else True
     handoff = cms.EDProducer('MkFitAlpakaSeedHandoffK1@alpaka',
                              lstOutput=lstSeeds.lstOutput,
                              pixelSeedStates=build.pixelSeedStates,
@@ -549,7 +647,7 @@ def _seedHandoff(process):
                              pixelTracks=cms.InputTag('hltPhase2PixelTracks'),
                              otClusters=cms.InputTag(OT_CLUSTERS),
                              Phase2StripCPE=getattr(process, OT_RECHITS).Phase2StripCPE,
-                             includeFourthHit=cms.bool(process.hltInitialStepSeeds.includeFourthHit.value()),
+                             includeFourthHit=cms.bool(fourthHit),
                              dropOTHitsPurePLS=lstSeeds.dropOTHitsPurePLS,
                              maxITHitsToDropOTHitsPurePLS=lstSeeds.maxITHitsToDropOTHitsPurePLS,
                              # the placeholder state is not converted for the seeds the device seed fit refits
@@ -587,6 +685,8 @@ def _pixelIndexFromEventOfHits(process):
     the menu pixel hit converter leaves the menu."""
     eoh = getattr(process, EOH)
     pix = getattr(process, PIX_HITS)
+    if _wrapperReaders(process, PIX_HITS):  # the host converter stays (_deviceHits)
+        return
     if eoh.pixelRecHits.getModuleLabel() != pix.hits.getModuleLabel():
         raise RuntimeError('customizeHLTforMkFitAlpaka: %s reads %s, %s reads %s'
                            % (EOH, eoh.pixelRecHits.getModuleLabel(), PIX_HITS, pix.hits.getModuleLabel()))
@@ -618,14 +718,27 @@ def customizeHLTforMkFitAlpaka(process):
     _eventOfHitsEarlyDelete(process)
     _otRecHitsDevice(process)
     _buildEarlyDelete(process)
-    _lightSeeds(process)
+    caSeeds = _caPixelSeeds(process)
+    deviceSeeds = caSeeds or _devicePixelSeeds(process)
+    if deviceSeeds:
+        _lightSeeds(process)
+    else:
+        # host seeds: the iteration's seed cleaner (MkFitCore, e.g. phase1:default) runs on them in the build module
+        getattr(process, BUILD_DEVICE).seedCleanerConfig = cms.ESInputTag('', 'hltInitialStepTrackCandidatesMkFitConfig')
     _nearEndOutliers(process)
-    _lstInputDevice(process)
-    _seedHandoff(process)
+    if caSeeds:
+        _lstInputDevice(process)
+        _seedHandoff(process)
+    elif deviceSeeds:
+        _lstInputDeviceFromSeeds(process)
+        _seedHandoff(process)
+    else:
+        _hitModuleTable(process)
     _navigationDevice(process)
     _pixelIndexFromEventOfHits(process)
     _pcaDevice(process)
     _otSoAEarlyDelete(process)
-    _lstInputEarlyDelete(process)
+    if deviceSeeds:
+        _lstInputEarlyDelete(process)
     return process
 

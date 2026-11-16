@@ -5,6 +5,10 @@
 //             key (otCAKeyStart). otSoAQueue: the SoA is deleted early (canDeleteEarly), this module orders its
 //             allocation queue after its reads (MkFitAlpakaReleaseOrder.h).
 //   pLS     : Patatrack's device pixel tracks; seedIdx = the edm pixel track index (pixelTracks' SoA->edm map).
+//             Or (pixelSeeds set) generic device pixel seeds: TrackSoA rows in the format of 'pixelSeedStates' (hits as
+//             (mkFit layer, cluster key) inside-out, the state on the last hit, charge 0 = no seed; seedIdx = row), from
+//             any producer (another seeder, or this module's own CA adapter output); the CA inputs are then not read.
+//             Optional pixelSeedsPLSStates: per row another state for the pLS (e.g. at the last pixel hit).
 // The pLS fields come from the device KF on the pixel-track hits (the host creator of hltInitialStepSeeds emulated +
 // TSCBL; MkFitAlpaka fitPixelSeeds) and the device creator-failure rule (no seed -> no pLS); the device seed states
 // and seed hits go to 'pixelSeedStates' for the build module and the seed hand-off. The KF capacity / lookup failures
@@ -72,26 +76,36 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           pseudoLastHit_(cfg.getParameter<int>("pseudoLastHit")),
           pcaAnchor_(cfg.getParameter<int>("pcaAnchor")),
           ptFieldCorrection_(cfg.getParameter<bool>("ptFieldCorrection")),
-          pixToken_(consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"))),
+          seedsMode_(!cfg.getParameter<edm::InputTag>("pixelSeeds").label().empty()),
           otCluToken_(consumes(cfg.getParameter<edm::InputTag>("otClusters"))),
-          pixCluToken_(consumes(cfg.getParameter<edm::InputTag>("pixelClusters"))),
-          pixHMSToken_(consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"))),
-          otHMSToken_(consumes(cfg.getParameter<edm::InputTag>("otRecHitsSoA"))),
-          pixelHitsSoAToken_(consumes(cfg.getParameter<edm::InputTag>("pixelRecHitSrc"))),
-          otHitsSoAToken_(consumes(cfg.getParameter<edm::InputTag>("trackerRecHitsSoA"))),
           bsToken_(consumes(cfg.getParameter<edm::InputTag>("beamSpot"))),
           mfToken_(esConsumes()),
           outToken_(produces()) {
       otSoAToken_ = consumes(cfg.getParameter<edm::InputTag>("otSoA"));
       if (auto const q = cfg.getParameter<edm::InputTag>("otSoAQueue"); !q.label().empty())
         otSoAQueueToken_ = consumes(q);
-      eohToken_ = consumes(cfg.getParameter<edm::InputTag>("eventOfHits"));
       esDataToken_ = esConsumes(cfg.getParameter<edm::ESInputTag>("esData"));
+      statesPutToken_ = produces("pixelSeedStates");
+      statusPutToken_ = produces("status");
+      if (seedsMode_) {
+        pixelSeedsToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelSeeds"));
+        if (auto const& t = cfg.getParameter<edm::InputTag>("pixelSeedsPLSStates"); !t.label().empty()) {
+          plsStatesToken_ = consumes(t);
+          plsStates_ = true;
+        }
+        return;
+      }
+      // the pixel-track (CA) inputs
+      pixToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"));
+      pixCluToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelClusters"));
+      pixHMSToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"));
+      otHMSToken_ = consumes(cfg.getParameter<edm::InputTag>("otRecHitsSoA"));
+      pixelHitsSoAToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHitSrc"));
+      otHitsSoAToken_ = consumes(cfg.getParameter<edm::InputTag>("trackerRecHitsSoA"));
+      eohToken_ = consumes(cfg.getParameter<edm::InputTag>("eventOfHits"));
       kfCfg_.originPrior = ::mkfitdev::lstseeds::kHostCreator;
       kfCfg_.passes = cfg.getParameter<int>("pixKFPasses");
       kfCfg_.hlBackwardTol = cfg.getParameter<double>("pixKFBackwardTol");
-      statesPutToken_ = produces("pixelSeedStates");
-      statusPutToken_ = produces("status");
       tracksDevToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracksSoA"));
       indToEdmToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracks"));
       recoTracksToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracks"));
@@ -149,6 +163,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("trackerRecHitsSoA", edm::InputTag("hltPhase2OtRecHitsSoA"))
           ->setComment("the OT rechits of the pixel tracks (the CA's trackerRecHitsSoA)");
       desc.add<edm::InputTag>("beamSpot", edm::InputTag("hltOnlineBeamSpot"));
+      desc.add<edm::InputTag>("pixelSeeds", edm::InputTag(""))
+          ->setComment(
+              "generic device pixel seeds instead of the pixel tracks: TrackSoA rows as 'pixelSeedStates' (hits as "
+              "(mkFit layer, cluster key) inside-out, the state on the last hit, charge 0 = no seed; seedIdx = row); "
+              "the pLS as with the device creator (pixKF: TSCBL of the state), 'pixelSeedStates' = a copy of the rows. "
+              "Empty: the pixel-track (CA) inputs");
+      desc.add<edm::InputTag>("pixelSeedsPLSStates", edm::InputTag(""))
+          ->setComment(
+              "with pixelSeeds, optional: TrackSoA rows as pixelSeeds with the state each pLS starts from instead of "
+              "the seed's own (charge 0: the own), e.g. the state at the last pixel hit of a seed that ends on an "
+              "outer-tracker hit (LSTInputProducer stateAtLastPixelHit); 'pixelSeedStates' keeps the seeds' states");
       descriptions.addWithDefaultLabel(desc);
     }
 
@@ -158,6 +183,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // acquire: host staging into pinned buffers, H2D copies, the per-track pLS kernels and the counts D2H; produce
     // (after the framework's synchronisation, no blocking wait on the host thread) allocates the exact-size collection
     void acquire(device::Event const& iEvent, device::EventSetup const& iSetup) override {
+      if (seedsMode_) {
+        acquireSeeds(iEvent, iSetup);
+        return;
+      }
       auto& queue = iEvent.queue();
       auto const& pixHits = iEvent.get(pixToken_);
       auto const& pixHMS = iEvent.get(pixHMSToken_);
@@ -339,6 +368,69 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           queue, *hCounts_, cms::alpakatools::make_device_view(queue, dCounts_->data(), ::mkfitdev::lstin::kNCounts));
     }
 
+    // generic pixel seeds: the pLS from the seed rows (state on the last hit -> TSCBL -> pLS), no pixel-track input
+    void acquireSeeds(device::Event const& iEvent, device::EventSetup const& iSetup) {
+      auto& queue = iEvent.queue();
+      auto const& bs = iEvent.get(bsToken_);
+      const uint32_t nOT = iEvent.get(otCluToken_).dataSize();
+      otSoAView_ = iEvent.get(otSoAToken_).const_view();
+      if (uint32_t(otSoAView_.metadata().size()) != std::max<uint32_t>(nOT, 1))
+        throw cms::Exception("MkFitAlpakaLstInput")
+            << "OT rechit SoA rows " << otSoAView_.metadata().size() << " != OT clusters " << nOT;
+      auto const seeds = iEvent.get(pixelSeedsToken_).const_view();
+      const uint32_t n = seeds.metadata().size();
+      p_ = ::mkfitdev::lstin::Params{};
+      p_.ptCut = ptCut_;
+      p_.bsx = bs.x0();
+      p_.bsy = bs.y0();
+      p_.bsz = bs.z0();
+      p_.nOT = nOT;
+      p_.pixKF = 1;
+      maxTracks_ = n;
+      mt_ = std::max<uint32_t>(n, 1);
+      nStates_ = int32_t(n);
+      const uint32_t nChunks = (maxTracks_ + 255) / 256;
+      dScratch_.emplace(cms::alpakatools::make_device_buffer<PLS[]>(queue, mt_));
+      dPIdx_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, mt_));
+      dHOff_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, mt_));
+      dCounts_.emplace(
+          cms::alpakatools::make_device_buffer<uint32_t[]>(queue, ::mkfitdev::lstin::kNCounts + 2 * nChunks));
+      alpaka::memset(queue, *dCounts_, 0);
+      dPixOut_.emplace(cms::alpakatools::make_device_buffer<::mkfitdev::lstseeds::PixSeedOut[]>(queue, mt_));
+      status_.emplace(queue);
+      mkfitdev::zeroStatus(queue, *status_);
+      auto const& esD = iSetup.getData(esDataToken_);
+      const ::mkfitdev::lstseeds::PixSeedBeam beam{
+          float(bs.x0()), float(bs.y0()), float(bs.z0()), float(bs.dxdz()), float(bs.dydz())};
+      ::mkfitdev::TrackSoAConstView pls = seeds;
+      uint32_t nPls = 0;
+      if (plsStates_) {
+        pls = iEvent.get(plsStatesToken_).const_view();
+        nPls = pls.metadata().size();
+        if (nPls != n)
+          throw cms::Exception("MkFitAlpakaLstInput")
+              << "pixelSeedsPLSStates rows " << nPls << " != pixelSeeds rows " << n;
+      }
+      ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::launchPLSFromSeedRows(queue,
+                                                                           seeds,
+                                                                           pls,
+                                                                           nPls,
+                                                                           esD.view().layers,
+                                                                           n,
+                                                                           otSoAView_.metadata().addressOf_detId(),
+                                                                           otSoAView_.metadata().addressOf_clustSize(),
+                                                                           p_,
+                                                                           beam,
+                                                                           dPixOut_->data(),
+                                                                           dScratch_->data(),
+                                                                           dPIdx_->data(),
+                                                                           dHOff_->data(),
+                                                                           dCounts_->data());
+      hCounts_.emplace(cms::alpakatools::make_host_buffer<uint32_t[]>(queue, ::mkfitdev::lstin::kNCounts));
+      alpaka::memcpy(
+          queue, *hCounts_, cms::alpakatools::make_device_view(queue, dCounts_->data(), ::mkfitdev::lstin::kNCounts));
+    }
+
     void produce(device::Event& iEvent, device::EventSetup const& iSetup) override {
       auto& queue = iEvent.queue();
       uint32_t const* hCounts = hCounts_->data();
@@ -370,7 +462,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ++nOtSameQueue_;
       }
       iEvent.emplace(outToken_, std::move(out));
-      {
+      if (seedsMode_) {
+        // the input seed rows as they are
+        auto const& in = iEvent.get(pixelSeedsToken_);
+        mkfitdev::TrackSoADeviceCollection states(queue, in.const_view().metadata().size());
+        alpaka::memcpy(queue, states.buffer(), in.const_buffer());
+        iEvent.emplace(statesPutToken_, std::move(states));
+      } else {
         // per EDM pixel track the device creator's state (charge 0 = none: failed, not tight, or option (i) event)
         mkfitdev::TrackSoADeviceCollection states(queue, std::max(nStates_, 1));
         auto statesBuf = states.buffer();
@@ -424,15 +522,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::EDGetTokenT<unsigned long long> otSoAQueueToken_;
     unsigned long nOtSameQueue_ = 0, nOtOrdered_ = 0;
     ::mkfitdev::OTRecHitSoA::ConstView otSoAView_;
-    const edm::EDGetTokenT<SiPixelRecHitCollection> pixToken_;
+    const bool seedsMode_;  // generic pixel seeds (pixelSeeds) instead of the pixel tracks
+    device::EDGetToken<mkfitdev::TrackSoADeviceCollection> pixelSeedsToken_;
+    device::EDGetToken<mkfitdev::TrackSoADeviceCollection> plsStatesToken_;  // optional, with pixelSeeds
+    bool plsStates_ = false;
+    edm::EDGetTokenT<SiPixelRecHitCollection> pixToken_;
     const edm::EDGetTokenT<Phase2TrackerCluster1DCollectionNew> otCluToken_;
-    const edm::EDGetTokenT<SiPixelClusterCollectionNew> pixCluToken_;
-    const edm::EDGetTokenT<HMS> pixHMSToken_;
-    const edm::EDGetTokenT<HMS> otHMSToken_;
+    edm::EDGetTokenT<SiPixelClusterCollectionNew> pixCluToken_;
+    edm::EDGetTokenT<HMS> pixHMSToken_;
+    edm::EDGetTokenT<HMS> otHMSToken_;
     device::EDGetToken<reco::TracksSoACollection> tracksDevToken_;
     // the pixel and OT rechit SoAs of the pixel tracks
-    const device::EDGetToken<reco::TrackingRecHitsSoACollection> pixelHitsSoAToken_;
-    const device::EDGetToken<reco::TrackingRecHitsSoACollection> otHitsSoAToken_;
+    device::EDGetToken<reco::TrackingRecHitsSoACollection> pixelHitsSoAToken_;
+    device::EDGetToken<reco::TrackingRecHitsSoACollection> otHitsSoAToken_;
     const edm::EDGetTokenT<::reco::BeamSpot> bsToken_;
     const edm::ESGetToken<MagneticField, IdealMagneticFieldRecord> mfToken_;
     const device::EDPutToken<LstInputDevice> outToken_;

@@ -165,6 +165,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
                      LstSeedFitConfig const& cfg,
                      ::mkfitdev::lstseeds::PixSeedBeam const& beam);
 
+  // the TSCBL part of fitPixelSeeds alone: for every row r < n of `out` with status kPixOk (par, err, charge = the
+  // state on the last hit) the PCA state, pcaStatus, ptErr and etaErr. Asynchronous in `queue`.
+  void pcaPixelSeeds(Queue& queue,
+                     ::mkfitdev::lstseeds::PixSeedOut* out,
+                     int32_t n,
+                     ::mkfitdev::lstseeds::PixSeedBeam const& beam);
+
   // the pLS seed state from the device: seed rows s < n with pixIdx[s] >= 0 (the edm pixel
   // track of a pLS, pT3 or pT5 seed; LSTOutputConverter: seed = *pixelSeed) take params / errors / charge from row
   // pixIdx[s] of `states` (hltInputLSTDevice:pixelSeedStates; charge 0 = no state: the row is left as it is).

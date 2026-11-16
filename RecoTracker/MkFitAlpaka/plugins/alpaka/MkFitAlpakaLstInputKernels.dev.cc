@@ -9,6 +9,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/DeviceHitInput.h"
+#include "RecoTracker/MkFitAlpaka/interface/math/PcaToBeamLine.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/TkBfield.h"
 
 #include "MkFitAlpakaLstInputKernels.h"
@@ -36,6 +37,124 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
     ALPAKA_FN_ACC ALPAKA_FN_INLINE float etaRoot(float rho, float z) {
       const float zs = z / rho;
       return std::log(zs + std::sqrt(zs * zs + 1.f));
+    }
+
+    // pixKF: the pLS of one pixel seed from the device creator's state f (status kPixOk): DEVIATION DEV-7, the
+    // LSTInputProducer quantities of the host seed (hltInitialStepSeeds) from the KF state on the last hit (r3LH, p3LH,
+    // charge) and its TSCBL (p3PCA, dxy, dz, ptErr, etaErr). key / isOT: the seed's hits 0, 1, 2 and the last one (slot
+    // 3 = kNoKey for 3 hits), bits: hitDetBits. Returns false (o.pass untouched) below the pT cut.
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool plsFromKF(Acc1D const& acc,
+                                                  Params const& p,
+                                                  ::mkfitdev::lstseeds::PixSeedOut const& f,
+                                                  int32_t seedIdx,
+                                                  uint32_t nh,
+                                                  uint32_t const (&key)[4],
+                                                  bool const (&isOT)[4],
+                                                  uint8_t bits,
+                                                  uint32_t const* otDetId,
+                                                  uint16_t const* otClust,
+                                                  uint32_t* counts,
+                                                  PLS& o) {
+      int q = f.charge;
+      const float lx = f.par[0], ly = f.par[1], lz = f.par[2];
+      const float iptL = f.par[3], phL = f.par[4], thL = f.par[5];
+      const float pxL = std::cos(phL) / iptL;
+      const float pyL = std::sin(phL) / iptL;
+      const float pzL = std::cos(thL) / std::sin(thL) / iptL;
+      float px0, py0, pz0, dxy, dz;
+      if (f.pcaStatus == 0) {
+        px0 = f.pcaPx;
+        py0 = f.pcaPy;
+        pz0 = f.pcaPz;
+        const float ptP = std::sqrt(px0 * px0 + py0 * py0);
+        dxy = (-(f.pcaX - p.bsx) * py0 + (f.pcaY - p.bsy) * px0) / ptP;
+        dz = (f.pcaZ - p.bsz) - ((f.pcaX - p.bsx) * px0 + (f.pcaY - p.bsy) * py0) / ptP * (pz0 / ptP);
+      } else {  // host: invalid TSCBL -> zero PCA fields and errors, charge 0 (kept)
+        alpaka::atomicAdd(acc, &counts[7], 1u, alpaka::hierarchy::Blocks{});
+        if (f.pcaStatus == 2)
+          alpaka::atomicAdd(acc, &counts[10], 1u, alpaka::hierarchy::Blocks{});
+        px0 = py0 = pz0 = dxy = dz = 0.f;
+        q = 0;
+      }
+      const float ptIn = std::sqrt(pxL * pxL + pyL * pyL);
+      const bool pcaOk = f.pcaStatus == 0;
+      const float ptErr = pcaOk ? f.ptErr : 0.f;
+      const float etaErr = pcaOk ? f.etaErr : 0.f;
+
+      if (!(ptIn > p.ptCut - 2 * ptErr))
+        return false;
+      const float phiL = std::atan2(pyL, pxL);
+      const float dPhi = deltaPhiRoot(phiL, std::atan2(ly, lx));
+      int8_t pixtype;
+      if (ptIn >= 2.0f)
+        pixtype = ::lst::PixelType::kHighPt;
+      else if (ptIn >= (p.ptCut - 2 * ptErr) and ptIn < 2.0f)
+        pixtype = dPhi >= 0 ? ::lst::PixelType::kLowPtPosCurv : ::lst::PixelType::kLowPtNegCurv;
+      else
+        return false;
+
+      //::lst::calculateR3FromPCA
+      const float pxA = px0, pyA = py0;
+      const float dxyA = dxy;
+      const float dzA = dz;
+      const float ptP = std::sqrt(pxA * pxA + pyA * pyA);
+      const float pP = std::sqrt(pxA * pxA + pyA * pyA + pz0 * pz0);
+      const float vz = dzA * ptP * ptP / pP / pP;
+      const float vx = -dxyA * pyA / ptP - pxA / pP * pz0 / pP * dzA;
+      const float vy = dxyA * pxA / ptP - pyA / pP * pz0 / pP * dzA;
+      const float etaP = etaRoot(ptP, pz0);
+      const float phiP = std::atan2(pyA, pxA);
+
+      o.pass = 1;
+      o.seedIdx = seedIdx;
+      o.charge = q;
+      o.nHits = nh;
+      o.nToSoA = nh < ::lst::kMaxPLSHitsInHitsSoA ? nh : ::lst::kMaxPLSHitsInHitsSoA;
+      o.hitDetBits = bits;
+      o.isQuad = nh > 3;
+      o.pixelType = pixtype;
+      o.ptIn = ptIn;
+      o.ptErr = ptErr;
+      o.px = pxL;
+      o.py = pyL;
+      o.pz = pzL;
+      o.etaErr = etaErr;
+      o.eta = etaRoot(ptIn, pzL);
+      o.phi = phiL;
+      o.deltaPhi = dPhi;
+      // pseudo-hits as ::lst::prepareInput
+      o.x[0] = vx;
+      o.y[0] = vy;
+      o.z[0] = vz;
+      o.x[1] = ptP;
+      o.y[1] = etaP;
+      o.z[1] = phiP;
+      o.x[2] = lx;
+      o.y[2] = ly;
+      o.z[2] = lz;
+      o.x[3] = lx;
+      o.y[3] = dxyA;
+      o.z[3] = dzA;
+      // detid / cluster size of the hits stored: iSH -> iH (the last slot is the last hit)
+      for (int s = 0; s < 4; ++s) {
+        const int src = (s + 1 == int(o.nToSoA)) ? (nh > 3 ? 3 : 2) : s;
+        const uint32_t k = key[src];
+        const bool ot = isOT[src];
+        o.detid[s] = ot ? (k != kNoKey ? otDetId[k] : 0u) : ::lst::kPixelModuleId;
+        o.clust[s] = ot ? (k != kNoKey ? otClust[k] : uint16_t(0)) : uint16_t(1);
+      }
+      o.idx[0] = key[0];
+      o.idx[1] = key[1];
+      o.idx[2] = key[2];
+      o.idx[3] = nh > 3 ? key[3] : kNoKey;
+      // superbin, with the host's mixed float/double expressions
+      const float neta = 25.f, nphi = 72.f, nz = 25.f;
+      const int etabin = (etaP + 2.6) / ((2 * 2.6) / neta);
+      const int phibin = (phiP + std::numbers::pi_v<float>) / ((2. * std::numbers::pi_v<float>) / nphi);
+      const float dzc = dzA < -30.f ? -30.f : (dzA > 30.f ? 30.f : dzA);
+      const int dzbin = (dzc + 30) / (2 * 30 / nz);
+      o.superbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
+      return true;
     }
 
     struct KernelPLSCompute {
@@ -144,6 +263,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
           if (nh == 3) {  // with 3 hits slot 2 is also the last; slot 3 unused
             key[3] = kNoKey;
           }
+          if (kf != nullptr) {  // pixKF: every pLS field from the device creator's state
+            plsFromKF(acc, p, kf[t], seedIdx, nh, key, isOT, bits, otDetId, otClust, counts, o);
+            continue;
+          }
           // momentum scale: 1, or <Bz>_hits / Bz(0)
           const float pt = p.ptFieldCorrection ? ptFit * (bzSum / float(nh)) / p.bz0 : ptFit;
 
@@ -159,7 +282,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
           const float cx = x0 + q * R * sphi;
           const float cy = y0 - q * R * cphi;
           const float lxHit = lx, lyHit = ly, lzHit = lz;
-          if (p.pseudoLH == 1 && kf == nullptr) {
+          if (p.pseudoLH == 1) {
             // r3LH = the helix point at the hit's transverse radius rL (circle-circle intersection nearest to the hit;
             // no intersection: the hit projected radially onto the helix circle), z from the helix arc length
             const float rL2 = lx * lx + ly * ly;
@@ -194,39 +317,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
           float pxL = pt * (q * ddy / dn);
           float pyL = pt * (-q * ddx / dn);
           float pzL = pz0;
-          if (kf != nullptr) {
-            // DEVIATION DEV-7: the LSTInputProducer quantities of the host seed
-            // (hltInitialStepSeeds) from the device creator emulation: the KF state on the last hit
-            // (r3LH, p3LH, charge) and its TSCBL (p3PCA, dxy, dz; ptErr / etaErr below)
-            ::mkfitdev::lstseeds::PixSeedOut const& f = kf[t];
-            q = f.charge;
-            lx = f.par[0];
-            ly = f.par[1];
-            lz = f.par[2];
-            const float iptL = f.par[3], phL = f.par[4], thL = f.par[5];
-            pxL = std::cos(phL) / iptL;
-            pyL = std::sin(phL) / iptL;
-            pzL = std::cos(thL) / std::sin(thL) / iptL;
-            if (f.pcaStatus == 0) {
-              px0 = f.pcaPx;
-              py0 = f.pcaPy;
-              pz0 = f.pcaPz;
-              const float ptP = std::sqrt(px0 * px0 + py0 * py0);
-              dxy = (-(f.pcaX - p.bsx) * py0 + (f.pcaY - p.bsy) * px0) / ptP;
-              dz = (f.pcaZ - p.bsz) - ((f.pcaX - p.bsx) * px0 + (f.pcaY - p.bsy) * py0) / ptP * (pz0 / ptP);
-            } else {  // host: invalid TSCBL -> zero PCA fields and errors, charge 0 (kept)
-              alpaka::atomicAdd(acc, &counts[7], 1u, alpaka::hierarchy::Blocks{});
-              if (f.pcaStatus == 2)
-                alpaka::atomicAdd(acc, &counts[10], 1u, alpaka::hierarchy::Blocks{});
-              px0 = py0 = pz0 = dxy = dz = 0.f;
-              q = 0;
-            }
-          }
-
           // PCA used for the pseudo-hits / dxy / dz / superbin (pcaAnchor 1: the helix through the outermost hit with
           // the tangent there, back to its point of closest approach to the beam line, uniform field)
           float xa = x0, ya = y0, za = p.bsz + zip, cpa = cphi, spa = sphi;
-          if (p.pcaAnchor == 1 && kf == nullptr) {
+          if (p.pcaAnchor == 1) {
             const float hx = lxHit - cx, hy = lyHit - cy;
             const float hn = std::sqrt(hx * hx + hy * hy);
             const float cxa = lxHit - R * hx / hn, cya = lyHit - R * hy / hn;  // centre: the circle through the hit
@@ -252,11 +346,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
           float ptErr = std::sqrt(pt * pt * pmag * pmag / (qf * qf) * varRho +
                                   2.f * std::sqrt(pmag * pmag * pt * pt) / qf * pz0 * covRT + pz0 * pz0 * varTh);
           float etaErr = std::sqrt(varTh) * pmag / pt;
-          if (kf != nullptr) {
-            const bool pcaOk = kf[t].pcaStatus == 0;
-            ptErr = pcaOk ? kf[t].ptErr : 0.f;
-            etaErr = pcaOk ? kf[t].etaErr : 0.f;
-          }
 
           if (!(ptIn > p.ptCut - 2 * ptErr))
             continue;
@@ -271,7 +360,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
             continue;
 
           //::lst::calculateR3FromPCA
-          const bool anchor = p.pcaAnchor == 1 && kf == nullptr;
+          const bool anchor = p.pcaAnchor == 1;
           const float pxA = anchor ? pt * cpa : px0, pyA = anchor ? pt * spa : py0;
           const float dxyA =
               anchor ? (-(xa - p.bsx) * pyA + (ya - p.bsy) * pxA) / std::sqrt(pxA * pxA + pyA * pyA) : dxy;
@@ -333,6 +422,98 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
           const float dzc = dzA < -30.f ? -30.f : (dzA > 30.f ? 30.f : dzA);
           const int dzbin = (dzc + 30) / (2 * 30 / nz);
           o.superbin = (nz * nphi) * etabin + (nz)*phibin + dzbin;
+        }
+      }
+    };
+
+    // generic pixel seeds (seed rows: TrackSoA, row = seed index): the state on the last hit as the creator's output
+    // (charge 0 or a non-finite state = no seed; pcaPixelSeeds adds the TSCBL); with plsStates (nPls rows) the state
+    // of row e there instead where its charge is not 0 (the state the pLS starts from, e.g. at the last pixel hit)
+    struct KernelSeedRowsToKF {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::mkfitdev::TrackSoAConstView seeds,
+                                    uint32_t n,
+                                    ::mkfitdev::TrackSoAConstView plsStates,
+                                    uint32_t nPls,
+                                    ::mkfitdev::lstseeds::PixSeedOut* out) const {
+        for (uint32_t e : uniform_elements(acc, n)) {
+          ::mkfitdev::lstseeds::PixSeedOut& o = out[e];
+          o.pcaStatus = ::mkfitdev::pca::kPcaFailed;
+          bool ok = seeds[e].charge() != 0;
+          const bool pls = ok && e < nPls && plsStates[e].charge() != 0;
+          auto const& st = pls ? plsStates[e] : seeds[e];
+          for (int k = 0; k < 6; ++k) {
+            o.par[k] = st.params().v[k];
+            ok = ok && std::isfinite(o.par[k]);
+          }
+          for (int k = 0; k < 21; ++k) {
+            o.err[k] = st.errors().v[k];
+            ok = ok && std::isfinite(o.err[k]);
+          }
+          o.charge = st.charge();
+          o.status = ok ? ::mkfitdev::lstseeds::kPixOk : ::mkfitdev::lstseeds::kPixNotFitted;
+        }
+      }
+    };
+
+    // generic pixel seeds: the pLS of every seed row (the counterpart of KernelPLSCompute with pixKF); a hit is an OT
+    // hit when its mkFit layer is not a pixel layer, its key the cluster key (the LST hit index)
+    struct KernelPLSFromSeedRows {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::mkfitdev::TrackSoAConstView seeds,
+                                    ::mkfitdev::LayerInfoSoA::ConstView layers,
+                                    uint32_t n,
+                                    ::mkfitdev::lstseeds::PixSeedOut const* kf,
+                                    uint32_t const* otDetId,
+                                    uint16_t const* otClust,
+                                    Params p,
+                                    PLS* scratch,
+                                    uint32_t* counts) const {
+        if (once_per_grid(acc))
+          counts[2] = n;
+        for (uint32_t e : uniform_elements(acc, n)) {
+          PLS& o = scratch[e];
+          o.pass = 0;
+          o.nToSoA = 0;
+          const int nTot = seeds[e].nTotalHits();
+          if (seeds[e].charge() == 0 && nTot == 0)
+            continue;  // not a seed
+          uint32_t key[4] = {kNoKey, kNoKey, kNoKey, kNoKey};
+          bool isOT[4] = {false, false, false, false};
+          uint32_t nh = 0;
+          for (int i = 0; i < nTot; ++i)
+            nh += seeds[e].hits().hot[i].index >= 0;
+          if (nh > uint32_t(kMaxTrackHits) || nh < 3) {
+            alpaka::atomicAdd(acc, &counts[3], 1u, alpaka::hierarchy::Blocks{});
+            continue;
+          }
+          if (kf[e].status != ::mkfitdev::lstseeds::kPixOk) {
+            alpaka::atomicAdd(acc, &counts[6], 1u, alpaka::hierarchy::Blocks{});
+            continue;
+          }
+          uint8_t bits = 0;
+          const uint32_t nToBits = nh < ::lst::kMaxPLSHitBitsInHitsSoA ? nh : ::lst::kMaxPLSHitBitsInHitsSoA;
+          uint32_t i = 0;
+          for (int h = 0; h < nTot; ++h) {
+            const auto hot = seeds[e].hits().hot[h];
+            if (hot.index < 0)
+              continue;
+            const bool ot = !layers[hot.layer].is_pixel();
+            const uint32_t k = uint32_t(hot.index);
+            const int slot = i < 3 ? int(i) : (i + 1 == nh ? 3 : -1);
+            if (slot >= 0) {
+              key[slot] = k;
+              isOT[slot] = ot;
+            }
+            if (i + 1 < nToBits)
+              bits |= uint8_t(ot) << i;
+            if (i + 1 == nh)
+              bits |= uint8_t(ot) << (nToBits - 1);
+            ++i;
+          }
+          if (nh == 3)
+            key[3] = kNoKey;
+          plsFromKF(acc, p, kf[e], int32_t(e), nh, key, isOT, bits, otDetId, otClust, counts, o);
         }
       }
     };
@@ -587,6 +768,35 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
     };
   }  // namespace
 
+  namespace {
+    // pLS index and pseudo-hit offset per scratch row (chunk counts, a serial scan over chunks, per-row offsets)
+    void scanPLS(Queue& queue, uint32_t maxTracks, PLS* scratch, uint32_t* pIdx, uint32_t* hOff, uint32_t* counts) {
+      const uint32_t nChunks = divide_up_by(maxTracks, kChunk);
+      // chunk sums: counts[kNCounts .. kNCounts + 2 nChunks) (the producer sizes the counts buffer)
+      uint32_t* chunkP = counts + ::mkfitdev::lstin::kNCounts;
+      uint32_t* chunkH = chunkP + nChunks;
+      alpaka::exec<Acc1D>(queue,
+                          make_workdiv<Acc1D>(divide_up_by(nChunks, 64u), 64u),
+                          KernelChunkCount{},
+                          scratch,
+                          maxTracks,
+                          nChunks,
+                          chunkP,
+                          chunkH);
+      alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, 1), KernelChunkScan{}, nChunks, chunkP, chunkH, counts);
+      alpaka::exec<Acc1D>(queue,
+                          make_workdiv<Acc1D>(divide_up_by(nChunks, 64u), 64u),
+                          KernelChunkOffsets{},
+                          scratch,
+                          maxTracks,
+                          nChunks,
+                          chunkP,
+                          chunkH,
+                          pIdx,
+                          hOff);
+    }
+  }  // namespace
+
   void launchPLS(Queue& queue,
                  ::reco::TrackBlocksConstView tracks,
                  uint32_t maxTracks,
@@ -620,29 +830,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                         scratch,
                         counts,
                         kf);
-    const uint32_t nChunks = divide_up_by(maxTracks, kChunk);
-    // chunk sums: counts[kNCounts .. kNCounts + 2 nChunks) (the producer sizes the counts buffer)
-    uint32_t* chunkP = counts + ::mkfitdev::lstin::kNCounts;
-    uint32_t* chunkH = chunkP + nChunks;
-    alpaka::exec<Acc1D>(queue,
-                        make_workdiv<Acc1D>(divide_up_by(nChunks, 64u), 64u),
-                        KernelChunkCount{},
-                        scratch,
-                        maxTracks,
-                        nChunks,
-                        chunkP,
-                        chunkH);
-    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, 1), KernelChunkScan{}, nChunks, chunkP, chunkH, counts);
-    alpaka::exec<Acc1D>(queue,
-                        make_workdiv<Acc1D>(divide_up_by(nChunks, 64u), 64u),
-                        KernelChunkOffsets{},
-                        scratch,
-                        maxTracks,
-                        nChunks,
-                        chunkP,
-                        chunkH,
-                        pIdx,
-                        hOff);
+    scanPLS(queue, maxTracks, scratch, pIdx, hOff, counts);
   }
 
   void launchPixSeedStates(Queue& queue,
@@ -721,6 +909,48 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                           scratch,
                           pIdx,
                           hOff);
+  }
+
+  void launchPLSFromSeedRows(Queue& queue,
+                             ::mkfitdev::TrackSoAConstView seeds,
+                             ::mkfitdev::TrackSoAConstView plsStates,
+                             uint32_t nPls,
+                             ::mkfitdev::LayerInfoSoA::ConstView layers,
+                             uint32_t n,
+                             uint32_t const* otDetId,
+                             uint16_t const* otClust,
+                             Params p,
+                             ::mkfitdev::lstseeds::PixSeedBeam const& beam,
+                             ::mkfitdev::lstseeds::PixSeedOut* kf,
+                             PLS* scratch,
+                             uint32_t* pIdx,
+                             uint32_t* hOff,
+                             uint32_t* counts) {
+    if (n == 0)
+      return;
+    constexpr uint32_t kBlock = 128;
+    alpaka::exec<Acc1D>(queue,
+                        make_workdiv<Acc1D>(divide_up_by(n, kBlock), kBlock),
+                        KernelSeedRowsToKF{},
+                        seeds,
+                        n,
+                        plsStates,
+                        nPls,
+                        kf);
+    ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds::pcaPixelSeeds(queue, kf, int32_t(n), beam);
+    alpaka::exec<Acc1D>(queue,
+                        make_workdiv<Acc1D>(divide_up_by(n, kBlock), kBlock),
+                        KernelPLSFromSeedRows{},
+                        seeds,
+                        layers,
+                        n,
+                        kf,
+                        otDetId,
+                        otClust,
+                        p,
+                        scratch,
+                        counts);
+    scanPLS(queue, n, scratch, pIdx, hOff, counts);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin

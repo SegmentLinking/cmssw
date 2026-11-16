@@ -69,9 +69,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
                      ::mkfitdev::lstseeds::PixSeedBeam const& beam) {
     if (n <= 0)
       return;
+#if defined(ALPAKA_ACC_GPU_CUDA_ENABLED) || defined(ALPAKA_ACC_GPU_HIP_ENABLED)
     constexpr uint32_t kThreads = 64;  // heavy kernels: block <= 128, 64 as KernelLstSeedFit
     const uint32_t blocks = cms::alpakatools::divide_up_by(static_cast<uint32_t>(n), kThreads);
-#if defined(ALPAKA_ACC_GPU_CUDA_ENABLED) || defined(ALPAKA_ACC_GPU_HIP_ENABLED)
     alpaka::exec<Acc1D>(
         queue, cms::alpakatools::make_workdiv<Acc1D>(blocks, kThreads), KernelPixSeedFit{}, es, hits, in, out, n, cfg);
 #else
@@ -88,6 +88,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
                         n,
                         cfg);
 #endif
+    pcaPixelSeeds(queue, out, n, beam);
+  }
+
+  void pcaPixelSeeds(Queue& queue,
+                     ::mkfitdev::lstseeds::PixSeedOut* out,
+                     int32_t n,
+                     ::mkfitdev::lstseeds::PixSeedBeam const& beam) {
+    if (n <= 0)
+      return;
+    constexpr uint32_t kThreads = 64;
+    const uint32_t blocks = cms::alpakatools::divide_up_by(static_cast<uint32_t>(n), kThreads);
     // the PCA in two steps through a queue-ordered scratch (5x5 curvilinear error per track): spill-free on sm_89
     auto cov = cms::alpakatools::make_device_buffer<double[]>(queue, n * kPixPcaCov);
     alpaka::exec<Acc1D>(
