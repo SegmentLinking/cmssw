@@ -4,16 +4,34 @@ refused at job start (interface/SupportedConfig.h and the checks of python/custo
 Building
 - Hit masks (clustersToSkip) and the strip charge cut (passStripChargePCMfromTrack): the LST step has no mask and
   Phase-2 OT layers have no charge information.
-- Building routines other than cloneEngine (among them v2p2, MkFinderV2p2), seed cleaning other than the LST step's,
+- Building routines other than cloneEngine and v2p2 (bestHit, standard), seed cleaning other than the LST step's,
   backwardFitInCMSSW.
 - Seed hit sorting, backward_drop_seed_hits, recheckOverlap and the removal of seed hits.
-- Filters, partitioners, scorers and duplicate cleaners other than the ones of the LST step's iteration config.
+- Filters, partitioners, scorers and duplicate cleaners other than the ones of the LST step's iteration config; the
+  final-pick scorer v2p2:llh is accepted only with buildingRoutine v2p2.
 - Debug instrumentation (dprintf, RNT dumps) and the values only it reads (the phi_c = PI - phi_c wrap and dphi of
   selectHitIndicesV2).
 - Exact score ties among more than 16 options of one seed: the clone engine keeps equal scores in input order, which
   is MkFitCore's std::sort order only up to 16 options (insertion sort); above that, introsort's order is not
   reproduced. MkFitCore's input order is hit-slot major only within one Matriplex batch of candidates; when a seed's
   candidates straddle a batch boundary, exact ties across the boundary can also be ordered differently.
+- v2p2 (MkFinderV2p2): paired plan entries (LayerControl::m_layer_sec, the two-layer MkRZLimits setup) are refused at
+  ES fill; CMSSW's IterationConfig never sets them. The constexpr-off knobs sister_hole_drop and early_select (which
+  changes no result), MKFIT_TRACE and the stop reason of a TrackCand (trace only) are not ported; late_max_cands,
+  reserve_hole_slot and best_short are, behind the same constexpr switches.
+- v2p2 end-of-layer selection (std::partial_sort, not stable): the device keeps the same top candidates in the same
+  order except among exactly equal scores, where it uses a fixed order (holes, then paths, then untouched
+  candidates); MkFitCore's order there depends on the Matriplex width and the TBB seed partition. A NaN score ranks
+  last on the device (MkFitCore's std::partial_sort has no defined order with it); such a selection is counted
+  (kV2p2NanScore) and the event is reported as not clean.
+- v2p2 results agree with MkFitCore's v2p2 to the float floor, not bitwise: the CPU backends build without
+  -fassociative-math, -ffinite-math-only and -fno-signed-zeros, so the port calls scalar sincosf where MkFitCore's
+  -Ofast build calls libmvec, and some products are written as explicit fma (see Build dependence). The lane loops
+  follow MkFitCore's Matriplex code. Decisions differ only where a value sits at a threshold.
+- v2p2 in-layer nodes live in an event-wide pool (module parameter v2p2NodesPerSeed rows per seed); a node beyond it
+  is dropped and counted (kV2p2NodeOverflow), and the event is reported as not clean.
+- The device EventOfHits computes the v2p2 hit extents (phi, qbar) and their per-layer maxima for both building
+  routines.
 - EventOfHits: MkFitCore sorts layers with fewer than 256 hits with std::sort (not stable); the device order of hits
   with equal bin keys is (key, original index), the order of MkFitCore's radix sort for the larger layers.
 
@@ -31,11 +49,15 @@ Hit input
 - Only Phase-2 geometries.
 
 Fixed capacities (overflows are counted in the per-event status product, never silent)
-- Seed hits, hit-on-track pool per seed, hits per track, EventOfHits bin index and bin count; an event beyond the
-  EventOfHits limits is skipped and counted.
+- Seed hits, the hit-on-track pool (home rows per seed plus an event-wide set of extension slots, where MkFitCore
+  grows each seed's pool: a seed that finds none left fails), hits per track, EventOfHits bin index and bin count; an
+  event beyond the EventOfHits limits is skipped and counted. When an event runs out of extension slots, which seeds
+  fail follows the order of the slot requests, which on the GPU is not reproducible from run to run; the failed seeds
+  are counted and the event is flagged.
 
 Build dependence
-- Bit identity with MkFitCore and with the host hit converters holds for the default x86-64-v3 GCC build (-Ofast
-  for MkFitCore): the device code writes as explicit fma the products GCC contracts there (selection windows, initial
-  states, the hit transforms, the final fit's hit-order key). Other targets (x86-64-v2, aarch64) or compilers contract
-  differently; then last-bit differences, and the fit order of overlap hits with near-equal keys, can differ.
+- Bit identity of the clone engine with MkFitCore and of the hit converters with the host ones holds for the default
+  x86-64-v3 GCC build (-Ofast for MkFitCore; v2p2: see Building): the device code writes as explicit fma the products
+  GCC contracts there (selection windows, initial states, the hit transforms, the final fit's hit-order key). Other
+  targets (x86-64-v2, aarch64) or compilers contract differently; then last-bit differences, and the fit order of
+  overlap hits with near-equal keys, can differ.
