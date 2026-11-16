@@ -10,6 +10,8 @@
 #   hltMkFitSiPixelHits             host map of the EventOfHits' pixel rows to the legacy pixel rechits (unscheduled, for
 #                                   the host readers)
 #   hltInputLSTDevice               device LST input; pLS parameters from the device KF of the pixel-track hits
+#   hltMkFitPixelTrackCount         host counts of the device pixel tracks (the LST input numbers them on the device as
+#                                   hltPhase2PixelTracks does; no legacy pixel input on the device path)
 #   hltInitialStepMkFitSeeds        device hand-off of the LST track candidates to the mkFit seeds
 #   hltInitialStepTrackCandidatesMkFitDevice     device building (seed fit, clone engine, backward fit, cleaning)
 #   hltInitialStepTrackCandidatesMkFitFitDevice  device mkFit final fit (with the pixel CPE)
@@ -40,6 +42,7 @@ OT_RECHITS = 'hltSiPhase2RecHits'
 CA_OT = 'hltPhase2OtRecHitsSoA'
 PIXEL_TRACKS_CA = 'hltPhase2PixelTracksSoA'
 LST_INPUT_DEVICE = 'hltInputLSTDevice'
+PIXEL_TRACK_COUNT = 'hltMkFitPixelTrackCount'
 LST_SEEDS = 'hltInitialStepTrajectorySeedsLST'
 MKFIT_SEEDS = 'hltInitialStepMkFitSeeds'
 OUTCONV_STATES = 'hltInitialStepOutConvStates'
@@ -579,6 +582,23 @@ def _lstInputDevice(process):
                          alpaka=cms.untracked.PSet(backend=cms.untracked.string('')))
     setattr(process, LST_INPUT_DEVICE, dev)
     eoh.producePixelSrcRows = cms.bool(True)
+    if getattr(eoh, 'pixelRowsFromSoA', cms.bool(False)).value():
+        # the EventOfHits' pixel rows are the SoA rows: pixelSrcRows is the exact identity, no legacy pixel input
+        dev.pixelRecHits = cms.InputTag('')
+    # the pixel tracks' index (seedIdx = the hltPhase2PixelTracks index) made on the device when the converter's
+    # selection is the one emulated (quality >= tight as the LST input's, every track converted otherwise)
+    pt = process.hltPhase2PixelTracks
+    if (pt.type_() == 'PixelTrackProducerFromSoAAlpaka' and pt.trackSrc.value() == dev.pixelTracksSoA.value()
+            and getattr(pt, 'minQuality', cms.string('loose')).value() == 'tight'
+            and getattr(pt, 'minNumberOfHits', cms.int32(0)).value() <= 3
+            and not getattr(pt, 'requireQuadsFromConsecutiveLayers', cms.bool(False)).value()):
+        setattr(process, PIXEL_TRACK_COUNT, cms.EDProducer('MkFitAlpakaPixelTrackCountProducer@alpaka',
+                                                           pixelTracksSoA=dev.pixelTracksSoA,
+                                                           minQuality=cms.string('tight'),
+                                                           alpaka=cms.untracked.PSet(backend=cms.untracked.string(''))))
+        process.hltMkFitAlpakaTask.add(getattr(process, PIXEL_TRACK_COUNT))
+        dev.pixelTracks = cms.InputTag('')
+        dev.pixelTrackCount = cms.InputTag(PIXEL_TRACK_COUNT)
     # one OT module table for the LST input and the EventOfHits
     _hitModuleTable(process)
     seq = process.HLTInitialStepSequence
@@ -652,11 +672,24 @@ def _seedHandoff(process):
         raise RuntimeError('customizeHLTforMkFitAlpaka: the seed hand-off needs the device LST seed fit')
     # the pixel seeds' hits: the CA seeds' creator option, all the hits of generic device pixel seeds
     fourthHit = process.hltInitialStepSeeds.includeFourthHit.value() if _caPixelSeeds(process) else True
+    # the dropOTHitsPurePLS creator refits on the device (the LST seed fit's creator emulation, its field model) when
+    # the creator is the one emulated; else on the host from the legacy pixel tracks
+    creator = lstSeeds.SeedCreatorPSet
+
+    def cval(name, default):
+        return getattr(creator, name).value() if hasattr(creator, name) else default
+    deviceRefit = (cval('ComponentName', '') == 'SeedFromConsecutiveHitsCreator'
+                   and cval('propagator', '') == 'PropagatorWithMaterial' and cval('MinOneOverPtError', 1.) == 1.
+                   and cval('OriginTransverseErrorMultiplier', 1.) == 1.
+                   and not cval('forceKinematicWithRegionDirection', False) and cval('magneticField', '') == '')
     handoff = cms.EDProducer('MkFitAlpakaSeedHandoffK1@alpaka',
                              lstOutput=lstSeeds.lstOutput,
                              pixelSeedStates=build.pixelSeedStates,
                              eventOfHits=build.eventOfHits,
-                             pixelTracks=cms.InputTag('hltPhase2PixelTracks'),
+                             pixelTracks=cms.InputTag('' if deviceRefit else 'hltPhase2PixelTracks'),
+                             esData=cms.ESInputTag('', ES_LABEL),
+                             refitPasses=build.lstSeedFitPasses,
+                             refitBackwardTol=getattr(build, 'lstSeedFitBackwardTol', cms.double(0.01)),
                              otClusters=cms.InputTag(OT_CLUSTERS),
                              Phase2StripCPE=getattr(process, OT_RECHITS).Phase2StripCPE,
                              includeFourthHit=cms.bool(fourthHit),
@@ -666,6 +699,11 @@ def _seedHandoff(process):
                              deviceFitStates=cms.bool(True),
                              SeedCreatorPSet=lstSeeds.SeedCreatorPSet.clone())
     setattr(process, MKFIT_SEEDS, handoff)
+    lstIn = getattr(process, LST_INPUT_DEVICE, None)
+    if not deviceRefit and lstIn is not None and hasattr(lstIn, 'pixelTrackCount'):
+        # the host refits find their pixel track by the hltPhase2PixelTracks index: the LST input uses its map (the
+        # device index can order pixel tracks of equal SoA pT differently)
+        lstIn.pixelTracks = cms.InputTag('hltPhase2PixelTracks')
     build.deviceSeeds = cms.InputTag(MKFIT_SEEDS)
     build.pixelTrackOfSeed = cms.InputTag(MKFIT_SEEDS, 'pixelTrackOfSeed')
     trk = process.hltInitialStepTracks
@@ -722,7 +760,8 @@ def _pixelIndexFromEventOfHits(process):
                     getattr(pset, n)[i] = cms.InputTag(PIX_HITS)
         for l, m in _modules(process):
             _visitTags(m, l + '.', visit)
-        if hasattr(process, MKFIT_SEEDS) and getattr(process, MKFIT_SEEDS).type_() == 'MkFitAlpakaSeedHandoffK1@alpaka':
+        if (hasattr(process, MKFIT_SEEDS) and getattr(process, MKFIT_SEEDS).type_() == 'MkFitAlpakaSeedHandoffK1@alpaka'
+                and getattr(process, MKFIT_SEEDS).pixelTracks.getModuleLabel() != ''):  # the host refits' hit match
             getattr(process, MKFIT_SEEDS).pixelHits = cms.InputTag(PIX_HITS)
         return
     if eoh.pixelRecHits.getModuleLabel() != pix.hits.getModuleLabel():

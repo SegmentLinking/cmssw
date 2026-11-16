@@ -1,4 +1,6 @@
 // Top-level translation unit of the LST seed fit: kernel in src/alpaka/seeds/LstSeedKernels.h.
+#include <algorithm>
+
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
@@ -89,6 +91,34 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
                         cfg);
 #endif
     pcaPixelSeeds(queue, out, n, beam);
+  }
+
+  void refitRowsHostLike(Queue& queue,
+                         ::mkfitdev::ESView const& es,
+                         ::mkfitdev::HitSoAConstView hits,
+                         ::mkfitdev::TrackSoAView rows,
+                         int32_t const* list,
+                         int32_t const* nList,
+                         int32_t maxList,
+                         LstSeedFitConfig const& cfg,
+                         int32_t* status) {
+    if (maxList <= 0)
+      return;
+    // a few rows per event: a small grid, grid-stride over the device count
+    constexpr uint32_t kThreads = 64;
+    const uint32_t blocks =
+        std::min<uint32_t>(cms::alpakatools::divide_up_by(static_cast<uint32_t>(maxList), kThreads), 8u);
+    alpaka::exec<Acc1D>(queue,
+                        cms::alpakatools::make_workdiv<Acc1D>(blocks, kThreads),
+                        KernelRefitRowsHostLike{},
+                        es,
+                        hits,
+                        rows,
+                        list,
+                        nList,
+                        maxList,
+                        cfg,
+                        status);
   }
 
   void pcaPixelSeeds(Queue& queue,

@@ -4,7 +4,9 @@
 //             row = cluster key = legacy rechit index); the CA-row -> key map from the producer's per-module first
 //             key (otCAKeyStart). otSoAQueue: the SoA is deleted early (canDeleteEarly), this module orders its
 //             allocation queue after its reads (MkFitAlpakaReleaseOrder.h).
-//   pLS     : Patatrack's device pixel tracks; seedIdx = the edm pixel track index (pixelTracks' SoA->edm map).
+//   pLS     : Patatrack's device pixel tracks; seedIdx = the edm pixel track index: numbered on the device as
+//             PixelTrackProducerFromSoAAlpaka numbers its tracks (descending pT of the converted ones; the counts from
+//             'pixelTrackCount', MkFitAlpakaPixelTrackCountProducer), or (fallback, 'pixelTracks') its SoA->edm map.
 //             Or (pixelSeeds set) generic device pixel seeds: TrackSoA rows in the format of 'pixelSeedStates' (hits as
 //             (mkFit layer, cluster key) inside-out, the state on the last hit, charge 0 = no seed; seedIdx = row), from
 //             any producer (another seeder, or this module's own CA adapter output); the CA inputs are then not read.
@@ -77,6 +79,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           pcaAnchor_(cfg.getParameter<int>("pcaAnchor")),
           ptFieldCorrection_(cfg.getParameter<bool>("ptFieldCorrection")),
           seedsMode_(!cfg.getParameter<edm::InputTag>("pixelSeeds").label().empty()),
+          checkIndex_(cfg.getParameter<bool>("checkPixelTrackIndex")),
           otCluToken_(consumes(cfg.getParameter<edm::InputTag>("otClusters"))),
           bsToken_(consumes(cfg.getParameter<edm::InputTag>("beamSpot"))),
           mfToken_(esConsumes()),
@@ -95,10 +98,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         }
         return;
       }
-      // the pixel-track (CA) inputs
-      pixToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"));
-      pixCluToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelClusters"));
-      pixHMSToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHits"));
+      // the pixel-track (CA) inputs; the legacy pixel rechits / clusters (pixelRecHits not empty) only for the SoA
+      // row -> cluster key map when pixelSrcRows is not given or empty
+      if (auto const t = cfg.getParameter<edm::InputTag>("pixelSrcRows"); !t.label().empty())
+        srcRowsToken_ = consumes(t);
+      if (auto const t = cfg.getParameter<edm::InputTag>("pixelRecHits"); !t.label().empty()) {
+        pixToken_ = consumes(t);
+        pixCluToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelClusters"));
+        pixHMSToken_ = consumes(t);
+      } else if (srcRowsToken_.isUninitialized()) {
+        throw cms::Exception("Configuration") << "MkFitAlpakaLstInput: neither pixelSrcRows nor pixelRecHits";
+      }
       otHMSToken_ = consumes(cfg.getParameter<edm::InputTag>("otRecHitsSoA"));
       pixelHitsSoAToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelRecHitSrc"));
       otHitsSoAToken_ = consumes(cfg.getParameter<edm::InputTag>("trackerRecHitsSoA"));
@@ -107,10 +117,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       kfCfg_.passes = cfg.getParameter<int>("pixKFPasses");
       kfCfg_.hlBackwardTol = cfg.getParameter<double>("pixKFBackwardTol");
       tracksDevToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracksSoA"));
-      indToEdmToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracks"));
-      recoTracksToken_ = consumes(cfg.getParameter<edm::InputTag>("pixelTracks"));
-      if (auto const t = cfg.getParameter<edm::InputTag>("pixelSrcRows"); !t.label().empty())
-        srcRowsToken_ = consumes(t);
+      if (auto const t = cfg.getParameter<edm::InputTag>("pixelTracks"); !t.label().empty()) {
+        indToEdmToken_ = consumes(t);
+        recoTracksToken_ = consumes(t);
+      }
+      if (auto const c = cfg.getParameter<edm::InputTag>("pixelTrackCount");
+          !c.label().empty() && (indToEdmToken_.isUninitialized() || checkIndex_)) {
+        countToken_ = consumes(c);
+      }
+      if (indToEdmToken_.isUninitialized() && countToken_.isUninitialized())
+        throw cms::Exception("Configuration") << "MkFitAlpakaLstInput: neither pixelTracks nor pixelTrackCount";
+      if (checkIndex_ && (indToEdmToken_.isUninitialized() || countToken_.isUninitialized()))
+        throw cms::Exception("Configuration") << "MkFitAlpakaLstInput: checkPixelTrackIndex needs pixelTracks and "
+                                                 "pixelTrackCount";
       keyStartToken_ = consumes(cfg.getParameter<edm::InputTag>("otCAKeyStart"));
     }
 
@@ -120,7 +139,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<bool>("ptFieldCorrection", false)
           ->setComment("pLS momentum x <Bz>_hits / Bz(0) with the closed-form tracker field");
       desc.add<edm::InputTag>("pixelTracks", edm::InputTag("hltPhase2PixelTracks"))
-          ->setComment("seedIdx = index in these edm pixel tracks (their SoA->edm map)");
+          ->setComment(
+              "fallback: seedIdx = index in these edm pixel tracks (their SoA->edm map). Empty: the index is made "
+              "on the device (pixelTrackCount)");
+      desc.add<bool>("checkPixelTrackIndex", false)
+          ->setComment(
+              "validation: with pixelTracks and pixelTrackCount, the device index is used and compared with "
+              "pixelTracks' map (LogError per event with differences)");
+      desc.add<edm::InputTag>("pixelTrackCount", edm::InputTag(""))
+          ->setComment(
+              "without pixelTracks: {SoA nTracks, converted tracks} of pixelTracksSoA (the same minQuality; "
+              "MkFitAlpakaPixelTrackCountProducer); seedIdx = the descending-pT rank among the converted tracks, as "
+              "PixelTrackProducerFromSoAAlpaka (minNumberOfHits <= 3, no requireQuadsFromConsecutiveLayers)");
       desc.add<int>("pseudoLastHit", 0)
           ->setComment(
               "the pLS last-hit pseudo-hit r3LH; 0 = the outermost hit, 1 = the"
@@ -144,18 +174,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ->setComment("device EventOfHits (hits)");
       desc.add<edm::ESInputTag>("esData", edm::ESInputTag("", "hltMkFitAlpakaES"))
           ->setComment("MkFitAlpaka ES product");
-      desc.add<edm::InputTag>("pixelRecHits", edm::InputTag("hltSiPixelRecHits"));
+      desc.add<edm::InputTag>("pixelRecHits", edm::InputTag("hltSiPixelRecHits"))
+          ->setComment(
+              "the legacy pixel rechits (and their hitsModuleStart) for the host pass when pixelSrcRows is not "
+              "given or empty; empty tag: not read (pixelSrcRows exact, e.g. the identity of the EventOfHits' "
+              "SoA-order rows)");
       desc.add<edm::InputTag>("otClusters", edm::InputTag("hltSiPhase2Clusters"))
           ->setComment("the clusters of the OT rechits");
       desc.add<edm::InputTag>("pixelClusters", edm::InputTag("hltSiPixelClusters"))
-          ->setComment("the clusters of the pixel rechits");
+          ->setComment("the clusters of the pixel rechits (with pixelRecHits)");
       desc.add<edm::InputTag>("otCAKeyStart", edm::InputTag("hltMkFitAlpakaOTRecHits", "caKeyStart"))
           ->setComment(
               "the first OT cluster key per P module from the producer of otRecHitsSoA: the CA-row -> key map");
       desc.add<edm::InputTag>("pixelSrcRows", edm::InputTag(""))
           ->setComment(
-              "the device EventOfHits' pixel key -> SoA row map (producePixelSrcRows), inverted here"
-              "instead of the host pass over the pixel rechits; empty tag or empty map: the host pass");
+              "the device EventOfHits' pixel key -> SoA row map (producePixelSrcRows), inverted here "
+              "instead of the host pass over the legacy pixel rechits (empty tag or empty map: the host pass, which "
+              "needs pixelRecHits)");
       desc.add<edm::InputTag>("otRecHitsSoA", edm::InputTag("hltPhase2OtRecHitsSoA"));
       desc.add<edm::InputTag>("pixelTracksSoA", edm::InputTag("hltPhase2PixelTrackTorchHighPuritySelector"));
       desc.add<edm::InputTag>("pixelRecHitSrc", edm::InputTag("hltPhase2SiPixelRecHitsSoA"))
@@ -188,8 +223,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         return;
       }
       auto& queue = iEvent.queue();
-      auto const& pixHits = iEvent.get(pixToken_);
-      auto const& pixHMS = iEvent.get(pixHMSToken_);
       auto const& otHMS = iEvent.get(otHMSToken_);
       auto const& bs = iEvent.get(bsToken_);
       auto const& mf = iSetup.getData(mfToken_);
@@ -200,7 +233,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         pixelTrackHits.addView(view, view.metadata().size());
       }
       auto const& otClu = iEvent.get(otCluToken_);
-      auto const& pixClu = iEvent.get(pixCluToken_);
 
       // ---- host staging: OT-SoA row -> legacy OT index, pixel SoA row -> legacy cluster key (as
       //      PixelTrackProducerFromSoAAlpaka's hitmap, inverted)
@@ -236,15 +268,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             otKey[row + j] = keyStart[i] + j;
         }
       }
-      // pixel SoA row -> cluster key: the inverse of the device EventOfHits' key -> row map when it is exact (the same
-      // moduleStart[det] + originalId of the same rechits and clusters), else the host pass over the pixel rechits
+      // pixel SoA row -> cluster key: the inverse of the device EventOfHits' key -> row map (the same moduleStart[det] +
+      // originalId of the same rechits and clusters; with the EventOfHits' pixel rows in SoA order the identity), else
+      // the host pass over the legacy pixel rechits
       std::vector<uint32_t> const* srcRows = srcRowsToken_.isUninitialized() ? nullptr : &iEvent.get(srcRowsToken_);
-      if (srcRows && !srcRows->empty()) {
-        const uint32_t nKeys = srcRows->size();
+      if ((srcRows && !srcRows->empty()) || pixToken_.isUninitialized()) {
+        const uint32_t nKeys = srcRows ? srcRows->size() : 0;
+        if (nKeys == 0 && nPixelSoA > 0)
+          throw cms::Exception("MkFitAlpakaLstInput")
+              << "empty pixelSrcRows for " << nPixelSoA << " pixel rechits and no pixelRecHits for the host pass";
         for (uint32_t k = 0; k < nKeys; ++k)
           if (const uint32_t soa = (*srcRows)[k]; soa < nPixelSoA)
             pixKey[soa] = k;
       } else {
+        auto const& pixHits = iEvent.get(pixToken_);
+        auto const& pixHMS = iEvent.get(pixHMSToken_);
+        auto const& pixClu = iEvent.get(pixCluToken_);
         for (auto const& ds : pixHits) {
           if (ds.empty())
             continue;
@@ -283,30 +322,51 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // ---- pass 1: pLS per track + deterministic scan; counts to the host
       const ::reco::TrackBlocksConstView tracksView = iEvent.get(tracksDevToken_).const_view();
       maxTracks_ = tracksView.tracks().metadata().size();
-      {
-        // SoA track -> edm track index (PixelTrackProducerFromSoAAlpaka's map); no host seed collection is read
-        auto const& i2e = iEvent.get(indToEdmToken_);
-        const uint32_t nTrk = iEvent.get(recoTracksToken_).size();
-        const uint32_t n = std::max<uint32_t>(i2e.size(), 1);
-        hSeedOf_.emplace(cms::alpakatools::make_host_buffer<int32_t[]>(queue, n));
-        for (uint32_t t = 0; t < n; ++t)
-          hSeedOf_->data()[t] = (t < i2e.size() && i2e[t] < nTrk) ? int32_t(i2e[t]) : -1;
-        dSeedOf_.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, n));
-        alpaka::memcpy(queue, *dSeedOf_, *hSeedOf_);
-        p.nSeedMap = std::max<uint32_t>(i2e.size(), 1);
+      // the SoA rows of the seed map: PixelTrackProducerFromSoAAlpaka's map (fallback), or the SoA's nTracks
+      std::vector<uint32_t> const* i2e = indToEdmToken_.isUninitialized() ? nullptr : &iEvent.get(indToEdmToken_);
+      std::vector<unsigned int> const* cnt = countToken_.isUninitialized() ? nullptr : &iEvent.get(countToken_);
+      if (checkIndex_) {
+        // validation: the device index is used, the legacy map kept for the comparison in produce
+        checkI2E_ = i2e;
+        checkNTrk_ = iEvent.get(recoTracksToken_).size();
+        i2e = nullptr;
       }
+      if (cnt && cnt->size() != 2)
+        throw cms::Exception("MkFitAlpakaLstInput") << "pixelTrackCount has " << cnt->size() << " entries, expected 2";
+      const uint32_t nMap = i2e ? uint32_t(i2e->size()) : std::min<uint32_t>((*cnt)[0], maxTracks_);
+      p.nSeedMap = std::max<uint32_t>(nMap, 1);
       // with a seed map the kernels skip t >= nSeedMap (= the SoA's nTracks), so buffers and grids stop
       // there instead of at the SoA capacity (122,880 on Phase-2); same outputs
-      if (p.nSeedMap > 0)
-        maxTracks_ = std::min<uint32_t>(maxTracks_, p.nSeedMap);
+      maxTracks_ = std::min<uint32_t>(maxTracks_, p.nSeedMap);
       const uint32_t nChunks = (maxTracks_ + 255) / 256;
+      const uint32_t nCounts = ::mkfitdev::lstin::kNCounts + 2 * nChunks;
+      dCounts_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, nCounts));
+      alpaka::memset(queue, *dCounts_, 0);
+      dSeedOf_.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, p.nSeedMap));
+      if (i2e) {
+        // SoA track -> edm track index (PixelTrackProducerFromSoAAlpaka's map); no host seed collection is read
+        const uint32_t nTrk = iEvent.get(recoTracksToken_).size();
+        hSeedOf_.emplace(cms::alpakatools::make_host_buffer<int32_t[]>(queue, p.nSeedMap));
+        for (uint32_t t = 0; t < p.nSeedMap; ++t)
+          hSeedOf_->data()[t] = (t < i2e->size() && (*i2e)[t] < nTrk) ? int32_t((*i2e)[t]) : -1;
+        alpaka::memcpy(queue, *dSeedOf_, *hSeedOf_);
+        nStates_ = int32_t(nTrk);
+      } else {
+        // the same index made on the device: the descending-pT rank of the converted tracks (counts[14]: their number)
+        dIndexScratch_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(
+            queue, ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::pixelTrackIndexScratchSize(nMap)));
+        ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::launchPixelTrackIndex(
+            queue, tracksView, nMap, p.minQuality, dSeedOf_->data(), dIndexScratch_->data(), dCounts_->data() + 14);
+        nStates_ = int32_t((*cnt)[1]);
+        if (checkIndex_) {
+          hSeedOf_.emplace(cms::alpakatools::make_host_buffer<int32_t[]>(queue, p.nSeedMap));
+          alpaka::memcpy(queue, *hSeedOf_, *dSeedOf_);
+        }
+      }
       mt_ = std::max<uint32_t>(maxTracks_, 1);
       dScratch_.emplace(cms::alpakatools::make_device_buffer<PLS[]>(queue, mt_));
       dPIdx_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, mt_));
       dHOff_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, mt_));
-      const uint32_t nCounts = ::mkfitdev::lstin::kNCounts + 2 * nChunks;
-      dCounts_.emplace(cms::alpakatools::make_device_buffer<uint32_t[]>(queue, nCounts));
-      alpaka::memset(queue, *dCounts_, 0);
       ::mkfitdev::lstseeds::PixSeedOut const* kfOut = nullptr;
       p.pixKF = 0;
       {
@@ -345,7 +405,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds::fitPixelSeeds(
               queue, esD.view(), ev.hits(), dPixIn_->data(), dPixOut_->data(), int32_t(maxTracks_), kfCfg_, beam);
           kfOut = dPixOut_->data();
-          nStates_ = int32_t(iEvent.get(recoTracksToken_).size());
         }
       }
       ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::launchPLS(queue,
@@ -445,6 +504,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         edm::LogWarning("MkFitAlpakaLstInput")
             << "pixKF: pixel tracks without a pLS: > kMaxPixSeedHits hits" << hCounts[8]
             << ", hits without an EventOfHits row " << hCounts[11] << ", hits without an mkFit layer " << hCounts[12];
+      if (checkIndex_) {
+        uint32_t nDiff = 0, nT = 0;
+        auto const& i2e = *checkI2E_;
+        for (uint32_t t = 0; t < p_.nSeedMap; ++t) {
+          const int32_t legacy = (t < i2e.size() && i2e[t] < checkNTrk_) ? int32_t(i2e[t]) : -1;
+          nT += legacy >= 0;
+          nDiff += legacy != hSeedOf_->data()[t];
+        }
+        nCheckEv_ += 1;
+        nCheckDiffEv_ += nDiff > 0;
+        nCheckDiff_ += nDiff;
+        if (nDiff > 0 || nT != uint32_t(nStates_))
+          edm::LogError("MkFitAlpakaLstInput") << "checkPixelTrackIndex: event " << iEvent.id().event() << ": " << nDiff
+                                               << " SoA tracks with another index, legacy tracks " << nT << " ("
+                                               << checkNTrk_ << "), device " << nStates_;
+      }
+      if (!seedsMode_ && (indToEdmToken_.isUninitialized() || checkIndex_) && int32_t(hCounts[14]) != nStates_)
+        throw cms::Exception("MkFitAlpakaLstInput")
+            << "device pixel-track index: " << hCounts[14] << " tracks numbered, pixelTrackCount " << nStates_;
       if (hCounts[3] || hCounts[4] || hCounts[5])
         edm::LogWarning("MkFitAlpakaLstInput")
             << "tracks with > kMaxTrackHits or < 3 hits " << hCounts[3] << ", hits without a legacy key " << hCounts[4]
@@ -469,19 +547,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         alpaka::memcpy(queue, states.buffer(), in.const_buffer());
         iEvent.emplace(statesPutToken_, std::move(states));
       } else {
-        // per EDM pixel track the device creator's state (charge 0 = none: failed, not tight, or option (i) event)
+        // per EDM pixel track the device creator's state (charge 0 = none: failed, not tight, or option (i) event);
+        // nTracks = the pixel-track count
         mkfitdev::TrackSoADeviceCollection states(queue, std::max(nStates_, 1));
         auto statesBuf = states.buffer();
         alpaka::memset(queue, statesBuf, 0x00);
-        if (p_.pixKF)
-          ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::launchPixSeedStates(queue,
-                                                                             states.view(),
-                                                                             nStates_,
-                                                                             maxTracks_,
-                                                                             dSeedOf_->data(),
-                                                                             p_.nSeedMap,
-                                                                             dPixOut_->data(),
-                                                                             dPixIn_->data());
+        ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin::launchPixSeedStates(queue,
+                                                                           states.view(),
+                                                                           nStates_,
+                                                                           maxTracks_,
+                                                                           dSeedOf_->data(),
+                                                                           p_.nSeedMap,
+                                                                           p_.pixKF ? dPixOut_->data() : nullptr,
+                                                                           p_.pixKF ? dPixIn_->data() : nullptr);
         iEvent.emplace(statesPutToken_, std::move(states));
       }
       iEvent.emplace(statusPutToken_, std::move(*status_));
@@ -498,11 +576,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       hCounts_.reset();
       hSeedOf_.reset();
       dSeedOf_.reset();
+      dIndexScratch_.reset();
       dPixIn_.reset();
       dPixOut_.reset();
     }
 
     void endStream() override {
+      if (checkIndex_)
+        edm::LogInfo("MkFitAlpakaLstInput")
+            << "checkPixelTrackIndex (stream): events " << nCheckEv_ << ", with differences " << nCheckDiffEv_
+            << ", SoA tracks with another index " << nCheckDiff_;
       edm::LogInfo("MkFitAlpakaLstInput")
           << "LSTIN_PIXKF totals (stream): devNoPLS " << kfTot_[0] << " pcaInvalid " << kfTot_[1] << " tooManyHits "
           << kfTot_[2] << " rowMismatch " << kfTot_[3] << " pcaOutsideField " << kfTot_[4] << " noRow " << kfTot_[5]
@@ -518,11 +601,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const bool ptFieldCorrection_;
     edm::EDGetTokenT<std::vector<uint32_t>> indToEdmToken_;
     edm::EDGetTokenT<::reco::TrackCollection> recoTracksToken_;
+    edm::EDGetTokenT<std::vector<unsigned int>> countToken_;  // device numbering (without pixelTracks)
     device::EDGetToken<mkfitdev::OTRecHitDeviceCollection> otSoAToken_;
     edm::EDGetTokenT<unsigned long long> otSoAQueueToken_;
     unsigned long nOtSameQueue_ = 0, nOtOrdered_ = 0;
     ::mkfitdev::OTRecHitSoA::ConstView otSoAView_;
-    const bool seedsMode_;  // generic pixel seeds (pixelSeeds) instead of the pixel tracks
+    const bool seedsMode_;   // generic pixel seeds (pixelSeeds) instead of the pixel tracks
+    const bool checkIndex_;  // validation: device pixel-track index vs the legacy map
+    std::vector<uint32_t> const* checkI2E_ = nullptr;
+    uint32_t checkNTrk_ = 0;
+    unsigned long nCheckEv_ = 0, nCheckDiffEv_ = 0, nCheckDiff_ = 0;
     device::EDGetToken<mkfitdev::TrackSoADeviceCollection> pixelSeedsToken_;
     device::EDGetToken<mkfitdev::TrackSoADeviceCollection> plsStatesToken_;  // optional, with pixelSeeds
     bool plsStates_ = false;
@@ -550,6 +638,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     ::mkfitdev::lstin::Params p_{};
     HBuf<int32_t[]> hSeedOf_;
     DBuf<int32_t[]> dSeedOf_;
+    DBuf<uint32_t[]> dIndexScratch_;
     uint32_t maxTracks_ = 0, mt_ = 1;
     device::EDGetToken<mkfitdev::EventOfHitsDeviceCollection> eohToken_;
     device::EDPutToken<mkfitdev::TrackSoADeviceCollection> statesPutToken_;

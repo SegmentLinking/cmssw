@@ -1,9 +1,14 @@
 // K1: the device seed hand-off. The LST track candidates stay on the device and become the mkFit seed rows of the
 // build module (deviceSeeds) without the TC copy to the host. The seeds equal the light LSTOutputConverter +
 // MkFitSeedConverter ones, hit order as DEVIATIONS DEV-8 (MkFitAlpakaSeedHandoffK1Kernels.h).
-// acquire() runs K1 and copies back one small row record per TC plus the host requests (the dropOTHitsPurePLS creator
-// refits, placeholder states: a few per event); produce() makes those states with the CMSSW objects of
-// LSTOutputConverter, numbers the kept rows in TC order and compacts them on the device.
+// acquire() runs K1 and copies back one small row record per TC plus the host requests (placeholder states, a few per
+// event); produce() makes those states with the CMSSW objects of LSTOutputConverter, numbers the kept rows in TC order
+// and compacts them on the device.
+// Pixel tracks: without 'pixelTracks' (default) nothing of the legacy pixel chain is read: the pixel-track count is the
+// pixel seed states' nTracks, the dropOTHitsPurePLS creator refits run on the device (refitRowsHostLike, the device
+// creator emulation of the LST seed fit), a pixel placeholder state is made from the EventOfHits position and the
+// geometry. With 'pixelTracks' (fallback, the earlier behaviour): the legacy count, host refits with the SeedCreator on
+// the legacy pixel tracks' TrackingRecHits (matched through 'pixelHits').
 // Products: the seed rows (TrackSoADeviceCollection, label = row) and pixelTrackOfSeed (host, one entry per seed).
 #include <algorithm>
 #include <cstring>
@@ -34,6 +39,7 @@
 #include "Geometry/TrackerNumberingBuilder/interface/GeometricDet.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDGetToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EDPutToken.h"
+#include "HeterogeneousCore/AlpakaCore/interface/alpaka/ESGetToken.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/Event.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/EventSetup.h"
 #include "HeterogeneousCore/AlpakaCore/interface/alpaka/MakerMacros.h"
@@ -49,6 +55,8 @@
 #include "RecoTracker/MkFit/interface/MkFitGeometry.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/EventOfHitsProduct.h"
 #include "RecoTracker/MkFitAlpaka/interface/alpaka/TrackProduct.h"
+#include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
+#include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 #include "RecoTracker/MkFitCMS/interface/LayerNumberConverter.h"
 #include "RecoTracker/MkFitCore/interface/Track.h"
 #include "RecoTracker/MkFitCore/interface/TrackerInfo.h"
@@ -155,7 +163,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           lstToken_(consumes(cfg.getParameter<edm::InputTag>("lstOutput"))),
           statesToken_(consumes(cfg.getParameter<edm::InputTag>("pixelSeedStates"))),
           eohToken_(consumes(cfg.getParameter<edm::InputTag>("eventOfHits"))),
-          pixelTracksToken_(consumes(cfg.getParameter<edm::InputTag>("pixelTracks"))),
           otClustersToken_(consumes(cfg.getParameter<edm::InputTag>("otClusters"))),
           otCpeToken_(esConsumes(cfg.getParameter<edm::ESInputTag>("Phase2StripCPE"))),
           mfToken_(esConsumes()),
@@ -171,8 +178,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                          consumesCollector())),
           seedsPutToken_(produces()),
           pixOfSeedPutToken_(produces("pixelTrackOfSeed")) {
-      if (auto const t = cfg.getParameter<edm::InputTag>("pixelHits"); !t.label().empty())
-        pixelHitsToken_ = consumes(t);
+      if (auto const t = cfg.getParameter<edm::InputTag>("pixelTracks"); !t.label().empty()) {
+        pixelTracksToken_ = consumes(t);
+        if (auto const h = cfg.getParameter<edm::InputTag>("pixelHits"); !h.label().empty())
+          pixelHitsToken_ = consumes(h);
+      } else {
+        esDataToken_ = esConsumes(cfg.getParameter<edm::ESInputTag>("esData"));
+        refitCfg_.originPrior = ::mkfitdev::lstseeds::kHostCreator;
+        refitCfg_.passes = cfg.getParameter<int>("refitPasses");
+        refitCfg_.hlBackwardTol = cfg.getParameter<double>("refitBackwardTol");
+      }
     }
 
     static void fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
@@ -181,13 +196,24 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       desc.add<edm::InputTag>("pixelSeedStates", edm::InputTag("hltInputLSTDevice", "pixelSeedStates"))
           ->setComment("device pLS states + pixel seed hit lists per pixel track (hltInputLSTDevice)");
       desc.add<edm::InputTag>("eventOfHits", edm::InputTag("hltMkFitEventOfHits"));
-      desc.add<edm::InputTag>("pixelTracks", edm::InputTag("hltPhase2PixelTracks"));
+      desc.add<edm::InputTag>("pixelTracks", edm::InputTag(""))
+          ->setComment(
+              "fallback: the legacy pixel tracks (their count; the dropOTHitsPurePLS creator refits and pixel "
+              "placeholder states on the host from their TrackingRecHits). Empty: no legacy pixel input (the count "
+              "from pixelSeedStates, the refits on the device)");
       desc.add<edm::InputTag>("otClusters", edm::InputTag("hltSiPhase2Clusters"));
       desc.add<edm::InputTag>("pixelHits", edm::InputTag(""))
           ->setComment(
               "the map of the EventOfHits' pixel rows to the legacy pixel rechits when the rows are not the cluster "
               "keys (EventOfHits pixelRowsFromSoA): the host requests' pixel hits are matched by the rows' clusters; "
-              "empty: rows = cluster keys");
+              "empty: rows = cluster keys. Read only with pixelTracks");
+      desc.add<edm::ESInputTag>("esData", edm::ESInputTag("", "hltMkFitAlpakaES"))
+          ->setComment("MkFitAlpaka ES product (the device refits, without pixelTracks)");
+      desc.add<int>("refitPasses", 1)
+          ->setComment(
+              "device refit: the field model as the build module's lstSeedFitPasses (1 = B at the step start)");
+      desc.add<double>("refitBackwardTol", 0.01)
+          ->setComment("device refit: cm, 'against the momentum' tolerance (as lstSeedFitBackwardTol)");
       desc.add<edm::ESInputTag>("Phase2StripCPE", edm::ESInputTag("phase2StripCPEESProducer", "Phase2StripCPE"));
       desc.add<bool>("includeFourthHit", true);
       desc.add<bool>("dropOTHitsPurePLS", true);
@@ -214,19 +240,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       cap_ = uint32_t(tcs.const_view().metadata().size());
       DevTables const& T = tables(queue, iSetup);
       K1Config cfg{};
-      cfg.nPixTracks = int32_t(iEvent.get(pixelTracksToken_).size());
+      const bool legacy = !pixelTracksToken_.isUninitialized();
+      cfg.nPixTracks = legacy ? int32_t(iEvent.get(pixelTracksToken_).size()) : -1;
       cfg.nStates = int32_t(states.const_view().metadata().size());
       cfg.nLayers = T.nLayers;
       cfg.includeFourthHit = includeFourthHit_;
       cfg.dropOTHitsPurePLS = dropOTHitsPurePLS_;
       cfg.maxITHitsToDrop = maxITHitsToDrop_;
       cfg.deviceFitStates = deviceFitStates_;
+      cfg.deviceRefit = !legacy;
       const uint32_t c = std::max<uint32_t>(cap_, 1);
       rows_.emplace(queue, int32_t(c));
       dInfo_.emplace(cms::alpakatools::make_device_buffer<RowInfo[]>(queue, c));
       dReq_.emplace(cms::alpakatools::make_device_buffer<HostReq[]>(queue, kMaxHostReq));
       dCnt_.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, kNCounters + 2));
       alpaka::memset(queue, *dCnt_, 0);
+      if (!legacy) {
+        dRefitList_.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, c));
+        dRefitStatus_.emplace(cms::alpakatools::make_device_buffer<int32_t[]>(queue, c));
+      }
       ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1::launchK1Rows(queue,
                                                                tcs.const_view(),
                                                                cap_,
@@ -241,7 +273,23 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                                dReq_->data(),
                                                                dCnt_->data() + kNCounters,
                                                                dCnt_->data(),
-                                                               dCnt_->data() + kNCounters + 1);
+                                                               dCnt_->data() + kNCounters + 1,
+                                                               legacy ? nullptr : dRefitList_->data());
+      if (!legacy) {
+        // the dropOTHitsPurePLS creator refits on the device, then their rows' kind
+        auto const& esD = iSetup.getData(esDataToken_);
+        ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds::refitRowsHostLike(queue,
+                                                                            esD.view(),
+                                                                            eoh.const_view().hits(),
+                                                                            rows_->view(),
+                                                                            dRefitList_->data(),
+                                                                            dCnt_->data() + kCntRefitList,
+                                                                            int32_t(c),
+                                                                            refitCfg_,
+                                                                            dRefitStatus_->data());
+        ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1::launchK1RefitDone(
+            queue, dRefitList_->data(), dRefitStatus_->data(), dInfo_->data(), dCnt_->data());
+      }
       hInfo_.emplace(cms::alpakatools::make_host_buffer<RowInfo[]>(queue, c));
       hReq_.emplace(cms::alpakatools::make_host_buffer<HostReq[]>(queue, kMaxHostReq));
       hCnt_.emplace(cms::alpakatools::make_host_buffer<int32_t[]>(queue, kNCounters + 2));
@@ -261,6 +309,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             << " error rows (no seed: no pixel seed list / a hit without an mkFit row)";
       nReqOvf_ += cnt[0];
       nErr_ += cnt[1];
+      nRefit_ += cnt[kCntRefit] + cnt[kCntRefitFailed];
+      nRefitFailed_ += cnt[kCntRefitFailed];
       RowInfo const* info = hInfo_->data();
       // host states for the requests (indexed by TC row)
       std::vector<int32_t> reqOfRow(nTC, -1);
@@ -274,7 +324,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         mkFitGeom_ = &iSetup.getData(mkFitGeomToken_);
         auto const& mf = iSetup.getData(mfToken_);
         auto const& geom = iSetup.getData(tGeomToken_);
-        auto const& pixelTracks = iEvent.get(pixelTracksToken_);
+        static const reco::TrackCollection kNoTracks;
+        const bool legacy = !pixelTracksToken_.isUninitialized();
+        auto const& pixelTracks = legacy ? iEvent.get(pixelTracksToken_) : kNoTracks;
         pixelRowHits_ = pixelHitsToken_.isUninitialized() ? nullptr : &iEvent.get(pixelHitsToken_).hits();
         std::optional<Phase2TrackerRecHitOnDemand> otOnDemand;
         for (int32_t q = 0; q < nReq; ++q) {
@@ -289,6 +341,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             const auto hit = otOnDemand->make(uint32_t(r.hot[0].index));
             ok = convert(placeholder(hit.localPosition(), hit.geographicalId().rawId()), &hit.det()->surface(), mf, hs);
             ++nOTState_;
+          } else if (!legacy && r.kind == kHostPixState) {
+            // the placeholder on the last hit's module at its EventOfHits position (no legacy pixel rechit)
+            if (auto const* d = pixelDet(r, geom)) {
+              const auto lp = d->surface().toLocal(GlobalPoint(r.pos[0], r.pos[1], r.pos[2]));
+              ok = convert(placeholder(LocalPoint(lp.x(), lp.y()), d->geographicalId().rawId()), &d->surface(), mf, hs);
+              ++nPixState_;
+            } else {
+              ++nHostMiss_;
+            }
           } else if (r.e >= 0 && size_t(r.e) < pixelTracks.size()) {
             auto const hits = trackHits(pixelTracks[r.e], r, geom);
             if (int(hits.size()) == r.nHot) {
@@ -367,6 +428,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       dInfo_.reset();
       dReq_.reset();
       dCnt_.reset();
+      dRefitList_.reset();
+      dRefitStatus_.reset();
     }
 
     void endStream() override {
@@ -437,6 +500,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return out;
     }
     int mkFitLayer(DetId id) const { return mkFitGeom_ ? mkFitGeom_->mkFitLayerNumber(id) : -1; }
+    // the module of a state request's last hit (mkFit layer, short id = det - the layer's first det table row)
+    GeomDet const* pixelDet(HostReq const& r, TrackerGeometry const& geom) const {
+      if (r.nHot < 1 || r.det < 0 || !mkFitGeom_)
+        return nullptr;
+      auto const& ti = mkFitGeom_->trackerInfo();
+      const int layer = r.hot[r.nHot - 1].layer;
+      if (layer < 0 || layer >= ti.n_layers())
+        return nullptr;
+      int base = 0;
+      for (int l = 0; l < layer; ++l)
+        base += ti[l].n_modules();
+      const int sid = r.det - base;
+      if (sid < 0 || sid >= ti[layer].n_modules())
+        return nullptr;
+      return geom.idToDet(DetId(ti[layer].module_info(sid).detid));
+    }
     // the cluster key of an mkFit hit index (pixel: the key of the row's legacy rechit with pixelHits)
     uint32_t clusterKey(BaseTrackerRecHit const& b, int index) const {
       if (!pixelRowHits_ || !b.firstClusterRef().isPixel())
@@ -479,7 +558,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const device::EDGetToken<lst::TrackCandidatesBaseDeviceCollection> lstToken_;
     const device::EDGetToken<mkfitdev::TrackSoADeviceCollection> statesToken_;
     const device::EDGetToken<mkfitdev::EventOfHitsDeviceCollection> eohToken_;
-    const edm::EDGetTokenT<reco::TrackCollection> pixelTracksToken_;
+    edm::EDGetTokenT<reco::TrackCollection> pixelTracksToken_;  // fallback only
     const edm::EDGetTokenT<Phase2TrackerCluster1DCollectionNew> otClustersToken_;
     edm::EDGetTokenT<MkFitClusterIndexToHit> pixelHitsToken_;
     std::vector<TrackingRecHit const*> const* pixelRowHits_ = nullptr;  // this event's (produce)
@@ -488,6 +567,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     const edm::ESGetToken<TrackerGeometry, TrackerDigiGeometryRecord> tGeomToken_;
     const edm::ESGetToken<TrackerTopology, TrackerTopologyRcd> tTopoToken_;
     const edm::ESGetToken<MkFitGeometry, TrackerRecoGeometryRecord> mkFitGeomToken_;
+    device::ESGetToken<::mkfitdev::ESData<Device>, TrackerRecoGeometryRecord> esDataToken_;  // device refits
+    ::mkfitdev::lstseeds::LstSeedFitConfig refitCfg_;
     const bool includeFourthHit_;
     const bool dropOTHitsPurePLS_;
     const int maxITHitsToDrop_;
@@ -504,6 +585,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::optional<cms::alpakatools::device_buffer<Device, RowInfo[]>> dInfo_;
     std::optional<cms::alpakatools::device_buffer<Device, HostReq[]>> dReq_;
     std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> dCnt_;
+    std::optional<cms::alpakatools::device_buffer<Device, int32_t[]>> dRefitList_, dRefitStatus_;
     std::optional<cms::alpakatools::host_buffer<RowInfo[]>> hInfo_;
     std::optional<cms::alpakatools::host_buffer<HostReq[]>> hReq_;
     std::optional<cms::alpakatools::host_buffer<int32_t[]>> hCnt_;

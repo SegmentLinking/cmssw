@@ -1,11 +1,13 @@
 // Kernels of the device LST input: see MkFitAlpakaLstInputKernels.h.
 #include <Eigen/Core>  // before any SoA header (Eigen columns of TracksSoA)
 #include <cmath>
+#include <cstring>
 #include <numbers>
 
 #include <alpaka/alpaka.hpp>
 
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
+#include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
 #include "RecoTracker/MkFitAlpaka/interface/hits/DeviceHitInput.h"
@@ -611,6 +613,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                                     uint32_t nSeedMap,
                                     ::mkfitdev::lstseeds::PixSeedOut const* kf,
                                     ::mkfitdev::lstseeds::PixSeedIn const* in) const {
+        if (once_per_grid(acc))
+          states.nTracks() = nStates;  // the pixel-track count (the seed hand-off's pixelSeedIndex range)
         for (uint32_t t : uniform_elements(acc, maxTracks)) {
           if (t >= nSeedMap)
             continue;
@@ -624,7 +628,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
               states[e].hits().hot[k] = in[t].hot[k];
             states[e].nTotalHits() = static_cast<int16_t>(nh);
           }
-          if (kf[t].status != ::mkfitdev::lstseeds::kPixOk)
+          if (kf == nullptr || kf[t].status != ::mkfitdev::lstseeds::kPixOk)
             continue;
           for (int k = 0; k < 6; ++k)
             states[e].params().v[k] = kf[t].par[k];
@@ -841,11 +845,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                            uint32_t nSeedMap,
                            ::mkfitdev::lstseeds::PixSeedOut const* kf,
                            ::mkfitdev::lstseeds::PixSeedIn const* in) {
-    if (maxTracks == 0)
-      return;
     constexpr uint32_t kBlock = 128;
     alpaka::exec<Acc1D>(queue,
-                        make_workdiv<Acc1D>(divide_up_by(maxTracks, kBlock), kBlock),
+                        make_workdiv<Acc1D>(divide_up_by(maxTracks > 0 ? maxTracks : 1u, kBlock), kBlock),
                         KernelPixSeedStates{},
                         states,
                         nStates,
@@ -951,6 +953,186 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                         scratch,
                         counts);
     scanPLS(queue, n, scratch, pIdx, hOff, counts);
+  }
+
+  namespace {
+    // PixelTrackProducerFromSoAAlpaka's selection of SoA track t (the tracks it converts, minNumberOfHits <= 3): quality
+    // >= minQuality and a finite converted track (its check: chi2 * ndof and the momentum, i.e. phi, q/pT != 0 and
+    // cot(theta); the positions tip / zip do not enter it)
+    template <typename TTk>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE bool legacyPixelTrack(TTk const& tk, uint32_t t, int minQuality) {
+      if (static_cast<int>(tk[t].quality()) < minQuality)
+        return false;
+      const auto st = tk[t].state();
+      const float phi0 = st(0), qpt = st(2), cot = st(3);
+      return std::isfinite(tk[t].chi2()) && std::isfinite(phi0) && std::isfinite(qpt) && qpt != 0.f &&
+             std::isfinite(cot);
+    }
+
+    // the legacy numbering is the rank in descending pT (the SoA pt column): a histogram on the pT bits (bucket order =
+    // pT order), the bucket offsets, then the exact rank inside the bucket (ties by SoA index)
+    constexpr uint32_t kPtBucketBits = 14;
+    constexpr uint32_t kPtBuckets = 1u << kPtBucketBits;  // 1024 per octave, pT 0.25 .. 16384 GeV (clamped outside)
+    constexpr uint32_t kPtBucketChunk = 256;
+    constexpr uint32_t kPtBucketChunks = kPtBuckets / kPtBucketChunk;
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE uint32_t ptBucketDesc(float pt) {
+      // positive floats order as their bits; NaN / non-positive into the lowest-pT bucket
+      constexpr uint32_t kBase = 0x3e800000u;  // 0.25f
+      uint32_t bits;
+      memcpy(&bits, &pt, sizeof(bits));
+      uint32_t b = 0;
+      if (pt > 0.f && bits > kBase)
+        b = (bits - kBase) >> (23 - 10);
+      b = b < kPtBuckets ? b : kPtBuckets - 1;
+      return kPtBuckets - 1 - b;
+    }
+
+    struct KernelPixelTrackCount {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::reco::TrackBlocksConstView tracks,
+                                    uint32_t capacity,
+                                    int minQuality,
+                                    uint32_t* counts) const {
+        auto const tk = tracks.tracks();
+        const uint32_t nT = uint32_t(tk.nTracks()) < capacity ? uint32_t(tk.nTracks()) : capacity;
+        if (once_per_grid(acc))
+          counts[0] = nT;
+        for (uint32_t t : uniform_elements(acc, nT))
+          if (legacyPixelTrack(tk, t, minQuality))
+            alpaka::atomicAdd(acc, &counts[1], 1u, alpaka::hierarchy::Blocks{});
+      }
+    };
+
+    struct KernelPtBucketCount {
+      ALPAKA_FN_ACC void operator()(
+          Acc1D const& acc, ::reco::TrackBlocksConstView tracks, uint32_t nT, int minQuality, uint32_t* cnt) const {
+        auto const tk = tracks.tracks();
+        for (uint32_t t : uniform_elements(acc, nT))
+          if (legacyPixelTrack(tk, t, minQuality))
+            alpaka::atomicAdd(acc, &cnt[ptBucketDesc(tk[t].pt())], 1u, alpaka::hierarchy::Blocks{});
+      }
+    };
+
+    // bucket offsets: per chunk the sum, a serial scan over the chunks (and the total), per bucket the offset
+    struct KernelPtBucketChunkSum {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, uint32_t const* cnt, uint32_t* chunk) const {
+        for (uint32_t c : uniform_elements(acc, kPtBucketChunks)) {
+          uint32_t n = 0;
+          for (uint32_t b = c * kPtBucketChunk; b < (c + 1) * kPtBucketChunk; ++b)
+            n += cnt[b];
+          chunk[c] = n;
+        }
+      }
+    };
+    struct KernelPtBucketChunkScan {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, uint32_t* chunk, uint32_t* total) const {
+        if (once_per_grid(acc)) {
+          uint32_t run = 0;
+          for (uint32_t c = 0; c < kPtBucketChunks; ++c) {
+            const uint32_t n = chunk[c];
+            chunk[c] = run;
+            run += n;
+          }
+          *total = run;
+        }
+      }
+    };
+    struct KernelPtBucketOffsets {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc, uint32_t const* cnt, uint32_t const* chunk, uint32_t* off) const {
+        for (uint32_t c : uniform_elements(acc, kPtBucketChunks)) {
+          uint32_t run = chunk[c];
+          for (uint32_t b = c * kPtBucketChunk; b < (c + 1) * kPtBucketChunk; ++b) {
+            off[b] = run;
+            run += cnt[b];
+          }
+        }
+      }
+    };
+    struct KernelPtBucketFill {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::reco::TrackBlocksConstView tracks,
+                                    uint32_t nT,
+                                    int minQuality,
+                                    uint32_t const* off,
+                                    uint32_t* fill,
+                                    int32_t* list) const {
+        auto const tk = tracks.tracks();
+        for (uint32_t t : uniform_elements(acc, nT)) {
+          if (!legacyPixelTrack(tk, t, minQuality))
+            continue;
+          const uint32_t b = ptBucketDesc(tk[t].pt());
+          list[off[b] + alpaka::atomicAdd(acc, &fill[b], 1u, alpaka::hierarchy::Blocks{})] = int32_t(t);
+        }
+      }
+    };
+    struct KernelPtRank {
+      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                    ::reco::TrackBlocksConstView tracks,
+                                    uint32_t nT,
+                                    int minQuality,
+                                    uint32_t const* cnt,
+                                    uint32_t const* off,
+                                    int32_t const* list,
+                                    int32_t* seedOf) const {
+        auto const tk = tracks.tracks();
+        for (uint32_t t : uniform_elements(acc, nT)) {
+          if (!legacyPixelTrack(tk, t, minQuality))
+            continue;
+          const float pt = tk[t].pt();
+          const uint32_t b = ptBucketDesc(pt);
+          uint32_t rank = off[b];
+          for (uint32_t k = off[b]; k < off[b] + cnt[b]; ++k) {
+            const uint32_t j = uint32_t(list[k]);
+            const float ptj = tk[j].pt();
+            rank += ptj > pt || (ptj == pt && j < t);
+          }
+          seedOf[t] = int32_t(rank);
+        }
+      }
+    };
+  }  // namespace
+
+  void launchPixelTrackCount(
+      Queue& queue, ::reco::TrackBlocksConstView tracks, uint32_t capacity, int minQuality, uint32_t* counts) {
+    constexpr uint32_t kBlock = 256;
+    alpaka::exec<Acc1D>(queue,
+                        make_workdiv<Acc1D>(divide_up_by(capacity > 0 ? capacity : 1u, kBlock), kBlock),
+                        KernelPixelTrackCount{},
+                        tracks,
+                        capacity,
+                        minQuality,
+                        counts);
+  }
+
+  uint32_t pixelTrackIndexScratchSize(uint32_t nT) { return 3 * kPtBuckets + kPtBucketChunks + 1 + (nT > 0 ? nT : 1u); }
+
+  void launchPixelTrackIndex(Queue& queue,
+                             ::reco::TrackBlocksConstView tracks,
+                             uint32_t nT,
+                             int minQuality,
+                             int32_t* seedOf,
+                             uint32_t* scratch,
+                             uint32_t* nSelected) {
+    // scratch: cnt, fill (zeroed here), off [kPtBuckets] each, chunk sums [kPtBucketChunks], the total, the list [nT]
+    uint32_t* cnt = scratch;
+    uint32_t* fill = cnt + kPtBuckets;
+    uint32_t* off = fill + kPtBuckets;
+    uint32_t* chunk = off + kPtBuckets;
+    int32_t* list = reinterpret_cast<int32_t*>(chunk + kPtBucketChunks + 1);
+    auto counters = cms::alpakatools::make_device_view(queue, scratch, 2 * kPtBuckets);
+    alpaka::memset(queue, counters, 0x00);
+    auto index = cms::alpakatools::make_device_view(queue, seedOf, nT > 0 ? nT : 1u);
+    alpaka::memset(queue, index, 0xff);  // -1
+    constexpr uint32_t kBlock = 128;
+    const uint32_t blocks = divide_up_by(nT > 0 ? nT : 1u, kBlock);
+    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(blocks, kBlock), KernelPtBucketCount{}, tracks, nT, minQuality, cnt);
+    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, kPtBucketChunks), KernelPtBucketChunkSum{}, cnt, chunk);
+    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, 1), KernelPtBucketChunkScan{}, chunk, nSelected);
+    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, kPtBucketChunks), KernelPtBucketOffsets{}, cnt, chunk, off);
+    alpaka::exec<Acc1D>(
+        queue, make_workdiv<Acc1D>(blocks, kBlock), KernelPtBucketFill{}, tracks, nT, minQuality, off, fill, list);
+    alpaka::exec<Acc1D>(
+        queue, make_workdiv<Acc1D>(blocks, kBlock), KernelPtRank{}, tracks, nT, minQuality, cnt, off, list, seedOf);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin

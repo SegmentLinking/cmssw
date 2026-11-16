@@ -83,8 +83,9 @@ namespace mkfitdev::lstin {
   // 8 KF inputs not built: > kMaxPixSeedHits hits (no pLS),
   // 9 hits whose mkFit row position differs from the Patatrack hit by > 10 um (row-map check, expect 0),
   // 10 TSCBL outside the closed-form field volume (part of 7), 11 KF inputs not built: a hit without a key or beyond
-  // the mkFit hit rows, 12 KF inputs not built: a hit without an mkFit layer
-  constexpr int kNCounts = 14;
+  // the mkFit hit rows, 12 KF inputs not built: a hit without an mkFit layer; 14 the pixel tracks numbered on the device
+  // (launchPixelTrackIndex; = the pixel-track count)
+  constexpr int kNCounts = 15;
 
 }  // namespace mkfitdev::lstin
 
@@ -109,7 +110,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
 
   // the device creator's state on the last hit per EDM pixel track (row = seedOfTrack[t], the
   // hltPhase2PixelTracks index) for the build module's hits-only pLS seeds; rows of failed / absent tracks keep charge 0.
-  // in != nullptr: every row with a pixel seed list (nh >= 2) also gets its hits (nTotalHits, hits)
+  // in != nullptr: every row with a pixel seed list (nh >= 2) also gets its hits (nTotalHits, hits); kf == nullptr: no
+  // states (charge 0). nTracks = nStates (the pixel-track count; also for maxTracks = 0)
   void launchPixSeedStates(Queue& queue,
                            ::mkfitdev::TrackSoAView states,
                            int32_t nStates,
@@ -155,6 +157,25 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstin {
                              uint32_t* pIdx,
                              uint32_t* hOff,
                              uint32_t* counts);
+
+  // the pixel-track counts without the legacy pixel tracks: counts[0] = the SoA's nTracks (at most capacity), counts[1]
+  // += the tracks PixelTrackProducerFromSoAAlpaka converts (quality >= minQuality, finite; minNumberOfHits <= 3)
+  void launchPixelTrackCount(
+      Queue& queue, ::reco::TrackBlocksConstView tracks, uint32_t capacity, int minQuality, uint32_t* counts);
+
+  // the legacy pixel-track index of every SoA track t < nT without the legacy collection: seedOf[t] = the rank of the
+  // track in descending pT among the converted ones (as PixelTrackProducerFromSoAAlpaka's sort; equal pT by SoA index,
+  // where std::sort leaves the order unspecified: such pairs can be swapped w.r.t. the legacy collection, ~0.07 per
+  // ttbar PU200 event; the device consumers use the index only as a label), -1 for the others; *nSelected = their
+  // number. scratch: pixelTrackIndexScratchSize(nT) device words
+  uint32_t pixelTrackIndexScratchSize(uint32_t nT);
+  void launchPixelTrackIndex(Queue& queue,
+                             ::reco::TrackBlocksConstView tracks,
+                             uint32_t nT,
+                             int minQuality,
+                             int32_t* seedOf,
+                             uint32_t* scratch,
+                             uint32_t* nSelected);
 
   // pass 2: the OT hits from the device OT rechit SoA (rows [0, nOT) = SoA rows = cluster keys, with its global
   // position, DetId and cluster size), then the pLS rows and their pseudo-hits

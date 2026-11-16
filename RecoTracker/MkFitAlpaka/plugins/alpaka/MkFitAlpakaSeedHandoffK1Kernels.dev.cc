@@ -6,6 +6,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/LSTCore/interface/Common.h"
+#include "RecoTracker/MkFitAlpaka/interface/seeds/alpaka/LstSeedFit.h"
 
 #include "MkFitAlpakaSeedHandoffK1Kernels.h"
 
@@ -36,12 +37,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
                                     HostReq* req,
                                     int32_t* nReq,
                                     int32_t* counters,
-                                    int32_t* nTCOut) const {
+                                    int32_t* nTCOut,
+                                    int32_t* refitList) const {
         const uint32_t nTC = tcs.nTrackCandidates() < tcCapacity ? tcs.nTrackCandidates() : tcCapacity;
         if (cms::alpakatools::once_per_grid(acc))
           *nTCOut = int32_t(nTC);
         const uint32_t nPixel = mk.nPixel();
         const uint32_t nRows = mk.metadata().size();
+        // the pixel-track count: the legacy collection's size, or the pixel seed states' (one row per pixel track)
+        const int32_t nPixTracks = cfg.nPixTracks >= 0 ? cfg.nPixTracks : states.nTracks();
         // det table index of the hit (layer, index); -1: no mkFit row / layer / module
         auto detOf = [&](int layer, int index) -> int32_t {
           if (layer < 0 || layer >= cfg.nLayers || index < 0)
@@ -68,7 +72,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
           bool err = false;
           if (!isT5orT4) {
             e = int32_t(tcs.pixelSeedIndex()[r]);
-            if (tcs.pixelSeedIndex()[r] >= uint32_t(cfg.nPixTracks))
+            if (tcs.pixelSeedIndex()[r] >= uint32_t(nPixTracks))
               continue;  // as LSTOutputConverter: no pixel seed, the TC is skipped
             const int np = e < cfg.nStates ? states[e].nTotalHits() : 0;
             if (np < 2) {
@@ -105,6 +109,17 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
             q.nHot = nh;
             for (int k = 0; k < nh; ++k)
               q.hot[k] = hs[k].hot;
+            // the last hit's det and position (the pixel placeholder without the legacy pixel tracks)
+            q.det = nh > 0 ? hs[nh - 1].det : -1;
+            q.pos[0] = q.pos[1] = q.pos[2] = 0.f;
+            if (nh > 0) {
+              const int layer = hs[nh - 1].hot.layer;
+              const uint32_t hrow =
+                  layerIsPixel[layer] ? uint32_t(hs[nh - 1].hot.index) : nPixel + uint32_t(hs[nh - 1].hot.index);
+              q.pos[0] = mk[hrow].x();
+              q.pos[1] = mk[hrow].y();
+              q.pos[2] = mk[hrow].z();
+            }
             ri.kind = int8_t(kind);
           };
           auto writeHits = [&](ListHit const* hs, int nh) {
@@ -138,14 +153,20 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
               pixelSeed();
               continue;
             }
-            // the creator refit on the IT hits (host); the seed's hits are those IT hits in list order
+            // the creator refit on the IT hits (host, or the device with deviceRefit); the seed's hits are those IT hits
+            // in list order
             ListHit it[kReqHits];
             int ni = 0;
             for (int k = 0; k < nPix && ni < kReqHits; ++k)
               if (!dets[list[k].det].isOT)
                 it[ni++] = list[k];
             writeHits(it, ni);
-            request(kHostRefit, e, it, ni);
+            if (cfg.deviceRefit) {
+              ri.kind = kDeviceRefit;
+              refitList[alpaka::atomicAdd(acc, &counters[kCntRefitList], 1, alpaka::hierarchy::Blocks{})] = int32_t(r);
+            } else {
+              request(kHostRefit, e, it, ni);
+            }
             continue;
           }
           // T5 / T4 / pT3 / pT5, hits in LSTOutputConverter's order (equal keys as DEVIATIONS DEV-8):
@@ -271,6 +292,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
       }
     };
 
+    // after refitRowsHostLike: a refit row whose creator succeeded is complete on the device, a failed one has no seed
+    struct KernelK1RefitDone {
+      ALPAKA_FN_ACC void operator()(
+          Acc1D const& acc, int32_t const* refitList, int32_t const* status, RowInfo* info, int32_t* counters) const {
+        for (int32_t i : uniform_elements(acc, counters[kCntRefitList])) {
+          const int32_t r = refitList[i];
+          const bool ok = status[r] == ::mkfitdev::lstseeds::kPixOk;
+          info[r].kind = ok ? kDevice : kSkip;
+          alpaka::atomicAdd(acc, &counters[ok ? kCntRefit : kCntRefitFailed], 1, alpaka::hierarchy::Blocks{});
+        }
+      }
+    };
+
     struct KernelK1Compact {
       ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                     ::mkfitdev::TrackSoAConstView rows,
@@ -368,7 +402,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
                     HostReq* req,
                     int32_t* nReq,
                     int32_t* counters,
-                    int32_t* nTCOut) {
+                    int32_t* nTCOut,
+                    int32_t* refitList) {
     constexpr uint32_t kBlock = 64;  // a 96-entry local hit list per thread
     const uint32_t blocks = divide_up_by(tcCapacity > 0 ? tcCapacity : 1u, kBlock);
     alpaka::exec<Acc1D>(queue,
@@ -387,7 +422,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::k1 {
                         req,
                         nReq,
                         counters,
-                        nTCOut);
+                        nTCOut,
+                        refitList);
+  }
+
+  void launchK1RefitDone(
+      Queue& queue, int32_t const* refitList, int32_t const* status, RowInfo* info, int32_t* counters) {
+    alpaka::exec<Acc1D>(queue, make_workdiv<Acc1D>(1, 128), KernelK1RefitDone{}, refitList, status, info, counters);
   }
 
   void launchK1Compact(Queue& queue,

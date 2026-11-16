@@ -87,6 +87,49 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
     }
   };
 
+  // refitRowsHostLike: one thread per listed row (a few per event), the default GlobalTrackingRegion
+  class KernelRefitRowsHostLike {
+  public:
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ESView es,
+                                  HitSoAConstView hits,
+                                  ::mkfitdev::TrackSoAView rows,
+                                  int32_t const* list,
+                                  int32_t const* nList,
+                                  int32_t maxList,
+                                  LstSeedFitConfig cfg,
+                                  int32_t* status) const {
+      const uint32_t nPixel = hits.nPixel();
+      const int32_t n = *nList < maxList ? *nList : maxList;
+      // GlobalTrackingRegion(): ptMin 1, origin (0, 0, 0), originRadius 0.2, originHalfLength 22.7
+      cfg.hlPtMin = 1.f;
+      cfg.originR2 = 0.04f;
+      cfg.originZ2 = 515.29f;
+      for (int32_t i : cms::alpakatools::uniform_elements(acc, n)) {
+        const int32_t r = list[i];
+        const int nh = rows[r].nTotalHits();
+        PixSeedOut o;
+        o.status = ::mkfitdev::lstseeds::kPixNotFitted;
+        if (nh >= 2) {
+          MPlexLV<1> parH;
+          MPlexLS<1> errH;
+          MPlexQI<1> chgH;
+          const ::mkfitdev::HitOnTrack* hot = rows[r].hits().hot;
+          const int st = fitHostLike(acc, es, hits, nPixel, hot, nh, cfg, false, parH, errH, chgH, 0., 0.);
+          pixSeedStore(acc, es, hits, nPixel, hot, nh, 0., 0., cfg, st, parH, errH, chgH, o);
+        }
+        status[r] = o.status;
+        if (o.status != ::mkfitdev::lstseeds::kPixOk)
+          continue;
+        for (int k = 0; k < 6; ++k)
+          rows[r].params().v[k] = o.par[k];
+        for (int k = 0; k < 21; ++k)
+          rows[r].errors().v[k] = o.err[k];
+        rows[r].charge() = static_cast<int16_t>(o.charge);
+      }
+    }
+  };
+
   constexpr int kPixPcaCov = 25;  // doubles of scratch per pixel track between the two PCA kernels
 
   class KernelPixSeedPca {

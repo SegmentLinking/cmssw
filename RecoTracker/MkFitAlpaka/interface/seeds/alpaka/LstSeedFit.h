@@ -165,6 +165,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::lstseeds {
                      LstSeedFitConfig const& cfg,
                      ::mkfitdev::lstseeds::PixSeedBeam const& beam);
 
+  // the creator refit of seed rows on their own hits: SeedFromConsecutiveHitsCreator::makeSeed with a default
+  // GlobalTrackingRegion (origin (0, 0, 0), ptMin 1 GeV, radius 0.2 cm, half-length 22.7 cm; LSTOutputConverter's refit
+  // of the dropOTHitsPurePLS seeds) emulated with fitHostLike (cfg.passes selects the field model, cfg.hlBackwardTol the
+  // backward tolerance; the capped-prior retry as fitPixelSeeds). Rows list[i], i < *nList (on the device; at most
+  // maxList) of `rows` (nTotalHits, hits: (mkFit layer, hit index) inside-out): status[list[i]] = PixSeedStatus, and on
+  // kPixOk params / errors / charge = the state on the last hit. Asynchronous in `queue`.
+  void refitRowsHostLike(Queue& queue,
+                         ::mkfitdev::ESView const& es,
+                         ::mkfitdev::HitSoAConstView hits,
+                         ::mkfitdev::TrackSoAView rows,
+                         int32_t const* list,
+                         int32_t const* nList,
+                         int32_t maxList,
+                         LstSeedFitConfig const& cfg,
+                         int32_t* status);
+
   // the TSCBL part of fitPixelSeeds alone: for every row r < n of `out` with status kPixOk (par, err, charge = the
   // state on the last hit) the PCA state, pcaStatus, ptErr and etaErr. Asynchronous in `queue`.
   void pcaPixelSeeds(Queue& queue,
