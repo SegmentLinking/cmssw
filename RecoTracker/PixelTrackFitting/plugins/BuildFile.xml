@@ -1,4 +1,8 @@
 <library file="*.cc" name="RecoPixelVertexingPixelTrackFittingPlugins">
+  <!-- on-demand OT rechits in PixelTrackProducerFromSoAAlpaka -->
+  <use name="RecoLocalTracker/Phase2TrackerRecHits"/>
+  <use name="RecoLocalTracker/Records"/>
+  <use name="DataFormats/Phase2TrackerCluster"/>
   <use name="DataFormats/TrackSoA"/>
   <use name="DataFormats/TrackingRecHit"/>
   <use name="Geometry/Records"/>
