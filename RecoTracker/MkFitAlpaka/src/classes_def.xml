@@ -1,0 +1,12 @@
+<lcgdict>
+  <!-- Event products of MkFitAlpaka (host side). Transient: they are never written to files. -->
+  <class name="mkfitdev::TrackSoAHostCollection" persistent="false"/>
+  <class name="mkfitdev::TrackSoAHostCollection::Layout" persistent="false"/>
+  <class name="mkfitdev::TrackLayout<128,false>" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::TrackSoAHostCollection>" splitLevel="0" persistent="false"/>
+
+  <!-- per-event status product -->
+  <class name="mkfitdev::MkFitStatus" persistent="false"/>
+  <class name="mkfitdev::MkFitStatusHostObject" persistent="false"/>
+  <class name="edm::Wrapper<mkfitdev::MkFitStatusHostObject>" splitLevel="0" persistent="false"/>
+</lcgdict>
