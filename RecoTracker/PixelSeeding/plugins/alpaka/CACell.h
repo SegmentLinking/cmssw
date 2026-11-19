@@ -305,11 +305,15 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           // a 3-layer ntuplet only where a straight line crosses few layers: |cot(theta)| of its first-to-last hit
           // below maxTripletCotTheta (negative = everywhere)
           bool tripletAllowed = true;
-          if (nl == 3 && maxTripletCotTheta >= 0.f) {
-            auto const& first = cells[tmpNtuplet[0]];
-            const float dr = alpaka::math::abs(acc, outer_r(hh) - first.inner_r(hh));
-            const float dz = alpaka::math::abs(acc, outer_z(hh) - first.inner_z(hh));
-            tripletAllowed = dz < maxTripletCotTheta * dr;
+          // nl == 3 only at this recursion depth (tmpNtuplet.size() == maxDepth - DEPTH + 1): a run-time nl == 3
+          // test would keep this code in every inlined depth of the recursion and doubles the device code
+          if constexpr (DEPTH == int(TrackerTraits::maxLayersPerTrack) - 2) {
+            if (maxTripletCotTheta >= 0.f) {
+              auto const& first = cells[tmpNtuplet[0]];
+              const float dr = alpaka::math::abs(acc, outer_r(hh) - first.inner_r(hh));
+              const float dz = alpaka::math::abs(acc, outer_z(hh) - first.inner_z(hh));
+              tripletAllowed = dz < maxTripletCotTheta * dr;
+            }
           }
           // if long enough save...
           if (nl >= minHitsPerNtuplet && tripletAllowed) {
