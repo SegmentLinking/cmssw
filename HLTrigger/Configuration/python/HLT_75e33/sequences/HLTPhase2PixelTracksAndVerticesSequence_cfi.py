@@ -116,3 +116,47 @@ _HLTPhase2PixelTracksAndVerticesSequenceCAVectorHitsSerialSync = cms.Sequence(
     HLTPhase2PixelTracksAndVerticesSequenceSerialSync,
     _HLTPhase2PixelTracksAndVerticesSequenceCAVectorHitsSerialSync
 )
+
+# phase2MkSeeder: the mkFit seeder (hltMkFitSeederSeedsMkFitDevice_cfi.py) and its seed classifier
+# (hltMkFitSeederSeedsClassifiedDevice_cfi.py) replace the pixel CA; the selected seeds as TrajectorySeeds
+# (hltMkFitSeederSeedsClassified, for LST) and as tracks (hltPhase2PixelTracks, from the seeder's perigees) feed the
+# pixel vertices
+from ..sequences.HLTMkFitInputSequence_cfi import *
+from ..modules.hltMkFitSeederSeedsMkFitDevice_cfi import hltMkFitSeederSeedsMkFitDevice as _hltMkFitSeederSeedsMkFitDevice
+from ..modules.hltMkFitSeederSeedsMkFitDevice_cfi import hltMkFitSeederSeedsMkFitDeviceModifier
+from ..modules.hltMkFitSeederSeedsClassifiedDevice_cfi import hltMkFitSeederSeedsClassifiedDevice as _hltMkFitSeederSeedsClassifiedDevice
+from ..modules.hltMkFitSeederSeedsClassifiedDevice_cfi import hltMkFitSeederSeedsClassifiedDeviceModifier
+from ..modules.hltMkFitSeederSeedsClassified_cfi import hltMkFitSeederSeedsClassified as _hltMkFitSeederSeedsClassified
+from ..modules.hltMkFitSeederSeedsClassified_cfi import hltMkFitSeederSeedsClassifiedModifier
+_HLTPhase2PixelTracksAndVerticesSequenceMkSeeder = cms.Sequence(
+    HLTBeamSpotSequence
+    +hltPhase2PixelFitterByHelixProjections # Currently needed by tracker muons
+    +hltPhase2PixelTrackFilterByKinematics  # Currently needed by tracker muons
+    +HLTMkFitInputSequence
+    +_hltMkFitSeederSeedsMkFitDevice
+    +_hltMkFitSeederSeedsClassifiedDevice
+    +_hltMkFitSeederSeedsClassified
+    +hltPhase2PixelTracks
+    +HLTPhase2PixelVertexingSequence
+)
+from Configuration.ProcessModifiers.phase2MkSeeder_cff import phase2MkSeeder
+phase2MkSeeder.toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence, _HLTPhase2PixelTracksAndVerticesSequenceMkSeeder)
+
+# with trackingMkFitAlpaka (all-Alpaka initial step): the selected seeds stay on the device as the LST input's pixel
+# seeds (hltInitialStepPixelSeedsDevice, customizeHLTforMkFitAlpaka), the pixel tracks without TrajectorySeeds
+from ..modules.hltInitialStepPixelSeedsDevice_cfi import hltInitialStepPixelSeedsDevice as _hltInitialStepPixelSeedsDevice
+from ..modules.hltInitialStepPixelSeedsDevice_cfi import hltInitialStepPixelSeedsDeviceModifier
+_HLTPhase2PixelTracksAndVerticesSequenceMkSeederDevice = cms.Sequence(
+    HLTBeamSpotSequence
+    +hltPhase2PixelFitterByHelixProjections # Currently needed by tracker muons
+    +hltPhase2PixelTrackFilterByKinematics  # Currently needed by tracker muons
+    +HLTMkFitInputSequence
+    +_hltMkFitSeederSeedsMkFitDevice
+    +_hltMkFitSeederSeedsClassifiedDevice
+    +_hltInitialStepPixelSeedsDevice
+    +hltPhase2PixelTracks
+    +HLTPhase2PixelVertexingSequence
+)
+from Configuration.ProcessModifiers.trackingMkFitAlpaka_cff import trackingMkFitAlpaka
+(phase2MkSeeder & trackingMkFitAlpaka).toReplaceWith(HLTPhase2PixelTracksAndVerticesSequence,
+                                                     _HLTPhase2PixelTracksAndVerticesSequenceMkSeederDevice)

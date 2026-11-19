@@ -301,7 +301,7 @@ float runTrackCandidate(LSTEvent* event, bool no_pls_dupclean, bool tc_pls_tripl
   if (ana.verbose >= 2)
     std::cout << "Reco TrackCandidate start" << std::endl;
   my_timer.Start();
-  event->createTrackCandidates(no_pls_dupclean, tc_pls_triplets);
+  event->createTrackCandidates(no_pls_dupclean, tc_pls_triplets, /*pls_t5_sharedhit=*/false);
   event->wait();  // device side event calls are asynchronous: wait to measure time or print
   float tc_elapsed = my_timer.RealTime();
   if (ana.verbose >= 2)

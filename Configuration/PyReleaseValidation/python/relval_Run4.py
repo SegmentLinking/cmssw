@@ -64,6 +64,9 @@ numWFIB.extend([prefixDet+234.0])     #standard PU
 
 # Phase-2 HLT tests
 numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
+numWFIB.extend([prefixDet+34.750101]) # HLTTrackingOnly75e33, phase2MkSeeder (mkFit seeder on alpaka)
+numWFIB.extend([prefixDet+34.750102]) # HLTTrackingOnly75e33, all-Alpaka LST + mkFit initial step
+numWFIB.extend([prefixDet+34.750103]) # HLTTrackingOnly75e33, phase2MkSeeder + all-Alpaka LST + mkFit initial step
 numWFIB.extend([prefixDet+34.7502]) # HLTTrackingNtuple75e33
 numWFIB.extend([prefixDet+34.7503]) # HLTHeterogeneousValid
 numWFIB.extend([prefixDet+34.7504]) # HLTDev75e33

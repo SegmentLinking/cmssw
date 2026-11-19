@@ -108,6 +108,9 @@ fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltESPStackedModuleG
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltLSTGeometry_cfi")
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltESPModulesDevLST_cfi")
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltESPTTRHBuilderWithoutRefit_cfi")
+fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMkSeederConfig_cfi")
+fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMkSeederESProducer_cfi")
+fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMkSeederForestESProducer_cfi")
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMTDCPEESProducer_cfi")
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMTDTimeCalibESProducer_cfi")
 fragment.load("HLTrigger/Configuration/HLT_75e33/eventsetup/hltMTDTransientTrackingRecHitBuilder_cfi")
@@ -356,3 +359,8 @@ fragment.schedule = cms.Schedule(*[
     fragment.HLTriggerFinalPath,
     fragment.HLTAnalyzerEndpath,
 ])
+
+### The mkFit chain of the initial step on the device with Alpaka (--procModifiers trackingMkFitFit,trackingMkFitAlpaka)
+from Configuration.ProcessModifiers.trackingMkFitAlpaka_cff import trackingMkFitAlpaka
+from RecoTracker.MkFitAlpaka.customizeHLTforMkFitAlpaka import customizeHLTforMkFitAlpaka as _customizeHLTforMkFitAlpaka
+modifyHLTforMkFitAlpaka_ = trackingMkFitAlpaka.makeProcessModifier(_customizeHLTforMkFitAlpaka)

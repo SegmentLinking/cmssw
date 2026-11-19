@@ -1,0 +1,63 @@
+<!-- validation tool of the mkFit seeder chain (hash of its products); not a production plugin -->
+<library file="MkFitSeedWrapperHasher.cc" name="RecoTrackerMkSeederAlpakaTestPlugins">
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/TrackingRecHit"/>
+  <use name="DataFormats/TrajectorySeed"/>
+  <use name="DataFormats/TrajectoryState"/>
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="RecoTracker/MkFit"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+
+<!-- unit tests; the alpaka ones are built once per backend (each test binary runs on the devices of its backend) -->
+<bin name="testMkSeederRadixSort" file="alpaka/testMkSeederRadixSort.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/SoATemplate"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testMkSeederLibm" file="alpaka/testMkSeederLibm.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+</bin>
+
+<bin name="testMkSeederHelix" file="alpaka/testMkSeederHelix.dev.cc">
+  <use name="alpaka"/>
+  <use name="catch2"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/SoATemplate"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpakaMath"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <!-- the Matriplex loops' '#pragma omp simd' (MPLEX_SIMD), as for the seed fits in plugins/BuildFile.xml -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+  <!-- not for ROCm: the HIP compile (host and device in one clang command) would treat the device code as OpenMP
+       device code and globalize locals through the OpenMP device runtime (__kmpc_alloc_shared); MPLEX_SIMD is empty
+       under clang anyway (as in RecoTracker/MkFitAlpaka) -->
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd"/>
+</bin>
+
+<bin name="testMkSeederConfig" file="testMkSeederConfig.cc">
+  <use name="catch2"/>
+  <use name="json"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="RecoTracker/MkSeederAlpaka"/>
+</bin>

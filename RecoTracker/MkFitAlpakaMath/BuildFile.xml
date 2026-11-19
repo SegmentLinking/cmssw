@@ -1,0 +1,5 @@
+<!-- Header-only portable mkFit math (no library, no device code): Matriplex, vdt, field, beam-line PCA, helix crossings,
+     plane propagation and Kalman update, MaterialView. Device packages that only need these headers <use> this package;
+     see README.md for why they must not <use> RecoTracker/MkFitAlpaka for that. -->
+<use name="alpaka"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>

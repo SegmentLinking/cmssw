@@ -296,6 +296,10 @@ void LSTOutputConverter::produce(edm::Event& iEvent, const edm::EventSetup& iSet
                                              << ", fall back to the input pixel seed";
           seed = *pixelSeed;
           seedRef = edm::RefToBase<TrajectorySeed>(pixelSeed);
+          // the candidate keeps the hits of the input seed, including its outer-tracker hits
+          recHits.clear();
+          for (auto const& hit : seed.recHits())
+            recHits.push_back(hit.clone());
         } else {
           seed = seeds[0];
           seedRef = edm::RefToBase<TrajectorySeed>(edm::Ref(outputTSRP, outputTS.size()));

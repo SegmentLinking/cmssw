@@ -444,8 +444,9 @@ namespace mkfit {
     void addHitIdx(const HitOnTrack& hot, float chi2) { addHitIdx(hot.index, hot.layer, chi2); }
 
     void removeHit(int posHitIdx) {
-      // negative index and keep hit
-      hitsOnTrk_[posHitIdx].index = -1;
+      // negative index and keep hit: its layer stays, and the index tells it from a miss of the building and still
+      // gives the hit
+      hitsOnTrk_[posHitIdx].index = Hit::fitOutlierIdx(hitsOnTrk_[posHitIdx].index);
 
       //should remove it from the vector, but didn't work so far
       //hitsOnTrk_.erase(hitsOnTrk_.begin() + posHitIdx);
@@ -592,6 +593,15 @@ namespace mkfit {
   };
 
   typedef std::vector<Track> TrackVec;
+
+  // Per-seed quality from the mkFit seeder (RecoTracker/MkSeederAlpaka), indexed by seed label. The defaults mean
+  // "unknown".
+  struct SeedQuality {
+    float clean_score = -1;  // the seeder's cleaning score
+    float fake_score = -1;   // the seeder's fake score
+    int n_amb = 0;           // quads the seeder dropped for sharing >= 3 hits with this one
+  };
+
   typedef std::vector<TrackVec> TrackVecVec;
 
   inline bool sortByHitsChi2(const Track& cand1, const Track& cand2) {

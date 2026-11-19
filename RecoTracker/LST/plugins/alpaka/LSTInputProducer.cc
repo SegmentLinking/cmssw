@@ -20,6 +20,7 @@
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateTransform.h"
 #include "TrackingTools/TransientTrackingRecHit/interface/TransientTrackingRecHitBuilder.h"
 #include "TrackingTools/PatternTools/interface/TSCBLBuilderNoMaterial.h"
+#include "TrackingTools/GeomPropagators/interface/AnalyticalPropagator.h"
 #include "TrackingTools/TrajectoryState/interface/PerigeeConversions.h"
 
 #include "RecoTracker/LSTCore/interface/LSTInputHostCollection.h"
@@ -39,7 +40,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   private:
     void produce(edm::StreamID, device::Event& iEvent, const device::EventSetup& iSetup) const override;
 
+    // a pixel line segment (pLS) needs three pixel hits
+    static constexpr int kMinPixelHitsForPLS = 3;
+
     const double ptCut_;
+    const bool stateAtLastPixelHit_;
+    const double stateAtLastPixelHitMaxPt_;
 
     const edm::EDGetTokenT<Phase2TrackerRecHit1DCollectionNew> phase2OTRecHitToken_;
 
@@ -57,6 +63,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   LSTInputProducer::LSTInputProducer(edm::ParameterSet const& iConfig)
       : EDProducer<>(iConfig),
         ptCut_(iConfig.getParameter<double>("ptCut")),
+        stateAtLastPixelHit_(iConfig.getParameter<bool>("stateAtLastPixelHit")),
+        stateAtLastPixelHitMaxPt_(iConfig.getParameter<double>("stateAtLastPixelHitMaxPt")),
         phase2OTRecHitToken_(consumes(iConfig.getParameter<edm::InputTag>("phase2OTRecHits"))),
         mfToken_(esConsumes()),
         beamSpotToken_(consumes(iConfig.getParameter<edm::InputTag>("beamSpot"))),
@@ -71,6 +79,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     edm::ParameterSetDescription desc;
 
     desc.add<double>("ptCut", 0.8);
+    desc.add<bool>("stateAtLastPixelHit", false)
+        ->setComment(
+            "The seed's state is propagated back (no material) from its last hit, an OT hit, onto its last "
+            "pixel hit (the pLS direction is taken at the state)");
+    desc.add<double>("stateAtLastPixelHitMaxPt", 0.)
+        ->setComment("stateAtLastPixelHit only for seeds with pT below this (GeV); 0: all seeds");
 
     desc.add<edm::InputTag>("phase2OTRecHits", edm::InputTag("siPhase2RecHits"));
 
@@ -116,6 +130,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     auto const& bs = iEvent.get(beamSpotToken_);
 
     TSCBLBuilderNoMaterial tscblBuilder;
+    // for stateAtLastPixelHit: from an OT hit back onto the last pixel hit, without material
+    const AnalyticalPropagator backPropagator(&mf, oppositeToMomentum);
 
     // Vector definitions
     std::vector<float> see_px;
@@ -148,6 +164,37 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         const TrackingRecHit* lastRecHit = &*(seed.recHits().end() - 1);
         TrajectoryStateOnSurface tsos =
             trajectoryStateTransform::transientState(seed.startingState(), lastRecHit->surface(), &mf);
+        // The seed's hits, with the number of pixel hits and the last pixel hit
+        std::vector<int> hitIdx;
+        std::vector<int> hitType;
+        const TrackingRecHit* lastPixHit = nullptr;
+        int npix = 0;
+        for (auto const& hit : seed.recHits()) {
+          auto det = hit.geographicalId().det();
+          if (det == DetId::Tracker) {
+            const BaseTrackerRecHit* bhit = dynamic_cast<const BaseTrackerRecHit*>(&hit);
+            const auto& clusterRef = bhit->firstClusterRef();
+            hitIdx.push_back(clusterRef.index());
+            if (clusterRef.isPixel()) {
+              hitType.push_back(static_cast<int>(lst::HitType::Pixel));
+              ++npix;
+              lastPixHit = &hit;
+            } else if (clusterRef.isPhase2()) {
+              hitType.push_back(static_cast<int>(lst::HitType::Phase2OT));
+            } else {
+              throw cms::Exception("LSTInputProducer") << "Unknown tracker hit type found!";
+            }
+          } else {
+            throw cms::Exception("LSTInputProducer") << "Not tracker hit found!";
+          }
+        }
+        // stateAtLastPixelHit: the state at the last pixel hit (the seed's OT hits are kept)
+        if (stateAtLastPixelHit_ && npix >= kMinPixelHitsForPLS && lastPixHit != lastRecHit &&
+            (stateAtLastPixelHitMaxPt_ <= 0 || tsos.globalMomentum().perp() < stateAtLastPixelHitMaxPt_)) {
+          const TrajectoryStateOnSurface atLastPixelHit = backPropagator.propagate(tsos, *lastPixHit->surface());
+          if (atLastPixelHit.isValid())
+            tsos = atLastPixelHit;
+        }
         auto const& stateGlobal = tsos.globalParameters();
 
         // Propagate to beam line to get perigee parameters (replicates TrackFromSeedProducer)
@@ -184,26 +231,6 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                             pz * pz * errMat(1, 1));
           // etaError() = sqrt(cov(lambda,lambda)) * p/pt
           etaErr = std::sqrt(errMat(1, 1)) * p / pt;
-        }
-
-        std::vector<int> hitIdx;
-        std::vector<int> hitType;
-        for (auto const& hit : seed.recHits()) {
-          auto det = hit.geographicalId().det();
-          if (det == DetId::Tracker) {
-            const BaseTrackerRecHit* bhit = dynamic_cast<const BaseTrackerRecHit*>(&hit);
-            const auto& clusterRef = bhit->firstClusterRef();
-            hitIdx.push_back(clusterRef.index());
-            if (clusterRef.isPixel()) {
-              hitType.push_back(static_cast<int>(lst::HitType::Pixel));
-            } else if (clusterRef.isPhase2()) {
-              hitType.push_back(static_cast<int>(lst::HitType::Phase2OT));
-            } else {
-              throw cms::Exception("LSTInputProducer") << "Unknown tracker hit type found!";
-            }
-          } else {
-            throw cms::Exception("LSTInputProducer") << "Not tracker hit found!";
-          }
         }
 
         // Fill output
