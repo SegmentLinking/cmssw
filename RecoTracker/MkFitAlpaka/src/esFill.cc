@@ -14,6 +14,7 @@
 #include "RecoTracker/MkFitCore/interface/IterationConfig.h"
 #include "RecoTracker/MkFitCore/interface/PropagationConfig.h"
 #include "RecoTracker/MkFitCore/interface/TrackerInfo.h"
+#include "RecoTracker/MkFitCore/interface/V2p2Params.h"
 
 #include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
@@ -111,6 +112,11 @@ namespace mkfitdev {
                   Config::missingHitPenalty_ == mkfit::Config::missingHitPenalty_ &&
                   Config::tailMissingHitPenalty_ == mkfit::Config::tailMissingHitPenalty_);
 
+    // the device copies of the V2p2Params limits (the knobs of interface/v2p2/V2p2Config.h: test/testESFill.cpp)
+    static_assert(V2p2Params::max_presel_hits_limit == mkfit::V2p2Params::max_presel_hits_limit &&
+                  V2p2Params::max_hits_per_layer_limit == mkfit::V2p2Params::max_hits_per_layer_limit &&
+                  V2p2ScoreParams::n_hit_eff_grp == mkfit::V2p2ScoreParams::n_hit_eff_grp);
+
     PropFlags convert(mkfit::PropagationFlags const& flags) {
       return PropFlags{
           flags.use_param_b_field, flags.apply_material, flags.copy_input_state_on_fail, flags.use_fit_b_field};
@@ -128,6 +134,32 @@ namespace mkfitdev {
       out.minHitsQF = params.minHitsQF;
       out.minPtCut = params.minPtCut;
       out.maxClusterSize = params.maxClusterSize;
+      return out;
+    }
+
+    V2p2ScoreParams convert(mkfit::V2p2ScoreParams const& params) {
+      V2p2ScoreParams out{};
+      out.hit_bonus = params.hit_bonus;
+      out.overlap_bonus = params.overlap_bonus;
+      out.chi2_weight = params.chi2_weight;
+      out.miss_penalty = params.miss_penalty;
+      out.edge_penalty = params.edge_penalty;
+      out.gap_penalty = params.gap_penalty;
+      out.stop_penalty = params.stop_penalty;
+      out.hit_eff = params.hit_eff;
+      for (int group = 0; group < V2p2ScoreParams::n_hit_eff_grp; ++group)
+        out.hit_eff_grp[group] = params.hit_eff_grp[group];
+      return out;
+    }
+
+    V2p2Params convert(mkfit::V2p2Params const& params) {
+      V2p2Params out{};
+      out.score_outward = convert(params.score_outward);
+      out.score_inward = convert(params.score_inward);
+      out.chi2_trk_fac = params.chi2_trk_fac;
+      out.hit_chi2_cut = params.hit_chi2_cut;
+      out.max_presel_hits = params.max_presel_hits;
+      out.max_hits_per_layer = params.max_hits_per_layer;
       return out;
     }
 
@@ -192,6 +224,7 @@ namespace mkfitdev {
       row.hole_r_max() = li.hole_r_max();
       row.is_pixel() = li.is_pixel();
       row.has_charge() = li.has_charge();
+      row.double_layer_partner() = li.double_layer_partner();
       row.module_begin() = moduleBegin;
       // LayerOfHits binning: use the MkFitCore Initializator itself
       mkfit::LayerOfHits::Initializator init(li);
@@ -324,6 +357,7 @@ namespace mkfitdev {
     cfg.dc_minPtUniqueHitsToKeep = ic.dc_minPtUniqueHitsToKeep;
     cfg.params = convert(ic.m_params);
     cfg.backward_params = convert(ic.m_backward_params);
+    cfg.v2p2 = convert(ic.m_v2p2);
 
     const int nRegions = ic.m_steering_params.size();
     if (nRegions > es::kMaxRegions || ic.m_n_regions != nRegions ||
@@ -365,8 +399,14 @@ namespace mkfitdev {
           sp.m_track_scorer_name.empty() ? cfg.default_track_scorer : trackScorerFromName(sp.m_track_scorer_name);
       steering.final_pick_track_scorer = finalPickScorer != TrackScorer::None ? finalPickScorer : steering.track_scorer;
       steering.post_bkfit_track_scorer = postBkfitScorer != TrackScorer::None ? postBkfitScorer : steering.track_scorer;
-      for (int i = 0; i < nPlan; ++i)
+      for (int i = 0; i < nPlan; ++i) {
+        // the device plan has one layer per entry; MkFitCore's JSON never sets the second one
+        if (sp.m_layer_plan[i].has_second_layer())
+          throw cms::Exception("MkFitAlpakaES")
+              << "region " << region << " layer plan entry " << i << " has a second layer (m_layer_sec "
+              << sp.m_layer_plan[i].m_layer_sec << "): paired plan entries are not ported";
         steering.layer[i] = sp.m_layer_plan[i].m_layer;
+      }
     }
 
     cfg.duplicate_cleaner_track_scorer = trackScorerFromName(ic.m_duplicate_cleaner_track_scorer_name);

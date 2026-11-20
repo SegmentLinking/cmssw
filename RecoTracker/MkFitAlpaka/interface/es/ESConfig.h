@@ -44,7 +44,7 @@ namespace mkfitdev {
     None = 0,
     Default,  // "default" and "phase1:default" = trackScoreDefault
     Keep,     // "keep" = trackScoreKeep
-    V2p2Llh   // "v2p2:llh" = trackScoreV2p2Llh (MkBuilder.cc): recognized only to be refused, not ported
+    V2p2Llh   // "v2p2:llh" = trackScoreV2p2Llh (MkBuilder.cc): the final pick of the v2p2 search
   };
 
   // mkfit::PropagationFlags (tracker_info back-pointer dropped)

@@ -24,6 +24,8 @@ namespace mkfitdev {
                       SOA_COLUMN(bool, has_r_range_hole),
                       SOA_COLUMN(bool, is_pixel),
                       SOA_COLUMN(bool, has_charge),
+                      // the other sensor layer of a module pair, -1 if none (TrackerInfo::setup_double_layers)
+                      SOA_COLUMN(int, double_layer_partner),
                       // global module row = module_begin + short id (LayerInfo::short_id)
                       SOA_COLUMN(int, module_begin),
                       // q binning of LayerOfHits, as LayerOfHits::Initializator(const LayerInfo&) computes it

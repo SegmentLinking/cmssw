@@ -9,6 +9,7 @@
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandTypes.h"
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Params.h"
 
 namespace mkfitdev {
 
@@ -62,15 +63,17 @@ namespace mkfitdev {
       violations.require(cfg.backward_fit_max_outliers >= 0, "m_backward_fit_max_outliers must be >= 0");
       violations.require(cfg.backward_search_min_pixel_layers >= 0, "backwardSearchMinPixelLayers must be >= 0");
       violations.require(cfg.seed_partitioner == SeedPartitioner::Phase2_1, "seed_partitioner must be phase2:1");
-      // track scorers: the device scores with trackScoreDefault everywhere (search, final pick, after the backward fit)
+      // track scorers: the search and the post-backward-fit scores are trackScoreDefault; the final pick also takes
+      // trackScoreV2p2Llh, which the build module allows only with the v2p2 search
       violations.require(cfg.default_track_scorer == TrackScorer::Default, "default_track_scorer must be 'default'");
       for (int region = 0; region < cfg.n_regions && region < es::kMaxRegions; ++region) {
         SteeringRegion const& steering = cfg.steering_params[region];
         if (steering.track_scorer != TrackScorer::Default)
           violations.add("track_scorer of region " + std::to_string(region) + " must be 'default' or empty");
-        if (steering.final_pick_track_scorer != TrackScorer::Default)
+        if (steering.final_pick_track_scorer != TrackScorer::Default &&
+            steering.final_pick_track_scorer != TrackScorer::V2p2Llh)
           violations.add("final_pick_track_scorer of region " + std::to_string(region) +
-                         " must be 'default' or empty (m_final_pick_track_scorer_name)");
+                         " must be 'default', 'v2p2:llh' or empty (m_final_pick_track_scorer_name)");
         if (steering.post_bkfit_track_scorer != TrackScorer::Default)
           violations.add("post_bkfit_track_scorer of region " + std::to_string(region) +
                          " must be 'default' or empty (m_post_bkfit_track_scorer_name)");
@@ -93,6 +96,16 @@ namespace mkfitdev {
         violations.add("params.minHitsQF (" + std::to_string(cfg.params.minHitsQF) +
                        ") != backward_params.minHitsQF (" + std::to_string(cfg.backward_params.minHitsQF) +
                        "): the device filters use one value");
+      // v2p2 tunings: the device candidate storage is sized by the V2p2Params limits (MkFitIterationConfigESProducer
+      // checks the same ranges)
+      if (cfg.v2p2.max_presel_hits < 1 || cfg.v2p2.max_presel_hits > V2p2Params::max_presel_hits_limit)
+        violations.add("v2p2.max_presel_hits = " + std::to_string(cfg.v2p2.max_presel_hits) +
+                       " outside [1, max_presel_hits_limit = " + std::to_string(V2p2Params::max_presel_hits_limit) +
+                       "]");
+      if (cfg.v2p2.max_hits_per_layer < 1 || cfg.v2p2.max_hits_per_layer > V2p2Params::max_hits_per_layer_limit)
+        violations.add(
+            "v2p2.max_hits_per_layer = " + std::to_string(cfg.v2p2.max_hits_per_layer) +
+            " outside [1, max_hits_per_layer_limit = " + std::to_string(V2p2Params::max_hits_per_layer_limit) + "]");
       violations.require(cfg.params.useHitSelectionV2 && cfg.backward_params.useHitSelectionV2,
                          "useHitSelectionV2 must be true (only selectHitIndicesV2 is ported)");
       // iteration flags and runtime mkfit::Config values the device code fixes
@@ -132,8 +145,15 @@ namespace mkfitdev {
     checkESLevel(violations, cfg);
     // no hit mask column on the device (MkFitProducer fills m_iteration_hit_mask from clustersToSkip)
     violations.require(moduleCfg.clustersToSkip.empty(), "clustersToSkip must be empty: no hit mask on the device");
-    violations.require(moduleCfg.buildingRoutine == "cloneEngine",
-                       "buildingRoutine must be cloneEngine (MkFinderV2p2, 'v2p2', is not ported)");
+    // MkFitProducer's clone engine and MkFinderV2p2 are ported, its bestHit and standard routines are not
+    const bool v2p2 = moduleCfg.buildingRoutine == "v2p2";
+    violations.require(moduleCfg.buildingRoutine == "cloneEngine" || v2p2,
+                       "buildingRoutine must be cloneEngine or v2p2 (bestHit and standard are not ported)");
+    // the clone engine's final pick scores with trackScoreDefault only
+    for (int region = 0; region < cfg.n_regions && region < es::kMaxRegions; ++region)
+      if (!v2p2 && cfg.steering_params[region].final_pick_track_scorer == TrackScorer::V2p2Llh)
+        violations.add("final_pick_track_scorer of region " + std::to_string(region) +
+                       " is 'v2p2:llh': supported with buildingRoutine v2p2 only");
     violations.require(!moduleCfg.backwardFitInCMSSW,
                        "backwardFitInCMSSW must be false (the device runs mkFit's backward fit)");
     // MkFitCore runs the seed cleaner only if seedCleaning && itconf.m_seed_cleaner; none is ported
