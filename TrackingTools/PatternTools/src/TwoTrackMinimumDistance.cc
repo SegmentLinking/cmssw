@@ -114,7 +114,7 @@ bool TwoTrackMinimumDistance::pointsLineLine(const GlobalTrajectoryParameters& s
 bool TwoTrackMinimumDistance::pointsHelixLine(const GlobalTrajectoryParameters& sta,
                                               const GlobalTrajectoryParameters& stb) {
   theCharge = hl;
-  if (theTTMDhl.calculate(sta, stb, 0.000001))
+  if (theTTMDhl.calculate(sta, stb, TwoTrackMinimumDistanceHelixLinePortable::tolerance))
     return false;
   points_ = theTTMDhl.points();
   return true;
