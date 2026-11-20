@@ -33,6 +33,12 @@ namespace mkfitdev {
     float chi2_trk_fac;
     float hit_chi2_cut;
 
+    // track terms of the search window, <= 0 = the built-in Window::dphi_trk_fac / dq_trk_fac
+    float window_dphi_trk_fac;
+    float window_dq_trk_fac;
+
+    int outside_hole_max_seed_hits;  // > 0: WSR_Outside is a hole for seeds with at most this many hits
+
     int max_presel_hits;
     int max_hits_per_layer;
 

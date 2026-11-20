@@ -63,6 +63,15 @@ namespace mkfitdev {
   template <Matriplex::idx_t N>
   using MPlexQUH = Matriplex::Matriplex<unsigned short, 1, 1, N>;
 
+  // pad_free_lanes() of MkFitCore's Matrix.h: slot 0 copied into the slots from n_filled up, so that a partial
+  // batch is computed at full width (a loop bounded by the fill rounds differently in its vector body and its
+  // remainder); the free slots hold valid inputs and their results are not used.
+  template <Matriplex::idx_t N, typename... MP>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void pad_free_lanes(int n_filled, MP&... mp) {
+    for (int i = n_filled; i < int(N); ++i)
+      (mp.copy(i, 0), ...);
+  }
+
 }  // namespace mkfitdev
 
 #endif

@@ -111,6 +111,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       return book->nInsideMinusOne + book->nTailMinusOne;
     }
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int nTailMinusOneHits() const { return book->nTailMinusOne; }
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int nFoundHits() const { return book->nFound; }
+    ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int getNSeedHits() const { return state->nSeedHits; }
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE int getLastHitIdx() const { return seed->hot(book->lastHitIdx).index; }
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE float score() const { return book->score; }
   };
@@ -243,6 +245,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 
     // compute_pars()
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void compute_pars() {
+      // Computed at full width: the free lanes take lane 0, as pad_free_lanes() does for the other inputs.
+      // A one-wide batch is full when flushed; a run-time slot there would move tsXyz to local memory on GPU backends.
+      if constexpr (N > 1) {
+        for (int i = N_filled; i < N; ++i)
+          tsXyz.copyIn(i, tsXyz, 0);
+      }
       // The search's crossing on the module plane (tsXyz) becomes propPar and the
       // transverse path length sPerp; tsPar keeps the parameters at the previous
       // hit, which the jacobian needs. The crossing is the Hermite cubic solved
@@ -252,7 +260,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         propPar.At(i, 1, 0) = tsXyz.y[i];
         propPar.At(i, 2, 0) = tsXyz.z[i];
         propPar.At(i, 3, 0) = tsXyz.inv_pt[i];
-        propPar.At(i, 4, 0) = vdt::fast_atan2f(tsXyz.py[i], tsXyz.px[i]);
+        propPar.At(i, 4, 0) = ::mkfitdev::Matriplex::internal::atan2_poly(tsXyz.py[i], tsXyz.px[i]);
         propPar.At(i, 5, 0) = tsXyz.theta[i];
 
         sPerp[i] = tsXyz.dalpha[i] / (tsXyz.inv_pt[i] * tsXyz.inv_k[i]);
@@ -282,8 +290,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     // and supplies the transverse path length sPerp, so only the covariance is transported.
     using namespace plane;
 
+    // Computed at full width, see pad_free_lanes(); only the first N_filled slots are read out.
+    ::mkfitdev::pad_free_lanes<N>(N_filled, tsPar, tsErr, tsChg, sPerp, propPar, msErr, msPar, plNrm, plDir, plPnt);
+
     const PropagationFlags& pf = m_solve_plane ? intra : inter;
-    const TrackRef<N> in{tsPar, tsChg, N_filled};
+    const TrackRef<N> in{tsPar, tsChg, N};
     const PlaneRef<N> pl{plPnt, plNrm};
 
     FieldAt<N> f;
@@ -304,9 +315,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     transport_cov(J, tsErr, propErr);
     if (pf.apply_material) {
       MaterialAt<N> m;
-      material_grid<N>(pf, propPar, nullptr, N_filled, m);
-      eloss_sign_from_path<N>(s, nullptr, N_filled, m);
-      apply_material(m, plNrm, propErr, propPar, N_filled);
+      material_grid<N>(pf, propPar, nullptr, N, m);
+      eloss_sign_from_path<N>(s, nullptr, N, m);
+      apply_material(m, plNrm, propErr, propPar, N);
     }
     outFailFlag.setVal(0);
     finish(in, tsErr, outFailFlag, propPar, propErr);
@@ -314,7 +325,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     const float acc_scale2 = m_chi2_trk_fac * m_chi2_trk_fac;
     const bool acc_separate = acc_scale2 != 1.0f;
 
-    const TrackRef<N> pred{propPar, tsChg, N_filled};
+    const TrackRef<N> pred{propPar, tsChg, N};
     MPlexQF<N> bFld;
     local_field(pred, pf, false, bFld);
     LocalPred<N> L;
@@ -333,7 +344,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     LocalUpd<N> U;
     update(L, R, U);
     to_global(U, L, pl, tsChg, bFld, tsPar, tsErr);
-    kalmanCheckChargeFlip(tsPar, tsChg, N_filled);
+    kalmanCheckChargeFlip(tsPar, tsChg, N);
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev

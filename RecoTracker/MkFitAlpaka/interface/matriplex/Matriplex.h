@@ -65,6 +65,13 @@ namespace mkfitdev {
         }
       }
 
+      // slot n = slot in of this matriplex
+      ALPAKA_FN_HOST_ACC void copy(idx_t n, idx_t in) {
+        for (idx_t i = n; i < kTotSize; i += N, in += N) {
+          fArray[i] = fArray[in];
+        }
+      }
+
       ALPAKA_FN_HOST_ACC void copyIn(idx_t n, const T* arr) {
         for (idx_t i = n; i < kTotSize; i += N) {
           fArray[i] = *(arr++);

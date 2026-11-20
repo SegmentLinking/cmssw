@@ -158,6 +158,9 @@ namespace mkfitdev {
       out.score_inward = convert(params.score_inward);
       out.chi2_trk_fac = params.chi2_trk_fac;
       out.hit_chi2_cut = params.hit_chi2_cut;
+      out.window_dphi_trk_fac = params.window_dphi_trk_fac;
+      out.window_dq_trk_fac = params.window_dq_trk_fac;
+      out.outside_hole_max_seed_hits = params.outside_hole_max_seed_hits;
       out.max_presel_hits = params.max_presel_hits;
       out.max_hits_per_layer = params.max_hits_per_layer;
       return out;

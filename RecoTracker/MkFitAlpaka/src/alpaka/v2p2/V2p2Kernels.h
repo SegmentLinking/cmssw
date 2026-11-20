@@ -201,7 +201,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                              int& nBatch,
                                              int8_t* laneStageCand,
                                              V2p2PassedHitMatch* laneStage,
-                                             bool& staged) {
+                                             bool& staged,
+                                             const ::mkfitdev::V2p2Params& vp) {
       bool pass[kNN];
       V2p2PassedHitMatch phm[kNN];
       for (int k = nBatch; k < int(kNN); ++k) {
@@ -209,7 +210,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
         hitIdcs[k] = hitIdcs[0];
         hitOrigIdcs[k] = hitOrigIdcs[0];
       }
-      preselect_hit_batch<kNN>(w, L, hits, candIdcs, hitIdcs, hitOrigIdcs, nBatch, pass, phm);
+      preselect_hit_batch<kNN>(w, L, hits, candIdcs, hitIdcs, hitOrigIdcs, nBatch, pass, phm, vp);
       for (int k = 0; k < nBatch; ++k) {
         if (pass[k]) {
           laneStageCand[k] = int8_t(candIdcs[k]);
@@ -316,7 +317,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                 w.rho_dq[i] = 0.f;
                 walk[i] = 0;
               } else {
-                select_hits_setup(w, i, L);
+                select_hits_setup(w, i, L, ctx.vp);
                 walk[i] = 1;
               }
             }
@@ -381,7 +382,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                      nBatch,
                                      &stageCand[tid * kNN],
                                      &stage[tid * kNN],
-                                     staged);
+                                     staged,
+                                     ctxBase.vp);
                   }
                 }
                 offerStaged(acc, tid, stageCand, stage, pq, pqSize, preselStride, staged);
@@ -404,7 +406,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                              nBatch,
                              &stageCand[tid * kNN],
                              &stage[tid * kNN],
-                             staged);
+                             staged,
+                             ctxBase.vp);
             offerStaged(acc, tid, stageCand, stage, pq, pqSize, preselStride, staged);
           }
           for (int i = 0; i < int(kNN) && i < n; ++i)
@@ -450,7 +453,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       V2p2Counters& cnt = v2seeds.counters();
       for (int i = 0; i < int(N) && i < koa.N_filled; ++i) {
         row[i] = -1;
-        if (!harvest_accept(koa.tsChi2Acc.constAt(i, 0, 0), vp))
+        if (!harvest_accept(
+                koa.tsChi2.constAt(i, 0, 0), koa.tsChi2Acc.constAt(i, 0, 0), koa.tsDetV.constAt(i, 0, 0), vp))
           continue;
         const int p = koa.parent_idx[i];
         // the depth of the new node = the parent's hit count

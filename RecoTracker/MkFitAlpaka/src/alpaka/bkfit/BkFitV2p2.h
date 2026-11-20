@@ -44,6 +44,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     errC.scale(100.0f);
 
     // ---- MkFinder::bkFitFitTracksV2p2 ----
+    // Computed at full width, see pad_free_lanes(); only the first N_proc slots are read out.
+    ::mkfitdev::pad_free_lanes<N>(N_proc, parC, errC, chg);
     MPlexQF<N> tmp_chi2(0.0f);
     int done_flag[N];
     // The last hit fitted per lane, to skip a repeated hit on track (seed-hit merging can put the same hit on twice).
@@ -163,10 +165,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
       if (here_count == 0)
         continue;
 
+      ::mkfitdev::pad_free_lanes<N>(N_proc, msErr, msPar, plNrm, plDir, plPnt);
+
       // The propagation fail flag is not checked, as in MkFitCore.
       failFlag.setVal(0);
       const MPlexQI<N> chg_prev = chg;
-      propagateHelixToPlaneMPlex(errC, parC, chg, plPnt, plNrm, errP, parP, failFlag, N_proc, pflags);
+      propagateHelixToPlaneMPlex(errC, parC, chg, plPnt, plNrm, errP, parP, failFlag, N, pflags);
       kalmanOperationPlaneLocal(KFO_Calculate_Chi2 | KFO_Update_Params | KFO_Local_Cov,
                                 errP,
                                 parP,
@@ -179,8 +183,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
                                 errC,
                                 parC,
                                 tmp_chi2,
-                                N_proc);
-      kalmanCheckChargeFlip(parC, chg, N_proc);
+                                N);
+      kalmanCheckChargeFlip(parC, chg, N);
 
       // Outlier rejection: the hit becomes a missing hit and the propagated state is kept. The negated comparison
       // leaves a NaN chi2 alone.
