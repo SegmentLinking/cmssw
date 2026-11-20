@@ -1,5 +1,6 @@
 // Runs the Alpaka port of the MkFitCore propagation / Kalman functions and mini propagators on the inputs written by
-// testMkFitAlpakaPropMkFitCoreRef and compares with the MkFitCore outputs stored in the same file.
+// testMkFitAlpakaPropMkFitCoreRef and compares with the MkFitCore outputs stored in the same file. The v2p2 operations
+// compose the plane steps exactly as KalmanOpArgs::do_kalman_stuff (MkFinderV2p2Structures.cc) does.
 // Usage: testMkFitAlpakaProp<Backend> <mkfitcore_ref.bin>
 
 #include <algorithm>
@@ -17,6 +18,7 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/memory.h"
 #include "HeterogeneousCore/AlpakaInterface/interface/workdivision.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/prop/KalmanUtilsMPlex.h"
+#include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PlaneSteps.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/prop/PropagationMPlex.h"
 #include "RecoTracker/MkFitAlpaka/src/alpaka/select/MiniPropagators.h"
 #include "RecoTracker/MkFitAlpaka/test/propTestIO.h"
@@ -36,7 +38,7 @@ namespace {
     mkd::MPlexLS<N> inErr, outErr;
     mkd::MPlexLV<N> inPar, outPar;
     mkd::MPlexQI<N> chg, fail, noMat;
-    mkd::MPlexQF<N> msRad, msZ, chi2, modRadl, modBbxi, msRefP;
+    mkd::MPlexQF<N> msRad, msZ, chi2, modRadl, modBbxi, msRefP, detV, chi2Acc;
     mkd::MPlexHS<N> msErr;
     mkd::MPlexHV<N> msPar, pnt, nrm, dir;
   };
@@ -75,6 +77,150 @@ namespace {
     rec.chi2 = slots.chi2.constAt(slot, 0, 0);
     rec.fail = slots.fail.constAt(slot, 0, 0);
     rec.chgOut = slots.chg.constAt(slot, 0, 0);
+    rec.detV = slots.detV.constAt(slot, 0, 0);
+    rec.chi2Acc = slots.chi2Acc.constAt(slot, 0, 0);
+  }
+
+  // v2p2: element k of the flat list of a slot's outputs that are not a track state (outErr in packed order)
+  template <int N>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void storeExtra(Slots<N>& slots, int slot, int k, float value) {
+    slots.outErr.fArray[k * N + slot] = value;
+  }
+
+  // MkFinderV2p2::prop_to_layer_edges + MkBins::prop_to_limits_in_order: the start state with the field per lane
+  // (paramB) or uniform, then the near and the far bounding surface of the layer (the records of a group are all
+  // barrel or all endcap)
+  template <int N>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void layerEdges(const Rec* recs,
+                                                 int base,
+                                                 int N_proc,
+                                                 bool paramB,
+                                                 const PropagationFlags& pf,
+                                                 mini::InitialStatePlex<N>& isp,
+                                                 mini::StatePlex<N>& sp1,
+                                                 mini::StatePlex<N>& sp2) {
+    float phi[N], bf[N], e1[N], e2[N];
+    int chg[N];
+    for (int i = 0; i < N; ++i) {
+      const Rec& rec = recs[base + (i < N_proc ? i : 0)];
+      isp.copyIn_partial_track_state(i, rec.inPar);
+      phi[i] = rec.inPar[4];
+      chg[i] = rec.chg;
+      bf[i] =
+          ::mkfitdev::Config::bFieldFromZR(pf.material.bField, rec.inPar[2], std::hypot(rec.inPar[0], rec.inPar[1]));
+      e1[i] = rec.edge[0];
+      e2[i] = rec.edge[1];
+    }
+    if (paramB)
+      isp.init_momentum_vec_and_k(phi, chg, bf);
+    else
+      isp.init_momentum_vec_and_k(phi, chg, ::mkfitdev::Config::Bfield);
+    // the slots are copied through a one-slot plex, as the finder copies its candidates
+    mini::InitialStatePlex<1> isp1;
+    mini::InitialStatePlex<N> isp2;
+    for (int i = 0; i < N; ++i) {
+      isp1.copyIn(0, isp, i);
+      isp2.copyIn(i, isp1, 0);
+    }
+    if (recs[base].barrel) {
+      isp2.propagate_to_r(e1, sp1);
+      isp2 = sp1;
+      isp2.propagate_to_r(e2, sp2);
+    } else {
+      isp2.propagate_to_z(e1, sp1);
+      isp2 = sp1;
+      isp2.propagate_to_z(e2, sp2);
+    }
+    isp = isp2;
+  }
+
+  // the Hermite cubic through the two crossings, copied slot by slot through a one-slot cubic as the finder does
+  template <int N>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void hermite(const mini::StatePlex<N>& sp1,
+                                              const mini::StatePlex<N>& sp2,
+                                              const float* inv_k,
+                                              mini::Hermite3D<N>& h3d) {
+    mini::Hermite3D<N> H;
+    mini::Hermite3D<1> H1;
+    H.calculate_coeffs(sp1, sp2, inv_k);
+    for (int i = 0; i < N; ++i) {
+      H1.copyIn(0, H, i);
+      h3d.copyIn(i, H1, 0);
+    }
+  }
+
+  // KalmanOpArgs::do_kalman_stuff (MkFinderV2p2Structures.cc) composed from the plane steps; the depth-0 path takes
+  // propPar and sPerp from compute_pars()
+  template <int N>
+  ALPAKA_FN_ACC ALPAKA_FN_INLINE void doKalmanStuff(bool solve_plane,
+                                                    const PropagationFlags& pf,
+                                                    float chi2_trk_fac,
+                                                    int N_filled,
+                                                    mkd::MPlexLS<N>& tsErr,
+                                                    mkd::MPlexLV<N>& tsPar,
+                                                    mkd::MPlexQI<N>& tsChg,
+                                                    const mkd::MPlexQF<N>& sPerp,
+                                                    mkd::MPlexLV<N>& propPar,
+                                                    const mkd::MPlexHS<N>& msErr,
+                                                    const mkd::MPlexHV<N>& msPar,
+                                                    const mkd::MPlexHV<N>& plNrm,
+                                                    const mkd::MPlexHV<N>& plDir,
+                                                    const mkd::MPlexHV<N>& plPnt,
+                                                    mkd::MPlexQF<N>& tsChi2,
+                                                    mkd::MPlexQF<N>& tsDetV,
+                                                    mkd::MPlexQF<N>& tsChi2Acc) {
+    using namespace mkd::plane;
+    const TrackRef<N> in{tsPar, tsChg, N_filled};
+    const PlaneRef<N> pl{plPnt, plNrm};
+
+    FieldAt<N> f;
+    field_at_start(in, pf, f);
+    StartTrig<N> t;
+    start_trig(in, t);
+    mkd::MPlexQF<N> s;
+    if (solve_plane) {
+      PathSolve<N> p;
+      path_solve(in, t, pl, f, p);
+      s = p.s;
+      drift(in, t, f, s, propPar);
+    } else {
+      path_from_perp(in, t, sPerp, s);
+    }
+    mkd::MPlexLL<N> J(0.0f);
+    jacobian(in, t, propPar, f, s, J);
+    mkd::MPlexLS<N> propErr(0.0f);
+    transport_cov(J, tsErr, propErr);
+    if (pf.apply_material) {
+      MaterialAt<N> m;
+      material_grid(pf, propPar, nullptr, N_filled, m);
+      eloss_sign_from_path(s, nullptr, N_filled, m);
+      apply_material(m, plNrm, propErr, propPar, N_filled);
+    }
+    mkd::MPlexQI<N> outFailFlag(0);
+    finish(in, tsErr, outFailFlag, propPar, propErr);
+
+    const float acc_scale2 = chi2_trk_fac * chi2_trk_fac;
+    const bool acc_separate = acc_scale2 != 1.0f;
+
+    const TrackRef<N> pred{propPar, tsChg, N_filled};
+    mkd::MPlexQF<N> bFld;
+    local_field(pred, pf, false, bFld);
+    LocalPred<N> Lp;
+    to_local(pred, propErr, pl, plDir, bFld, Lp);
+    LocalMeas<N> M;
+    measurement(Lp, msPar, msErr, plPnt, M);
+    Residual<N> R;
+    residual(Lp, M, R);
+    chi2(R, tsChi2);
+    tsDetV = R.det;
+    if (acc_separate)
+      chi2_scaled(Lp, M, R, acc_scale2, tsChi2Acc);
+    else
+      tsChi2Acc = tsChi2;
+    LocalUpd<N> U;
+    update(Lp, R, U);
+    to_global(U, Lp, pl, tsChg, bFld, tsPar, tsErr);
+    mkd::kalmanCheckChargeFlip(tsPar, tsChg, N_filled);
   }
 
   // the outputs of a mini-propagator operation: outPar = (x, y, z, px, py, pz), chi2 = dalpha
@@ -103,6 +249,8 @@ namespace {
         slots.chi2.setVal(0.f);
         slots.fail.setVal(0);
         slots.noMat.setVal(OP == kPropPlaneNoMat ? 1 : 0);
+        slots.detV.setVal(0.f);
+        slots.chi2Acc.setVal(0.f);
         const bool p2h = propToHit;
         if constexpr (OP == kPropR) {
           mkd::propagateHelixToRMPlex(slots.inErr,
@@ -237,6 +385,144 @@ namespace {
             }
             storeMini(slots, n, st.x, st.y, st.z, st.px, st.py, st.pz, st.dalpha, st.fail_flag);
           }
+        } else if constexpr (OP == kV2p2Edges || OP == kHermite || OP == kHermitePlane) {
+          mini::InitialStatePlex<N> isp;
+          mini::StatePlex<N> sp1, sp2;
+          layerEdges(recs, base, N_proc, OP != kHermite, pf, isp, sp1, sp2);
+          if constexpr (OP == kV2p2Edges) {
+            for (int n = 0; n < N; ++n) {
+              storeMini(slots, n, sp2.x[n], sp2.y[n], sp2.z[n], sp2.px[n], sp2.py[n], sp2.pz[n], sp2.dalpha[n], 0);
+              slots.fail(n, 0, 0) = 3 * sp1.fail_flag[n] + sp2.fail_flag[n];
+              const float near[7] = {sp1.x[n], sp1.y[n], sp1.z[n], sp1.px[n], sp1.py[n], sp1.pz[n], sp1.dalpha[n]};
+              for (int k = 0; k < 7; ++k)
+                storeExtra(slots, n, k, near[k]);
+            }
+          } else {
+            mini::Hermite3D<N> h3d;
+            hermite(sp1, sp2, isp.inv_k, h3d);
+            if constexpr (OP == kHermite) {
+              float t[N], x[N], y[N], z[N], dx[N], dy[N], dz[N], x3[N], y3[N], z3[N];
+              for (int n = 0; n < N; ++n)
+                t[n] = recs[base + (n < N_proc ? n : 0)].hermT;
+              h3d.evaluate(t, x, y, z, dx, dy, dz);
+              h3d.evaluate(t, x3, y3, z3);
+              for (int n = 0; n < N; ++n) {
+                storeMini(slots, n, x[n], y[n], z[n], dx[n], dy[n], dz[n], 0.f, 0);
+                for (int k = 0; k < 4; ++k) {
+                  storeExtra(slots, n, k, h3d.m_Hx[k][n]);
+                  storeExtra(slots, n, 4 + k, h3d.m_Hy[k][n]);
+                  storeExtra(slots, n, 8 + k, h3d.m_Hz[k][n]);
+                }
+                storeExtra(slots, n, 12, h3d.m_Hderfac[n]);
+                storeExtra(slots, n, 13, x3[n]);
+                storeExtra(slots, n, 14, y3[n]);
+                storeExtra(slots, n, 15, z3[n]);
+              }
+            } else {
+              mini::Hermite3DOnPlane<N> h3dop;
+              h3dop.init_coeffs(h3d, slots.pnt, slots.nrm);
+              float t0[N], d[N], dddt[N], d2[N];
+              for (int n = 0; n < N; ++n)
+                t0[n] = h3dop.m_T[n];
+              h3dop.solve();
+              h3dop.evaluate(h3dop.m_T, d, dddt);
+              h3dop.evaluate(h3dop.m_T, d2);
+              mini::StatePlex<N> h3_state;
+              h3d.evaluate(h3dop.m_T, h3_state);
+              for (int n = 0; n < N; ++n) {
+                storeMini(slots,
+                          n,
+                          h3_state.x[n],
+                          h3_state.y[n],
+                          h3_state.z[n],
+                          h3_state.px[n],
+                          h3_state.py[n],
+                          h3_state.pz[n],
+                          h3dop.m_T[n],
+                          0);
+                for (int k = 0; k < 4; ++k)
+                  storeExtra(slots, n, k, h3dop.m_D[k][n]);
+                storeExtra(slots, n, 4, t0[n]);
+                storeExtra(slots, n, 5, d[n]);
+                storeExtra(slots, n, 6, dddt[n]);
+                storeExtra(slots, n, 7, d2[n]);
+              }
+            }
+          }
+        } else if constexpr (OP == kKalmanD0 || OP == kKalmanD1) {
+          constexpr bool deep = OP == kKalmanD1;
+          // BaseArgs / KalmanOpArgs: zero beyond the filled lanes, as a fresh MkFitCore batch
+          mkd::MPlexLS<N> tsErr(0.0f);
+          mkd::MPlexLV<N> tsPar(0.0f), propPar(0.0f);
+          mkd::MPlexQI<N> tsChg(0);
+          mkd::MPlexQF<N> sPerp(0.0f);
+          mkd::MPlexHS<N> msErr(0.0f);
+          mkd::MPlexHV<N> msPar(0.0f), plNrm(0.0f), plDir(0.0f), plPnt(0.0f);
+          mini::InitialStatePlex<N> tsXyz;
+          for (int n = 0; n < N; ++n) {
+            tsXyz.x[n] = tsXyz.y[n] = tsXyz.z[n] = 0.f;
+            tsXyz.px[n] = tsXyz.py[n] = tsXyz.pz[n] = 0.f;
+            tsXyz.dalpha[n] = 0.f;
+            tsXyz.fail_flag[n] = 0;
+            tsXyz.inv_pt[n] = tsXyz.inv_k[n] = tsXyz.theta[n] = 0.f;
+          }
+          for (int n = 0; n < N_proc; ++n) {
+            tsPar.copySlot(n, slots.inPar);
+            tsErr.copySlot(n, slots.inErr);
+            tsChg.copySlot(n, slots.chg);
+            msErr.copySlot(n, slots.msErr);
+            msPar.copySlot(n, slots.msPar);
+            plNrm.copySlot(n, slots.nrm);
+            plDir.copySlot(n, slots.dir);
+            plPnt.copySlot(n, slots.pnt);
+            if constexpr (!deep) {
+              const float* xyz = recs[base + n].xyz;
+              tsXyz.x[n] = xyz[0];
+              tsXyz.y[n] = xyz[1];
+              tsXyz.z[n] = xyz[2];
+              tsXyz.px[n] = xyz[3];
+              tsXyz.py[n] = xyz[4];
+              tsXyz.pz[n] = xyz[5];
+              tsXyz.dalpha[n] = xyz[6];
+              tsXyz.inv_pt[n] = xyz[7];
+              tsXyz.inv_k[n] = xyz[8];
+              tsXyz.theta[n] = xyz[9];
+            }
+          }
+          if constexpr (!deep) {
+            // KalmanOpArgs::compute_pars
+            for (int n = 0; n < N; ++n) {
+              propPar(n, 0, 0) = tsXyz.x[n];
+              propPar(n, 1, 0) = tsXyz.y[n];
+              propPar(n, 2, 0) = tsXyz.z[n];
+              propPar(n, 3, 0) = tsXyz.inv_pt[n];
+              propPar(n, 4, 0) = ::mkfitdev::Matriplex::internal::atan2_poly(tsXyz.py[n], tsXyz.px[n]);
+              propPar(n, 5, 0) = tsXyz.theta[n];
+              sPerp[n] = tsXyz.dalpha[n] / (tsXyz.inv_pt[n] * tsXyz.inv_k[n]);
+            }
+          }
+          doKalmanStuff(deep,
+                        pf,
+                        kV2p2Chi2TrkFac,
+                        N_proc,
+                        tsErr,
+                        tsPar,
+                        tsChg,
+                        sPerp,
+                        propPar,
+                        msErr,
+                        msPar,
+                        plNrm,
+                        plDir,
+                        plPnt,
+                        slots.chi2,
+                        slots.detV,
+                        slots.chi2Acc);
+          for (int n = 0; n < N_proc; ++n) {
+            slots.outPar.copySlot(n, tsPar);
+            slots.outErr.copySlot(n, tsErr);
+            slots.chg.copySlot(n, tsChg);
+          }
         }
         for (int n = 0; n < N_proc; ++n)
           storeSlot(recs[base + n], slots, n);
@@ -289,6 +575,16 @@ namespace {
         return launch<kMiniR>(queue, d_recs, ntrk, pf, propToHit);
       case kMiniPlane:
         return launch<kMiniPlane>(queue, d_recs, ntrk, pf, propToHit);
+      case kV2p2Edges:
+        return launch<kV2p2Edges>(queue, d_recs, ntrk, pf, propToHit);
+      case kHermite:
+        return launch<kHermite>(queue, d_recs, ntrk, pf, propToHit);
+      case kHermitePlane:
+        return launch<kHermitePlane>(queue, d_recs, ntrk, pf, propToHit);
+      case kKalmanD0:
+        return launch<kKalmanD0>(queue, d_recs, ntrk, pf, propToHit);
+      case kKalmanD1:
+        return launch<kKalmanD1>(queue, d_recs, ntrk, pf, propToHit);
     }
   }
 
@@ -300,8 +596,9 @@ namespace {
 
   // Agreement gate, met on every backend for every operation. Per track: parameter difference (x, y, z relative to
   // max(|ref|, 1 cm), 1/pT relative, phi and theta absolute; mini propagators: the momentum relative to the reference
-  // |p|, the turning angle absolute), covariance difference (relative Frobenius norm) and chi2 difference (relative to
-  // max(|ref|, kChi2MinScale)); per metric, its median and its 99% quantile are gated.
+  // |p|, the turning angle (Hermite plane solve: T) absolute), covariance difference (relative Frobenius norm; v2p2
+  // Hermite operations: their flat output list) and chi2 difference (relative to max(|ref|, kChi2MinScale)); v2p2
+  // Kalman: also det V (relative) and the acceptance chi2; per metric, its median and its 99% quantile are gated.
   // the propagation status must agree almost always: a near-boundary track may flip
   constexpr double kMinFailAgreement = 0.999;
   // the typical track agrees at the rounding level of a long chain of single-precision operations
@@ -309,6 +606,10 @@ namespace {
   // the tail: near-singular updates amplify rounding, but a wrong term moves most tracks well past this
   constexpr double kMaxQ99Diff = 1e-2;
   constexpr double kChi2MinScale = 1e-3;
+  // non-finite mismatches printed per operation
+  constexpr int kMaxPrinted = 3;
+  // det of the residual covariance: relative (a pixel hit's is many orders below one)
+  constexpr double kDetVMinScale = 1e-30;
 
   // per-track differences of one metric; the quantiles sort a copy
   struct Distribution {
@@ -394,7 +695,7 @@ int main(int argc, char** argv) {
     alpaka::wait(queue);
 
     int failAgree = 0, nNonFinite = 0, nChi2FinMismatch = 0, nBitwise = 0;
-    Distribution parDiff, errDiff, chi2Diff;
+    Distribution parDiff, errDiff, chi2Diff, detVDiff, chi2AccDiff;
     for (int i = 0; i < ntrk; ++i) {
       const Rec& ref = block.recs[i];
       const Rec& got = h_recs[i];
@@ -406,6 +707,23 @@ int main(int argc, char** argv) {
       for (int k = 0; k < 6; ++k)
         finite = finite && std::isfinite(got.outPar[k]) == std::isfinite(ref.outPar[k]);
       if (!finite) {
+        if (nNonFinite < kMaxPrinted)
+          std::printf("    non-finite mismatch, record %d: ref (%g %g %g %g %g %g | %g) got (%g %g %g %g %g %g | %g)\n",
+                      i,
+                      ref.outPar[0],
+                      ref.outPar[1],
+                      ref.outPar[2],
+                      ref.outPar[3],
+                      ref.outPar[4],
+                      ref.outPar[5],
+                      ref.chi2,
+                      got.outPar[0],
+                      got.outPar[1],
+                      got.outPar[2],
+                      got.outPar[3],
+                      got.outPar[4],
+                      got.outPar[5],
+                      got.chi2);
         ++nNonFinite;
         continue;
       }
@@ -438,6 +756,15 @@ int main(int argc, char** argv) {
         if (refFinite && gotFinite)
           chi2Diff.values.push_back(relDiff(got.chi2, ref.chi2, kChi2MinScale));
       }
+      if (isV2p2Kalman(block.op)) {
+        const bool refFinite = std::isfinite(ref.detV) && std::isfinite(ref.chi2Acc);
+        const bool gotFinite = std::isfinite(got.detV) && std::isfinite(got.chi2Acc);
+        nChi2FinMismatch += refFinite != gotFinite;
+        if (refFinite && gotFinite) {
+          detVDiff.values.push_back(relDiff(got.detV, ref.detV, kDetVMinScale));
+          chi2AccDiff.values.push_back(relDiff(got.chi2Acc, ref.chi2Acc, kChi2MinScale));
+        }
+      }
     }
     const double fFail = double(failAgree) / ntrk;
     std::string outside;
@@ -451,8 +778,16 @@ int main(int argc, char** argv) {
       outside += " errors";
     if (!chi2Diff.inGate())
       outside += " chi2";
+    if (!detVDiff.inGate())
+      outside += " detV";
+    if (!chi2AccDiff.inGate())
+      outside += " chi2Acc";
+    // the v2p2 operations run the barrel and the endcap records as separate blocks
+    const bool v2p2 = block.op >= kV2p2Edges;
+    const std::string name =
+        std::string(opName(block.op)) + (v2p2 ? (block.recs[0].barrel ? " [barrel]" : " [endcap]") : "");
     std::printf("%-42s n=%6d fail-agree %.5f bitwise %.5f non-finite %d%s%s\n",
-                opName(block.op),
+                name.c_str(),
                 ntrk,
                 fFail,
                 double(nBitwise) / ntrk,
@@ -463,6 +798,10 @@ int main(int argc, char** argv) {
     errDiff.print("errors");
     if (hasChi2(block.op))
       chi2Diff.print("chi2");
+    if (isV2p2Kalman(block.op)) {
+      detVDiff.print("detV");
+      chi2AccDiff.print("chi2Acc");
+    }
     if (!outside.empty())
       ++nBad;
   }

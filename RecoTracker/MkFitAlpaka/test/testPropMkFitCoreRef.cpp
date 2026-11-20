@@ -1,9 +1,12 @@
 // MkFitCore reference for the propagation chain test: generates Phase-2-like track states, module planes and hits,
 // runs the MkFitCore functions on them and writes the inputs and outputs for testMkFitAlpakaProp<Backend>. Some
-// low-pT tracks cross their module at the turning point, where the plane path solve has two comparable roots.
+// low-pT tracks cross their module at the turning point, where the plane path solve has two comparable roots. The v2p2
+// operations run the mini propagators, the Hermite cubic and KalmanOpArgs::do_kalman_stuff of MkFinderV2p2 as its
+// search calls them.
 // Usage: testMkFitAlpakaPropMkFitCoreRef <out.bin> [ntracks=20000] [seed=12345]
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -18,6 +21,7 @@
 #include <RecoTracker/MkFitCore/src/FinalFit.h>
 #include <RecoTracker/MkFitCore/src/KalmanUtilsMPlex.h>
 #include <RecoTracker/MkFitCore/src/MiniPropagators.h>
+#include <RecoTracker/MkFitCore/src/MkFinderV2p2Structures.h>
 #include <RecoTracker/MkFitCore/src/PropagationMPlex.h>
 
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
@@ -74,6 +78,86 @@ namespace {
       outPar(slot, i, 0) = out[i];
     chi2(slot, 0, 0) = st.dalpha;
     fail(slot, 0, 0) = st.fail_flag;
+  }
+
+  TrackState trackState(const Rec& rec) {
+    TrackState ts;
+    for (int i = 0; i < 6; ++i) {
+      ts.parameters[i] = rec.inPar[i];
+      for (int j = 0; j <= i; ++j)
+        ts.errors(i, j) = rec.inErr[symIdx(i, j)];
+    }
+    ts.charge = rec.chg;
+    return ts;
+  }
+
+  // MkFinderV2p2::prop_to_layer_edges + MkBins::prop_to_limits_in_order for the NN records of a batch: the start state
+  // with the field per lane (paramB) or uniform, then the near and the far bounding surface of the layer
+  void layerEdges(const Rec* const* recs,
+                  bool paramB,
+                  mp::InitialStatePlex& isp,
+                  mp::StatePlex& sp1,
+                  mp::StatePlex& sp2,
+                  int N_proc) {
+    MPlexQF phi(0.0f), bf(Config::Bfield);
+    MPlexQI chg(0);
+    for (int i = 0; i < NN; ++i) {
+      const TrackState ts = trackState(*recs[i]);
+      isp.copyIn_partial_track_state(i, ts);
+      phi[i] = ts.momPhi();
+      chg[i] = ts.charge;
+      if (paramB)
+        bf[i] = Config::bFieldFromZR(ts.z(), std::hypot(ts.x(), ts.y()));
+    }
+    if (paramB) {
+      isp.init_momentum_vec_and_k(phi, chg, bf);
+    } else {
+      isp.init_momentum_vec_and_k(phi, chg);
+    }
+    // the slots are copied through a one-slot plex, as the finder copies its candidates
+    mp::InitialStatePlex isp1, isp2 = isp;
+    for (int i = 0; i < NN; ++i) {
+      isp1.copyIn(0, isp, i);
+      isp2.copyIn(i, isp1, 0);
+    }
+    MPlexQF e1, e2;
+    for (int i = 0; i < NN; ++i) {
+      e1[i] = recs[i]->edge[0];
+      e2[i] = recs[i]->edge[1];
+    }
+    // the records of a batch are all barrel or all endcap
+    if (recs[0]->barrel) {
+      isp2.propagate_to_r(mp::PA_Exact, e1, sp1, true, N_proc);
+      isp2 = sp1;
+      isp2.propagate_to_r(mp::PA_Exact, e2, sp2, true, N_proc);
+    } else {
+      isp2.propagate_to_z(mp::PA_Exact, e1, sp1, true, N_proc);
+      isp2 = sp1;
+      isp2.propagate_to_z(mp::PA_Exact, e2, sp2, true, N_proc);
+    }
+    isp = isp2;
+  }
+
+  // the Hermite cubic through the two crossings, copied slot by slot through a one-slot cubic as the finder does
+  mp::Hermite3D hermite(const mp::StatePlex& sp1, const mp::StatePlex& sp2, const MPlexQF& inv_k) {
+    mp::Hermite3D H, H1, h3d(0.0f);
+    H.calculate_coeffs(sp1, sp2, inv_k);
+    for (int i = 0; i < NN; ++i) {
+      H1.copyIn(0, H, i);
+      h3d.copyIn(i, H1, 0);
+    }
+    return h3d;
+  }
+
+  // both layer crossings of the v2p2 search fail (MkFinderV2p2::determine_wsr: WSR_Outside)
+  bool missesLayer(const Rec& rec) {
+    const Rec* recs[NN];
+    for (int i = 0; i < NN; ++i)
+      recs[i] = &rec;
+    mp::InitialStatePlex isp;
+    mp::StatePlex sp1, sp2;
+    layerEdges(recs, true, isp, sp1, sp2, 1);
+    return sp1.fail_flag[0] != 0 && sp2.fail_flag[0] != 0;
   }
 
   // Runs one operation in batches of NN with the MkFitCore functions.
@@ -208,6 +292,147 @@ namespace {
           }
           break;
       }
+      // v2p2: outputs that are not a track state go to outErr as a flat list
+      MPlexQF detV(0.f), chi2Acc(0.f);
+      const Rec* recs[NN];
+      for (int n = 0; n < NN; ++n)
+        recs[n] = &block.recs[base + (n < N_proc ? n : 0)];
+      std::vector<std::array<float, 21>> extras(NN, std::array<float, 21>{});
+      switch (block.op) {
+        case kV2p2Edges:
+        case kHermite:
+        case kHermitePlane: {
+          mp::InitialStatePlex isp;
+          mp::StatePlex sp1, sp2;
+          layerEdges(recs, block.op != kHermite, isp, sp1, sp2, N_proc);
+          if (block.op == kV2p2Edges) {
+            for (int n = 0; n < NN; ++n) {
+              storeMini(mp::State(sp2, n), outPar, chi2, fail, n);
+              fail(n, 0, 0) = 3 * sp1.fail_flag[n] + sp2.fail_flag[n];
+              const float near[7] = {sp1.x[n], sp1.y[n], sp1.z[n], sp1.px[n], sp1.py[n], sp1.pz[n], sp1.dalpha[n]};
+              std::copy(near, near + 7, extras[n].begin());
+            }
+            break;
+          }
+          const mp::Hermite3D h3d = hermite(sp1, sp2, isp.inv_k);
+          if (block.op == kHermite) {
+            MPlexQF t, x, y, z, dx, dy, dz, x3, y3, z3;
+            for (int n = 0; n < NN; ++n)
+              t[n] = recs[n]->hermT;
+            h3d.evaluate(t, x, y, z, dx, dy, dz);
+            h3d.evaluate(t, x3, y3, z3);
+            for (int n = 0; n < NN; ++n) {
+              storeMini(mp::State(x[n], y[n], z[n], dx[n], dy[n], dz[n], 0.f, 0), outPar, chi2, fail, n);
+              for (int k = 0; k < 4; ++k) {
+                extras[n][k] = h3d.m_Hx.constAt(n, k, 0);
+                extras[n][4 + k] = h3d.m_Hy.constAt(n, k, 0);
+                extras[n][8 + k] = h3d.m_Hz.constAt(n, k, 0);
+              }
+              extras[n][12] = h3d.m_Hderfac[n];
+              extras[n][13] = x3[n];
+              extras[n][14] = y3[n];
+              extras[n][15] = z3[n];
+            }
+            break;
+          }
+          mp::Hermite3DOnPlane h3dop;
+          h3dop.init_coeffs(h3d, pnt, nrm);
+          const MPlexQF t0 = h3dop.m_T;
+          h3dop.solve();
+          MPlexQF d, dddt, d2;
+          h3dop.evaluate(h3dop.m_T, d, dddt);
+          h3dop.evaluate(h3dop.m_T, d2);
+          mp::StatePlex h3_state;
+          h3d.evaluate(h3dop.m_T, h3_state);
+          for (int n = 0; n < NN; ++n) {
+            storeMini(mp::State(h3_state, n), outPar, chi2, fail, n);
+            chi2(n, 0, 0) = h3dop.m_T[n];
+            for (int k = 0; k < 4; ++k)
+              extras[n][k] = h3dop.m_D.constAt(n, k, 0);
+            extras[n][4] = t0[n];
+            extras[n][5] = d[n];
+            extras[n][6] = dddt[n];
+            extras[n][7] = d2[n];
+          }
+          break;
+        }
+        case kKalmanD0:
+        case kKalmanD1: {
+          const bool deep = block.op == kKalmanD1;
+          PropagationConfig pc;
+          pc.finding_inter_layer_pflags = pc.finding_intra_layer_pflags = pf;
+          std::vector<KalmanOpArgs::ItemOut> out;
+          KalmanOpArgs koa;
+          koa.prop_config = &pc;
+          koa.mp_out = &out;
+          koa.m_solve_plane = deep;
+          koa.m_chi2_trk_fac = kV2p2Chi2TrkFac;
+          if (!deep) {
+            // the search's crossing on the module plane, as MkFinderV2p2::preselect_hit_batch makes it
+            mp::InitialStatePlex isp;
+            mp::StatePlex sp1, sp2;
+            layerEdges(recs, true, isp, sp1, sp2, N_proc);
+            const mp::Hermite3D h3d = hermite(sp1, sp2, isp.inv_k);
+            mp::Hermite3DOnPlane h3dop;
+            h3dop.init_coeffs(h3d, pnt, nrm);
+            h3dop.solve();
+            mp::StatePlex h3_state;
+            h3d.evaluate(h3dop.m_T, h3_state);
+            for (int n = 0; n < N_proc; ++n) {
+              h3_state.dalpha[n] = sp1.dalpha[n] + h3dop.m_T[n] * (sp2.dalpha[n] - sp1.dalpha[n]);
+              const mp::InitialState is(h3_state, n, isp, n);
+              const float xyz[10] = {is.x, is.y, is.z, is.px, is.py, is.pz, is.dalpha, is.inv_pt, is.inv_k, is.theta};
+              std::copy(xyz, xyz + 10, block.recs[base + n].xyz);
+            }
+          }
+          for (int n = 0; n < N_proc; ++n) {
+            const Rec& rec = block.recs[base + n];
+            koa.item_begin(nullptr, HitOnTrack(n, 0), deep ? n : -1, n);
+            if (deep) {
+              koa.load_state_err_chg(trackState(rec));
+            } else {
+              mp::InitialState is;
+              is.x = rec.xyz[0];
+              is.y = rec.xyz[1];
+              is.z = rec.xyz[2];
+              is.px = rec.xyz[3];
+              is.py = rec.xyz[4];
+              is.pz = rec.xyz[5];
+              is.dalpha = rec.xyz[6];
+              is.inv_pt = rec.xyz[7];
+              is.inv_k = rec.xyz[8];
+              is.theta = rec.xyz[9];
+              koa.load_state_err_chg(is, trackState(rec));
+            }
+            for (int i = 0; i < 3; ++i) {
+              koa.msPar(n, i, 0) = rec.msPar[i];
+              koa.plPnt(n, i, 0) = rec.plPnt[i];
+              koa.plNrm(n, i, 0) = rec.plNrm[i];
+              koa.plDir(n, i, 0) = rec.plDir[i];
+              for (int j = 0; j <= i; ++j)
+                koa.msErr(n, i, j) = rec.msErr[symIdx(i, j)];
+            }
+            koa.item_finished();
+          }
+          // MkFinderV2p2::rk_flush
+          if (!deep)
+            koa.compute_pars();
+          koa.do_kalman_stuff();
+          for (const auto& o : out) {
+            const int n = o.hit_pos;
+            for (int i = 0; i < 6; ++i) {
+              outPar(n, i, 0) = o.state.parameters[i];
+              for (int j = 0; j <= i; ++j)
+                outErr(n, i, j) = o.state.errors(i, j);
+            }
+            chi2(n, 0, 0) = o.chi2;
+            detV(n, 0, 0) = o.det_v;
+            chi2Acc(n, 0, 0) = o.chi2_acc;
+            chg(n, 0, 0) = o.state.charge;
+          }
+          break;
+        }
+      }
       for (int n = 0; n < N_proc; ++n) {
         Rec& rec = block.recs[base + n];
         for (int i = 0; i < 6; ++i) {
@@ -215,9 +440,13 @@ namespace {
           for (int j = 0; j <= i; ++j)
             rec.outErr[symIdx(i, j)] = outErr.constAt(n, i, j);
         }
+        if (block.op == kV2p2Edges || block.op == kHermite || block.op == kHermitePlane)
+          std::copy(extras[n].begin(), extras[n].end(), rec.outErr);
         rec.chi2 = chi2.constAt(n, 0, 0);
         rec.fail = fail.constAt(n, 0, 0);
         rec.chgOut = chg.constAt(n, 0, 0);
+        rec.detV = detV.constAt(n, 0, 0);
+        rec.chi2Acc = chi2Acc.constAt(n, 0, 0);
       }
     }
   }
@@ -275,14 +504,18 @@ int main(int argc, char** argv) {
   std::mt19937 rngMod(seed + 1);
   // the turning-point tracks draw from their own stream, so the other tracks stay the same
   std::mt19937 rngTurn(seed + 2);
+  // and so do the v2p2 inputs
+  std::mt19937 rngV2p2(seed + 3);
+  // half thickness of the layer whose bounding surfaces the v2p2 search crosses
+  constexpr float kLayerHalfThickness = 0.6f;
   // fraction of the low-pT barrel tracks that cross their module at the turning point
   constexpr float kTurningFraction = 0.1f;
 
-  std::vector<OpBlock> ops(kNOps);
+  std::vector<OpBlock> ops(kNOps), opsEc(kNOps);
   for (int op = 0; op < kNOps; ++op) {
-    ops[op].op = op;
-    ops[op].pflags = (op == kFitUpdBkw || op == kFitUpdFwd) ? (kMat | PF_use_fit_b_field) : kMat;
-    ops[op].propToHit = op == kUpdPlane || op == kChi2Plane;
+    ops[op].op = opsEc[op].op = op;
+    ops[op].pflags = opsEc[op].pflags = (op == kFitUpdBkw || op == kFitUpdFwd) ? (kMat | PF_use_fit_b_field) : kMat;
+    ops[op].propToHit = opsEc[op].propToHit = op == kUpdPlane || op == kChi2Plane;
   }
 
   // one state (slot 0) propagated with MkFitCore to a radius or a z, no material; false if the propagation failed
@@ -303,7 +536,7 @@ int main(int argc, char** argv) {
     return fail.constAt(0, 0, 0) == 0;
   };
 
-  int nBrl = 0, nEc = 0, nSkip = 0, nTurn = 0;
+  int nBrl = 0, nEc = 0, nSkip = 0, nTurn = 0, nMissV2p2 = 0;
   for (int itrk = 0; itrk < nGen; ++itrk) {
     const float pt = std::exp(std::log(0.4f) + uniform(rng) * (std::log(50.f) - std::log(0.4f)));
     const float eta = -2.4f + 4.8f * uniform(rng);
@@ -439,6 +672,28 @@ int main(int argc, char** argv) {
     } else {
       ops[kMiniPlexZ].recs.push_back(rec);
     }
+    // v2p2: the bounding surfaces around the layer of the module, in search (outward) order; the barrel and the endcap
+    // records go to separate operations so that a batch never mixes them
+    rec.barrel = isBarrel;
+    if (isBarrel) {
+      rec.edge[0] = msRad - kLayerHalfThickness;
+      rec.edge[1] = msRad + kLayerHalfThickness;
+    } else {
+      const float zsgn = msZ > 0.f ? 1.f : -1.f;
+      rec.edge[0] = msZ - zsgn * kLayerHalfThickness;
+      rec.edge[1] = msZ + zsgn * kLayerHalfThickness;
+    }
+    rec.hermT = std::uniform_real_distribution<float>(0.f, 1.f)(rngV2p2);
+    for (int op : {kV2p2Edges, kKalmanD1})
+      (isBarrel ? ops : opsEc)[op].recs.push_back(rec);
+    // a track that crosses neither bounding surface is WSR_Outside (MkFinderV2p2::determine_wsr): no Hermite cubic
+    if (!missesLayer(rec)) {
+      for (int op : {kHermite, kHermitePlane, kKalmanD0})
+        (isBarrel ? ops : opsEc)[op].recs.push_back(rec);
+    } else {
+      ++nMissV2p2;
+    }
+
     // final fit: the module's material and the |p| of the start state (as in bkReFitFitTracks)
     rec.modRadl = 0.01f + 0.04f * uniform(rngMod);
     rec.modBbxi = rec.modRadl * (0.9e-3f + 0.2e-3f * uniform(rngMod));
@@ -463,14 +718,24 @@ int main(int argc, char** argv) {
     runMkFitCore(ops[op], pfMat);
   for (int op : {kFitUpdBkw, kFitUpdFwd})
     runMkFitCore(ops[op], pfFit);
+  // v2p2: the finding flags inter- and intra-layer (both use_param_b_field | apply_material in Phase 2); the endcap
+  // records as blocks of their own
+  for (int op : {kV2p2Edges, kHermite, kHermitePlane, kKalmanD0, kKalmanD1}) {
+    runMkFitCore(ops[op], pfMat);
+    runMkFitCore(opsEc[op], pfMat);
+    ops.push_back(std::move(opsEc[op]));
+  }
 
-  std::printf("MkFitCore NN = %d, generated %d tracks: barrel %d (at the turning point %d) endcap %d skipped %d\n",
-              int(NN),
-              nGen,
-              nBrl,
-              nTurn,
-              nEc,
-              nSkip);
+  std::printf(
+      "MkFitCore NN = %d, generated %d tracks: barrel %d (at the turning point %d) endcap %d skipped %d; v2p2: %d miss "
+      "the layer\n",
+      int(NN),
+      nGen,
+      nBrl,
+      nTurn,
+      nEc,
+      nSkip,
+      nMissV2p2);
   if (!writeFile(outFn, mb, ops)) {
     std::printf("cannot write %s\n", outFn.c_str());
     return 2;
