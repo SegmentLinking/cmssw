@@ -2,8 +2,10 @@
 #define RecoTracker_MkFitAlpaka_interface_v2p2_V2p2Config_h
 
 // Portable copy of RecoTracker/MkFitCore/src/V2p2Config.h: the switches of MkFinderV2p2 and of the v2p2 window in
-// MkBins, constexpr as in the CMSSW build of MkFitCore. src/esFill.cc checks every value against MkFitCore.
+// MkBins, constexpr as in the CMSSW build of MkFitCore. test/testESFill.cpp checks every value against MkFitCore.
 // The per-iteration tunings are V2p2Params (interface/v2p2/V2p2Params.h), carried by the ES product.
+
+#include <algorithm>
 
 #include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
 #include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Params.h"
@@ -25,6 +27,14 @@ namespace mkfitdev {
       constexpr float dphi_hit_fac = 3.0f;
       constexpr float dphi_flat_rad = 2.0f * 0.0123f;
       constexpr int phi_extra_bins = 0;
+      // Upper bound on the phi margin, track and hit terms together [rad]: fetch, cut, line pre-cut and density region.
+      // Keep it well below a full turn: the phi bin walk cannot tell a full-turn window from an empty one (p1 == p2).
+      constexpr float dphi_max_rad = 0.05f;
+      ALPAKA_FN_HOST_ACC inline float capped_dphi(float m) { return std::min(m, float(dphi_max_rad)); }
+
+      // Hits whose module the track crosses at |cos(incidence)| below this are not taken; 0 takes all. Design notes,
+      // "Grazing incidence".
+      constexpr float min_cos_incidence = 0.0f;
     }  // namespace Window
 
     // Line pre-cut in select_hits(), design notes "Line pre-cut".

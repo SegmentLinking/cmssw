@@ -69,6 +69,7 @@ namespace mkfitdev {
     int32_t moduleBegin;  // row of module detIDinLayer 0 of this layer in the module table
     int8_t isPixel;
     int8_t isBarrel;
+    int16_t doubleLayerPartner;  // LayerInfo::double_layer_partner(), -1 = single layer
   };
 
   // Module plane table row (ModuleInfo zdir / xdir / pos as packModuleNormDirPnt packs them).

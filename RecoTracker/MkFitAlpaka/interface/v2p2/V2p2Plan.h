@@ -11,6 +11,7 @@
 // layer -1 and only awakens (MkFinderV2p2::end_layer of the last entry also awakens dormant CombCandidates).
 // planIndex[s * nRegions + r] = P + w * (s + 1), -1 past the end (the plan index of the entry).
 
+#include <cstdint>
 #include <vector>
 
 #include "RecoTracker/MkFitAlpaka/interface/cands/CandEngineTypes.h"
@@ -22,7 +23,44 @@ namespace mkfitdev {
     std::vector<int16_t> planIndex;
   };
 
-  inline V2p2StepTablesHost makeV2p2StepTables(const EnginePlan& plan, bool fwd);
+  // The walk of SteeringParams::iterator (make_iterator(IT_FwdSearch / IT_BkwSearch), operator++) for every region. A
+  // region without a backward-search plan (pickup -1) gets no step: findTracksStandardv2p2 skips it.
+  inline V2p2StepTablesHost makeV2p2StepTables(const EnginePlan& plan, bool fwd) {
+    V2p2StepTablesHost tables;
+    EngineStepTablesHost& st = tables.steps;
+    st.nRegions = int(plan.layers.size());
+    st.plans = makeEngineRegionPlans(plan, fwd);
+    const int dir = fwd ? 1 : -1;
+    for (int region = 0; region < st.nRegions; ++region) {
+      const int nLayers = int(plan.layers[region].size());
+      const int pickup = fwd ? plan.fwdPickup[region] : plan.bkwPickup[region];
+      if (pickup < 0 || pickup >= nLayers)
+        continue;
+      const int entries = fwd ? nLayers - 1 - pickup : pickup;
+      st.nSteps = entries + 1 > st.nSteps ? entries + 1 : st.nSteps;
+    }
+    st.layer.assign(st.nSteps * st.nRegions, -1);
+    st.prevLayer.assign(st.nSteps * st.nRegions, -1);
+    tables.planIndex.assign(st.nSteps * st.nRegions, -1);
+    for (int region = 0; region < st.nRegions; ++region) {
+      const auto& pl = plan.layers[region];
+      const int nLayers = int(pl.size());
+      const int pickup = fwd ? plan.fwdPickup[region] : plan.bkwPickup[region];
+      for (int step = 0; step < st.nSteps; ++step) {
+        const int prev = pickup + dir * step;
+        if (prev < 0 || prev >= nLayers)
+          break;
+        const int row = step * st.nRegions + region;
+        st.prevLayer[row] = int16_t(pl[prev]);
+        const int idx = prev + dir;
+        if (idx >= 0 && idx < nLayers) {
+          st.layer[row] = int16_t(pl[idx]);
+          tables.planIndex[row] = int16_t(idx);
+        }
+      }
+    }
+    return tables;
+  }
 
 }  // namespace mkfitdev
 

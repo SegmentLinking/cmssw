@@ -45,7 +45,8 @@ namespace mkfitdev {
     for (int layer = 0; layer < nLayers; ++layer)
       out[layer] = EngineLayerParams{layers[layer].module_begin(),
                                      int8_t(layers[layer].is_pixel() ? 1 : 0),
-                                     int8_t(layers[layer].layer_type() == static_cast<int>(LayerType::Barrel) ? 1 : 0)};
+                                     int8_t(layers[layer].layer_type() == static_cast<int>(LayerType::Barrel) ? 1 : 0),
+                                     int16_t(layers[layer].double_layer_partner())};
     return out;
   }
 

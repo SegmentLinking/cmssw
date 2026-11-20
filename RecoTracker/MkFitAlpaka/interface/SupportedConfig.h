@@ -22,6 +22,7 @@ namespace mkfitdev {
   // Defaults = the HLT_75e33 values.
   struct BuildModuleConfig {
     std::string clustersToSkip;  // InputTag label; the device has no hit mask (m_iteration_hit_mask)
+    // "cloneEngine" or "v2p2" (MkFinderV2p2); MkFitProducer's bestHit and standard are not ported
     std::string buildingRoutine = "cloneEngine";
     bool seedCleaning = true;         // runs the IterationConfig seed cleaner if one is set (none ported)
     bool removeDuplicates = true;     // runs the IterationConfig duplicate cleaner if one is set
