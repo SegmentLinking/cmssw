@@ -48,7 +48,16 @@ namespace reco {
   //                       directly to propagate xerrLocal/yerrLocal to the
   //                       global covariance via `SOAFrame::toGlobal`, instead
   //                       of reading pre-computed columns from OTRecHitsSoA.
-  GENERATE_SOA_LAYOUT(CAModulesLayout, SOA_COLUMN(DetFrame, detFrame), SOA_COLUMN(DetFrame, innerSensorFrame))
+  //   halfWidth, halfLength: half sizes of the module surface along local x and y [cm];
+  //   thickness, pitchY:  sensor thickness and pixel pitch along local y [cm] (0 for outer-tracker modules);
+  //                       read by the hit-expectation tests of the inner-tracker-only CA (CATripletHoleCheck.h).
+  GENERATE_SOA_LAYOUT(CAModulesLayout,
+                      SOA_COLUMN(DetFrame, detFrame),
+                      SOA_COLUMN(DetFrame, innerSensorFrame),
+                      SOA_COLUMN(float, halfWidth),
+                      SOA_COLUMN(float, halfLength),
+                      SOA_COLUMN(float, thickness),
+                      SOA_COLUMN(float, pitchY))
 
   GENERATE_SOA_LAYOUT(CALayersLayout,
                       // doublet duplication removal

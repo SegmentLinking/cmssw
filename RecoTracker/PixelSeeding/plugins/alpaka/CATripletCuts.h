@@ -345,6 +345,92 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       return compatible;
     }
 
+    // ---------------------------------
+    // Pixel-only triplet DNN gate (inner-tracker-only CA, pixelTopology::Phase2)
+    // ---------------------------------
+    // The 27 inputs of the pixel-only bank (CATripletDNNWeights_pixelOnly.h), in the trained order, from the three
+    // hits and the circle through them; returns false if one of them is not finite.
+    template <typename TAcc, typename Outer>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE static bool pixelOnlyDNNInputs(TAcc const& acc,
+                                                                  CACell<TrackerTraits> const& innerCell,
+                                                                  Outer const& outer,
+                                                                  HitsMultiView const& hh,
+                                                                  reco::CAGraphSoAConstView const& cc,
+                                                                  CircleEq<float> const& eq,
+                                                                  float absCurvature,
+                                                                  float r1,
+                                                                  float z1,
+                                                                  float x2,
+                                                                  float y2,
+                                                                  float (&in)[caTripletDNN_pixelOnly::kNFeat]) {
+      constexpr float kEps = 1e-12f;
+      const float r2 = outer.r2(), z2 = outer.z2(), r3 = outer.r3(), z3 = outer.z3();
+      const float dr13 = r3 - r1;
+      const float dPhi12 = short2phi(outer.iphi2() - hh[innerCell.inner_hit_id()].iphi());
+      const float dPhi13 = short2phi(outer.iphi3() - hh[innerCell.inner_hit_id()].iphi());
+      // The distance of closest approach of the circle without the cancellation of dca0() = sqrt(x^2 + y^2) - 1
+      // (x = c x2 + alpha, y = c y2 + beta), which for nearly straight (TeV) tracks leaves only rounding error
+      // and, divided by the tiny curvature, a spurious dca of O(0.01-0.1) cm. With alpha^2 + beta^2 = 1:
+      // x^2 + y^2 - 1 = c^2 r2^2 + 2 c (x2 alpha + y2 beta), so dca = (c r2^2 + 2 (x2 alpha + y2 beta)) /
+      // (sqrt(x^2 + y^2) + 1), finite also at c = 0.
+      const float c = eq.curvature();
+      const auto [al, be] = eq.cosdir();
+      const float xx = c * x2 + al, yy = c * y2 + be;
+      const float dca = alpaka::math::abs(
+          acc,
+          (c * (x2 * x2 + y2 * y2) + 2.f * (x2 * al + y2 * be)) / (alpaka::math::sqrt(acc, xx * xx + yy * yy) + 1.f));
+      in[0] = (z3 - z1) / (dr13 + kEps);                          // cotTheta
+      in[1] = std::log1p(absCurvature * 1e3f);                    // logAbsCurv
+      in[2] = std::log1p(dca);                                    // logDca
+      in[3] = z2 - (z1 + (r2 - r1) * (z3 - z1) / (dr13 + kEps));  // rzResid
+      in[4] = z1;
+      in[5] = r1;
+      const uint32_t hitId[3] = {innerCell.inner_hit_id(), outer.innerHitId(), outer.outerHitId()};
+      const int layer[3] = {int(innerCell.innerLayer(cc)),
+                            int(cc[outer.layerPairId()].layerPair()[0]),
+                            int(cc[outer.layerPairId()].layerPair()[1])};
+      // expected cluster sizes from the triplet direction: hit 1 at phi = 0, the others at dPhi12, dPhi13;
+      // eY = 1.5 |cot(theta)| (barrel) or 1.5 |tan(theta)| (disks), tX = signed r-phi crossing tangent of the local
+      // chord
+      const float rr[3] = {r1, r2, r3}, zz[3] = {z1, z2, z3}, ph[3] = {0.f, dPhi12, dPhi13};
+      float xh[3], yh[3];
+      for (int k = 0; k < 3; ++k) {
+        xh[k] = rr[k] * alpaka::math::cos(acc, ph[k]);
+        yh[k] = rr[k] * alpaka::math::sin(acc, ph[k]);
+      }
+      const float cot = (z3 - z1) / (r3 - r1 + kEps);
+      const int ca[3] = {0, 0, 1}, cb[3] = {1, 2, 2};
+      for (int k = 0; k < 3; ++k) {
+        auto const hit = hh[hitId[k]];
+        const int sx = hit.clusterSizeX(), sy = hit.clusterSizeY();
+        const float sX = float(alpaka::math::abs(acc, int(sx))) / 8.f,
+                    sY = float(alpaka::math::abs(acc, int(sy))) / 8.f;
+        const bool barrel = layer[k] < 4;
+        const float tx = xh[cb[k]] - xh[ca[k]], ty = yh[cb[k]] - yh[ca[k]], tz = zz[cb[k]] - zz[ca[k]];
+        const float ux = xh[k] / (rr[k] + kEps), uy = yh[k] / (rr[k] + kEps);
+        const float cross = tx * uy - ty * ux, dot = tx * ux + ty * uy;
+        float tX = barrel ? cross / (alpaka::math::abs(acc, dot) + kEps) * (dot >= 0.f ? 1.f : -1.f)
+                          : cross / (alpaka::math::abs(acc, tz) + kEps);
+        tX = alpaka::math::min(acc, alpaka::math::max(acc, tX, -20.f), 20.f);
+        const float eY = alpaka::math::min(
+            acc,
+            alpaka::math::max(
+                acc, barrel ? 1.5f * alpaka::math::abs(acc, cot) : 1.5f / (alpaka::math::abs(acc, cot) + kEps), 0.f),
+            50.f);
+        in[6 + k] = float(layer[k]);
+        in[9 + k] = sX;
+        in[12 + k] = sY;
+        in[15 + k] = float(hit.chargeAndStatus().charge) / 1.e4f;
+        in[18 + k] = eY;
+        in[21 + k] = sY - 1.f - eY;
+        in[24 + k] = sX - 1.f - 6.f * alpaka::math::abs(acc, tX);
+      }
+      bool finite = true;
+      for (int k = 0; k < caTripletDNN_pixelOnly::kNFeat; ++k)
+        finite = finite && !edm::isNotFinite(in[k]);
+      return finite;
+    }
+
     // -------------------------------------------------------------------------------------------------------------
     // MAIN FUNCTION: ACCEPT function applying the cuts in sequence
     // -------------------------------------------------------------------------------------------------------------
@@ -409,6 +495,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       if (!beamspotCompatibleXY(
               absCurvature, tipTimesCurvature, tripletCuts[innerPairId].maxDCA(), tripletCuts[innerPairId].floorDCA())) {
         return false;
+      }
+
+      // inner-tracker-only CA: the pixel-only triplet DNN gate (same promoting form and NaN discipline as the
+      // vector-hit gate below)
+      if constexpr (std::is_same_v<pixelTopology::Phase2, TrackerTraits>) {
+        if (useTripletDNN) {
+          float in[caTripletDNN_pixelOnly::kNFeat];
+          const bool finite = pixelOnlyDNNInputs(acc, innerCell, outer, hh, cc, eq, absCurvature, r1, z1, x2, y2, in);
+          const float score = caTripletDNN_eval::scorePixelOnly(acc, in);
+          const float thr =
+              (tripletDNNThreshold >= 0.f) ? tripletDNNThreshold : caTripletDNN_pixelOnly::kDefaultThreshold;
+          const bool dnnAccept = finite && (score >= thr);
+          if (!dnnAccept) {
+            return false;
+          }
+        }
       }
 
       // vector hit specific cuts for Phase2 OT

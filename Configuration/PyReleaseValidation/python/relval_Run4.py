@@ -64,6 +64,7 @@ numWFIB.extend([prefixDet+234.0])     #standard PU
 
 # Phase-2 HLT tests
 numWFIB.extend([prefixDet+34.7501]) # HLTTrackingOnly75e33
+numWFIB.extend([prefixDet+34.750104]) # HLTTrackingOnly75e33, phase2ITonlyCA
 numWFIB.extend([prefixDet+34.7502]) # HLTTrackingNtuple75e33
 numWFIB.extend([prefixDet+34.7503]) # HLTHeterogeneousValid
 numWFIB.extend([prefixDet+34.7504]) # HLTDev75e33

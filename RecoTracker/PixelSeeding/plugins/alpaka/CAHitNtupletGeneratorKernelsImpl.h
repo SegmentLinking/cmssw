@@ -45,6 +45,8 @@
 #include "CAStructures.h"
 #include "CATrackDNN.h"
 #include "CATripletCuts.h"
+#include "CATripletHoleCheck.h"
+#include "CAZVertexHisto.h"
 
 //#define CA_DEBUG
 //#define CA_STATS
@@ -548,10 +550,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                            int first,
                                                            int step,
                                                            Quality reject,
-                                                           float fastDupNSigma2) {
+                                                           float fastDupNSigma2,
+                                                           bool nLayersFirst) {
       constexpr auto loose = Quality::loose;
 
       auto score = [&](uint32_t it) { return tracks_view[it].chi2(); };
+      // nLayersFirst: of two tracks of the same quality the one with more layers wins before the chi2 is compared
+      auto nl = [&](uint32_t it) { return nLayersFirst ? int(tracks_view[it].nLayers()) : 0; };
       auto demote = [&](uint32_t it, Quality q) {
         alpaka::atomicMin(acc, &qualityScratch[it], static_cast<int32_t>(q), alpaka::hierarchy::Blocks{});
       };
@@ -601,7 +606,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           if (incompatibleTrackParams(jt)) {
             continue;
           }
-          if ((qj > qi) || (qj == qi && score(jt) < score(it))) {
+          if ((qj > qi) || (qj == qi && (nl(jt) > nl(it) || (nl(jt) == nl(it) && score(jt) < score(it))))) {
             demote(it, reject);
             break;
           }
@@ -620,11 +625,19 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         return;
       }
 
-      // min chi2 among the tracks of quality maxQual (the demotions above go to qualityScratch)
+      // min chi2 among the tracks of quality maxQual (the demotions above go to qualityScratch); with nLayersFirst
+      // among the longest of them, and the shorter ones count as worse
+      int maxNl = 0;
+      for (int i = 0; i < ntr; i++) {
+        auto it = thisCellTracks[i];
+        if (tracks_view[it].quality() == maxQual && nl(it) > maxNl) {
+          maxNl = nl(it);
+        }
+      }
       float mc = maxScore;
       for (int i = 0; i < ntr; i++) {
         auto it = thisCellTracks[i];
-        if (tracks_view[it].quality() == maxQual && score(it) < mc) {
+        if (tracks_view[it].quality() == maxQual && nl(it) == maxNl && score(it) < mc) {
           mc = score(it);
         }
       }
@@ -632,7 +645,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       // demote the other tracks above loose to loose
       for (int i = iFirst; i < ntr; i += iStep) {
         auto it = thisCellTracks[i];
-        if (tracks_view[it].quality() > loose && score(it) > mc) {
+        if (tracks_view[it].quality() > loose && (nl(it) < maxNl || score(it) > mc)) {
           demote(it, loose);
         }
       }
@@ -663,8 +676,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             ALPAKA_ASSERT_ACC(slot < heavyCellsCapacity);
             heavyCells[1 + slot] = idx;
           } else if (ntr >= 2) {
-            fastDupRemoverCell<false>(
-                acc, cellTracksHisto->begin(idx), tracks_view, qualityScratch, ntr, 0, 1, reject, fastDupNSigma2);
+            fastDupRemoverCell<false>(acc,
+                                      cellTracksHisto->begin(idx),
+                                      tracks_view,
+                                      qualityScratch,
+                                      ntr,
+                                      0,
+                                      1,
+                                      reject,
+                                      fastDupNSigma2,
+                                      TrackerTraits::dupNLayersFirst);
           }
         }
       }
@@ -705,8 +726,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           alpaka::syncBlockThreads(acc);
           const int n = static_cast<int>(nAlive);
           if (n >= 2) {
-            fastDupRemoverCell<true>(
-                acc, alive, tracks_view, qualityScratch, n, thread, blockSize, reject, fastDupNSigma2);
+            fastDupRemoverCell<true>(acc,
+                                     alive,
+                                     tracks_view,
+                                     qualityScratch,
+                                     n,
+                                     thread,
+                                     blockSize,
+                                     reject,
+                                     fastDupNSigma2,
+                                     TrackerTraits::dupNLayersFirst);
           }
           // all threads have read nAlive before the next cell resets it
           alpaka::syncBlockThreads(acc);
@@ -1188,7 +1217,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                                       tracks_view.pt().data(),
                                                       stack,
                                                       hits,
-                                                      params.minHitsPerNtuplet_);
+                                                      params.minHitsPerNtuplet_,
+                                                      params.maxTripletCotTheta_);
             ALPAKA_ASSERT_ACC(stack.empty());
           }
         }
@@ -1807,7 +1837,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     // a track with more entries than this in its hits' track lists (a heavy track) is processed by a whole block
     inline constexpr uint32_t kRejectDupHeavyMinPairs = 256;
 
-    // Whether a compatible track sharing a hit with `it` is better: more layers, [Phase2OTVectorHits: more hits], higher
+    // Whether a compatible track sharing a hit with `it` is better: more layers, [dupHitCountTieBreak: more hits], higher
     // quality, lower chi2, then hitsBefore on Phase-2 or the lower tuple index elsewhere. The calling thread tests the
     // entries k = first, first + step, ... of each hit's track list.
     template <typename TrackerTraits>
@@ -1824,9 +1854,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       auto score = [&](uint32_t t) { return tracks_view[t].chi2(); };
       auto const qi = qual(it);
       auto const nli = tracks_view[it].nLayers();
-      // Phase2OTVectorHits only: the number of hits ranks between nLayers and quality, so that a pixel-rich
-      // prompt track cannot beat its OT-rich displaced twin on quality or chi2 and lose the twin's TID hits
-      constexpr bool kUseHitCountTieBreak = std::is_same_v<pixelTopology::Phase2OTVectorHits, TrackerTraits>;
+      // TrackerTraits::dupHitCountTieBreak (Phase2, Phase2OTVectorHits): the number of hits ranks between nLayers and
+      // quality, so that a pixel-rich prompt track cannot beat its OT-rich displaced twin on quality or chi2 and lose
+      // the twin's TID hits; off on the other topologies
+      constexpr bool kUseHitCountTieBreak = TrackerTraits::dupHitCountTieBreak;
       const uint32_t nhi = kUseHitCountTieBreak ? ::reco::nHits(tracks_view, it) : 0u;
       constexpr bool kTieBreakByHits = std::is_base_of_v<pixelTopology::Phase2, TrackerTraits>;
 
@@ -2187,6 +2218,40 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       }
     };
 
+    // compactOutput: prefix copy of the output track SoA into a collection sized to the event
+    class Kernel_compactTracks {
+    public:
+      ALPAKA_FN_ACC void operator()(Acc1D const &acc,
+                                    ::reco::TrackBlocksConstView src,
+                                    ::reco::TrackBlocksView dst,
+                                    uint32_t nTracks,
+                                    uint32_t nHitRows) const {
+        auto s = src.tracks();
+        auto d = dst.tracks();
+        const uint32_t nCopy = alpaka::math::min(acc, nTracks, uint32_t(alpaka::math::max(acc, s.nTracks(), 0)));
+        if (cms::alpakatools::once_per_grid(acc))
+          d.nTracks() = int(nCopy);
+        for (auto i : cms::alpakatools::uniform_elements(acc, nCopy)) {
+          d[i].quality() = s[i].quality();
+          d[i].chi2() = s[i].chi2();
+          d[i].nLayers() = s[i].nLayers();
+          d[i].eta() = s[i].eta();
+          d[i].pt() = s[i].pt();
+          d[i].state() = s[i].state();
+          d[i].covariance() = s[i].covariance();
+          d[i].hitOffsets() = s[i].hitOffsets();
+          d[i].ndof() = s[i].ndof();
+        }
+        auto sh = src.trackHits();
+        auto dh = dst.trackHits();
+        for (auto j : cms::alpakatools::uniform_elements(acc, nHitRows)) {
+          dh[j].id() = sh[j].id();
+          dh[j].detId() = sh[j].detId();
+          dh[j].attached() = sh[j].attached();
+        }
+      }
+    };
+
     template <typename TrackerTraits>
     class Kernel_simpleTripletCleaner {
     public:
@@ -2195,16 +2260,18 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     bool dupPassThrough,
                                     HitContainer const *__restrict__ foundNtuplets,
                                     int32_t const *__restrict__ qualityScratch,
-                                    HitToTuple const *__restrict__ phitToTuple) const {
+                                    HitToTuple const *__restrict__ phitToTuple,
+                                    uint16_t mode) const {
         // quality to mark rejected
         auto const reject = Quality::loose;
-        /// min quality of good
-        auto const good = Quality::loose;
+        /// min quality of good: with mode 2 only tight (or better) tracks compete for a shared hit
+        auto const good = mode == 2 ? Quality::tight : Quality::loose;
 
         auto &hitToTuple = *phitToTuple;
         auto qual = [&](uint32_t t) { return static_cast<Quality>(qualityScratch[t]); };
 
-        // Triplet `it` is rejected if, on one of its shared hits, it is not the best-tip survivor
+        // mode 0: triplet `it` is rejected if, on one of its shared hits, it is not the best-tip survivor;
+        // modes 1 and 2: only if one of its hits is shared with a longer good track
         for (auto it : cms::alpakatools::uniform_elements(acc, foundNtuplets->nOnes())) {
           if (foundNtuplets->size(it) == 0)
             break;  // guard
@@ -2219,6 +2286,14 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             }
             if (hitToTuple.size(h) < 2)
               continue;
+            if (mode != 0) {
+              for (auto jp = hitToTuple.begin(h); jp != hitToTuple.end(h) && !kill; ++jp) {
+                auto const jt = *jp;
+                if (jt != it && qual(jt) >= good && !reco::isTriplet(tracks_view, jt))
+                  kill = true;
+              }
+              continue;
+            }
             float mc = maxScore;
             uint32_t im = tkNotFound;
             for (auto jp = hitToTuple.begin(h); jp != hitToTuple.end(h); ++jp) {
@@ -3502,9 +3577,26 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
 
   template <typename TrackerTraits>
-  void CAHitNtupletGeneratorKernels<TrackerTraits>::classifyTuples(const HitsMultiView &hh,
-                                                                   TkSoAView &tracks_view,
-                                                                   Queue &queue) {
+  void CAHitNtupletGeneratorKernels<TrackerTraits>::compactTracks(::reco::TrackBlocksConstView src,
+                                                                  ::reco::TrackBlocksView dst,
+                                                                  uint32_t nTracks,
+                                                                  uint32_t nHitRows,
+                                                                  Queue &queue) {
+    using namespace caHitNtupletGeneratorKernels;
+    const uint32_t threads = 256;
+    const auto workDiv = cms::alpakatools::make_workdiv<Acc1D>(
+        cms::alpakatools::divide_up_by(std::max(nTracks, nHitRows), threads), threads);
+    alpaka::exec<Acc1D>(queue, workDiv, Kernel_compactTracks{}, src, dst, nTracks, nHitRows);
+  }
+
+  template <typename TrackerTraits>
+  void CAHitNtupletGeneratorKernels<TrackerTraits>::classifyTuples(
+      const HitsMultiView &hh,
+      TkSoAView &tracks_view,
+      Queue &queue,
+      [[maybe_unused]] const ModulesMultiView &mm,
+      [[maybe_unused]] const ::reco::CAModulesConstView &cm,
+      [[maybe_unused]] const ::reco::CALayersSoAConstView &cl) {
     using namespace caHitNtupletGeneratorKernels;
 
 #ifdef GPU_DEBUG
@@ -3549,6 +3641,77 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     alpaka::wait(queue);
     std::cout << "Kernel_classifyTracks -> done!" << std::endl;
 #endif
+
+    // inner-tracker-only CA: hit-expectation tests of the 3- and 4-hit tracks (CATripletHoleCheck.h); the 3-hit
+    // tracks failing them are flagged for the vertex rescue of the z-vertex filter (CAZVertexHisto.h)
+    [[maybe_unused]] uint8_t *holeCheckSuspect = nullptr;
+    if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase2>) {
+      auto const &holeCheck = this->m_params.algoParams_.tripletHoleCheck_;
+      auto const &zVertex = this->m_params.algoParams_.zVertex_;
+      if (holeCheck.enabled && this->m_params.algoParams_.minHitsPerNtuplet_ <= 3) {
+        if (zVertex.enabled && zVertex.rescueDz >= 0.f) {
+          this->device_holeCheckSuspect_ = cms::alpakatools::make_device_buffer<uint8_t[]>(queue, maxTuples);
+          alpaka::memset(queue, *this->device_holeCheckSuspect_, 0);
+          holeCheckSuspect = this->device_holeCheckSuspect_->data();
+        }
+        alpaka::exec<Acc1D>(queue,
+                            workDiv1D,
+                            caHoleCheck::Kernel_tripletHoleCheck<TrackerTraits>{},
+                            tracks_view,
+                            this->device_hitContainer_->data(),
+                            hh,
+                            mm,
+                            cm,
+                            cl,
+                            holeCheck,
+                            holeCheckSuspect);
+#ifdef GPU_DEBUG
+        alpaka::wait(queue);
+        std::cout << "Kernel_tripletHoleCheck -> done!" << std::endl;
+#endif
+      }
+    }
+
+    // inner-tracker-only CA: z-vertex histogram of the >= 4-hit tracks, then the vertex restriction of the 3- and
+    // 4-hit tracks (CAZVertexHisto.h); run after the duplicate removers, so that duplicates and demoted tracks do
+    // not count
+    auto runZVertexFilter = [&]() {
+      if constexpr (std::is_same_v<TrackerTraits, pixelTopology::Phase2>) {
+        auto const &zVertex = this->m_params.algoParams_.zVertex_;
+        if (!zVertex.enabled || this->m_params.algoParams_.minHitsPerNtuplet_ > 3)
+          return;
+        const auto zVertexWorkDiv =
+            cms::alpakatools::make_workdiv<Acc1D>(cms::alpakatools::divide_up_by(maxTuples, 64u), 64u);
+        this->device_zVertexHisto_ = cms::alpakatools::make_device_buffer<caZVertex::ZVertexHisto>(queue);
+        alpaka::memset(queue, *this->device_zVertexHisto_, 0);
+        alpaka::exec<Acc1D>(queue,
+                            zVertexWorkDiv,
+                            caZVertex::Kernel_zvtxFill{},
+                            tracks_view,
+                            this->device_hitContainer_->data(),
+                            this->device_zVertexHisto_->data(),
+                            zVertex);
+        alpaka::exec<Acc1D>(queue,
+                            cms::alpakatools::make_workdiv<Acc1D>(1u, 256u),
+                            caZVertex::Kernel_zvtxFind{},
+                            this->device_zVertexHisto_->data(),
+                            zVertex);
+        alpaka::exec<Acc1D>(queue,
+                            zVertexWorkDiv,
+                            caZVertex::Kernel_zvtxFilterTriplets<TrackerTraits>{},
+                            tracks_view,
+                            this->device_hitContainer_->data(),
+                            hh,
+                            cl,
+                            this->device_zVertexHisto_->data(),
+                            zVertex,
+                            holeCheckSuspect);
+#ifdef GPU_DEBUG
+        alpaka::wait(queue);
+        std::cout << "z-vertex filter -> done!" << std::endl;
+#endif
+      }
+    };
 
     if (this->m_params.algoParams_.lateFishbone_) {
       // apply fishbone cleaning to good tracks
@@ -3713,6 +3876,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
       }
 
+      runZVertexFilter();
       if (this->m_params.algoParams_.doTripletCleaner_ && (this->m_params.algoParams_.minHitsPerNtuplet_ <= 3)) {
         if (this->m_params.algoParams_.useSimpleTripletCleaner_) {
           numberOfBlocks =
@@ -3726,7 +3890,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                               this->m_params.algoParams_.dupPassThrough_,
                               this->device_hitContainer_->data(),
                               qScratch,
-                              this->device_hitToTuple_->data());
+                              this->device_hitToTuple_->data(),
+                              this->m_params.algoParams_.tripletCleanerMode_);
 #ifdef GPU_DEBUG
           alpaka::wait(queue);
           std::cout << "Kernel_simpleTripletCleaner   -> done!" << std::endl;
@@ -3750,6 +3915,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
 #endif
         }
       }
+    } else {
+      runZVertexFilter();
     }
 
     if (this->m_params.algoParams_.doStats_) {
