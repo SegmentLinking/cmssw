@@ -50,6 +50,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     mini_propagators::InitialStatePlex<N> m_isp;
     mini_propagators::StatePlex<N> m_sp1, m_sp2;
 
+    float m_phi1[N], m_phi2[N];  // phi at m_sp1 and m_sp2, from determine_bin_windows()
     float m_phi_min[N], m_phi_max[N], m_phi_center[N], m_phi_delta[N];
     float m_q_min[N], m_q_max[N];
 
@@ -69,14 +70,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     // determine_bin_windows (MkBins.cc)
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void determine_bin_windows(const MkBinTrackCovExtract<N>& cov_ex);
 
-    // find_bin_ranges (MkBins.cc)
+    // find_bin_ranges (MkBins.cc). dphi_trk_fac, dq_trk_fac: the track terms of the window, see V2p2Params; <= 0 takes
+    // Window::dphi_trk_fac, Window::dq_trk_fac.
     ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void find_bin_ranges(const ::mkfitdev::LayerOfHitsAccess& loh,
-                                                             MkBinLimits<N>& bl) const;
+                                                             MkBinLimits<N>& bl,
+                                                             float dphi_trk_fac = -1.0f,
+                                                             float dq_trk_fac = -1.0f) const;
   };
-
-  // Largest phi margin added on each side of the crossing span: just under pi,
-  // since at pi the two endpoints coincide and the arc degenerates to a point.
-  constexpr float kMaxHalfPhiWindow = 3.14f;
 
   //==============================================================================
 
@@ -244,10 +244,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
     // The wrap fix-up in a loop of its own, as MkFitCore, so that the window loop vectorizes.
     MPLEX_SIMD
     for (int ii = 0; ii < N; ++ii) {
-      const float xp1 = vdt::fast_atan2f(m_sp1.y[ii], m_sp1.x[ii]);
-      const float xp2 = vdt::fast_atan2f(m_sp2.y[ii], m_sp2.x[ii]);
-      m_phi_min[ii] = std::min(xp1, xp2);
-      m_phi_max[ii] = std::max(xp1, xp2);
+      m_phi1[ii] = ::mkfitdev::Matriplex::internal::atan2_poly(m_sp1.y[ii], m_sp1.x[ii]);
+      m_phi2[ii] = ::mkfitdev::Matriplex::internal::atan2_poly(m_sp2.y[ii], m_sp2.x[ii]);
+      m_phi_min[ii] = std::min(m_phi1[ii], m_phi2[ii]);
+      m_phi_max[ii] = std::max(m_phi1[ii], m_phi2[ii]);
       m_phi_delta[ii] = m_phi_max[ii] - m_phi_min[ii];
       m_phi_center[ii] = 0.5f * (m_phi_max[ii] + m_phi_min[ii]);
     }
@@ -302,24 +302,29 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev {
 
   template <idx_t N>
   ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void MkBins<N>::find_bin_ranges(const ::mkfitdev::LayerOfHitsAccess& loh,
-                                                                      MkBinLimits<N>& bl) const {
+                                                                      MkBinLimits<N>& bl,
+                                                                      float dphi_trk_fac,
+                                                                      float dq_trk_fac) const {
     namespace Window = ::mkfitdev::Config::V2p2::Window;
+    if (!(dphi_trk_fac > 0.0f))
+      dphi_trk_fac = Window::dphi_trk_fac;
+    if (!(dq_trk_fac > 0.0f))
+      dq_trk_fac = Window::dq_trk_fac;
     for (int i = 0; i < N; ++i) {
       if (i < m_n_proc) {
         // Fetch what the cut can accept, using the layer's largest hit extent since
         // the hit is not known yet, then extend by whole bins on the bin index.
-        // The margin is clamped below pi: a larger one wraps to a small arc.
+        // The margin is capped at Window::dphi_max_rad.
         // See doc/MkFinderV2p2-DesignNotes.md, "Search window".
         const float phi_hit_term =
             Window::phi_per_hit ? Window::dphi_hit_fac * loh.max_hit_phi_half_extent() : Window::dphi_flat_rad;
-        const float cut_dphi = std::min(Window::dphi_trk_fac * m_dphi_track[i] + phi_hit_term,
-                                        float(kMaxHalfPhiWindow));  // by value: no ODR-use in device code
+        const float cut_dphi = Window::capped_dphi(dphi_trk_fac * m_dphi_track[i] + phi_hit_term);
         auto pr = loh.phiRangeBins(m_phi_min[i] - cut_dphi, m_phi_max[i] + cut_dphi);
         bl.p1[i] = loh.phiMaskApply(pr.begin - Window::phi_extra_bins);
         bl.p2[i] = loh.phiMaskApply(pr.end + Window::phi_extra_bins);
 
         // Same for q. The q axis is bounded, so the extension clamps.
-        const float cut_dq = Window::dq_trk_fac * m_dq_track[i] + Window::dq_hit_fac * loh.max_hit_q_half_length();
+        const float cut_dq = dq_trk_fac * m_dq_track[i] + Window::dq_hit_fac * loh.max_hit_q_half_length();
         auto qr = loh.qRangeBins(m_q_min[i] - cut_dq, m_q_max[i] + cut_dq);
         const int nq = (int)loh.qNBins();
         int qb = (int)qr.begin - Window::q_extra_bins;
