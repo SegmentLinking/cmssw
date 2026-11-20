@@ -8,7 +8,8 @@ import sys
 
 MENUS = ('HLT_75e33_cff', 'HLT_75e33_timing_cff', 'HLT_75e33_trackingOnly_cff')
 SCENARIOS = ['procModifier:' + menu for menu in MENUS] + ['customise', 'validation', 'alpakaAlone', 'otherFitConfig',
-                                                          'stripQualityDB', 'noBuilding', 'v2p2Building']
+                                                          'stripQualityDB', 'noBuilding', 'v2p2Building',
+                                                          'cloneEngineBuilding', 'standardBuilding']
 
 
 def runScenario(scenario):
@@ -93,10 +94,23 @@ def runScenario(scenario):
         refused(lambda: customisedWith(lambda process: delattr(process, mkFitAlpaka.BUILD)), mkFitAlpaka.BUILD,
                 'process without the mkFit building')
     elif scenario == 'v2p2Building':
-        # the device chain ports the clone engine only
+        # MkFinderV2p2 on the device: the device building module gets the menu's routine, v2p2 in the menu
+        process = customisedWith(lambda process: None)
+        checkDeviceChain(process, 'menu building with its own buildingRoutine')
+        routine = getattr(process, mkFitAlpaka.BUILD_DEVICE).buildingRoutine.value()
+        check(routine == 'v2p2', 'menu building with its own buildingRoutine: device routine %s' % routine)
+    elif scenario == 'cloneEngineBuilding':
+        # the clone engine stays selectable: the menu building with buildingRoutine cloneEngine
+        process = customisedWith(lambda process: setattr(getattr(process, mkFitAlpaka.BUILD), 'buildingRoutine',
+                                                         cms.string('cloneEngine')))
+        checkDeviceChain(process, 'menu building with buildingRoutine cloneEngine')
+        routine = getattr(process, mkFitAlpaka.BUILD_DEVICE).buildingRoutine.value()
+        check(routine == 'cloneEngine', 'menu building with buildingRoutine cloneEngine: device routine %s' % routine)
+    elif scenario == 'standardBuilding':
+        # the device chain ports the clone engine and MkFinderV2p2 only
         refused(lambda: customisedWith(lambda process: setattr(getattr(process, mkFitAlpaka.BUILD), 'buildingRoutine',
-                                                               cms.string('v2p2'))),
-                'buildingRoutine', 'menu building with buildingRoutine v2p2')
+                                                               cms.string('standard'))),
+                'buildingRoutine', 'menu building with buildingRoutine standard')
     else:
         check(False, 'unknown scenario ' + scenario)
     return len(failures)

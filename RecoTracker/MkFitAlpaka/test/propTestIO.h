@@ -29,7 +29,24 @@ namespace mkfitdev::proptest {
     kMiniPlexZ = 10,  // InitialStatePlex::propagate_to_z (the bin limits, endcap)
     kMiniR = 11,      // InitialState::propagate_to_r      (the per-hit preselection, barrel)
     kMiniPlane = 12,  // InitialState::propagate_to_plane  (the per-hit preselection, tilted barrel modules)
-    kNOps = 13
+    // v2p2 (MkFinderV2p2): the layer crossings, the Hermite cubic and the in-layer Kalman step chains
+    // prop_to_layer_edges: copyIn_partial_track_state, init_momentum_vec_and_k with a per-lane field, the two bounding
+    // surfaces (propagate_to_r or _to_z, m_isp = m_sp1 between them); outPar = far crossing (x, y, z, px, py, pz),
+    // chi2 = its dalpha, outErr[0, 7) = near crossing (x .. pz, dalpha)
+    kV2p2Edges = 13,
+    // Hermite3D::calculate_coeffs through the two crossings (uniform field), copied slot-wise, evaluate(t = hermT):
+    // outPar = (x, y, z, dx, dy, dz), outErr[0, 12) = coefficients, [12] = derfac, [13, 16) = evaluate(t, x, y, z)
+    kHermite = 14,
+    // Hermite3DOnPlane::init_coeffs + solve (two Newton steps) onto the module plane: outPar = Hermite3D::evaluate at T,
+    // chi2 = T, outErr[0, 4) = distance cubic, [4] = T before the steps, [5] = d(T), [6] = dd/dt(T), [7] = d(T),
+    // [8] = T after the first step alone
+    kHermitePlane = 15,
+    // KalmanOpArgs::do_kalman_stuff (MkFinderV2p2Structures.cc), depth 0: from the search's crossing on the module
+    // plane (xyz, compute_pars + path_from_perp), inter-layer flags
+    kKalmanD0 = 16,
+    // KalmanOpArgs::do_kalman_stuff, depth >= 1: path_solve + drift, intra-layer flags
+    kKalmanD1 = 17,
+    kNOps = 18
   };
 
   inline const char* opName(int op) {
@@ -45,19 +62,34 @@ namespace mkfitdev::proptest {
                                        "mini InitialStatePlex::propagate_to_r",
                                        "mini InitialStatePlex::propagate_to_z",
                                        "mini InitialState::propagate_to_r",
-                                       "mini InitialState::propagate_to_plane"};
+                                       "mini InitialState::propagate_to_plane",
+                                       "v2p2 prop_to_layer_edges",
+                                       "v2p2 Hermite3D",
+                                       "v2p2 Hermite3DOnPlane",
+                                       "v2p2 do_kalman_stuff (depth 0)",
+                                       "v2p2 do_kalman_stuff (depth >= 1)"};
     return names[op];
   }
 
+  // the operations whose outPar is a mini-propagator state (x, y, z, px, py, pz)
   inline constexpr bool isMini(int op) {
-    return op == kMiniPlexR || op == kMiniPlexZ || op == kMiniR || op == kMiniPlane;
+    return op == kMiniPlexR || op == kMiniPlexZ || op == kMiniR || op == kMiniPlane || op == kV2p2Edges ||
+           op == kHermite || op == kHermitePlane;
   }
+
+  // the v2p2 Kalman operations, which also return detV and chi2Acc
+  inline constexpr bool isV2p2Kalman(int op) { return op == kKalmanD0 || op == kKalmanD1; }
+
+  // V2p2Params::chi2_trk_fac (MkFitCore default) of the v2p2 Kalman operations
+  inline constexpr float kV2p2Chi2TrkFac = 3.0f;
 
   // FinalFitFlags::bkw_sub_steps of the backward final-fit operation
   inline constexpr int kBkwSubSteps = 2;
 
   // the operations that compute a chi2
-  inline constexpr bool hasChi2(int op) { return op == kFitUpdBkw || op == kChi2Plane || op == kFitUpdFwd; }
+  inline constexpr bool hasChi2(int op) {
+    return op == kFitUpdBkw || op == kChi2Plane || op == kFitUpdFwd || isV2p2Kalman(op);
+  }
 
   struct Rec {
     // inputs
@@ -74,12 +106,21 @@ namespace mkfitdev::proptest {
     float modRadl;   // the module's own material (final fit)
     float modBbxi;
     float msRefP;  // final_fit::Pass::ms_ref_p (backward final fit): |p| of the start state
+    // v2p2: the layer's bounding surfaces in search order (radii in the barrel, z in the endcap), the Hermite parameter
+    // of kHermite, and the search's crossing on the module plane (InitialState: x, y, z, px, py, pz, dalpha, inv_pt,
+    // inv_k, theta), written by the reference for kKalmanD0
+    float edge[2];
+    int barrel;
+    float hermT;
+    float xyz[10];
     // outputs
     float outPar[6];
     float outErr[21];
     float chi2;
     int fail;
     int chgOut;
+    float detV;     // v2p2 Kalman: det of the residual covariance
+    float chi2Acc;  // v2p2 Kalman: the acceptance chi2 (track covariance scaled by kV2p2Chi2TrkFac^2)
   };
 
   struct OpBlock {

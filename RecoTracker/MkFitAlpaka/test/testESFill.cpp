@@ -1,8 +1,12 @@
 // Host unit test of mkfitdev::fillESDataHost on a small synthetic TrackerInfo / IterationConfig: covers what the
-// Phase-2 cmsRun test cannot (an r-hole layer, which Phase-2 does not have, and the per-task track scorers) and the
-// error paths (capacities, hit-window parameters, unknown function names). Run: testMkFitAlpakaESFill
+// Phase-2 cmsRun test cannot (an r-hole layer, which Phase-2 does not have, the per-task track scorers per building
+// routine, the v2p2 tunings and the double-layer partners) and the error paths (capacities, hit-window parameters,
+// unknown function names, paired plan entries). Run: testMkFitAlpakaESFill
 
 #include <cstdio>
+#include <cstring>
+#include <initializer_list>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -10,11 +14,62 @@
 #include "RecoTracker/MkFitCore/interface/Config.h"
 #include "RecoTracker/MkFitCore/interface/IterationConfig.h"
 #include "RecoTracker/MkFitCore/interface/TrackerInfo.h"
+#include "RecoTracker/MkFitCore/interface/V2p2Params.h"
+// package-private MkFitCore header on purpose: angle brackets keep scram's private-header check off this test
+#include <RecoTracker/MkFitCore/src/V2p2Config.h>
 
 #include "RecoTracker/MkFitAlpaka/interface/SupportedConfig.h"
 #include "RecoTracker/MkFitAlpaka/interface/es/ESData.h"
+#include "RecoTracker/MkFitAlpaka/interface/v2p2/V2p2Config.h"
 
 namespace {
+  // the device copies of the MkFinderV2p2 knobs (interface/v2p2/V2p2Config.h), checked at compile time
+  static_assert(mkfitdev::Config::V2p2::Window::mini_prop_param_b == mkfit::Config::V2p2::Window::mini_prop_param_b &&
+                mkfitdev::Config::V2p2::Window::dq_trk_fac == mkfit::Config::V2p2::Window::dq_trk_fac &&
+                mkfitdev::Config::V2p2::Window::dq_hit_fac == mkfit::Config::V2p2::Window::dq_hit_fac &&
+                mkfitdev::Config::V2p2::Window::surface_q == mkfit::Config::V2p2::Window::surface_q &&
+                mkfitdev::Config::V2p2::Window::q_extra_bins == mkfit::Config::V2p2::Window::q_extra_bins &&
+                mkfitdev::Config::V2p2::Window::dphi_trk_fac == mkfit::Config::V2p2::Window::dphi_trk_fac &&
+                mkfitdev::Config::V2p2::Window::phi_per_hit == mkfit::Config::V2p2::Window::phi_per_hit &&
+                mkfitdev::Config::V2p2::Window::dphi_hit_fac == mkfit::Config::V2p2::Window::dphi_hit_fac &&
+                mkfitdev::Config::V2p2::Window::dphi_flat_rad == mkfit::Config::V2p2::Window::dphi_flat_rad &&
+                mkfitdev::Config::V2p2::Window::phi_extra_bins == mkfit::Config::V2p2::Window::phi_extra_bins &&
+                mkfitdev::Config::V2p2::Window::dphi_max_rad == mkfit::Config::V2p2::Window::dphi_max_rad &&
+                mkfitdev::Config::V2p2::Window::min_cos_incidence == mkfit::Config::V2p2::Window::min_cos_incidence);
+  static_assert(mkfitdev::Config::V2p2::PreCut::q == mkfit::Config::V2p2::PreCut::q &&
+                mkfitdev::Config::V2p2::PreCut::phi == mkfit::Config::V2p2::PreCut::phi &&
+                mkfitdev::Config::V2p2::PreCut::dq_slack == mkfit::Config::V2p2::PreCut::dq_slack &&
+                mkfitdev::Config::V2p2::PreCut::dphi_slack == mkfit::Config::V2p2::PreCut::dphi_slack &&
+                mkfitdev::Config::V2p2::PreCut::qbar_fac == mkfit::Config::V2p2::PreCut::qbar_fac);
+  static_assert(
+      mkfitdev::Config::V2p2::InLayer::max_presel_hits_limit == mkfit::Config::V2p2::InLayer::max_presel_hits_limit &&
+      mkfitdev::Config::V2p2::InLayer::max_hits_per_layer_limit ==
+          mkfit::Config::V2p2::InLayer::max_hits_per_layer_limit &&
+      mkfitdev::Config::V2p2::InLayer::reserve_hole_slot == mkfit::Config::V2p2::InLayer::reserve_hole_slot &&
+      mkfitdev::Config::V2p2::InLayer::best_short == mkfit::Config::V2p2::InLayer::best_short &&
+      mkfitdev::Config::V2p2::InLayer::early_select == mkfit::Config::V2p2::InLayer::early_select &&
+      mkfitdev::Config::V2p2::InLayer::late_max_cands == mkfit::Config::V2p2::InLayer::late_max_cands &&
+      mkfitdev::Config::V2p2::InLayer::late_max_cands_hits == mkfit::Config::V2p2::InLayer::late_max_cands_hits &&
+      mkfitdev::Config::V2p2::InLayer::late_max_cands_step_cm == mkfit::Config::V2p2::InLayer::late_max_cands_step_cm &&
+      mkfitdev::Config::V2p2::InLayer::sister_hole_drop == mkfit::Config::V2p2::InLayer::sister_hole_drop &&
+      mkfitdev::Config::V2p2::InLayer::sister_hole_chi2 == mkfit::Config::V2p2::InLayer::sister_hole_chi2);
+  static_assert(mkfitdev::Config::V2p2::Policy::use_wsr == mkfit::Config::V2p2::Policy::use_wsr &&
+                mkfitdev::Config::V2p2::Policy::wsr_n_sigma == mkfit::Config::V2p2::Policy::wsr_n_sigma &&
+                mkfitdev::Config::V2p2::Policy::use_hole_limits == mkfit::Config::V2p2::Policy::use_hole_limits &&
+                mkfitdev::Config::V2p2::Policy::use_stop_cuts == mkfit::Config::V2p2::Policy::use_stop_cuts &&
+                mkfitdev::Config::V2p2::Policy::final_pick_hole_penalty ==
+                    mkfit::Config::V2p2::Policy::final_pick_hole_penalty &&
+                mkfitdev::Config::V2p2::Policy::final_pick_tail_penalty ==
+                    mkfit::Config::V2p2::Policy::final_pick_tail_penalty &&
+                mkfitdev::Config::V2p2::Policy::looper_max_angle == mkfit::Config::V2p2::Policy::looper_max_angle &&
+                mkfitdev::Config::V2p2::Policy::looper_max_pt == mkfit::Config::V2p2::Policy::looper_max_pt &&
+                mkfitdev::Config::V2p2::Policy::looper_min_r == mkfit::Config::V2p2::Policy::looper_min_r);
+  static_assert(mkfitdev::Config::V2p2::Score::mode == mkfit::Config::V2p2::Score::mode &&
+                mkfitdev::Config::V2p2::Score::use_rho == mkfit::Config::V2p2::Score::use_rho &&
+                mkfitdev::Config::V2p2::Score::rho_const == mkfit::Config::V2p2::Score::rho_const &&
+                mkfitdev::Config::V2p2::Score::use_detv == mkfit::Config::V2p2::Score::use_detv &&
+                mkfitdev::Config::V2p2::Score::detv_const == mkfit::Config::V2p2::Score::detv_const);
+
   constexpr int kNLayers = 3, kModulesPerLayer = 50, kNModules = kNLayers * kModulesPerLayer;
   constexpr int kMatBinsZ = 30, kMatBinsR = 12;
 
@@ -86,6 +141,28 @@ namespace {
     }
     return "";
   }
+
+  // the same for the build module with the given MkFitProducer buildingRoutine
+  std::string buildConfigViolations(mkfitdev::ESDataHost const& es, std::string const& routine) {
+    mkfitdev::BuildModuleConfig moduleCfg;
+    moduleCfg.buildingRoutine = routine;
+    try {
+      mkfitdev::checkSupportedBuildConfig(es.hostConfigValue(), moduleCfg);
+    } catch (cms::Exception const& e) {
+      return e.what();
+    }
+    return "";
+  }
+
+  bool sameScoreParams(mkfitdev::V2p2ScoreParams const& dev, mkfit::V2p2ScoreParams const& ref) {
+    bool same = dev.hit_bonus == ref.hit_bonus && dev.overlap_bonus == ref.overlap_bonus &&
+                dev.chi2_weight == ref.chi2_weight && dev.miss_penalty == ref.miss_penalty &&
+                dev.edge_penalty == ref.edge_penalty && dev.gap_penalty == ref.gap_penalty &&
+                dev.stop_penalty == ref.stop_penalty && dev.hit_eff == ref.hit_eff;
+    for (int group = 0; group < mkfit::V2p2ScoreParams::n_hit_eff_grp; ++group)
+      same = same && dev.hit_eff_grp[group] == ref.hit_eff_grp[group];
+    return same;
+  }
 }  // namespace
 
 int main() {
@@ -103,6 +180,26 @@ int main() {
   auto es = mkfitdev::fillESDataHost(ti, ic);
   auto layers = es->layers->const_view();
   check(es->sizes.nLayers == kNLayers && es->sizes.nModules == kNModules, "sizes");
+  {
+    // the phi-margin cap of the v2p2 window, bitwise as MkFitCore's Window::capped_dphi, NaN and infinity included
+    bool sameCap = true;
+    const float margins[] = {0.f,
+                             0.01f,
+                             0.0499f,
+                             0.05f,
+                             0.0501f,
+                             1.34f,
+                             3.14f,
+                             -0.01f,
+                             std::numeric_limits<float>::infinity(),
+                             std::numeric_limits<float>::quiet_NaN()};
+    for (float m : margins) {
+      const float dev = mkfitdev::Config::V2p2::Window::capped_dphi(m),
+                  ref = mkfit::Config::V2p2::Window::capped_dphi(m);
+      sameCap = sameCap && std::memcmp(&dev, &ref, sizeof(float)) == 0;
+    }
+    check(sameCap, "phi-margin cap as MkFitCore");
+  }
   check(!layers[0].has_r_range_hole() && !layers[2].has_r_range_hole(), "no hole on layers 0, 2");
   check(layers[1].has_r_range_hole(), "hole on layer 1");
   check(layers[1].hole_r_min() == 30.5f && layers[1].hole_r_max() == 42.25f, "hole range copied");
@@ -201,9 +298,15 @@ int main() {
           "per-task scorers from their names");
     check(cfg.duplicate_cleaner_track_scorer == mkfitdev::TrackScorer::Keep, "duplicate-cleaner scorer from its name");
     const std::string violations = supportedConfigViolations(*esScorers);
-    check(violations.find("final_pick_track_scorer of region 1") != std::string::npos &&
-              violations.find("post_bkfit_track_scorer of region 1") != std::string::npos,
-          "non-default final-pick and post-backward-fit scorers refused");
+    check(violations.find("final_pick_track_scorer of region 1") == std::string::npos,
+          "'v2p2:llh' final-pick scorer accepted by the ES");
+    check(violations.find("post_bkfit_track_scorer of region 1") != std::string::npos,
+          "non-default post-backward-fit scorer refused");
+    // the final sort of either finder takes it, as in MkBuilder
+    check(buildConfigViolations(*esScorers, "cloneEngine").find("'v2p2:llh'") == std::string::npos,
+          "'v2p2:llh' final-pick scorer accepted with the clone engine");
+    check(buildConfigViolations(*esScorers, "v2p2").find("'v2p2:llh'") == std::string::npos,
+          "'v2p2:llh' final-pick scorer accepted with v2p2");
     check(violations.find("duplicate_cleaner_track_scorer") == std::string::npos,
           "'keep' before the duplicate cleaner supported");
     scorers.m_final_pick_track_scorer_name = "phase1:default";
@@ -213,6 +316,90 @@ int main() {
     check(rescore.find("final_pick_track_scorer") == std::string::npos, "'phase1:default' final-pick scorer supported");
     check(rescore.find("duplicate_cleaner_track_scorer") != std::string::npos,
           "re-scoring before the duplicate cleaner refused");
+  }
+
+  {
+    // building routines: the clone engine and MkFinderV2p2 are ported, the others are refused
+    check(buildConfigViolations(*es, "cloneEngine").find("buildingRoutine") == std::string::npos,
+          "buildingRoutine cloneEngine accepted");
+    check(buildConfigViolations(*es, "v2p2").find("buildingRoutine") == std::string::npos,
+          "buildingRoutine v2p2 accepted");
+    check(
+        buildConfigViolations(*es, "standard").find("buildingRoutine must be cloneEngine or v2p2") != std::string::npos,
+        "buildingRoutine standard refused");
+  }
+  {
+    // the v2p2 tunings (IterationConfig::m_v2p2), every member set away from its default
+    mkfit::IterationConfig tuned;
+    makeConfig(tuned, 2, kNLayers);
+    mkfit::V2p2Params& vp = tuned.m_v2p2;
+    for (mkfit::V2p2ScoreParams* sp : {&vp.score_outward, &vp.score_inward}) {
+      const float offset = sp == &vp.score_outward ? 0.5f : 0.25f;
+      sp->hit_bonus += offset;
+      sp->overlap_bonus += offset;
+      sp->chi2_weight += offset;
+      sp->miss_penalty += offset;
+      sp->edge_penalty += offset;
+      sp->gap_penalty += offset;
+      sp->stop_penalty += offset;
+      sp->hit_eff = 0.5f * offset;
+      for (int group = 0; group < mkfit::V2p2ScoreParams::n_hit_eff_grp; ++group)
+        sp->hit_eff_grp[group] = 0.01f * (group + 1) + offset;
+    }
+    vp.chi2_trk_fac = 2.5f;
+    vp.hit_chi2_cut = 11.34f;
+    vp.max_presel_hits = 7;
+    vp.max_hits_per_layer = 3;
+    vp.window_dphi_trk_fac = 2.5f;
+    vp.window_dq_trk_fac = 1.25f;
+    vp.outside_hole_max_seed_hits = 3;
+    auto esTuned = mkfitdev::fillESDataHost(ti, tuned);
+    auto const& cfg = esTuned->hostConfigValue().v2p2;
+    check(sameScoreParams(cfg.score_outward, vp.score_outward) && sameScoreParams(cfg.score_inward, vp.score_inward),
+          "v2p2 score parameters copied");
+    check(cfg.chi2_trk_fac == vp.chi2_trk_fac && cfg.hit_chi2_cut == vp.hit_chi2_cut &&
+              cfg.max_presel_hits == vp.max_presel_hits && cfg.max_hits_per_layer == vp.max_hits_per_layer,
+          "v2p2 hit acceptance and capacities copied");
+    check(cfg.window_dphi_trk_fac == vp.window_dphi_trk_fac && cfg.window_dq_trk_fac == vp.window_dq_trk_fac &&
+              cfg.outside_hole_max_seed_hits == vp.outside_hole_max_seed_hits,
+          "v2p2 window factors and short-seed hole rule copied");
+    check(supportedConfigViolations(*esTuned).find("v2p2.") == std::string::npos, "v2p2 tunings in range supported");
+    // the defaults, as MkFitIterationConfigESProducer leaves them when its PSet is not set
+    auto const& defaults = es->hostConfigValue().v2p2;
+    const mkfit::V2p2Params ref;
+    check(sameScoreParams(defaults.score_outward, ref.score_outward) &&
+              sameScoreParams(defaults.score_inward, ref.score_inward) && defaults.chi2_trk_fac == ref.chi2_trk_fac &&
+              defaults.hit_chi2_cut == ref.hit_chi2_cut && defaults.max_presel_hits == ref.max_presel_hits &&
+              defaults.max_hits_per_layer == ref.max_hits_per_layer &&
+              defaults.window_dphi_trk_fac == ref.window_dphi_trk_fac &&
+              defaults.window_dq_trk_fac == ref.window_dq_trk_fac &&
+              defaults.outside_hole_max_seed_hits == ref.outside_hole_max_seed_hits,
+          "v2p2 default tunings copied");
+    // beyond the device capacities (MkFitIterationConfigESProducer refuses them too)
+    vp.max_presel_hits = mkfit::V2p2Params::max_presel_hits_limit + 1;
+    vp.max_hits_per_layer = 0;
+    const std::string outside = supportedConfigViolations(*mkfitdev::fillESDataHost(ti, tuned));
+    check(outside.find("v2p2.max_presel_hits") != std::string::npos &&
+              outside.find("v2p2.max_hits_per_layer") != std::string::npos,
+          "v2p2 tunings beyond the device capacities refused");
+  }
+  {
+    // double layers: the test's own partner function pairs layers 1 and 2 (TrackerInfo::setup_double_layers)
+    mkfit::TrackerInfo paired;
+    makeTracker(paired);
+    paired.setup_double_layers([](int l) { return l == 1 ? 2 : l == 2 ? 1 : -1; });
+    auto esPaired = mkfitdev::fillESDataHost(paired, ic);
+    auto pairedLayers = esPaired->layers->const_view();
+    bool samePartners = true;
+    for (int l = 0; l < kNLayers; ++l)
+      samePartners = samePartners && pairedLayers[l].double_layer_partner() == paired.layer(l).double_layer_partner();
+    check(samePartners && pairedLayers[0].double_layer_partner() == -1 && pairedLayers[1].double_layer_partner() == 2 &&
+              pairedLayers[2].double_layer_partner() == 1,
+          "double-layer partners");
+    bool noPartners = true;
+    for (int l = 0; l < kNLayers; ++l)
+      noPartners = noPartners && layers[l].double_layer_partner() == -1;
+    check(noPartners, "no double layers in the unpaired tracker");
   }
 
   // error paths: never truncate silently
@@ -245,6 +432,13 @@ int main() {
     for (int i = 0; i < mkfitdev::es::kMaxPlanLayers; ++i)
       bad.m_steering_params[0].append_plan(0);
     check(throws([&] { mkfitdev::fillESDataHost(ti, bad); }), "too long layer plan throws");
+  }
+  {
+    // a plan entry with a second layer (LayerControl::m_layer_sec): the device plan has one layer per entry
+    mkfit::IterationConfig bad;
+    makeConfig(bad, 1, kNLayers);
+    bad.m_steering_params[0].m_layer_plan[1].m_layer_sec = 2;
+    check(throws([&] { mkfitdev::fillESDataHost(ti, bad); }), "paired plan entry throws");
   }
 
   std::printf("testMkFitAlpakaESFill: %s (%d failures)\n", nFail == 0 ? "PASS" : "FAIL", nFail);
