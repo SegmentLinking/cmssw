@@ -21,7 +21,6 @@
 #include "RecoTracker/LSTCore/interface/TripletsSoA.h"
 #include "RecoTracker/LSTCore/interface/QuadrupletsSoA.h"
 
-#include "NeuralNetwork.h"
 #include "TripletAccessors.h"
 #include "PixelQuintupletAccessors.h"
 
@@ -285,14 +284,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
                                   PixelTripletsConst pixelTriplets,
                                   TrackCandidatesBase candsBase,
                                   TrackCandidatesExtended candsExtended,
-                                  SegmentsConst segments,
                                   SegmentsOccupancyConst segmentsOccupancy,
                                   PixelSeedsConst pixelSeeds,
-                                  PixelSegments pixelSegments,
-                                  MiniDoubletsConst mds,
-                                  HitsBaseConst hitsBase,
-                                  QuintupletsConst quintuplets,
-                                  QuadrupletsConst quadruplets) const {
+                                  PixelSegments pixelSegments) const {
       int pixelModuleIndex = modules.nLowerModules();
       unsigned int nPixels = segmentsOccupancy.nSegments()[pixelModuleIndex];
       for (unsigned int pixelArrayIndex : cms::alpakatools::uniform_elements_y(acc, nPixels)) {
@@ -303,41 +297,11 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
         float phi1 = pixelSeeds.phi()[pixelArrayIndex];
         unsigned int prefix = ranges.segmentModuleIndices()[pixelModuleIndex];
 
-        // Store the pLS embedding outside the TC comparison loop.
-        float plsEmbed[Params_pLS::kEmbed];
-        CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
-          plsEmbed[k] = pixelSegments.plsEmbed()[pixelArrayIndex][k];
-        }
-
-        // Get pLS embedding eta bin and cut value for that bin.
-        float absEta1 = alpaka::math::abs(acc, eta1);
-        uint8_t bin_idx = (absEta1 > 2.5f) ? (dnn::kEtaBins - 1) : static_cast<uint8_t>(absEta1 / dnn::kEtaSize);
-        const float threshold = dnn::plsembdnn::kWP[bin_idx];
-
         unsigned int nTrackCandidates = candsBase.nTrackCandidates();
         for (unsigned int trackCandidateIndex : cms::alpakatools::uniform_elements_x(acc, nTrackCandidates)) {
           LSTObjType type = candsBase.trackCandidateType()[trackCandidateIndex];
           unsigned int innerTrackletIdx = candsExtended.objectIndices()[trackCandidateIndex][0];
-          if (type == LSTObjType::T5) {
-            unsigned int quintupletIndex = innerTrackletIdx;  // T5 index
-            float eta2 = __H2F(quintuplets.eta()[quintupletIndex]);
-            float phi2 = __H2F(quintuplets.phi()[quintupletIndex]);
-            float dEta = alpaka::math::abs(acc, eta1 - eta2);
-            float dPhi = cms::alpakatools::deltaPhi(acc, phi1, phi2);
-            float dR2 = dEta * dEta + dPhi * dPhi;
-            // Cut on pLS-T5 embed distance.
-            if (dR2 < 0.02f) {
-              float d2 = 0.f;
-              CMS_UNROLL_LOOP for (unsigned k = 0; k < Params_pLS::kEmbed; ++k) {
-                const float diff = plsEmbed[k] - quintuplets.t5Embed()[quintupletIndex][k];
-                d2 += diff * diff;
-              }
-              // Compare squared embedding distance to the cut value for the eta bin.
-              if (d2 < threshold * threshold) {
-                pixelSegments.isDup()[pixelArrayIndex] = true;
-              }
-            }
-          } else if (type == LSTObjType::pT3) {
+          if (type == LSTObjType::pT3) {
             int pT3Index = innerTrackletIdx;
             int pLSIndex = pixelTriplets.pixelSegmentIndices()[pT3Index];
             if (pixelHitsOverlapAny(pixelArrayIndex, pLSIndex - prefix, pixelSegments)) {

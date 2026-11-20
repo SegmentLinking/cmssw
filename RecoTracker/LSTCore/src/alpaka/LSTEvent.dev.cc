@@ -1081,14 +1081,9 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       pixelTripletsDC_->const_view(),
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view(),
-                      segmentsDC_->const_view().segments(),
                       segmentsDC_->const_view().segmentsOccupancy(),
                       lstInputDC_->const_view().pixelSeeds(),
-                      pixelSegmentsDC_->view(),
-                      miniDoubletsDC_->const_view().miniDoublets(),
-                      lstInputDC_->const_view().hits(),
-                      quintupletsDC_->const_view().quintuplets(),
-                      quadrupletsDC_->const_view().quadruplets());
+                      pixelSegmentsDC_->view());
 
   auto const addpLSasTrackCandidate_workDiv = cms::alpakatools::make_workdiv<Acc1D>(max_blocks, 384);
 

@@ -5,6 +5,7 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
     FoundHitBonus = cms.double(5.0),
     LostHitPenalty = cms.double(5.0),
     MaxNormalizedChisq = cms.double(1000.0),
+    MaxSameParticleChisq = cms.double(600.0),
     MinFound = cms.int32(3),
     MinPT = cms.double(0.8),
     ShareFrac = cms.double(0.19),
@@ -29,6 +30,7 @@ hltGeneralTracks = cms.EDProducer("TrackListMerger",
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 _hltGeneralTracksLegacy = hltGeneralTracks.clone(
     MinPT = cms.double(0.9),
+    MaxSameParticleChisq = cms.double(0.),
     TrackProducers = ["hltInitialStepTrackSelectionHighPurity", "hltHighPtTripletStepTrackSelectionHighPurity"],
     hasSelector = [0, 0],
     indivShareFrac = [1.0, 1.0],
@@ -65,6 +67,7 @@ _hltGeneralTracksNGTScouting = cms.EDProducer("RecoTrackSelector",
 
 _hltGeneralTracksNGTScoutingLST = hltGeneralTracks.clone(
     MinPT = cms.double(0.9),
+    MaxSameParticleChisq = cms.double(0.),
     TrackProducers = ["hltPhase2PixelTracks", "hltInitialStepTracksT4T5TCLST"],
     hasSelector = [0,0],
     indivShareFrac = [0.1,0.1],
