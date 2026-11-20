@@ -7,6 +7,8 @@
 #include "DataFormats/TrackingRecHitSoA/interface/SiPixelHitStatus.h"
 #include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/OTRecHitsSoA.h"
+#include "DataFormats/TrackingRecHitSoA/interface/Phase2OTRecHitsHost.h"
+#include "DataFormats/TrackingRecHitSoA/interface/Phase2OTRecHitsSoA.h"
 #include "DataFormats/TrackingRecHitSoA/interface/VectorHitsHost.h"
 #include "DataFormats/TrackingRecHitSoA/interface/VectorHitsSoA.h"
 
