@@ -130,7 +130,7 @@ void TrackTorchClassifierFromSoA::produce(edm::Event& iEvent, const edm::EventSe
       quality |= (1 << reco::TrackBase::tight);
     if (pass_loose && pass_tight && pass_hp)
       quality |= (1 << reco::TrackBase::highPurity);
-    selTracks[i] = quality;
+    selTracks[i] = pass_loose ? quality : -1;
   }
 
   edm::ValueMap<float>::Filler mva_filler(*mva_vals);
