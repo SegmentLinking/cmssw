@@ -1,0 +1,77 @@
+#ifndef RecoTracker_MkFitAlpaka_interface_matriplex_Matrix_h
+#define RecoTracker_MkFitAlpaka_interface_matriplex_Matrix_h
+
+// Portable port of RecoTracker/MkFitCore/src/Matrix.h: the Matriplex typedefs, templated on N = tracks per Alpaka
+// thread (MkFitCore: fixed NN = MPT_SIZE = 8 on x86-64-v3). hipo lives in interface/math/MathUtils.h. Per-backend N:
+// see MatriplexBackend.h (ALPAKA_ACCELERATOR_NAMESPACE::mkfitdev::kNN).
+
+#include "RecoTracker/MkFitAlpaka/interface/matriplex/Matriplex.h"
+#include "RecoTracker/MkFitAlpaka/interface/matriplex/MatriplexSym.h"
+#include "RecoTracker/MkFitAlpaka/interface/math/Config.h"
+#include "RecoTracker/MkFitAlpaka/interface/math/MathUtils.h"
+
+namespace mkfitdev {
+
+  // NN of the default CMSSW x86-64-v3 build (MPT_SIZE for __AVX2__). Lane width on CPU backends.
+  constexpr Matriplex::idx_t kNNCpu = 8;
+  // GPU backends: one track per thread.
+  constexpr Matriplex::idx_t kNNGpu = 1;
+
+  constexpr Matriplex::idx_t LL = 6;  // Dimension of large/long  MPlex entities
+  constexpr Matriplex::idx_t HH = 3;  // Dimension of small/short MPlex entities
+
+  template <Matriplex::idx_t N>
+  using MPlexLL = Matriplex::Matriplex<float, LL, LL, N>;
+  template <Matriplex::idx_t N>
+  using MPlexLV = Matriplex::Matriplex<float, LL, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlexLS = Matriplex::MatriplexSym<float, LL, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlexHH = Matriplex::Matriplex<float, HH, HH, N>;
+  template <Matriplex::idx_t N>
+  using MPlexHV = Matriplex::Matriplex<float, HH, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlexHS = Matriplex::MatriplexSym<float, HH, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlex5V = Matriplex::Matriplex<float, 5, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlex5S = Matriplex::MatriplexSym<float, 5, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlex55 = Matriplex::Matriplex<float, 5, 5, N>;
+  template <Matriplex::idx_t N>
+  using MPlex56 = Matriplex::Matriplex<float, 5, 6, N>;
+  template <Matriplex::idx_t N>
+  using MPlex65 = Matriplex::Matriplex<float, 6, 5, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlex2V = Matriplex::Matriplex<float, 2, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlex2S = Matriplex::MatriplexSym<float, 2, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlex52 = Matriplex::Matriplex<float, 5, 2, N>;
+  template <Matriplex::idx_t N>
+  using MPlex2H = Matriplex::Matriplex<float, 2, HH, N>;
+
+  template <Matriplex::idx_t N>
+  using MPlexQF = Matriplex::Matriplex<float, 1, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlexQI = Matriplex::Matriplex<int, 1, 1, N>;
+  template <Matriplex::idx_t N>
+  using MPlexQUH = Matriplex::Matriplex<unsigned short, 1, 1, N>;
+
+  // pad_free_lanes() of MkFitCore's Matrix.h: slot 0 copied into the slots from n_filled up, so that a partial
+  // batch is computed at full width (a loop bounded by the fill rounds differently in its vector body and its
+  // remainder); the free slots hold valid inputs and their results are not used.
+  template <Matriplex::idx_t N, typename... MP>
+  ALPAKA_FN_HOST_ACC ALPAKA_FN_INLINE void pad_free_lanes(int n_filled, MP&... mp) {
+    for (int i = n_filled; i < int(N); ++i)
+      (mp.copy(i, 0), ...);
+  }
+
+}  // namespace mkfitdev
+
+#endif
