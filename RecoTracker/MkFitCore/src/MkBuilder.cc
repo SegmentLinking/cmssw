@@ -1429,11 +1429,6 @@ namespace mkfit {
   // ReFit
   //==============================================================================
 
-  namespace {
-    // outlier cut for the innermost and outermost hits: the EstimateCut of the CKF final fit (KFFittingSmoother)
-    constexpr float kEndHitChi2Cut = 20.f;
-  }  // namespace
-
   void MkBuilder::fit_tracks(MkFitter *mkfitter,
                              int nFoundHits,
                              std::vector<int> inds,
@@ -1449,6 +1444,10 @@ namespace mkfit {
 
     mkfitter->m_event = m_event;
 
+    // the outlier test needs the combined chi2 of each hit
+    const bool outlierTest = remap && m_fitOutliers.estimate_cut > 0.f;
+    mkfitter->m_combinedChi2 = outlierTest;
+
     // per-hit states: each lane writes into its track's entries (reset: a refit after outlier removal
     // uses fewer hits)
     mkfitter->m_storeHitStates = m_hsOut && m_hsOut->perHit;
@@ -1460,6 +1459,7 @@ namespace mkfit {
 
     float chi2fwd[size_hits];
     float chi2bkwd[size_hits];
+    float chi2comb[size_hits];  // backward-pass order, as chi2bkwd
     int sortedIdxs[size_hits];
     int n_removed[(end_trk - start_trk)];
 
@@ -1468,6 +1468,7 @@ namespace mkfit {
     for (int ic = 0; ic < size_hits; ic++) {
       chi2fwd[ic] = 0;
       chi2bkwd[ic] = 0;
+      chi2comb[ic] = 0;
       sortedIdxs[ic] = 0;
     }
 
@@ -1501,7 +1502,8 @@ namespace mkfit {
       // input candidate tracks
       mkfitter->bkReFitInputTracks(m_tracks, inds, icand, end, nFoundHits);
       // fit the tracks from the input in bkw direction
-      mkfitter->bkReFitFitTracks(m_job->m_event_of_hits, end - icand, nFoundHits, indices_R2, chi2bkwd);
+      mkfitter->bkReFitFitTracks(
+          m_job->m_event_of_hits, end - icand, nFoundHits, indices_R2, chi2bkwd, outlierTest ? chi2comb : nullptr);
       // fwdFitOutput
       mkfitter->reFitOutputTracks(m_tracks, inds, icand, end, nFoundHits, true);
 
@@ -1514,69 +1516,46 @@ namespace mkfit {
       }  //do the copy of indices ---- only if remap is there
     }
 
-    //do the processing of the chi2
-    if (remap) {
+    // The outlier test of the CKF final fit (KFFittingSmoother), one hit per round (fittracks() refits and tests
+    // again): the chi2 of each hit against the prediction from all the other hits -- between the two ends the
+    // combination of the forward and the backward prediction, at the innermost and the outermost hit the pass that
+    // predicts it from the other hits.  The hits above the cut are the outliers; the worst is removed, or, with more
+    // outliers than allowed, the outermost hit, as KFFittingSmoother tries only that one then.  KFFittingSmoother
+    // refits once per outlier and keeps the removal with the lowest chi2; the worst hit stands in for that here.
+    if (outlierTest) {
+      const FitOutlierRejection &orj = m_fitOutliers;
       for (int i = 0; i < end_trk - start_trk; i++) {
-        //sort by worst
-#ifdef DEBUG_FIT
-        std::cout << "FWD ";
+        int nbad = 0, worst = -1;
+        float worstChi2 = 0.f;
         for (int j = 0; j < nFoundHits; j++) {
-          std::cout << chi2fwd[j + nFoundHits * i] << " ";
-        }
-        std::cout << "\n ";
-        std::cout << "BKWD ";
-        for (int j = 0; j < nFoundHits; j++) {
-          std::cout << chi2bkwd[nFoundHits - 1 - j + nFoundHits * i] << " ";
-        }
-        std::cout << "\n ";
-#endif
-        std::multimap<float, int> scorerAndIdx;  // worst first; hits with equal scores are all kept
-        for (int j = 0; j < nFoundHits; j++) {
-          //95% qunatiles for FWD and BWD didn't work
-          //float TF = 23.7 * j / nFoundHits + 0.8;
-          //float TB = 23.6 * (nFoundHits - 1 - j) / nFoundHits + 3.6;
+          const int jb = nFoundHits - 1 - j + nFoundHits * i;  // the same hit in the backward pass
+          float c = j == 0 ? chi2bkwd[jb] : j == nFoundHits - 1 ? chi2fwd[j + nFoundHits * i] : chi2comb[jb];
           // isFinite, not x != x: -Ofast assumes finite math and folds x != x to false
-          if (!isFinite(chi2fwd[j + nFoundHits * i]))
-            chi2fwd[j + nFoundHits * i] = 1000000;
-          if (!isFinite(chi2bkwd[nFoundHits - 1 - j + nFoundHits * i]))
-            chi2bkwd[nFoundHits - 1 - j + nFoundHits * i] = 1000000;
-          float scorer =
-              (chi2fwd[j + nFoundHits * i]) +
-              (chi2bkwd[nFoundHits - 1 - j + nFoundHits * i]);  //simpler alternative to metric based on quantiles
-          scorerAndIdx.emplace(-scorer, j);
-        }
-
-        int remove_i = 0;
-        bool blocked = false;  // an outlier that the minimum of three hits keeps on the track
-        for (auto idscore : scorerAndIdx) {
-          //if(idscore.first<0)
-#ifdef DEBUG_FIT
-          std::cout << "scorer " << idscore.first << " " << chi2fwd[idscore.second + nFoundHits * i] << " "
-                    << chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i] << " \n";
-#endif
-          // The innermost and the outermost hit have no information on one side (the pass that starts there updates
-          // the inflated start state with them), so they are tested with the pass that predicts them from all the
-          // other hits, at the cut of the CKF final fit (KFFittingSmoother EstimateCut).
-          const float chi2F = chi2fwd[idscore.second + nFoundHits * i];
-          const float chi2B = chi2bkwd[nFoundHits - 1 - idscore.second + nFoundHits * i];
-          const bool innermost = idscore.second == 0, outermost = idscore.second == nFoundHits - 1;
-          if ((innermost && chi2B > kEndHitChi2Cut) || (outermost && chi2F > kEndHitChi2Cut) ||
-              (m_tracks[inds[i + start_trk]].pT() > 1 && -idscore.first > 20 && chi2F > 8 && chi2B > 8) ||
-              (m_tracks[inds[i + start_trk]].pT() <= 1 && -idscore.first > 15 && chi2F > 7 && chi2B > 7)) {
-            if ((nFoundHits - remove_i) <= 3) {
-              blocked = true;
-              continue;  // 3 hits is the minimum...
+          if (!isFinite(c))
+            c = 1.e6f;
+          if (c > orj.estimate_cut) {
+            ++nbad;
+            if (c > worstChi2) {
+              worstChi2 = c;
+              worst = j;
             }
-            remove_i++;
-            n_removed[i] += 1;
-            m_tracks[inds[i + start_trk]].removeHit(sortedIdxs[nFoundHits - 1 - idscore.second + nFoundHits * i]);
           }
         }
-        // An outlier that cannot be removed without going below three hits, with no other hit removed (so no refit
-        // will test it again): the fit has failed, as KFFittingSmoother rejects a track left with too few hits; the
-        // negative chi2 makes the converter drop the candidate.
-        if (blocked && remove_i == 0)
+#ifdef DEBUG_FIT
+        std::cout << "outliers " << nbad << " worst " << worst << " chi2 " << worstChi2 << std::endl;
+#endif
+        if (nbad == 0)
+          continue;
+        // A track with 3 hits cannot lose one: the fit has failed, as KFFittingSmoother rejects a track left with
+        // too few hits; the negative chi2 makes the converter drop the candidate.
+        if (nFoundHits <= 3) {
           m_tracks[inds[i + start_trk]].setChi2(-1.f);
+          continue;
+        }
+        if (nbad > orj.max_outliers || nbad > orj.max_fraction * nFoundHits)
+          worst = nFoundHits - 1;
+        n_removed[i] = 1;
+        m_tracks[inds[i + start_trk]].removeHit(sortedIdxs[nFoundHits - 1 - worst + nFoundHits * i]);
       }
 
       for (int i = 0; i < end_trk - start_trk; i++) {

@@ -34,14 +34,17 @@ namespace mkfit {
     };
 
     // Optional outputs of the update, in the local frame of the module plane (q/p, dx/dz, dy/dz, x, y) as the update
-    // computes them: the predicted and the updated state and the sign of the local z momentum.  Each pointer may be
-    // null.  For the final fit's per-hit states.
+    // computes them: the predicted and the updated state, the sign of the local z momentum and the measurement
+    // (local x, y and its covariance).  Each pointer may be null.  For the final fit's per-hit states and its
+    // outlier test.
     struct LocalStatesOut {
       MPlex5V* predPar = nullptr;
       MPlex5S* predErr = nullptr;
       MPlex5V* updPar = nullptr;
       MPlex5S* updErr = nullptr;
       MPlexQI* pzSign = nullptr;
+      MPlex2V* measPar = nullptr;
+      MPlex2S* measErr = nullptr;
     };
 
     // Propagation of (inErr, inPar) to the planes (plPnt, plNrm), with material at the destination.

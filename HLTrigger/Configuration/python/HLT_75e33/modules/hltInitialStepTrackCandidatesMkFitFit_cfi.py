@@ -14,7 +14,11 @@ hltInitialStepTrackCandidatesMkFitFit = cms.EDProducer("MkFitFitProducer",
     candMinPtCut = cms.double(0.85),
     candMinPtRelaxedCut = cms.double(0.8),
     candMinAbsEtaForRelaxedCut = cms.double(1.4),
-    storeHitStates = cms.bool(False)
+    storeHitStates = cms.bool(False),
+    # outlier rejection as the CKF fit of this step (hltESPKFFittingSmootherForLSTStep)
+    estimateCut = cms.double(20.0),
+    maxNumberOfOutliers = cms.int32(6),
+    maxFractionOutliers = cms.double(0.5)
 )
 
 from Configuration.ProcessModifiers.mtd_at_hlt_cff import mtd_at_hlt

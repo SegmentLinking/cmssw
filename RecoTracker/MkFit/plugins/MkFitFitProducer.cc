@@ -65,6 +65,7 @@ private:
   const bool limitConcurrency_;
   const bool storeHitStates_;
   const bool validateHitStates_;
+  const mkfit::MkBuilder::FitOutlierRejection outlierRejection_;
 };
 
 MkFitFitProducer::MkFitFitProducer(edm::ParameterSet const& iConfig)
@@ -83,7 +84,10 @@ MkFitFitProducer::MkFitFitProducer(edm::ParameterSet const& iConfig)
       mkFitSilent_{iConfig.getUntrackedParameter<bool>("mkFitSilent")},
       limitConcurrency_{iConfig.getUntrackedParameter<bool>("limitConcurrency")},
       storeHitStates_{iConfig.getParameter<bool>("storeHitStates")},
-      validateHitStates_{iConfig.getUntrackedParameter<bool>("validateHitStates")} {
+      validateHitStates_{iConfig.getUntrackedParameter<bool>("validateHitStates")},
+      outlierRejection_{float(iConfig.getParameter<double>("estimateCut")),
+                        iConfig.getParameter<int>("maxNumberOfOutliers"),
+                        float(iConfig.getParameter<double>("maxFractionOutliers"))} {
   // TODO: what to do when we have multiple instances of MkFitFitProducer in a job?
   mkfit::MkBuilderWrapper::populate();
 }
@@ -117,6 +121,17 @@ void MkFitFitProducer::fillDescriptions(edm::ConfigurationDescriptions& descript
           "Trajectories); off: no per-hit work");
   desc.addUntracked<bool>("validateHitStates", false)
       ->setComment("With storeHitStates: also store the two states each smoothed state combines (validation only)");
+
+  // outlier rejection, as KFFittingSmoother (EstimateCut, MaxNumberOfOutliers, MaxFractionOutliers) with the
+  // values of the CKF final fit it replaces (default: KFFittingSmootherWithOutliersRejectionAndRK)
+  desc.add<double>("estimateCut", 20.)
+      ->setComment(
+          "a hit is an outlier when its chi2 against the prediction from all other hits is above this; <= 0: "
+          "no outlier rejection");
+  desc.add<int>("maxNumberOfOutliers", 3)
+      ->setComment("with more outliers than this, only the outermost hit is removed in a round");
+  desc.add<double>("maxFractionOutliers", 0.3)
+      ->setComment("with more outliers than this fraction of the hits, only the outermost hit is removed in a round");
 
   descriptions.add("MkFitFitProducerDefault", desc);
 }
@@ -175,6 +190,7 @@ void MkFitFitProducer::produce(edm::StreamID iID, edm::Event& iEvent, const edm:
   hitStates.validate = validateHitStates_;
   auto& builder = streamCache(iID)->get();
   builder.set_hit_states_output(&hitStates);
+  builder.set_fit_outlier_rejection(outlierRejection_);
   auto lambda = [&]() {
     mkfit::run_MkFitFit(mkFitGeom.trackerInfo(), mkFitIterConfig, eventOfHits.get(), builder, intracks, tracks, cpe);
   };

@@ -36,7 +36,8 @@ namespace mkfit {
                           const int N_proc,
                           int nFoundHits,
                           std::vector<std::vector<int>> indices_R2Z,
-                          float *chi2);
+                          float *chi2,
+                          float *chi2comb = nullptr);
     void reFitOutputTracks(TrackVec &cands, std::vector<int> inds, int beg, int end, int nFoundHits, bool bkw = false);
     void storeHitStates(const int h,
                         const int nFoundHits,
@@ -87,6 +88,14 @@ namespace mkfit {
     std::vector<MPlex5S> m_fwdLocErr;
     std::vector<MPlexQI> m_fwdPzSign;
     MPlexQF m_fwdChi2Outer;
+
+    // Outlier test of the final fit (MkBuilder::fit_tracks): with m_combinedChi2 the forward pass keeps its
+    // predicted state at each hit (m_fwdPred*, local frame), and the backward pass gives, for the hits between the
+    // two ends, the chi2 of the hit against the combination of the forward and the backward predicted state, which
+    // do not use the hit: the estimate KFTrajectorySmoother gives the CKF final fit's outlier test.
+    bool m_combinedChi2 = false;
+    std::vector<MPlex5V> m_fwdPredPar;
+    std::vector<MPlex5S> m_fwdPredErr;
   };
 
 }  // end namespace mkfit

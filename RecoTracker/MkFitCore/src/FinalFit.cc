@@ -435,6 +435,10 @@ namespace mkfit::final_fit {
           *localStates->updErr = U.err;
         if (localStates->pzSign)
           *localStates->pzSign = L.pz_sign;
+        if (localStates->measPar)
+          *localStates->measPar = M.par;
+        if (localStates->measErr)
+          *localStates->measErr = M.err;
       }
       to_global(U, L, pl, inChg, bFld, outPar, outErr);
     }
