@@ -26,6 +26,10 @@ from Configuration.ProcessModifiers.trackingLST_cff import trackingLST
 from Configuration.ProcessModifiers.hltPhase2LegacyTracking_cff import hltPhase2LegacyTracking
 (trackingLST | hltPhase2LegacyTracking).toModify(hltInitialStepTracks, Fitter = 'hltESPFlexibleKFFittingSmoother')
 
+# The CKF-fit definition, kept before the mkFit fit replaces hltInitialStepTracks below: for the modules that fit other
+# LST candidates with the CKF fit (hltInitialStepTracksT4T5TCLST)
+_hltInitialStepTracksCKFFit = hltInitialStepTracks.clone()
+
 _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     mkFitEventOfHits = cms.InputTag("hltMkFitEventOfHits"),
     mkFitPixelHits = cms.InputTag("hltMkFitSiPixelHits"),
@@ -50,6 +54,10 @@ _hltInitialStepTracksMkFitFit = cms.EDProducer("MkFitOutputTrackConverter",
     mightGet = cms.optional.untracked.vstring
 )
 
-from Configuration.ProcessModifiers.trackingMkFitFit_cff import trackingMkFitFit
-trackingMkFitFit.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksMkFitFit)
-(trackingMkFitFit & mtd_at_hlt).toModify(hltInitialStepTracks, trajectoryInEvent = True)
+# The mkFit final fit wherever mkFit builds the initialStep candidates (the LST + mkFit sequence, see
+# HLTInitialStepSequence_cfi); the sequences without mkFit building keep the CKF fit, and trackingCKFFit restores it.
+from Configuration.ProcessModifiers.trackingCKFFit_cff import trackingCKFFit
+from Configuration.ProcessModifiers.ngtScouting_cff import ngtScouting
+_hltMkFitFit = ~trackingCKFFit & ~trackingLST & ~hltPhase2LegacyTracking & ~ngtScouting
+_hltMkFitFit.toReplaceWith(hltInitialStepTracks, _hltInitialStepTracksMkFitFit)
+(_hltMkFitFit & mtd_at_hlt).toModify(hltInitialStepTracks, trajectoryInEvent = True)
