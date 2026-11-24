@@ -31,6 +31,7 @@
 
 #include "CACell.h"
 #include "CAPixelDoublets.h"
+#include "CAZVertexHisto.h"
 #include "CAStructures.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
@@ -226,7 +227,22 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                        const ::reco::CANtupletCutsSoAConstView& ntupletCuts,
                        Queue& queue);
 
-    void classifyTuples(const HitsMultiView& hh, TkSoAView& track_view, Queue& queue);
+    // compactOutput: copy the first nTracks track rows, the first nHitRows hit rows and the nTracks scalar of src
+    // into dst
+    void compactTracks(::reco::TrackBlocksConstView src,
+                       ::reco::TrackBlocksView dst,
+                       uint32_t nTracks,
+                       uint32_t nHitRows,
+                       Queue& queue);
+
+    // mm, cm, cl: module hit starts, CA module frames and layer starts, for the hit-expectation tests of the
+    // inner-tracker-only CA (CATripletHoleCheck.h)
+    void classifyTuples(const HitsMultiView& hh,
+                        TkSoAView& track_view,
+                        Queue& queue,
+                        const ModulesMultiView& mm,
+                        const ::reco::CAModulesConstView& cm,
+                        const ::reco::CALayersSoAConstView& cl);
 
     // Returns the doublet count the countDoubletsFirst count-only pass read back to the host
     // (0 when countDoubletsFirst_ is off, or when the event was too empty to run the passes).
@@ -311,6 +327,10 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::optional<cms::alpakatools::device_buffer<Device, PhiBinnerStorageType[]>> device_phiBinnerStorage_;
     PhiBinnerView device_hitPhiView_;
     std::optional<cms::alpakatools::device_buffer<Device, hindex_type[]>> device_layerStarts_;
+    // inner-tracker-only CA: z-vertex histogram (CAZVertexHisto.h) and the per-track flags of the 3-hit tracks
+    // failing the hit-expectation tests (CATripletHoleCheck.h), for the vertex rescue
+    std::optional<cms::alpakatools::device_buffer<Device, caZVertex::ZVertexHisto>> device_zVertexHisto_;
+    std::optional<cms::alpakatools::device_buffer<Device, uint8_t[]>> device_holeCheckSuspect_;
 
     // Scratch int32 mirror of the track quality used by the duplicate-removal kernels to make them
     // order/backend independent. The cell-parallel fast remover accumulates demotions here via atomicMin

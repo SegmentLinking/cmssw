@@ -1,6 +1,7 @@
 // #define BROKENLINE_DEBUG
 // #define BL_DUMP_HITS
 // #define GPU_DEBUG
+#include <algorithm>
 #include <cstdint>
 
 #include <alpaka/alpaka.hpp>
@@ -273,10 +274,12 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     //  Fit internals
     auto tkidDevice =
         cms::alpakatools::make_device_buffer<typename caStructures::tindex_type[]>(queue, maxNumberOfConcurrentFits_);
+    // sized for the largest fit, of maxHitsOnTrackForFullFit hits
+    constexpr uint32_t maxHitsInFit = std::max(6u, TrackerTraits::maxHitsOnTrackForFullFit);
     auto hitsDevice = cms::alpakatools::make_device_buffer<double[]>(
-        queue, maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix3xNd<6>) / sizeof(double));
+        queue, maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix3xNd<maxHitsInFit>) / sizeof(double));
     auto hits_geDevice = cms::alpakatools::make_device_buffer<float[]>(
-        queue, maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix6xNf<6>) / sizeof(float));
+        queue, maxNumberOfConcurrentFits_ * sizeof(riemannFit::Matrix6xNf<maxHitsInFit>) / sizeof(float));
     auto fast_fit_resultsDevice = cms::alpakatools::make_device_buffer<double[]>(
         queue, maxNumberOfConcurrentFits_ * sizeof(riemannFit::Vector4d) / sizeof(double));
 

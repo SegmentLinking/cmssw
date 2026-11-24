@@ -593,6 +593,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                   const double scoreThreshold,
                                   const double scoreThresholdLowDxy,
                                   const double dxyRampKnee,
+                                  const int shortTrackMaxLayers,
+                                  const double scoreThresholdShortTracks,
+                                  const double passThroughMaxAbsEta,
                                   const PixelTrackFitFeaturesConstView fitFeatures,
                                   const int* nPreselectedTracks,
                                   const PixelTrackScoresSoA::View trackScores,
@@ -608,6 +611,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
             * |dxyBS| = 0 down to scoreThreshold at |dxyBS| >= dxyRampKnee.
             * scoreThresholdLowDxy < 0 DISABLES the ramp (flat scoreThreshold everywhere), which is
             * the default and reproduces the plain threshold cut exactly.
+            * Tracks with at most shortTrackMaxLayers layers (if > 0) are cut at scoreThresholdShortTracks
+            * instead, and tracks with |eta| < passThroughMaxAbsEta (if >= 0) are kept whatever their score.
             *
             * Outputs:
             *  - selectionMask[i] = 1 if track is selected, 0 otherwise
@@ -625,12 +630,16 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
           const float ramp = (adxy >= float(dxyRampKnee)) ? 0.f : (1.f - adxy / float(dxyRampKnee));
           thr = float(scoreThreshold) + (float(scoreThresholdLowDxy) - float(scoreThreshold)) * ramp;
         }
+        if (shortTrackMaxLayers > 0 && fitFeatures[i].nLayers() <= shortTrackMaxLayers)
+          thr = scoreThresholdShortTracks;
+        const bool passThrough =
+            passThroughMaxAbsEta >= 0. && alpaka::math::abs(acc, fitFeatures[i].eta()) < float(passThroughMaxAbsEta);
         // A track whose fit produced a non-finite chi2, parameter or covariance-derived error is
         // rejected outright: the forest's verdict on it is meaningless. The score comparison is kept
         // in the promoting form (`score >= thr` -> keep), which leaves a non-finite score on the
         // rejecting side under -Ofast (-ffinite-math-only); the negated form is rewritable.
         const bool fitOk = forestFitFeaturesFinite(fitFeatures, i);
-        selectionMask[i] = (fitOk && score >= thr) ? 1 : 0;
+        selectionMask[i] = (fitOk && (passThrough || score >= thr)) ? 1 : 0;
       }
     }
   };
@@ -785,6 +794,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                          const double scoreThreshold,
                          const double scoreThresholdLowDxy,
                          const double dxyRampKnee,
+                         const int shortTrackMaxLayers,
+                         const double scoreThresholdShortTracks,
+                         const double passThroughMaxAbsEta,
                          const PixelTrackFitFeaturesConstView fitFeatures,
                          const PixelTrackScoresSoA::View trackScores,
                          const int* preselectedTrackIndices,
@@ -815,6 +827,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                         scoreThreshold,
                         scoreThresholdLowDxy,
                         dxyRampKnee,
+                        shortTrackMaxLayers,
+                        scoreThresholdShortTracks,
+                        passThroughMaxAbsEta,
                         fitFeatures,
                         nPreselectedTracks,
                         trackScores,
