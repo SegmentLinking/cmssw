@@ -345,3 +345,34 @@ tau_embedding_cleaning.toReplaceWith(siPixelClusters, tau_embedding_siPixelClust
 from Configuration.ProcessModifiers.tau_embedding_sim_cff import tau_embedding_sim
 from TauAnalysis.MCEmbeddingTools.Simulation_RECO_cff import tau_embedding_correct_hlt_vertices
 tau_embedding_sim.toReplaceWith(firstStepPrimaryVerticesPreSplitting, tau_embedding_correct_hlt_vertices)
+
+# mkFit final fit in place of the CKF fit wherever mkFit builds the candidates (Phase 2; trackingCKFFit restores the CKF
+# fit), as in the initialStep
+from Configuration.ProcessModifiers.trackingCKFFit_cff import trackingCKFFit
+from Configuration.Eras.Modifier_trackingPhase2PU140_cff import trackingPhase2PU140 as _trackingPhase2PU140
+from Configuration.Eras.Modifier_fastSim_cff import fastSim as _fastSim
+from RecoTracker.MkFit.MkFitFitProducerDefault_cfi import MkFitFitProducerDefault as _mkFitFitProducer
+from RecoTracker.MkFit.mkFitOutputTrackConverter_cfi import mkFitOutputTrackConverter as _mkFitOutputTrackConverter
+initialStepTrackCandidatesMkFitFitPreSplitting = _mkFitFitProducer.clone(
+    config = ('', 'initialStepTrackCandidatesMkFitConfigPreSplitting'),
+    tracks = 'initialStepTrackCandidatesMkFitPreSplitting',
+    eventOfHits = 'mkFitEventOfHitsPreSplitting',
+    mkFitPixelHits = 'mkFitSiPixelHitsPreSplitting',
+    pixelCPE = 'PixelCPEGeneric',
+    storeHitStates = True,
+)
+_initialStepTracksPreSplittingMkFitFit = _mkFitOutputTrackConverter.clone(
+    mkFitEventOfHits = 'mkFitEventOfHitsPreSplitting',
+    mkFitPixelHits = 'mkFitSiPixelHitsPreSplitting',
+    mkFitStripHits = 'mkFitSiPhase2Hits',
+    measurementTrackerEvent = 'MeasurementTrackerEventPreSplitting',
+    mkFitSeeds = 'initialStepTrackCandidatesMkFitSeedsPreSplitting',
+    src = 'initialStepTrackCandidatesMkFitFitPreSplitting',
+    seeds = 'initialStepSeedsPreSplitting',
+    algorithmName = 'initialStep',
+)
+_trackingMkFitFitPreSplitting = trackingMkFitInitialStepPreSplitting & _trackingPhase2PU140 & ~trackingCKFFit & ~_fastSim
+_trackingMkFitFitPreSplitting.toReplaceWith(initialStepTracksPreSplitting, _initialStepTracksPreSplittingMkFitFit)
+_InitialStepPreSplittingTask_mkFitFit = InitialStepPreSplittingTask.copy()
+_InitialStepPreSplittingTask_mkFitFit.add(initialStepTrackCandidatesMkFitFitPreSplitting)
+_trackingMkFitFitPreSplitting.toReplaceWith(InitialStepPreSplittingTask, _InitialStepPreSplittingTask_mkFitFit)

@@ -115,5 +115,11 @@ _HLTInitialStepSequenceMkFitFit = cms.Sequence(
     +HLTInitialStepHPSelectionSequence
 )
 
-from Configuration.ProcessModifiers.trackingMkFitFit_cff import trackingMkFitFit
-trackingMkFitFit.toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceMkFitFit)
+# The mkFit final fit wherever mkFit builds the initialStep candidates: the nominal LST + mkFit sequence, and its copy for
+# the alpaka validation; the sequences without mkFit building keep the CKF fit, and trackingCKFFit restores it.
+from Configuration.ProcessModifiers.trackingCKFFit_cff import trackingCKFFit
+_hltMkFitFit = ~trackingCKFFit & ~trackingLST & ~hltPhase2LegacyTracking & ~ngtScouting
+_hltMkFitFit.toReplaceWith(HLTInitialStepSequence, _HLTInitialStepSequenceMkFitFit)
+_HLTHeterogeneousInitialStepSequenceMkFitFit = _HLTInitialStepSequenceMkFitFit.copy()
+_HLTHeterogeneousInitialStepSequenceMkFitFit += hltInitialStepTrajectorySeedsLSTTracks
+(_hltMkFitFit & alpakaValidationHLT).toReplaceWith(HLTInitialStepSequence, _HLTHeterogeneousInitialStepSequenceMkFitFit)

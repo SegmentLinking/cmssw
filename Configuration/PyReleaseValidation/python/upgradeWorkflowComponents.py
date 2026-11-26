@@ -2227,10 +2227,10 @@ upgradeWFs['HLTTiming75e33LST'].suffix = '_HLT75e33TimingLST'
 upgradeWFs['HLTTiming75e33LST'].offset = 0.7531
 upgradeWFs['HLTTiming75e33LST'].step2['--procModifiers'] = 'trackingLST'
 
-upgradeWFs['HLTTiming75e33MkFitFit'] = deepcopy(upgradeWFs['HLTTiming75e33'])
-upgradeWFs['HLTTiming75e33MkFitFit'].suffix = '_HLT75e33TimingMkFitFit'
-upgradeWFs['HLTTiming75e33MkFitFit'].offset = 0.7532
-upgradeWFs['HLTTiming75e33MkFitFit'].step2['--procModifiers'] = 'trackingMkFitFit'
+upgradeWFs['HLTTiming75e33CKFFit'] = deepcopy(upgradeWFs['HLTTiming75e33'])
+upgradeWFs['HLTTiming75e33CKFFit'].suffix = '_HLT75e33TimingCKFFit'
+upgradeWFs['HLTTiming75e33CKFFit'].offset = 0.7532
+upgradeWFs['HLTTiming75e33CKFFit'].step2['--procModifiers'] = 'trackingCKFFit'
 
 # Vector-hit-based CA tracking workflow
 upgradeWFs['HLTTiming75e33CAVectorHits'] = deepcopy(upgradeWFs['HLTTiming75e33'])

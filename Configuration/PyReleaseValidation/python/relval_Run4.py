@@ -72,7 +72,7 @@ numWFIB.extend([prefixDet+34.751])  # HLTTiming75e33, alpaka
 # timing menu, tracking variants
 numWFIB.extend([prefixDet+34.753])  # HLTTiming75e33, legacy tracking
 numWFIB.extend([prefixDet+34.7531]) # HLTTiming75e33, trackingLST
-numWFIB.extend([prefixDet+34.7532]) # HLTTiming75e33, MkFitFit
+numWFIB.extend([prefixDet+34.7532]) # HLTTiming75e33, CKFFit
 numWFIB.extend([prefixDet+34.7533]) # HLTTiming75e33, phase2CAVectorHits
 # timing menu, calorimetry and timing-detector variants
 numWFIB.extend([prefixDet+34.756])  # HLTTiming75e33, ticl_barrel

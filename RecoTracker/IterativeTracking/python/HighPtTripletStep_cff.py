@@ -503,3 +503,29 @@ _HighPtTripletStepTask_fastSim_phase2 = _HighPtTripletStepTask_fastSim.copy()
 _HighPtTripletStepTask_fastSim_phase2.replace(highPtTripletStep, highPtTripletStepSelector)
 fastSim.toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_fastSim)
 (fastSim & trackingPhase2PU140).toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_fastSim_phase2)
+
+# mkFit final fit in place of the CKF fit wherever mkFit builds the candidates (Phase 2 LST + mkFit; trackingCKFFit
+# restores the CKF fit), as in the initialStep
+from Configuration.ProcessModifiers.trackingCKFFit_cff import trackingCKFFit
+from Configuration.Eras.Modifier_phase2_timing_layer_cff import phase2_timing_layer as _phase2_timing_layer
+from RecoTracker.MkFit.MkFitFitProducerDefault_cfi import MkFitFitProducerDefault as _mkFitFitProducer
+from RecoTracker.MkFit.mkFitOutputTrackConverter_cfi import mkFitOutputTrackConverter as _mkFitOutputTrackConverter
+highPtTripletStepTrackCandidatesMkFitFit = _mkFitFitProducer.clone(
+    config = ('', 'highPtTripletStepTrackCandidatesMkFitConfig'),
+    tracks = 'highPtTripletStepTrackCandidatesMkFit',
+    pixelCPE = 'PixelCPEGeneric',
+    storeHitStates = True,
+)
+_highPtTripletStepTracksMkFitFit = _mkFitOutputTrackConverter.clone(
+    mkFitStripHits = 'mkFitSiPhase2Hits',
+    mkFitSeeds = 'highPtTripletStepTrackCandidatesMkFitSeeds',
+    src = 'highPtTripletStepTrackCandidatesMkFitFit',
+    seeds = 'highPtTripletStepSeedsPixelsWithLST',
+    algorithmName = 'highPtTripletStep',
+)
+_phase2LSTmkFitFit = _phase2LSTmkFit & ~trackingCKFFit & ~fastSim
+_phase2LSTmkFitFit.toReplaceWith(highPtTripletStepTracks, _highPtTripletStepTracksMkFitFit)
+(_phase2LSTmkFitFit & _phase2_timing_layer).toModify(highPtTripletStepTracks, trajectoryInEvent = True)
+_HighPtTripletStepTask_mkFitFit = HighPtTripletStepTask.copy()
+_HighPtTripletStepTask_mkFitFit.add(highPtTripletStepTrackCandidatesMkFitFit)
+_phase2LSTmkFitFit.toReplaceWith(HighPtTripletStepTask, _HighPtTripletStepTask_mkFitFit)

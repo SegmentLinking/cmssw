@@ -134,6 +134,17 @@ namespace mkfit {
     // track and HitOnTrack position.  nullptr (the default) stores nothing.
     void set_hit_states_output(FinalFitHitStates *hs) { m_hsOut = hs; }
 
+    // Outlier rejection of the final fit (fittracks), as the CKF final fit's KFFittingSmoother and with its
+    // parameters: a hit is an outlier when its chi2 against the prediction from all the other hits is above
+    // estimate_cut (<= 0: no outlier rejection); with more than max_outliers outliers, or more than max_fraction of
+    // the track's hits, only the outermost hit is removed in a round.
+    struct FitOutlierRejection {
+      float estimate_cut = 20.f;
+      int max_outliers = 3;
+      float max_fraction = 0.3f;
+    };
+    void set_fit_outlier_rejection(const FitOutlierRejection &o) { m_fitOutliers = o; }
+
   private:
     void fit_one_seed_set(TrackVec &simtracks, int itrack, int end, MkFitter *mkfttr, const bool is_brl[]);
 
@@ -158,6 +169,7 @@ namespace mkfit {
     bool m_silent;
 
     FinalFitHitStates *m_hsOut = nullptr;
+    FitOutlierRejection m_fitOutliers;
   };
 
 }  // end namespace mkfit

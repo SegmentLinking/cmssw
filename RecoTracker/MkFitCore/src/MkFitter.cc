@@ -260,6 +260,10 @@ namespace mkfit {
       m_fwdLocErr.resize(nFoundHits);
       m_fwdPzSign.resize(nFoundHits);
     }
+    if (m_combinedChi2 && (int)m_fwdPredPar.size() < nFoundHits) {
+      m_fwdPredPar.resize(nFoundHits);
+      m_fwdPredErr.resize(nFoundHits);
+    }
 
     int hitIndex[N_proc];
 
@@ -365,6 +369,11 @@ namespace mkfit {
         fwdLoc.updErr = &m_fwdLocErr[h];
         fwdLoc.pzSign = &m_fwdPzSign[h];
       }
+      // the outlier test: the predicted state at every hit
+      if (m_combinedChi2) {
+        fwdLoc.predPar = &m_fwdPredPar[h];
+        fwdLoc.predErr = &m_fwdPredErr[h];
+      }
       final_fit::propagate_update(m_Err[i1],
                                   m_Par[i1],
                                   m_Chg,
@@ -383,7 +392,7 @@ namespace mkfit {
                                   &do_cpe,
                                   m_cpe_corr_func,
                                   &modMat,
-                                  keepLoc ? &fwdLoc : nullptr);
+                                  keepLoc || m_combinedChi2 ? &fwdLoc : nullptr);
       if (keepLoc && h == nFoundHits - 1)
         m_fwdChi2Outer = outChi2;
 
@@ -417,7 +426,8 @@ namespace mkfit {
                                   const int N_proc,
                                   int nFoundHits,
                                   std::vector<std::vector<int>> indices_R2Z,
-                                  float *chi2) {
+                                  float *chi2,
+                                  float *chi2comb) {
 #ifdef DEBUG_FIT_BKW
     std::cout << "bkReFitFitTracks " << nFoundHits << std::endl;
 #endif
@@ -576,6 +586,16 @@ namespace mkfit {
         }
         bkLoc.pzSign = &bkPzSign;
       }
+      // the outlier test between the two ends: the backward predicted state and the measurement
+      const bool combine = chi2comb && m_combinedChi2 && h > 0 && !innermost;
+      MPlex2V measPar;
+      MPlex2S measErr;
+      if (combine) {
+        bkLoc.predPar = &bkPredPar;
+        bkLoc.predErr = &bkPredErr;
+        bkLoc.measPar = &measPar;
+        bkLoc.measErr = &measErr;
+      }
       final_fit::propagate_update(m_Err[i1],
                                   m_Par[i1],
                                   m_Chg,
@@ -594,7 +614,34 @@ namespace mkfit {
                                   &do_cpe,
                                   m_cpe_corr_func,
                                   &modMat,
-                                  keepBkLoc ? &bkLoc : nullptr);
+                                  keepBkLoc || combine ? &bkLoc : nullptr);
+
+      // The chi2 of the hit against the combination of the forward and the backward predicted state (two-filter
+      // smoother of the two predictions, neither of which uses the hit), as KFTrajectorySmoother's estimate; at the
+      // two ends, and where the combination fails, the backward pass's own chi2.
+      if (chi2comb) {
+        MPlexQF combChi2 = outChi2;
+        if (combine) {
+          MPlex5V uPar;
+          MPlex5S uErr;
+          MPlexQI ok;
+          const int hf = nFoundHits - 1 - h;  // the same hit in the forward pass
+          final_fit::smooth_local_states(
+              m_fwdPredPar[hf], m_fwdPredErr[hf], bkPredPar, bkPredErr, uPar, uErr, ok, N_proc);
+          for (int i = 0; i < N_proc; ++i) {
+            const float r0 = measPar.constAt(i, 0, 0) - uPar.constAt(i, 3, 0);
+            const float r1 = measPar.constAt(i, 1, 0) - uPar.constAt(i, 4, 0);
+            const float s00 = measErr.constAt(i, 0, 0) + uErr.constAt(i, 3, 3);
+            const float s01 = measErr.constAt(i, 0, 1) + uErr.constAt(i, 3, 4);
+            const float s11 = measErr.constAt(i, 1, 1) + uErr.constAt(i, 4, 4);
+            const float det = s00 * s11 - s01 * s01;
+            if (ok.constAt(i, 0, 0) && det > 0.f)
+              combChi2.At(i, 0, 0) = (r0 * r0 * s11 - 2.f * r0 * r1 * s01 + r1 * r1 * s00) / det;
+          }
+        }
+        for (int i = 0; i < N_proc; ++i)
+          chi2comb[h + i * nFoundHits] = combChi2.constAt(i, 0, 0);
+      }
 
       if (keepBkLoc)
         storeHitStates(h, nFoundHits, N_proc, bkHot, bkPredPar, bkPredErr, bkUpdPar, bkUpdErr, bkPzSign, outChi2);
