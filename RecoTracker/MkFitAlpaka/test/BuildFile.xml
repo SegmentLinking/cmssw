@@ -1,0 +1,163 @@
+<!-- propagation, Kalman update and final-fit step of MkFitAlpaka compared with MkFitCore on synthetic tracks, on every
+     backend -->
+<bin file="testPropMkFitCoreRef.cpp" name="testMkFitAlpakaPropMkFitCoreRef">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<bin file="alpaka/testProp.dev.cc" name="testMkFitAlpakaProp">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the prop kernels are instantiated here, so the CPU backends get the library's flags -->
+  <flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+  <flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+  <flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+</bin>
+<test name="testMkFitAlpakaPropChain" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testPropChain.sh"/>
+<!-- device EventOfHits (binning, hit extents, layer maxima, range queries) compared with MkFitCore's LayerOfHits
+     on synthetic hits, on every backend -->
+<bin file="testEventOfHitsMkFitCoreRef.cpp" name="testMkFitAlpakaEventOfHitsMkFitCoreRef">
+  <use name="RecoTracker/MkFitCore"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<bin file="alpaka/testEventOfHits.dev.cc" name="testMkFitAlpakaEventOfHits">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/SoATemplate"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the EventOfHits kernels are instantiated here, so the CPU backends get the library's flags -->
+  <flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+  <flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+  <flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+</bin>
+<test name="testMkFitAlpakaEventOfHitsChain" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testEventOfHitsChain.sh"/>
+<!-- the v2p2 finder pieces of MkFitAlpaka compared with MkFitCore on synthetic inputs, on every backend -->
+<bin file="testV2p2MkFitCoreRef.cpp" name="testMkFitAlpakaV2p2MkFitCoreRef">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<bin file="alpaka/testV2p2.dev.cc" name="testMkFitAlpakaV2p2">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="DataFormats/Portable"/>
+  <use name="DataFormats/SoATemplate"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the v2p2 device functions are instantiated here, so the CPU backends get the library's flags -->
+  <flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+  <flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+  <flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+</bin>
+<test name="testMkFitAlpakaV2p2Chain" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testV2p2Chain.sh"/>
+<!-- duplicate cleaner of MkFitAlpaka compared with MkFitCore (MkStdSeqs.cc) on synthetic events, on every backend -->
+<bin file="testDupCleanMkFitCoreRef.cpp" name="testMkFitAlpakaDupCleanMkFitCoreRef">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitCMS"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <flags NO_TESTRUN="1"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<bin file="alpaka/testDupClean.dev.cc" name="testMkFitAlpakaDupClean">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="DataFormats/Portable"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+</bin>
+<test name="testMkFitAlpakaDupCleanChain" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testDupCleanChain.sh"/>
+<!-- the ES data fill on a synthetic geometry and configuration, including its error paths -->
+<bin file="testESFill.cpp" name="testMkFitAlpakaESFill">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="DataFormats/Portable"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+</bin>
+<!-- the clone engine's candidate selection against MkFitCore's CandCloner on random seeds -->
+<bin file="testCandSelectionMkFitCoreRef.cpp" name="testMkFitAlpakaCandSelectionMkFitCoreRef">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+  <!-- the MkFitCore headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<!-- the Track::Status bit positions of the seed kernels against mkfit::Track::Status -->
+<bin file="testSeedStatus.cpp" name="testMkFitAlpakaSeedStatus">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+</bin>
+<!-- the v2p2 plan tables, the v2p2:llh scorer and the final sorting with it against MkFitCore -->
+<bin file="testV2p2Host.cpp" name="testMkFitAlpakaV2p2Host">
+  <use name="alpaka"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <use name="RecoTracker/MkFitCore"/>
+</bin>
+<!-- the hit-selection priority queue against std::priority_queue with MkFitCore's comparator, on every backend -->
+<bin file="alpaka/testSelHeap.dev.cc" name="testMkFitAlpakaSelHeap">
+  <use name="alpaka"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <!-- the selection headers carry "#pragma omp simd" -->
+  <flags CXXFLAGS="-fopenmp-simd"/>
+  <flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd"/>
+</bin>
+<!-- a plugin-library kernel writes known values into the event products, checked on the host copy -->
+<test name="testMkFitAlpakaCudaCanary" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/integ_cuda_canary.sh"/>
+<library file="plugins/MkFitAlpakaProductsCheck.cc" name="testRecoTrackerMkFitAlpakaProductsCheck">
+  <use name="FWCore/Framework"/>
+  <use name="FWCore/MessageLogger"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+<library file="plugins/alpaka/MkFitAlpakaProductsTest.cc,plugins/alpaka/MkFitProductsTestKernels.dev.cc" name="testRecoTrackerMkFitAlpakaProductsTest">
+  <use name="alpaka"/>
+  <use name="DataFormats/Portable"/>
+  <use name="FWCore/ParameterSet"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaCore"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags EDM_PLUGIN="1"/>
+</library>
+<!-- the early-delete branch names of customiseEarlyDeleteForMkFit against the class names of the products -->
+<bin file="alpaka/testEarlyDeleteNames.dev.cc" name="testMkFitAlpakaEarlyDeleteNames">
+  <use name="alpaka"/>
+  <use name="DataFormats/Common"/>
+  <use name="FWCore/Utilities"/>
+  <use name="HeterogeneousCore/AlpakaInterface"/>
+  <use name="RecoTracker/MkFitAlpaka"/>
+  <flags ALPAKA_BACKENDS="1"/>
+  <flags NO_TESTRUN="1"/>
+</bin>
+<test name="testMkFitAlpakaEarlyDelete" command="${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testEarlyDeleteMkFitAlpaka.sh"/>
+<!-- the menu customise on the HLT_75e33 menus (configuration only), including the configurations it refuses -->
+<test name="testMkFitAlpakaCustomise" command="python3 ${LOCALTOP}/src/RecoTracker/MkFitAlpaka/test/testCustomiseMkFitAlpaka.py"/>

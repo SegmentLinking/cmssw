@@ -1,0 +1,28 @@
+<!-- Portable (Alpaka) mkFit: core library (src/*.cc host, src/alpaka/*.dev.cc per backend) -->
+<use name="alpaka"/>
+<use name="vdt_headers"/>
+<use name="FWCore/Utilities"/>
+<use name="FWCore/MessageLogger"/>
+<use name="DataFormats/Common"/>
+<use name="DataFormats/Portable"/>
+<use name="DataFormats/SiPixelClusterSoA"/>
+<use name="DataFormats/SiPixelDigiSoA"/>
+<use name="DataFormats/SoATemplate"/>
+<use name="HeterogeneousCore/AlpakaInterface"/>
+<use name="RecoTracker/MkFitCore"/>
+<!-- The CPU backends (serial / TBB) get MkFitCore's flags (ofast-flag = -Ofast -fno-reciprocal-math -mrecip=none,
+     -fopenmp-simd) through USE_ALPAKA_<BACKEND>, which adds the tool to that backend's product only; plain CXXFLAGS also
+     reach hipcc, so -Ofast is not set there, and CUDA / ROCm device code stays strict.
+     -fassociative-math, -ffinite-math-only and -fno-signed-zeros are switched back off: each moves the results away from
+     MkFitCore's. -fno-trapping-math, which lets the per-slot bodies vectorize, stays. The three are no-ops for compilers
+     without fast math; REM keeps the hipcc host line unchanged.
+     The trailing &#9; (tab) is needed: SCRAM writes use_public + use with no separator, which glues the tool name to the
+     parent-library use; make splits on the tab. -->
+<flags USE_ALPAKA_SERIAL="ofast-flag&#9;"/>
+<flags USE_ALPAKA_TBB="ofast-flag&#9;"/>
+<flags CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+<flags REM_ROCM_HOST_CXXFLAGS="-fopenmp-simd -fno-associative-math -fno-finite-math-only -fsigned-zeros"/>
+<flags ALPAKA_BACKENDS="1"/>
+<export>
+  <lib name="1"/>
+</export>
