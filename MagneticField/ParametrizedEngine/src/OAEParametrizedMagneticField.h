@@ -13,7 +13,7 @@
  */
 
 #include "MagneticField/Engine/interface/MagneticField.h"
-#include "TkBfield.h"
+#include "MagneticField/ParametrizedEngine/interface/TkBfield.h"
 
 namespace edm {
   class ParameterSet;
@@ -41,6 +41,9 @@ public:
   GlobalVector inTeslaUnchecked(const GlobalPoint& gp) const override;
 
   bool isDefined(const GlobalPoint& gp) const override;
+
+  /// The parametrization, e.g. to copy its bcycl() to a device
+  magfieldparam::TkBfield const& parametrization() const { return theParam; }
 
 private:
   magfieldparam::TkBfield theParam;
