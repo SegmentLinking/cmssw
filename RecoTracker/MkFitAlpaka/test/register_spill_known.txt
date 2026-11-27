@@ -1,0 +1,7 @@
+# Known spills. One line:
+#   <kernel regex> <arch regex> <device cost (no spaces)> <reason>
+# Kernels the menu RUNS whose register spill is kept by a decision. The gate lists them in their own counted section
+# with the measured device cost and its verdict is KNOWN-SPILLS, never PASS. Device cost = CUPTI kernel time,
+# L40 (sm_89), 1 job x 8 threads, ttbar PU200 50 events (38 tracked), median per call (= per tracked event) on the integrated head
+# at the time. Remove a line when its kernel
+# stops spilling (the gate reports it).
