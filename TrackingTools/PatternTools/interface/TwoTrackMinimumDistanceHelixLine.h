@@ -3,6 +3,7 @@
 
 #include "DataFormats/GeometryVector/interface/GlobalPoint.h"
 #include "DataFormats/GeometryVector/interface/GlobalVector.h"
+#include "TrackingTools/PatternTools/interface/TwoTrackMinimumDistanceHelixLinePortable.h"
 #include <utility>
 /** \class TwoTrackMinimumDistanceHelixLine
  *  This is a helper class for TwoTrackMinimumDistance, for the
@@ -16,7 +17,7 @@ class GlobalTrajectoryParameters;
 
 class TwoTrackMinimumDistanceHelixLine {
 public:
-  TwoTrackMinimumDistanceHelixLine() : theH(nullptr), theL(nullptr), themaxiter(12), pointsUpdated(false) {}
+  TwoTrackMinimumDistanceHelixLine() : theH(nullptr), theL(nullptr), pointsUpdated(false) {}
   ~TwoTrackMinimumDistanceHelixLine() {}
 
   /**
@@ -44,16 +45,12 @@ private:
   const GlobalTrajectoryParameters *theH, *theL, *firstGTP, *secondGTP;
   GlobalVector posDiff;
   GlobalVector theLp;
-  double X, Y, Z, px, py, pz, px2, py2, pz2, baseFct, baseDer;
-  double theh, thePhiH0, thesinPhiH0, thecosPhiH0, thetanlambdaH;
+  TwoTrackMinimumDistanceHelixLinePortable::Coefficients theCoeffs;
   double thePhiH;
   double Hn, Ln;
-  double aa, bb, cc, dd, ee, ff;
 
-  int themaxiter;
   bool updateCoeffs();
   void finalPoints();
-  bool oneIteration(double &thePhiH, double &fct, double &derivative) const;
   GlobalPoint helixPoint, linePoint;
   double tL, linePath, helixPath;
   bool pointsUpdated;
